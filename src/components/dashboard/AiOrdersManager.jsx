@@ -193,22 +193,29 @@ const AiOrdersManager = ({ onClose }) => {
         <Card className="border-0 h-full bg-transparent shadow-none">
           {/* Header */}
           <CardHeader 
-            className="border-b border-white/10 p-6"
+            className="border-b border-white/10 p-4 md:p-6 relative overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(236, 72, 153, 0.15) 100%)',
-              backdropFilter: 'blur(10px)'
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.12) 35%, rgba(236, 72, 153, 0.12) 70%, rgba(245, 101, 101, 0.12) 100%)',
+              backdropFilter: 'blur(15px)'
             }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/20">
-                  <Bot className="w-8 h-8 text-blue-400" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-white/5" />
+            <div className="relative flex items-center justify-between">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div 
+                  className="p-2 md:p-3 rounded-xl md:rounded-2xl border border-white/30 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                >
+                  <Bot className="w-6 h-6 md:w-8 md:h-8 text-blue-300 drop-shadow-lg" />
                 </div>
                 <div>
                   <CardTitle 
-                    className="text-3xl md:text-4xl font-black tracking-tight"
+                    className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight drop-shadow-lg"
                     style={{
-                      background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)',
+                      background: 'linear-gradient(135deg, #7DD3FC 0%, #A78BFA 30%, #F472B6 70%, #FB7185 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       backgroundClip: 'text'
@@ -216,7 +223,7 @@ const AiOrdersManager = ({ onClose }) => {
                   >
                     إدارة الطلبات الذكية
                   </CardTitle>
-                  <CardDescription className="text-lg text-white/70 mt-1">
+                  <CardDescription className="text-sm md:text-lg text-white/80 mt-1 drop-shadow-md font-medium">
                     نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي
                   </CardDescription>
                 </div>
@@ -225,11 +232,16 @@ const AiOrdersManager = ({ onClose }) => {
                 variant="ghost" 
                 size="icon" 
                 onClick={onClose}
-                className="rounded-2xl w-12 h-12 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 hover:scale-110 border border-white/20"
+                className="rounded-xl md:rounded-2xl w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white hover:bg-white/15 transition-all duration-300 hover:scale-110 border border-white/30 backdrop-blur-sm shadow-lg hover:shadow-xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)'
+                }}
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" />
               </Button>
             </div>
+            <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full bg-blue-400/10 blur-2xl" />
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full bg-purple-400/10 blur-2xl" />
           </CardHeader>
 
           <CardContent className="p-0 h-[calc(95vh-120px)] overflow-y-auto custom-scrollbar">
@@ -266,28 +278,39 @@ const AiOrdersManager = ({ onClose }) => {
                   </div>
                   
                   {selectedOrders.length > 0 && (
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
                             size="lg"
                             disabled={isProcessing}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+                            className="bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-600 hover:via-green-600 hover:to-emerald-700 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3 font-bold"
                           >
                             {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <ShieldCheck className="w-5 h-5 ml-2" />}
-                            موافقة على المحدد
+                            موافقة على المحدد ({selectedOrders.length})
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent>
+                        <AlertDialogContent 
+                          className="rounded-2xl border border-white/20"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%)',
+                            backdropFilter: 'blur(20px)'
+                          }}
+                        >
                           <AlertDialogHeader>
-                            <AlertDialogTitle>تأكيد تحويل الطلبات المحددة</AlertDialogTitle>
-                            <AlertDialogDescription>
+                            <AlertDialogTitle className="text-white text-xl">تأكيد تحويل الطلبات المحددة</AlertDialogTitle>
+                            <AlertDialogDescription className="text-white/80 text-lg">
                               سيتم تحويل {selectedOrders.length} طلب ذكي إلى طلبات حقيقية مع التحقق من المخزون وحجزه.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleBulkApprove}>تأكيد التحويل</AlertDialogAction>
+                            <AlertDialogCancel className="bg-white/10 text-white border-white/20 hover:bg-white/20">إلغاء</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={handleBulkApprove}
+                              className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                            >
+                              تأكيد التحويل
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -296,10 +319,10 @@ const AiOrdersManager = ({ onClose }) => {
                         size="lg"
                         onClick={handleBulkDelete}
                         disabled={isProcessing}
-                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="bg-gradient-to-r from-red-500 via-rose-500 to-red-600 hover:from-red-600 hover:via-rose-600 hover:to-red-700 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 rounded-xl px-6 py-3 font-bold"
                       >
                         {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <Trash2 className="w-5 h-5 ml-2" />}
-                        حذف المحدد
+                        حذف المحدد ({selectedOrders.length})
                       </Button>
                     </div>
                   )}
@@ -316,23 +339,29 @@ const AiOrdersManager = ({ onClose }) => {
             >
               {needReviewCount > 0 && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-6 rounded-3xl p-6 border border-red-400/30 shadow-2xl"
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ type: "spring", duration: 0.6 }}
+                  className="mb-6 rounded-2xl p-5 md:p-6 border border-red-400/40 shadow-2xl hover:shadow-red-500/20 transition-all duration-500"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
-                    backdropFilter: 'blur(15px)'
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.25) 50%, rgba(185, 28, 28, 0.25) 100%)',
+                    backdropFilter: 'blur(20px)'
                   }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="shrink-0 p-4 rounded-2xl bg-red-500/25 border border-red-400/30">
-                      <AlertTriangle className="w-8 h-8 text-red-300" />
+                    <div 
+                      className="shrink-0 p-3 md:p-4 rounded-xl border border-red-400/40 shadow-xl"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)'
+                      }}
+                    >
+                      <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-200 drop-shadow-lg" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-black text-xl text-red-200 mb-2">
+                      <p className="font-black text-lg md:text-xl text-red-100 mb-2 drop-shadow-md">
                         🚨 هناك {needReviewCount} طلب تحتاج إلى مراجعة عاجلة
                       </p>
-                      <p className="text-red-300/80 text-lg">
+                      <p className="text-red-200/90 text-base md:text-lg leading-relaxed">
                         يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة على هذه الطلبات.
                       </p>
                     </div>
@@ -363,24 +392,27 @@ const AiOrdersManager = ({ onClose }) => {
                   {userAiOrders.map((order, index) => (
                     <motion.div
                       key={order.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="rounded-3xl overflow-hidden border border-white/10 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01]"
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: index * 0.1, type: "spring", duration: 0.6 }}
+                      className="rounded-2xl overflow-hidden border border-white/20 shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:scale-[1.02] group"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%)',
-                        backdropFilter: 'blur(20px)'
+                        background: 'linear-gradient(135deg, rgba(51, 65, 85, 0.7) 0%, rgba(30, 41, 59, 0.7) 50%, rgba(51, 65, 85, 0.7) 100%)',
+                        backdropFilter: 'blur(25px)'
                       }}
                     >
-                      <AiOrderCard
-                        order={order}
-                        isSelected={selectedOrders.includes(order.id)}
-                        onSelect={(checked) => handleSelectOrder(order.id, checked)}
-                        onEdit={() => {
-                          setEditingOrder(order);
-                          setQuickOrderDialogOpen(true);
-                        }}
-                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                      <div className="relative">
+                        <AiOrderCard
+                          order={order}
+                          isSelected={selectedOrders.includes(order.id)}
+                          onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                          onEdit={() => {
+                            setEditingOrder(order);
+                            setQuickOrderDialogOpen(true);
+                          }}
+                        />
+                      </div>
                     </motion.div>
                   ))}
                 </motion.div>
