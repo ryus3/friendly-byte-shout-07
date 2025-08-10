@@ -25,10 +25,11 @@ import {
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { aiOrders = [], loading, refreshAll, products = [] } = useSuper();
+  const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -159,12 +160,28 @@ const AiOrdersManager = ({ onClose }) => {
     }
   };
 
-  const handleBulkAction = (action) => {
+  const handleBulkAction = async (action) => {
     if (selectedOrders.length === 0) return;
-    
-    console.log(`Bulk ${action} for orders:`, selectedOrders);
-    // Here you would implement the bulk action logic
-    setSelectedOrders([]);
+    try {
+      if (action === 'approve') {
+        const results = await Promise.all(selectedOrders.map(id => approveAiOrder?.(id)));
+        const okIds = selectedOrders.filter((_, i) => results[i]?.success);
+        okIds.forEach(id => window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } })));
+        setOrders(prev => prev.filter(o => !okIds.includes(o.id)));
+        toast({ title: 'تمت الموافقة', description: `تمت الموافقة على ${okIds.length} طلب`, variant: 'success' });
+      } else if (action === 'delete') {
+        const results = await Promise.all(selectedOrders.map(id => supabase.rpc('delete_ai_order_safe', { p_order_id: id })));
+        const okIds = results.map((r, i) => (!r.error ? selectedOrders[i] : null)).filter(Boolean);
+        okIds.forEach(id => window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })));
+        setOrders(prev => prev.filter(o => !okIds.includes(o.id)));
+        toast({ title: 'تم الحذف', description: `تم حذف ${okIds.length} طلب`, variant: 'success' });
+      }
+    } catch (e) {
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تنفيذ العملية', variant: 'destructive' });
+    } finally {
+      setSelectedOrders([]);
+      try { await refreshAll?.(); } catch (_) {}
+    }
   };
 
   return (

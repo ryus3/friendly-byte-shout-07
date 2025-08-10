@@ -404,12 +404,36 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         continue;
       }
       
-      // التحقق من المنتجات (يدعم + للفصل)
+      // التحقق من المنتجات (يدعم + للفصل مع فهم المقاسات المختصرة)
       if (line.includes('+')) {
-        const products = line.split('+').map(p => p.trim());
-        for (const product of products) {
-          if (product) {
-            items.push(await parseProduct(product));
+        const parts = line.split('+').map(p => p.trim()).filter(Boolean);
+        let baseName = '';
+        let baseColor = '';
+        for (let idx = 0; idx < parts.length; idx++) {
+          const part = parts[idx];
+          const parsed = await parseProduct(part);
+          if (idx === 0) {
+            baseName = parsed.name || parsed.product_name || '';
+            baseColor = parsed.color || '';
+            items.push(parsed);
+            continue;
+          }
+          const sizeOnly = isSizeOnly(part);
+          if (sizeOnly) {
+            const std = detectStandardSize(part) || parsed.size;
+            items.push({
+              ...parsed,
+              name: baseName || parsed.name,
+              product_name: baseName || parsed.product_name || parsed.name,
+              color: parsed.color || baseColor || '',
+              size: std || parsed.size || ''
+            });
+          } else {
+            if (!parsed.name || parsed.name.toLowerCase() === part.toLowerCase()) {
+              parsed.name = baseName || parsed.name;
+            }
+            if (!parsed.color) parsed.color = baseColor || parsed.color;
+            items.push(parsed);
           }
         }
         continue;
@@ -764,6 +788,49 @@ function levenshteinDistance(str1: string, str2: string): number {
   return matrix[str2.length][str1.length];
 }
 
+// تحويل الأرقام العربية إلى إنجليزية
+function normalizeDigits(input: string): string {
+  const map: Record<string, string> = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+  return input.replace(/[٠-٩]/g, (d) => map[d] || d);
+}
+
+// جميع صيغ المقاسات الشائعة بالعربي والإنجليزي
+const SIZE_SYNONYMS: Record<string, string[]> = {
+  'S': ['s','small','سمول','صغير'],
+  'M': ['m','medium','ميديم','مديم','متوسط','وسط'],
+  'L': ['l','large','لارج','كبير'],
+  'XL': ['xl','x l','اكس لارج','اكس ال','إكس إل','اكسل'],
+  'XXL': ['xxl','2xl','٢xl','٢ اكس','2 اكس','اكسين','اكسين لارج','دبل اكس'],
+  'XXXL': ['xxxl','3xl','٣xl','3 اكس','٣ اكس','ثلاثة اكس','ثلاث اكس','ثري اكس']
+};
+
+function sizeSynonymsRegex(): RegExp {
+  const all = Object.values(SIZE_SYNONYMS).flat().map(s => s.replace(/\s+/g, '\\s*'));
+  const base = ['s','m','l','xl','xxl','xxxl'];
+  const pattern = `\\b(?:${[...base, ...all].join('|')})\\b`;
+  return new RegExp(pattern, 'gi');
+}
+
+function detectStandardSize(text: string): string | null {
+  const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
+  // نماذج رقمية مثل 2xl / 3xl
+  if (/\b(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)\b/i.test(t)) return 'XXXL';
+  if (/\b(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)\b/i.test(t)) return 'XXL';
+  if (/(^|\s)(xl|x\s*l|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل)(\s|$)/i.test(t)) return 'XL';
+  // أساسية
+  if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
+  if (/(^|\s)(m|medium|ميديم|مديم|متوسط|وسط)(\s|$)/i.test(t)) return 'M';
+  if (/(^|\s)(s|small|سمول|صغير)(\s|$)/i.test(t)) return 'S';
+  return null;
+}
+
+function isSizeOnly(text: string): boolean {
+  const cleaned = normalizeDigits(text).toLowerCase().replace(/[^a-zA-Z\u0600-\u06FF\d\s]/g, ' ').trim();
+  const withoutSizes = cleaned.replace(sizeSynonymsRegex(), '').replace(/\b(2xl|3xl)\b/gi, '').replace(/\s+/g, '');
+  // إذا لم يتبق شيء تقريباً بعد إزالة المقاسات، فهو مقاس فقط
+  return withoutSizes.length === 0 || /^\d{2,3}$/.test(withoutSizes);
+}
+
 async function parseProduct(productText: string) {
   const text = productText.trim();
   
@@ -800,6 +867,11 @@ async function parseProduct(productText: string) {
         break;
       }
     }
+  }
+  // مطابقة الصيغ العربية والإنجليزية إلى مقاس قياسي إن لم نجد أعلاه
+  if (!size) {
+    const std = detectStandardSize(text);
+    if (std) size = std;
   }
   
   // جلب الألوان من قاعدة البيانات
