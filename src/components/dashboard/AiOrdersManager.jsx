@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
+import { supabase } from '@/integrations/supabase/client';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
@@ -57,6 +58,36 @@ const AiOrdersManager = ({ onClose }) => {
       window.removeEventListener('aiOrderDeleted', handleDeleted);
       window.removeEventListener('aiOrderApproved', handleApproved);
     };
+  }, []);
+
+  // Realtime updates for ai_orders: insert/update/delete
+  useEffect(() => {
+    try {
+      const channel = supabase
+        .channel('ai-orders-realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ai_orders' }, (payload) => {
+          const newOrder = payload.new;
+          setOrders((prev) => {
+            if (prev.some(o => o.id === newOrder.id)) return prev;
+            return [newOrder, ...prev];
+          });
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ai_orders' }, (payload) => {
+          const updated = payload.new;
+          setOrders((prev) => prev.map(o => (o.id === updated.id ? updated : o)));
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'ai_orders' }, (payload) => {
+          const removed = payload.old;
+          setOrders((prev) => prev.filter(o => o.id !== removed.id));
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } catch (e) {
+      // no-op
+    }
   }, []);
 
   const totalCount = orders.length;

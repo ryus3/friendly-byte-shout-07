@@ -310,7 +310,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="h-8 text-xs bg-sky-500 text-white hover:bg-sky-600" disabled={availability !== 'available' || needsReview}>
+                <Button size="sm" className="h-8 text-xs bg-sky-500 text-white hover:bg-sky-600 gap-1" disabled={availability !== 'available' || needsReview}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>
@@ -343,7 +343,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Edit */}
             <Button 
               size="sm"
-              className="h-8 text-xs bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm"
+              className="h-8 text-xs bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm gap-1"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openQuickOrderWithAi', { detail: order }));
               }}
@@ -355,7 +355,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Delete */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="h-8 text-xs bg-red-500 text-white hover:bg-red-600">
+                <Button size="sm" className="h-8 text-xs bg-red-500 text-white hover:bg-red-600 gap-1">
                   <Trash2 className="w-3 h-3" />
                   حذف
                 </Button>
