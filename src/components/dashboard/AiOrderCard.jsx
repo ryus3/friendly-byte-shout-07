@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
   Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -228,11 +229,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   {getStatusIcon(order.status)}
                   {getStatusText(order.status)}
                 </Badge>
-                {availability !== 'available' && (
-                  <Badge className="bg-white/20 text-white border-0 text-[10px]">
-                    {availability === 'out' ? 'غير متاح بالمخزون' : 'بحاجة مطابقة'}
-                  </Badge>
-                )}
               </div>
               <div className="text-xs opacity-90">{formatDateEnglish(order.created_at)}</div>
             </div>
@@ -250,17 +246,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           {/* Complete Order Details */}
           <div className="space-y-1.5 mb-2">
             {/* Customer Phone */}
-            {(order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone) && (
-              <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
-                <div className="flex items-center gap-1">
-                  <Smartphone className="w-3 h-3" />
-                  <span className="text-[11px] font-medium">الهاتف:</span>
-                  <span className="text-[11px]">
-                    {order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Shipping Address */}
             {(order.order_data?.shipping_address || order.order_data?.address || order.shipping_address) && (
@@ -278,10 +263,19 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Product Details */}
             {order.order_data && (
               <div className="bg-white/10 rounded-md p-2 backdrop-blur-sm">
-                <div className="flex items-center gap-1 mb-1">
-                  <Package className="w-3 h-3" />
-                  <span className="text-xs font-medium">تفاصيل الطلب:</span>
+              <div className="flex items-center gap-1 mb-1">
+                <Package className="w-3 h-3" />
+                <span className="text-xs font-medium">تفاصيل الطلب:</span>
+              </div>
+              {(order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone) && (
+                <div className="flex items-center gap-1 text-[11px] mb-1">
+                  <Smartphone className="w-3 h-3" />
+                  <span className="font-medium">الهاتف:</span>
+                  <span>
+                    {order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone}
+                  </span>
                 </div>
+              )}
                 
                 {items && items.length > 0 ? (
                   <div className="space-y-1">
@@ -319,28 +313,45 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons with confirmations */}
           <div className="grid grid-cols-3 gap-1">
-            {availability === 'available' && !needsReview && (
-              <Button 
-                size="sm"
-                className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
-                onClick={async () => {
-                  const res = await approveAiOrder(order.id);
-                  if (res?.success) {
-                    toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
-                  } else {
-                    toast({ title: 'فشل الموافقة', description: res?.error || 'حدث خطأ غير متوقع', variant: 'destructive' });
-                  }
-                }}
-              >
-                <CheckCircle2 className="w-3 h-3" />
-                موافقة
-              </Button>
-            )}
+            {/* Approve */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90" disabled={availability !== 'available' || needsReview}>
+                  <CheckCircle2 className="w-3 h-3" />
+                  موافقة
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد الموافقة</AlertDialogTitle>
+                  <AlertDialogDescription>سيتم إنشاء طلب حقيقي وحذف الطلب الذكي فورًا.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      const res = await approveAiOrder(order.id);
+                      if (res?.success) {
+                        window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: order.id } }));
+                        toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
+                      } else {
+                        toast({ title: 'فشل الموافقة', description: res?.error || 'حدث خطأ غير متوقع', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    تأكيد
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Edit */}
             <Button 
               size="sm"
-              className="h-8 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 flex items-center justify-center gap-1"
+              variant="secondary"
+              className="h-8 text-xs"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openQuickOrderWithAi', { detail: order }));
               }}
@@ -348,21 +359,39 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <Edit className="w-3 h-3" />
               تعديل
             </Button>
-            <Button 
-              size="sm"
-              className="h-8 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0 flex items-center justify-center gap-1"
-              onClick={async () => {
-                const { error } = await supabase.from('ai_orders').delete().eq('id', order.id);
-                if (error) {
-                  toast({ title: 'فشل الحذف', description: error.message, variant: 'destructive' });
-                } else {
-                  toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
-                }
-              }}
-            >
-              <Trash2 className="w-3 h-3" />
-              حذف
-            </Button>
+
+            {/* Delete */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="destructive" className="h-8 text-xs">
+                  <Trash2 className="w-3 h-3" />
+                  حذف
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                  <AlertDialogDescription>سيتم حذف الطلب الذكي نهائيًا.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={async () => {
+                      const { error } = await supabase.from('ai_orders').delete().eq('id', order.id);
+                      if (error) {
+                        toast({ title: 'فشل الحذف', description: error.message, variant: 'destructive' });
+                      } else {
+                        window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
+                        toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
+                      }
+                    }}
+                  >
+                    تأكيد
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

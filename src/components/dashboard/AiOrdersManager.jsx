@@ -28,8 +28,30 @@ import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
   const { aiOrders = [], loading } = useSuper();
-  const orders = Array.isArray(aiOrders) ? aiOrders : [];
+  const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
+  const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
+
+  useEffect(() => {
+    setOrders(ordersFromContext);
+  }, [ordersFromContext]);
+
+  useEffect(() => {
+    const handleDeleted = (e) => {
+      const id = e?.detail?.id;
+      if (id) setOrders(prev => prev.filter(o => o.id !== id));
+    };
+    const handleApproved = (e) => {
+      const id = e?.detail?.id;
+      if (id) setOrders(prev => prev.filter(o => o.id !== id));
+    };
+    window.addEventListener('aiOrderDeleted', handleDeleted);
+    window.addEventListener('aiOrderApproved', handleApproved);
+    return () => {
+      window.removeEventListener('aiOrderDeleted', handleDeleted);
+      window.removeEventListener('aiOrderApproved', handleApproved);
+    };
+  }, []);
 
   const totalCount = orders.length;
   const pendingCount = orders.filter(order => order.status === 'pending').length;
