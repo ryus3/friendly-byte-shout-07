@@ -170,7 +170,7 @@ const AiOrdersManager = ({ onClose }) => {
               </Card>
 
               {/* Total Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[100px]">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
@@ -180,13 +180,14 @@ const AiOrdersManager = ({ onClose }) => {
                     </div>
                     <div>
                       <h4 className="font-bold text-xs">إجمالي الطلبات</h4>
-                      <p className="text-blue-100 text-xs">طلبات واردة</p>
+                      <p className="text-indigo-100 text-xs">طلبات واردة</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{totalCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                  <div className="absolute top-2 left-2 w-6 h-6 bg-white/10 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>

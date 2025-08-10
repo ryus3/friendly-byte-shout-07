@@ -41,27 +41,27 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     switch (status) {
       case 'pending':
         return {
-          gradient: 'bg-gradient-to-br from-orange-500 to-orange-700'
+          gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500'
         };
       case 'processing':
         return {
-          gradient: 'bg-gradient-to-br from-blue-500 to-blue-700'
+          gradient: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600'
         };
       case 'completed':
         return {
-          gradient: 'bg-gradient-to-br from-emerald-500 to-teal-600'
+          gradient: 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600'
         };
       case 'needs_review':
         return {
-          gradient: 'bg-gradient-to-br from-red-500 to-red-700'
+          gradient: 'bg-gradient-to-br from-red-500 via-pink-500 to-rose-600'
         };
       case 'failed':
         return {
-          gradient: 'bg-gradient-to-br from-gray-500 to-gray-700'
+          gradient: 'bg-gradient-to-br from-gray-500 via-slate-600 to-gray-700'
         };
       default:
         return {
-          gradient: 'bg-gradient-to-br from-slate-500 to-slate-700'
+          gradient: 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700'
         };
     }
   };
@@ -104,12 +104,12 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'pending': return <Clock className="w-3 h-3 mr-1" />;
-      case 'processing': return <Zap className="w-3 h-3 mr-1" />;
-      case 'completed': return <CheckCircle2 className="w-3 h-3 mr-1" />;
-      case 'needs_review': return <AlertTriangle className="w-3 h-3 mr-1" />;
-      case 'failed': return <XCircle className="w-3 h-3 mr-1" />;
-      default: return <AlertTriangle className="w-3 h-3 mr-1" />;
+      case 'pending': return <Clock className="w-3 h-3 ml-1" />;
+      case 'processing': return <Zap className="w-3 h-3 ml-1" />;
+      case 'completed': return <CheckCircle2 className="w-3 h-3 ml-1" />;
+      case 'needs_review': return <AlertTriangle className="w-3 h-3 ml-1" />;
+      case 'failed': return <XCircle className="w-3 h-3 ml-1" />;
+      default: return <AlertTriangle className="w-3 h-3 ml-1" />;
     }
   };
 
@@ -124,9 +124,11 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           "relative rounded-lg p-3 text-white overflow-hidden",
           getStatusColor(order.status).gradient
         )}>
-          {/* Background decoration */}
-          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
-          <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+          {/* Background decoration - Beautiful circles like inventory sections */}
+          <div className="absolute -bottom-3 -right-3 w-12 h-12 bg-white/10 rounded-full"></div>
+          <div className="absolute -top-2 -left-2 w-8 h-8 bg-white/15 rounded-full"></div>
+          <div className="absolute top-1/2 left-1/4 w-6 h-6 bg-white/5 rounded-full"></div>
+          <div className="absolute bottom-1/3 right-1/3 w-4 h-4 bg-white/10 rounded-full"></div>
           
           {/* Header with selection */}
           <div className="flex items-center justify-between mb-3">
