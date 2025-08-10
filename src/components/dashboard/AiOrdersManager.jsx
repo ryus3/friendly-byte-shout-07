@@ -40,6 +40,7 @@ const AiOrdersManager = ({ onClose }) => {
       <div 
         className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl w-full max-w-5xl h-[90vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
+        dir="rtl"
       >
         {/* Header */}
         <div className="relative p-4 pb-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg overflow-hidden">
@@ -50,15 +51,6 @@ const AiOrdersManager = ({ onClose }) => {
           </div>
           
           <div className="relative flex items-center justify-between">
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto mr-2"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-            
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
@@ -71,6 +63,15 @@ const AiOrdersManager = ({ onClose }) => {
                 <p className="text-blue-100 text-xs">نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي</p>
               </div>
             </div>
+            
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
@@ -92,8 +93,7 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-blue-100 text-xs">طلبات واردة</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{totalCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
+                      <p className="text-lg font-bold">{totalCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
@@ -114,8 +114,7 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-cyan-100 text-xs">تليغرام بوت</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{telegramCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
+                      <p className="text-lg font-bold">{telegramCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
@@ -136,8 +135,7 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-purple-100 text-xs">مساعد ذكي</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{aiChatCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
+                      <p className="text-lg font-bold">{aiChatCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
@@ -158,8 +156,7 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-red-100 text-xs">مراجعة عاجلة</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{needsReviewCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
+                      <p className="text-lg font-bold">{needsReviewCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
