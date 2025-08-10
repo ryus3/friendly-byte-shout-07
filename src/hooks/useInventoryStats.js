@@ -60,7 +60,8 @@ const useInventoryStats = () => {
           mediumStockCount: parseInt(statsData.medium_stock_count) || 0,
           lowStockCount: parseInt(statsData.low_stock_count) || 0,
           outOfStockCount: parseInt(statsData.out_of_stock_count) || 0,
-          reservedStockCount: (statsData.reserved_stock_count != null ? parseInt(statsData.reserved_stock_count) : 0) || reservedFallback,
+          // نعتمد كلياً على البيانات الموحدة (الطلبات) لحساب المحجوز لضمان التطابق مع النافذة
+          reservedStockCount: reservedFallback,
           archivedProductsCount: parseInt(statsData.archived_products_count) || 0,
           totalInventoryValue: parseFloat(statsData.total_inventory_value) || 0,
           departments: statsData.departments_data || []
