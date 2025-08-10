@@ -10,9 +10,14 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'orders'
     }, (payload) => {
-      // إرسال حدث مخصص فقط بدون إعادة تحميل
-      if (payload.eventType === 'INSERT') {
+      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
+      const type = payload.eventType;
+      if (type === 'INSERT') {
         window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
+      } else if (type === 'UPDATE') {
+        window.dispatchEvent(new CustomEvent('orderUpdated', { detail: payload.new }));
+      } else if (type === 'DELETE') {
+        window.dispatchEvent(new CustomEvent('orderDeleted', { detail: payload.old }));
       }
     })
     .subscribe();
@@ -25,8 +30,15 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'ai_orders'
     }, (payload) => {
-      // إرسال حدث مخصص فقط بدون إعادة تحميل
-      window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
+      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
+      const type = payload.eventType;
+      if (type === 'INSERT') {
+        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
+      } else if (type === 'UPDATE') {
+        window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: payload.new }));
+      } else if (type === 'DELETE') {
+        window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: payload.old }));
+      }
     })
     .subscribe();
 

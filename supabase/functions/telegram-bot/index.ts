@@ -691,29 +691,26 @@ const okList = availableItems.map(item => {
 // المجموع يُحسب من المنتجات المتاحة فقط
 const totalAvailable = availableItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
 
+const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliveryFee || 0) : 0;
+const totalWithDelivery = totalAvailable + deliveryFeeApplied;
+
 let message = '';
 if (unavailableItemsCount > 0) {
   message = [
-    '⚠ تنبيه توفر',
+    '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
-    `📦 المنتجات (${unavailableItemsCount}):`,
     warnList,
     '',
-    '⚠ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة',
-    '————'
+    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
   ].join('\n');
 } else {
   message = [
-    '✅ تم استلام الطلب! للمراجعة',
+    '✅ تم استلام الطلب!',
     '',
     `📱 الهاتف : ${customerPhone || '—'}`,
-    `📦 المنتجات ( ${totalItemsCount} ) :`,
     okList,
-    '',
-    '📊 حالة المنتجات',
-    `• تم العثور على: ${availableItemsCount}/${totalItemsCount} منتجات ✅`,
-    '',
-    `• المجموع : ${totalAvailable.toLocaleString()} د.ع`
+    `• اجمالي المبلغ : ${totalWithDelivery.toLocaleString()} د.ع`,
+    'المجموع يعني المبلغ الطلب + التوصيل'
   ].join('\n');
 }
 
