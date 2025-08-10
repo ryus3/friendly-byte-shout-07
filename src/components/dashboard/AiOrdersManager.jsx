@@ -19,7 +19,8 @@ import {
   Smartphone,
   Users,
   TrendingUp,
-  Activity
+  Activity,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
@@ -210,36 +211,39 @@ const AiOrdersManager = ({ onClose }) => {
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between" dir="rtl">
-                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <div dir="rtl">
+                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-blue-600" />
                     قائمة الطلبات الذكية ({orders.length})
                   </CardTitle>
                   
                   {orders.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedOrders.length === orders.length}
-                        onCheckedChange={handleSelectAll}
-                        className="ml-2"
-                      />
-                      <span className="text-xs text-slate-600 dark:text-slate-400">تحديد الكل</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedOrders.length === orders.length}
+                          onCheckedChange={handleSelectAll}
+                        />
+                        <span className="text-xs text-slate-600 dark:text-slate-400">تحديد الكل</span>
+                      </div>
                       
                       {selectedOrders.length > 0 && (
-                        <div className="flex gap-1 mr-3">
+                        <div className="flex gap-2">
                           <Button
                             size="sm"
                             onClick={() => handleBulkAction('approve')}
-                            className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                            className="h-7 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
                           >
-                            موافقة ({selectedOrders.length})
+                            <CheckCircle2 className="w-3 h-3 ml-1" />
+                            موافقة على المحدد ({selectedOrders.length})
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleBulkAction('delete')}
-                            className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white"
+                            className="h-7 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
                           >
-                            حذف ({selectedOrders.length})
+                            <Trash2 className="w-3 h-3 ml-1" />
+                            حذف المحدد ({selectedOrders.length})
                           </Button>
                         </div>
                       )}
