@@ -123,7 +123,10 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-lg font-bold">{needsReviewCount} طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                  {/* Beautiful decorative circles */}
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                  <div className="absolute top-1 left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                  <div className="absolute top-1/2 right-1/4 w-4 h-4 bg-white/15 rounded-full"></div>
                 </CardContent>
               </Card>
 
@@ -144,7 +147,10 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-lg font-bold">{aiChatCount} طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                  {/* Beautiful decorative circles */}
+                  <div className="absolute -bottom-3 -right-3 w-10 h-10 bg-white/10 rounded-full"></div>
+                  <div className="absolute top-2 left-2 w-5 h-5 bg-white/15 rounded-full"></div>
+                  <div className="absolute bottom-1/3 left-1/3 w-3 h-3 bg-white/20 rounded-full"></div>
                 </CardContent>
               </Card>
 
@@ -165,7 +171,10 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-lg font-bold">{telegramCount} طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                  {/* Beautiful decorative circles */}
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white/10 rounded-full"></div>
+                  <div className="absolute top-3 left-3 w-4 h-4 bg-white/20 rounded-full"></div>
+                  <div className="absolute top-1/2 right-1/3 w-5 h-5 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
@@ -186,8 +195,11 @@ const AiOrdersManager = ({ onClose }) => {
                       <p className="text-lg font-bold">{totalCount} طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
-                  <div className="absolute top-2 left-2 w-6 h-6 bg-white/10 rounded-full"></div>
+                  {/* Beautiful decorative circles */}
+                  <div className="absolute -bottom-2 -right-2 w-9 h-9 bg-white/10 rounded-full"></div>
+                  <div className="absolute top-2 left-2 w-6 h-6 bg-white/15 rounded-full"></div>
+                  <div className="absolute bottom-1/4 left-1/4 w-4 h-4 bg-white/20 rounded-full"></div>
+                  <div className="absolute top-3/4 right-1/3 w-3 h-3 bg-white/10 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>
