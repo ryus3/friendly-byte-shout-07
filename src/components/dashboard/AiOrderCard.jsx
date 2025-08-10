@@ -118,7 +118,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
       "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20",
       isSelected && "ring-2 ring-blue-500"
-    )}>
+    )} dir="ltr">
       <CardContent className="p-3">
         <div className={cn(
           "relative rounded-lg p-3 text-white overflow-hidden",
@@ -239,30 +239,34 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             <Button 
               size="sm" 
               variant="secondary"
-              className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0 px-1"
+              className="h-8 text-xs bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800 text-white border-0 flex items-center justify-center gap-1"
               onClick={() => setShowDetails(!showDetails)}
             >
+              <Eye className="w-3 h-3" />
               معاينة
             </Button>
             
             <Button 
               size="sm"
-              className="h-7 text-xs bg-emerald-500/30 hover:bg-emerald-500/50 text-white border-0 px-1"
+              className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
             >
+              <CheckCircle2 className="w-3 h-3" />
               موافقة
             </Button>
             
             <Button 
               size="sm"
-              className="h-7 text-xs bg-blue-500/30 hover:bg-blue-500/50 text-white border-0 px-1"
+              className="h-8 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 flex items-center justify-center gap-1"
             >
+              <Edit className="w-3 h-3" />
               تعديل
             </Button>
             
             <Button 
               size="sm"
-              className="h-7 text-xs bg-red-500/30 hover:bg-red-500/50 text-white border-0 px-1"
+              className="h-8 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0 flex items-center justify-center gap-1"
             >
+              <Trash2 className="w-3 h-3" />
               حذف
             </Button>
           </div>
