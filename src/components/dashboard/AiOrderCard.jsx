@@ -118,7 +118,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
       "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20",
       isSelected && "ring-2 ring-blue-500"
-    )} dir="ltr">
+    )} dir="rtl">
       <CardContent className="p-3">
         <div className={cn(
           "relative rounded-lg p-3 text-white overflow-hidden",
@@ -239,7 +239,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             <Button 
               size="sm" 
               variant="secondary"
-              className="h-8 text-xs bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800 text-white border-0 flex items-center justify-center gap-1"
+              className="h-8 text-xs bg-white/20 hover:bg-white/30 text-white border-0 flex items-center justify-center gap-1"
               onClick={() => setShowDetails(!showDetails)}
             >
               <Eye className="w-3 h-3" />

@@ -210,7 +210,7 @@ const AiOrdersManager = ({ onClose }) => {
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between" dir="ltr">
+                <div className="flex items-center justify-between" dir="rtl">
                   <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-blue-600" />
                     قائمة الطلبات الذكية ({orders.length})
