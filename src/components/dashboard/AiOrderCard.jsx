@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ import {
   CheckCircle2, 
   XCircle, 
   Send, 
-  Eye,
   AlertTriangle,
   User,
   Calendar,
@@ -26,9 +25,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
 const AiOrderCard = ({ order, isSelected, onSelect }) => {
-  const [showDetails, setShowDetails] = useState(false);
-  
-  // Format date with English numbers
+  // المعاينة ملغاة - التفاصيل تظهر دائماً
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
@@ -230,6 +227,15 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <div className="text-xs opacity-90">{formatDateEnglish(order.created_at)}</div>
             </div>
           </div>
+          {/* Alerts */}
+          {availability !== 'available' && (
+            <div className="mb-2 p-2 rounded-md bg-white/15 border border-white/30 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-xs font-medium">
+                {availability === 'out' ? 'تنبيه: عناصر غير متاحة (نافذة/محجوزة)' : 'تنبيه: تفاصيل تحتاج مطابقة مع المنتجات'}
+              </span>
+            </div>
+          )}
 
           {/* Complete Order Details */}
           <div className="space-y-2 mb-3">
@@ -267,25 +273,25 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   <span className="text-xs font-medium">تفاصيل الطلب:</span>
                 </div>
                 
-                {order.order_data.items && order.order_data.items.length > 0 ? (
+                {items && items.length > 0 ? (
                   <div className="space-y-1">
-                    {order.order_data.items.map((item, index) => (
+                    {items.map((item, index) => (
                       <div key={index} className="text-xs bg-white/10 rounded px-2 py-1">
                         <div className="font-medium">{item.product_name || item.name || item.product}</div>
                         <div className="flex justify-between items-center text-xs opacity-90">
                           <span>
-                            {item.quantity && `الكمية: ${item.quantity}`}
-                            {item.size && ` • المقاس: ${item.size}`}
-                            {item.color && ` • اللون: ${item.color}`}
+                            {item.quantity ? `الكمية: ${item.quantity}` : null}
+                            {item.size ? ` • المقاس: ${item.size}` : null}
+                            {item.color ? ` • اللون: ${item.color}` : null}
                           </span>
-                          {item.price && <span className="font-bold">{item.price} د.ع</span>}
+                          {(item.price || item.unit_price) && <span className="font-bold">{item.price || item.unit_price} د.ع</span>}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className="text-xs leading-relaxed">
-                    {order.message || order.order_data.raw_message || order.order_data.description || 'لا توجد تفاصيل متاحة'}
+                    {order.message || order.order_data?.raw_message || order.order_data?.description || 'لا توجد تفاصيل متاحة'}
                   </p>
                 )}
                 
@@ -304,20 +310,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             )}
           </div>
 
-
           {/* Action Buttons */}
-          <div className="grid grid-cols-4 gap-1">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              className="h-8 text-xs bg-white/20 hover:bg-white/30 text-white border-0 flex items-center justify-center gap-1"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              <Eye className="w-3 h-3" />
-              معاينة
-            </Button>
-            
-            {availability === 'available' && (
+          <div className="grid grid-cols-3 gap-1">
+            {availability === 'available' && !needsReview && (
               <Button 
                 size="sm"
                 className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
@@ -326,7 +321,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                 موافقة
               </Button>
             )}
-            
             <Button 
               size="sm"
               className="h-8 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 flex items-center justify-center gap-1"
@@ -334,7 +328,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <Edit className="w-3 h-3" />
               تعديل
             </Button>
-            
             <Button 
               size="sm"
               className="h-8 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0 flex items-center justify-center gap-1"
@@ -345,9 +338,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           </div>
         </div>
 
-        {/* Expanded Details */}
-        {showDetails && (
-          <div className="mt-3 space-y-2">
+        {/* Expanded Details - always visible */}
+        <div className="mt-3 space-y-2">
             {order.order_data?.shipping_address && (
               <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
                 <div className="flex items-center gap-2 text-xs">
@@ -407,7 +399,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               </details>
             )}
           </div>
-        )}
       </CardContent>
     </Card>
   );
