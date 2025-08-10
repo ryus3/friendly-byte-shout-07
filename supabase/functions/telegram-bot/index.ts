@@ -62,30 +62,45 @@ async function getBotToken(): Promise<string | null> {
 }
 
 
-async function sendTelegramMessage(chatId: number, text: string, parseMode = 'HTML') {
+async function sendTelegramMessage(chatId: number, text: string, parseMode: 'HTML' | 'MarkdownV2' | 'None' = 'HTML'): Promise<boolean> {
   const botToken = await getBotToken();
   if (!botToken) {
     console.error('Bot token not found in database');
-    return;
+    return false;
   }
 
-  try {
+  const doSend = async (mode?: 'HTML' | 'MarkdownV2') => {
+    const payload: any = { chat_id: chatId, text, disable_web_page_preview: true };
+    if (mode) payload.parse_mode = mode;
     const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: parseMode
-      })
+      body: JSON.stringify(payload)
     });
-
+    const txt = await response.text();
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Telegram API error:', errorData);
+      console.error('Telegram API error:', txt);
+      return { ok: false, txt };
     }
+    try { console.log('Telegram API response:', txt); } catch {}
+    return { ok: true, txt };
+  };
+
+  try {
+    // 1) Try HTML
+    let res = await doSend('HTML');
+    if (res.ok) return true;
+
+    // 2) Fallback to MarkdownV2 (without escaping we just try in case)
+    res = await doSend('MarkdownV2');
+    if (res.ok) return true;
+
+    // 3) Plain text
+    res = await doSend(undefined);
+    return !!res.ok;
   } catch (error) {
     console.error('Error sending message to Telegram:', error);
+    return false;
   }
 }
 
