@@ -409,9 +409,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         const segments = line.split('+').map(s => s.trim()).filter(Boolean);
         if (segments.length) {
           const sizeMap: Record<string, string> = {
-            'سمول': 'S', 'صغير': 'S', 'س': 'S', 'small': 'S',
-            'ميديم': 'M', 'وسط': 'M', 'م': 'M', 'medium': 'M',
-            'لارج': 'L', 'كبير': 'L', 'ل': 'L', 'large': 'L'
+            'سمول': 'S', 'صغير': 'S', 'س': 'S', 'small': 'S', 's': 'S',
+            'ميديم': 'M', 'وسط': 'M', 'متوسط': 'M', 'م': 'M', 'medium': 'M', 'm': 'M',
+            'لارج': 'L', 'كبير': 'L', 'ل': 'L', 'large': 'L', 'l': 'L',
+            'xl': 'XL', 'x l': 'XL', 'اكس لارج': 'XL', 'اكسلارج': 'XL', 'إكس لارج': 'XL', 'إكسلارج': 'XL', 'Xl': 'XL', 'XL': 'XL',
+            'xxl': 'XXL', 'x x l': 'XXL', 'اكسين': 'XXL', 'اكسين لارج': 'XXL', 'اكس اكس لارج': 'XXL', 'XXL': 'XXL', 'Xxl': 'XXL', 'xXl': 'XXL',
+            'xxxl': 'XXXL', 'x x x l': 'XXXL', '3 اكس': 'XXXL', '3 اكسات': 'XXXL', 'ثلاثة اكس': 'XXXL', 'ثلاثة اكس لارج': 'XXXL', 'ثلاث اكس': 'XXXL', 'ثلاث اكس لارج': 'XXXL', 'XXXL': 'XXXL'
           };
           const isSizeOnly = (s: string) => {
             const norm = (sizeMap[s.toLowerCase()] || s).toString().trim();
@@ -720,7 +723,16 @@ const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliv
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 
 let message = '';
-if (unavailableItemsCount > 0) {
+if (unavailableItemsCount > 0 && availableItemsCount > 0) {
+  message = [
+    '⚠️ تنبيه توفر',
+    `📱 الهاتف : ${customerPhone || '—'}`,
+    okList,
+    warnList,
+    '',
+    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
+  ].join('\n');
+} else if (unavailableItemsCount > 0) {
   message = [
     '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
@@ -808,19 +820,34 @@ async function parseProduct(productText: string) {
   const { data: sizesData } = await supabase.from('sizes').select('name') || {};
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
-  // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
+  // استخراج المقاس مع دعم موسّع للمترادفات
   let size = '';
-  const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
-  const sizeMatch = text.match(basicSizeRegex);
+  // مترادفات المقاسات إلى رموز موحّدة
+  const sizeSynonyms: Array<{ re: RegExp; val: string }> = [
+    { re: /\b(سمول|صغير|small|s)\b/i, val: 'S' },
+    { re: /\b(ميديم|وسط|متوسط|medium|m|م)\b/i, val: 'M' },
+    { re: /\b(لارج|كبير|large|l|ل)\b/i, val: 'L' },
+    { re: /\b(اكس\s*لارج|اكس.?لارج|xl|x\s*l)\b/i, val: 'XL' },
+    { re: /\b(اكسين(?:\s*لارج)?|اكس\s*اكس\s*لارج|xxl|x\s*x\s*l)\b/i, val: 'XXL' },
+    { re: /\b(3\s*ا?كس(?:\s*ات)?(?:\s*لارج)?|ثلاث(?:ة)?\s*ا?كس(?:\s*لارج)?|xxxl|x\s*x\s*x\s*l)\b/i, val: 'XXXL' },
+  ];
+  for (const syn of sizeSynonyms) {
+    if (syn.re.test(text)) { size = syn.val; break; }
+  }
   
-  if (sizeMatch) {
-    size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
-  } else {
-    // البحث في المقاسات من قاعدة البيانات
-    for (const dbSize of dbSizes) {
-      if (text.toLowerCase().includes(dbSize.toLowerCase())) {
-        size = dbSize;
-        break;
+  // إذا لم نجد بالمرادفات، استخدم التعبير الأساسي
+  if (!size) {
+    const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
+    const sizeMatch = text.match(basicSizeRegex);
+    if (sizeMatch) {
+      size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+    } else {
+      // البحث في المقاسات من قاعدة البيانات
+      for (const dbSize of dbSizes) {
+        if (text.toLowerCase().includes(dbSize.toLowerCase())) {
+          size = dbSize;
+          break;
+        }
       }
     }
   }
