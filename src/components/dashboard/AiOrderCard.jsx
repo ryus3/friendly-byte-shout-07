@@ -38,51 +38,30 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   };
 
   const getStatusColor = (status) => {
-    // Check if order has stock issues (you would need to add this logic based on your data structure)
-    const hasStockIssues = order.stock_status === 'out_of_stock' || 
-                          order.order_data?.has_stock_issues || 
-                          (order.order_data?.items && order.order_data.items.some(item => item.stock_status === 'out_of_stock'));
-    
-    const hasAvailableStock = order.stock_status === 'available' || 
-                             order.order_data?.stock_available ||
-                             (order.order_data?.items && order.order_data.items.every(item => item.stock_status === 'available'));
-    
-    // Professional color scheme based on stock availability and status
-    if (hasStockIssues) {
-      return {
-        gradient: 'bg-gradient-to-br from-red-500 via-orange-500 to-red-600' // Out of stock - urgent attention
-      };
-    } else if (hasAvailableStock) {
-      return {
-        gradient: 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600' // Available - success
-      };
-    }
-    
-    // Default status-based colors
     switch (status) {
       case 'pending':
         return {
-          gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500' // Pending - needs attention
+          gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500'
         };
       case 'processing':
         return {
-          gradient: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600' // Processing - in progress
+          gradient: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600'
         };
       case 'completed':
         return {
-          gradient: 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600' // Completed - success
+          gradient: 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600'
         };
       case 'needs_review':
         return {
-          gradient: 'bg-gradient-to-br from-red-500 via-pink-500 to-rose-600' // Needs review - urgent
+          gradient: 'bg-gradient-to-br from-red-500 via-pink-500 to-rose-600'
         };
       case 'failed':
         return {
-          gradient: 'bg-gradient-to-br from-gray-500 via-slate-600 to-gray-700' // Failed - neutral
+          gradient: 'bg-gradient-to-br from-gray-500 via-slate-600 to-gray-700'
         };
       default:
         return {
-          gradient: 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700' // Default - neutral
+          gradient: 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700'
         };
     }
   };
