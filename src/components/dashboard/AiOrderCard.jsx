@@ -180,6 +180,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     return getStatusColor(order.status).gradient;
   }, [availability, needsReview, order.status]);
 
+  const isProblematic = availability !== 'available' || needsReview;
+
   return (
     <Card className={cn(
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
@@ -310,7 +312,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs bg-sky-500 text-white hover:bg-sky-600 gap-1" disabled={availability !== 'available' || needsReview}>
+                <Button variant="ghost" size="sm" className={cn("h-8 text-xs gap-1", isProblematic ? "bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white")} disabled={availability !== 'available' || needsReview}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>
@@ -356,7 +358,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Delete */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs bg-red-500 text-white hover:bg-red-600 gap-1">
+                <Button variant="ghost" size="sm" className={cn("h-8 text-xs gap-1", isProblematic ? "bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" : "bg-red-500 text-white hover:bg-red-600")}>
                   <Trash2 className="w-3 h-3" />
                   حذف
                 </Button>
