@@ -328,6 +328,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                     onClick={async () => {
                       const res = await approveAiOrder(order.id);
                       if (res?.success) {
+                        // ضمان حذف الطلب الذكي حتى لو فشلت RLS في الدالة الداخلية
+                        try { await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id }); } catch {}
                         window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: order.id } }));
                         toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
                         try { await refreshAll?.(); } catch (e) {}
@@ -373,9 +375,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={async () => {
-                      const { error } = await supabase.from('ai_orders').delete().eq('id', order.id);
-                      if (error) {
-                        toast({ title: 'فشل الحذف', description: error.message, variant: 'destructive' });
+                      const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id });
+                      if (rpcErr || rpcRes?.success === false) {
+                        toast({ title: 'فشل الحذف', description: rpcErr?.message || rpcRes?.error || 'تعذر حذف الطلب الذكي', variant: 'destructive' });
                       } else {
                         window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                         toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
