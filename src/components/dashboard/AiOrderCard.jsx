@@ -112,7 +112,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       default: return <AlertTriangle className="w-3 h-3 ml-1" />;
     }
   };
-  const { products = [], users = [], approveAiOrder } = useSuper();
+  const { products = [], users = [], approveAiOrder, refreshAll } = useSuper();
 
   const items = useMemo(() => (
     Array.isArray(order.items) ? order.items : (order.order_data?.items || [])
@@ -174,9 +174,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const needsReview = useMemo(() => needsReviewStatuses.includes(order.status) || availability !== 'available', [order.status, availability]);
 
   const gradientToUse = useMemo(() => {
-    if (availability === 'out') return 'bg-gradient-to-br from-red-500 via-orange-500 to-rose-600';
+    if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
     if (availability === 'available' && !needsReview) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
-    if (needsReview) return 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500';
+    if (needsReview) return 'bg-gradient-to-br from-red-500 to-red-700';
     return getStatusColor(order.status).gradient;
   }, [availability, needsReview, order.status]);
 
@@ -218,7 +218,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               </div>
             </div>
             
-            <div className="text-left">
+            <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-1 mb-1">
                 <Badge className="bg-white/20 text-white border-0 text-[10px]">
                   {getStatusIcon(order.status)}
@@ -310,7 +310,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="h-8 text-xs bg-[hsl(var(--primary))] text-white hover:brightness-110" disabled={availability !== 'available' || needsReview}>
+                <Button size="sm" className="h-8 text-xs bg-sky-500 text-white hover:bg-sky-600" disabled={availability !== 'available' || needsReview}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>
@@ -328,6 +328,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       if (res?.success) {
                         window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: order.id } }));
                         toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
+                        try { await refreshAll?.(); } catch (e) {}
                       } else {
                         toast({ title: 'فشل الموافقة', description: res?.error || 'حدث خطأ غير متوقع', variant: 'destructive' });
                       }
@@ -342,7 +343,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Edit */}
             <Button 
               size="sm"
-              className="h-8 text-xs bg-white/15 text-white border border-white/20 hover:bg-white/25"
+              className="h-8 text-xs bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openQuickOrderWithAi', { detail: order }));
               }}
@@ -354,7 +355,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Delete */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="h-8 text-xs bg-white/15 text-white border border-white/20 hover:bg-white/25">
+                <Button size="sm" className="h-8 text-xs bg-red-500 text-white hover:bg-red-600">
                   <Trash2 className="w-3 h-3" />
                   حذف
                 </Button>
@@ -375,6 +376,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       } else {
                         window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                         toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
+                        try { await refreshAll?.(); } catch (e) {}
                       }
                     }}
                   >
