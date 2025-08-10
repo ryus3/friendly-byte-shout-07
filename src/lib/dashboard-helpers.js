@@ -154,7 +154,7 @@ export const getTopCustomers = (orders) => {
     
     console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
     
-    return isDeliveredOrCompleted && !isReturnedOrCancelled && !!order.receipt_received;
+    return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
   console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
@@ -230,7 +230,7 @@ export const getTopProvinces = (orders) => {
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
-    return isDeliveredOrCompleted && !isReturnedOrCancelled && !!order.receipt_received;
+    return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
   console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);

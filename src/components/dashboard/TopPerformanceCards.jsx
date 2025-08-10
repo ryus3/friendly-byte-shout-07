@@ -30,7 +30,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const customerStats = deliveredOrders.reduce((acc, order) => {
@@ -75,7 +75,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const cityStats = deliveredOrders.reduce((acc, order) => {
@@ -116,7 +116,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const productStats = {};
