@@ -8,6 +8,7 @@ import { X, Bot, FileDown, Trash2, ShieldCheck, Loader2, AlertTriangle } from 'l
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
 import AiOrderCard from './AiOrderCard';
+import AiOrdersHeaderStats from './AiOrdersHeaderStats';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -64,6 +65,32 @@ const AiOrdersManager = ({ onClose }) => {
     return userAiOrders.some(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient'));
   }, [userAiOrders]);
 
+  const needReviewCount = React.useMemo(() => {
+    return userAiOrders.filter(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient')).length;
+  }, [userAiOrders]);
+
+  const totalCount = userAiOrders.length;
+
+  const telegramCount = React.useMemo(() => {
+    return userAiOrders.filter(o => (
+      o?.source === 'telegram' ||
+      o?.channel === 'telegram' ||
+      o?.platform === 'telegram' ||
+      o?.entry === 'telegram' ||
+      o?.from_telegram === true ||
+      o?.meta?.source === 'telegram'
+    )).length;
+  }, [userAiOrders]);
+
+  const aiCount = React.useMemo(() => {
+    return userAiOrders.filter(o => (
+      o?.source === 'ai' ||
+      o?.origin === 'ai' ||
+      o?.ai_generated === true ||
+      o?.is_ai === true ||
+      o?.meta?.ai === true
+    )).length;
+  }, [userAiOrders]);
   const handleSelectAll = (checked) => {
     if (checked) {
       setSelectedOrders(userAiOrders.map(order => order.id));
@@ -120,7 +147,7 @@ const AiOrdersManager = ({ onClose }) => {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-primary/10 w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        className="bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-primary/10 w-full max-w-3xl lg:max-w-4xl max-h-[88vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         <Card className="border-0 h-full">
@@ -144,7 +171,10 @@ const AiOrdersManager = ({ onClose }) => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex flex-col h-[calc(90vh-100px)]">
+          <CardContent className="p-0 flex flex-col h-[calc(86vh-80px)] overscroll-contain">
+            <div className="p-3 md:p-4 border-b bg-gradient-to-l from-primary/5 to-background/40 supports-[backdrop-filter]:backdrop-blur">
+              <AiOrdersHeaderStats totalCount={totalCount} telegramCount={telegramCount} aiCount={aiCount} needReviewCount={needReviewCount} />
+            </div>
             {userAiOrders.length > 0 && (
               <div className="p-3 md:p-4 border-b bg-gradient-to-l from-muted/50 to-background/50 supports-[backdrop-filter]:backdrop-blur">
                 <div className="flex items-center justify-between">
@@ -199,13 +229,15 @@ const AiOrdersManager = ({ onClose }) => {
             )}
 
             <div className="flex-1 overflow-y-auto p-4">
-              {hasAnyUnavailable && (
-                <div className="mb-4 rounded-xl p-4 bg-destructive/15 text-destructive ring-1 ring-destructive/30 shadow-sm animate-fade-in">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 mt-0.5" />
-                    <div>
-                      <p className="font-semibold">هناك طلبات تحتوي عناصر غير متاحة/محجوزة</p>
-                      <p className="text-sm opacity-90">يرجى تعديل الطلب واختيار بديل قبل الموافقة. لا تتم الموافقة على الطلبات التي تحتوي عناصر غير متاحة.</p>
+              {needReviewCount > 0 && (
+                <div className="mb-4 rounded-2xl p-4 md:p-5 bg-gradient-to-br from-destructive/15 to-background/10 ring-1 ring-destructive/40 shadow-lg hover-scale animate-enter">
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 bg-destructive/20 text-destructive rounded-lg p-2 ring-1 ring-destructive/30">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold leading-6">هناك {needReviewCount} طلب تحتاج إلى مراجعة</p>
+                      <p className="text-sm text-muted-foreground mt-1">يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة.</p>
                     </div>
                   </div>
                 </div>
