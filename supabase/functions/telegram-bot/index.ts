@@ -689,8 +689,9 @@ const okList = availableItems.map(item => {
 }).join('\n');
 
 // المجموع يُحسب من المنتجات المتاحة فقط
-const totalAvailable = availableItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+const totalAvailable = availableItems.reduce((sum, item) => sum + ((item.price || item.unit_price || 0) * (item.quantity || 1)), 0);
 
+// احتساب التوصيل إن وُجد
 const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliveryFee || 0) : 0;
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 

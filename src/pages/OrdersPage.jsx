@@ -142,6 +142,21 @@ const OrdersPage = () => {
     };
   }, [refetchProducts]);
 
+  // مستمعون عامّون لأحداث النظام المحلية لضمان التحديث حتى إن لم تصل Realtime
+  useEffect(() => {
+    const handler = () => { try { refetchProducts?.(); } catch {} };
+    window.addEventListener('orderCreated', handler);
+    window.addEventListener('orderUpdated', handler);
+    window.addEventListener('orderDeleted', handler);
+    window.addEventListener('aiOrderDeleted', handler);
+    return () => {
+      window.removeEventListener('orderCreated', handler);
+      window.removeEventListener('orderUpdated', handler);
+      window.removeEventListener('orderDeleted', handler);
+      window.removeEventListener('aiOrderDeleted', handler);
+    };
+  }, [refetchProducts]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusFilter = params.get('status');

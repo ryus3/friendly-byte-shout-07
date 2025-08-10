@@ -842,6 +842,9 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
+      // بث حدث إنشاء الطلب محلياً لتحديث الواجهات فوراً
+      try { window.dispatchEvent(new CustomEvent('orderCreated', { detail: createdOrder })); } catch {}
+
       // 8) حذف الطلب الذكي نهائياً
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
       if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
