@@ -1,239 +1,226 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2, MessageCircle, Bot, AlertTriangle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
-import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { 
+  Bot, 
+  MessageSquare, 
+  Clock, 
+  CheckCircle2, 
+  XCircle, 
+  Send, 
+  Eye,
+  AlertTriangle,
+  User,
+  Calendar,
+  Hash,
+  Smartphone,
+  Zap
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
-    const { approveAiOrder, deleteOrders } = useInventory();
-    const { user, hasPermission } = useAuth();
-    const [isProcessing, setIsProcessing] = React.useState(false);
-    const [creatorName, setCreatorName] = React.useState(null);
+const AiOrderCard = ({ order }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  const displayId = order?.order_number || order?.order_data?.trackingNumber || order?.order_data?.order_code || (order?.id ? String(order.id).split('-')[0].toUpperCase() : '');
 
-    // عرض اسم المستخدم بدلاً من كود الموظف
-    React.useEffect(() => {
-        let isMounted = true;
-        const fetchName = async () => {
-            if (!order?.created_by) return;
-            try {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('full_name, username')
-                    .eq('employee_code', order.created_by)
-                    .maybeSingle();
-                if (!error && isMounted) {
-                    setCreatorName(data?.full_name || data?.username || order.created_by);
-                }
-            } catch (err) {
-                console.error('Error fetching creator name:', err);
-            }
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return {
+          gradient: 'bg-gradient-to-br from-orange-500 to-orange-700'
         };
-        fetchName();
-        return () => { isMounted = false; };
-    }, [order?.created_by]);
-
-    const handleDelete = async () => {
-        setIsProcessing(true);
-        await deleteOrders([order.id], true);
-        setIsProcessing(false);
-        toast({ title: "تم حذف الطلب الذكي", variant: "success" });
+      case 'processing':
+        return {
+          gradient: 'bg-gradient-to-br from-blue-500 to-blue-700'
+        };
+      case 'completed':
+        return {
+          gradient: 'bg-gradient-to-br from-emerald-500 to-teal-600'
+        };
+      case 'needs_review':
+        return {
+          gradient: 'bg-gradient-to-br from-red-500 to-red-700'
+        };
+      case 'failed':
+        return {
+          gradient: 'bg-gradient-to-br from-gray-500 to-gray-700'
+        };
+      default:
+        return {
+          gradient: 'bg-gradient-to-br from-slate-500 to-slate-700'
+        };
     }
+  };
 
-    const handleApproveClick = async () => {
-        setIsProcessing(true);
-        try {
-            const res = await approveAiOrder(order.id);
-            if (res?.success) {
-                toast({ title: "تم التحويل", description: "تم إنشاء طلب حقيقي وحذف الذكي", variant: "success" });
-            } else {
-                toast({ title: "لم يكتمل", description: res?.error || "فشل التحويل", variant: "destructive" });
-            }
-        } catch (error) {
-            console.error('Error approving order:', error);
-            toast({ title: "خطأ", description: error.message || "فشل في تحويل الطلب", variant: "destructive" });
-        } finally {
-            setIsProcessing(false);
-        }
+  const getSourceIcon = (source) => {
+    switch (source) {
+      case 'telegram':
+        return {
+          icon: MessageSquare,
+          label: 'تليغرام'
+        };
+      case 'ai_chat':
+        return {
+          icon: Bot,
+          label: 'ذكاء اصطناعي'
+        };
+      case 'web':
+        return {
+          icon: Smartphone,
+          label: 'الموقع'
+        };
+      default:
+        return {
+          icon: MessageSquare,
+          label: 'غير محدد'
+        };
     }
+  };
 
-    // تحديد نوع المصدر وأيقونته
-    const getSourceInfo = (source) => {
-        switch (source) {
-            case 'telegram':
-                return { icon: MessageCircle, label: 'تليغرام', color: 'text-primary' };
-            case 'whatsapp':
-                return { icon: MessageCircle, label: 'واتساب', color: 'text-primary' };
-            default:
-                return { icon: Bot, label: 'ذكي', color: 'text-primary' };
-        }
-    };
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'pending': return 'قيد الانتظار';
+      case 'processing': return 'قيد المعالجة';
+      case 'completed': return 'مكتمل';
+      case 'needs_review': return 'يحتاج مراجعة';
+      case 'failed': return 'فشل';
+      default: return 'غير محدد';
+    }
+  };
 
-    const sourceInfo = getSourceInfo(order.source);
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-3 h-3 mr-1" />;
+      case 'processing': return <Zap className="w-3 h-3 mr-1" />;
+      case 'completed': return <CheckCircle2 className="w-3 h-3 mr-1" />;
+      case 'needs_review': return <AlertTriangle className="w-3 h-3 mr-1" />;
+      case 'failed': return <XCircle className="w-3 h-3 mr-1" />;
+      default: return <AlertTriangle className="w-3 h-3 mr-1" />;
+    }
+  };
 
-    // فحص توفر بديل احتياطي للطلبات القديمة التي لا تحتوي حقول availability
-    const { products } = useInventory();
-    const isItemAvailable = (it) => {
-        if (it?.available === false) return false;
-        if (it?.availability) return it.availability === 'ok';
-        // احتياطي: حساب التوفر من بيانات المخزون عند توفر variant_id
-        if (it?.variant_id) {
-            const variant = products?.flatMap(p => p.variants || []).find(v => v.id === it.variant_id);
-            if (variant) {
-                const qty = Number(variant.quantity || 0);
-                const reserved = Number(variant.reserved_quantity || 0);
-                const availableQty = Math.max(0, qty - reserved);
-                const requested = Number(it.quantity || 1);
-                return availableQty >= requested;
-            }
-        }
-        return true; // إذا لم نستطع التحقق نعتبره متاح لتجنب الإيجابيات الكاذبة
-    };
-
-    const hasUnavailable = Array.isArray(order.items) && order.items.some(it => !isItemAvailable(it));
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="group rounded-2xl p-4 md:p-5 space-y-4 bg-card/70 backdrop-blur ring-1 ring-border/50 hover:ring-primary/40 hover:shadow-xl transition-all hover-scale"
-        >
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                    <Checkbox 
-                        checked={isSelected}
-                        onCheckedChange={onSelect}
-                    />
-                    <div className="flex items-center gap-2">
-                        <sourceInfo.icon className={`w-5 h-5 ${sourceInfo.color}`} />
-                        <div className="space-y-1">
-                            <h4 className="font-medium">{order.customer_name}</h4>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Package className="w-4 h-4" />
-                                <span>{order.items?.length || 0} منتجات</span>
-                                <Badge variant="outline" size="sm" className="ml-1">
-                                    {sourceInfo.label}
-                                </Badge>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <Badge variant="secondary" className="bg-primary/10 text-primary ring-1 ring-primary/20 shadow-sm">
-                    {order.total_amount?.toLocaleString() || 0} د.ع
-                </Badge>
+  return (
+    <Card className={cn(
+      "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
+      "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20"
+    )}>
+      <CardContent className="p-3">
+        <div className={cn(
+          "relative rounded-lg p-3 text-white overflow-hidden",
+          getStatusColor(order.status).gradient
+        )}>
+          {/* Background decoration */}
+          <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+          <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+          
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                {React.createElement(getSourceIcon(order.source).icon, {
+                  className: "w-4 h-4 text-white"
+                })}
+              </div>
+              <div>
+                <h4 className="font-bold text-sm">طلب {displayId ? `#${displayId}` : ''}</h4>
+                <p className="text-xs opacity-90">{getSourceIcon(order.source).label}</p>
+              </div>
             </div>
+            
+            <Badge className="bg-white/20 text-white border-0 text-xs">
+              {getStatusText(order.status)}
+            </Badge>
+          </div>
 
-            {hasUnavailable && (
-                <div className="rounded-xl p-4 bg-destructive/15 text-destructive ring-1 ring-destructive/30 shadow-sm animate-fade-in">
-                    <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-5 h-5 mt-0.5" />
-                        <div>
-                            <p className="font-semibold">بعض العناصر غير متاحة أو محجوزة</p>
-                            <p className="text-sm opacity-90">يرجى اختيار بديل قبل الموافقة. لا نبيع بالسالب أو العناصر النافذة.</p>
-                        </div>
-                    </div>
+          {/* Customer Info */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-1">
+              <User className="w-3 h-3" />
+              <span className="text-xs font-medium truncate max-w-[100px]">
+                {order.customer_name || 'غير محدد'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
+              <span className="text-xs opacity-90">
+                {new Date(order.created_at).toLocaleDateString('ar-EG')}
+              </span>
+            </div>
+          </div>
+
+          {/* Message Preview */}
+          <div className="bg-white/10 rounded-md p-2 mb-3 backdrop-blur-sm">
+            <p className="text-xs leading-relaxed line-clamp-2">
+              {order.message || 'لا توجد تفاصيل متاحة'}
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="secondary"
+              className="flex-1 h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              <Eye className="w-3 h-3 mr-1" />
+              {showDetails ? 'إخفاء' : 'عرض'}
+            </Button>
+            
+            <Button 
+              size="sm"
+              className="flex-1 h-7 text-xs bg-white/30 hover:bg-white/40 text-white border-0"
+            >
+              <Send className="w-3 h-3 mr-1" />
+              {order.status === 'pending' ? 'معالجة' : 'رد'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Expanded Details */}
+        {showDetails && (
+          <div className="mt-3 space-y-2">
+            {order.customer_phone && (
+              <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
+                <div className="flex items-center gap-2 text-xs">
+                  <Smartphone className="w-3 h-3 text-green-600" />
+                  <span className="font-medium">الهاتف:</span>
+                  <span className="text-muted-foreground">{order.customer_phone}</span>
                 </div>
+              </div>
             )}
-
-            <div className="space-y-2 text-sm">
-                {order.customer_phone && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Phone className="w-4 h-4" />
-                        {order.customer_phone}
-                    </div>
-                )}
-                
-                {order.customer_address && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <MapPin className="w-4 h-4" />
-                        {order.customer_address}
-                    </div>
-                )}
-
-                {order.created_by && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        <span>بواسطة: {creatorName || order.created_by}</span>
-                    </div>
-                )}
-
-                {order.items && order.items.length > 0 && (
-                    <div>
-                        <span className="font-medium">العناصر:</span>
-                        <div className="mt-1 space-y-1">
-                            {order.items.slice(0, 3).map((item, index) => (
-                                <div key={index} className="text-xs text-muted-foreground pl-4">
-                                    • {item.name} {item.quantity && `× ${item.quantity}`}
-                                </div>
-                            ))}
-                            {order.items.length > 3 && (
-                                <div className="text-xs text-muted-foreground pl-4">
-                                    ... و {order.items.length - 3} عناصر أخرى
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {order.order_data?.original_text && (
-                    <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
-                        <span className="font-medium">النص الأصلي:</span>
-                        <div className="mt-1 text-muted-foreground max-h-20 overflow-y-auto">
-                            {order.order_data.original_text}
-                        </div>
-                    </div>
-                )}
+            
+            {order.ai_response && (
+              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-md p-2">
+                <h5 className="font-medium text-xs mb-1 text-blue-800 dark:text-blue-200 flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  رد الذكاء الاصطناعي:
+                </h5>
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  {order.ai_response}
+                </p>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
+                <span className="font-medium text-xs block">وقت الإنشاء:</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(order.created_at).toLocaleTimeString('ar-EG')}
+                </span>
+              </div>
+              <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
+                <span className="font-medium text-xs block">آخر تحديث:</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(order.updated_at || order.created_at).toLocaleTimeString('ar-EG')}
+                </span>
+              </div>
             </div>
-
-            <div className="flex items-center justify-between pt-3 border-t">
-                <div className="flex items-center gap-2">
-                    <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={onEdit}
-                        disabled={isProcessing}
-                    >
-                        <Edit className="w-4 h-4 ml-2" />
-                        تعديل
-                    </Button>
-                    <Button 
-                        size="sm" 
-                        variant="destructive" 
-                        onClick={handleDelete}
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Trash2 className="w-4 h-4 ml-2" />}
-                        حذف
-                    </Button>
-                </div>
-                
-                <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button size="sm" disabled={isProcessing || hasUnavailable}>
-                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                            {hasUnavailable ? 'حلّ التعارض أولاً' : 'موافقة'}
-                        </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>تأكيد تحويل الطلب</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                سيتم تحويل هذا الطلب الذكي إلى طلب حقيقي مع التحقق من المخزون وحجزه.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleApproveClick}>تأكيد التحويل</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </div>
-        </motion.div>
-    );
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 };
 
 export default AiOrderCard;
