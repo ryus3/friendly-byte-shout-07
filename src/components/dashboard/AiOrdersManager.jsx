@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/hooks/use-toast';
 import { 
   Bot, 
   MessageSquare, 
@@ -160,42 +159,14 @@ const AiOrdersManager = ({ onClose }) => {
     }
   };
 
-  const handleBulkAction = async (action) => {
+  const handleBulkAction = (action) => {
     if (selectedOrders.length === 0) return;
-    const ids = [...selectedOrders];
-    try {
-      if (action === 'approve') {
-        let ok = 0, fail = 0;
-        for (const id of ids) {
-          try {
-            const res = await useSuper().approveAiOrder(id);
-            if (res?.success) {
-              try { await supabase.rpc('delete_ai_order_safe', { p_order_id: id }); } catch {}
-              window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } }));
-              ok++;
-            } else { fail++; }
-          } catch { fail++; }
-        }
-        setOrders(prev => prev.filter(o => !ids.includes(o.id)));
-        toast({ title: 'الموافقة على المحدد', description: `تمت الموافقة على ${ok}، فشل ${fail}`, variant: fail ? 'destructive' : 'success' });
-      } else if (action === 'delete') {
-        let ok = 0, fail = 0;
-        await Promise.all(ids.map(async (id) => {
-          try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: id });
-            if (rpcErr || rpcRes?.success === false) throw new Error(rpcErr?.message || rpcRes?.error);
-            window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } }));
-            ok++;
-          } catch { fail++; }
-        }));
-        setOrders(prev => prev.filter(o => !ids.includes(o.id)));
-        toast({ title: 'حذف المحدد', description: `تم حذف ${ok}، فشل ${fail}`, variant: fail ? 'destructive' : 'success' });
-      }
-    } finally {
-      setSelectedOrders([]);
-      try { await refreshAll?.(); } catch {}
-    }
+    
+    console.log(`Bulk ${action} for orders:`, selectedOrders);
+    // Here you would implement the bulk action logic
+    setSelectedOrders([]);
   };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
       <ScrollArea className="h-full w-full max-w-5xl mx-auto" onClick={(e) => e.stopPropagation()}>
