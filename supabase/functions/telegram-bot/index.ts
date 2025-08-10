@@ -720,7 +720,16 @@ const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliv
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 
 let message = '';
-if (unavailableItemsCount > 0) {
+if (unavailableItemsCount > 0 && availableItemsCount > 0) {
+  message = [
+    '⚠️ تنبيه توفر',
+    `📱 الهاتف : ${customerPhone || '—'}`,
+    okList,
+    warnList,
+    '',
+    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
+  ].join('\n');
+} else if (unavailableItemsCount > 0) {
   message = [
     '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
