@@ -358,6 +358,23 @@ export const SuperProvider = ({ children }) => {
     };
   }, [user, fetchAllData]);
 
+  // تحديث فوري أيضاً عبر أحداث المتصفح (احتياطي عند تأخر Realtime)
+  useEffect(() => {
+    const handler = () => { try { fetchAllData(); } catch {} };
+    window.addEventListener('aiOrderApproved', handler);
+    window.addEventListener('aiOrderDeleted', handler);
+    window.addEventListener('orderCreated', handler);
+    window.addEventListener('orderUpdated', handler);
+    window.addEventListener('orderDeleted', handler);
+    return () => {
+      window.removeEventListener('aiOrderApproved', handler);
+      window.removeEventListener('aiOrderDeleted', handler);
+      window.removeEventListener('orderCreated', handler);
+      window.removeEventListener('orderUpdated', handler);
+      window.removeEventListener('orderDeleted', handler);
+    };
+  }, [fetchAllData]);
+
   // ===============================
   // وظائف متوافقة مع InventoryContext
   // ===============================
@@ -776,9 +793,11 @@ export const SuperProvider = ({ children }) => {
         reservedSoFar.push(it);
       }
 
-      // 5) حساب المجاميع
+      // 5) حساب المجاميع مع رسوم التوصيل الحقيقية
       const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * (it.unit_price || 0), 0);
-      const deliveryFee = 0; // افتراضي محلي هنا
+      const deliveryType = aiOrder?.order_data?.delivery_type || (aiOrder?.customer_address ? 'توصيل' : 'محلي');
+      const settingsDelivery = Number((allData?.settings?.deliveryFee ?? 5000)) || 0;
+      const deliveryFee = deliveryType === 'توصيل' ? settingsDelivery : 0;
       const discount = 0;
       const total = subtotal - discount + deliveryFee;
 
@@ -799,7 +818,7 @@ export const SuperProvider = ({ children }) => {
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
-        delivery_partner: 'محلي',
+        delivery_partner: deliveryType === 'توصيل' ? 'شركة التوصيل' : 'محلي',
         notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
         created_by: user?.user_id || user?.id,
       };
