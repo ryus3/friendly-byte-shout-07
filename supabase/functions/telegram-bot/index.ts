@@ -644,6 +644,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               const availableQty = Math.max(0, qty - reserved);
               const requested = Number(item.quantity || 1);
 
+              // حفظ تفاصيل المخزون لأغراض الرسائل
+              item.stock_quantity = qty;
+              item.reserved_quantity = reserved;
               item.available_quantity = availableQty;
               item.available = availableQty >= requested;
               item.availability = item.available ? 'ok' : (availableQty > 0 ? 'insufficient' : 'out');
@@ -722,7 +725,28 @@ const unavailableItemsCount = unavailableItems.length;
 // قوائم المنتجات لكل حالة
 const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
   const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
-  const reason = item.availability === 'missing_attributes' ? ' — يتطلب تحديد اللون والمقاس' : (item.availability === 'insufficient' ? ' — الكمية غير كافية' : '');
+  const reason = (() => {
+    if (item.availability === 'missing_attributes') {
+      const miss = item.missing_attributes || {};
+      if (miss.need_color && miss.need_size) return ' — بدون لون وبدون قياس';
+      if (miss.need_color) return ' — بدون لون';
+      if (miss.need_size) return ' — بدون قياس';
+      return ' — يتطلب تحديد اللون والمقاس';
+    }
+    if (item.availability === 'insufficient') {
+      const av = item.available_quantity ?? 0;
+      return ` — الكمية غير كافية (المتاح ${av})`;
+    }
+    if (item.availability === 'out') {
+      const sq = item.stock_quantity ?? 0;
+      const rq = item.reserved_quantity ?? 0;
+      if (sq === 0) return ' — نافذ من المخزون';
+      if (rq >= sq && sq > 0) return ' — محجوز بالكامل';
+      return ' — غير متاح حالياً';
+    }
+    if (item.availability === 'not_found') return ' — غير موجود في النظام';
+    return '';
+  })();
   return `❌ غير متاح ${base}${reason}`;
 }).join('\n');
 
