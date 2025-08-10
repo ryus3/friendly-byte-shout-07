@@ -404,38 +404,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         continue;
       }
       
-      // التحقق من المنتجات (يدعم + للفصل مع فهم المقاسات المختصرة)
+      // التحقق من المنتجات (يدعم + للفصل)
       if (line.includes('+')) {
-        const segments = line.split('+').map(s => s.trim()).filter(Boolean);
-        if (segments.length) {
-          const sizeMap: Record<string, string> = {
-            'سمول': 'S', 'صغير': 'S', 'س': 'S', 'small': 'S', 's': 'S',
-            'ميديم': 'M', 'وسط': 'M', 'متوسط': 'M', 'م': 'M', 'medium': 'M', 'm': 'M',
-            'لارج': 'L', 'كبير': 'L', 'ل': 'L', 'large': 'L', 'l': 'L',
-            'xl': 'XL', 'x l': 'XL', 'اكس لارج': 'XL', 'اكسلارج': 'XL', 'إكس لارج': 'XL', 'إكسلارج': 'XL', 'Xl': 'XL', 'XL': 'XL',
-            'xxl': 'XXL', 'x x l': 'XXL', 'اكسين': 'XXL', 'اكسين لارج': 'XXL', 'اكس اكس لارج': 'XXL', 'XXL': 'XXL', 'Xxl': 'XXL', 'xXl': 'XXL',
-            'xxxl': 'XXXL', 'x x x l': 'XXXL', '3 اكس': 'XXXL', '3 اكسات': 'XXXL', 'ثلاثة اكس': 'XXXL', 'ثلاثة اكس لارج': 'XXXL', 'ثلاث اكس': 'XXXL', 'ثلاث اكس لارج': 'XXXL', 'XXXL': 'XXXL'
-          };
-          const isSizeOnly = (s: string) => {
-            const norm = (sizeMap[s.toLowerCase()] || s).toString().trim();
-            return /^(s|m|l|xl|xxl|xxxl|\d{2,3})$/i.test(norm);
-          };
-          // المنتج الأساس
-          const firstParsed = await parseProduct(segments[0]);
-          items.push(firstParsed);
-          const baseName = firstParsed.name || '';
-          const baseColor = firstParsed.color ? ` ${firstParsed.color}` : '';
-          for (let k = 1; k < segments.length; k++) {
-            const seg = segments[k];
-            if (!seg) continue;
-            const lower = seg.toLowerCase();
-            const mapped = sizeMap[lower] || seg;
-            if (isSizeOnly(seg)) {
-              const combined = `${baseName}${baseColor} ${mapped}`.trim();
-              items.push(await parseProduct(combined));
-            } else {
-              items.push(await parseProduct(seg));
-            }
+        const products = line.split('+').map(p => p.trim());
+        for (const product of products) {
+          if (product) {
+            items.push(await parseProduct(product));
           }
         }
         continue;
@@ -543,9 +517,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               barcode,
               colors (name),
               sizes (name)
-            ),
-            product_departments (
-              departments ( name )
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -570,9 +541,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                   barcode,
                   colors (name),
                   sizes (name)
-                ),
-                product_departments (
-                  departments ( name )
                 )
               `)
               .or(searchQuery)
@@ -603,24 +571,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         if (bestMatch) {
           let productPrice = bestMatch.base_price || 0;
           let selectedVariant = null;
-
-          // تحديد إن كان المنتج من قسم الملابس أو الأحذية → يجب تحديد اللون والقياس
-          const depNames = (bestMatch.product_departments || []).map((pd: any) => (pd?.departments?.name || '').toString().toLowerCase());
-          const nameLc = (bestMatch.name || '').toString().toLowerCase();
-          const isClothingOrShoes = depNames.some((n: string) => ['ملابس','أحذية','احذية','clothing','clothes','shoes','footwear'].some(k => n.includes(k)))
-            || /(قميص|بنطال|بنطلون|سوت|بدلة|تيشيرت|هودي|جاكيت|حذاء|بوت|سنيكر|صندل|نعال|خف)/i.test(nameLc);
-
-          // إذا كان من هذه الأقسام ولم يذكر اللون أو القياس → لا نعتمد على أول تنويع، ونوسم العنصر كمعلومات ناقصة
-          if (isClothingOrShoes && (!item.size || !item.color)) {
-            item.available = false;
-            item.availability = 'missing_attributes';
-            item.product_id = bestMatch.id;
-            item.product_name = bestMatch.name;
-            item.available_quantity = 0;
-            // لا نضيف للسعر وننتقل للعنصر التالي
-            console.log(`Missing attributes (color/size) for clothing/shoes: ${bestMatch.name}`);
-            continue;
-          }
           
           // البحث عن التنويع المطابق للون والمقاس
           if (bestMatch.product_variants && bestMatch.product_variants.length > 0) {
@@ -732,9 +682,7 @@ const unavailableItemsCount = unavailableItems.length;
 
 // قوائم المنتجات لكل حالة
 const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
-  const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
-  const reason = item.availability === 'missing_attributes' ? ' — يرجى تحديد اللون والقياس' : '';
-  return `❌ ${item.availability === 'missing_attributes' ? 'معلومات ناقصة' : 'غير متاح'} ${base}${reason}`;
+  return `❌ غير متاح ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
 }).join('\n');
 
 const okList = availableItems.map(item => {
@@ -749,16 +697,7 @@ const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliv
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 
 let message = '';
-if (unavailableItemsCount > 0 && availableItemsCount > 0) {
-  message = [
-    '⚠️ تنبيه توفر',
-    `📱 الهاتف : ${customerPhone || '—'}`,
-    okList,
-    warnList,
-    '',
-    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
-  ].join('\n');
-} else if (unavailableItemsCount > 0) {
+if (unavailableItemsCount > 0) {
   message = [
     '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
@@ -846,34 +785,19 @@ async function parseProduct(productText: string) {
   const { data: sizesData } = await supabase.from('sizes').select('name') || {};
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
-  // استخراج المقاس مع دعم موسّع للمترادفات
+  // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
   let size = '';
-  // مترادفات المقاسات إلى رموز موحّدة
-  const sizeSynonyms: Array<{ re: RegExp; val: string }> = [
-    { re: /\b(سمول|صغير|small|s)\b/i, val: 'S' },
-    { re: /\b(ميديم|وسط|متوسط|medium|m|م)\b/i, val: 'M' },
-    { re: /\b(لارج|كبير|large|l|ل)\b/i, val: 'L' },
-    { re: /\b(اكس\s*لارج|اكس.?لارج|xl|x\s*l)\b/i, val: 'XL' },
-    { re: /\b(اكسين(?:\s*لارج)?|اكس\s*اكس\s*لارج|xxl|x\s*x\s*l)\b/i, val: 'XXL' },
-    { re: /\b(3\s*ا?كس(?:\s*ات)?(?:\s*لارج)?|ثلاث(?:ة)?\s*ا?كس(?:\s*لارج)?|xxxl|x\s*x\s*x\s*l)\b/i, val: 'XXXL' },
-  ];
-  for (const syn of sizeSynonyms) {
-    if (syn.re.test(text)) { size = syn.val; break; }
-  }
+  const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
+  const sizeMatch = text.match(basicSizeRegex);
   
-  // إذا لم نجد بالمرادفات، استخدم التعبير الأساسي
-  if (!size) {
-    const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
-    const sizeMatch = text.match(basicSizeRegex);
-    if (sizeMatch) {
-      size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
-    } else {
-      // البحث في المقاسات من قاعدة البيانات
-      for (const dbSize of dbSizes) {
-        if (text.toLowerCase().includes(dbSize.toLowerCase())) {
-          size = dbSize;
-          break;
-        }
+  if (sizeMatch) {
+    size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+  } else {
+    // البحث في المقاسات من قاعدة البيانات
+    for (const dbSize of dbSizes) {
+      if (text.toLowerCase().includes(dbSize.toLowerCase())) {
+        size = dbSize;
+        break;
       }
     }
   }

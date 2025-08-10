@@ -59,12 +59,6 @@ class SuperAPI {
       localStorage.setItem(this.persistPrefix + key, JSON.stringify({ ts: Date.now(), data }));
     } catch {}
   }
-  removePersisted(key) {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.removeItem(this.persistPrefix + key);
-    } catch {}
-  }
 
   // جلب البيانات مع منع التكرار
   async fetch(key, queryFn, options = {}) {
@@ -132,11 +126,10 @@ class SuperAPI {
     }
   }
 
-  // حذف cache عند التحديث + إزالة النسخة المحفوظة محلياً لمنع عودة البيانات القديمة
+  // حذف cache عند التحديث
   invalidate(key) {
     this.cache.delete(key);
     this.timestamps.delete(key);
-    this.removePersisted(key);
     console.log(`🗑️ تم حذف cache: ${key}`);
   }
 

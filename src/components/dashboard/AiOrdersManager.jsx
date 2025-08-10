@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/hooks/use-toast';
 import { 
   Bot, 
   MessageSquare, 
@@ -29,12 +28,10 @@ import { supabase } from '@/integrations/supabase/client';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder } = useSuper();
+  const { aiOrders = [], loading, refreshAll, products = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [canClose, setCanClose] = useState(false);
 
   useEffect(() => {
     setOrders(ordersFromContext);
@@ -43,10 +40,6 @@ const AiOrdersManager = ({ onClose }) => {
   // Force refresh when opening to fetch latest ai_orders even if cache is warm
   useEffect(() => {
     refreshAll?.();
-    const t = setTimeout(() => setCanClose(true), 150);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -166,46 +159,16 @@ const AiOrdersManager = ({ onClose }) => {
     }
   };
 
-  const handleBulkAction = async (action) => {
-    if (selectedOrders.length === 0 || isProcessing) return;
-    setIsProcessing(true);
-    const ids = [...selectedOrders];
-    try {
-      if (action === 'approve') {
-        let ok = 0, fail = 0;
-        for (const id of ids) {
-          try {
-            const res = await approveAiOrder?.(id);
-            if (res?.success) {
-              try { await supabase.rpc('delete_ai_order_safe', { p_order_id: id }); } catch {}
-              window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } }));
-              ok++;
-            } else { fail++; }
-          } catch { fail++; }
-        }
-        setOrders(prev => prev.filter(o => !ids.includes(o.id)));
-        toast({ title: 'الموافقة على المحدد', description: `تمت الموافقة على ${ok}، فشل ${fail}`, variant: fail ? 'destructive' : 'success' });
-      } else if (action === 'delete') {
-        let ok = 0, fail = 0;
-        await Promise.all(ids.map(async (id) => {
-          try {
-            const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: id });
-            if (rpcErr || rpcRes?.success === false) throw new Error(rpcErr?.message || rpcRes?.error);
-            window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } }));
-            ok++;
-          } catch { fail++; }
-        }));
-        setOrders(prev => prev.filter(o => !ids.includes(o.id)));
-        toast({ title: 'حذف المحدد', description: `تم حذف ${ok}، فشل ${fail}`, variant: fail ? 'destructive' : 'success' });
-      }
-    } finally {
-      setSelectedOrders([]);
-      setIsProcessing(false);
-      try { await refreshAll?.(); } catch {}
-    }
+  const handleBulkAction = (action) => {
+    if (selectedOrders.length === 0) return;
+    
+    console.log(`Bulk ${action} for orders:`, selectedOrders);
+    // Here you would implement the bulk action logic
+    setSelectedOrders([]);
   };
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={() => { if (canClose) onClose(); }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
       <ScrollArea className="h-full w-full max-w-5xl mx-auto" onClick={(e) => e.stopPropagation()}>
         <div 
           className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl min-h-[90vh] overflow-hidden mx-4 my-8"
@@ -383,19 +346,17 @@ const AiOrdersManager = ({ onClose }) => {
                             size="sm"
                             onClick={() => handleBulkAction('approve')}
                             className="h-7 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white"
-                            disabled={isProcessing}
                           >
                             <CheckCircle2 className="w-3 h-3 ml-1" />
-                            {isProcessing ? 'جاري الموافقة...' : `موافقة على المحدد (${selectedOrders.length})`}
+                            موافقة على المحدد ({selectedOrders.length})
                           </Button>
                           <Button
                             size="sm"
                             onClick={() => handleBulkAction('delete')}
                             className="h-7 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
-                            disabled={isProcessing}
                           >
                             <Trash2 className="w-3 h-3 ml-1" />
-                            {isProcessing ? 'جاري الحذف...' : `حذف المحدد (${selectedOrders.length})`}
+                            حذف المحدد ({selectedOrders.length})
                           </Button>
                         </div>
                       )}
