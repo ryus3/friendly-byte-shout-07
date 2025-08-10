@@ -541,6 +541,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               barcode,
               colors (name),
               sizes (name)
+            ),
+            product_departments (
+              departments (name)
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -565,6 +568,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                   barcode,
                   colors (name),
                   sizes (name)
+                ),
+                product_departments (
+                  departments (name)
                 )
               `)
               .or(searchQuery)
@@ -641,6 +647,15 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               item.available_quantity = availableQty;
               item.available = availableQty >= requested;
               item.availability = item.available ? 'ok' : (availableQty > 0 ? 'insufficient' : 'out');
+
+              // الزام اللون والمقاس لأقسام الملابس/الأحذية
+              const deptNames = (bestMatch.product_departments || []).map((pd: any) => (pd?.departments?.name || '').toLowerCase()).filter(Boolean);
+              const isClothingOrShoes = deptNames.some((n: string) => /(ملابس|لبس|أحذية|احذية|shoes|clothing)/i.test(n));
+              if (isClothingOrShoes && (!item.color || !item.size)) {
+                item.available = false;
+                item.availability = 'missing_attributes';
+                item.missing_attributes = { need_color: !item.color, need_size: !item.size } as any;
+              }
             }
           }
           
@@ -706,7 +721,9 @@ const unavailableItemsCount = unavailableItems.length;
 
 // قوائم المنتجات لكل حالة
 const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
-  return `❌ غير متاح ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+  const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+  const reason = item.availability === 'missing_attributes' ? ' — يتطلب تحديد اللون والمقاس' : (item.availability === 'insufficient' ? ' — الكمية غير كافية' : '');
+  return `❌ غير متاح ${base}${reason}`;
 }).join('\n');
 
 const okList = availableItems.map(item => {
@@ -721,7 +738,19 @@ const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliv
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 
 let message = '';
-if (unavailableItemsCount > 0) {
+if (unavailableItemsCount > 0 && availableItemsCount > 0) {
+  message = [
+    '⚠️ تنبيه توفر',
+    `📱 الهاتف : ${customerPhone || '—'}`,
+    '✅ العناصر المتاحة:',
+    okList,
+    '',
+    '❌ العناصر غير المتاحة:',
+    warnList,
+    '',
+    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
+  ].join('\n');
+} else if (unavailableItemsCount > 0) {
   message = [
     '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
