@@ -379,7 +379,7 @@ export const SuperProvider = ({ children }) => {
   useEffect(() => {
     (async () => {
       try {
-        await fetch('https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-webhook-check?auto=1');
+        await fetch('https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-webhook-check?force=1');
       } catch (_) {}
     })();
     // تشغيل لمرة واحدة فقط
