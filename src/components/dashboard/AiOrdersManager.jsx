@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,7 @@ const AiOrdersManager = ({ onClose }) => {
       customer_phone: "07901234567",
       message: "أريد فستان أزرق مقاس M وحقيبة سوداء",
       source: "telegram",
-      status: "pending",
+      status: "needs_review",
       created_at: new Date(),
       updated_at: new Date(),
       ai_response: "تم العثور على فستان أزرق وحقيبة سوداء متاحين"
@@ -43,20 +42,55 @@ const AiOrdersManager = ({ onClose }) => {
       customer_phone: "07912345678",
       message: "بحاجة لحذاء رياضي مقاس 40",
       source: "ai_chat",
+      status: "pending",
+      created_at: new Date(),
+      updated_at: new Date(),
+      ai_response: "جاري البحث عن الأحذية الرياضية المتاحة"
+    },
+    {
+      id: 3,
+      customer_name: "محمد عباس",
+      customer_phone: "07923456789",
+      message: "أحتاج قميص أبيض مقاس L",
+      source: "telegram",
       status: "completed",
+      created_at: new Date(Date.now() - 86400000),
+      updated_at: new Date(),
+      ai_response: "تم إرسال تفاصيل القمصان المتاحة"
+    },
+    {
+      id: 4,
+      customer_name: "سارة أحمد",
+      customer_phone: "07934567890",
+      message: "أريد فستان سهرة أسود",
+      source: "ai_chat",
+      status: "needs_review",
+      created_at: new Date(),
+      updated_at: new Date(),
+      ai_response: "عذراً، لا توجد فساتين سهرة متاحة حالياً"
+    },
+    {
+      id: 5,
+      customer_name: "خالد مصطفى",
+      customer_phone: "07945678901",
+      message: "بحاجة لجاكيت شتوي مقاس XL",
+      source: "telegram",
+      status: "pending",
       created_at: new Date(),
       updated_at: new Date()
     }
   ]);
 
-  const isAvailable = true;
+  const totalCount = aiOrders.length;
   const pendingCount = aiOrders.filter(order => order.status === 'pending').length;
-  const completedCount = aiOrders.filter(order => order.status === 'completed').length;
+  const needsReviewCount = aiOrders.filter(order => order.status === 'needs_review').length;
+  const telegramCount = aiOrders.filter(order => order.source === 'telegram').length;
+  const aiChatCount = aiOrders.filter(order => order.source === 'ai_chat').length;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
       <div 
-        className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl w-full max-w-4xl h-[85vh] overflow-hidden"
+        className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl w-full max-w-5xl h-[90vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -85,145 +119,156 @@ const AiOrdersManager = ({ onClose }) => {
               onClick={onClose}
               variant="ghost"
               size="sm"
-              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto"
+              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto ml-2"
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(85vh-120px)]">
+        <ScrollArea className="h-[calc(90vh-120px)]">
           <div className="p-4">
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
               {/* Total Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[120px]">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
-                  <div className="text-center space-y-2">
+                  <div className="text-center space-y-1">
                     <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <MessageSquare className="w-5 h-5" />
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <MessageSquare className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm">إجمالي الطلبات</h4>
+                      <h4 className="font-bold text-xs">إجمالي الطلبات</h4>
                       <p className="text-blue-100 text-xs">طلبات واردة</p>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
-                      <div className="text-center">
-                        <p className="text-xl font-bold">{aiOrders.length}</p>
-                        <p className="text-white/80 text-xs">طلب</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <TrendingUp className="w-3 h-3" />
-                        <span className="text-xs">نشط</span>
-                      </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{totalCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
               {/* Pending Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-red-600 text-white min-h-[120px]">
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-red-600 text-white min-h-[100px]">
                 <CardContent className="p-3">
-                  <div className="text-center space-y-2">
+                  <div className="text-center space-y-1">
                     <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <Clock className="w-5 h-5" />
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Clock className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm">في الانتظار</h4>
+                      <h4 className="font-bold text-xs">في الانتظار</h4>
                       <p className="text-orange-100 text-xs">قيد المعالجة</p>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
-                      <div className="text-center">
-                        <p className="text-xl font-bold">{pendingCount}</p>
-                        <p className="text-white/80 text-xs">طلب</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Clock className="w-3 h-3" />
-                        <span className="text-xs">انتظار</span>
-                      </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{pendingCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
-              {/* Completed Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white min-h-[120px]">
+              {/* Needs Review Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
-                  <div className="text-center space-y-2">
+                  <div className="text-center space-y-1">
                     <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <CheckCircle2 className="w-5 h-5" />
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <AlertTriangle className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm">مكتملة</h4>
-                      <p className="text-emerald-100 text-xs">تم الإنجاز</p>
+                      <h4 className="font-bold text-xs">تحتاج مراجعة</h4>
+                      <p className="text-red-100 text-xs">مراجعة عاجلة</p>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
-                      <div className="text-center">
-                        <p className="text-xl font-bold">{completedCount}</p>
-                        <p className="text-white/80 text-xs">طلب</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <CheckCircle2 className="w-3 h-3" />
-                        <span className="text-xs">مكتمل</span>
-                      </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{needsReviewCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
-              {/* AI Activity Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white min-h-[120px]">
+              {/* Telegram Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white min-h-[100px]">
                 <CardContent className="p-3">
-                  <div className="text-center space-y-2">
+                  <div className="text-center space-y-1">
                     <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <Activity className="w-5 h-5" />
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Smartphone className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-sm">نشاط الذكاء</h4>
-                      <p className="text-purple-100 text-xs">حالة النظام</p>
+                      <h4 className="font-bold text-xs">من التليغرام</h4>
+                      <p className="text-cyan-100 text-xs">تليغرام بوت</p>
                     </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
-                      <div className="text-center">
-                        <p className="text-xl font-bold">94%</p>
-                        <p className="text-white/80 text-xs">نشط</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Activity className="w-3 h-3" />
-                        <span className="text-xs">متاح</span>
-                      </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{telegramCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* AI Chat Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white min-h-[100px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-1">
+                    <div className="flex justify-center">
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Brain className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs">الذكاء الاصطناعي</h4>
+                      <p className="text-purple-100 text-xs">مساعد ذكي</p>
+                    </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{aiChatCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Needs Review Alert */}
+            {needsReviewCount > 0 && (
+              <div className="mb-4 p-3 bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <div>
+                    <h4 className="font-bold text-sm text-red-800 dark:text-red-200">
+                      لديك {needsReviewCount} طلب يحتاج مراجعة عاجلة!
+                    </h4>
+                    <p className="text-xs text-red-700 dark:text-red-300">
+                      هذه الطلبات تحتاج إلى اهتمام فوري ومراجعة يدوية
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
                 <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-blue-600" />
-                  قائمة الطلبات الذكية
+                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                  قائمة الطلبات الذكية ({aiOrders.length})
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="p-0">
-                <ScrollArea className="h-[300px]">
+                <ScrollArea className="h-[400px]">
                   <div className="p-3 space-y-3">
                     {aiOrders.length === 0 ? (
                       <div className="text-center py-8">

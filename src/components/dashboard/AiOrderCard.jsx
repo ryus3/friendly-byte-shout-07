@@ -26,7 +26,7 @@ const AiOrderCard = ({ order }) => {
     switch (status) {
       case 'pending':
         return {
-          gradient: 'bg-gradient-to-br from-yellow-500 to-orange-600'
+          gradient: 'bg-gradient-to-br from-orange-500 to-orange-700'
         };
       case 'processing':
         return {
@@ -36,9 +36,13 @@ const AiOrderCard = ({ order }) => {
         return {
           gradient: 'bg-gradient-to-br from-emerald-500 to-teal-600'
         };
-      case 'failed':
+      case 'needs_review':
         return {
           gradient: 'bg-gradient-to-br from-red-500 to-red-700'
+        };
+      case 'failed':
+        return {
+          gradient: 'bg-gradient-to-br from-gray-500 to-gray-700'
         };
       default:
         return {
@@ -77,6 +81,7 @@ const AiOrderCard = ({ order }) => {
       case 'pending': return 'قيد الانتظار';
       case 'processing': return 'قيد المعالجة';
       case 'completed': return 'مكتمل';
+      case 'needs_review': return 'يحتاج مراجعة';
       case 'failed': return 'فشل';
       default: return 'غير محدد';
     }
@@ -87,6 +92,7 @@ const AiOrderCard = ({ order }) => {
       case 'pending': return <Clock className="w-3 h-3 mr-1" />;
       case 'processing': return <Zap className="w-3 h-3 mr-1" />;
       case 'completed': return <CheckCircle2 className="w-3 h-3 mr-1" />;
+      case 'needs_review': return <AlertTriangle className="w-3 h-3 mr-1" />;
       case 'failed': return <XCircle className="w-3 h-3 mr-1" />;
       default: return <AlertTriangle className="w-3 h-3 mr-1" />;
     }
