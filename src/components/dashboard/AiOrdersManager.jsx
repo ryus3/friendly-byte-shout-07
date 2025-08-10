@@ -193,37 +193,46 @@ const AiOrdersManager = ({ onClose }) => {
         <Card className="border-0 h-full bg-transparent shadow-none">
           {/* Header */}
           <CardHeader 
-            className="border-b border-white/10 p-4 md:p-6 relative overflow-hidden"
+            className="border-b border-white/15 p-4 md:p-6 relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(147, 51, 234, 0.12) 35%, rgba(236, 72, 153, 0.12) 70%, rgba(245, 101, 101, 0.12) 100%)',
-              backdropFilter: 'blur(15px)'
+              background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(59, 130, 246, 0.15) 25%, rgba(99, 102, 241, 0.15) 50%, rgba(139, 92, 246, 0.15) 75%, rgba(168, 85, 247, 0.15) 100%)',
+              backdropFilter: 'blur(20px)'
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-white/5" />
+            <div className="absolute inset-0">
+              <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-indigo-500/10" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400" />
+            </div>
             <div className="relative flex items-center justify-between">
-              <div className="flex items-center gap-3 md:gap-4">
+              <div className="flex items-center gap-3 md:gap-5">
                 <div 
-                  className="p-2 md:p-3 rounded-xl md:rounded-2xl border border-white/30 shadow-lg"
+                  className="p-3 md:p-4 rounded-2xl border border-sky-300/30 shadow-2xl backdrop-blur-sm"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)',
-                    backdropFilter: 'blur(10px)'
+                    background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.4) 0%, rgba(59, 130, 246, 0.4) 50%, rgba(99, 102, 241, 0.4) 100%)',
+                    boxShadow: '0 20px 40px rgba(56, 189, 248, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                   }}
                 >
-                  <Bot className="w-6 h-6 md:w-8 md:h-8 text-blue-300 drop-shadow-lg" />
+                  <Bot className="w-7 h-7 md:w-9 md:h-9 text-sky-100 drop-shadow-2xl" />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <CardTitle 
-                    className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight drop-shadow-lg"
+                    className="text-xl md:text-3xl lg:text-4xl font-black tracking-tight drop-shadow-2xl"
                     style={{
-                      background: 'linear-gradient(135deg, #7DD3FC 0%, #A78BFA 30%, #F472B6 70%, #FB7185 100%)',
+                      background: 'linear-gradient(135deg, #87CEEB 0%, #4FC3F7 15%, #29B6F6 30%, #03A9F4 45%, #0288D1 60%, #0277BD 75%, #01579B 90%, #1A237E 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
+                      backgroundClip: 'text',
+                      filter: 'drop-shadow(0 4px 8px rgba(56, 189, 248, 0.3))'
                     }}
                   >
                     إدارة الطلبات الذكية
                   </CardTitle>
-                  <CardDescription className="text-sm md:text-lg text-white/80 mt-1 drop-shadow-md font-medium">
+                  <CardDescription 
+                    className="text-sm md:text-lg text-sky-100/90 font-medium drop-shadow-lg"
+                    style={{
+                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
+                    }}
+                  >
                     نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي
                   </CardDescription>
                 </div>
@@ -232,16 +241,18 @@ const AiOrdersManager = ({ onClose }) => {
                 variant="ghost" 
                 size="icon" 
                 onClick={onClose}
-                className="rounded-xl md:rounded-2xl w-10 h-10 md:w-12 md:h-12 text-white/70 hover:text-white hover:bg-white/15 transition-all duration-300 hover:scale-110 border border-white/30 backdrop-blur-sm shadow-lg hover:shadow-xl"
+                className="rounded-2xl w-11 h-11 md:w-14 md:h-14 text-sky-100/80 hover:text-sky-50 transition-all duration-500 hover:scale-110 border border-sky-300/30 backdrop-blur-sm shadow-xl hover:shadow-2xl group"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)'
+                  background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <X className="w-5 h-5 md:w-6 md:h-6 drop-shadow-md" />
+                <X className="w-5 h-5 md:w-7 md:h-7 drop-shadow-xl transition-transform duration-300 group-hover:rotate-90" />
               </Button>
             </div>
-            <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full bg-blue-400/10 blur-2xl" />
-            <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full bg-purple-400/10 blur-2xl" />
+            <div className="absolute -top-6 -left-6 w-32 h-32 rounded-full bg-sky-400/20 blur-3xl animate-pulse" />
+            <div className="absolute -bottom-6 -right-6 w-32 h-32 rounded-full bg-blue-400/20 blur-3xl animate-pulse" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-indigo-400/10 blur-[100px]" />
           </CardHeader>
 
           <CardContent className="p-0 h-[calc(95vh-120px)] overflow-y-auto custom-scrollbar">
@@ -339,33 +350,42 @@ const AiOrdersManager = ({ onClose }) => {
             >
               {needReviewCount > 0 && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  initial={{ opacity: 0, y: -20, scale: 0.9 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ type: "spring", duration: 0.6 }}
-                  className="mb-6 rounded-2xl p-5 md:p-6 border border-red-400/40 shadow-2xl hover:shadow-red-500/20 transition-all duration-500"
+                  transition={{ type: "spring", duration: 0.8, bounce: 0.3 }}
+                  className="mb-8 rounded-3xl p-6 md:p-8 border border-red-300/40 shadow-2xl hover:shadow-red-500/30 transition-all duration-700 group relative overflow-hidden"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.25) 50%, rgba(185, 28, 28, 0.25) 100%)',
-                    backdropFilter: 'blur(20px)'
+                    background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.25) 0%, rgba(185, 28, 28, 0.25) 30%, rgba(153, 27, 27, 0.25) 70%, rgba(127, 29, 29, 0.25) 100%)',
+                    backdropFilter: 'blur(25px)',
+                    boxShadow: '0 25px 50px rgba(220, 38, 38, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                   }}
                 >
-                  <div className="flex items-start gap-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-400/10 via-transparent to-red-400/10 group-hover:from-red-300/15 group-hover:to-red-300/15 transition-all duration-700" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 via-red-500 to-red-600" />
+                  <div className="relative flex items-start gap-5 md:gap-6">
                     <div 
-                      className="shrink-0 p-3 md:p-4 rounded-xl border border-red-400/40 shadow-xl"
+                      className="shrink-0 p-4 md:p-5 rounded-2xl border border-red-300/50 shadow-2xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-500"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%)'
+                        background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.4) 0%, rgba(185, 28, 28, 0.4) 100%)',
+                        boxShadow: '0 15px 30px rgba(220, 38, 38, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
                       }}
                     >
-                      <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-red-200 drop-shadow-lg" />
+                      <AlertTriangle className="w-8 h-8 md:w-10 md:h-10 text-red-100 drop-shadow-2xl" />
                     </div>
-                    <div className="flex-1">
-                      <p className="font-black text-lg md:text-xl text-red-100 mb-2 drop-shadow-md">
-                        🚨 هناك {needReviewCount} طلب تحتاج إلى مراجعة عاجلة
-                      </p>
-                      <p className="text-red-200/90 text-base md:text-lg leading-relaxed">
-                        يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة على هذه الطلبات.
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🚨</span>
+                        <p className="font-black text-xl md:text-2xl text-red-100 drop-shadow-xl">
+                          هناك {needReviewCount} طلب تحتاج إلى مراجعة عاجلة
+                        </p>
+                      </div>
+                      <p className="text-red-100/90 text-lg md:text-xl leading-relaxed font-medium drop-shadow-md">
+                        يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة على هذه الطلبات للمتابعة.
                       </p>
                     </div>
                   </div>
+                  <div className="absolute -top-8 -left-8 w-24 h-24 rounded-full bg-red-400/20 blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-8 -right-8 w-24 h-24 rounded-full bg-rose-400/20 blur-3xl animate-pulse" />
                 </motion.div>
               )}
 
@@ -392,17 +412,19 @@ const AiOrdersManager = ({ onClose }) => {
                   {userAiOrders.map((order, index) => (
                     <motion.div
                       key={order.id}
-                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      initial={{ opacity: 0, y: 30, scale: 0.9 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ delay: index * 0.1, type: "spring", duration: 0.6 }}
-                      className="rounded-2xl overflow-hidden border border-white/20 shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:scale-[1.02] group"
+                      transition={{ delay: index * 0.15, type: "spring", duration: 0.8, bounce: 0.2 }}
+                      className="rounded-3xl overflow-hidden border border-white/25 shadow-2xl hover:shadow-blue-500/20 transition-all duration-700 hover:scale-[1.03] group relative"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(51, 65, 85, 0.7) 0%, rgba(30, 41, 59, 0.7) 50%, rgba(51, 65, 85, 0.7) 100%)',
-                        backdropFilter: 'blur(25px)'
+                        background: 'linear-gradient(135deg, rgba(30, 58, 138, 0.4) 0%, rgba(30, 41, 59, 0.4) 30%, rgba(51, 65, 85, 0.4) 70%, rgba(30, 58, 138, 0.4) 100%)',
+                        backdropFilter: 'blur(30px)',
+                        boxShadow: '0 25px 50px rgba(30, 58, 138, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                       }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                      <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/8 via-sky-500/8 to-indigo-500/8 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400" />
+                      <div className="relative backdrop-blur-sm">
                         <AiOrderCard
                           order={order}
                           isSelected={selectedOrders.includes(order.id)}
@@ -413,6 +435,8 @@ const AiOrdersManager = ({ onClose }) => {
                           }}
                         />
                       </div>
+                      <div className="absolute -top-6 -left-6 w-20 h-20 rounded-full bg-sky-400/20 blur-2xl group-hover:bg-sky-400/30 transition-all duration-700" />
+                      <div className="absolute -bottom-6 -right-6 w-20 h-20 rounded-full bg-blue-400/20 blur-2xl group-hover:bg-blue-400/30 transition-all duration-700" />
                     </motion.div>
                   ))}
                 </motion.div>
