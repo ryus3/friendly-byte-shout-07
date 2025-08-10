@@ -404,12 +404,35 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         continue;
       }
       
-      // التحقق من المنتجات (يدعم + للفصل)
+      // التحقق من المنتجات (يدعم + للفصل مع فهم المقاسات المختصرة)
       if (line.includes('+')) {
-        const products = line.split('+').map(p => p.trim());
-        for (const product of products) {
-          if (product) {
-            items.push(await parseProduct(product));
+        const segments = line.split('+').map(s => s.trim()).filter(Boolean);
+        if (segments.length) {
+          const sizeMap: Record<string, string> = {
+            'سمول': 'S', 'صغير': 'S', 'س': 'S', 'small': 'S',
+            'ميديم': 'M', 'وسط': 'M', 'م': 'M', 'medium': 'M',
+            'لارج': 'L', 'كبير': 'L', 'ل': 'L', 'large': 'L'
+          };
+          const isSizeOnly = (s: string) => {
+            const norm = (sizeMap[s.toLowerCase()] || s).toString().trim();
+            return /^(s|m|l|xl|xxl|xxxl|\d{2,3})$/i.test(norm);
+          };
+          // المنتج الأساس
+          const firstParsed = await parseProduct(segments[0]);
+          items.push(firstParsed);
+          const baseName = firstParsed.name || '';
+          const baseColor = firstParsed.color ? ` ${firstParsed.color}` : '';
+          for (let k = 1; k < segments.length; k++) {
+            const seg = segments[k];
+            if (!seg) continue;
+            const lower = seg.toLowerCase();
+            const mapped = sizeMap[lower] || seg;
+            if (isSizeOnly(seg)) {
+              const combined = `${baseName}${baseColor} ${mapped}`.trim();
+              items.push(await parseProduct(combined));
+            } else {
+              items.push(await parseProduct(seg));
+            }
           }
         }
         continue;
