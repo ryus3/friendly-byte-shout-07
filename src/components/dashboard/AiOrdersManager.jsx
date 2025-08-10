@@ -61,35 +61,60 @@ const AiOrdersManager = ({ onClose }) => {
     });
 }, [aiOrders, userEmployeeCode, hasPermission]);
 
-  const hasAnyUnavailable = React.useMemo(() => {
-    return userAiOrders.some(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient'));
-  }, [userAiOrders]);
+  const isOrderNeedsReview = React.useCallback((o) => {
+    if (!o) return false;
+    const status = (o.status || o.order_data?.status || '').toString().toLowerCase();
+    if (['needs_review', 'requires_review', 'pending_review', 'review'].includes(status)) return true;
+    if (o?.needs_review === true || o?.order_data?.needs_review === true) return true;
+    const items = Array.isArray(o.items)
+      ? o.items
+      : Array.isArray(o.order_data?.items)
+      ? o.order_data.items
+      : [];
+    return items.some((it) => {
+      const avail = (it?.availability || '').toString().toLowerCase();
+      const unavailableStates = ['out', 'insufficient', 'reserved', 'unavailable', 'hold', 'not_available'];
+      const qtyShort =
+        typeof it?.available_qty === 'number' &&
+        typeof it?.requested_qty === 'number' &&
+        it.available_qty < it.requested_qty;
+      return it?.available === false || unavailableStates.includes(avail) || qtyShort;
+    });
+  }, []);
 
   const needReviewCount = React.useMemo(() => {
-    return userAiOrders.filter(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient')).length;
-  }, [userAiOrders]);
+    return userAiOrders.filter(isOrderNeedsReview).length;
+  }, [userAiOrders, isOrderNeedsReview]);
+
+  const hasAnyUnavailable = needReviewCount > 0;
 
   const totalCount = userAiOrders.length;
 
   const telegramCount = React.useMemo(() => {
-    return userAiOrders.filter(o => (
-      o?.source === 'telegram' ||
-      o?.channel === 'telegram' ||
-      o?.platform === 'telegram' ||
-      o?.entry === 'telegram' ||
-      o?.from_telegram === true ||
-      o?.meta?.source === 'telegram'
-    )).length;
+    const tg = ['telegram', 'tg_bot', 'telegram_bot'];
+    return userAiOrders.filter((o) => {
+      const src = (
+        o?.source ||
+        o?.channel ||
+        o?.platform ||
+        o?.entry ||
+        o?.meta?.source ||
+        ''
+      )
+        .toString()
+        .toLowerCase();
+      return o?.from_telegram === true || tg.includes(src);
+    }).length;
   }, [userAiOrders]);
 
   const aiCount = React.useMemo(() => {
-    return userAiOrders.filter(o => (
-      o?.source === 'ai' ||
-      o?.origin === 'ai' ||
-      o?.ai_generated === true ||
-      o?.is_ai === true ||
-      o?.meta?.ai === true
-    )).length;
+    const aiKeys = ['ai', 'gpt', 'assistant', 'llm'];
+    return userAiOrders.filter((o) => {
+      const src = (o?.source || o?.origin || o?.meta?.source || '')
+        .toString()
+        .toLowerCase();
+      return o?.ai_generated === true || o?.is_ai === true || o?.meta?.ai === true || aiKeys.includes(src);
+    }).length;
   }, [userAiOrders]);
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -147,11 +172,11 @@ const AiOrdersManager = ({ onClose }) => {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-primary/10 w-full max-w-3xl lg:max-w-4xl max-h-[88vh] overflow-hidden"
+        className="bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-primary/10 w-full max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
         <Card className="border-0 h-full">
-          <CardHeader className="border-b bg-gradient-to-l from-primary/10 to-transparent backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky top-0 z-10">
+          <CardHeader className="border-b bg-gradient-to-l from-primary/10 to-transparent backdrop-blur supports-[backdrop-filter]:bg-background/80">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bot className="w-6 h-6 text-primary" />
@@ -171,7 +196,7 @@ const AiOrdersManager = ({ onClose }) => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex flex-col h-[calc(86vh-80px)] overscroll-contain">
+          <CardContent className="p-0 flex flex-col">
             <div className="p-3 md:p-4 border-b bg-gradient-to-l from-primary/5 to-background/40 supports-[backdrop-filter]:backdrop-blur">
               <AiOrdersHeaderStats totalCount={totalCount} telegramCount={telegramCount} aiCount={aiCount} needReviewCount={needReviewCount} />
             </div>
