@@ -13,7 +13,7 @@ class SuperAPI {
     this.subscriptions = new Map();
     
     // 3 دقائق cache - يقلل 95% من الطلبات
-    this.CACHE_TTL = 3 * 60 * 1000;
+    this.CACHE_TTL = 15 * 1000;
     
     console.log('🚀 SuperAPI: نظام موحد لحل فوضى البيانات');
     // مفتاح تخزين محلي

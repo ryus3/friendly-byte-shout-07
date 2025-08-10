@@ -1134,7 +1134,7 @@ ${employee.role === 'admin' ?
     } else {
       // Process order
       console.log('Processing order for employee:', employee.employee_code);
-      await sendTelegramMessage(chatId, '✅ تم استلام رسالتك، جاري المعالجة خلال ثوانٍ...');
+      // تم إلغاء رسالة الانتظار بناءً على طلبكم
       await processOrderText(text, chatId, employee.employee_code);
     }
 

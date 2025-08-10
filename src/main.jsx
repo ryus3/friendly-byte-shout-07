@@ -20,7 +20,7 @@ improvedSystemMonitor.initialize();
 enforceEmployeeCodeSystem();
 
 // تفعيل Real-time عند بدء التطبيق (بدون إعادة تحميل)
-// setupRealtime(); // معطل مؤقتاً لحل مشكلة التحديث المستمر
+setupRealtime(); // مفعّل لضمان التحديث اللحظي بدون إعادة تحميل
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <AppProviders>
