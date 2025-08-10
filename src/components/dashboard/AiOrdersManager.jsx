@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { aiOrders = [], loading, refreshAll } = useSuper();
+  const { aiOrders = [], loading, refreshAll, products = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -90,10 +90,56 @@ const AiOrdersManager = ({ onClose }) => {
     }
   }, []);
 
+  // Availability helpers based on products
+  const variants = useMemo(() => {
+    const v = [];
+    (products || []).forEach(p => {
+      const list = Array.isArray(p.variants) ? p.variants : (p.product_variants || []);
+      list.forEach(vi => v.push({ ...vi, product_id: p.id, product_name: p.name }));
+    });
+    return v;
+  }, [products]);
+
+  const availabilityOf = (order) => {
+    const items = Array.isArray(order?.items) ? order.items : (order?.order_data?.items || []);
+    if (!items.length) return 'unknown';
+    const lower = (v) => (v || '').toString().trim().toLowerCase();
+    const findByVariantId = (id) => variants.find(v => v.id === id);
+    const findByProductId = (pid) => variants.find(v => v.product_id === pid);
+    const findByName = (name, color, size) => {
+      const vname = lower(name);
+      const matches = variants.filter(v => lower(v.product_name) === vname || lower(v.product_name).includes(vname));
+      if (!matches.length) return null;
+      if (color || size) {
+        return matches.find(v => lower(v.color || v.color_name) === lower(color) && lower(v.size || v.size_name) === lower(size))
+          || matches.find(v => lower(v.color || v.color_name) === lower(color))
+          || matches.find(v => lower(v.size || v.size_name) === lower(size))
+          || matches[0];
+      }
+      return matches[0];
+    };
+
+    let allMatched = true;
+    let allAvailable = true;
+
+    for (const it of items) {
+      const qty = Number(it.quantity || 1);
+      let variant = null;
+      if (it.variant_id) variant = findByVariantId(it.variant_id);
+      else if (it.product_id) variant = findByProductId(it.product_id);
+      else variant = findByName(it.product_name || it.name || it.product, it.color, it.size);
+      if (!variant) { allMatched = false; continue; }
+      const available = (Number(variant.quantity ?? 0) - Number(variant.reserved_quantity ?? 0));
+      if (available < qty) { allAvailable = false; }
+    }
+    if (!allMatched) return 'unknown';
+    return allAvailable ? 'available' : 'out';
+  };
+
   const totalCount = orders.length;
   const pendingCount = orders.filter(order => order.status === 'pending').length;
   const needsReviewStatuses = ['needs_review','review','error','failed'];
-  const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status)).length;
+  const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status) || availabilityOf(order) !== 'available').length;
   const telegramCount = orders.filter(order => order.source === 'telegram').length;
   const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;
 
