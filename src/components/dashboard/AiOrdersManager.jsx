@@ -21,71 +21,19 @@ import {
   Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSuper } from '@/contexts/SuperProvider';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
-  const [aiOrders] = useState([
-    {
-      id: 1,
-      customer_name: "أحمد محمد",
-      customer_phone: "07901234567",
-      message: "أريد فستان أزرق مقاس M وحقيبة سوداء",
-      source: "telegram",
-      status: "needs_review",
-      created_at: new Date(),
-      updated_at: new Date(),
-      ai_response: "تم العثور على فستان أزرق وحقيبة سوداء متاحين"
-    },
-    {
-      id: 2,
-      customer_name: "فاطمة علي",
-      customer_phone: "07912345678",
-      message: "بحاجة لحذاء رياضي مقاس 40",
-      source: "ai_chat",
-      status: "pending",
-      created_at: new Date(),
-      updated_at: new Date(),
-      ai_response: "جاري البحث عن الأحذية الرياضية المتاحة"
-    },
-    {
-      id: 3,
-      customer_name: "محمد عباس",
-      customer_phone: "07923456789",
-      message: "أحتاج قميص أبيض مقاس L",
-      source: "telegram",
-      status: "completed",
-      created_at: new Date(Date.now() - 86400000),
-      updated_at: new Date(),
-      ai_response: "تم إرسال تفاصيل القمصان المتاحة"
-    },
-    {
-      id: 4,
-      customer_name: "سارة أحمد",
-      customer_phone: "07934567890",
-      message: "أريد فستان سهرة أسود",
-      source: "ai_chat",
-      status: "needs_review",
-      created_at: new Date(),
-      updated_at: new Date(),
-      ai_response: "عذراً، لا توجد فساتين سهرة متاحة حالياً"
-    },
-    {
-      id: 5,
-      customer_name: "خالد مصطفى",
-      customer_phone: "07945678901",
-      message: "بحاجة لجاكيت شتوي مقاس XL",
-      source: "telegram",
-      status: "pending",
-      created_at: new Date(),
-      updated_at: new Date()
-    }
-  ]);
+  const { aiOrders = [], loading } = useSuper();
+  const orders = Array.isArray(aiOrders) ? aiOrders : [];
 
-  const totalCount = aiOrders.length;
-  const pendingCount = aiOrders.filter(order => order.status === 'pending').length;
-  const needsReviewCount = aiOrders.filter(order => order.status === 'needs_review').length;
-  const telegramCount = aiOrders.filter(order => order.source === 'telegram').length;
-  const aiChatCount = aiOrders.filter(order => order.source === 'ai_chat').length;
+  const totalCount = orders.length;
+  const pendingCount = orders.filter(order => order.status === 'pending').length;
+  const needsReviewStatuses = ['needs_review','review','error','failed'];
+  const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status)).length;
+  const telegramCount = orders.filter(order => order.source === 'telegram').length;
+  const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
@@ -263,14 +211,14 @@ const AiOrdersManager = ({ onClose }) => {
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
                 <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-blue-600" />
-                  قائمة الطلبات الذكية ({aiOrders.length})
+                  قائمة الطلبات الذكية ({orders.length})
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="p-0">
                 <ScrollArea className="h-[400px]">
                   <div className="p-3 space-y-3">
-                    {aiOrders.length === 0 ? (
+                    {orders.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                           <Bot className="w-6 h-6 text-slate-400" />
@@ -283,7 +231,7 @@ const AiOrdersManager = ({ onClose }) => {
                         </p>
                       </div>
                     ) : (
-                      aiOrders.map((order) => (
+                      orders.map((order) => (
                         <AiOrderCard key={order.id} order={order} />
                       ))
                     )}
