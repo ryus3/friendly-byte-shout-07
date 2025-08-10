@@ -213,11 +213,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-sm">{getSourceIcon(order.source).label}</h4>
-                  {availability !== 'available' && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-white text-red-600 font-semibold shadow-md">
-                      غير متاح بالمخزون
-                    </span>
-                  )}
                 </div>
                 <p className="text-xs opacity-90">بواسطة: {createdByName}</p>
               </div>
@@ -263,19 +258,16 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Product Details */}
             {order.order_data && (
               <div className="bg-white/10 rounded-md p-2 backdrop-blur-sm">
-              <div className="flex items-center gap-1 mb-1">
+              <div className="flex items-center gap-2 mb-1">
                 <Package className="w-3 h-3" />
                 <span className="text-xs font-medium">تفاصيل الطلب:</span>
-              </div>
-              {(order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone) && (
-                <div className="flex items-center gap-1 text-[11px] mb-1">
-                  <Smartphone className="w-3 h-3" />
-                  <span className="font-medium">الهاتف:</span>
-                  <span>
+                {(order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone) && (
+                  <span className="text-[11px] flex items-center gap-1">
+                    <Smartphone className="w-3 h-3" />
                     {order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone}
                   </span>
-                </div>
-              )}
+                )}
+              </div>
                 
                 {items && items.length > 0 ? (
                   <div className="space-y-1">
@@ -318,7 +310,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" className="h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90" disabled={availability !== 'available' || needsReview}>
+                <Button size="sm" className="h-8 text-xs bg-[hsl(var(--primary))] text-white hover:brightness-110" disabled={availability !== 'available' || needsReview}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>
@@ -350,8 +342,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Edit */}
             <Button 
               size="sm"
-              variant="secondary"
-              className="h-8 text-xs"
+              className="h-8 text-xs bg-white/15 text-white border border-white/20 hover:bg-white/25"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openQuickOrderWithAi', { detail: order }));
               }}
@@ -363,7 +354,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Delete */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" variant="destructive" className="h-8 text-xs">
+                <Button size="sm" className="h-8 text-xs bg-white/15 text-white border border-white/20 hover:bg-white/25">
                   <Trash2 className="w-3 h-3" />
                   حذف
                 </Button>
