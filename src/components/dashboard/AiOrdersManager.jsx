@@ -78,43 +78,22 @@ const AiOrdersManager = ({ onClose }) => {
         <ScrollArea className="h-[calc(90vh-120px)]">
           <div className="p-4">
             {/* Stats Overview */}
-            <div className="grid grid-cols-4 gap-3 mb-4">
-              {/* Total Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[100px]">
+            <div className="grid grid-cols-4 gap-3 mb-4" dir="ltr">
+              {/* Needs Review Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
                       <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
-                        <MessageSquare className="w-4 h-4" />
+                        <AlertTriangle className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs">إجمالي الطلبات</h4>
-                      <p className="text-blue-100 text-xs">طلبات واردة</p>
+                      <h4 className="font-bold text-xs">تحتاج مراجعة</h4>
+                      <p className="text-red-100 text-xs">مراجعة عاجلة</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{totalCount} طلب</p>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
-                </CardContent>
-              </Card>
-
-              {/* Telegram Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white min-h-[100px]">
-                <CardContent className="p-3">
-                  <div className="text-center space-y-1">
-                    <div className="flex justify-center">
-                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
-                        <Smartphone className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs">من التليغرام</h4>
-                      <p className="text-cyan-100 text-xs">تليغرام بوت</p>
-                    </div>
-                    <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{telegramCount} طلب</p>
+                      <p className="text-lg font-bold">{needsReviewCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
@@ -142,21 +121,42 @@ const AiOrdersManager = ({ onClose }) => {
                 </CardContent>
               </Card>
 
-              {/* Needs Review Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
+              {/* Telegram Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white min-h-[100px]">
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
                       <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
-                        <AlertTriangle className="w-4 h-4" />
+                        <Smartphone className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs">تحتاج مراجعة</h4>
-                      <p className="text-red-100 text-xs">مراجعة عاجلة</p>
+                      <h4 className="font-bold text-xs">من التليغرام</h4>
+                      <p className="text-cyan-100 text-xs">تليغرام بوت</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{needsReviewCount} طلب</p>
+                      <p className="text-lg font-bold">{telegramCount} طلب</p>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* Total Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[100px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-1">
+                    <div className="flex justify-center">
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs">إجمالي الطلبات</h4>
+                      <p className="text-blue-100 text-xs">طلبات واردة</p>
+                    </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{totalCount} طلب</p>
                     </div>
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
