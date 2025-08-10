@@ -725,24 +725,25 @@ const unavailableItemsCount = unavailableItems.length;
 // قوائم المنتجات لكل حالة
 const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
   const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+  const variantDesc = `${item.size ? `المقاس ${item.size}` : ''}${item.color ? `${item.size ? ' و' : ''}اللون ${item.color}` : ''}`.trim();
   const reason = (() => {
     if (item.availability === 'missing_attributes') {
       const miss = item.missing_attributes || {};
       if (miss.need_color && miss.need_size) return ' — بدون لون وبدون قياس';
       if (miss.need_color) return ' — بدون لون';
       if (miss.need_size) return ' — بدون قياس';
-      return ' — يتطلب تحديد اللون والمقاس';
+      return ' — يحتاج تحديد اللون والمقاس';
     }
     if (item.availability === 'insufficient') {
       const av = item.available_quantity ?? 0;
-      return ` — الكمية غير كافية (المتاح ${av})`;
+      return ` — الكمية غير كافية${variantDesc ? ` للمحددات (${variantDesc})` : ''} (المتاح ${av})`;
     }
     if (item.availability === 'out') {
       const sq = item.stock_quantity ?? 0;
       const rq = item.reserved_quantity ?? 0;
-      if (sq === 0) return ' — نافذ من المخزون';
-      if (rq >= sq && sq > 0) return ' — محجوز بالكامل';
-      return ' — غير متاح حالياً';
+      if (sq === 0) return ` — ${variantDesc ? `${variantDesc} نافذ من المخزون` : 'نافذ من المخزون'}`;
+      if (rq >= sq && sq > 0) return ` — ${variantDesc ? `${variantDesc} محجوز بالكامل` : 'محجوز بالكامل'}`;
+      return ` — غير متاح حالياً${variantDesc ? ` (${variantDesc})` : ''}`;
     }
     if (item.availability === 'not_found') return ' — غير موجود في النظام';
     return '';

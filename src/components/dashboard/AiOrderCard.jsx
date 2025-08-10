@@ -178,6 +178,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     const reasons = [];
     for (const it of items) {
       const name = (it?.product_name || it?.name || it?.product || '').toString().trim();
+      const size = it?.size ? `المقاس ${it.size}` : '';
+      const color = it?.color ? `اللون ${it.color}` : '';
+      const variantDesc = `${size}${size && color ? ' و' : ''}${color}`;
       const avail = it?.availability;
       const miss = it?.missing_attributes || {};
       // سمات ناقصة
@@ -193,14 +196,14 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       if (avail === 'out') {
         const sq = it?.stock_quantity ?? 0;
         const rq = it?.reserved_quantity ?? 0;
-        if (sq === 0) reasons.push(`${name}: نافذ من المخزون`);
-        else if (rq >= sq && sq > 0) reasons.push(`${name}: محجوز بالكامل`);
-        else reasons.push(`${name}: غير متاح حالياً`);
+        if (sq === 0) reasons.push(`${name}: ${variantDesc ? variantDesc + ' ' : ''}نافذ من المخزون`);
+        else if (rq >= sq && sq > 0) reasons.push(`${name}: ${variantDesc ? variantDesc + ' ' : ''}محجوز بالكامل`);
+        else reasons.push(`${name}: غير متاح حالياً${variantDesc ? ` (${variantDesc})` : ''}`);
       }
       // كمية غير كافية
       if (avail === 'insufficient') {
         const av = it?.available_quantity ?? 0;
-        reasons.push(`${name}: الكمية غير كافية (المتاح ${av})`);
+        reasons.push(`${name}: الكمية غير كافية${variantDesc ? ` للمحددات (${variantDesc})` : ''} (المتاح ${av})`);
       }
     }
     return reasons;
