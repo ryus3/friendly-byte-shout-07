@@ -671,6 +671,7 @@ export const SuperProvider = ({ children }) => {
   // دوال أخرى مطلوبة للتوافق
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
+  const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {
     try {
@@ -980,6 +981,7 @@ export const SuperProvider = ({ children }) => {
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),
+    refreshAll: refreshAll || (async () => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {

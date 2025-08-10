@@ -27,7 +27,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import AiOrderCard from './AiOrderCard';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { aiOrders = [], loading } = useSuper();
+  const { aiOrders = [], loading, refreshAll } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -35,6 +35,12 @@ const AiOrdersManager = ({ onClose }) => {
   useEffect(() => {
     setOrders(ordersFromContext);
   }, [ordersFromContext]);
+
+  // Force refresh when opening to fetch latest ai_orders even if cache is warm
+  useEffect(() => {
+    refreshAll?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleDeleted = (e) => {
