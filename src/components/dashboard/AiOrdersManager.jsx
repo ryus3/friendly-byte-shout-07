@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Bot, 
   MessageSquare, 
@@ -27,6 +28,7 @@ import AiOrderCard from './AiOrderCard';
 const AiOrdersManager = ({ onClose }) => {
   const { aiOrders = [], loading } = useSuper();
   const orders = Array.isArray(aiOrders) ? aiOrders : [];
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
   const totalCount = orders.length;
   const pendingCount = orders.filter(order => order.status === 'pending').length;
@@ -34,6 +36,30 @@ const AiOrdersManager = ({ onClose }) => {
   const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status)).length;
   const telegramCount = orders.filter(order => order.source === 'telegram').length;
   const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedOrders(orders.map(order => order.id));
+    } else {
+      setSelectedOrders([]);
+    }
+  };
+
+  const handleSelectOrder = (orderId, checked) => {
+    if (checked) {
+      setSelectedOrders(prev => [...prev, orderId]);
+    } else {
+      setSelectedOrders(prev => prev.filter(id => id !== orderId));
+    }
+  };
+
+  const handleBulkAction = (action) => {
+    if (selectedOrders.length === 0) return;
+    
+    console.log(`Bulk ${action} for orders:`, selectedOrders);
+    // Here you would implement the bulk action logic
+    setSelectedOrders([]);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
@@ -184,15 +210,47 @@ const AiOrdersManager = ({ onClose }) => {
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2" dir="ltr">
-                  <MessageSquare className="w-4 h-4 text-blue-600" />
-                  قائمة الطلبات الذكية ({orders.length})
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-blue-600" />
+                    قائمة الطلبات الذكية ({orders.length})
+                  </CardTitle>
+                  
+                  {orders.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedOrders.length === orders.length}
+                        onCheckedChange={handleSelectAll}
+                        className="ml-2"
+                      />
+                      <span className="text-xs text-slate-600 dark:text-slate-400">تحديد الكل</span>
+                      
+                      {selectedOrders.length > 0 && (
+                        <div className="flex gap-1 mr-3">
+                          <Button
+                            size="sm"
+                            onClick={() => handleBulkAction('approve')}
+                            className="h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            موافقة ({selectedOrders.length})
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleBulkAction('delete')}
+                            className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            حذف ({selectedOrders.length})
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               
               <CardContent className="p-0">
                 <ScrollArea className="h-[400px]">
-                  <div className="p-3 space-y-3" dir="ltr">
+                  <div className="p-3 space-y-3">
                     {orders.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
@@ -207,7 +265,12 @@ const AiOrdersManager = ({ onClose }) => {
                       </div>
                     ) : (
                       [...orders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
-                        <AiOrderCard key={order.id} order={order} />
+                        <AiOrderCard 
+                          key={order.id} 
+                          order={order}
+                          isSelected={selectedOrders.includes(order.id)}
+                          onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                        />
                       ))
                     )}
                   </div>
