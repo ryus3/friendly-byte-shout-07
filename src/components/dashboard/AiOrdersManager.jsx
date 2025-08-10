@@ -165,31 +165,31 @@ const AiOrdersManager = ({ onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4 sm:p-6 animate-enter"
+      className="fixed inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-md z-[1200] flex items-center justify-center p-4 sm:p-6 animate-enter"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-background/95 backdrop-blur-xl rounded-2xl shadow-2xl ring-1 ring-primary/10 w-full max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-y-auto"
+        className="bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 backdrop-blur-2xl rounded-3xl shadow-2xl ring-1 ring-white/10 w-full max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-y-auto border border-white/5"
         onClick={e => e.stopPropagation()}
       >
         <Card className="border-0 h-full">
-          <CardHeader className="border-b bg-gradient-to-l from-primary/10 to-transparent backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          <CardHeader className="border-b border-white/10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 backdrop-blur supports-[backdrop-filter]:bg-background/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Bot className="w-6 h-6 text-primary" />
+                <Bot className="w-6 h-6 text-blue-400" />
                 <div>
-                  <CardTitle className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-l from-primary to-foreground">إدارة الطلبات الذكية</CardTitle>
-                  <CardDescription className="text-sm md:text-base text-muted-foreground/80">{userAiOrders.length} طلبات ذكية في انتظار المراجعة</CardDescription>
+                  <CardTitle className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300">إدارة الطلبات الذكية</CardTitle>
+                  <CardDescription className="text-sm md:text-base text-white/70">{userAiOrders.length} طلبات ذكية في انتظار المراجعة</CardDescription>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={onClose}
-                className="rounded-lg w-8 h-8 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+                className="rounded-lg w-8 h-8 bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-white/40"
               >
                 <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
               </Button>
@@ -197,18 +197,18 @@ const AiOrdersManager = ({ onClose }) => {
           </CardHeader>
 
           <CardContent className="p-0 flex flex-col">
-            <div className="p-3 md:p-4 border-b bg-gradient-to-l from-primary/5 to-background/40 supports-[backdrop-filter]:backdrop-blur">
+            <div className="p-5 md:p-6 border-b border-white/10 bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 supports-[backdrop-filter]:backdrop-blur-sm">
               <AiOrdersHeaderStats totalCount={totalCount} telegramCount={telegramCount} aiCount={aiCount} needReviewCount={needReviewCount} />
             </div>
             {userAiOrders.length > 0 && (
-              <div className="p-3 md:p-4 border-b bg-gradient-to-l from-muted/50 to-background/50 supports-[backdrop-filter]:backdrop-blur">
+              <div className="p-4 md:p-5 border-b border-white/10 bg-gradient-to-r from-slate-800/30 via-slate-700/30 to-slate-800/30 supports-[backdrop-filter]:backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Checkbox
                       checked={selectedOrders.length === userAiOrders.length}
                       onCheckedChange={handleSelectAll}
                     />
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-white/90">
                       تحديد الكل ({selectedOrders.length}/{userAiOrders.length})
                     </span>
                   </div>
@@ -255,39 +255,41 @@ const AiOrdersManager = ({ onClose }) => {
 
             <div className="flex-1 overflow-y-auto p-4">
               {needReviewCount > 0 && (
-                <div className="mb-4 rounded-2xl p-4 md:p-5 bg-gradient-to-br from-destructive/15 to-background/10 ring-1 ring-destructive/40 shadow-lg hover-scale animate-enter">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 bg-destructive/20 text-destructive rounded-lg p-2 ring-1 ring-destructive/30">
-                      <AlertTriangle className="w-5 h-5" />
+                <div className="mb-6 rounded-2xl p-5 md:p-6 bg-gradient-to-br from-red-500/20 via-red-600/15 to-red-700/20 ring-1 ring-red-400/30 shadow-xl hover-scale animate-enter border border-red-400/20">
+                  <div className="flex items-start gap-4">
+                    <div className="shrink-0 bg-red-500/25 text-red-300 rounded-xl p-3 ring-1 ring-red-400/30 shadow-lg">
+                      <AlertTriangle className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold leading-6">هناك {needReviewCount} طلب تحتاج إلى مراجعة</p>
-                      <p className="text-sm text-muted-foreground mt-1">يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة.</p>
+                      <p className="font-bold leading-6 text-red-200 text-lg">هناك {needReviewCount} طلب تحتاج إلى مراجعة</p>
+                      <p className="text-sm text-red-300/80 mt-2">يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة.</p>
                     </div>
                   </div>
                 </div>
               )}
               {userAiOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <Bot className="w-16 h-16 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">لا توجد طلبات ذكية</h3>
-                  <p className="text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <Bot className="w-20 h-20 text-white/40 mb-6" />
+                  <h3 className="text-xl font-bold mb-3 text-white/90">لا توجد طلبات ذكية</h3>
+                  <p className="text-white/60 max-w-sm">
                     عندما تصل طلبات ذكية جديدة، ستظهر هنا للمراجعة والموافقة.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {userAiOrders.map(order => (
-                    <AiOrderCard
-                      key={order.id}
-                      order={order}
-                      isSelected={selectedOrders.includes(order.id)}
-                      onSelect={(checked) => handleSelectOrder(order.id, checked)}
-                      onEdit={() => {
-                        setEditingOrder(order);
-                        setQuickOrderDialogOpen(true);
-                      }}
-                    />
+                    <div key={order.id} className="rounded-2xl bg-gradient-to-br from-slate-700/40 via-slate-600/30 to-slate-700/40 backdrop-blur-sm border border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] overflow-hidden">
+                      <AiOrderCard
+                        key={order.id}
+                        order={order}
+                        isSelected={selectedOrders.includes(order.id)}
+                        onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                        onEdit={() => {
+                          setEditingOrder(order);
+                          setQuickOrderDialogOpen(true);
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
               )}
