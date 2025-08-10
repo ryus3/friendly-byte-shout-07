@@ -1,9 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
+import { toast } from '@/components/ui/use-toast';
+import { useInventory } from '@/contexts/InventoryContext';
+import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
   
@@ -14,6 +17,44 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       handleSelectChange('city', 'بغداد');
     }
   }, [formData.address, handleSelectChange]);
+
+  // كشف الزبون المتكرر حسب رقم الهاتف (موحد لجميع الصيغ)
+  const { orders } = useInventory();
+  const [customerInsight, setCustomerInsight] = useState(null);
+  const lastNotifiedPhoneRef = useRef(null);
+
+  useEffect(() => {
+    const normalized = normalizePhone(formData.phone);
+    if (!normalized || !orders?.length) { setCustomerInsight(null); return; }
+    const matched = orders.filter(o => {
+      const p = normalizePhone(extractOrderPhone(o));
+      return p && p === normalized;
+    });
+    if (matched.length) {
+      const lastDate = matched
+        .map(o => new Date(o.created_at))
+        .filter(d => !isNaN(d))
+        .sort((a,b)=>b-a)[0];
+      setCustomerInsight({
+        count: matched.length,
+        lastDate: lastDate ? lastDate.toISOString() : null,
+        phone: normalized
+      });
+      if (lastNotifiedPhoneRef.current !== normalized) {
+        try {
+          toast({
+            title: 'تنبيه رقم متكرر',
+            description: lastDate ? `آخر طلب: ${new Date(lastDate).toLocaleString('ar-IQ')}` : 'رقم معروف',
+            variant: 'success'
+          });
+        } catch (e) {}
+        lastNotifiedPhoneRef.current = normalized;
+      }
+    } else {
+      setCustomerInsight(null);
+    }
+  }, [formData.phone, orders]);
+
 
   return (
     <Card>
@@ -41,6 +82,15 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>
           <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={errors.phone ? 'border-red-500' : ''} disabled={isSubmittingState} />
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+          {customerInsight && (
+            <div className="mt-2 p-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+              <div className="text-sm font-medium">تنبيه: رقم زبون معروف</div>
+              <div className="text-xs text-muted-foreground">
+                إجمالي الطلبات: {customerInsight.count} • آخر طلب: {customerInsight.lastDate ? new Date(customerInsight.lastDate).toLocaleString('ar-IQ') : 'غير متاح'}
+              </div>
+            </div>
+          )}
+
           
           {/* عرض معلومات العميل والنقاط */}
           {customerData && (

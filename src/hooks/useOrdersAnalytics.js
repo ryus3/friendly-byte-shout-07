@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getUserUUID } from '@/utils/userIdUtils';
+import { normalizePhone } from '@/utils/phoneUtils';
 
 /**
  * Hook موحد لجلب جميع إحصائيات الطلبات والعملاء
@@ -83,12 +84,13 @@ const useOrdersAnalytics = () => {
       sum + (order.final_amount || order.total_amount || 0), 0
     );
 
-    // أفضل العملاء
+    // أفضل العملاء (تجميع حسب رقم هاتف مُطبع)
     const customerStats = new Map();
     completedOrders.forEach(order => {
-      const phone = order.customer_phone;
-      const name = order.customer_name;
-      const city = order.customer_city || order.customer_province || 'غير محدد';
+      const rawPhone = order.customer_phone || order.order_data?.customer_phone || order.client_mobile || order.phone || order.customerinfo?.phone;
+      const phone = normalizePhone(rawPhone) || 'غير محدد';
+      const name = order.customer_name || order.client_name || order.name || 'غير محدد';
+      const city = order.customer_city || order.customer_province || order.city || order.province || 'غير محدد';
       const orderAmount = order.final_amount || order.total_amount || 0;
       const createdAt = order.created_at ? new Date(order.created_at) : null;
       

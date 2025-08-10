@@ -8,6 +8,7 @@ import {
   MapPin,
   Package
 } from 'lucide-react';
+import { normalizePhone } from '@/utils/phoneUtils';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
   // حساب أفضل العملاء حسب رقم الهاتف - فقط الطلبات الموصلة
@@ -33,8 +34,10 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
     });
     
     const customerStats = deliveredOrders.reduce((acc, order) => {
-      const customerPhone = order.customer_phone || 'غير محدد';
-      const customerName = order.customer_name || 'غير محدد';
+      const customerPhone = normalizePhone(
+        order.customer_phone || order.order_data?.customer_phone || order.client_mobile || order.phone || order.customerinfo?.phone
+      ) || 'غير محدد';
+      const customerName = order.customer_name || order.client_name || order.name || 'غير محدد';
       if (!acc[customerPhone]) {
         acc[customerPhone] = {
           phone: customerPhone,
