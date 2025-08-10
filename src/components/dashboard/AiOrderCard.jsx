@@ -121,8 +121,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const createdByName = useMemo(() => {
     const by = order.created_by || order.order_data?.created_by || order.user_id || order.created_by_employee_code;
     if (!by) return 'غير محدد';
-    const profile = users.find(u => u?.employee_code === by || u?.user_id === by || u?.id === by);
-    return profile?.full_name || by;
+    const profile = users.find(u => u?.employee_code === by || u?.user_id === by || u?.id === by || u?.username === by);
+    return profile?.full_name || profile?.username || by;
   }, [users, order]);
 
   const availability = useMemo(() => {
@@ -170,6 +170,15 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     return allAvailable ? 'available' : 'out';
   }, [items, products]);
 
+  const needsReviewStatuses = ['needs_review', 'review', 'error', 'failed'];
+  const needsReview = useMemo(() => needsReviewStatuses.includes(order.status) || availability !== 'available', [order.status, availability]);
+
+  const gradientToUse = useMemo(() => {
+    if (availability === 'out') return 'bg-gradient-to-br from-red-500 via-orange-500 to-rose-600';
+    if (needsReview) return 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500';
+    return getStatusColor(order.status).gradient;
+  }, [availability, needsReview, order.status]);
+
   return (
     <Card className={cn(
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
@@ -179,7 +188,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       <CardContent className="p-3">
         <div className={cn(
           "relative rounded-lg p-3 text-white overflow-hidden",
-          getStatusColor(order.status).gradient
+          gradientToUse
         )}>
           {/* Background decoration - Beautiful circles like inventory sections */}
           <div className="absolute -bottom-3 -right-3 w-12 h-12 bg-white/10 rounded-full"></div>
