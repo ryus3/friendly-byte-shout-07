@@ -88,52 +88,81 @@ const useOrdersAnalytics = () => {
     completedOrders.forEach(order => {
       const phone = order.customer_phone;
       const name = order.customer_name;
+      const city = order.customer_city || order.customer_province || 'غير محدد';
+      const orderAmount = order.final_amount || order.total_amount || 0;
+      const createdAt = order.created_at ? new Date(order.created_at) : null;
       
       if (customerStats.has(phone)) {
         const existing = customerStats.get(phone);
         existing.orderCount++;
-        existing.totalRevenue += order.final_amount || order.total_amount || 0;
+        existing.totalRevenue += orderAmount;
+        existing.city = existing.city || city;
+        if (createdAt && (!existing.lastOrderDate || createdAt > existing.lastOrderDate)) {
+          existing.lastOrderDate = createdAt;
+        }
       } else {
         customerStats.set(phone, {
           label: name,
+          name,
           phone,
+          city,
           orderCount: 1,
-          totalRevenue: order.final_amount || order.total_amount || 0
+          totalRevenue: orderAmount,
+          lastOrderDate: createdAt
         });
       }
     });
 
     const topCustomers = Array.from(customerStats.values())
       .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 5)
+      .slice(0, 10)
       .map(customer => ({
-        ...customer,
+        // الحقول الجديدة المتوافقة مع الواجهات
+        name: customer.name || customer.label || 'زبون غير محدد',
+        phone: customer.phone,
+        city: customer.city || 'غير محدد',
+        total_orders: customer.orderCount,
+        total_spent: customer.totalRevenue,
+        last_order_date: customer.lastOrderDate ? customer.lastOrderDate.toISOString() : null,
+        // الحقول القديمة للإبقاء على التوافق العكسي
+        label: customer.name || customer.label,
+        orderCount: customer.orderCount,
+        totalRevenue: customer.totalRevenue,
         value: `${customer.orderCount} طلب`
       }));
 
     // أفضل المحافظات
     const provinceStats = new Map();
     completedOrders.forEach(order => {
-      const province = order.customer_province || 'غير محدد';
+      const regionName = order.customer_city || order.customer_province || 'غير محدد';
+      const revenue = order.final_amount || order.total_amount || 0;
       
-      if (provinceStats.has(province)) {
-        const existing = provinceStats.get(province);
+      if (provinceStats.has(regionName)) {
+        const existing = provinceStats.get(regionName);
         existing.orderCount++;
-        existing.totalRevenue += order.final_amount || order.total_amount || 0;
+        existing.totalRevenue += revenue;
       } else {
-        provinceStats.set(province, {
-          label: province,
+        provinceStats.set(regionName, {
+          label: regionName,
+          city_name: regionName,
           orderCount: 1,
-          totalRevenue: order.final_amount || order.total_amount || 0
+          totalRevenue: revenue
         });
       }
     });
 
     const topProvinces = Array.from(provinceStats.values())
       .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 5)
+      .slice(0, 10)
       .map(province => ({
-        ...province,
+        // الحقول الجديدة
+        city_name: province.city_name || province.label,
+        total_orders: province.orderCount,
+        total_revenue: province.totalRevenue,
+        // الحقول القديمة للتوافق
+        label: province.city_name || province.label,
+        orderCount: province.orderCount,
+        totalRevenue: province.totalRevenue,
         value: `${province.orderCount} طلبات`
       }));
 
@@ -144,14 +173,21 @@ const useOrdersAnalytics = () => {
         order.order_items.forEach(item => {
           const productName = item.products?.name || item.product_name || 'منتج غير محدد';
           const quantity = item.quantity || 0;
+          const revenue = (item.total_price != null)
+            ? item.total_price
+            : ((item.unit_price != null ? item.unit_price : item.price || 0) * quantity);
           
           if (productStats.has(productName)) {
             const existing = productStats.get(productName);
             existing.quantity += quantity;
+            existing.totalRevenue = (existing.totalRevenue || 0) + revenue;
+            existing.ordersCount = (existing.ordersCount || 0) + 1;
           } else {
             productStats.set(productName, {
               label: productName,
-              quantity
+              quantity,
+              totalRevenue: revenue,
+              ordersCount: 1
             });
           }
         });
@@ -160,9 +196,16 @@ const useOrdersAnalytics = () => {
 
     const topProducts = Array.from(productStats.values())
       .sort((a, b) => b.quantity - a.quantity)
-      .slice(0, 5)
+      .slice(0, 10)
       .map(product => ({
-        ...product,
+        // الحقول الجديدة
+        product_name: product.label,
+        total_sold: product.quantity,
+        total_revenue: product.totalRevenue || 0,
+        orders_count: product.ordersCount || 0,
+        // الحقول القديمة للتوافق
+        label: product.label,
+        quantity: product.quantity,
         value: `${product.quantity} قطعة`
       }));
 
