@@ -357,6 +357,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .single();
     
     const defaultDeliveryFee = Number(settingsData?.value) || 5000;
+    const currentDeliveryFee = defaultDeliveryFee;
 
     let phoneFound = false;
     
@@ -710,8 +711,7 @@ if (unavailableItemsCount > 0) {
     '',
     `📱 الهاتف : ${customerPhone || '—'}`,
     okList,
-    `• اجمالي المبلغ : ${totalWithDelivery.toLocaleString()} د.ع`,
-    'المجموع يعني المبلغ الطلب + التوصيل'
+    `• المبلغ الاجمالي : ${totalWithDelivery.toLocaleString()} د.ع`
   ].join('\n');
 }
 
