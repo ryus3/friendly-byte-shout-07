@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 const AiOrderCard = ({ order }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const displayId = order?.order_number || order?.order_data?.trackingNumber || order?.order_data?.order_code || (order?.id ? String(order.id).split('-')[0].toUpperCase() : '');
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -121,7 +122,7 @@ const AiOrderCard = ({ order }) => {
                 })}
               </div>
               <div>
-                <h4 className="font-bold text-sm">طلب #{order.id}</h4>
+                <h4 className="font-bold text-sm">طلب {displayId ? `#${displayId}` : ''}</h4>
                 <p className="text-xs opacity-90">{getSourceIcon(order.source).label}</p>
               </div>
             </div>

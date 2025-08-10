@@ -231,7 +231,7 @@ const AiOrdersManager = ({ onClose }) => {
                         </p>
                       </div>
                     ) : (
-                      orders.map((order) => (
+                      [...orders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
                         <AiOrderCard key={order.id} order={order} />
                       ))
                     )}
