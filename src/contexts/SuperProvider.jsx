@@ -375,6 +375,17 @@ export const SuperProvider = ({ children }) => {
     };
   }, [fetchAllData]);
 
+  // تأكيد تفعيل Webhook للتليغرام تلقائياً (مرة واحدة عند تشغيل التطبيق)
+  useEffect(() => {
+    (async () => {
+      try {
+        await fetch('https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-webhook-check?auto=1');
+      } catch (_) {}
+    })();
+    // تشغيل لمرة واحدة فقط
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ===============================
   // وظائف متوافقة مع InventoryContext
   // ===============================
@@ -796,8 +807,17 @@ export const SuperProvider = ({ children }) => {
       // 5) حساب المجاميع مع رسوم التوصيل الحقيقية
       const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * (it.unit_price || 0), 0);
       const deliveryType = aiOrder?.order_data?.delivery_type || (aiOrder?.customer_address ? 'توصيل' : 'محلي');
-      const settingsDelivery = Number((allData?.settings?.deliveryFee ?? 5000)) || 0;
-      const deliveryFee = deliveryType === 'توصيل' ? settingsDelivery : 0;
+      // جلب رسوم التوصيل من جدول الإعدادات مباشرة لضمان الدقة
+      let deliveryFeeSetting = 5000;
+      try {
+        const { data: ds } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'delivery_fee')
+          .maybeSingle();
+        deliveryFeeSetting = Number(ds?.value) || 5000;
+      } catch (_) {}
+      const deliveryFee = deliveryType === 'توصيل' ? deliveryFeeSetting : 0;
       const discount = 0;
       const total = subtotal - discount + deliveryFee;
 

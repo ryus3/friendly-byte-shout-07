@@ -11,25 +11,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Get bot token from database settings
+// Get bot token from database settings with ENV fallback
 async function getBotToken(): Promise<string | null> {
   try {
     const { data, error } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'telegram_bot_config')
-      .single();
-    
-    if (error || !data) {
-      console.log('No bot config found in settings');
-      return null;
-    }
-    
-    return data.value?.bot_token || null;
+      .maybeSingle();
+
+    const tokenFromDb = (data && (typeof data.value === 'string' ? data.value : data.value?.bot_token)) || null;
+    if (tokenFromDb && String(tokenFromDb).trim()) return String(tokenFromDb).trim();
   } catch (error) {
-    console.error('Error getting bot token:', error);
-    return null;
+    console.error('Error reading settings for bot token:', error);
   }
+
+  const envToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (envToken && envToken.trim()) return envToken.trim();
+  return null;
+}
+
+const EXPECTED_WEBHOOK_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot`;
+
+async function setWebhook(botToken: string) {
+  const resp = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: EXPECTED_WEBHOOK_URL, allowed_updates: ['message'] })
+  });
+  const data = await resp.json();
+  return data;
 }
 
 serve(async (req) => {
@@ -41,32 +52,49 @@ serve(async (req) => {
   try {
     const botToken = await getBotToken();
     if (!botToken) {
-      return new Response(JSON.stringify({ error: 'Bot token not found' }), {
+      return new Response(JSON.stringify({ error: 'Bot token not found in DB or ENV' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Check webhook info
-    const webhookResponse = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
-    const webhookInfo = await webhookResponse.json();
-    
+    const url = new URL(req.url);
+    const force = url.searchParams.get('force') === '1' || url.searchParams.get('auto') === '1' || url.searchParams.get('set') === '1';
+
+    // Current webhook info
+    const webhookInfoResp = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+    const webhookInfo = await webhookInfoResp.json();
+
     // Check bot info
-    const botResponse = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
-    const botInfo = await botResponse.json();
+    const botResp = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const botInfo = await botResp.json();
+
+    // Auto-fix webhook if missing or different or forced
+    let action: 'none' | 'set' = 'none';
+    let setResult: any = null;
+    const currentUrl = webhookInfo?.result?.url || '';
+
+    if (force || !currentUrl || currentUrl !== EXPECTED_WEBHOOK_URL) {
+      setResult = await setWebhook(botToken);
+      action = 'set';
+    }
 
     return new Response(JSON.stringify({
+      ok: true,
+      action,
+      expected: EXPECTED_WEBHOOK_URL,
+      current: currentUrl,
+      setResult,
       webhook: webhookInfo,
       bot: botInfo,
-      webhookUrl: `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot`
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error checking webhook:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Error in webhook check:', error);
+    return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
