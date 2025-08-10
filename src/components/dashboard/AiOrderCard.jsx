@@ -174,7 +174,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
 
   const gradientToUse = useMemo(() => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 via-orange-500 to-rose-600';
-    if (availability === 'available' && !needsReview) return 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600';
+    if (availability === 'available' && !needsReview) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
     if (needsReview) return 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500';
     return getStatusColor(order.status).gradient;
   }, [availability, needsReview, order.status]);
@@ -185,9 +185,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20",
       isSelected && "ring-2 ring-blue-500"
     )} dir="rtl">
-      <CardContent className="p-3">
+      <CardContent className="p-2">
         <div className={cn(
-          "relative rounded-lg p-3 text-white overflow-hidden",
+          "relative rounded-lg p-2 text-white overflow-hidden",
           gradientToUse
         )}>
           {/* Background decoration - Beautiful circles like inventory sections */}
@@ -197,7 +197,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           <div className="absolute bottom-1/3 right-1/3 w-4 h-4 bg-white/10 rounded-full"></div>
           
           {/* Header with selection */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Checkbox
                 checked={isSelected}
@@ -248,14 +248,14 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           )}
 
           {/* Complete Order Details */}
-          <div className="space-y-2 mb-3">
+          <div className="space-y-1.5 mb-2">
             {/* Customer Phone */}
             {(order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone) && (
-              <div className="bg-white/10 rounded-md p-2 backdrop-blur-sm">
+              <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
                 <div className="flex items-center gap-1">
                   <Smartphone className="w-3 h-3" />
-                  <span className="text-xs font-medium">الهاتف:</span>
-                  <span className="text-xs">
+                  <span className="text-[11px] font-medium">الهاتف:</span>
+                  <span className="text-[11px]">
                     {order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone}
                   </span>
                 </div>
@@ -264,11 +264,11 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
 
             {/* Shipping Address */}
             {(order.order_data?.shipping_address || order.order_data?.address || order.shipping_address) && (
-              <div className="bg-white/10 rounded-md p-2 backdrop-blur-sm">
+              <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
                 <div className="flex items-center gap-1">
                   <Package className="w-3 h-3" />
-                  <span className="text-xs font-medium">العنوان:</span>
-                  <span className="text-xs">
+                  <span className="text-[11px] font-medium">العنوان:</span>
+                  <span className="text-[11px]">
                     {order.order_data?.shipping_address || order.order_data?.address || order.shipping_address}
                   </span>
                 </div>
@@ -285,19 +285,18 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                 
                 {items && items.length > 0 ? (
                   <div className="space-y-1">
-                    {items.map((item, index) => (
-                      <div key={index} className="text-xs bg-white/10 rounded px-2 py-1">
-                        <div className="font-medium">{item.product_name || item.name || item.product}</div>
-                        <div className="flex justify-between items-center text-xs opacity-90">
-                          <span>
-                            {item.quantity ? `الكمية: ${item.quantity}` : null}
-                            {item.size ? ` • المقاس: ${item.size}` : null}
-                            {item.color ? ` • اللون: ${item.color}` : null}
-                          </span>
-                          {(item.price || item.unit_price) && <span className="font-bold">{item.price || item.unit_price} د.ع</span>}
+                    {items.map((item, index) => {
+                      const name = (item.product_name || item.name || item.product || '').toString().trim();
+                      const size = item.size ? `${item.size}` : '';
+                      const color = item.color ? `${item.color}` : '';
+                      const qty = item.quantity || 1;
+                      const line = `${name}${size ? ' ' + size : ''}${color ? ' ' + color : ''} x ${qty}`;
+                      return (
+                        <div key={index} className="text-xs">
+                          {line}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs leading-relaxed">
@@ -368,7 +367,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         </div>
 
         {/* Expanded Details - always visible */}
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-2 hidden">
             {order.order_data?.shipping_address && (
               <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
                 <div className="flex items-center gap-2 text-xs">

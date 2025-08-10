@@ -180,6 +180,7 @@ const Layout = ({ children }) => {
   const { aiChatOpen, setAiChatOpen } = useAiChat();
   const [dialogs, setDialogs] = useState({ cart: false, quickOrder: false });
   const [aiOrdersOpen, setAiOrdersOpen] = useState(false);
+  const [aiOrderForEdit, setAiOrderForEdit] = useState(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { user } = useAuth();
 
@@ -194,6 +195,17 @@ const Layout = ({ children }) => {
     return () => {
       window.removeEventListener('openAiOrdersManager', handleOpenAiOrders);
     };
+  }, []);
+
+  // Listen for opening Quick Order with AI data
+  useEffect(() => {
+    const handleOpenQuickOrderWithAi = (e) => {
+      const data = e?.detail || null;
+      setAiOrderForEdit(data);
+      setDialogs({ cart: false, quickOrder: true });
+    };
+    window.addEventListener('openQuickOrderWithAi', handleOpenQuickOrderWithAi);
+    return () => window.removeEventListener('openQuickOrderWithAi', handleOpenQuickOrderWithAi);
   }, []);
 
   // استقبال إشارة فتح السايدبار من الشريط السفلي
