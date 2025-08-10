@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getUserUUID } from '@/utils/userIdUtils';
-import { normalizeIraqiPhone } from '@/utils/phoneUtils';
 
 /**
  * Hook موحد لجلب جميع إحصائيات الطلبات والعملاء
@@ -87,13 +86,11 @@ const useOrdersAnalytics = () => {
     // أفضل العملاء
     const customerStats = new Map();
     completedOrders.forEach(order => {
-      const rawPhone = order.customer_phone || order.phone_number || order.client_mobile || order.phone || order.customerinfo?.phone;
-      const phone = normalizeIraqiPhone(rawPhone);
-      if (!phone) return;
-      const name = order.customer_name || order.client_name || order.name || 'زبون غير محدد';
+      const phone = order.customer_phone;
+      const name = order.customer_name;
       const city = order.customer_city || order.customer_province || 'غير محدد';
       const orderAmount = order.final_amount || order.total_amount || 0;
-      const createdAt = order.created_at ? new Date(order.created_at) : (order.createdAt ? new Date(order.createdAt) : null);
+      const createdAt = order.created_at ? new Date(order.created_at) : null;
       
       if (customerStats.has(phone)) {
         const existing = customerStats.get(phone);

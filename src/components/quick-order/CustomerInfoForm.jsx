@@ -4,9 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
-import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
-import { findPhoneStatsInOrders } from '@/utils/phoneUtils';
 
 const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
   
@@ -17,21 +14,6 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       handleSelectChange('city', 'بغداد');
     }
   }, [formData.address, handleSelectChange]);
-
-  // تنبيه عند إدخال رقم زبون موجود مسبقاً
-  const { orders } = useInventory();
-  const lastNotifiedRef = React.useRef(null);
-  useEffect(() => {
-    if (!formData.phone) return;
-    const { canonical, count, lastOrderDate } = findPhoneStatsInOrders(orders, formData.phone);
-    if (canonical && canonical !== lastNotifiedRef.current && count > 0) {
-      toast({
-        title: 'تنبيه: عميل موجود',
-        description: `آخر طلب: ${lastOrderDate ? new Date(lastOrderDate).toLocaleString('ar-IQ') : 'غير متوفر'} • عدد الطلبات: ${count}`,
-      });
-      lastNotifiedRef.current = canonical;
-    }
-  }, [formData.phone, orders]);
 
   return (
     <Card>
