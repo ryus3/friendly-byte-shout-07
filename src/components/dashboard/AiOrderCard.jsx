@@ -173,12 +173,47 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const needsReviewStatuses = ['needs_review', 'review', 'error', 'failed'];
   const needsReview = useMemo(() => needsReviewStatuses.includes(order.status) || availability !== 'available', [order.status, availability]);
 
+  // أسباب المراجعة التفصيلية من عناصر الطلب (بدون قياس/لون، نافذ، محجوز، كمية غير كافية...)
+  const reviewReasons = useMemo(() => {
+    const reasons = [];
+    for (const it of items) {
+      const name = (it?.product_name || it?.name || it?.product || '').toString().trim();
+      const avail = it?.availability;
+      const miss = it?.missing_attributes || {};
+      // سمات ناقصة
+      if (avail === 'missing_attributes' || miss?.need_color || miss?.need_size) {
+        const parts = [];
+        if (miss?.need_size || (!it?.size && miss?.need_size !== false)) parts.push('بدون قياس');
+        if (miss?.need_color || (!it?.color && miss?.need_color !== false)) parts.push('بدون لون');
+        if (parts.length) reasons.push(`${name}: ${parts.join(' و ')}`);
+      }
+      // غير موجود
+      if (avail === 'not_found') reasons.push(`${name}: غير موجود في النظام`);
+      // نافذ/محجوز
+      if (avail === 'out') {
+        const sq = it?.stock_quantity ?? 0;
+        const rq = it?.reserved_quantity ?? 0;
+        if (sq === 0) reasons.push(`${name}: نافذ من المخزون`);
+        else if (rq >= sq && sq > 0) reasons.push(`${name}: محجوز بالكامل`);
+        else reasons.push(`${name}: غير متاح حالياً`);
+      }
+      // كمية غير كافية
+      if (avail === 'insufficient') {
+        const av = it?.available_quantity ?? 0;
+        reasons.push(`${name}: الكمية غير كافية (المتاح ${av})`);
+      }
+    }
+    return reasons;
+  }, [items]);
+
+  const needsReviewAny = useMemo(() => needsReview || reviewReasons.length > 0, [needsReview, reviewReasons.length]);
+
   const gradientToUse = useMemo(() => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
-    if (availability === 'available' && !needsReview) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
-    if (needsReview) return 'bg-gradient-to-br from-red-500 to-red-700';
+    if (availability === 'available' && !needsReviewAny) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
+    if (needsReviewAny) return 'bg-gradient-to-br from-red-500 to-red-700';
     return getStatusColor(order.status).gradient;
-  }, [availability, needsReview, order.status]);
+  }, [availability, needsReviewAny, order.status]);
 
   const isProblematic = availability !== 'available' || needsReview;
 
@@ -231,12 +266,19 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             </div>
           </div>
           {/* Alerts */}
-          {availability !== 'available' && (
-            <div className="mb-2 p-2 rounded-md bg-white/15 border border-white/30 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              <span className="text-xs font-medium">
-                {availability === 'out' ? 'تنبيه: عناصر غير متاحة (نافذة/محجوزة)' : 'تنبيه: تفاصيل تحتاج مطابقة مع المنتجات'}
-              </span>
+          {needsReviewAny && (
+            <div className="mb-2 p-2 rounded-md bg-white/15 border border-white/30 flex gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <div className="text-xs">
+                <div className="font-medium">تنبيه: هذا الطلب يحتاج مراجعة</div>
+                {reviewReasons.length > 0 && (
+                  <ul className="mt-1 list-disc list-inside space-y-0.5">
+                    {reviewReasons.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           )}
 
