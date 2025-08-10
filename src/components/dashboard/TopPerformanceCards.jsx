@@ -8,6 +8,7 @@ import {
   MapPin,
   Package
 } from 'lucide-react';
+import { normalizeIraqiPhone } from '@/utils/phoneUtils';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
   // حساب أفضل العملاء حسب رقم الهاتف - فقط الطلبات الموصلة
@@ -29,12 +30,14 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
     });
     
     const customerStats = deliveredOrders.reduce((acc, order) => {
-      const customerPhone = order.customer_phone || 'غير محدد';
-      const customerName = order.customer_name || 'غير محدد';
+      const raw = order.customer_phone || order.phone_number || order.client_mobile || order.phone || order.customerinfo?.phone;
+      const customerPhone = normalizeIraqiPhone(raw) || 'غير محدد';
+      const customerName = order.customer_name || order.client_name || order.name || 'غير محدد';
+      if (customerPhone === 'غير محدد') return acc;
       if (!acc[customerPhone]) {
         acc[customerPhone] = {
           phone: customerPhone,
@@ -44,7 +47,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
         };
       }
       acc[customerPhone].totalOrders += 1;
-      acc[customerPhone].totalAmount += order.final_amount || 0;
+      acc[customerPhone].totalAmount += (order.final_amount || order.total_amount || order.total || 0);
       return acc;
     }, {});
 
@@ -72,7 +75,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
     });
     
     const cityStats = deliveredOrders.reduce((acc, order) => {
@@ -113,7 +116,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.order_status === 'cancelled' ||
                                    order.isArchived === true;
       
-      return isCompleted && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled && !!order.receipt_received;
     });
     
     const productStats = {};

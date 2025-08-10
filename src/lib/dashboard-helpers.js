@@ -1,4 +1,5 @@
 import { startOfToday, startOfWeek, startOfMonth, startOfYear, subDays, parseISO, endOfMonth, endOfWeek, endOfYear } from 'date-fns';
+import { normalizeIraqiPhone } from '@/utils/phoneUtils';
 
 export const filterOrdersByPeriod = (orders, period, returnDateRange = false) => {
   const now = new Date();
@@ -132,26 +133,7 @@ export const getUniqueCustomerCount = (orders) => {
   return customerPhones.size;
 };
 
-// دالة تطبيع رقم الهاتف
-const normalizePhoneNumber = (phone) => {
-  if (!phone || typeof phone !== 'string') return null;
-  
-  // إزالة المسافات والرموز غير المرغوب فيها
-  let normalized = phone.replace(/[\s\-\(\)]/g, '');
-  
-  // إزالة رمز الدولة +964 أو 00964
-  normalized = normalized.replace(/^(\+964|00964)/, '');
-  
-  // إزالة الصفر في البداية إذا كان رقم العراق
-  normalized = normalized.replace(/^0/, '');
-  
-  // التأكد من أن الرقم بين 10-11 رقم
-  if (normalized.length >= 10 && normalized.length <= 11) {
-    return normalized;
-  }
-  
-  return null;
-};
+// هاتف: تم نقل دالة التطبيع إلى utils/phoneUtils.js لاستخدام موحد عبر النظام
 
 export const getTopCustomers = (orders) => {
   if (!orders || orders.length === 0) {
@@ -172,7 +154,7 @@ export const getTopCustomers = (orders) => {
     
     console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
     
-    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+    return isDeliveredOrCompleted && !isReturnedOrCancelled && !!order.receipt_received;
   });
   
   console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
@@ -191,7 +173,7 @@ export const getTopCustomers = (orders) => {
                      order.phone ||
                      order.customerinfo?.phone;
     
-    const phone = normalizePhoneNumber(rawPhone);
+    const phone = normalizeIraqiPhone(rawPhone);
     const name = order.customer_name || 
                  order.client_name || 
                  order.name ||
@@ -248,7 +230,7 @@ export const getTopProvinces = (orders) => {
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
-    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+    return isDeliveredOrCompleted && !isReturnedOrCancelled && !!order.receipt_received;
   });
   
   console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
