@@ -24,8 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 import AiOrderCard from './AiOrderCard';
 
-const AiOrdersManager = ({ isOpen, onClose }) => {
-  // Mock data for now - replace with real data
+const AiOrdersManager = ({ onClose }) => {
   const [aiOrders] = useState([
     {
       id: 1,
@@ -50,18 +49,18 @@ const AiOrdersManager = ({ isOpen, onClose }) => {
     }
   ]);
 
-  const isAvailable = true; // Mock availability
-
-  // Calculate stats
+  const isAvailable = true;
   const pendingCount = aiOrders.filter(order => order.status === 'pending').length;
   const completedCount = aiOrders.filter(order => order.status === 'completed').length;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[85vh] p-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 border-0 shadow-2xl">
-        {/* Header with AI Branding */}
-        <DialogHeader className="relative p-4 pb-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg overflow-hidden">
-          {/* Animated Background Elements */}
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
+      <div 
+        className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl w-full max-w-4xl h-[85vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="relative p-4 pb-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-32 h-32 bg-white/20 rounded-full -translate-x-16 -translate-y-16"></div>
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/10 rounded-full translate-x-12 translate-y-12"></div>
@@ -77,12 +76,8 @@ const AiOrdersManager = ({ isOpen, onClose }) => {
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
               <div>
-                <DialogTitle className="text-xl font-bold text-white mb-0.5">
-                  إدارة الطلبات الذكية
-                </DialogTitle>
-                <p className="text-blue-100 text-xs">
-                  نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي
-                </p>
+                <h2 className="text-xl font-bold text-white mb-0.5">إدارة الطلبات الذكية</h2>
+                <p className="text-blue-100 text-xs">نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي</p>
               </div>
             </div>
             
@@ -95,9 +90,9 @@ const AiOrdersManager = ({ isOpen, onClose }) => {
               <X className="w-4 h-4" />
             </Button>
           </div>
-        </DialogHeader>
+        </div>
 
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-[calc(85vh-120px)]">
           <div className="p-4">
             {/* Stats Overview */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -218,30 +213,6 @@ const AiOrdersManager = ({ isOpen, onClose }) => {
               </Card>
             </div>
 
-            {/* Availability Warning */}
-            {!isAvailable && (
-              <Card className="mb-4 border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 shadow-lg">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-amber-800 dark:text-amber-200 text-sm mb-0.5">
-                        تنبيه: النظام غير متاح حالياً
-                      </h4>
-                      <p className="text-xs text-amber-700 dark:text-amber-300">
-                        النظام الذكي لإدارة الطلبات متوقف مؤقتاً. سيتم استئناف الخدمة قريباً.
-                      </p>
-                    </div>
-                    <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">
-                      متوقف
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
@@ -277,8 +248,8 @@ const AiOrdersManager = ({ isOpen, onClose }) => {
             </Card>
           </div>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
