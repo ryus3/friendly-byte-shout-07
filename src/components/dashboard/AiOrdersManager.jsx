@@ -20,7 +20,8 @@ import {
   Users,
   TrendingUp,
   Activity,
-  Trash2
+  Trash2,
+  ShoppingCart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
@@ -143,6 +144,7 @@ const AiOrdersManager = ({ onClose }) => {
   const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status) || availabilityOf(order) !== 'available').length;
   const telegramCount = orders.filter(order => order.source === 'telegram').length;
   const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;
+  const storeCount = orders.filter(order => order.source === 'web' || order.source === 'store').length;
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -227,7 +229,7 @@ const AiOrdersManager = ({ onClose }) => {
 
           <div className="p-4">
             {/* Stats Overview */}
-            <div className="grid grid-cols-4 gap-3 mb-4" dir="ltr">
+            <div className="grid grid-cols-5 gap-3 mb-4" dir="ltr">
               {/* Needs Review Card */}
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
@@ -271,6 +273,29 @@ const AiOrdersManager = ({ onClose }) => {
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
                   <div className="absolute top-2 left-1 w-5 h-5 bg-white/8 rounded-full"></div>
                   <div className="absolute top-1 right-2 w-2 h-2 bg-white/15 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* Store Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white min-h-[100px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-1">
+                    <div className="flex justify-center">
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <ShoppingCart className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs">من المتجر</h4>
+                      <p className="text-amber-100 text-xs">طلبات الموقع</p>
+                    </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{storeCount} طلب</p>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                  <div className="absolute top-1 left-3 w-3 h-3 bg-white/12 rounded-full"></div>
+                  <div className="absolute top-4 right-1 w-2 h-2 bg-white/20 rounded-full"></div>
                 </CardContent>
               </Card>
 
