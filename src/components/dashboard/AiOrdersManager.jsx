@@ -52,6 +52,15 @@ const AiOrdersManager = ({ onClose }) => {
           
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/10 rounded-lg p-2 h-auto"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+              
               <div className="relative">
                 <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
                   <Brain className="w-6 h-6 text-white" />
@@ -63,15 +72,6 @@ const AiOrdersManager = ({ onClose }) => {
                 <p className="text-blue-100 text-xs">نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي</p>
               </div>
             </div>
-            
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto"
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
         </div>
 
@@ -184,7 +184,7 @@ const AiOrdersManager = ({ onClose }) => {
             {/* Orders List */}
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2" dir="ltr">
                   <MessageSquare className="w-4 h-4 text-blue-600" />
                   قائمة الطلبات الذكية ({orders.length})
                 </CardTitle>
@@ -192,7 +192,7 @@ const AiOrdersManager = ({ onClose }) => {
               
               <CardContent className="p-0">
                 <ScrollArea className="h-[400px]">
-                  <div className="p-3 space-y-3">
+                  <div className="p-3 space-y-3" dir="ltr">
                     {orders.length === 0 ? (
                       <div className="text-center py-8">
                         <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">

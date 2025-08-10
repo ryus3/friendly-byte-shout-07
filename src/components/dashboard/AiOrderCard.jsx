@@ -15,7 +15,12 @@ import {
   Calendar,
   Hash,
   Smartphone,
-  Zap
+  Zap,
+  Trash2,
+  X as XIcon,
+  Edit,
+  ShoppingCart,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -103,7 +108,7 @@ const AiOrderCard = ({ order }) => {
     <Card className={cn(
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
       "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20"
-    )}>
+    )} dir="rtl">
       <CardContent className="p-3">
         <div className={cn(
           "relative rounded-lg p-3 text-white overflow-hidden",
@@ -128,16 +133,17 @@ const AiOrderCard = ({ order }) => {
             </div>
             
             <Badge className="bg-white/20 text-white border-0 text-xs">
+              {getStatusIcon(order.status)}
               {getStatusText(order.status)}
             </Badge>
           </div>
 
           {/* Customer Info */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-1">
               <User className="w-3 h-3" />
-              <span className="text-xs font-medium truncate max-w-[100px]">
-                {order.customer_name || 'غير محدد'}
+              <span className="text-xs font-medium truncate max-w-[120px]">
+                {order.customer_name || order.order_data?.customer_name || 'غير محدد'}
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -148,31 +154,87 @@ const AiOrderCard = ({ order }) => {
             </div>
           </div>
 
-          {/* Message Preview */}
-          <div className="bg-white/10 rounded-md p-2 mb-3 backdrop-blur-sm">
-            <p className="text-xs leading-relaxed line-clamp-2">
-              {order.message || 'لا توجد تفاصيل متاحة'}
-            </p>
-          </div>
+          {/* Order Details */}
+          {order.order_data && (
+            <div className="bg-white/10 rounded-md p-2 mb-3 backdrop-blur-sm">
+              <div className="flex items-center gap-1 mb-1">
+                <Package className="w-3 h-3" />
+                <span className="text-xs font-medium">تفاصيل الطلب:</span>
+              </div>
+              {order.order_data.items && order.order_data.items.length > 0 ? (
+                <div className="space-y-1">
+                  {order.order_data.items.slice(0, 2).map((item, index) => (
+                    <div key={index} className="text-xs bg-white/10 rounded px-2 py-1">
+                      <span className="font-medium">{item.product_name || item.name}</span>
+                      {item.quantity && <span className="mr-2">الكمية: {item.quantity}</span>}
+                      {item.price && <span className="mr-2">{item.price} د.ع</span>}
+                    </div>
+                  ))}
+                  {order.order_data.items.length > 2 && (
+                    <div className="text-xs opacity-80">
+                      +{order.order_data.items.length - 2} منتج آخر
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs leading-relaxed line-clamp-2">
+                  {order.message || order.order_data.raw_message || 'لا توجد تفاصيل متاحة'}
+                </p>
+              )}
+              
+              {/* Total Amount */}
+              {order.order_data.total_amount && (
+                <div className="mt-2 pt-2 border-t border-white/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-medium">المجموع:</span>
+                    <span className="text-sm font-bold">{order.order_data.total_amount} د.ع</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Contact Info */}
+          {order.customer_phone && (
+            <div className="bg-white/10 rounded-md p-2 mb-3 backdrop-blur-sm">
+              <div className="flex items-center gap-1">
+                <Smartphone className="w-3 h-3" />
+                <span className="text-xs font-medium">الهاتف:</span>
+                <span className="text-xs">{order.customer_phone}</span>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-4 gap-1">
             <Button 
               size="sm" 
               variant="secondary"
-              className="flex-1 h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
+              className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0 px-2"
               onClick={() => setShowDetails(!showDetails)}
             >
-              <Eye className="w-3 h-3 mr-1" />
-              {showDetails ? 'إخفاء' : 'عرض'}
+              <Eye className="w-3 h-3" />
             </Button>
             
             <Button 
               size="sm"
-              className="flex-1 h-7 text-xs bg-white/30 hover:bg-white/40 text-white border-0"
+              className="h-7 text-xs bg-emerald-500/30 hover:bg-emerald-500/50 text-white border-0 px-2"
             >
-              <Send className="w-3 h-3 mr-1" />
-              {order.status === 'pending' ? 'معالجة' : 'رد'}
+              <CheckCircle2 className="w-3 h-3" />
+            </Button>
+            
+            <Button 
+              size="sm"
+              className="h-7 text-xs bg-blue-500/30 hover:bg-blue-500/50 text-white border-0 px-2"
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+            
+            <Button 
+              size="sm"
+              className="h-7 text-xs bg-red-500/30 hover:bg-red-500/50 text-white border-0 px-2"
+            >
+              <Trash2 className="w-3 h-3" />
             </Button>
           </div>
         </div>
@@ -180,12 +242,12 @@ const AiOrderCard = ({ order }) => {
         {/* Expanded Details */}
         {showDetails && (
           <div className="mt-3 space-y-2">
-            {order.customer_phone && (
+            {order.order_data?.shipping_address && (
               <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
                 <div className="flex items-center gap-2 text-xs">
-                  <Smartphone className="w-3 h-3 text-green-600" />
-                  <span className="font-medium">الهاتف:</span>
-                  <span className="text-muted-foreground">{order.customer_phone}</span>
+                  <Package className="w-3 h-3 text-blue-600" />
+                  <span className="font-medium">عنوان التوصيل:</span>
+                  <span className="text-muted-foreground">{order.order_data.shipping_address}</span>
                 </div>
               </div>
             )}
@@ -198,6 +260,18 @@ const AiOrderCard = ({ order }) => {
                 </h5>
                 <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                   {order.ai_response}
+                </p>
+              </div>
+            )}
+            
+            {order.error_message && (
+              <div className="bg-red-50 dark:bg-red-900/30 rounded-md p-2">
+                <h5 className="font-medium text-xs mb-1 text-red-800 dark:text-red-200 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  رسالة خطأ:
+                </h5>
+                <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed">
+                  {order.error_message}
                 </p>
               </div>
             )}
@@ -216,6 +290,16 @@ const AiOrderCard = ({ order }) => {
                 </span>
               </div>
             </div>
+
+            {/* Full Order Data Debug */}
+            {order.order_data && (
+              <details className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
+                <summary className="font-medium text-xs cursor-pointer">عرض البيانات الكاملة</summary>
+                <pre className="text-xs mt-2 overflow-auto max-h-32 bg-slate-200 dark:bg-slate-600 p-2 rounded">
+                  {JSON.stringify(order, null, 2)}
+                </pre>
+              </details>
+            )}
           </div>
         )}
       </CardContent>
