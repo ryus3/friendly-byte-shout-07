@@ -93,8 +93,8 @@ const AiOrdersManager = ({ onClose }) => {
   }, []);
 
   const baseVisible = useMemo(() => (
-    isAdmin ? orders : orders.filter(matchesCurrentUser)
-  ), [orders, isAdmin, matchesCurrentUser]);
+    (isAdmin || isDepartmentManager) ? orders : orders.filter(matchesCurrentUser)
+  ), [orders, isAdmin, isDepartmentManager, matchesCurrentUser]);
 
   const visibleOrders = useMemo(() => {
     let list = baseVisible;
@@ -470,7 +470,7 @@ const AiOrdersManager = ({ onClose }) => {
                   
                   {visibleOrders.length > 0 && (
                     <div className="space-y-2">
-                      {isAdmin && (
+                      {(isAdmin || isDepartmentManager) && (
                         <div className="flex flex-col md:flex-row md:items-center gap-2">
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4 text-slate-500" />
@@ -478,18 +478,16 @@ const AiOrdersManager = ({ onClose }) => {
                           </div>
                           <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
                             <SelectTrigger className="h-8 w-full md:w-80">
-                              <SelectValue placeholder="المدير العام" />
+                              <SelectValue placeholder="جميع الموظفين" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="z-[2000] bg-white dark:bg-slate-800">
                               <SelectGroup>
-                                <SelectLabel>خيارات عامة</SelectLabel>
-                                <SelectItem value="manager">المدير العام</SelectItem>
-                                <SelectItem value="all">جميع المستخدمين</SelectItem>
+                                <SelectItem value="all">جميع الموظفين</SelectItem>
                               </SelectGroup>
                               <SelectSeparator />
                               <SelectGroup>
                                 <SelectLabel>الموظفون</SelectLabel>
-                                {(allUsers || []).map((u) => (
+                                {employeesOnly.map((u) => (
                                   <SelectItem key={String(u.user_id || u.id)} value={`user:${String(u.user_id || u.id)}`}>
                                     {u.full_name || u.username || u.employee_code || (u.user_id || u.id)}
                                   </SelectItem>
