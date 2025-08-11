@@ -173,45 +173,102 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const needsReviewStatuses = ['needs_review', 'review', 'error', 'failed'];
   const needsReview = useMemo(() => needsReviewStatuses.includes(order.status) || availability !== 'available', [order.status, availability]);
 
-  // أسباب المراجعة التفصيلية من عناصر الطلب (بدون قياس/لون، نافذ، محجوز، كمية غير كافية...)
+  // أسباب المراجعة التفصيلية المستنتجة تلقائياً عند غياب أسباب صريحة من الـ AI
   const reviewReasons = useMemo(() => {
     const reasons = [];
+    // تجهيز المتغيرات المتاحة مع أسماء المنتجات
+    const variants = [];
+    for (const p of (products || [])) {
+      const list = Array.isArray(p.variants) ? p.variants : (p.product_variants || []);
+      list.forEach(v => variants.push({
+        ...v,
+        product_id: p.id,
+        product_name: p.name,
+        color: v.color || v.color_name,
+        size: v.size || v.size_name,
+      }));
+    }
+    const lower = (v) => (v || '').toString().trim().toLowerCase();
+
     for (const it of items) {
       const name = (it?.product_name || it?.name || it?.product || '').toString().trim();
-      const size = it?.size ? `المقاس ${it.size}` : '';
-      const color = it?.color ? `اللون ${it.color}` : '';
+      const qty = Number(it?.quantity || 1);
+      const sizeRaw = it?.size;
+      const colorRaw = it?.color;
+      const size = sizeRaw ? `المقاس ${sizeRaw}` : '';
+      const color = colorRaw ? `اللون ${colorRaw}` : '';
       const variantDesc = `${size}${size && color ? ' و' : ''}${color}`;
       const avail = it?.availability;
       const miss = it?.missing_attributes || {};
-      // سمات ناقصة
+
+      // 1) سمات ناقصة قادمة من الـ AI
       if (avail === 'missing_attributes' || miss?.need_color || miss?.need_size) {
         const parts = [];
         if (miss?.need_size || (!it?.size && miss?.need_size !== false)) parts.push('بدون قياس');
         if (miss?.need_color || (!it?.color && miss?.need_color !== false)) parts.push('بدون لون');
         if (parts.length) reasons.push(`${name}: ${parts.join(' و ')}`);
       }
-      // خارج الصلاحيات
+
+      // 2) عدم السماح
       if (avail === 'not_permitted') {
         reasons.push(`${name}: ليس ضمن صلاحياتك`);
       }
-      // غير موجود
-      if (avail === 'not_found') reasons.push(`${name}: غير موجود في النظام`);
-      // نافذ/محجوز
-      if (avail === 'out') {
-        const sq = it?.stock_quantity ?? 0;
-        const rq = it?.reserved_quantity ?? 0;
-        if (sq === 0) reasons.push(`${name}: ${variantDesc ? variantDesc + ' ' : ''}نافذ من المخزون`);
-        else if (rq >= sq && sq > 0) reasons.push(`${name}: ${variantDesc ? variantDesc + ' ' : ''}محجوز بالكامل`);
-        else reasons.push(`${name}: غير متاح حالياً${variantDesc ? ` (${variantDesc})` : ''}`);
+
+      // 3) استنتاج المنتج/اللون/المقاس من قاعدة البيانات
+      const matches = variants.filter(v => lower(v.product_name) === lower(name) || lower(v.product_name).includes(lower(name)));
+      if (!matches.length) {
+        // إذا لم نجد أي منتج مطابق
+        reasons.push(`${name || 'منتج'}: غير موجود في النظام`);
+        continue;
       }
-      // كمية غير كافية
+
+      let filtered = matches;
+      if (colorRaw) {
+        const lc = lower(colorRaw);
+        const byColor = filtered.filter(v => lower(v.color) === lc || lower(v.color_name) === lc);
+        if (byColor.length === 0) {
+          reasons.push(`${name}: اللون ${colorRaw} غير متوفر`);
+        } else {
+          filtered = byColor;
+        }
+      }
+      if (sizeRaw) {
+        const ls = lower(sizeRaw);
+        const bySize = filtered.filter(v => lower(v.size) === ls || lower(v.size_name) === ls);
+        if (bySize.length === 0) {
+          reasons.push(`${name}: المقاس ${sizeRaw} غير متوفر`);
+        } else {
+          filtered = bySize;
+        }
+      }
+
+      const variant = filtered[0];
+      if (variant) {
+        const available = (Number(variant.quantity ?? 0) - Number(variant.reserved_quantity ?? 0));
+        if (available <= 0) {
+          reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: نافذ من المخزون`);
+        } else if (available < qty) {
+          reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: الكمية غير كافية (المتاح ${available})`);
+        }
+      } else if (matches.length > 0 && (colorRaw || sizeRaw)) {
+        // وجدنا المنتج لكن لم نجد المطابقة الدقيقة
+        if (colorRaw && sizeRaw) {
+          reasons.push(`${name}: المطابقة للون ${colorRaw} والمقاس ${sizeRaw} غير متوفرة`);
+        }
+      }
+
+      // 4) حالات صريحة واردة من عناصر الـ AI
+      if (avail === 'not_found') reasons.push(`${name}: غير موجود في النظام`);
+      if (avail === 'out') {
+        reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: غير متاح حالياً`);
+      }
       if (avail === 'insufficient') {
         const av = it?.available_quantity ?? 0;
-        reasons.push(`${name}: الكمية غير كافية${variantDesc ? ` للمحددات (${variantDesc})` : ''} (المتاح ${av})`);
+        reasons.push(`${name}: الكمية غير كافية${variantDesc ? ` (${variantDesc})` : ''} (المتاح ${av})`);
       }
     }
     return reasons;
-  }, [items]);
+  }, [items, products]);
 
   const needsReviewAny = useMemo(() => needsReview || reviewReasons.length > 0, [needsReview, reviewReasons.length]);
 

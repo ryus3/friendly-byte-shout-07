@@ -246,9 +246,13 @@ const OrdersPage = () => {
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
     if (hasPermission('view_all_orders')) return aiOrders;
-    if (!userEmployeeCode) return [];
-    return aiOrders.filter(order => order.created_by === userEmployeeCode);
-  }, [aiOrders, userEmployeeCode, hasPermission]);
+    const identifiers = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean);
+    if (identifiers.length === 0) return [];
+    return aiOrders.filter(order => {
+      const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+      return identifiers.includes(by);
+    });
+  }, [aiOrders, userEmployeeCode, hasPermission, user?.user_id, user?.id]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;

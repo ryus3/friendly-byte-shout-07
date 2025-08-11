@@ -277,15 +277,14 @@ const Dashboard = () => {
 
     const userAiOrders = useMemo(() => {
         if (!aiOrders) return [];
-        
-        // للمدير - عرض كل الطلبات
         if (canViewAllData) return aiOrders;
-        
-        // للموظفين - فلترة حسب رمز الموظف
-        if (!userEmployeeCode) return [];
-        
-        return aiOrders.filter(order => order.created_by === userEmployeeCode);
-    }, [aiOrders, canViewAllData, userEmployeeCode]);
+        const identifiers = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean);
+        if (identifiers.length === 0) return [];
+        return aiOrders.filter(order => {
+            const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+            return identifiers.includes(by);
+        });
+    }, [aiOrders, canViewAllData, userEmployeeCode, user?.user_id, user?.id]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
