@@ -32,6 +32,7 @@ import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const AiOrdersManager = ({ onClose }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
@@ -58,12 +59,20 @@ const AiOrdersManager = ({ onClose }) => {
     fetchCode();
   }, [user?.user_id]);
 
-  // فلتر الموظفين مع حفظ محلي: الافتراضي "المدير العام"
-  const [employeeFilter, setEmployeeFilter] = useLocalStorage('aiOrdersEmployeeFilter', 'manager');
-  const adminUsers = useMemo(() => (allUsers || []).filter(u => Array.isArray(u?.roles) && (u.roles.includes('super_admin') || u.roles.includes('admin'))), [allUsers]);
+  // فلتر الموظفين مع حفظ محلي: الافتراضي "جميع الموظفين"
+  const [employeeFilter, setEmployeeFilter] = useLocalStorage('aiOrdersEmployeeFilter', 'all');
+  const employeesOnly = useMemo(
+    () => (allUsers || []).filter(u => 
+      u?.status === 'active' &&
+      Array.isArray(u?.roles) &&
+      u.roles.some(r => ['super_admin','admin','department_manager','sales_employee','warehouse_employee','cashier'].includes(r))
+    ),
+    [allUsers]
+  );
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
+  const { isDepartmentManager } = usePermissions();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
     const candidates = [employeeCode, userUUID, telegramCode]
@@ -90,17 +99,13 @@ const AiOrdersManager = ({ onClose }) => {
   const visibleOrders = useMemo(() => {
     let list = baseVisible;
     if (employeeFilter === 'all') return list;
-    if (employeeFilter === 'manager') {
-      if (!adminUsers?.length) return list;
-      return list.filter(o => adminUsers.some(u => matchesOrderByProfile(o, u)));
-    }
     if (employeeFilter?.startsWith('user:')) {
       const uid = employeeFilter.slice(5);
       const u = (allUsers || []).find(x => String(x?.user_id) === uid || String(x?.id) === uid);
       return u ? list.filter(o => matchesOrderByProfile(o, u)) : list;
     }
     return list;
-  }, [baseVisible, employeeFilter, adminUsers, allUsers, matchesOrderByProfile]);
+  }, [baseVisible, employeeFilter, allUsers, matchesOrderByProfile]);
 
   // مزامنة الطلبات المحلية عند تغيّر بيانات السياق
   useEffect(() => {
