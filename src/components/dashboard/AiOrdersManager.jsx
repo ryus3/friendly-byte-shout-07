@@ -468,7 +468,28 @@ const AiOrdersManager = ({ onClose }) => {
                     قائمة الطلبات الذكية ({visibleOrders.length})
                   </CardTitle>
                   
-                  {visibleOrders.length > 0 && (
+                    {(isAdmin || isDepartmentManager) && visibleOrders.length === 0 && (
+                      <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-slate-500" />
+                          <span className="text-xs text-slate-600 dark:text-slate-400">عرض الطلبات:</span>
+                        </div>
+                        <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                          <SelectTrigger className="h-8 w-full md:w-80">
+                            <SelectValue placeholder="جميع الموظفين" />
+                          </SelectTrigger>
+                          <SelectContent className="z-[2000] bg-white dark:bg-slate-800">
+                            <SelectItem value="all">جميع الموظفين</SelectItem>
+                            {employeesOnly.map((u) => (
+                              <SelectItem key={String(u.user_id || u.id)} value={`user:${String(u.user_id || u.id)}`}>
+                                {u.full_name || u.username || u.employee_code || (u.user_id || u.id)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       {(isAdmin || isDepartmentManager) && (
                         <div className="flex flex-col md:flex-row md:items-center gap-2">
@@ -481,18 +502,12 @@ const AiOrdersManager = ({ onClose }) => {
                               <SelectValue placeholder="جميع الموظفين" />
                             </SelectTrigger>
                             <SelectContent className="z-[2000] bg-white dark:bg-slate-800">
-                              <SelectGroup>
-                                <SelectItem value="all">جميع الموظفين</SelectItem>
-                              </SelectGroup>
-                              <SelectSeparator />
-                              <SelectGroup>
-                                <SelectLabel>الموظفون</SelectLabel>
-                                {employeesOnly.map((u) => (
-                                  <SelectItem key={String(u.user_id || u.id)} value={`user:${String(u.user_id || u.id)}`}>
-                                    {u.full_name || u.username || u.employee_code || (u.user_id || u.id)}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
+                              <SelectItem value="all">جميع الموظفين</SelectItem>
+                              {employeesOnly.map((u) => (
+                                <SelectItem key={String(u.user_id || u.id)} value={`user:${String(u.user_id || u.id)}`}>
+                                  {u.full_name || u.username || u.employee_code || (u.user_id || u.id)}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
