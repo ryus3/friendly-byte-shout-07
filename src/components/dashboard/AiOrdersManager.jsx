@@ -58,22 +58,49 @@ const AiOrdersManager = ({ onClose }) => {
     fetchCode();
   }, [user?.user_id]);
 
-  // صلاحيات وهوية المستخدم لفلترة الطلبات الذكية
+  // فلتر الموظفين مع حفظ محلي: الافتراضي "المدير العام"
+  const [employeeFilter, setEmployeeFilter] = useLocalStorage('aiOrdersEmployeeFilter', 'manager');
+  const adminUsers = useMemo(() => (allUsers || []).filter(u => Array.isArray(u?.roles) && (u.roles.includes('super_admin') || u.roles.includes('admin'))), [allUsers]);
+
+  // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
-    const candidates = [employeeCode, userUUID, telegramCode].filter(Boolean).map(v => String(v).toUpperCase());
+    const candidates = [employeeCode, userUUID, telegramCode]
+      .filter(Boolean)
+      .map(v => String(v).toUpperCase());
     const byNorm = by ? String(by).toUpperCase() : '';
     return by ? candidates.some(v => v === byNorm) : false;
   }, [employeeCode, userUUID, telegramCode]);
 
-  const visibleOrders = useMemo(() => (
+  const matchesOrderByProfile = useCallback((order, profile) => {
+    if (!order || !profile) return false;
+    const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+    const candidates = [profile?.employee_code, profile?.user_id, profile?.id, profile?.username]
+      .filter(Boolean)
+      .map(v => String(v).toUpperCase());
+    const byNorm = by ? String(by).toUpperCase() : '';
+    return by ? candidates.some(v => v === byNorm) : false;
+  }, []);
+
+  const baseVisible = useMemo(() => (
     isAdmin ? orders : orders.filter(matchesCurrentUser)
   ), [orders, isAdmin, matchesCurrentUser]);
 
-  useEffect(() => {
-    setOrders(ordersFromContext);
-  }, [ordersFromContext]);
+  const visibleOrders = useMemo(() => {
+    let list = baseVisible;
+    if (employeeFilter === 'all') return list;
+    if (employeeFilter === 'manager') {
+      if (!adminUsers?.length) return list;
+      return list.filter(o => adminUsers.some(u => matchesOrderByProfile(o, u)));
+    }
+    if (employeeFilter?.startsWith('user:')) {
+      const uid = employeeFilter.slice(5);
+      const u = (allUsers || []).find(x => String(x?.user_id) === uid || String(x?.id) === uid);
+      return u ? list.filter(o => matchesOrderByProfile(o, u)) : list;
+    }
+    return list;
+  }, [baseVisible, employeeFilter, adminUsers, allUsers, matchesOrderByProfile]);
 
   // Force refresh when opening to fetch latest ai_orders even if cache is warm
   useEffect(() => {
