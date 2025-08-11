@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useProfits } from '@/contexts/ProfitsContext'; // النظام الموحد للأرباح
 import StatCard from '@/components/dashboard/StatCard';
 import { Receipt } from 'lucide-react';
 import EmployeeReceivedProfitsDialog from './EmployeeReceivedProfitsDialog';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useEmployeeReceivedPeriod } from '@/hooks/useEmployeeReceivedPeriod';
+import { parseISO, isValid } from 'date-fns';
 
 /**
- * كارت أرباحي المستلمة للموظفين - تم الإصلاح لاستخدام النظام الموحد
+ * كارت أرباحي المستلمة للموظفين - موحد مع النافذة ويستخدم نفس فلترة الفترة
  */
 const EmployeeReceivedProfitsCard = ({ 
   className = '',
@@ -14,63 +16,55 @@ const EmployeeReceivedProfitsCard = ({
 }) => {
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  const { profits: profitsData } = useProfits(); // استخدام النظام الموحد للأرباح
- 
-  
-  // تصفية فواتير التسوية من البيانات الموحدة
-  const employeeReceivedProfits = useMemo(() => {
-    if (!user?.employee_code && !user?.user_id) return { total: 0, invoices: [] };
-    
-    const userUUID = user.user_id || user.id;
-    const userEmployeeCode = user.employee_code;
-    
-    // جمع كل أرباح المستخدم من الحالات المختلفة
-    const allProfits = [
-      ...(profitsData?.pending || []),
-      ...(profitsData?.settled || []),
-      ...(profitsData?.completed || [])
-    ];
-    
-    // البحث في الأرباح عن التسويات المكتملة للمستخدم
-    const userCompletedProfits = allProfits.filter(profit => {
-      const empId = profit.employee_id;
-      return (empId === userUUID || empId === userEmployeeCode) &&
-             (profit.status === 'completed' || profit.status === 'settled');
-    });
-    
-    // حساب إجمالي المبلغ المستلم
-    const totalReceived = userCompletedProfits.reduce((sum, profit) => 
-      sum + (profit.employee_profit || profit.total_profit || 0), 0
-    );
-    
-    console.log('📊 EmployeeReceivedProfitsCard (unified):', {
-      totalProfits: allProfits.length || 0,
-      userCompletedProfits: userCompletedProfits?.length || 0,
-      totalReceived,
-      userEmployeeCode: user?.employee_code,
-      userUUID
-    });
-    
-    return {
-      total: totalReceived,
-      invoices: userCompletedProfits
+  const { period, dateRange, periodLabels } = useEmployeeReceivedPeriod();
+  const [invoices, setInvoices] = useState([]);
+
+  // جلب فواتير التسوية المكتملة بالمعرف الصغير للموظف
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      if (!user?.employee_code) return setInvoices([]);
+      const { data, error } = await supabase
+        .from('settlement_invoices')
+        .select('*')
+        .eq('employee_code', user.employee_code)
+        .eq('status', 'completed')
+        .order('settlement_date', { ascending: false });
+      if (error) {
+        console.error('❌ خطأ في جلب فواتير أرباحي المستلمة:', error);
+        setInvoices([]);
+      } else {
+        setInvoices(data || []);
+      }
     };
-  }, [profitsData, user]);
+    fetchInvoices();
+  }, [user?.employee_code]);
+
+  // فلترة الفواتير حسب الفترة
+  const { totalReceived, filteredCount } = useMemo(() => {
+    if (!invoices?.length || !dateRange?.from || !dateRange?.to) return { totalReceived: 0, filteredCount: 0 };
+    const filtered = invoices.filter(inv => {
+      const d = parseISO(inv.settlement_date);
+      return isValid(d) && d >= dateRange.from && d <= dateRange.to;
+    });
+    const total = filtered.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    return { totalReceived: total, filteredCount: filtered.length };
+  }, [invoices, dateRange]);
 
   return (
     <>
       <StatCard 
         title="أرباحي المستلمة" 
-        value={employeeReceivedProfits.total} 
+        value={totalReceived} 
         icon={Receipt} 
         colors={['blue-500', 'cyan-500']} 
         format="currency" 
         onClick={() => setIsDialogOpen(true)}
         className={className}
+        currentPeriod={period}
+        periods={periodLabels}
         subtitle={
-          employeeReceivedProfits.invoices.length > 0 
-            ? `${employeeReceivedProfits.invoices.length} معاملة مكتملة`
+          filteredCount > 0 
+            ? `${filteredCount} معاملة مكتملة`
             : 'لا توجد أرباح مستلمة بعد'
         }
       />

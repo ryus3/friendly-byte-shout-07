@@ -21,6 +21,7 @@ const IRAQ_TIMEZONE = 'Asia/Baghdad';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
+import { useEmployeeReceivedPeriod } from '@/hooks/useEmployeeReceivedPeriod';
 
 /**
  * نافذة تفاصيل الأرباح المستلمة للموظف
@@ -37,52 +38,8 @@ const EmployeeReceivedProfitsDialog = ({
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   
-  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار (للموظف)
-  const [periodFilter, setPeriodFilter] = useState(() => {
-    return localStorage.getItem('employeeReceivedProfitsPeriodFilter') || 'month';
-  });
-  
-  // حفظ الخيار عند التغيير
-  useEffect(() => {
-    localStorage.setItem('employeeReceivedProfitsPeriodFilter', periodFilter);
-  }, [periodFilter]);
-  
-  // حساب نطاق التاريخ بناء على الفلتر المحدد
-  const dateRange = useMemo(() => {
-    const now = new Date();
-    switch (periodFilter) {
-      case 'day':
-        return {
-          from: startOfDay(now),
-          to: endOfDay(now)
-        };
-      case 'week':
-        return {
-          from: startOfWeek(now, { weekStartsOn: 6 }), // السبت بداية الأسبوع
-          to: endOfWeek(now, { weekStartsOn: 6 })
-        };
-      case 'month':
-        return {
-          from: startOfMonth(now),
-          to: endOfMonth(now)
-        };
-      case 'year':
-        return {
-          from: startOfYear(now),
-          to: endOfYear(now)
-        };
-      case 'all':
-        return {
-          from: new Date('2020-01-01'), // تاريخ بداية شامل
-          to: new Date('2030-12-31')   // تاريخ نهاية شامل
-        };
-      default:
-        return {
-          from: startOfMonth(now),
-          to: endOfMonth(now)
-        };
-    }
-  }, [periodFilter]);
+  // استخدام فلتر الفترة الموحد بين الكارت والنافذة
+  const { period, setPeriod, dateRange } = useEmployeeReceivedPeriod();
 
   // جلب فواتير التسوية باستخدام المعرف الصغير employee_code بدلاً من UUID - نفس منطق الكارت الخارجي
   useEffect(() => {
@@ -202,7 +159,7 @@ const EmployeeReceivedProfitsDialog = ({
                       <Calendar className="w-5 h-5 text-primary" />
                       <span className="font-semibold text-foreground">فترة العرض:</span>
                     </div>
-                    <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                    <Select value={period} onValueChange={setPeriod}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="اختر الفترة الزمنية" />
                       </SelectTrigger>

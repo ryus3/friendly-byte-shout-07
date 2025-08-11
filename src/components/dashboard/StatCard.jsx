@@ -33,7 +33,7 @@ const gradientMap = {
 };
 
 
-const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, currentPeriod, onClick, periods, onEdit, children, subtitle }) => {
+const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, currentPeriod, onClick, periods, onEdit, children, subtitle, periodInline = false }) => {
   // تحويل القيمة إلى رقم آمن مع التعامل مع null وundefined
   const safeValue = value == null || value === undefined || value === '' ? 0 : value;
   const displayValue = isNaN(Number(safeValue)) ? (format === 'text' ? safeValue : 0) : Number(safeValue);
