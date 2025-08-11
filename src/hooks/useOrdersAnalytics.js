@@ -32,7 +32,7 @@ const useOrdersAnalytics = () => {
     };
   }
 
-  const { canViewAllOrders, user } = usePermissions();
+  const { canViewAllOrders, user, isAdmin } = usePermissions();
   const { orders, profits, customers } = useInventory(); // استخدام البيانات الموحدة فقط!
   
   const [dateRange, setDateRange] = useState({
@@ -74,12 +74,22 @@ const useOrdersAnalytics = () => {
       });
     }
 
-    // الطلبات المكتملة
-    const completedOrders = filteredOrders.filter(order => 
-      ['completed', 'delivered'].includes(order.status) && order.receipt_received
-    );
+    // تعريف اكتمال الطلب وفق السياسة
+    const isOrderCompletedForAnalytics = (order) => {
+      const hasReceipt = !!order.receipt_received;
+      if (!hasReceipt) return false;
+      if (['cancelled', 'returned', 'returned_in_stock'].includes(order.status)) return false;
+      if (isAdmin) return true; // المدير: يكفي استلام الفاتورة
+      // الموظف: يجب أن تُسوى أرباحه لهذا الطلب
+      return profits?.some(
+        (p) => p.order_id === order.id && p.employee_id === userUUID && p.status === 'settled'
+      );
+    };
 
-    // حساب الإيرادات الإجمالية
+    // الطلبات المكتملة حسب السياسة أعلاه
+    const completedOrders = filteredOrders.filter(isOrderCompletedForAnalytics);
+
+    // حساب الإيرادات الإجمالية من المكتمل فقط
     const totalRevenue = completedOrders.reduce((sum, order) => 
       sum + (order.final_amount || order.total_amount || 0), 0
     );
@@ -230,7 +240,7 @@ const useOrdersAnalytics = () => {
 
     return {
       totalOrders: filteredOrders.length,
-      pendingOrders: filteredOrders.filter(o => o.status === 'pending').length,
+      pendingOrders: filteredOrders.filter(o => !isOrderCompletedForAnalytics(o) && !['cancelled','returned','returned_in_stock'].includes(o.status)).length,
       completedOrders: completedOrders.length,
       totalRevenue,
       topCustomers,

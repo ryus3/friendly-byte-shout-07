@@ -67,10 +67,10 @@ export const calculateStats = (orders, products, period) => {
 
     const orderProfit = order.total - orderCost;
 
-    if (order.status === 'delivered') {
+    if (order.receipt_received === true) {
       receivedSales += order.total;
       receivedProfit += orderProfit;
-    } else if (order.status !== 'cancelled' && order.status !== 'returned') {
+    } else if (order.status !== 'cancelled' && order.status !== 'returned' && order.status !== 'returned_in_stock') {
       pendingSales += order.total;
       pendingProfit += orderProfit;
     }
@@ -149,15 +149,12 @@ export const getTopCustomers = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
-    
+    const hasReceipt = !!order.receipt_received;
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.status === 'returned_in_stock';
-    
-    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
-    
-    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+                                 order.status === 'returned_in_stock' ||
+                                 order.isArchived === true;
+    return hasReceipt && !isReturnedOrCancelled;
   });
   
   console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
@@ -221,13 +218,12 @@ export const getTopProvinces = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
-    
+    const hasReceipt = !!order.receipt_received;
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.status === 'returned_in_stock';
-    
-    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+                                 order.status === 'returned_in_stock' ||
+                                 order.isArchived === true;
+    return hasReceipt && !isReturnedOrCancelled;
   });
   
   console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
@@ -275,13 +271,12 @@ export const getTopProducts = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
-    
+    const hasReceipt = !!order.receipt_received;
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.status === 'returned_in_stock';
-    
-    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+                                 order.status === 'returned_in_stock' ||
+                                 order.isArchived === true;
+    return hasReceipt && !isReturnedOrCancelled;
   });
   
   console.log('📦 الطلبات المكتملة للمنتجات:', deliveredOrders.length);

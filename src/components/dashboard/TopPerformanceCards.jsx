@@ -9,31 +9,30 @@ import {
   Package
 } from 'lucide-react';
 import { normalizePhone } from '@/utils/phoneUtils';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useInventory } from '@/contexts/InventoryContext';
+import { getUserUUID } from '@/utils/userIdUtils';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
+  const { isAdmin, user } = usePermissions();
+  const { profits } = useInventory();
+  const userUUID = getUserUUID(user);
+  const isOrderCompletedForAnalytics = (order) => {
+    const hasReceipt = !!order.receipt_received;
+    if (!hasReceipt) return false;
+    const isReturnedOrCancelled = ['returned','cancelled','returned_in_stock'].includes(order.status);
+    if (isReturnedOrCancelled) return false;
+    if (isAdmin) return true;
+    return profits?.some(p => p.order_id === order.id && p.employee_id === userUUID && p.status === 'settled');
+  };
   // حساب أفضل العملاء حسب رقم الهاتف - فقط الطلبات الموصلة
   const topCustomers = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
-    const deliveredOrders = orders.filter(order => {
-      const isCompleted = order.status === 'completed' || 
-                         order.status === 'delivered' || 
-                         order.delivery_status === 'delivered' || 
-                         order.order_status === 'delivered';
-      
-      const isReturnedOrCancelled = order.status === 'returned' || 
-                                   order.status === 'cancelled' ||
-                                   order.delivery_status === 'returned' ||
-                                   order.delivery_status === 'cancelled' ||
-                                   order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled' ||
-                                   order.isArchived === true;
-      
-      return isCompleted && !isReturnedOrCancelled;
-    });
+    // فلترة الطلبات وفق سياسة الاكتمال (استلام فاتورة، وللموظف تسوية الأرباح)
+    const completedOrders = orders.filter(isOrderCompletedForAnalytics);
     
-    const customerStats = deliveredOrders.reduce((acc, order) => {
+    const customerStats = completedOrders.reduce((acc, order) => {
       const customerPhone = normalizePhone(
         order.customer_phone || order.order_data?.customer_phone || order.client_mobile || order.phone || order.customerinfo?.phone
       ) || 'غير محدد';
@@ -60,25 +59,10 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
   const topProvinces = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
-    const deliveredOrders = orders.filter(order => {
-      const isCompleted = order.status === 'completed' || 
-                         order.status === 'delivered' || 
-                         order.delivery_status === 'delivered' || 
-                         order.order_status === 'delivered';
-      
-      const isReturnedOrCancelled = order.status === 'returned' || 
-                                   order.status === 'cancelled' ||
-                                   order.delivery_status === 'returned' ||
-                                   order.delivery_status === 'cancelled' ||
-                                   order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled' ||
-                                   order.isArchived === true;
-      
-      return isCompleted && !isReturnedOrCancelled;
-    });
+    // فلترة الطلبات وفق سياسة الاكتمال
+    const completedOrders = orders.filter(isOrderCompletedForAnalytics);
     
-    const cityStats = deliveredOrders.reduce((acc, order) => {
+    const cityStats = completedOrders.reduce((acc, order) => {
       const city = order.customer_city || order.customer_province || 'غير محدد';
       if (!acc[city]) {
         acc[city] = {
@@ -101,27 +85,12 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
   const topProducts = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
-    const deliveredOrders = orders.filter(order => {
-      const isCompleted = order.status === 'completed' || 
-                         order.status === 'delivered' || 
-                         order.delivery_status === 'delivered' || 
-                         order.order_status === 'delivered';
-      
-      const isReturnedOrCancelled = order.status === 'returned' || 
-                                   order.status === 'cancelled' ||
-                                   order.delivery_status === 'returned' ||
-                                   order.delivery_status === 'cancelled' ||
-                                   order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled' ||
-                                   order.isArchived === true;
-      
-      return isCompleted && !isReturnedOrCancelled;
-    });
+    // فلترة الطلبات وفق سياسة الاكتمال
+    const completedOrders = orders.filter(isOrderCompletedForAnalytics);
     
     const productStats = {};
     
-    deliveredOrders.forEach(order => {
+    completedOrders.forEach(order => {
       if (order.order_items && Array.isArray(order.order_items)) {
         order.order_items.forEach(item => {
           const productName = item.products?.name || item.product_name || `منتج ${item.product_id}`;
