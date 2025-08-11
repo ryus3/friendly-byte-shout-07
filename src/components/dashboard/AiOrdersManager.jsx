@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,25 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
+import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 
 const AiOrdersManager = ({ onClose }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
+
+  // صلاحيات وهوية المستخدم لفلترة الطلبات الذكية
+  const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
+  const matchesCurrentUser = useCallback((order) => {
+    const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+    const candidates = [employeeCode, userUUID].filter(Boolean);
+    return by ? candidates.some(v => v === by) : false;
+  }, [employeeCode, userUUID]);
+
+  const visibleOrders = useMemo(() => (
+    isAdmin ? orders : orders.filter(matchesCurrentUser)
+  ), [orders, isAdmin, matchesCurrentUser]);
 
   useEffect(() => {
     setOrders(ordersFromContext);
@@ -71,6 +84,7 @@ const AiOrdersManager = ({ onClose }) => {
           const newOrder = payload.new;
           setOrders((prev) => {
             if (prev.some(o => o.id === newOrder.id)) return prev;
+            if (!isAdmin && !matchesCurrentUser(newOrder)) return prev;
             return [newOrder, ...prev];
           });
         })
@@ -90,7 +104,7 @@ const AiOrdersManager = ({ onClose }) => {
     } catch (e) {
       // no-op
     }
-  }, []);
+  }, [isAdmin, matchesCurrentUser]);
 
   // Availability helpers based on products
   const variants = useMemo(() => {
@@ -138,17 +152,17 @@ const AiOrdersManager = ({ onClose }) => {
     return allAvailable ? 'available' : 'out';
   };
 
-  const totalCount = orders.length;
-  const pendingCount = orders.filter(order => order.status === 'pending').length;
+  const totalCount = visibleOrders.length;
+  const pendingCount = visibleOrders.filter(order => order.status === 'pending').length;
   const needsReviewStatuses = ['needs_review','review','error','failed'];
-  const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status) || availabilityOf(order) !== 'available').length;
-  const telegramCount = orders.filter(order => order.source === 'telegram').length;
-  const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;
-  const storeCount = orders.filter(order => order.source === 'web' || order.source === 'store').length;
+  const needsReviewCount = visibleOrders.filter(order => needsReviewStatuses.includes(order.status) || availabilityOf(order) !== 'available').length;
+  const telegramCount = visibleOrders.filter(order => order.source === 'telegram').length;
+  const aiChatCount = visibleOrders.filter(order => order.source === 'ai_chat').length;
+  const storeCount = visibleOrders.filter(order => order.source === 'web' || order.source === 'store').length;
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedOrders(orders.map(order => order.id));
+      setSelectedOrders(visibleOrders.map(order => order.id));
     } else {
       setSelectedOrders([]);
     }
@@ -369,14 +383,14 @@ const AiOrdersManager = ({ onClose }) => {
                 <div dir="rtl">
                   <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-blue-600" />
-                    قائمة الطلبات الذكية ({orders.length})
+                    قائمة الطلبات الذكية ({visibleOrders.length})
                   </CardTitle>
                   
-                  {orders.length > 0 && (
+                  {visibleOrders.length > 0 && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          checked={selectedOrders.length === orders.length}
+                          checked={selectedOrders.length === visibleOrders.length}
                           onCheckedChange={handleSelectAll}
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-400">تحديد الكل</span>
@@ -408,7 +422,7 @@ const AiOrdersManager = ({ onClose }) => {
               </CardHeader>
               
               <CardContent className="p-3 space-y-3">
-                {orders.length === 0 ? (
+                {visibleOrders.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                       <Bot className="w-6 h-6 text-slate-400" />
@@ -421,7 +435,7 @@ const AiOrdersManager = ({ onClose }) => {
                     </p>
                   </div>
                 ) : (
-                  [...orders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
+                  [...visibleOrders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
                     <AiOrderCard 
                       key={order.id} 
                       order={order}
