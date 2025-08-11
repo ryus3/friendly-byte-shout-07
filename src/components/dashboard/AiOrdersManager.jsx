@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select.jsx';
+import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { 
   Bot, 
   MessageSquare, 
@@ -32,7 +34,7 @@ import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder } = useSuper();
+  const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
