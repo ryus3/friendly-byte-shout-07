@@ -130,9 +130,22 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
       toast({
         title: "تم إنشاء الرمز",
-        description: `رمز التليجرام الجديد: ${data}`,
+        description: `رمز التليجرام الجديد: ${String(data || '').toUpperCase()}`,
         variant: "success"
       });
+
+      // تأكيد تخزين الرمز بالحروف الكبيرة وإلغاء أي ربط قديم
+      try {
+        await supabase
+          .from('telegram_employee_codes')
+          .update({ 
+            employee_code: String(data || '').toUpperCase(),
+            updated_at: new Date().toISOString(),
+            telegram_chat_id: null,
+            linked_at: null
+          })
+          .eq('user_id', userId);
+      } catch (_) {}
 
       setShowAddForm(false);
       setSelectedEmployee('');
@@ -153,7 +166,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
       const { error } = await supabase
         .from('telegram_employee_codes')
         .update({ 
-          employee_code: newCode,
+          employee_code: (newCode || '').toUpperCase(),
           updated_at: new Date().toISOString(),
           telegram_chat_id: null, // إلغاء الربط عند تغيير الرمز
           linked_at: null
@@ -210,7 +223,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
   // نسخ إلى الحافظة
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(String(text || '').toUpperCase());
     toast({
       title: "تم النسخ!",
       description: "تم نسخ الرمز إلى الحافظة",
@@ -449,7 +462,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                         : 'bg-gradient-to-r from-slate-600 to-slate-700 text-white'
                                     }`}
                                   >
-                                    {employeeCode.employee_code}
+                                    {(employeeCode.employee_code || '').toUpperCase()}
                                   </Badge>
                                   <p className="text-xs text-indigo-200 mt-1">الرمز</p>
                                 </div>

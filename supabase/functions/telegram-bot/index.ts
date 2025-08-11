@@ -160,7 +160,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
     const { data: codeRow, error: codeErr } = await supabase
       .from('employee_telegram_codes')
       .select('id,user_id,telegram_chat_id,is_active')
-      .eq('telegram_code', normalized)
+      .ilike('telegram_code', normalized)
       .maybeSingle();
 
     if (!codeErr && codeRow && codeRow.is_active !== false) {
@@ -205,7 +205,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
     const { data: telRows, error: telErr } = await supabase
       .from('telegram_employee_codes')
       .select('id,employee_code,telegram_chat_id,is_active')
-      .eq('employee_code', normalized)
+      .ilike('employee_code', normalized)
       .limit(1);
 
     if (!telErr && telRows && telRows.length > 0 && telRows[0].is_active !== false) {

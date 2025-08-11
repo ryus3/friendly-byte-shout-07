@@ -105,7 +105,7 @@ const RestrictedTelegramSettings = () => {
   };
 
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(String(text || '').toUpperCase());
     toast({
       title: "تم النسخ!",
       description: "تم نسخ الرمز إلى الحافظة"
@@ -212,7 +212,7 @@ const RestrictedTelegramSettings = () => {
                           isCurrentUser ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-green-50 text-green-700 border-green-300'
                         }`}
                       >
-                        {code.telegram_code}
+                        {(code.telegram_code || '').toUpperCase()}
                       </Badge>
                       <Button
                         size="sm"
