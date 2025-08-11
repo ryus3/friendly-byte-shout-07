@@ -30,7 +30,7 @@ const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProdu
               أرشيف المنتجات
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap truncate">
-              المنتجات النافذة والمؤرشفة
+              المنتجات النافذة
             </p>
           </div>
           <div className="bg-gradient-to-tr from-gray-500 to-gray-600 rounded-lg p-3 transition-transform duration-300 group-hover:scale-110">
@@ -43,7 +43,7 @@ const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProdu
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-2xl font-bold text-foreground">{archivedCount.toLocaleString()}</h3>
-            <p className="text-xs text-muted-foreground">منتج مؤرشف</p>
+            <p className="text-xs text-muted-foreground">منتج نافذ</p>
           </div>
           <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             {archivedCount > 0 ? 'يحتاج مراجعة' : 'لا يوجد'}

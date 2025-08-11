@@ -155,8 +155,8 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                           // في وضع "مخزون نافذ" نعرض فقط القياسات/الألوان النافذة
                           return qty === 0 || available <= 0;
                         }
-                        const sold = (typeof getSoldDataProp === 'function') ? (getSoldDataProp(v.id)?.soldQuantity || 0) : 0;
-                        return qty > 0 || res > 0 || available > 0 || sold > 0;
+                        // في الوضع العادي نخفي القياسات النافذة حتى لو كانت مباعه سابقاً
+                        return qty > 0 || res > 0 || available > 0;
                       });
                       return { ...g, variants: filtered };
                     })
