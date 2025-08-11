@@ -303,6 +303,25 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
 
   const needsReviewAny = useMemo(() => needsReview || reviewReasons.length > 0, [needsReview, reviewReasons.length]);
 
+  const primaryReason = useMemo(() => {
+    if (!needsReviewAny) return '';
+    const unique = Array.from(new Set(reviewReasons));
+    const priority = [
+      /المقاس نافذ/i,
+      /المقاس.*غير متوفر/i,
+      /اللون.*غير متوفر/i,
+      /الكمية غير كافية/i,
+      /غير موجود في النظام/i,
+      /ليس ضمن صلاحياتك/i,
+      /نافذ من المخزون/i,
+    ];
+    for (const re of priority) {
+      const hit = unique.find((r) => re.test(r));
+      if (hit) return hit;
+    }
+    return unique[0] || 'هذا الطلب يحتاج مراجعة';
+  }, [reviewReasons, needsReviewAny]);
+
   const gradientToUse = useMemo(() => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
     if (availability === 'available' && !needsReviewAny) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
@@ -366,12 +385,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="text-xs">
                 <div className="font-medium">تنبيه: هذا الطلب يحتاج مراجعة</div>
-                {reviewReasons.length > 0 && (
-                  <ul className="mt-1 list-disc list-inside space-y-0.5">
-                    {reviewReasons.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
+                {primaryReason && (
+                  <div className="mt-1">{primaryReason}</div>
                 )}
               </div>
             </div>

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select.jsx';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select.jsx';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { 
   Bot, 
@@ -102,10 +102,14 @@ const AiOrdersManager = ({ onClose }) => {
     return list;
   }, [baseVisible, employeeFilter, adminUsers, allUsers, matchesOrderByProfile]);
 
+  // مزامنة الطلبات المحلية عند تغيّر بيانات السياق
+  useEffect(() => {
+    setOrders(ordersFromContext);
+  }, [ordersFromContext]);
+
   // Force refresh when opening to fetch latest ai_orders even if cache is warm
   useEffect(() => {
     refreshAll?.();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -461,6 +465,36 @@ const AiOrdersManager = ({ onClose }) => {
                   
                   {visibleOrders.length > 0 && (
                     <div className="space-y-2">
+                      {isAdmin && (
+                        <div className="flex flex-col md:flex-row md:items-center gap-2">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-slate-500" />
+                            <span className="text-xs text-slate-600 dark:text-slate-400">عرض الطلبات:</span>
+                          </div>
+                          <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                            <SelectTrigger className="h-8 w-full md:w-80">
+                              <SelectValue placeholder="المدير العام" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectLabel>خيارات عامة</SelectLabel>
+                                <SelectItem value="manager">المدير العام</SelectItem>
+                                <SelectItem value="all">جميع المستخدمين</SelectItem>
+                              </SelectGroup>
+                              <SelectSeparator />
+                              <SelectGroup>
+                                <SelectLabel>الموظفون</SelectLabel>
+                                {(allUsers || []).map((u) => (
+                                  <SelectItem key={String(u.user_id || u.id)} value={`user:${String(u.user_id || u.id)}`}>
+                                    {u.full_name || u.username || u.employee_code || (u.user_id || u.id)}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={selectedOrders.length === visibleOrders.length}
