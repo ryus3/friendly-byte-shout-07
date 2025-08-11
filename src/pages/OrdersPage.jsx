@@ -247,13 +247,13 @@ const OrdersPage = () => {
     if (!Array.isArray(aiOrders)) return [];
     if (hasPermission('view_all_orders')) return aiOrders;
     const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-    const ids = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean).map(norm);
+    const ids = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(norm);
     if (ids.length === 0) return [];
     return aiOrders.filter(order => {
       const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
       return ids.includes(norm(by));
     });
-  }, [aiOrders, userEmployeeCode, hasPermission, user?.user_id, user?.id]);
+  }, [aiOrders, userEmployeeCode, user?.employee_code, hasPermission, user?.user_id, user?.id]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;

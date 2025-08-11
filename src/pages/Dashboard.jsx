@@ -278,13 +278,13 @@ const Dashboard = () => {
         if (!Array.isArray(aiOrders)) return [];
         if (canViewAllData) return aiOrders;
         const upper = (v) => (v ?? '').toString().trim().toUpperCase();
-        const candidates = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean).map(upper);
+        const candidates = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(upper);
         if (!candidates.length) return [];
         return aiOrders.filter((order) => {
             const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
             return by ? candidates.includes(upper(by)) : false;
         });
-    }, [aiOrders, canViewAllData, userEmployeeCode, user?.user_id, user?.id]);
+    }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 

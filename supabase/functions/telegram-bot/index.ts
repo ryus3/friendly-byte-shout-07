@@ -630,7 +630,8 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
           if (!allowAllProducts) {
             const productDeptIds = ((bestMatch as any).product_departments || []).map((pd: any) => String(pd?.department_id || pd?.departments?.id || '')).filter(Boolean);
             const intersect = productDeptIds.filter((id: string) => allowedDeptIds.includes(id));
-            if (productDeptIds.length > 0 && intersect.length === 0) {
+            // لا تقيّد بالأقسام إذا لم يُحدد للمستخدم أقسام مسموحة أصلاً
+            if ((allowedDeptIds && allowedDeptIds.length > 0) && productDeptIds.length > 0 && intersect.length === 0) {
               item.available = false;
               item.availability = 'not_permitted';
               (item as any).permission_scope = { scope: 'department', allowed: allowedDeptIds, product_departments: productDeptIds };
