@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 const AiOrderCard = ({ order, isSelected, onSelect }) => {
   // المعاينة ملغاة - التفاصيل تظهر دائماً
   const formatDateEnglish = (date) => {
@@ -113,6 +114,11 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     }
   };
   const { products = [], users = [], approveAiOrder, refreshAll } = useSuper();
+  const { filterProductsByPermissions, isAdmin } = useAuth();
+  const allowedProductIds = useMemo(() => {
+    const list = (filterProductsByPermissions ? filterProductsByPermissions(products) : products) || [];
+    return new Set(list.map(p => p.id));
+  }, [products, filterProductsByPermissions]);
 
   const items = useMemo(() => (
     Array.isArray(order.items) ? order.items : (order.order_data?.items || [])
@@ -209,9 +215,17 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         if (parts.length) reasons.push(`${name}: ${parts.join(' و ')}`);
       }
 
-      // 2) عدم السماح
+      // 2) عدم السماح - لا نعرضه إن كان لدى المستخدم صلاحية فعلية للمنتج
       if (avail === 'not_permitted') {
-        reasons.push(`${name}: ليس ضمن صلاحياتك`);
+        let pid = it?.product_id;
+        if (!pid) {
+          const m = variants.find(v => lower(v.product_name) === lower(name) || lower(v.product_name).includes(lower(name)));
+          pid = m?.product_id;
+        }
+        const allowed = isAdmin || (pid && allowedProductIds.has(pid));
+        if (!allowed) {
+          reasons.push(`${name}: ليس ضمن صلاحياتك`);
+        }
       }
 
       // 3) استنتاج المنتج/اللون/المقاس من قاعدة البيانات

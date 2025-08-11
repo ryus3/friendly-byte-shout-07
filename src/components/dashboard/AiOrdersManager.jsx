@@ -152,10 +152,33 @@ const AiOrdersManager = ({ onClose }) => {
     return allAvailable ? 'available' : 'out';
   };
 
+  // تحديد الحاجة للمراجعة بدقة (يشمل فقدان المقاس/اللون)
+  const orderNeedsReview = (order) => {
+    const items = Array.isArray(order?.items) ? order.items : (order?.order_data?.items || []);
+    const lower = (v) => (v || '').toString().trim().toLowerCase();
+    const productHasAnyColor = (it) => {
+      const list = variants.filter(v => (it.product_id ? v.product_id === it.product_id : lower(v.product_name) === lower(it.product_name || it.name || it.product)));
+      return list.some(v => v.color || v.color_name);
+    };
+    const productHasAnySize = (it) => {
+      const list = variants.filter(v => (it.product_id ? v.product_id === it.product_id : lower(v.product_name) === lower(it.product_name || it.name || it.product)));
+      return list.some(v => v.size || v.size_name);
+    };
+    const statusFlag = ['needs_review','review','error','failed'].includes(order.status);
+    const availFlag = availabilityOf(order) !== 'available';
+    let missingAttr = false;
+    for (const it of items) {
+      const miss = it?.missing_attributes || {};
+      if (miss?.need_color || miss?.need_size) { missingAttr = true; break; }
+      if (!it?.color && productHasAnyColor(it)) { missingAttr = true; break; }
+      if (!it?.size && productHasAnySize(it)) { missingAttr = true; break; }
+    }
+    return statusFlag || availFlag || missingAttr;
+  };
+
   const totalCount = visibleOrders.length;
   const pendingCount = visibleOrders.filter(order => order.status === 'pending').length;
-  const needsReviewStatuses = ['needs_review','review','error','failed'];
-  const needsReviewCount = visibleOrders.filter(order => needsReviewStatuses.includes(order.status) || availabilityOf(order) !== 'available').length;
+  const needsReviewCount = visibleOrders.filter(orderNeedsReview).length;
   const telegramCount = visibleOrders.filter(order => order.source === 'telegram').length;
   const aiChatCount = visibleOrders.filter(order => order.source === 'ai_chat').length;
   const storeCount = visibleOrders.filter(order => order.source === 'web' || order.source === 'store').length;
