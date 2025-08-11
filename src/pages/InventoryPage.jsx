@@ -29,6 +29,7 @@ import InventoryItem from '@/components/inventory/InventoryItem';
 import { generateInventoryReportPDF } from '@/utils/pdfGenerator';
 import { supabase } from '@/lib/customSupabaseClient';
 import { cn } from '@/lib/utils';
+import { useSalesStats } from '@/hooks/useSalesStats';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
   if (isLoading) {
