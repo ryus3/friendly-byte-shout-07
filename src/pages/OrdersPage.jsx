@@ -54,6 +54,10 @@ const OrdersPage = () => {
   });
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
+  // رمز الموظف لاستخدامه في فلترة طلبات الذكاء الاصطناعي
+  const [userEmployeeCode, setUserEmployeeCode] = useState(null);
+  // فلتر اختيار موظف محدد للمدير
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -191,6 +195,7 @@ const OrdersPage = () => {
     permission: 'view_orders',
   };
 
+  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب
   const usersMap = useMemo(() => {
     const map = new Map();
     (allUsers || []).forEach(u => {
@@ -202,18 +207,48 @@ const OrdersPage = () => {
     return map;
   }, [allUsers]);
 
+  // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
+  useEffect(() => {
+    const fetchEmployeeCode = async () => {
+      if (!user?.user_id || hasPermission('view_all_orders')) return;
+      try {
+        const { data } = await supabase
+          .from('telegram_employee_codes')
+          .select('employee_code')
+          .eq('user_id', user.user_id)
+          .single();
+        if (data?.employee_code) setUserEmployeeCode(data.employee_code);
+      } catch (err) {
+        console.error('Error fetching employee code:', err);
+      }
+    };
+    fetchEmployeeCode();
+  }, [user?.user_id, hasPermission]);
+
+  // خيارات الموظفين للمدير
+  const employeeOptions = useMemo(() => {
+    if (!hasPermission('view_all_orders')) return [];
+    const opts = (allUsers || []).map(u => ({ value: u.user_id, label: u.full_name || u.name || u.email || 'مستخدم' }));
+    return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
+  }, [allUsers, hasPermission]);
+
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     if (hasPermission('view_all_orders')) {
-        return orders;
+      if (selectedEmployeeId && selectedEmployeeId !== 'all') {
+        return orders.filter(order => order.created_by === selectedEmployeeId);
+      }
+      return orders;
     }
     return orders.filter(order => order.created_by === user?.user_id);
-  }, [orders, user, hasPermission]);
+  }, [orders, user?.user_id, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    return aiOrders.filter(order => order.created_by === user?.user_id);
-  }, [aiOrders, user]);
+    if (hasPermission('view_all_orders')) return aiOrders;
+    if (!userEmployeeCode) return [];
+    return aiOrders.filter(order => order.created_by === userEmployeeCode);
+  }, [aiOrders, userEmployeeCode, hasPermission]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;
@@ -461,6 +496,9 @@ const OrdersPage = () => {
             setDialogs(prev => ({ ...prev, details: true }));
           }}
           onUpdateOrderStatus={handleUpdateOrderStatus}
+          employeeOptions={employeeOptions}
+          selectedEmployeeId={selectedEmployeeId}
+          onEmployeeChange={setSelectedEmployeeId}
         />
         
         {selectedOrders.length > 0 && hasPermission('manage_orders') && (

@@ -190,6 +190,10 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         if (miss?.need_color || (!it?.color && miss?.need_color !== false)) parts.push('بدون لون');
         if (parts.length) reasons.push(`${name}: ${parts.join(' و ')}`);
       }
+      // خارج الصلاحيات
+      if (avail === 'not_permitted') {
+        reasons.push(`${name}: ليس ضمن صلاحياتك`);
+      }
       // غير موجود
       if (avail === 'not_found') reasons.push(`${name}: غير موجود في النظام`);
       // نافذ/محجوز

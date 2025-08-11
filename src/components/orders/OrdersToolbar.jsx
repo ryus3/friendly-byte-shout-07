@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, onOrderFound, onUpdateOrderStatus }) => {
+const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, onOrderFound, onUpdateOrderStatus, employeeOptions = [], selectedEmployeeId = 'all', onEmployeeChange }) => {
   const { hasPermission } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -120,6 +120,19 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
 
       {/* الصف الثاني: الفلاتر */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        {/* Employee Filter - للمدير */}
+        {hasPermission('view_all_orders') && employeeOptions.length > 0 && (
+          <Select value={selectedEmployeeId} onValueChange={(v) => onEmployeeChange?.(v)}>
+            <SelectTrigger className="w-full sm:w-[180px] h-9 text-sm">
+              <SelectValue placeholder="اختيار الموظف" />
+            </SelectTrigger>
+            <SelectContent>
+              {employeeOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {/* Status Filter */}
         {(hasPermission('view_all_orders') || filters.status === 'archived') && (
           <Select value={filters.status} onValueChange={handleStatusChange}>
