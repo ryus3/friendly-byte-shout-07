@@ -37,6 +37,7 @@ import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { toast } from '@/components/ui/use-toast';
+import EmployeeReceivedProfitsCard from '@/components/shared/EmployeeReceivedProfitsCard';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -569,16 +570,16 @@ const Dashboard = () => {
             onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), 
             onClick: () => setIsPendingProfitsOpen(true)
         },
-        {
+        canViewAllData && {
             key: 'deliveredSales', 
-            title: canViewAllData ? 'المبيعات المستلمة' : 'أرباحي المستلمة', 
-            value: canViewAllData ? dashboardData.deliveredSales : employeeProfitsData.personalSettledProfit, 
+            title: 'المبيعات المستلمة', 
+            value: dashboardData.deliveredSales, 
             icon: CheckCircle, 
             colors: ['purple-500', 'violet-500'], 
             format: 'currency', 
             currentPeriod: periods.deliveredSales, 
             onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), 
-            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
+            onClick: () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales')
         },
         {
             key: 'pendingSales', 
@@ -659,6 +660,11 @@ const Dashboard = () => {
                     />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    {!canViewAllData && (
+                      <motion.div key="my-received-profits" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+                        <EmployeeReceivedProfitsCard />
+                      </motion.div>
+                    )}
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                             <StatCard {...stat} />

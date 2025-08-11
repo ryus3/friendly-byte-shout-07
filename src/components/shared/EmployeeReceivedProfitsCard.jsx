@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
+import { useProfits } from '@/contexts/ProfitsContext'; // النظام الموحد للأرباح
 import StatCard from '@/components/dashboard/StatCard';
 import { Receipt } from 'lucide-react';
 import EmployeeReceivedProfitsDialog from './EmployeeReceivedProfitsDialog';
@@ -15,8 +15,8 @@ const EmployeeReceivedProfitsCard = ({
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { profits } = useInventory(); // استخدام النظام الموحد
-
+  const { profits: profitsData } = useProfits(); // استخدام النظام الموحد للأرباح
+ 
   
   // تصفية فواتير التسوية من البيانات الموحدة
   const employeeReceivedProfits = useMemo(() => {
@@ -25,9 +25,17 @@ const EmployeeReceivedProfitsCard = ({
     const userUUID = user.user_id || user.id;
     const userEmployeeCode = user.employee_code;
     
+    // جمع كل أرباح المستخدم من الحالات المختلفة
+    const allProfits = [
+      ...(profitsData?.pending || []),
+      ...(profitsData?.settled || []),
+      ...(profitsData?.completed || [])
+    ];
+    
     // البحث في الأرباح عن التسويات المكتملة للمستخدم
-    const userCompletedProfits = profits.filter(profit => {
-      return (profit.employee_id === userUUID || profit.employee_id === userEmployeeCode) &&
+    const userCompletedProfits = allProfits.filter(profit => {
+      const empId = profit.employee_id;
+      return (empId === userUUID || empId === userEmployeeCode) &&
              (profit.status === 'completed' || profit.status === 'settled');
     });
     
@@ -36,19 +44,19 @@ const EmployeeReceivedProfitsCard = ({
       sum + (profit.employee_profit || profit.total_profit || 0), 0
     );
     
-    console.log('📊 EmployeeReceivedProfitsCard: البيانات من النظام الموحد:', {
-      totalProfits: profits?.length || 0,
+    console.log('📊 EmployeeReceivedProfitsCard (unified):', {
+      totalProfits: allProfits.length || 0,
       userCompletedProfits: userCompletedProfits?.length || 0,
       totalReceived,
       userEmployeeCode: user?.employee_code,
-      userUUID: userUUID
+      userUUID
     });
     
     return {
       total: totalReceived,
       invoices: userCompletedProfits
     };
-  }, [profits, user]);
+  }, [profitsData, user]);
 
   return (
     <>
