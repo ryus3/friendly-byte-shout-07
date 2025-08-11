@@ -6,6 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
+import { getUserUUID } from '@/utils/userIdUtils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
