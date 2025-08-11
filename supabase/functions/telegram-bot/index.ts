@@ -359,6 +359,31 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const defaultDeliveryFee = Number(settingsData?.value) || 5000;
     const currentDeliveryFee = defaultDeliveryFee;
 
+    // صلاحيات الأقسام للموظف
+    let allowAllProducts = false;
+    let allowedDeptIds: string[] = [];
+    if (employee?.user_id) {
+      try {
+        const role = await determineUserRole(employee.user_id);
+        allowAllProducts = (role === 'admin' || role === 'manager');
+        if (!allowAllProducts) {
+          const { data: deptPerm } = await supabase
+            .from('user_product_permissions')
+            .select('has_full_access, allowed_items')
+            .eq('user_id', employee.user_id)
+            .eq('permission_type', 'department')
+            .maybeSingle();
+          if (deptPerm) {
+            if ((deptPerm as any).has_full_access) {
+              allowAllProducts = true;
+            } else if (Array.isArray((deptPerm as any).allowed_items)) {
+              allowedDeptIds = ((deptPerm as any).allowed_items as any[]).map((id: any) => String(id));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
     let phoneFound = false;
     
     for (let i = 0; i < lines.length; i++) {
@@ -543,7 +568,8 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               sizes (name)
             ),
             product_departments (
-              departments (name)
+              department_id,
+              departments (id, name)
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -570,7 +596,8 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                   sizes (name)
                 ),
                 product_departments (
-                  departments (name)
+                  department_id,
+                  departments (id, name)
                 )
               `)
               .or(searchQuery)
@@ -599,6 +626,19 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         }
         
         if (bestMatch) {
+          // التحقق من صلاحيات الأقسام قبل المتابعة
+          if (!allowAllProducts) {
+            const productDeptIds = ((bestMatch as any).product_departments || []).map((pd: any) => String(pd?.department_id || pd?.departments?.id || '')).filter(Boolean);
+            const intersect = productDeptIds.filter((id: string) => allowedDeptIds.includes(id));
+            if (productDeptIds.length > 0 && intersect.length === 0) {
+              item.available = false;
+              item.availability = 'not_permitted';
+              (item as any).permission_scope = { scope: 'department', allowed: allowedDeptIds, product_departments: productDeptIds };
+              item.price = 0;
+              continue;
+            }
+          }
+
           let productPrice = bestMatch.base_price || 0;
           let selectedVariant = null;
           
@@ -745,7 +785,8 @@ const warnList = (unavailableItems.length ? unavailableItems : items).map(item =
       if (rq >= sq && sq > 0) return ` — ${variantDesc ? `${variantDesc} محجوز بالكامل` : 'محجوز بالكامل'}`;
       return ` — غير متاح حالياً${variantDesc ? ` (${variantDesc})` : ''}`;
     }
-    if (item.availability === 'not_found') return ' — غير موجود في النظام';
+    if (item.availability === 'not_permitted') return ' — هذا المنتج غير ضمن صلاحياتك';
+    if (item.availability === 'not_found') return ' — لا يوجد هكذا منتج لدينا رجاءا';
     return '';
   })();
   return `❌ غير متاح ${base}${reason}`;
