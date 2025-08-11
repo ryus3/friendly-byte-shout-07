@@ -565,7 +565,7 @@ export const UnifiedAuthProvider = ({ children }) => {
 
   const isAdmin = useMemo(() => hasRole('super_admin') || hasRole('admin'), [hasRole]);
 
-  // فلترة المنتجات حسب الصلاحيات
+  // فلترة المنتجات حسب صلاحيات المستخدم - يدعم جميع أشكال العلاقات
   const filterProductsByPermissions = useMemo(() => {
     return (products) => {
       if (!products) return [];
@@ -576,14 +576,28 @@ export const UnifiedAuthProvider = ({ children }) => {
         return products;
       }
 
+      const getId = (obj, keys) => {
+        for (const k of keys) {
+          const parts = k.split('.');
+          let cur = obj;
+          for (const p of parts) {
+            cur = cur?.[p];
+          }
+          if (cur) return cur;
+        }
+        return null;
+      };
+
       return products.filter(product => {
         // فحص التصنيفات عبر product_categories
         const categoryPerm = productPermissions.category;
         if (categoryPerm && !categoryPerm.has_full_access) {
-          if (product.product_categories && product.product_categories.length > 0) {
-            const hasAllowedCategory = product.product_categories.some(pc => 
-              categoryPerm.allowed_items.includes(pc.category_id)
-            );
+          const list = product.product_categories || [];
+          if (list.length > 0) {
+            const hasAllowedCategory = list.some(pc => {
+              const cid = getId(pc, ['category_id', 'category.id', 'categories.id']);
+              return cid && categoryPerm.allowed_items.includes(cid);
+            });
             if (!hasAllowedCategory) return false;
           }
         }
@@ -591,21 +605,25 @@ export const UnifiedAuthProvider = ({ children }) => {
         // فحص الأقسام عبر product_departments
         const departmentPerm = productPermissions.department;
         if (departmentPerm && !departmentPerm.has_full_access) {
-          if (product.product_departments && product.product_departments.length > 0) {
-            const hasAllowedDepartment = product.product_departments.some(pd => 
-              departmentPerm.allowed_items.includes(pd.department_id)
-            );
+          const list = product.product_departments || [];
+          if (list.length > 0) {
+            const hasAllowedDepartment = list.some(pd => {
+              const did = getId(pd, ['department_id', 'department.id', 'departments.id']);
+              return did && departmentPerm.allowed_items.includes(did);
+            });
             if (!hasAllowedDepartment) return false;
           }
         }
 
-        // فحص المواسم عبر product_seasons_occasions
+        // فحص المواسم/المناسبات عبر product_seasons_occasions
         const seasonPerm = productPermissions.season_occasion;
         if (seasonPerm && !seasonPerm.has_full_access) {
-          if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
-            const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
-              seasonPerm.allowed_items.includes(pso.season_occasion_id)
-            );
+          const list = product.product_seasons_occasions || [];
+          if (list.length > 0) {
+            const hasAllowedSeason = list.some(pso => {
+              const sid = getId(pso, ['season_occasion_id', 'season_occasion.id', 'seasons_occasions.id']);
+              return sid && seasonPerm.allowed_items.includes(sid);
+            });
             if (!hasAllowedSeason) return false;
           }
         }
@@ -613,10 +631,12 @@ export const UnifiedAuthProvider = ({ children }) => {
         // فحص أنواع المنتجات عبر product_product_types
         const productTypePerm = productPermissions.product_type;
         if (productTypePerm && !productTypePerm.has_full_access) {
-          if (product.product_product_types && product.product_product_types.length > 0) {
-            const hasAllowedProductType = product.product_product_types.some(ppt => 
-              productTypePerm.allowed_items.includes(ppt.product_type_id)
-            );
+          const list = product.product_product_types || [];
+          if (list.length > 0) {
+            const hasAllowedProductType = list.some(ppt => {
+              const pid = getId(ppt, ['product_type_id', 'product_type.id', 'product_types.id']);
+              return pid && productTypePerm.allowed_items.includes(pid);
+            });
             if (!hasAllowedProductType) return false;
           }
         }
@@ -624,10 +644,12 @@ export const UnifiedAuthProvider = ({ children }) => {
         // فحص الألوان عبر المتغيرات
         const colorPerm = productPermissions.color;
         if (colorPerm && !colorPerm.has_full_access) {
-          if (product.variants && product.variants.length > 0) {
-            const hasAllowedColor = product.variants.some(variant => 
-              colorPerm.allowed_items.includes(variant.color_id)
-            );
+          const vs = product.variants || product.product_variants || [];
+          if (vs.length > 0) {
+            const hasAllowedColor = vs.some(variant => {
+              const cid = getId(variant, ['color_id', 'colors.id']);
+              return cid && colorPerm.allowed_items.includes(cid);
+            });
             if (!hasAllowedColor) return false;
           }
         }
@@ -635,10 +657,12 @@ export const UnifiedAuthProvider = ({ children }) => {
         // فحص الأحجام عبر المتغيرات
         const sizePerm = productPermissions.size;
         if (sizePerm && !sizePerm.has_full_access) {
-          if (product.variants && product.variants.length > 0) {
-            const hasAllowedSize = product.variants.some(variant => 
-              sizePerm.allowed_items.includes(variant.size_id)
-            );
+          const vs = product.variants || product.product_variants || [];
+          if (vs.length > 0) {
+            const hasAllowedSize = vs.some(variant => {
+              const sid = getId(variant, ['size_id', 'sizes.id']);
+              return sid && sizePerm.allowed_items.includes(sid);
+            });
             if (!hasAllowedSize) return false;
           }
         }
