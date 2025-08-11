@@ -418,7 +418,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={availability !== 'available' || needsReview}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={needsReviewAny || availability !== 'available'}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>

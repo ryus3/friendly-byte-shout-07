@@ -212,12 +212,22 @@ const OrdersPage = () => {
     const fetchEmployeeCode = async () => {
       if (!user?.user_id || hasPermission('view_all_orders')) return;
       try {
-        const { data } = await supabase
+        let code = null;
+        const { data: t1 } = await supabase
           .from('telegram_employee_codes')
           .select('employee_code')
           .eq('user_id', user.user_id)
-          .single();
-        if (data?.employee_code) setUserEmployeeCode(data.employee_code);
+          .maybeSingle();
+        code = t1?.employee_code || null;
+        if (!code) {
+          const { data: t2 } = await supabase
+            .from('employee_telegram_codes')
+            .select('employee_code')
+            .eq('user_id', user.user_id)
+            .maybeSingle();
+          code = t2?.employee_code || null;
+        }
+        if (code) setUserEmployeeCode(String(code).toUpperCase());
       } catch (err) {
         console.error('Error fetching employee code:', err);
       }
