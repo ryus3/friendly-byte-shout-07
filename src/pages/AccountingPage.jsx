@@ -350,27 +350,12 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // استخدام بيانات تحليل الأرباح المتقدم من الصفحة المتخصصة
-            const totalSystemProfit = profitsAnalysis?.systemProfit || 0;
-            console.log('🔍 [DEBUG] Product Analysis Card - systemProfit:', totalSystemProfit, 'from profitsAnalysis');
-            return formatCurrency(totalSystemProfit);
-          })(),
-          subValue: (() => {
-            // استخدام البيانات المحسوبة من صفحة تحليل الأرباح المتقدمة مباشرة
-            const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
-            const totalOrders = profitsAnalysis?.totalOrders || 0;
-            
-            if (totalProductsSold > 0) {
-              return `${totalProductsSold} منتج مباع`;
-            } else if (totalOrders > 0) {
-              return `${totalOrders} طلب`;
-            } else {
-              return 'لا توجد مبيعات';
-            }
+            const totalProductsSold = profitsAnalysis?.totalProductsSold ?? profitsAnalysis?.filteredItemsCount ?? 0;
+            return totalProductsSold > 0 ? `${totalProductsSold} منتجات` : 'لا توجد مبيعات';
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
-          format: 'custom', 
+          format: 'text', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
         // تم استبدال هذا الكارت بـ ManagerProfitsCard الموحد
