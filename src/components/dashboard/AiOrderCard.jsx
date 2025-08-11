@@ -298,29 +298,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         reasons.push(`${name}: الكمية غير كافية${parts ? ` (${parts})` : ''} (المتاح ${av})`);
       }
     }
-    // Post-process: إزالة الأسباب العامة إذا وُجد سبب محدد للمقاس/اللون، وإزالة التكرار
-    const deduped = Array.from(new Set(reasons));
-    const grouped = deduped.reduce((acc, r) => {
-      const product = r.split(':')[0]?.trim() || '';
-      if (!acc[product]) acc[product] = [];
-      acc[product].push(r);
-      return acc;
-    }, {});
-
-    const final = [];
-    Object.keys(grouped).forEach((product) => {
-      const rs = grouped[product];
-      const hasSizeOut = rs.some(r => r.includes('المقاس') && r.includes('نافذ'));
-      const hasSpecific = rs.some(r => r.includes('المقاس') || r.includes('اللون'));
-      rs.forEach(r => {
-        const isGeneric = r.includes('غير متاح حالياً') || r.includes('نافذ من المخزون');
-        const isSizeUnavailable = r.includes('المقاس') && r.includes('غير متوفر');
-        if (hasSizeOut && isSizeUnavailable) return; // نفضل "المقاس نافذ"
-        if (hasSpecific && isGeneric) return; // إزالة السبب العام
-        final.push(r);
-      });
-    });
-    return final;
+    return reasons;
   }, [items, products]);
 
   const needsReviewAny = useMemo(() => needsReview || reviewReasons.length > 0, [needsReview, reviewReasons.length]);
