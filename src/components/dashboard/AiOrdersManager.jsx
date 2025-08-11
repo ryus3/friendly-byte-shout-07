@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
+import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { 
   Bot, 
   MessageSquare, 
@@ -37,7 +39,17 @@ const AiOrdersManager = ({ onClose }) => {
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
-  const { user } = useAuth();
+  const { user, allUsers = [] } = useAuth();
+
+  // مرشح الموظف: المدير العام افتراضياً (me) ويُحفظ محلياً
+  const [employeeFilter, setEmployeeFilter] = useLocalStorage('aiOrdersEmployeeFilter', 'me');
+
+  const selectedProfile = useMemo(() => {
+    if (employeeFilter === 'me') return user;
+    const p = (allUsers || []).find(u => u.user_id === employeeFilter || u.id === employeeFilter);
+    return p || null;
+  }, [employeeFilter, allUsers, user]);
+
   const [telegramCode, setTelegramCode] = useState(null);
   useEffect(() => {
     const fetchCode = async () => {
@@ -56,7 +68,7 @@ const AiOrdersManager = ({ onClose }) => {
     fetchCode();
   }, [user?.user_id]);
 
-  // صلاحيات وهوية المستخدم لفلترة الطلبات الذكية
+// صلاحيات وهوية المستخدم لفلترة الطلبات الذكية
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
@@ -65,9 +77,23 @@ const AiOrdersManager = ({ onClose }) => {
     return by ? candidates.some(v => v === byNorm) : false;
   }, [employeeCode, userUUID, telegramCode]);
 
-  const visibleOrders = useMemo(() => (
-    isAdmin ? orders : orders.filter(matchesCurrentUser)
-  ), [orders, isAdmin, matchesCurrentUser]);
+  const matchesEmployee = useCallback((order, profile) => {
+    if (!profile) return false;
+    const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+    const candidates = [
+      profile?.employee_code,
+      profile?.user_id || profile?.id,
+      profile?.username
+    ].filter(Boolean).map(v => String(v).toUpperCase());
+    const byNorm = by ? String(by).toUpperCase() : '';
+    return by ? candidates.some(v => v === byNorm) : false;
+  }, []);
+
+  const visibleOrders = useMemo(() => {
+    if (!isAdmin) return orders.filter(matchesCurrentUser);
+    if (employeeFilter === 'all') return orders;
+    return orders.filter(o => matchesEmployee(o, selectedProfile));
+  }, [orders, isAdmin, matchesCurrentUser, employeeFilter, matchesEmployee, selectedProfile]);
 
   useEffect(() => {
     setOrders(ordersFromContext);
@@ -285,7 +311,39 @@ const AiOrdersManager = ({ onClose }) => {
             </div>
           </div>
 
-          <div className="p-4">
+<div className="p-4">
+            {/* Toolbar: Employee Filter */}
+            {isAdmin && (
+              <div className="mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-muted-foreground mb-1">تصفية حسب الموظف</label>
+                    <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الموظف" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="me">المدير العام</SelectItem>
+                          <SelectItem value="all">جميع المستخدمين</SelectItem>
+                        </SelectGroup>
+                        <SelectLabel>الموظفون</SelectLabel>
+                        {(allUsers || []).map((u) => (
+                          <SelectItem key={u.user_id || u.id} value={u.user_id || u.id}>
+                            {(u.full_name || u.username) + (u.employee_code ? ` (${u.employee_code})` : '')}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex">
+                    <Button variant="outline" size="sm" onClick={() => setEmployeeFilter('me')}>
+                      تعيين المدير الافتراضي
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Stats Overview */}
             <div className="grid grid-cols-5 gap-3 mb-4" dir="ltr">
               {/* Needs Review Card */}
