@@ -275,14 +275,14 @@ const Dashboard = () => {
     }, [user?.user_id, canViewAllData]);
 
     const userAiOrders = useMemo(() => {
-        if (!aiOrders) return [];
+        if (!Array.isArray(aiOrders)) return [];
         if (canViewAllData) return aiOrders;
-        const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-        const ids = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean).map(norm);
-        if (ids.length === 0) return [];
-        return aiOrders.filter(order => {
+        const upper = (v) => (v ?? '').toString().trim().toUpperCase();
+        const candidates = [userEmployeeCode, user?.user_id, user?.id].filter(Boolean).map(upper);
+        if (!candidates.length) return [];
+        return aiOrders.filter((order) => {
             const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
-            return ids.includes(norm(by));
+            return by ? candidates.includes(upper(by)) : false;
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.user_id, user?.id]);
 

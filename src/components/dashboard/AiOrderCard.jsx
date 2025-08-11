@@ -255,10 +255,25 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       }
 
       const variant = filtered[0];
+      const stock = (v) => (Number(v?.quantity ?? 0) - Number(v?.reserved_quantity ?? 0));
       if (variant) {
-        const available = (Number(variant.quantity ?? 0) - Number(variant.reserved_quantity ?? 0));
+        const available = stock(variant);
         if (available <= 0) {
-          reasons.push(`${name}: نافذ${parts ? ` (${parts})` : ''}`);
+          // تحديد السبب الحقيقي بدقة
+          const sameProduct = matches;
+          const sameColor = colorRaw ? sameProduct.filter(v => lower(v.color) === lower(colorRaw)) : [];
+          const sameSize = sizeRaw ? sameProduct.filter(v => lower(v.size) === lower(sizeRaw)) : [];
+
+          const anyOtherSizeInSameColorHasStock = sizeRaw && sameColor.some(v => lower(v.size) !== lower(sizeRaw) && stock(v) > 0);
+          const anyOtherColorInSameSizeHasStock = colorRaw && sameSize.some(v => lower(v.color) !== lower(colorRaw) && stock(v) > 0);
+
+          if (anyOtherSizeInSameColorHasStock) {
+            reasons.push(`${name}: المقاس نافذ (${sizeRaw})`);
+          } else if (anyOtherColorInSameSizeHasStock) {
+            reasons.push(`${name}: اللون غير متوفر (${colorRaw})`);
+          } else {
+            reasons.push(`${name}: نافذ من المخزون${parts ? ` (${parts})` : ''}`);
+          }
         } else if (available < qty) {
           reasons.push(`${name}: الكمية غير كافية${parts ? ` (${parts})` : ''} (المتاح ${available})`);
         }
@@ -266,6 +281,10 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         // وجدنا المنتج لكن لم نجد المطابقة الدقيقة
         if (colorRaw && sizeRaw) {
           reasons.push(`${name}: المطابقة للون ${colorRaw} والمقاس ${sizeRaw} غير متوفرة`);
+        } else if (colorRaw && !sizeRaw) {
+          reasons.push(`${name}: اللون ${colorRaw} غير متوفر`);
+        } else if (!colorRaw && sizeRaw) {
+          reasons.push(`${name}: المقاس ${sizeRaw} غير متوفر`);
         }
       }
 
