@@ -31,7 +31,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
 
-const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
+const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile, getVariantSoldData: getSoldDataProp }) => {
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -151,7 +151,11 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                         const qty = v?.quantity || 0;
                         const res = v?.reserved_quantity || v?.reserved || 0;
                         const available = Math.max(0, qty - res);
-                        const sold = (typeof getVariantSoldData === 'function') ? (getVariantSoldData(v.id)?.soldQuantity || 0) : 0;
+                        if (stockFilter === 'out-of-stock') {
+                          // في وضع "مخزون نافذ" نعرض فقط القياسات/الألوان النافذة
+                          return qty === 0 || available <= 0;
+                        }
+                        const sold = (typeof getSoldDataProp === 'function') ? (getSoldDataProp(v.id)?.soldQuantity || 0) : 0;
                         return qty > 0 || res > 0 || available > 0 || sold > 0;
                       });
                       return { ...g, variants: filtered };
@@ -799,6 +803,7 @@ const InventoryPage = () => {
           onSelectionChange={handleSelectionChange}
           selectedItems={selectedItemsForExport}
           isMobile={isMobile}
+          getVariantSoldData={getVariantSoldData}
         />
       </div>
 
