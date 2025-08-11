@@ -45,8 +45,11 @@ const filterDataByEmployeeCode = (data, user) => {
     return data;
   }
 
+  const upper = (v) => (v ?? '').toString().trim().toUpperCase();
+  const userCandidates = [user?.user_id, user?.id, user?.employee_code].filter(Boolean).map(upper);
   const matchUser = (val) => {
-    return val === user?.user_id || val === user?.id || val === user?.employee_code;
+    if (val === undefined || val === null) return false;
+    return userCandidates.includes(upper(val));
   };
 
   // ربط الطلبات بالأرباح لضمان عدم فقدان أي طلب يعود للموظف حتى لو أنشأه المدير
@@ -63,9 +66,7 @@ const filterDataByEmployeeCode = (data, user) => {
     purchases: (data.purchases || []).filter(p => matchUser(p.created_by)),
     expenses: (data.expenses || []).filter(e => matchUser(e.created_by)),
     cashSources: (data.cashSources || []).filter(c => matchUser(c.created_by)),
-    aiOrders: (data.aiOrders || []).filter(o =>
-      matchUser(o.created_by) || matchUser(o.user_id) || matchUser(o.created_by_employee_code) || matchUser(o.order_data?.created_by)
-    ),
+    aiOrders: data.aiOrders || [],
   };
 
   console.log('🛡️ تصفية حسب المستخدم العادي:', {
