@@ -201,18 +201,16 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       const qty = Number(it?.quantity || 1);
       const sizeRaw = it?.size;
       const colorRaw = it?.color;
-      const size = sizeRaw ? `المقاس ${sizeRaw}` : '';
-      const color = colorRaw ? `اللون ${colorRaw}` : '';
-      const variantDesc = `${size}${size && color ? ' و' : ''}${color}`;
+      const parts = [colorRaw ? `اللون ${colorRaw}` : null, sizeRaw ? `المقاس ${sizeRaw}` : null].filter(Boolean).join('، ');
       const avail = it?.availability;
       const miss = it?.missing_attributes || {};
 
       // 1) سمات ناقصة قادمة من الـ AI
-      if (avail === 'missing_attributes' || miss?.need_color || miss?.need_size) {
-        const parts = [];
-        if (miss?.need_size || (!it?.size && miss?.need_size !== false)) parts.push('بدون قياس');
-        if (miss?.need_color || (!it?.color && miss?.need_color !== false)) parts.push('بدون لون');
-        if (parts.length) reasons.push(`${name}: ${parts.join(' و ')}`);
+      if (avail === 'missing_attributes' || miss?.need_color || miss?.need_size || (!colorRaw && variants.some(v => lower(v.product_name) === lower(name) && v.color)) || (!sizeRaw && variants.some(v => lower(v.product_name) === lower(name) && v.size))) {
+        const needParts = [];
+        if (!sizeRaw) needParts.push('بدون قياس');
+        if (!colorRaw) needParts.push('بدون لون');
+        if (needParts.length) reasons.push(`${name}: ${needParts.join(' و ')}`);
       }
 
       // 2) عدم السماح - لا نعرضه إن كان لدى المستخدم صلاحية فعلية للمنتج
@@ -260,9 +258,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       if (variant) {
         const available = (Number(variant.quantity ?? 0) - Number(variant.reserved_quantity ?? 0));
         if (available <= 0) {
-          reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: نافذ من المخزون`);
+          reasons.push(`${name}: نافذ${parts ? ` (${parts})` : ''}`);
         } else if (available < qty) {
-          reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: الكمية غير كافية (المتاح ${available})`);
+          reasons.push(`${name}: الكمية غير كافية${parts ? ` (${parts})` : ''} (المتاح ${available})`);
         }
       } else if (matches.length > 0 && (colorRaw || sizeRaw)) {
         // وجدنا المنتج لكن لم نجد المطابقة الدقيقة
@@ -274,11 +272,11 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       // 4) حالات صريحة واردة من عناصر الـ AI
       if (avail === 'not_found') reasons.push(`${name}: غير موجود في النظام`);
       if (avail === 'out') {
-        reasons.push(`${name}${variantDesc ? ` (${variantDesc})` : ''}: غير متاح حالياً`);
+        reasons.push(`${name}: غير متاح حالياً${parts ? ` (${parts})` : ''}`);
       }
       if (avail === 'insufficient') {
         const av = it?.available_quantity ?? 0;
-        reasons.push(`${name}: الكمية غير كافية${variantDesc ? ` (${variantDesc})` : ''} (المتاح ${av})`);
+        reasons.push(`${name}: الكمية غير كافية${parts ? ` (${parts})` : ''} (المتاح ${av})`);
       }
     }
     return reasons;

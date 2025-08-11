@@ -260,22 +260,12 @@ const Dashboard = () => {
             if (!user?.user_id || canViewAllData) return;
             
             try {
-                let code = null;
-                const { data: t1 } = await supabase
-                    .from('telegram_employee_codes')
-                    .select('employee_code')
+                const { data } = await supabase
+                    .from('employee_telegram_codes')
+                    .select('telegram_code')
                     .eq('user_id', user.user_id)
-                    .maybeSingle();
-                code = t1?.employee_code || null;
-                if (!code) {
-                    const { data: t2 } = await supabase
-                        .from('employee_telegram_codes')
-                        .select('employee_code')
-                        .eq('user_id', user.user_id)
-                        .maybeSingle();
-                    code = t2?.employee_code || null;
-                }
-                if (code) setUserEmployeeCode(String(code).toUpperCase());
+                    .single();
+                if (data?.telegram_code) setUserEmployeeCode(String(data.telegram_code).toUpperCase());
             } catch (err) {
                 console.error('Error fetching employee code:', err);
             }

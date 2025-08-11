@@ -29,6 +29,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const AiOrdersManager = ({ onClose }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder } = useSuper();
@@ -36,13 +37,33 @@ const AiOrdersManager = ({ onClose }) => {
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
+  const { user } = useAuth();
+  const [telegramCode, setTelegramCode] = useState(null);
+  useEffect(() => {
+    const fetchCode = async () => {
+      if (!user?.user_id) return;
+      try {
+        const { data } = await supabase
+          .from('employee_telegram_codes')
+          .select('telegram_code')
+          .eq('user_id', user.user_id)
+          .single();
+        if (data?.telegram_code) setTelegramCode(String(data.telegram_code).toUpperCase());
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchCode();
+  }, [user?.user_id]);
+
   // صلاحيات وهوية المستخدم لفلترة الطلبات الذكية
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
-    const candidates = [employeeCode, userUUID].filter(Boolean);
-    return by ? candidates.some(v => v === by) : false;
-  }, [employeeCode, userUUID]);
+    const candidates = [employeeCode, userUUID, telegramCode].filter(Boolean).map(v => String(v).toUpperCase());
+    const byNorm = by ? String(by).toUpperCase() : '';
+    return by ? candidates.some(v => v === byNorm) : false;
+  }, [employeeCode, userUUID, telegramCode]);
 
   const visibleOrders = useMemo(() => (
     isAdmin ? orders : orders.filter(matchesCurrentUser)
