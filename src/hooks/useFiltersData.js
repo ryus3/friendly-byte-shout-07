@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import superAPI from '@/api/SuperAPI';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 // Cache موحّد لتقليل الاستهلاك وتجنب الازدواج
@@ -68,18 +69,16 @@ export const useFiltersData = (options = {}) => {
     setFiltersData(prev => ({ ...prev, loading: true, error: null }));
 
     const pendingPromise = (async () => {
-      // قاعدة البيانات الأساسية
-      const { data: baseData, error: baseError } = await supabase.rpc('get_filters_data');
-      if (baseError) throw baseError;
-      const result = baseData?.[0] || {};
+      // جلب البيانات من SuperAPI لتقليل الطلبات
+      const allData = await superAPI.getAllData();
 
       const parsedData = {
-        departments: result.departments || [],
-        categories: result.categories || [],
-        colors: result.colors || [],
-        sizes: result.sizes || [],
-        productTypes: result.product_types || [],
-        seasonsOccasions: result.seasons_occasions || []
+        departments: allData.departments || [],
+        categories: allData.categories || [],
+        colors: allData.colors || [],
+        sizes: allData.sizes || [],
+        productTypes: allData.productTypes || [],
+        seasonsOccasions: allData.seasons || []
       };
 
       // الصلاحيات

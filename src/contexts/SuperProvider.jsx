@@ -120,7 +120,7 @@ export const SuperProvider = ({ children }) => {
     capital: 10000000, 
     expenses: [] 
   });
-
+  const lastFetchAtRef = useRef(0);
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
     if (!user) return;
@@ -326,13 +326,25 @@ export const SuperProvider = ({ children }) => {
         });
       }
     } finally {
+      lastFetchAtRef.current = Date.now();
       setLoading(false);
     }
   }, [user]);
 
-  // تحميل البيانات عند بدء التشغيل
+  // تحميل البيانات عند بدء التشغيل فقط عندما تكون الصفحة مرئية
   useEffect(() => {
-    fetchAllData();
+    if (document.visibilityState === 'visible') {
+      fetchAllData();
+    } else {
+      const onVisible = () => {
+        if (document.visibilityState === 'visible') {
+          fetchAllData();
+          document.removeEventListener('visibilitychange', onVisible);
+        }
+      };
+      document.addEventListener('visibilitychange', onVisible);
+      return () => document.removeEventListener('visibilitychange', onVisible);
+    }
   }, [fetchAllData]);
 
   // إعداد Realtime للتحديثات الفورية
@@ -346,6 +358,8 @@ export const SuperProvider = ({ children }) => {
       // منع الإغراق بالطلبات: تأجيل وإلغاء السابق
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
+        // تبريد لمنع التكرار السريع
+        if (Date.now() - (lastFetchAtRef.current || 0) < 1500) return;
         fetchAllData();
       }, 800);
     };
@@ -360,7 +374,7 @@ export const SuperProvider = ({ children }) => {
 
   // تحديث فوري أيضاً عبر أحداث المتصفح (احتياطي عند تأخر Realtime)
   useEffect(() => {
-    const handler = () => { try { fetchAllData(); } catch {} };
+    const handler = () => { try { if (Date.now() - (lastFetchAtRef.current || 0) > 1500) fetchAllData(); } catch {} };
     window.addEventListener('aiOrderApproved', handler);
     window.addEventListener('aiOrderDeleted', handler);
     window.addEventListener('orderCreated', handler);
@@ -373,6 +387,21 @@ export const SuperProvider = ({ children }) => {
       window.removeEventListener('orderUpdated', handler);
       window.removeEventListener('orderDeleted', handler);
     };
+  }, [fetchAllData]);
+
+  // إعادة التحقق عند عودة التبويب للتركيز إذا انتهت صلاحية الكاش
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          if (!superAPI.isCacheValid('all_data')) {
+            fetchAllData();
+          }
+        } catch {}
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [fetchAllData]);
 
   // تأكيد تفعيل Webhook للتليغرام تلقائياً (مرة واحدة عند تشغيل التطبيق)
