@@ -39,7 +39,7 @@ const AiOrdersManager = ({ onClose }) => {
   const [orders, setOrders] = useState(ordersFromContext);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
-  const { user } = useAuth();
+  const { user, allUsers = [] } = useAuth();
   const [telegramCode, setTelegramCode] = useState(null);
   useEffect(() => {
     const fetchCode = async () => {
