@@ -143,7 +143,19 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                     if (!groupsMap[colorId]) groupsMap[colorId] = { id: colorId, name: colorName, hex: colorHex, image, variants: [] };
                     groupsMap[colorId].variants.push(v);
                   });
-                  const groups = Object.values(groupsMap);
+                  // فلترة القياسات: عرض فقط القياسات التي لديها مخزون أو محجوز أو متاح أو مباع
+                  const groups = Object.values(groupsMap)
+                    .map(g => {
+                      const filtered = (g.variants || []).filter(v => {
+                        const qty = v?.quantity || 0;
+                        const res = v?.reserved_quantity || v?.reserved || 0;
+                        const available = Math.max(0, qty - res);
+                        const sold = (typeof getVariantSoldData === 'function') ? (getVariantSoldData(v.id)?.soldQuantity || 0) : 0;
+                        return qty > 0 || res > 0 || available > 0 || sold > 0;
+                      });
+                      return { ...g, variants: filtered };
+                    })
+                    .filter(g => (g.variants || []).length > 0);
                   if (groups.length === 0) {
                     return (
                       <div className="text-center py-4 text-muted-foreground">
@@ -246,6 +258,7 @@ const InventoryPage = () => {
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   const { sizes = [] } = useVariants() || {};
+  const { getVariantSoldData } = useSalesStats();
   
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");

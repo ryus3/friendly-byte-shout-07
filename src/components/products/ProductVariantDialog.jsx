@@ -42,13 +42,23 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
 
 const totalStock = useMemo(() => product?.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0, [product]);
 
+  const normalize = (s) => (s ?? '').toString().trim().toLowerCase();
+
   const getAvailableColors = () => {
     if (!product) return [];
-    const colorNames = [...new Set((product.variants || []).map(v => v.color))];
-    return colorNames.map(name => {
-      const colorInfo = allColors.find(c => c.name === name);
-      return { name, hex: colorInfo?.hex_code || '#ccc' };
+    const map = new Map();
+    (product.variants || []).forEach(v => {
+      const name = v.color || v.color_name || v.colors?.name;
+      if (!name) return;
+      const key = normalize(name);
+      if (!map.has(key)) {
+        const hexFromVariant = v.color_hex || v.colors?.hex_code;
+        const fromCatalog = (allColors || []).find(c => normalize(c.name) === key);
+        const hex = hexFromVariant || fromCatalog?.hex_code || '#ccc';
+        map.set(key, { name, hex });
+      }
     });
+    return Array.from(map.values());
   };
 
   const getAvailableSizesForColor = () => {
