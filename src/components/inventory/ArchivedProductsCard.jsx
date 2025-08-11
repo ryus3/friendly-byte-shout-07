@@ -8,19 +8,18 @@ import { cn } from '@/lib/utils';
 const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProduct }) => {
   return (
     <Card className={cn(
-      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale h-full min-h-[196px] md:min-h-[208px]",
-      "shadow-lg shadow-black/10 dark:shadow-black/30",
-      "hover:shadow-2xl hover:shadow-primary/10",
-      "dark:hover:shadow-primary/20",
-      "cursor-pointer group"
+      "cursor-pointer relative overflow-hidden rounded-xl border bg-card text-card-foreground transition-all duration-300 animate-fade-in hover:scale-105",
+      "min-h-[180px] h-full",
+      "shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-xl hover:shadow-primary/10 dark:hover:shadow-primary/20"
     )}>
-      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-      <div 
-        className="absolute inset-px rounded-xl opacity-60"
-        style={{
-          backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-        }}
-      ></div>
+      <div className="absolute inset-4 rounded-lg pointer-events-none">
+        <div 
+          className="absolute inset-0 rounded-lg opacity-60 bg-gradient-to-br from-slate-500/20 to-slate-700/30"
+          style={{
+            backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+          }}
+        />
+      </div>
 
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
@@ -30,7 +29,7 @@ const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProdu
               أرشيف المنتجات
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap truncate">
-              المنتجات النافذة
+              المنتجات النافذة والمؤرشفة
             </p>
           </div>
           <div className="bg-gradient-to-tr from-gray-500 to-gray-600 rounded-lg p-3 transition-transform duration-300 group-hover:scale-110">

@@ -156,12 +156,22 @@ const AccountingPage = () => {
     
     
     
-    // جلب بيانات تحليل الأرباح لآخر 30 يوم
-    const profitsDateRange = {
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        to: new Date()
-    };
-    const profitsFilters = {
+    // تحليل أرباح المنتجات - مطابق لفترة المركز المالي
+    const getDateRangeForPeriod = React.useCallback((period) => {
+        const now = new Date();
+        switch (period) {
+            case 'today': return { from: subDays(now, 1), to: now };
+            case 'week': return { from: startOfWeek(now, { weekStartsOn: 1 }), to: now };
+            case 'month': return { from: startOfMonth(now), to: endOfMonth(now) };
+            case 'year': return { from: startOfYear(now), to: now };
+            case 'all':
+            default:
+                return { from: null, to: null };
+        }
+    }, []);
+    const profitsDateRange = getDateRangeForPeriod(selectedTimePeriod);
+    const profitsFilters = React.useMemo(() => ({
+        period: selectedTimePeriod || 'all',
         department: 'all',
         category: 'all',
         product: 'all',
@@ -169,7 +179,7 @@ const AccountingPage = () => {
         size: 'all',
         season: 'all',
         productType: 'all'
-    };
+    }), [selectedTimePeriod]);
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
     // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
     const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);

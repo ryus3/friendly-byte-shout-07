@@ -96,7 +96,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter, extraCard = null }) => {
                       </div>
                       <div>
                         <h4 className="font-bold text-sm md:text-base leading-none whitespace-nowrap truncate">أرشيف المنتجات</h4>
-                        <p className="text-xs opacity-90 mt-1">منتجات مؤرشفة</p>
+                        <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-white/20">
                         <div className="text-right">
