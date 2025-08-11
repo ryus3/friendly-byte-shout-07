@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -39,6 +39,9 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
             </div>
             المنتجات الأكثر طلباً
           </DialogTitle>
+          <DialogDescription>
+            يتم احتساب القوائم من عناصر الطلبات المكتملة/المسلّمة فقط.
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (

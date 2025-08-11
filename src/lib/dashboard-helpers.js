@@ -1,4 +1,5 @@
 import { startOfToday, startOfWeek, startOfMonth, startOfYear, subDays, parseISO, endOfMonth, endOfWeek, endOfYear } from 'date-fns';
+import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const filterOrdersByPeriod = (orders, period, returnDateRange = false) => {
   const now = new Date();
@@ -132,25 +133,9 @@ export const getUniqueCustomerCount = (orders) => {
   return customerPhones.size;
 };
 
-// دالة تطبيع رقم الهاتف
+// دالة تطبيع رقم الهاتف (موحّدة مع النظام)
 const normalizePhoneNumber = (phone) => {
-  if (!phone || typeof phone !== 'string') return null;
-  
-  // إزالة المسافات والرموز غير المرغوب فيها
-  let normalized = phone.replace(/[\s\-\(\)]/g, '');
-  
-  // إزالة رمز الدولة +964 أو 00964
-  normalized = normalized.replace(/^(\+964|00964)/, '');
-  
-  // إزالة الصفر في البداية إذا كان رقم العراق
-  normalized = normalized.replace(/^0/, '');
-  
-  // التأكد من أن الرقم بين 10-11 رقم
-  if (normalized.length >= 10 && normalized.length <= 11) {
-    return normalized;
-  }
-  
-  return null;
+  return normalizePhone(phone) || null;
 };
 
 export const getTopCustomers = (orders) => {
@@ -184,14 +169,8 @@ export const getTopCustomers = (orders) => {
   }
   
   const customerCounts = deliveredOrders.reduce((acc, order) => {
-    // البحث عن رقم الهاتف في جميع الحقول المحتملة
-    const rawPhone = order.customer_phone || 
-                     order.phone_number || 
-                     order.client_mobile || 
-                     order.phone ||
-                     order.customerinfo?.phone;
-    
-    const phone = normalizePhoneNumber(rawPhone);
+    const rawPhone = extractOrderPhone(order);
+    const phone = normalizePhone(rawPhone);
     const name = order.customer_name || 
                  order.client_name || 
                  order.name ||

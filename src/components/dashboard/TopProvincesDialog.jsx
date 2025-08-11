@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, Eye, TrendingUp, DollarSign, Map } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -34,6 +34,9 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
             </div>
             المدن الأكثر طلباً
           </DialogTitle>
+          <DialogDescription>
+            يتم حساب المدن من الطلبات المكتملة/المسلّمة فقط لتفادي البيانات المضللة.
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (

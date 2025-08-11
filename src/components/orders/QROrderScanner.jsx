@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { QrCode, Search, Package, RotateCcw, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
+import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';
 
 const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) => {
   const [isScanning, setIsScanning] = useState(false);
@@ -15,6 +16,8 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   const [error, setError] = useState('');
   const scannerRef = useRef(null);
   const html5QrCodeRef = useRef(null);
+  // تنبيه عميل مكرر عند العثور على طلب يحتوي رقم هاتف
+  useDuplicateCustomerAlert(foundOrder?.customer_phone, { trigger: !!foundOrder });
 
   // البحث عن طلب بـ QR ID
   const searchOrderByQR = async (qrId) => {

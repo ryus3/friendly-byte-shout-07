@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -35,6 +35,9 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
             </div>
             الزبائن الأكثر طلباً
           </DialogTitle>
+          <DialogDescription>
+            يتم تجميع الزبائن اعتماداً على رقم الهاتف بعد تطبيعه (077… / 77… / +964… / 00964…).
+          </DialogDescription>
         </DialogHeader>
 
         {loading ? (

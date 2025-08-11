@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getUserUUID } from '@/utils/userIdUtils';
-import { normalizePhone } from '@/utils/phoneUtils';
+import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 /**
  * Hook موحد لجلب جميع إحصائيات الطلبات والعملاء
@@ -87,7 +87,7 @@ const useOrdersAnalytics = () => {
     // أفضل العملاء (تجميع حسب رقم هاتف مُطبع)
     const customerStats = new Map();
     completedOrders.forEach(order => {
-      const rawPhone = order.customer_phone || order.order_data?.customer_phone || order.client_mobile || order.phone || order.customerinfo?.phone;
+      const rawPhone = extractOrderPhone(order);
       const phone = normalizePhone(rawPhone) || 'غير محدد';
       const name = order.customer_name || order.client_name || order.name || 'غير محدد';
       const city = order.customer_city || order.customer_province || order.city || order.province || 'غير محدد';
