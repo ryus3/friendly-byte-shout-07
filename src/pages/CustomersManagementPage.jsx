@@ -268,7 +268,7 @@ const CustomersManagementPage = () => {
         </motion.div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -367,12 +367,11 @@ const CustomersManagementPage = () => {
                     className="pr-10 sm:pr-12 h-10 sm:h-12 text-base sm:text-lg border-2 focus:border-primary/50 rounded-xl"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button
                     variant="default"
                     className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-0 gap-2 hover:scale-105 transition-all text-sm sm:text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={() => {
-                      // خيارات الفلترة المتقدمة
                       setShowAdvancedFilter(!showAdvancedFilter);
                     }}
                   >
@@ -395,100 +394,64 @@ const CustomersManagementPage = () => {
               </div>
               
               {/* Advanced Filter Options */}
-              {showAdvancedFilter && (
+              <AnimatePresence>
+                {showAdvancedFilter && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 p-4 bg-card border border-border rounded-xl shadow-lg"
+                    className="mt-4"
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <Select value={genderFilter} onValueChange={setGenderFilter}>
-                        <SelectTrigger className="h-10 rounded-lg border bg-background">
+                        <SelectTrigger className="h-10 sm:h-12 rounded-xl border-0 bg-primary hover:bg-primary/90 transition-all text-primary-foreground">
                           <SelectValue placeholder="الجنس" />
                         </SelectTrigger>
-                        <SelectContent className="bg-background border rounded-lg shadow-xl z-50">
-                          <SelectItem value="all" className="hover:bg-accent">جميع الأجناس</SelectItem>
-                          <SelectItem value="male" className="hover:bg-accent">ذكر</SelectItem>
-                          <SelectItem value="female" className="hover:bg-accent">أنثى</SelectItem>
+                        <SelectContent className="bg-background border shadow-xl z-50 rounded-xl">
+                          <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع الأجناس</SelectItem>
+                          <SelectItem value="male" className="hover:bg-accent rounded-lg">ذكر</SelectItem>
+                          <SelectItem value="female" className="hover:bg-accent rounded-lg">أنثى</SelectItem>
                         </SelectContent>
                       </Select>
-                    
-                    <Select>
-                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
-                        <SelectValue placeholder="مستوى الولاء" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
-                        <SelectItem value="bronze" className="text-slate-800 hover:bg-blue-50">برونزي</SelectItem>
-                        <SelectItem value="silver" className="text-slate-800 hover:bg-blue-50">فضي</SelectItem>
-                        <SelectItem value="gold" className="text-slate-800 hover:bg-blue-50">ذهبي</SelectItem>
-                        <SelectItem value="diamond" className="text-slate-800 hover:bg-blue-50">ماسي</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select>
-                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
-                        <SelectValue placeholder="النقاط" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
-                        <SelectItem value="no-points" className="text-slate-800 hover:bg-blue-50">بدون نقاط</SelectItem>
-                        <SelectItem value="low" className="text-slate-800 hover:bg-blue-50">1-500 نقطة</SelectItem>
-                        <SelectItem value="medium" className="text-slate-800 hover:bg-blue-50">501-1500 نقطة</SelectItem>
-                        <SelectItem value="high" className="text-slate-800 hover:bg-blue-50">أكثر من 1500</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </motion.div>
-              )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Tabs */}
+        {/* Tabs Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="space-y-6"
         >
-          <div className="flex flex-row gap-1 justify-center bg-white/80 dark:bg-slate-800/80 p-1 rounded-2xl backdrop-blur-sm border-2 border-primary/10 max-w-3xl mx-auto">
-            <Button
-              variant={activeTab === 'customers' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('customers')}
-              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
-                activeTab === 'customers' 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
-              }`}
-            >
-              <Users className="h-4 w-4 ml-2" />
-              العملاء (4)
-            </Button>
-            <Button
-              variant={activeTab === 'cityStats' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('cityStats')}
-              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
-                activeTab === 'cityStats' 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
-              }`}
-            >
-              <MapPin className="h-4 w-4 ml-2" />
-              إحصائيات المدن
-            </Button>
-            <Button
-              variant={activeTab === 'cityDiscounts' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('cityDiscounts')}
-              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
-                activeTab === 'cityDiscounts' 
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
-              }`}
-            >
-              <Gift className="h-4 w-4 ml-2" />
-              خصومات المدن
-            </Button>
-          </div>
+          <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-row justify-center gap-2 sm:gap-4">
+                {[
+                  { id: 'customers', label: 'العملاء', icon: Users },
+                  { id: 'cityStats', label: 'إحصائيات المدن', icon: MapPin },
+                  { id: 'cityDiscounts', label: 'خصومات المدن', icon: Gift }
+                ].map((tab) => (
+                  <Button
+                    key={tab.id}
+                    variant={activeTab === tab.id ? "default" : "outline"}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex-1 min-w-0 h-10 sm:h-12 px-2 sm:px-4 text-xs sm:text-sm rounded-xl gap-1 sm:gap-2 transition-all hover:scale-105 ${
+                      activeTab === tab.id 
+                        ? 'bg-primary text-primary-foreground shadow-lg' 
+                        : 'border-primary/20 hover:border-primary/40 hover:bg-primary/5'
+                    }`}
+                  >
+                    <tab.icon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="truncate">{tab.label}</span>
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
           {/* Tab Content */}
           <AnimatePresence mode="wait">
