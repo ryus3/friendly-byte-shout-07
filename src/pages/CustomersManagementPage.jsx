@@ -390,11 +390,62 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     setShowDetailsDialog(true);
   };
 
-  const handleRefresh = () => {
-    // Data is auto-updated via context
-  };
-
+  // قائمة المدن الفريدة لواجهة الفلترة
   const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
+  const handleRefresh = () => {};
+
+  // تصدير CSV شامل مع الجنس والمشتريات بدون التوصيل
+  const handleExportCSV = (optionId = 'all') => {
+    const dataset = (optionId === 'male')
+      ? filteredCustomers.filter(c => c.gender_type === 'male')
+      : (optionId === 'female')
+        ? filteredCustomers.filter(c => c.gender_type === 'female')
+        : (optionId === 'with_points')
+          ? filteredCustomers.filter(c => (c.customer_loyalty?.total_points || 0) > 0)
+          : (optionId === 'no_points')
+            ? filteredCustomers.filter(c => (c.customer_loyalty?.total_points || 0) === 0)
+            : (optionId === 'with_phone')
+              ? filteredCustomers.filter(c => c.phone && c.phone.trim())
+              : filteredCustomers;
+
+    const headers = [
+      'name','phone','city','province','gender','tier','points','orders','spent_no_delivery','promo_code','points_expiry'
+    ];
+
+    const rows = dataset.map(c => {
+      const tierName = c.customer_loyalty?.loyalty_tiers?.name || '';
+      const promo = c.phone 
+        ? `RY${normalizePhone(c.phone).slice(-4)}${(c.customer_loyalty?.loyalty_tiers?.name_en || 'BR').slice(0,2).toUpperCase()}`
+        : `RY${String(c.id).slice(0,6).toUpperCase()}`;
+      const expiry = c.customer_loyalty?.points_expiry_date
+        ? new Date(c.customer_loyalty.points_expiry_date).toISOString().split('T')[0]
+        : '';
+      return [
+        c.name || '',
+        normalizePhone(c.phone) || '',
+        c.city || '',
+        c.province || '',
+        c.gender_type || '',
+        tierName,
+        c.customer_loyalty?.total_points || 0,
+        c.customer_loyalty?.total_orders || 0,
+        c.customer_loyalty?.total_spent || 0,
+        promo,
+        expiry
+      ];
+    });
+
+    const csv = ['\ufeff' + headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `customers_${optionId}_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     const fetchCityDiscountsData = async () => {
@@ -1094,6 +1145,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
         customers={filteredCustomers}
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
+        onExport={handleExportCSV}
       />
 
       <TopProvincesDialog
