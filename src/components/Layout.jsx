@@ -37,7 +37,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
     { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', roles: ['super_admin', 'admin'], color: 'text-purple-500' },
     { path: '/products', icon: Package, label: 'المنتجات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-orange-500' },
     { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-cyan-500' },
-    { path: '/customers-management', icon: Heart, label: 'إدارة العملاء', roles: ['super_admin', 'admin', 'department_manager'], requiresCustomerAccess: true, color: 'text-rose-500' },
+    { path: '/customers-management', icon: Heart, label: 'إدارة العملاء', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], requiresCustomerAccess: true, color: 'text-rose-500' },
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: TrendingUp, label: 'المشتريات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-emerald-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
@@ -55,7 +55,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
       
       // فحص الصلاحيات الخاصة - التحقق من صلاحية إدارة العملاء
       if (item.requiresCustomerAccess) {
-        const hasCustomerPermission = hasPermission('manage_all_customers') || user?.customer_management_access === true;
+        const hasCustomerPermission = hasPermission('view_customers') || hasPermission('manage_all_customers') || user?.customer_management_access === true;
         return hasRole && hasCustomerPermission;
       }
       
