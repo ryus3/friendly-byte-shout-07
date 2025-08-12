@@ -369,20 +369,24 @@ const CustomersManagementPage = () => {
                 <div className="flex flex-row gap-2">
                   <Button
                     variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200"
+                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border-indigo-200 hover:border-indigo-300"
+                    onClick={() => {
+                      // فلترة متقدمة - يمكن إضافة المنطق هنا
+                      console.log('فلترة متقدمة');
+                    }}
                   >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
                     فلترة متقدمة
                   </Button>
                   
                   <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-white/80">
+                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-slate-50 to-blue-50 hover:from-slate-100 hover:to-blue-100 border-slate-200 hover:border-blue-300 transition-all">
                       <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white/95 backdrop-blur-sm border-2 z-50">
-                      <SelectItem value="all">جميع المدن</SelectItem>
+                    <SelectContent className="bg-white/95 backdrop-blur-sm border-2 border-slate-200 shadow-xl z-50">
+                      <SelectItem value="all" className="hover:bg-blue-50">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
-                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                        <SelectItem key={city} value={city} className="hover:bg-blue-50">{city}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -399,11 +403,11 @@ const CustomersManagementPage = () => {
           transition={{ delay: 0.5 }}
           className="space-y-6"
         >
-          <div className="flex flex-row gap-1 justify-center bg-white/80 dark:bg-slate-800/80 p-1 rounded-2xl backdrop-blur-sm border-2 border-primary/10 max-w-2xl mx-auto">
+          <div className="flex flex-row gap-1 justify-center bg-white/80 dark:bg-slate-800/80 p-1 rounded-2xl backdrop-blur-sm border-2 border-primary/10 max-w-3xl mx-auto">
             <Button
               variant={activeTab === 'customers' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('customers')}
-              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
                 activeTab === 'customers' 
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
@@ -415,7 +419,7 @@ const CustomersManagementPage = () => {
             <Button
               variant={activeTab === 'cityStats' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('cityStats')}
-              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
                 activeTab === 'cityStats' 
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
@@ -427,7 +431,7 @@ const CustomersManagementPage = () => {
             <Button
               variant={activeTab === 'cityDiscounts' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('cityDiscounts')}
-              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+              className={`flex-1 px-3 py-3 text-sm sm:text-base font-medium rounded-xl transition-all duration-200 whitespace-nowrap ${
                 activeTab === 'cityDiscounts' 
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
@@ -475,7 +479,7 @@ const CustomersManagementPage = () => {
                                 </div>
                                 <div>
                                   <h3 className="font-bold text-lg">{customer.name}</h3>
-                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1 text-sm text-blue-600 font-medium">
                                     <Phone className="h-3 w-3" />
                                     {customer.phone}
                                   </div>
@@ -491,8 +495,9 @@ const CustomersManagementPage = () => {
                               </Badge>
                             </div>
 
-                            {/* Customer Stats with Points Highlight */}
+                            {/* البيانات المهمة */}
                             <div className="space-y-3 mb-4">
+                              {/* النقاط */}
                               {customer.loyaltyPoints > 0 && (
                                 <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 p-3 rounded-xl border border-yellow-200 dark:border-yellow-700">
                                   <div className="flex justify-between items-center">
@@ -500,6 +505,30 @@ const CustomersManagementPage = () => {
                                     <div className="flex items-center gap-1">
                                       <Star className="h-4 w-4 text-yellow-500" />
                                       <span className="font-bold text-yellow-600 dark:text-yellow-400">{customer.loyaltyPoints.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* صلاحية النقاط */}
+                              {customer.pointsExpiry && (
+                                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-700">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">صلاحية النقاط:</span>
+                                    <span className="font-bold text-blue-600 dark:text-blue-400 text-sm">{customer.pointsExpiry}</span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* البروموكود */}
+                              {customer.promoCode && (
+                                <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-3 rounded-xl border border-purple-200 dark:border-purple-700">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">البروموكود:</span>
+                                    <div className="flex items-center gap-1">
+                                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
+                                        {customer.promoCode}
+                                      </Badge>
                                     </div>
                                   </div>
                                 </div>
