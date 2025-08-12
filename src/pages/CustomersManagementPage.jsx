@@ -259,15 +259,6 @@ const CustomersManagementPage = () => {
           
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Button
-              onClick={handleRefresh}
-              variant="outline"
-              size="lg"
-              className="gap-2 hover:scale-105 transition-transform"
-            >
-              <RefreshCw className="h-4 w-4" />
-              تحديث
-            </Button>
-            <Button
               onClick={() => setShowExportDialog(true)}
               size="lg"
               className="gap-2 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white border-0 hover:scale-105 transition-transform"
@@ -285,8 +276,8 @@ const CustomersManagementPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-orange-400 via-pink-500 to-red-500 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-300 to-orange-300" />
+            <Card className="border-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-300 to-purple-300" />
               <CardContent className="p-8">
                 <div className="flex items-center justify-between">
                   <div>
@@ -306,8 +297,8 @@ const CustomersManagementPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-purple-500 via-blue-600 to-indigo-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-300 to-blue-300" />
+            <Card className="border-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-300 to-teal-300" />
               <CardContent className="p-8">
                 <div className="flex items-center justify-between">
                   <div>
@@ -327,8 +318,8 @@ const CustomersManagementPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-pink-500 via-red-500 to-orange-500 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-300 to-red-300" />
+            <Card className="border-0 bg-gradient-to-br from-amber-500 via-orange-600 to-red-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-300 to-orange-300" />
               <CardContent className="p-8">
                 <div className="flex items-center justify-between">
                   <div>
@@ -382,6 +373,14 @@ const CustomersManagementPage = () => {
                   >
                     <Users className="h-4 w-4" />
                     أفضل العملاء
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    className="h-12 px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform"
+                  >
+                    <Filter className="h-4 w-4" />
+                    فلترة متقدمة
                   </Button>
                 </div>
               </div>
@@ -446,11 +445,72 @@ const CustomersManagementPage = () => {
           </div>
         </motion.div>
 
-        {/* Customers Grid */}
+        {/* City Management Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
+          className="space-y-6"
+        >
+          <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex flex-wrap justify-center gap-4 mb-6">
+                <Button
+                  variant="outline"
+                  className="h-12 px-8 rounded-xl border-2 gap-2 hover:scale-105 transition-transform bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0"
+                >
+                  <Users className="h-4 w-4" />
+                  العملاء
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-12 px-8 rounded-xl border-2 gap-2 hover:scale-105 transition-transform"
+                  onClick={() => setShowTopProvincesDialog(true)}
+                >
+                  <MapPin className="h-4 w-4" />
+                  إحصائيات المدن
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="h-12 px-8 rounded-xl border-2 gap-2 hover:scale-105 transition-transform"
+                >
+                  <Gift className="h-4 w-4" />
+                  خصومات المدن
+                </Button>
+              </div>
+              
+              <div className="text-center">
+                <Card className="bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 border-2 border-purple-200 dark:border-purple-700">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
+                        <Target className="h-6 w-6 text-white" />
+                      </div>
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        نظام المسابقات الشهرية
+                      </h3>
+                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      اختر عشوائياً الفائز من كل مدينة حسب الأداء والنشاط
+                    </p>
+                    <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white gap-2">
+                      <Trophy className="h-4 w-4" />
+                      اختيار الفائزين
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Customers Grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
           className="space-y-6"
         >
           <div className="flex items-center justify-between">
