@@ -230,8 +230,8 @@ const CustomersManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
-      <div className="w-full max-w-full px-2 sm:px-4 lg:px-8 py-4 mx-auto space-y-6 sm:space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      <div className="w-full max-w-7xl px-4 py-4 mx-auto space-y-6 sm:space-y-8">
         {/* Modern Header */}
         <motion.div
           initial={{ opacity: 0, y: -30 }}
@@ -367,27 +367,27 @@ const CustomersManagementPage = () => {
                     className="pr-10 sm:pr-12 h-10 sm:h-12 text-base sm:text-lg border-2 focus:border-primary/50 rounded-xl"
                   />
                 </div>
-                <div className="flex flex-row gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <Button
-                    variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-blue-600 hover:border-purple-600 text-white hover:text-white"
+                    variant="default"
+                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-0 gap-2 hover:scale-105 transition-all text-sm sm:text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={() => {
-                      // فلترة متقدمة
+                      // خيارات الفلترة المتقدمة
                       setShowAdvancedFilter(!showAdvancedFilter);
                     }}
                   >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
                     فلترة متقدمة
                   </Button>
                   
                   <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-blue-600 hover:border-purple-600 transition-all text-white">
+                    <SelectTrigger className="h-10 sm:h-12 rounded-xl border-0 bg-primary hover:bg-primary/90 transition-all text-primary-foreground">
                       <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-2 border-blue-600 shadow-2xl z-50 rounded-xl backdrop-blur-none">
-                      <SelectItem value="all" className="hover:bg-blue-50 rounded-lg text-slate-800 font-medium">جميع المدن</SelectItem>
+                    <SelectContent className="bg-background border shadow-xl z-50 rounded-xl">
+                      <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
-                        <SelectItem key={city} value={city} className="hover:bg-blue-50 rounded-lg text-slate-800 font-medium">{city}</SelectItem>
+                        <SelectItem key={city} value={city} className="hover:bg-accent rounded-lg">{city}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -396,23 +396,23 @@ const CustomersManagementPage = () => {
               
               {/* Advanced Filter Options */}
               {showAdvancedFilter && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 p-4 bg-white border-2 border-blue-200 rounded-xl shadow-lg"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <Select value={genderFilter} onValueChange={setGenderFilter}>
-                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
-                        <SelectValue placeholder="الجنس" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
-                        <SelectItem value="all" className="text-slate-800 hover:bg-blue-50">جميع الأجناس</SelectItem>
-                        <SelectItem value="male" className="text-slate-800 hover:bg-blue-50">ذكر</SelectItem>
-                        <SelectItem value="female" className="text-slate-800 hover:bg-blue-50">أنثى</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 p-4 bg-card border border-border rounded-xl shadow-lg"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Select value={genderFilter} onValueChange={setGenderFilter}>
+                        <SelectTrigger className="h-10 rounded-lg border bg-background">
+                          <SelectValue placeholder="الجنس" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border rounded-lg shadow-xl z-50">
+                          <SelectItem value="all" className="hover:bg-accent">جميع الأجناس</SelectItem>
+                          <SelectItem value="male" className="hover:bg-accent">ذكر</SelectItem>
+                          <SelectItem value="female" className="hover:bg-accent">أنثى</SelectItem>
+                        </SelectContent>
+                      </Select>
                     
                     <Select>
                       <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
