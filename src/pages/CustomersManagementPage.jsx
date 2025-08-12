@@ -214,7 +214,7 @@ const CustomersManagementPage = () => {
     // Data is auto-updated via context
   };
 
-  const getLoyaltyLevel = (points) => {
+  const getLoyaltyLevel = (points = 0) => {
     if (points >= 3000) return loyaltyLevels[3];
     if (points >= 1500) return loyaltyLevels[2];
     if (points >= 750) return loyaltyLevels[1];
@@ -521,14 +521,14 @@ const CustomersManagementPage = () => {
                             <span className="text-sm text-muted-foreground">النقاط:</span>
                             <div className="flex items-center gap-1">
                               <Star className="h-4 w-4 text-yellow-500" />
-                              <span className="font-bold text-orange-600">{customer.loyaltyPoints}</span>
+                              <span className="font-bold text-orange-600">{customer?.loyaltyPoints || 0}</span>
                             </div>
                           </div>
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                              {customer.pointsExpiry}
+                              {customer.pointsExpiry || 'غير محدد'}
                             </Badge>
                           </div>
                           
@@ -536,21 +536,21 @@ const CustomersManagementPage = () => {
                             <span className="text-sm text-muted-foreground">الطلبات:</span>
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4 text-blue-500" />
-                              <span className="font-bold text-blue-600">{customer.totalOrders}</span>
+                              <span className="font-bold text-blue-600">{customer?.totalOrders || 0}</span>
                             </div>
                           </div>
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">المشتريات:</span>
                             <span className="font-bold text-green-600">
-                              {customer.totalRevenue.toLocaleString()} د.ع
+                              {(customer?.totalRevenue || 0).toLocaleString()} د.ع
                             </span>
                           </div>
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">برومو كود:</span>
                             <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
-                              {customer.promoCode}
+                              {customer.promoCode || 'غير متوفر'}
                             </Badge>
                           </div>
                         </div>
