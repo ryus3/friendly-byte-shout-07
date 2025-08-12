@@ -54,6 +54,7 @@ const CustomersManagementPage = () => {
   const [activeTab, setActiveTab] = useState('customers');
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [loyaltyPointsFilter, setLoyaltyPointsFilter] = useState('all');
+  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState('all');
 
   // Sample data for demonstration
   const sampleCustomers = [
@@ -153,9 +154,17 @@ const CustomersManagementPage = () => {
         filtered = filtered.filter(customer => points(customer) > 1500);
       }
     }
+
+    // Apply loyalty tier filter
+    if (loyaltyTierFilter !== 'all') {
+      filtered = filtered.filter(customer => {
+        const tierName = getLoyaltyLevel(customer.loyaltyPoints || 0).name;
+        return tierName === loyaltyTierFilter;
+      });
+    }
     
     return filtered;
-  }, [displayCustomers, filterDataByUser, searchTerm, cityFilter, genderFilter, loyaltyPointsFilter]);
+  }, [displayCustomers, filterDataByUser, searchTerm, cityFilter, genderFilter, loyaltyPointsFilter, loyaltyTierFilter]);
 
   // Calculate customer statistics
   const customerStats = useMemo(() => {
@@ -245,7 +254,7 @@ const CustomersManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       <div className="w-full max-w-7xl px-4 py-4 mx-auto space-y-6 sm:space-y-8">
         {/* Modern Header */}
         <motion.div
@@ -398,7 +407,7 @@ const CustomersManagementPage = () => {
                     <SelectTrigger className="h-10 sm:h-12 rounded-xl border-0 bg-primary hover:bg-primary/90 transition-all text-primary-foreground">
                       <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-background border shadow-xl z-50 rounded-xl">
+                    <SelectContent className="bg-popover/95 backdrop-blur-sm border border-border shadow-xl z-50 rounded-xl">
                       <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
                         <SelectItem key={city} value={city} className="hover:bg-accent rounded-lg">{city}</SelectItem>
@@ -417,23 +426,35 @@ const CustomersManagementPage = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-4"
                   >
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                        <Select value={genderFilter} onValueChange={setGenderFilter}>
                          <SelectTrigger className="h-10 sm:h-12 rounded-xl border-2 border-primary/20 bg-background hover:border-primary/40 hover:bg-accent/10 transition-all">
                            <SelectValue placeholder="الجنس" />
                          </SelectTrigger>
-                         <SelectContent className="bg-background border border-border shadow-xl z-50 rounded-xl">
-                           <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع الأجناس</SelectItem>
+                         <SelectContent className="bg-popover/95 backdrop-blur-sm border border-border shadow-xl z-50 rounded-xl">
+                           <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع العملاء</SelectItem>
                            <SelectItem value="male" className="hover:bg-accent rounded-lg">ذكر</SelectItem>
                            <SelectItem value="female" className="hover:bg-accent rounded-lg">أنثى</SelectItem>
+                         </SelectContent>
+                       </Select>
+
+                       <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
+                         <SelectTrigger className="h-10 sm:h-12 rounded-xl border-2 border-primary/20 bg-background hover:border-primary/40 hover:bg-accent/10 transition-all">
+                           <SelectValue placeholder="مستوى الولاء" />
+                         </SelectTrigger>
+                         <SelectContent className="bg-popover/95 backdrop-blur-sm border border-border shadow-xl z-50 rounded-xl">
+                           <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع المستويات</SelectItem>
+                           {loyaltyLevels.map(level => (
+                             <SelectItem key={level.name} value={level.name} className="hover:bg-accent rounded-lg">{level.name}</SelectItem>
+                           ))}
                          </SelectContent>
                        </Select>
                        
                        <Select value={loyaltyPointsFilter} onValueChange={setLoyaltyPointsFilter}>
                          <SelectTrigger className="h-10 sm:h-12 rounded-xl border-2 border-primary/20 bg-background hover:border-primary/40 hover:bg-accent/10 transition-all">
-                           <SelectValue placeholder="مستوى النقاط" />
+                           <SelectValue placeholder="النقاط" />
                          </SelectTrigger>
-                         <SelectContent className="bg-background border border-border shadow-xl z-50 rounded-xl">
+                         <SelectContent className="bg-popover/95 backdrop-blur-sm border border-border shadow-xl z-50 rounded-xl">
                            <SelectItem value="all" className="hover:bg-accent rounded-lg">جميع المستويات</SelectItem>
                            <SelectItem value="none" className="hover:bg-accent rounded-lg">بدون نقاط</SelectItem>
                            <SelectItem value="1-500" className="hover:bg-accent rounded-lg">1-500 نقطة</SelectItem>
