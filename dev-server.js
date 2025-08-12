@@ -1,15 +1,22 @@
 #!/usr/bin/env node
 
-// Direct vite execution bypassing all issues
-const { spawn } = require('child_process');
-const path = require('path');
+// ESM-compatible dev server to run Vite directly
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-console.log('🚀 Starting vite directly...');
+console.log('🚀 Starting Vite directly (ESM)...');
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Use direct path to vite executable
 const viteExecutable = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
 
-const child = spawn('node', [viteExecutable, '--host', '::', '--port', '8080'], {
+const port = process.env.PORT || '5173';
+const host = process.env.HOST || '::';
+
+const child = spawn(process.execPath, [viteExecutable, '--host', host, '--port', port], {
   stdio: 'inherit',
   cwd: __dirname,
   env: {
