@@ -55,7 +55,7 @@ const EnhancedExportDialog = ({
       title: 'العملاء الرجال',
       description: 'العملاء المصنفون كرجال حسب تحليل المشتريات',
       count: customers.filter(c => 
-        c.customer_gender_segments?.gender_type === 'male'
+        c.customer_gender_segments?.gender_type === 'male' || c.gender_type === 'male'
       ).length,
       icon: User,
       gradient: 'from-sky-500 to-blue-500',
@@ -66,7 +66,7 @@ const EnhancedExportDialog = ({
       title: 'العميلات النساء',
       description: 'العميلات المصنفات كنساء حسب تحليل المشتريات',
       count: customers.filter(c => 
-        c.customer_gender_segments?.gender_type === 'female'
+        c.customer_gender_segments?.gender_type === 'female' || c.gender_type === 'female'
       ).length,
       icon: User,
       gradient: 'from-pink-500 to-rose-500',

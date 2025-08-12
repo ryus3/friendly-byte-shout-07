@@ -14,6 +14,8 @@ import CityDiscountsContent from "@/components/customers/CityDiscountsContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/UnifiedAuthContext";
+import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 import { 
   Users, 
   Search, 
@@ -40,7 +42,7 @@ import {
 } from "lucide-react";
 
 const CustomersManagementPage = () => {
-  const { customers, loading } = useInventory();
+  const { customers, orders, products, loading } = useInventory();
   const { filterDataByUser } = usePermissions();
   
   // State management
@@ -174,72 +176,212 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     return loyaltyLevels[0];
   };
 
-  // Filter customers based on permissions and search criteria
+  // المستخدم الحالي
+  const { user: authUser } = useAuth();
+  const currentUserId = authUser?.user_id || authUser?.id || null;
+
+  // الطلبات الصالحة للتحليلات (مكتملة/تم التسليم مع إيصال)
+  const eligibleOrders = useMemo(() => {
+    return (orders || []).filter(
+      (o) => ['completed', 'delivered'].includes(o.status) && o.receipt_received === true
+    );
+  }, [orders]);
+
+  // تحديد جنس المنتج من تصنيف الفئات (رجالي/نسائي)
+  const productGenderMap = useMemo(() => {
+    const map = new Map();
+    (products || []).forEach((p) => {
+      const catNames = (p.product_categories || [])
+        .map((pc) => pc?.categories?.name)
+        .filter(Boolean);
+      let g = null;
+      if (catNames.some((n) => /رجالي/i.test(n))) g = 'male';
+      else if (catNames.some((n) => /نسائي/i.test(n))) g = 'female';
+      map.set(p.id, g);
+    });
+    return map;
+  }, [products]);
+
+  // تجميع الطلبات حسب رقم الهاتف
+  const ordersByPhone = useMemo(() => {
+    const m = new Map();
+    eligibleOrders.forEach((o) => {
+      const phone = normalizePhone(extractOrderPhone(o));
+      if (!phone) return;
+      if (!m.has(phone)) m.set(phone, []);
+      m.get(phone).push(o);
+    });
+    return m;
+  }, [eligibleOrders]);
+
+  // دمج العملاء على مستوى رقم الهاتف + حساب المشتريات بدون التوصيل + تحديد الجنس
+  const mergedCustomers = useMemo(() => {
+    const map = new Map();
+
+    (displayCustomers || []).forEach((c) => {
+      const phone = normalizePhone(c.phone);
+      const key = phone || c.id;
+      const base = map.get(key) || {
+        ...c,
+        phone: phone || c.phone,
+        customer_loyalty: {
+          total_points: 0,
+          total_spent: 0,
+          total_orders: 0,
+          points_expiry_date: c.customer_loyalty?.points_expiry_date || null,
+        },
+      };
+
+      base.customer_loyalty.total_points += c.customer_loyalty?.total_points || 0;
+      base.customer_loyalty.total_spent += c.customer_loyalty?.total_spent || 0;
+      base.customer_loyalty.total_orders += c.customer_loyalty?.total_orders || 0;
+
+      if (!base.name && c.name) base.name = c.name;
+      if (!base.city && c.city) base.city = c.city;
+      if (!base.province && c.province) base.province = c.province;
+      if (!base.created_by && c.created_by) base.created_by = c.created_by;
+
+      map.set(key, base);
+    });
+
+    const result = Array.from(map.values()).map((c) => {
+      const phone = normalizePhone(c.phone);
+      const relatedOrders = phone ? ordersByPhone.get(phone) || [] : [];
+
+      let ordersCount = 0;
+      let spentNoDelivery = 0;
+      let maleCount = 0;
+      let femaleCount = 0;
+
+      relatedOrders.forEach((o) => {
+        ordersCount += 1;
+        const deliveryFee = Number(o.delivery_fee) || 0;
+        const totalAmount = Number(o.total_amount) || 0;
+        const itemsTotal = Array.isArray(o.items)
+          ? o.items.reduce(
+              (s, it) => s + (Number(it.unit_price ?? it.price ?? 0) * (Number(it.quantity) || 0)),
+              0
+            )
+          : 0;
+        const revenueNoDelivery = totalAmount > 0 ? Math.max(0, totalAmount - deliveryFee) : itemsTotal;
+        spentNoDelivery += revenueNoDelivery;
+
+        if (Array.isArray(o.items)) {
+          o.items.forEach((it) => {
+            const pid = it.product_id || it.products?.id;
+            const g = pid ? productGenderMap.get(pid) : null;
+            if (g === 'male') maleCount++;
+            else if (g === 'female') femaleCount++;
+          });
+        }
+      });
+
+      const merged = {
+        ...c,
+        customer_loyalty: {
+          ...c.customer_loyalty,
+          total_points: c.customer_loyalty?.total_points || 0,
+          total_orders: ordersCount,
+          total_spent: spentNoDelivery,
+        },
+      };
+
+      const tier = getLoyaltyLevel(merged.customer_loyalty.total_points || 0);
+      merged.customer_loyalty.loyalty_tiers = merged.customer_loyalty.loyalty_tiers || { name: tier.name };
+
+      merged.gender_type = maleCount === 0 && femaleCount === 0 ? undefined : maleCount >= femaleCount ? 'male' : 'female';
+
+      return merged;
+    });
+
+    return result;
+  }, [displayCustomers, ordersByPhone, productGenderMap]);
+
+  // فصل العملاء لكل مستخدم (حتى المدير) بالاعتماد على منشئ الطلبات/العميل
+  const myCustomers = useMemo(() => {
+    if (!currentUserId) return mergedCustomers;
+    return mergedCustomers.filter((c) => {
+      const phone = normalizePhone(c.phone);
+      const related = phone ? ordersByPhone.get(phone) || [] : [];
+      const belongsByOrder = related.some((o) => (o.created_by && o.created_by === currentUserId));
+      const belongsByCustomer = c.created_by && c.created_by === currentUserId;
+      return belongsByOrder || belongsByCustomer;
+    });
+  }, [mergedCustomers, ordersByPhone, currentUserId]);
+
+  // تطبيق البحث والفلاتر بعد الدمج والتقسيم
   const filteredCustomers = useMemo(() => {
-    if (!displayCustomers) return [];
-    
-    let filtered = filterDataByUser(displayCustomers, 'customers');
-    
-    // Apply search filter
+    let filtered = myCustomers;
+
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(customer =>
+      filtered = filtered.filter((customer) =>
         customer.name?.toLowerCase().includes(term) ||
         customer.phone?.includes(term) ||
         customer.city?.toLowerCase().includes(term)
       );
     }
-    
-    // Apply city filter
+
     if (cityFilter !== 'all') {
-      filtered = filtered.filter(customer => customer.city === cityFilter);
+      filtered = filtered.filter((customer) => customer.city === cityFilter);
     }
-    
-    // Apply gender filter
+
     if (genderFilter !== 'all') {
-      filtered = filtered.filter(customer => customer.gender_type === genderFilter);
+      filtered = filtered.filter((customer) => customer.gender_type === genderFilter);
     }
-    
-    // Apply loyalty level filter
+
     if (loyaltyLevelFilter !== 'all') {
-      filtered = filtered.filter(customer => {
+      filtered = filtered.filter((customer) => {
         const level = getLoyaltyLevel(customer.customer_loyalty?.total_points || 0);
         return level.name === loyaltyLevelFilter;
       });
     }
-    
-    // Apply points range filter
+
     if (pointsRangeFilter !== 'all') {
-      filtered = filtered.filter(customer => {
+      filtered = filtered.filter((customer) => {
         const points = customer.customer_loyalty?.total_points || 0;
         switch (pointsRangeFilter) {
-          case 'none': return points === 0;
-          case '1-749': return points >= 1 && points <= 749;
-          case '750-1499': return points >= 750 && points <= 1499;
-          case '1500-2999': return points >= 1500 && points <= 2999;
-          case '3000+': return points >= 3000;
-          default: return true;
+          case 'none':
+            return points === 0;
+          case '1-749':
+            return points >= 1 && points <= 749;
+          case '750-1499':
+            return points >= 750 && points <= 1499;
+          case '1500-2999':
+            return points >= 1500 && points <= 2999;
+          case '3000+':
+            return points >= 3000;
+          default:
+            return true;
         }
       });
     }
-    
-    return filtered;
-  }, [displayCustomers, filterDataByUser, searchTerm, cityFilter, genderFilter, loyaltyLevelFilter, pointsRangeFilter, getLoyaltyLevel]);
 
-  // Calculate customer statistics
+    return filtered;
+  }, [myCustomers, searchTerm, cityFilter, genderFilter, loyaltyLevelFilter, pointsRangeFilter, getLoyaltyLevel]);
+
+  // إحصائيات العملاء (المشتريات بدون التوصيل)
   const customerStats = useMemo(() => {
     const totalCustomers = filteredCustomers.length;
-    const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.total_points && c.customer_loyalty.total_points > 0).length;
-    const totalLoyaltyPoints = filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.total_points || 0), 0);
-    const totalRevenue = filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.total_spent || 0), 0);
-    const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))].length;
-    
+    const customersWithPoints = filteredCustomers.filter(
+      (c) => c.customer_loyalty?.total_points && c.customer_loyalty.total_points > 0
+    ).length;
+    const totalLoyaltyPoints = filteredCustomers.reduce(
+      (sum, c) => sum + (c.customer_loyalty?.total_points || 0),
+      0
+    );
+    const totalRevenue = filteredCustomers.reduce(
+      (sum, c) => sum + (c.customer_loyalty?.total_spent || 0),
+      0
+    );
+    const uniqueCities = [...new Set(filteredCustomers.map((c) => c.city).filter(Boolean))].length;
+
     return {
       totalCustomers,
       customersWithPoints,
       totalLoyaltyPoints,
       totalRevenue,
-      uniqueCities
+      uniqueCities,
     };
   }, [filteredCustomers]);
 
