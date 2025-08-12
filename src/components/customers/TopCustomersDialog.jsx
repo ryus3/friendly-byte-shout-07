@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader } from "@/components/ui/loader";
+import Loader from "@/components/ui/loader";
 import { motion, AnimatePresence } from "framer-motion";
 import useOrdersAnalytics from "@/hooks/useOrdersAnalytics";
 import { Users, TrendingUp, Award, Star, Crown, Diamond, Medal } from "lucide-react";
