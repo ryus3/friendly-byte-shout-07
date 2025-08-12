@@ -6,16 +6,16 @@ import Loader from "@/components/ui/loader";
 import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 
-const CityDiscountsContent = () => {
-  const [loading, setLoading] = useState(true);
-  const [cityDiscounts, setCityDiscounts] = useState([]);
-  const [monthlyBenefits, setMonthlyBenefits] = useState([]);
-  const [topCities, setTopCities] = useState([]);
+const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthlyBenefits: initialMonthlyBenefits = [], topCities: initialTopCities = [] }) => {
+  const [loading, setLoading] = useState(!(initialCityDiscounts.length || initialMonthlyBenefits.length || initialTopCities.length));
+  const [cityDiscounts, setCityDiscounts] = useState(initialCityDiscounts);
+  const [monthlyBenefits, setMonthlyBenefits] = useState(initialMonthlyBenefits);
+  const [topCities, setTopCities] = useState(initialTopCities);
 
   useEffect(() => {
     const fetchCityDiscountsData = async () => {
       try {
-        setLoading(true);
+        setLoading(!(cityDiscounts.length || monthlyBenefits.length || topCities.length));
         const month = new Date().getMonth() + 1;
         const year = new Date().getFullYear();
 
@@ -28,11 +28,11 @@ const CityDiscountsContent = () => {
         const { data: benefits } = await supabase
           .from('city_monthly_benefits')
           .select('*')
-          .eq('benefit_month', month)
-          .eq('benefit_year', year);
+          .eq('month', month)
+          .eq('year', year);
 
         const { data: cities } = await supabase
-          .from('city_performance')
+          .from('city_order_stats')
           .select('*')
           .eq('month', month)
           .eq('year', year)
@@ -49,15 +49,19 @@ const CityDiscountsContent = () => {
       }
     };
 
-    fetchCityDiscountsData();
-  }, []);
+    if (!(initialCityDiscounts.length && initialMonthlyBenefits.length && initialTopCities.length)) {
+      fetchCityDiscountsData();
+    } else {
+      setLoading(false);
+    }
+  }, [initialCityDiscounts, initialMonthlyBenefits, initialTopCities]);
 
   const getCurrentMonthName = () => {
     const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
     return months[new Date().getMonth()];
   };
 
-  if (loading) {
+  if (loading && !(cityDiscounts.length || monthlyBenefits.length || topCities.length)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader />
@@ -141,7 +145,7 @@ const CityDiscountsContent = () => {
                           <div className="space-y-3">
                             <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 w-full justify-center py-2">
                               <Percent className="h-4 w-4 mr-2" />
-                              خصم {discount.discount_percentage}% + توصيل مجاني
+                              خصم {discount.discount_percentage}% {discount.include_free_delivery ? '+ توصيل مجاني' : ''}
                             </Badge>
                             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-4 w-4" />
@@ -188,7 +192,7 @@ const CityDiscountsContent = () => {
                             </div>
                           </div>
                           <Badge className={`w-full justify-center py-1 ${benefit.benefit_type === 'free_delivery' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-orange-500 to-red-500'} text-white border-0`}>
-                            {benefit.benefit_type === 'free_delivery' ? 'توصيل مجاني' : 'خصم 5% + توصيل'}
+                            {benefit.benefit_type === 'free_delivery' ? 'توصيل مجاني' : `خصم ${benefit.benefit_value || 5}% + توصيل`}
                           </Badge>
                         </CardContent>
                       </Card>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import CustomerDetailsDialog from "@/components/customers/CustomerDetailsDialog"
 import EnhancedExportDialog from "@/components/customers/EnhancedExportDialog";
 import TopProvincesDialog from "@/components/customers/TopProvincesDialog";
 import CityDiscountsContent from "@/components/customers/CityDiscountsContent";
+import { supabase } from "@/integrations/supabase/client";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { 
@@ -54,6 +55,7 @@ const CustomersManagementPage = () => {
   const [showExportDialog, setShowExportDialog] = useState(false);
 const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
+  const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
 
   // Sample data for demonstration
   const sampleCustomers = [
@@ -136,7 +138,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       bgColor: 'bg-gradient-to-br from-gray-100 to-gray-200',
       textColor: 'text-gray-700',
       discount: 5,
-      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة']
+      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة', 'توصيل مجاني']
     },
     {
       name: 'ذهبي',
@@ -158,7 +160,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       bgColor: 'bg-gradient-to-br from-cyan-100 to-blue-100',
       textColor: 'text-cyan-700',
       discount: 15,
-      benefits: ['خصم 15% شهرياً', 'توصيل مجاني دائماً', 'دعم VIP']
+      benefits: ['خصم 15% شهرياً', 'توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم']
     }
   ];
 
@@ -249,6 +251,45 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   };
 
   const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
+
+  useEffect(() => {
+    const fetchCityDiscountsData = async () => {
+      try {
+        const month = new Date().getMonth() + 1;
+        const year = new Date().getFullYear();
+
+        const { data: discounts } = await supabase
+          .from('city_random_discounts')
+          .select('*')
+          .eq('discount_month', month)
+          .eq('discount_year', year);
+
+        const { data: benefits } = await supabase
+          .from('city_monthly_benefits')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year);
+
+        const { data: cities } = await supabase
+          .from('city_order_stats')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year)
+          .order('total_amount', { ascending: false })
+          .limit(5);
+
+        setCityDiscountsData({
+          cityDiscounts: discounts || [],
+          monthlyBenefits: benefits || [],
+          topCities: cities || []
+        });
+      } catch (e) {
+        console.error('Error preloading city discounts:', e);
+      }
+    };
+
+    fetchCityDiscountsData();
+  }, []);
 
   if (loading) {
     return (
@@ -551,12 +592,24 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                         <p className="font-bold">خصم {level.discount}% شهرياً</p>
                       </div>
                     )}
-                    {(level.name === 'ذهبي' || level.name === 'ماسي') && (
-                      <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
-                        <Truck className="h-4 w-4" />
-                        توصيل مجاني دائماً
-                      </Button>
-                    )}
+                      {level.name === 'ذهبي' && (
+                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
+                          <Truck className="h-4 w-4" />
+                          توصيل مجاني دائماً
+                        </Button>
+                      )}
+                      {level.name === 'ماسي' && (
+                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
+                          <Truck className="h-4 w-4" />
+                          توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم
+                        </Button>
+                      )}
+                      {level.name === 'فضي' && (
+                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
+                          <Truck className="h-4 w-4" />
+                          توصيل مجاني
+                        </Button>
+                      )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -670,7 +723,11 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-<CityDiscountsContent />
+<CityDiscountsContent 
+            cityDiscounts={cityDiscountsData.cityDiscounts}
+            monthlyBenefits={cityDiscountsData.monthlyBenefits}
+            topCities={cityDiscountsData.topCities}
+          />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -799,13 +856,31 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                               خصم {loyaltyLevel.discount}% شهرياً
                             </Button>
                           )}
-                          {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
+                          {loyaltyLevel.name === 'ذهبي' && (
                             <Button 
                               size="sm" 
                               className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
                             >
                               <Truck className="h-4 w-4" />
                               توصيل مجاني دائماً
+                            </Button>
+                          )}
+                          {loyaltyLevel.name === 'ماسي' && (
+                            <Button 
+                              size="sm" 
+                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
+                            >
+                              <Truck className="h-4 w-4" />
+                              توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم
+                            </Button>
+                          )}
+                          {loyaltyLevel.name === 'فضي' && (
+                            <Button 
+                              size="sm" 
+                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
+                            >
+                              <Truck className="h-4 w-4" />
+                              توصيل مجاني
                             </Button>
                           )}
                         </div>
