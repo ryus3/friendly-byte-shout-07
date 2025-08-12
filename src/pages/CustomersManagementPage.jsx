@@ -117,6 +117,62 @@ const CustomersManagementPage = () => {
   // Use sample data if no customers exist
   const displayCustomers = customers && customers.length > 0 ? customers : sampleCustomers;
 
+  // Loyalty levels configuration
+  const loyaltyLevels = [
+    {
+      name: 'برونزي',
+      icon: <Award className="h-6 w-6" />,
+      minPoints: 0,
+      maxPoints: 749,
+      color: 'from-orange-400 to-red-500',
+      bgColor: 'bg-gradient-to-br from-orange-100 to-red-100',
+      textColor: 'text-orange-700',
+      discount: 0,
+      benefits: ['نقاط على المشتريات']
+    },
+    {
+      name: 'فضي',
+      icon: <Medal className="h-6 w-6" />,
+      minPoints: 750,
+      maxPoints: 1499,
+      color: 'from-gray-400 to-gray-600',
+      bgColor: 'bg-gradient-to-br from-gray-100 to-gray-200',
+      textColor: 'text-gray-700',
+      discount: 5,
+      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة']
+    },
+    {
+      name: 'ذهبي',
+      icon: <Crown className="h-6 w-6" />,
+      minPoints: 1500,
+      maxPoints: 2999,
+      color: 'from-yellow-400 to-orange-500',
+      bgColor: 'bg-gradient-to-br from-yellow-100 to-orange-100',
+      textColor: 'text-yellow-700',
+      discount: 10,
+      benefits: ['خصم 10% شهرياً', 'توصيل مجاني دائماً']
+    },
+    {
+      name: 'ماسي',
+      icon: <Diamond className="h-6 w-6" />,
+      minPoints: 3000,
+      maxPoints: Infinity,
+      color: 'from-cyan-400 to-blue-500',
+      bgColor: 'bg-gradient-to-br from-cyan-100 to-blue-100',
+      textColor: 'text-cyan-700',
+      discount: 15,
+      benefits: ['خصم 15% شهرياً', 'توصيل مجاني دائماً', 'دعم VIP']
+    }
+  ];
+
+  // Get loyalty level function - defined before use
+  const getLoyaltyLevel = (points = 0) => {
+    if (points >= 3000) return loyaltyLevels[3];
+    if (points >= 1500) return loyaltyLevels[2];
+    if (points >= 750) return loyaltyLevels[1];
+    return loyaltyLevels[0];
+  };
+
   // Filter customers based on permissions and search criteria
   const filteredCustomers = useMemo(() => {
     if (!displayCustomers) return [];
@@ -186,54 +242,6 @@ const CustomersManagementPage = () => {
     };
   }, [filteredCustomers]);
 
-  // Loyalty levels configuration
-  const loyaltyLevels = [
-    {
-      name: 'برونزي',
-      icon: <Award className="h-6 w-6" />,
-      minPoints: 0,
-      maxPoints: 749,
-      color: 'from-orange-400 to-red-500',
-      bgColor: 'bg-gradient-to-br from-orange-100 to-red-100',
-      textColor: 'text-orange-700',
-      discount: 0,
-      benefits: ['نقاط على المشتريات']
-    },
-    {
-      name: 'فضي',
-      icon: <Medal className="h-6 w-6" />,
-      minPoints: 750,
-      maxPoints: 1499,
-      color: 'from-gray-400 to-gray-600',
-      bgColor: 'bg-gradient-to-br from-gray-100 to-gray-200',
-      textColor: 'text-gray-700',
-      discount: 5,
-      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة']
-    },
-    {
-      name: 'ذهبي',
-      icon: <Crown className="h-6 w-6" />,
-      minPoints: 1500,
-      maxPoints: 2999,
-      color: 'from-yellow-400 to-orange-500',
-      bgColor: 'bg-gradient-to-br from-yellow-100 to-orange-100',
-      textColor: 'text-yellow-700',
-      discount: 10,
-      benefits: ['خصم 10% شهرياً', 'توصيل مجاني دائماً']
-    },
-    {
-      name: 'ماسي',
-      icon: <Diamond className="h-6 w-6" />,
-      minPoints: 3000,
-      maxPoints: Infinity,
-      color: 'from-cyan-400 to-blue-500',
-      bgColor: 'bg-gradient-to-br from-cyan-100 to-blue-100',
-      textColor: 'text-cyan-700',
-      discount: 15,
-      benefits: ['خصم 15% شهرياً', 'توصيل مجاني دائماً', 'دعم VIP']
-    }
-  ];
-
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
     setShowDetailsDialog(true);
@@ -241,13 +249,6 @@ const CustomersManagementPage = () => {
 
   const handleRefresh = () => {
     // Data is auto-updated via context
-  };
-
-  const getLoyaltyLevel = (points = 0) => {
-    if (points >= 3000) return loyaltyLevels[3];
-    if (points >= 1500) return loyaltyLevels[2];
-    if (points >= 750) return loyaltyLevels[1];
-    return loyaltyLevels[0];
   };
 
   const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
