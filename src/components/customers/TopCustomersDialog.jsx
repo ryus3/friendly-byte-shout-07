@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import Loader from "@/components/ui/loader";
 import { motion, AnimatePresence } from "framer-motion";
 import useOrdersAnalytics from "@/hooks/useOrdersAnalytics";
 import { Users, TrendingUp, Award, Star, Crown, Diamond, Medal } from "lucide-react";
+import { startOfMonth, startOfYear, subMonths, startOfWeek } from 'date-fns';
 
 const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
@@ -19,8 +20,33 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
     { key: 'year', label: 'سنة' }
   ];
 
-  const { analytics, loading } = useOrdersAnalytics();
+  const { analytics, loading, setDateRange } = useOrdersAnalytics();
   
+  // تفعيل فلترة الفترة الزمنية فعلياً عبر hook التحليلات
+  const getDateRangeFor = (key) => {
+    const now = new Date();
+    switch (key) {
+      case 'week':
+        return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), to: now };
+      case 'month':
+        return { from: startOfMonth(now), to: now };
+      case '3months':
+        // آخر 3 أشهر تشمل الشهر الحالي + شهرين سابقين
+        return { from: startOfMonth(subMonths(now, 2)), to: now };
+      case '6months':
+        // آخر 6 أشهر تشمل الشهر الحالي + 5 سابقة
+        return { from: startOfMonth(subMonths(now, 5)), to: now };
+      case 'year':
+        return { from: startOfYear(now), to: now };
+      default:
+        return { from: null, to: null };
+    }
+  };
+
+  useEffect(() => {
+    setDateRange(getDateRangeFor(selectedPeriod));
+  }, [selectedPeriod, setDateRange]);
+
   const topCustomers = analytics?.topCustomers || [];
   const totalOrders = topCustomers.reduce((sum, c) => sum + (c.total_orders ?? c.orderCount ?? 0), 0);
   const totalRevenue = topCustomers.reduce((sum, c) => sum + (c.total_spent ?? c.totalRevenue ?? 0), 0);
@@ -41,7 +67,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <Users className="h-6 w-6 text-primary" />
