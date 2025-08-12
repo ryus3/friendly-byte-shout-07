@@ -64,12 +64,13 @@ function ProtectedRoute({ children, permission }) {
 
   // فحص الصلاحيات إذا كانت مطلوبة
   if (permission) {
-    const allowed = Array.isArray(permission)
-      ? permission.some((p) => hasPermission(p))
-      : hasPermission(permission);
+    const requested = Array.isArray(permission) ? permission : [permission];
+    const allowedByPerms = requested.some((p) => hasPermission(p));
+    const allowedByFlag = requested.some((p) => ['view_customers','manage_all_customers'].includes(p)) && (user?.customer_management_access === true);
+    const allowed = allowedByPerms || allowedByFlag;
     if (!allowed) {
       // إذا لم يملك المستخدم الصلاحية، انتقل للصفحة الافتراضية
-      return <Navigate to={user.defaultPage || user.default_page || '/'} replace />;
+      return <Navigate to={(user && (user.defaultPage || user.default_page)) || '/'} replace />;
     }
   }
   
