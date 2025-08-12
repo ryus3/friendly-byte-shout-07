@@ -846,12 +846,12 @@ const CustomersManagementPage = () => {
                   </Card>
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
-      </div>
 
-      {/* Dialogs */}
+        {/* Dialogs */}
       <CustomerDetailsDialog
         customer={selectedCustomer}
         open={showDetailsDialog}
