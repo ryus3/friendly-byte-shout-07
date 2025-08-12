@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader } from "@/components/ui/loader";
-import { CustomerCard } from "@/components/customers/CustomerCard";
-import { CustomerDetailsDialog } from "@/components/customers/CustomerDetailsDialog";
-import { EnhancedExportDialog } from "@/components/customers/EnhancedExportDialog";
-import { TopProvincesDialog } from "@/components/customers/TopProvincesDialog";
-import { TopCustomersDialog } from "@/components/customers/TopCustomersDialog";
+import CustomerCard from "@/components/customers/CustomerCard";
+import CustomerDetailsDialog from "@/components/customers/CustomerDetailsDialog";
+import EnhancedExportDialog from "@/components/customers/EnhancedExportDialog";
+import TopProvincesDialog from "@/components/customers/TopProvincesDialog";
+import TopCustomersDialog from "@/components/customers/TopCustomersDialog";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { 

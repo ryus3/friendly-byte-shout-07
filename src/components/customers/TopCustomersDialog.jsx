@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader } from "@/components/ui/loader";
 import { motion, AnimatePresence } from "framer-motion";
-import { useOrdersAnalytics } from "@/hooks/useOrdersAnalytics";
+import useOrdersAnalytics from "@/hooks/useOrdersAnalytics";
 import { Users, TrendingUp, Award, Star, Crown, Diamond, Medal } from "lucide-react";
 
 const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
@@ -19,15 +19,12 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
     { key: 'year', label: 'سنة' }
   ];
 
-  const { analytics, loading } = useOrdersAnalytics(selectedPeriod, employeeId);
+  const { analytics, loading } = useOrdersAnalytics();
   
   const topCustomers = analytics?.topCustomers || [];
-  const customerStats = analytics?.customerStats || {};
-  
-  const totalOrders = customerStats.totalOrders || 0;
-  const totalRevenue = customerStats.totalRevenue || 0;
+  const totalOrders = topCustomers.reduce((sum, c) => sum + (c.total_orders ?? c.orderCount ?? 0), 0);
+  const totalRevenue = topCustomers.reduce((sum, c) => sum + (c.total_spent ?? c.totalRevenue ?? 0), 0);
   const totalCustomers = topCustomers.length;
-
   const getLoyaltyIcon = (rank) => {
     if (rank === 1) return <Crown className="h-5 w-5 text-yellow-500" />;
     if (rank === 2) return <Diamond className="h-5 w-5 text-blue-400" />;
@@ -124,7 +121,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
                   topCustomers.map((customer, index) => {
                     const rank = index + 1;
                     const loyaltyInfo = getLoyaltyLevel(customer.loyaltyPoints || 0);
-                    const contribution = totalOrders > 0 ? ((customer.totalOrders || 0) / totalOrders * 100) : 0;
+                    const contribution = totalOrders > 0 ? (((customer.total_orders ?? customer.orderCount ?? 0)) / totalOrders * 100) : 0;
                     
                     return (
                       <motion.div
@@ -163,12 +160,12 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
                               <div className="text-left space-y-1">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-muted-foreground">الطلبات:</span>
-                                  <span className="font-semibold">{customer.totalOrders || 0}</span>
+                                  <span className="font-semibold">{customer.total_orders ?? customer.orderCount ?? 0}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-muted-foreground">المبلغ:</span>
                                   <span className="font-semibold text-green-600">
-                                    {(customer.totalRevenue || 0).toLocaleString()} د.ع
+                                    {((customer.total_spent ?? customer.totalRevenue ?? 0)).toLocaleString()} د.ع
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-2">
