@@ -203,7 +203,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     // Apply loyalty level filter
     if (loyaltyLevelFilter !== 'all') {
       filtered = filtered.filter(customer => {
-        const level = getLoyaltyLevel(customer.loyaltyPoints || 0);
+        const level = getLoyaltyLevel(customer.customer_loyalty?.total_points || 0);
         return level.name === loyaltyLevelFilter;
       });
     }
@@ -211,7 +211,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     // Apply points range filter
     if (pointsRangeFilter !== 'all') {
       filtered = filtered.filter(customer => {
-        const points = customer.loyaltyPoints || 0;
+        const points = customer.customer_loyalty?.total_points || 0;
         switch (pointsRangeFilter) {
           case 'none': return points === 0;
           case '1-749': return points >= 1 && points <= 749;
@@ -229,9 +229,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   // Calculate customer statistics
   const customerStats = useMemo(() => {
     const totalCustomers = filteredCustomers.length;
-    const customersWithPoints = filteredCustomers.filter(c => c.loyaltyPoints && c.loyaltyPoints > 0).length;
-    const totalLoyaltyPoints = filteredCustomers.reduce((sum, c) => sum + (c.loyaltyPoints || 0), 0);
-    const totalRevenue = filteredCustomers.reduce((sum, c) => sum + (c.totalRevenue || 0), 0);
+    const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.total_points && c.customer_loyalty.total_points > 0).length;
+    const totalLoyaltyPoints = filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.total_points || 0), 0);
+    const totalRevenue = filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.total_spent || 0), 0);
     const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))].length;
     
     return {
@@ -757,7 +757,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             <AnimatePresence>
               {filteredCustomers.map((customer, index) => {
-                const loyaltyLevel = getLoyaltyLevel(customer.loyaltyPoints || 0);
+                const loyaltyLevel = getLoyaltyLevel(customer.customer_loyalty?.total_points || 0);
                 
                 return (
                   <motion.div
@@ -802,7 +802,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">المستوى:</span>
                             <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                              كيروزتي
+                            {customer.customer_loyalty?.loyalty_tiers?.name || loyaltyLevel.name}
                             </Badge>
                           </div>
                           
@@ -810,14 +810,14 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             <span className="text-sm text-muted-foreground">النقاط:</span>
                             <div className="flex items-center gap-1">
                               <Star className="h-4 w-4 text-yellow-500" />
-                              <span className="font-bold text-orange-600">{customer?.loyaltyPoints || 0}</span>
+                              <span className="font-bold text-orange-600">{customer?.customer_loyalty?.total_points || 0}</span>
                             </div>
                           </div>
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                              {customer.pointsExpiry || 'غير محدد'}
+                              {customer.customer_loyalty?.points_expiry_date ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-IQ') : 'غير محدد'}
                             </Badge>
                           </div>
                           
@@ -825,14 +825,14 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             <span className="text-sm text-muted-foreground">الطلبات:</span>
                             <div className="flex items-center gap-1">
                               <Users className="h-4 w-4 text-blue-500" />
-                              <span className="font-bold text-blue-600">{customer?.totalOrders || 0}</span>
+                              <span className="font-bold text-blue-600">{customer?.customer_loyalty?.total_orders || 0}</span>
                             </div>
                           </div>
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">المشتريات:</span>
                             <span className="font-bold text-green-600">
-                              {(customer?.totalRevenue || 0).toLocaleString()} د.ع
+                              {(customer?.customer_loyalty?.total_spent || 0).toLocaleString()} د.ع
                             </span>
                           </div>
                           

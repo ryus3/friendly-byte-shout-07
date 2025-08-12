@@ -218,7 +218,13 @@ return this.fetch('all_data', async () => {
     `).order('created_at', { ascending: false }),
     
     // البيانات الأساسية
-    supabase.from('customers').select('*').order('created_at', { ascending: false }),
+    supabase.from('customers').select(`
+      *,
+      customer_loyalty (
+        *,
+        loyalty_tiers (*)
+      )
+    `).order('created_at', { ascending: false }),
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),
     supabase.from('expenses').select('*').order('created_at', { ascending: false }),
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
