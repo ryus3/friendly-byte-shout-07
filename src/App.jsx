@@ -63,9 +63,14 @@ function ProtectedRoute({ children, permission }) {
   }
 
   // فحص الصلاحيات إذا كانت مطلوبة
-  if (permission && !hasPermission(permission)) {
-    // إذا لم يملك المستخدم الصلاحية، انتقل للصفحة الافتراضية
-    return <Navigate to={user.defaultPage || '/'} replace />;
+  if (permission) {
+    const allowed = Array.isArray(permission)
+      ? permission.some((p) => hasPermission(p))
+      : hasPermission(permission);
+    if (!allowed) {
+      // إذا لم يملك المستخدم الصلاحية، انتقل للصفحة الافتراضية
+      return <Navigate to={user.defaultPage || user.default_page || '/'} replace />;
+    }
   }
   
   return children;
@@ -133,7 +138,7 @@ function AppContent() {
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
           <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
-          <Route path="/customers-management" element={<ProtectedRoute permission="view_customers">{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
+          <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
 
         </Routes>
       </Suspense>
