@@ -11,6 +11,7 @@ import CustomerDetailsDialog from "@/components/customers/CustomerDetailsDialog"
 import EnhancedExportDialog from "@/components/customers/EnhancedExportDialog";
 import TopProvincesDialog from "@/components/customers/TopProvincesDialog";
 import TopCustomersDialog from "@/components/customers/TopCustomersDialog";
+import CityDiscountsDialog from "@/components/customers/CityDiscountsDialog";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { 
@@ -46,11 +47,15 @@ const CustomersManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('all');
   const [genderFilter, setGenderFilter] = useState('all');
+  const [loyaltyLevelFilter, setLoyaltyLevelFilter] = useState('all');
+  const [pointsRangeFilter, setPointsRangeFilter] = useState('all');
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showTopCustomersDialog, setShowTopCustomersDialog] = useState(false);
   const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
+  const [showCityDiscountsDialog, setShowCityDiscountsDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
 
   // Sample data for demonstration
@@ -138,8 +143,31 @@ const CustomersManagementPage = () => {
       filtered = filtered.filter(customer => customer.gender_type === genderFilter);
     }
     
+    // Apply loyalty level filter
+    if (loyaltyLevelFilter !== 'all') {
+      filtered = filtered.filter(customer => {
+        const level = getLoyaltyLevel(customer.loyaltyPoints || 0);
+        return level.name === loyaltyLevelFilter;
+      });
+    }
+    
+    // Apply points range filter
+    if (pointsRangeFilter !== 'all') {
+      filtered = filtered.filter(customer => {
+        const points = customer.loyaltyPoints || 0;
+        switch (pointsRangeFilter) {
+          case 'none': return points === 0;
+          case '1-749': return points >= 1 && points <= 749;
+          case '750-1499': return points >= 750 && points <= 1499;
+          case '1500-2999': return points >= 1500 && points <= 2999;
+          case '3000+': return points >= 3000;
+          default: return true;
+        }
+      });
+    }
+    
     return filtered;
-  }, [displayCustomers, filterDataByUser, searchTerm, cityFilter, genderFilter]);
+  }, [displayCustomers, filterDataByUser, searchTerm, cityFilter, genderFilter, loyaltyLevelFilter, pointsRangeFilter, getLoyaltyLevel]);
 
   // Calculate customer statistics
   const customerStats = useMemo(() => {
@@ -359,47 +387,142 @@ const CustomersManagementPage = () => {
           transition={{ delay: 0.4 }}
         >
           <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col space-y-4">
-                <div className="relative flex-1">
-                  <Search className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
+            <CardContent className="p-3 sm:p-6">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="البحث بالاسم، الهاتف..."
+                    placeholder="البحث بالاسم، الهاتف، المدينة..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-10 sm:pr-12 h-10 sm:h-12 text-base sm:text-lg border-2 focus:border-primary/50 rounded-xl"
+                    className="pr-10 h-12 text-base border-2 focus:border-primary/50 rounded-xl bg-background"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                  <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="w-full sm:w-40 h-10 sm:h-12 rounded-xl border-2">
-                      <SelectValue placeholder="المدينة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">جميع المدن</SelectItem>
-                      {uniqueCities.map(city => (
-                        <SelectItem key={city} value={city}>{city}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                
+                {/* Main Filter Row */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex gap-2 flex-1">
+                    <Select value={cityFilter} onValueChange={setCityFilter}>
+                      <SelectTrigger className="flex-1 sm:min-w-[140px] h-11 rounded-xl border-2 bg-background">
+                        <SelectValue placeholder="جميع العملاء" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-2 rounded-xl shadow-xl z-50">
+                        <SelectItem value="all">جميع العملاء</SelectItem>
+                        {uniqueCities.map(city => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      className="h-11 px-4 rounded-xl border-2 gap-2 bg-background hover:bg-muted transition-all"
+                    >
+                      <Filter className="h-4 w-4" />
+                      فلترة متقدمة
+                    </Button>
+                  </div>
                   
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowTopCustomersDialog(true)}
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base"
-                  >
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    أفضل العملاء
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base"
-                  >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
-                    فلترة متقدمة
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowTopCustomersDialog(true)}
+                      className="h-11 px-4 rounded-xl border-2 gap-2 bg-background hover:bg-muted transition-all"
+                    >
+                      <Users className="h-4 w-4" />
+                      أفضل العملاء
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCityDiscountsDialog(true)}
+                      className="h-11 px-4 rounded-xl border-2 gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 border-0"
+                    >
+                      <Gift className="h-4 w-4" />
+                      خصومات المدن
+                    </Button>
+                  </div>
                 </div>
+                
+                {/* Advanced Filters */}
+                <AnimatePresence>
+                  {showAdvancedFilters && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4 border-t border-border">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">مستوى الولاء</label>
+                            <Select value={loyaltyLevelFilter} onValueChange={setLoyaltyLevelFilter}>
+                              <SelectTrigger className="h-10 rounded-lg border-2 bg-background">
+                                <SelectValue placeholder="جميع المستويات" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border-2 rounded-xl shadow-xl z-50">
+                                <SelectItem value="all">جميع المستويات</SelectItem>
+                                <SelectItem value="برونزي">برونزي</SelectItem>
+                                <SelectItem value="فضي">فضي</SelectItem>
+                                <SelectItem value="ذهبي">ذهبي</SelectItem>
+                                <SelectItem value="ماسي">ماسي</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">نطاق النقاط</label>
+                            <Select value={pointsRangeFilter} onValueChange={setPointsRangeFilter}>
+                              <SelectTrigger className="h-10 rounded-lg border-2 bg-background">
+                                <SelectValue placeholder="جميع النطاقات" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border-2 rounded-xl shadow-xl z-50">
+                                <SelectItem value="all">جميع النطاقات</SelectItem>
+                                <SelectItem value="none">بدون نقاط</SelectItem>
+                                <SelectItem value="1-749">1 - 749 نقطة</SelectItem>
+                                <SelectItem value="750-1499">750 - 1499 نقطة</SelectItem>
+                                <SelectItem value="1500-2999">1500 - 2999 نقطة</SelectItem>
+                                <SelectItem value="3000+">3000+ نقطة</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <label className="text-sm font-medium text-muted-foreground mb-2 block">الجنس</label>
+                            <Select value={genderFilter} onValueChange={setGenderFilter}>
+                              <SelectTrigger className="h-10 rounded-lg border-2 bg-background">
+                                <SelectValue placeholder="جميع الأجناس" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background border-2 rounded-xl shadow-xl z-50">
+                                <SelectItem value="all">جميع الأجناس</SelectItem>
+                                <SelectItem value="male">ذكر</SelectItem>
+                                <SelectItem value="female">أنثى</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setCityFilter('all');
+                              setGenderFilter('all');
+                              setLoyaltyLevelFilter('all');
+                              setPointsRangeFilter('all');
+                            }}
+                            className="h-9 px-4 rounded-lg text-sm"
+                          >
+                            مسح الفلاتر
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </CardContent>
           </Card>
@@ -823,6 +946,11 @@ const CustomersManagementPage = () => {
       <TopProvincesDialog
         open={showTopProvincesDialog}
         onOpenChange={setShowTopProvincesDialog}
+      />
+
+      <CityDiscountsDialog
+        isOpen={showCityDiscountsDialog}
+        onClose={() => setShowCityDiscountsDialog(false)}
       />
     </div>
   );
