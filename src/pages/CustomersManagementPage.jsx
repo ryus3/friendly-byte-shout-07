@@ -234,7 +234,7 @@ const CustomersManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <div className="container mx-auto p-2 sm:p-4 lg:p-8 space-y-6 sm:space-y-8")
+      <div className="container mx-auto p-2 sm:p-4 lg:p-8 space-y-6 sm:space-y-8">
         {/* Modern Header */}
         <motion.div 
           initial={{ opacity: 0, y: -30 }}
@@ -412,10 +412,10 @@ const CustomersManagementPage = () => {
           transition={{ delay: 0.5 }}
           className="space-y-6"
         >
-          <h2 className="text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             مستويات الولاء
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {loyaltyLevels.map((level, index) => (
               <motion.div
                 key={level.name}
@@ -426,20 +426,20 @@ const CustomersManagementPage = () => {
                 className="group"
               >
                 <Card className={`border-0 bg-white dark:bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative`}>
-                  <div className={`h-2 bg-gradient-to-r ${level.color}`} />
-                  <CardContent className="p-6 text-center space-y-4">
-                    <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-r ${level.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}>
-                      {level.icon}
+                  <div className={`h-1 sm:h-2 bg-gradient-to-r ${level.color}`} />
+                  <CardContent className="p-3 sm:p-6 text-center space-y-2 sm:space-y-4">
+                    <div className={`w-12 h-12 sm:w-20 sm:h-20 mx-auto rounded-full bg-gradient-to-r ${level.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}>
+                      {React.cloneElement(level.icon, { className: "h-4 w-4 sm:h-6 sm:w-6" })}
                     </div>
-                    <h3 className="text-2xl font-bold">{level.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-lg sm:text-2xl font-bold">{level.name}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {level.maxPoints === Infinity 
                         ? `${level.minPoints.toLocaleString()}+ نقطة`
                         : `${level.minPoints} - ${level.maxPoints} نقطة`}
                     </p>
-                    <div className="space-y-2">
+                    <div className="space-y-1 sm:space-y-2">
                       {level.benefits.map((benefit, i) => (
-                        <Badge key={i} className="bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200 text-xs">
+                        <Badge key={i} className="bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200 text-xs block">
                           {benefit}
                         </Badge>
                       ))}
