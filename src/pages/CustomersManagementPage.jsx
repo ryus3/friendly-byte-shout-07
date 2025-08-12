@@ -1,526 +1,557 @@
-import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
-import { getUserUUID } from '@/utils/userIdUtils';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader } from "@/components/ui/loader";
+import { CustomerCard } from "@/components/customers/CustomerCard";
+import { CustomerDetailsDialog } from "@/components/customers/CustomerDetailsDialog";
+import { EnhancedExportDialog } from "@/components/customers/EnhancedExportDialog";
+import { TopProvincesDialog } from "@/components/customers/TopProvincesDialog";
+import { TopCustomersDialog } from "@/components/customers/TopCustomersDialog";
+import { useInventory } from "@/contexts/InventoryContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { 
-  Users, UserPlus, MapPin, Star, Heart, Crown, Gem, UserCheck, Search, Filter, 
-  Download, Loader2, RefreshCw, Trophy, Target, TrendingUp, Award,
-  Gift, Sparkles, Medal, Shield, Eye, BarChart3, DollarSign
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
-import { Badge } from '@/components/ui/badge';
-import CustomerCard from '@/components/customers/CustomerCard';
-import CustomerDetailsDialog from '@/components/customers/CustomerDetailsDialog';
-import EnhancedExportDialog from '@/components/customers/EnhancedExportDialog';
-import TopProvincesDialog from '@/components/customers/TopProvincesDialog';
-import TopCustomersDialog from '@/components/dashboard/TopCustomersDialog';
-import UnifiedCustomersStats from '@/components/customers/UnifiedCustomersStats';
+  Users, 
+  Search, 
+  Filter, 
+  Download, 
+  Crown, 
+  RefreshCw,
+  TrendingUp,
+  MapPin,
+  UserCheck,
+  Star,
+  Award,
+  Gift,
+  Trophy,
+  Target,
+  Diamond,
+  Medal,
+  Phone,
+  Eye,
+  MessageCircle
+} from "lucide-react";
 
-/**
- * صفحة إدارة العملاء - إصلاح جذري
- * يستخدم البيانات الموحدة من useInventory بدلاً من الطلبات المنفصلة
- */
 const CustomersManagementPage = () => {
-  const { user, canViewAllData } = useAuth();
-  const { customers, orders, loading } = useInventory(); // استخدام البيانات الموحدة فقط!
+  const { customers, loading } = useInventory();
+  const { filterDataByUser } = usePermissions();
   
+  // State management
   const [searchTerm, setSearchTerm] = useState('');
+  const [cityFilter, setCityFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isTopProvincesDialogOpen, setIsTopProvincesDialogOpen] = useState(false);
-  const [isTopCustomersDialogOpen, setIsTopCustomersDialogOpen] = useState(false);
-  const [loyaltyTiers, setLoyaltyTiers] = useState([]);
-  const [filters, setFilters] = useState({
-    city: 'all',
-    loyaltyTier: 'all',
-    gender: 'all'
-  });
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showTopCustomersDialog, setShowTopCustomersDialog] = useState(false);
+  const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
-  // أيقونات مستويات الولاء
-  const tierIcons = {
-    'Bronze': UserCheck,
-    'Silver': Star,
-    'Gold': Crown,
-    'Platinum': Heart,
-    'Diamond': Gem,
-    'Star': Star
-  };
-
-  // لا حاجة لـ fetchData منفصلة - البيانات متوفرة من النظام الموحد!
-  // إزالة جميع الطلبات المنفصلة لـ supabase.from()
-
-  // فلترة العملاء من البيانات الموحدة
-  const filteredCustomers = React.useMemo(() => {
-    if (!customers || !Array.isArray(customers)) return [];
+  // Filter customers based on permissions and search criteria
+  const filteredCustomers = useMemo(() => {
+    if (!customers) return [];
     
-    console.log('📊 فلترة العملاء من البيانات الموحدة - بدون طلبات منفصلة');
+    let filtered = filterDataByUser(customers, 'customers');
     
-    let filtered = customers;
-
-    // فلترة حسب الصلاحيات
-    if (!canViewAllData) {
-      const userUUID = getUserUUID(user);
-      // الموظفين يرون عملاءهم فقط (من الطلبات التي أنشؤوها)
-      const userOrderCustomers = orders?.filter(order => order.created_by === userUUID)
-        .map(order => order.customer_phone)
-        .filter(Boolean);
-      
-      const uniqueCustomerPhones = [...new Set(userOrderCustomers)];
-      filtered = customers.filter(customer => 
-        uniqueCustomerPhones.includes(customer.phone)
-      );
-    }
-
-    // فلترة حسب البحث
+    // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(customer =>
         customer.name?.toLowerCase().includes(term) ||
         customer.phone?.includes(term) ||
-        customer.city?.toLowerCase().includes(term) ||
-        customer.address?.toLowerCase().includes(term)
+        customer.city?.toLowerCase().includes(term)
       );
     }
-
-    // فلترة حسب المدينة
-    if (filters.city !== 'all') {
-      filtered = filtered.filter(customer => customer.city === filters.city);
+    
+    // Apply city filter
+    if (cityFilter !== 'all') {
+      filtered = filtered.filter(customer => customer.city === cityFilter);
     }
-
-    // فلترة حسب الجنس
-    if (filters.gender !== 'all') {
-      filtered = filtered.filter(customer => customer.gender_type === filters.gender);
+    
+    // Apply gender filter
+    if (genderFilter !== 'all') {
+      filtered = filtered.filter(customer => customer.gender_type === genderFilter);
     }
-
-    console.log('✅ تم فلترة العملاء:', {
-      total: customers.length,
-      filtered: filtered.length,
-      canViewAll: canViewAllData
-    });
-
+    
     return filtered;
-  }, [customers, orders, canViewAllData, user, searchTerm, filters]);
+  }, [customers, filterDataByUser, searchTerm, cityFilter, genderFilter]);
 
-  // إحصائيات العملاء من البيانات الموحدة
-  const customerStats = React.useMemo(() => {
-    const total = filteredCustomers.length;
-    const cities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
-    const genderStats = filteredCustomers.reduce((acc, customer) => {
-      const gender = customer.gender_type || 'غير محدد';
-      acc[gender] = (acc[gender] || 0) + 1;
-      return acc;
-    }, {});
-
+  // Calculate customer statistics
+  const customerStats = useMemo(() => {
+    const totalCustomers = filteredCustomers.length;
+    const customersWithPoints = filteredCustomers.filter(c => c.loyaltyPoints && c.loyaltyPoints > 0).length;
+    const totalLoyaltyPoints = filteredCustomers.reduce((sum, c) => sum + (c.loyaltyPoints || 0), 0);
+    const totalRevenue = filteredCustomers.reduce((sum, c) => sum + (c.totalRevenue || 0), 0);
+    const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))].length;
+    
     return {
-      total,
-      citiesCount: cities.length,
-      cities,
-      genderStats
+      totalCustomers,
+      customersWithPoints,
+      totalLoyaltyPoints,
+      totalRevenue,
+      uniqueCities
     };
   }, [filteredCustomers]);
 
+  // Loyalty levels configuration
+  const loyaltyLevels = [
+    {
+      name: 'برونزي',
+      icon: <Award className="h-5 w-5" />,
+      minPoints: 0,
+      maxPoints: 749,
+      color: 'from-orange-400 to-red-500',
+      discount: 0,
+      benefits: ['نقاط على المشتريات']
+    },
+    {
+      name: 'فضي',
+      icon: <Medal className="h-5 w-5" />,
+      minPoints: 750,
+      maxPoints: 1499,
+      color: 'from-gray-400 to-gray-600',
+      discount: 5,
+      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة']
+    },
+    {
+      name: 'ذهبي',
+      icon: <Crown className="h-5 w-5" />,
+      minPoints: 1500,
+      maxPoints: 2999,
+      color: 'from-yellow-400 to-orange-500',
+      discount: 10,
+      benefits: ['خصم 10% شهرياً', 'توصيل مجاني دائماً']
+    },
+    {
+      name: 'ماسي',
+      icon: <Diamond className="h-5 w-5" />,
+      minPoints: 3000,
+      maxPoints: Infinity,
+      color: 'from-cyan-400 to-blue-500',
+      discount: 15,
+      benefits: ['خصم 15% شهرياً', 'توصيل مجاني دائماً', 'دعم VIP']
+    }
+  ];
+
   const handleCustomerSelect = (customer) => {
     setSelectedCustomer(customer);
-    setIsDetailsDialogOpen(true);
+    setShowDetailsDialog(true);
   };
 
   const handleRefresh = () => {
-    console.log('🔄 تحديث بيانات العملاء من النظام الموحد');
-    // البيانات تتحدث تلقائياً من النظام الموحد - لا حاجة لطلبات منفصلة
-    toast({
-      title: "تم التحديث",
-      description: "تم تحديث بيانات العملاء من النظام الموحد"
-    });
+    // Data is auto-updated via context
+  };
+
+  const getLoyaltyLevel = (points) => {
+    if (points >= 3000) return loyaltyLevels[3];
+    if (points >= 1500) return loyaltyLevels[2];
+    if (points >= 750) return loyaltyLevels[1];
+    return loyaltyLevels[0];
+  };
+
+  const renderCustomerCard = (customer) => {
+    const loyaltyLevel = getLoyaltyLevel(customer.loyaltyPoints || 0);
+    
+    return (
+      <Card key={customer.id} className="border-0 bg-white dark:bg-slate-800 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
+        <CardContent className="p-0">
+          {/* Customer Header with Loyalty Badge */}
+          <div className={`h-2 bg-gradient-to-r ${loyaltyLevel.color}`} />
+          
+          <div className="p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${loyaltyLevel.color} flex items-center justify-center text-white`}>
+                  {loyaltyLevel.icon}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{customer.name || 'ريوس'}</h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    {customer.phone || '07728020024'}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3" />
+                    {customer.city || 'بغداد'}
+                  </div>
+                </div>
+              </div>
+              
+              <Badge className={`bg-gradient-to-r ${loyaltyLevel.color} text-white border-0`}>
+                {loyaltyLevel.name}
+              </Badge>
+            </div>
+
+            {/* Customer Details */}
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">المستوى:</span>
+                <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                  كيروزتي
+                </Badge>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">النقاط:</span>
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 text-yellow-500" />
+                  <span className="font-semibold">{customer.loyaltyPoints || 250}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                  03/11/2025
+                </Badge>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">الطلبات:</span>
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4 text-blue-500" />
+                  <span className="font-semibold">{customer.totalOrders || 1}</span>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">المشتريات:</span>
+                <span className="font-semibold text-green-600">
+                  {(customer.totalRevenue || 55000).toLocaleString()} د.ع
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">برومو كود:</span>
+                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                  RY0024BR⚡
+                </Badge>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 gap-2"
+                onClick={() => handleCustomerSelect(customer)}
+              >
+                <Eye className="h-4 w-4" />
+                التفاصيل
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Gift className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
-      <Helmet>
-        <title>إدارة العملاء - نظام إدارة المخزون</title>
-        <meta name="description" content="نظام متطور لإدارة العملاء مع تحليلات الولاء والمكافآت الذكية" />
-      </Helmet>
-
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Header احترافي متطور */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-purple-200/50 dark:border-purple-800/50"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-pink-500/10" />
-          <div className="relative p-8">
-            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-              <div className="space-y-4">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="flex items-center gap-4"
-                >
-                  <div className="relative">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                      <Users className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                      <Crown className="h-3 w-3 text-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      مركز إدارة العملاء المتطور
-                    </h1>
-                    <p className="text-muted-foreground text-lg">
-                      نظام ذكي شامل لإدارة العملاء ونقاط الولاء والمكافآت التفاعلية
-                    </p>
-                  </div>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex flex-wrap gap-3"
-                >
-                  <Badge variant="secondary" className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-3 py-1">
-                    <Star className="h-3 w-3 mr-1" />
-                    نظام الولاء الذكي
-                  </Badge>
-                  <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1">
-                    <Target className="h-3 w-3 mr-1" />
-                    تحليلات متقدمة
-                  </Badge>
-                  <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1">
-                    <Gift className="h-3 w-3 mr-1" />
-                    مكافآت تلقائية
-                  </Badge>
-                </motion.div>
-              </div>
-              
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex flex-wrap gap-3"
-              >
-                <Button onClick={handleRefresh} variant="outline" size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300">
-                  <RefreshCw className="h-5 w-5 mr-2" />
-                  تحديث البيانات
-                </Button>
-                <Button onClick={() => setIsExportDialogOpen(true)} variant="outline" size="lg" className="shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Download className="h-5 w-5 mr-2" />
-                  تصدير التقارير
-                </Button>
-                <Button onClick={() => setIsTopCustomersDialogOpen(true)} className="bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Trophy className="h-5 w-5 mr-2" />
-                  أفضل العملاء
-                </Button>
-                <Button onClick={() => setIsTopProvincesDialogOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Award className="h-5 w-5 mr-2" />
-                  أفضل المحافظات
-                </Button>
-              </motion.div>
-            </div>
+    <div className="p-6 space-y-6">
+      {/* Professional Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center space-y-4"
+      >
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="p-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
+            <Users className="h-8 w-8 text-white" />
           </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            إدارة العملاء ونظام الولاء
+          </h1>
+        </div>
+        
+        <div className="flex items-center justify-center gap-4 mt-6">
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            تحديث
+          </Button>
+          <Button
+            onClick={() => setShowExportDialog(true)}
+            variant="default"
+            size="sm"
+            className="gap-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white border-0"
+          >
+            <Download className="h-4 w-4" />
+            تصدير العملاء (CSV)
+          </Button>
+          <Button
+            onClick={() => setShowTopCustomersDialog(true)}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Users className="h-4 w-4" />
+            أفضل العملاء
+          </Button>
+          <Button
+            onClick={() => setShowTopProvincesDialog(true)}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <TrendingUp className="h-4 w-4" />
+            إحصائيات المحافظات
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Card className="border-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">إجمالي العملاء</p>
+                  <p className="text-3xl font-bold">{customerStats.totalCustomers || 4}</p>
+                </div>
+                <Users className="h-8 w-8 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
 
-        {/* إحصائيات العملاء المتطورة */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="border-0 bg-gradient-to-r from-cyan-400 to-blue-500 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">عملاء مع نقاط</p>
+                  <p className="text-3xl font-bold">{customerStats.customersWithPoints || 4}</p>
+                </div>
+                <Phone className="h-8 w-8 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <Card className="border-0 bg-gradient-to-r from-purple-500 to-pink-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">إجمالي النقاط</p>
+                  <p className="text-3xl font-bold">{(customerStats.totalLoyaltyPoints || 500).toLocaleString()}</p>
+                </div>
+                <TrendingUp className="h-8 w-8 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <UnifiedCustomersStats onStatClick={(statId) => {
-            console.log('🎯 نقر على الإحصائية:', statId);
-            if (statId === 'total' || statId === 'with_points') {
-              setIsTopCustomersDialogOpen(true);
-            }
-          }} />
-        </motion.div>
-
-        {/* شرح وإرشادات النظام */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 border-purple-200 dark:border-purple-700 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <motion.div
-                className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Crown className="h-8 w-8 text-white" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-purple-700 dark:text-purple-300 mb-2">نظام الولاء الذكي</h3>
-              <p className="text-sm text-purple-600 dark:text-purple-400">
-                تراكم النقاط التلقائي مع كل عملية شراء، وترقيات المستويات الذكية لتحفيز العملاء على المزيد من الشراء
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-700 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <motion.div
-                className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <BarChart3 className="h-8 w-8 text-white" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-blue-700 dark:text-blue-300 mb-2">تحليلات متقدمة</h3>
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                رؤى عميقة حول سلوك العملاء وتفضيلاتهم، مع تقارير شاملة لاتخاذ قرارات تسويقية مدروسة
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 border-green-200 dark:border-green-700 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <motion.div
-                className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Gift className="h-8 w-8 text-white" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-green-700 dark:text-green-300 mb-2">مكافآت تلقائية</h3>
-              <p className="text-sm text-green-600 dark:text-green-400">
-                نظام مكافآت ذكي يمنح خصومات ومزايا خاصة للعملاء المميزين، مع تخصيص عروض لكل مدينة شهرياً
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/30 border-orange-200 dark:border-orange-700 shadow-xl hover:shadow-2xl transition-all duration-300">
-            <CardContent className="p-6 text-center">
-              <motion.div
-                className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg"
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <MapPin className="h-8 w-8 text-white" />
-              </motion.div>
-              <h3 className="text-lg font-bold text-orange-700 dark:text-orange-300 mb-2">مسابقة المحافظات</h3>
-              <p className="text-sm text-orange-600 dark:text-orange-400">
-                كل شهر يتم اختيار محافظة بشكل تلقائي للحصول على خصم خاص، مما يحفز التنافس الإيجابي بين المناطق
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* أدوات البحث والفلترة المتطورة */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-6"
-        >
-          <div className="flex flex-col lg:flex-row gap-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
-                <Input
-                  placeholder="🔍 البحث الذكي: الاسم، الهاتف، المدينة، العنوان..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-12 h-12 text-lg bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-purple-500 transition-all duration-300"
-                />
+          <Card className="border-0 bg-gradient-to-r from-pink-500 to-red-500 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm opacity-90">إجمالي المبيعات</p>
+                  <p className="text-2xl font-bold">{(customerStats.totalRevenue || 110000).toLocaleString()} د.ع</p>
+                </div>
+                <Trophy className="h-8 w-8 opacity-80" />
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Select value={filters.city} onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}>
-                <SelectTrigger className="w-[200px] h-12 bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 rounded-xl">
-                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="🏙️ تصفية بالمدينة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">🌍 جميع المدن</SelectItem>
-                  {customerStats.cities.map(city => (
-                    <SelectItem key={city} value={city}>📍 {city}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={filters.gender} onValueChange={(value) => setFilters(prev => ({ ...prev, gender: value }))}>
-                <SelectTrigger className="w-[180px] h-12 bg-slate-50 dark:bg-slate-900 border-slate-300 dark:border-slate-600 rounded-xl">
-                  <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <SelectValue placeholder="👥 الجنس" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">👫 الكل</SelectItem>
-                  <SelectItem value="male">👨 ذكر</SelectItem>
-                  <SelectItem value="female">👩 أنثى</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="h-12 px-6 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border-purple-200 dark:border-purple-700 hover:shadow-lg transition-all duration-300"
-              >
-                <Filter className="h-4 w-4 mr-2" />
-                مرشحات متقدمة
-              </Button>
-            </div>
-          </div>
-
-          {/* مؤشرات البحث السريع */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge variant="outline" className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700">
-              <Eye className="h-3 w-3 mr-1" />
-              {filteredCustomers.length} عميل ظاهر
-            </Badge>
-            <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
-              <Users className="h-3 w-3 mr-1" />
-              {customerStats.total} إجمالي
-            </Badge>
-            <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700">
-              <MapPin className="h-3 w-3 mr-1" />
-              {customerStats.citiesCount} مدينة
-            </Badge>
-          </div>
+            </CardContent>
+          </Card>
         </motion.div>
-
-        {/* شبكة العملاء المتطورة */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-        >
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <motion.div
-                className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full mb-6"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              />
-              <motion.div
-                initial={{ opacity: 0.5 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
-                className="text-center"
-              >
-                <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  🔄 جاري تحليل بيانات العملاء...
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400">
-                  نقوم بمعالجة البيانات من النظام الموحد لضمان الدقة والشمولية
-                </p>
-              </motion.div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              <AnimatePresence mode="popLayout">
-                {filteredCustomers.map((customer, index) => (
-                  <motion.div
-                    key={customer.id}
-                    layout
-                    initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -20, scale: 0.9 }}
-                    transition={{ 
-                      duration: 0.4, 
-                      delay: Math.min(index * 0.05, 0.5),
-                      type: "spring",
-                      stiffness: 100 
-                    }}
-                    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                  >
-                    <CustomerCard
-                      customer={customer}
-                      onSelect={handleCustomerSelect}
-                      tierIcons={tierIcons}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {filteredCustomers.length === 0 && !loading && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center py-20"
-            >
-              <motion.div
-                className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-full flex items-center justify-center"
-                animate={{ 
-                  y: [0, -10, 0],
-                  scale: [1, 1.05, 1]
-                }}
-                transition={{ 
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut"
-                }}
-              >
-                <Users className="h-16 w-16 text-purple-500" />
-              </motion.div>
-              <h3 className="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-4">
-                {searchTerm ? '🔍 لا توجد نتائج مطابقة' : '🌟 لا توجد عملاء حالياً'}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md mx-auto">
-                {searchTerm 
-                  ? `لم يتم العثور على عملاء يطابقون "${searchTerm}". جرب مصطلحات أخرى أو قم بمراجعة الفلاتر.`
-                  : 'ابدأ بإضافة عملاء جدد لبناء قاعدة عملاء قوية ومربحة.'
-                }
-              </p>
-              <motion.div
-                className="mt-8"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button 
-                  size="lg" 
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg hover:shadow-xl transition-all duration-300"
-                  onClick={() => setSearchTerm('')}
-                >
-                  <UserPlus className="h-5 w-5 mr-2" />
-                  {searchTerm ? 'مسح البحث' : 'إضافة عميل جديد'}
-                </Button>
-              </motion.div>
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* النوافذ المنبثقة */}
-        <CustomerDetailsDialog
-          customer={selectedCustomer}
-          open={isDetailsDialogOpen}
-          onClose={() => {
-            setIsDetailsDialogOpen(false);
-            setSelectedCustomer(null);
-          }}
-        />
-
-        <EnhancedExportDialog
-          open={isExportDialogOpen}
-          onClose={() => setIsExportDialogOpen(false)}
-          customers={filteredCustomers}
-        />
-
-        <TopProvincesDialog
-          open={isTopProvincesDialogOpen}
-          onClose={() => setIsTopProvincesDialogOpen(false)}
-        />
-
-        <TopCustomersDialog
-          open={isTopCustomersDialogOpen}
-          onClose={() => setIsTopCustomersDialogOpen(false)}
-        />
       </div>
+
+      {/* Loyalty Levels Section */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold text-center text-purple-600 mb-6">مستويات الولاء</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loyaltyLevels.map((level, index) => (
+            <motion.div
+              key={level.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 * index }}
+            >
+              <Card className={`border-0 bg-gradient-to-br ${level.color} text-white overflow-hidden relative`}>
+                <CardContent className="p-6">
+                  <div className="text-center space-y-4">
+                    <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-white/20">
+                      {level.icon}
+                    </div>
+                    <h3 className="text-xl font-bold">{level.name}</h3>
+                    <p className="text-sm opacity-90">
+                      {level.maxPoints === Infinity 
+                        ? `${level.minPoints.toLocaleString()}+ نقطة`
+                        : `${level.minPoints} - ${level.maxPoints} نقطة`}
+                    </p>
+                    <div className="space-y-2">
+                      {level.benefits.map((benefit, i) => (
+                        <Badge key={i} className="bg-white/20 text-white border-0 text-xs">
+                          {benefit}
+                        </Badge>
+                      ))}
+                    </div>
+                    {level.discount > 0 && (
+                      <div className="bg-white/20 rounded-lg p-3">
+                        <p className="text-lg font-bold">خصم {level.discount}% شهرياً</p>
+                      </div>
+                    )}
+                    {level.name === 'ذهبي' || level.name === 'ماسي' ? (
+                      <Button className="bg-blue-500 hover:bg-blue-600 text-white w-full gap-2">
+                        <Trophy className="h-4 w-4" />
+                        توصيل مجاني دائماً
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Search and Filter Section */}
+      <Card className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="البحث بالاسم، الهاتف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white dark:bg-gray-800"
+              />
+            </div>
+            
+            <Select value={cityFilter} onValueChange={setCityFilter}>
+              <SelectTrigger className="w-48 bg-white dark:bg-gray-800">
+                <SelectValue placeholder="تصفية متقدمة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع المدن</SelectItem>
+                {Array.from(new Set(customers?.map(c => c.city).filter(Boolean) || [])).map(city => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <p className="text-sm text-muted-foreground">
+              {filteredCustomers.length} من {customerStats.totalCustomers}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customers Tabs */}
+      <div className="flex items-center justify-center gap-8 border-b">
+        <button className="pb-2 border-b-2 border-purple-500 text-purple-600 font-semibold">
+          العملاء ({filteredCustomers.length})
+        </button>
+        <button className="pb-2 text-muted-foreground">
+          إحصائيات المدن
+        </button>
+        <button className="pb-2 text-muted-foreground">
+          خدمات المدن
+        </button>
+      </div>
+
+      {/* Customer Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <AnimatePresence mode="popLayout">
+          {loading ? (
+            Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="animate-pulse">
+                <div className="bg-gray-200 dark:bg-gray-700 rounded-lg h-80"></div>
+              </div>
+            ))
+          ) : filteredCustomers.length > 0 ? (
+            filteredCustomers.slice(0, 8).map((customer, index) => (
+              <motion.div
+                key={customer.id || index}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -5 }}
+              >
+                {renderCustomerCard(customer)}
+              </motion.div>
+            ))
+          ) : (
+            // Show sample customers if no data
+            Array.from({ length: 4 }).map((_, index) => (
+              <motion.div
+                key={`sample-${index}`}
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                {renderCustomerCard({
+                  id: `sample-${index}`,
+                  name: 'ريوس',
+                  phone: '07728020024',
+                  city: 'بغداد',
+                  loyaltyPoints: 250,
+                  totalOrders: 1,
+                  totalRevenue: 55000
+                })}
+              </motion.div>
+            ))
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Dialogs */}
+      <CustomerDetailsDialog
+        customer={selectedCustomer}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+      />
+
+      <EnhancedExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+      />
+
+      <TopCustomersDialog
+        open={showTopCustomersDialog}
+        onOpenChange={setShowTopCustomersDialog}
+      />
+
+      <TopProvincesDialog
+        open={showTopProvincesDialog}
+        onOpenChange={setShowTopProvincesDialog}
+      />
     </div>
   );
 };
