@@ -90,9 +90,12 @@ const useOrdersAnalytics = () => {
     const completedOrders = filteredOrders.filter(isOrderCompletedForAnalytics);
 
     // حساب الإيرادات الإجمالية من المكتمل فقط
-    const totalRevenue = completedOrders.reduce((sum, order) => 
-      sum + (order.final_amount || order.total_amount || 0), 0
-    );
+    const totalRevenue = completedOrders.reduce((sum, order) => {
+      const gross = order.final_amount || order.total_amount || 0;
+      const delivery = order.delivery_fee || 0;
+      return sum + Math.max(0, gross - delivery);
+    }, 0);
+
 
     // أفضل العملاء (تجميع حسب رقم هاتف مُطبع)
     const customerStats = new Map();
@@ -101,7 +104,9 @@ const useOrdersAnalytics = () => {
       const phone = normalizePhone(rawPhone) || 'غير محدد';
       const name = order.customer_name || order.client_name || order.name || 'غير محدد';
       const city = order.customer_city || order.customer_province || order.city || order.province || 'غير محدد';
-      const orderAmount = order.final_amount || order.total_amount || 0;
+      const gross = order.final_amount || order.total_amount || 0;
+      const delivery = order.delivery_fee || 0;
+      const orderAmount = Math.max(0, gross - delivery);
       const createdAt = order.created_at ? new Date(order.created_at) : null;
       
       if (customerStats.has(phone)) {
