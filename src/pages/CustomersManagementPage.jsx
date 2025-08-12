@@ -10,8 +10,7 @@ import CustomerCard from "@/components/customers/CustomerCard";
 import CustomerDetailsDialog from "@/components/customers/CustomerDetailsDialog";
 import EnhancedExportDialog from "@/components/customers/EnhancedExportDialog";
 import TopProvincesDialog from "@/components/customers/TopProvincesDialog";
-import TopCustomersDialog from "@/components/customers/TopCustomersDialog";
-import CityDiscountsDialog from "@/components/customers/CityDiscountsDialog";
+import CityDiscountsContent from "@/components/customers/CityDiscountsContent";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { 
@@ -53,9 +52,7 @@ const CustomersManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
-  const [showTopCustomersDialog, setShowTopCustomersDialog] = useState(false);
-  const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
-  const [showCityDiscountsDialog, setShowCityDiscountsDialog] = useState(false);
+const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
 
   // Sample data for demonstration
@@ -426,25 +423,6 @@ const CustomersManagementPage = () => {
                     </Button>
                   </div>
                   
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowTopCustomersDialog(true)}
-                      className="h-11 px-4 rounded-xl border-2 gap-2 bg-background hover:bg-muted transition-all"
-                    >
-                      <Users className="h-4 w-4" />
-                      أفضل العملاء
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowCityDiscountsDialog(true)}
-                      className="h-11 px-4 rounded-xl border-2 gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:from-orange-600 hover:to-red-600 border-0"
-                    >
-                      <Gift className="h-4 w-4" />
-                      خصومات المدن
-                    </Button>
-                  </div>
                 </div>
                 
                 {/* Advanced Filters */}
@@ -692,35 +670,7 @@ const CustomersManagementPage = () => {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="text-center p-4 space-y-4">
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="p-3 bg-gradient-to-r from-green-500 to-teal-500 rounded-full">
-                          <Gift className="h-6 w-6 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-                          عروض وخصومات المدن
-                        </h3>
-                      </div>
-                      <p className="text-muted-foreground mb-4">
-                        إدارة الخصومات والعروض الخاصة لكل مدينة
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Card className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900 dark:to-teal-900">
-                          <CardContent className="p-4 text-center">
-                            <h4 className="font-bold text-green-700 dark:text-green-300">خصم بغداد</h4>
-                            <p className="text-2xl font-bold text-green-600">15%</p>
-                            <p className="text-sm text-muted-foreground">نشط حتى نهاية الشهر</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900">
-                          <CardContent className="p-4 text-center">
-                            <h4 className="font-bold text-blue-700 dark:text-blue-300">خصم البصرة</h4>
-                            <p className="text-2xl font-bold text-blue-600">10%</p>
-                            <p className="text-sm text-muted-foreground">نشط حتى نهاية الشهر</p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
+<CityDiscountsContent />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -938,20 +888,10 @@ const CustomersManagementPage = () => {
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
       />
-      
-      <TopCustomersDialog
-        open={showTopCustomersDialog}
-        onOpenChange={setShowTopCustomersDialog}
-      />
-      
+
       <TopProvincesDialog
         open={showTopProvincesDialog}
         onOpenChange={setShowTopProvincesDialog}
-      />
-
-      <CityDiscountsDialog
-        isOpen={showCityDiscountsDialog}
-        onClose={() => setShowCityDiscountsDialog(false)}
       />
     </div>
   );

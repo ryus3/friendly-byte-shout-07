@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Loader from "@/components/ui/loader";
-import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy } from "lucide-react";
+import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 
 const CityDiscountsContent = () => {
