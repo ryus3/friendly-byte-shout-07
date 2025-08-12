@@ -44,10 +44,10 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
   const { orders: ctxOrders } = useSuper();
 
   const periods = [
-    { value: 'week', label: 'هذا الأسبوع', icon: Calendar },
-    { value: 'month', label: 'هذا الشهر', icon: BarChart3 },
-    { value: 'quarter', label: 'هذا الربع', icon: TrendingUp },
-    { value: 'year', label: 'هذا العام', icon: Star }
+    { value: 'month', label: 'الشهر', icon: BarChart3 },
+    { value: '3months', label: '٣ أشهر', icon: TrendingUp },
+    { value: 'year', label: 'سنة', icon: Star },
+    { value: 'all', label: 'كل الفترات', icon: Calendar }
   ];
 
   const fetchProvinceData = async () => {
@@ -175,18 +175,17 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
     let start, end = now;
 
     switch (period) {
-      case 'week':
-        start = new Date(now.setDate(now.getDate() - now.getDay()));
-        break;
       case 'month':
         start = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case 'quarter':
-        const quarter = Math.ceil((now.getMonth() + 1) / 3);
-        start = new Date(now.getFullYear(), (quarter - 1) * 3, 1);
+      case '3months':
+        start = new Date(now.getFullYear(), now.getMonth() - 2, 1);
         break;
       case 'year':
         start = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'all':
+        start = new Date(1970, 0, 1);
         break;
       default:
         start = new Date(now.getFullYear(), now.getMonth(), 1);

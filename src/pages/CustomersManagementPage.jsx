@@ -202,9 +202,17 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       const catNames = (p.product_categories || [])
         .map((pc) => pc?.categories?.name)
         .filter(Boolean);
+      const depNames = (p.product_departments || [])
+        .map((pd) => pd?.departments?.name)
+        .filter(Boolean);
+      const typeNames = (p.product_product_types || [])
+        .map((pt) => pt?.product_types?.name)
+        .filter(Boolean);
+
+      const allNames = [...catNames, ...depNames, ...typeNames].map((n) => (n || '').toString());
       let g = null;
-      if (catNames.some((n) => /رجالي/i.test(n))) g = 'male';
-      else if (catNames.some((n) => /نسائي/i.test(n))) g = 'female';
+      if (allNames.some((n) => /رجالي|ذكور|men|male/i.test(n))) g = 'male';
+      else if (allNames.some((n) => /نسائي|اناث|women|female/i.test(n))) g = 'female';
       map.set(p.id, g);
     });
     return map;
