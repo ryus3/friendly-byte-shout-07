@@ -313,6 +313,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (loyaltyData && loyaltyData.loyalty_tiers) {
         const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
         
+        // توليد بروموكود ثابت من الهاتف ومستوى الولاء
+        const cleanPhone = (customer.phone || '').replace(/\D/g, '');
+        const localPhone = cleanPhone.startsWith('964') ? `0${cleanPhone.slice(3)}` : cleanPhone.startsWith('0') ? cleanPhone : `0${cleanPhone}`;
+        const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
+        const tierAbbr = abbrMap[loyaltyData.loyalty_tiers.name] || 'BR';
+        const promo = localPhone ? `RY${localPhone.slice(-4)}${tierAbbr}` : '';
+        setFormData(prev => ({ ...prev, promocode: promo }));
+        
         // إعادة حساب الخصم مع السلة الحالية
         const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
         const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
@@ -328,7 +336,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
         
         // عدم إظهار رسالة الولاء للموظفين لتجنب الخلط
-        // لأن كل موظف يرى عملاءه فقط
         console.log(`✅ تم العثور على العميل: ${customer.name} - نقاط: ${loyaltyData.total_points}`);
         if (roundedDiscountAmount > 0) {
           console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);

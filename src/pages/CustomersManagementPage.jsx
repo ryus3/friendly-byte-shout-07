@@ -187,6 +187,12 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     );
   }, [orders]);
 
+  // طلبات المستخدم الحالي فقط (لمنع احتساب مبيعات الآخرين)
+  const eligibleOrdersByUser = useMemo(() => {
+    if (!currentUserId) return [];
+    return eligibleOrders.filter((o) => o.created_by === currentUserId);
+  }, [eligibleOrders, currentUserId]);
+
   // تحديد جنس المنتج من تصنيف الفئات (رجالي/نسائي)
   const productGenderMap = useMemo(() => {
     const map = new Map();
@@ -202,17 +208,17 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     return map;
   }, [products]);
 
-  // تجميع الطلبات حسب رقم الهاتف
+  // تجميع الطلبات حسب رقم الهاتف - تخصيص للمستخدم الحالي فقط
   const ordersByPhone = useMemo(() => {
     const m = new Map();
-    eligibleOrders.forEach((o) => {
+    eligibleOrdersByUser.forEach((o) => {
       const phone = normalizePhone(extractOrderPhone(o));
       if (!phone) return;
       if (!m.has(phone)) m.set(phone, []);
       m.get(phone).push(o);
     });
     return m;
-  }, [eligibleOrders]);
+  }, [eligibleOrdersByUser]);
 
   // دمج العملاء على مستوى رقم الهاتف + حساب المشتريات بدون التوصيل + تحديد الجنس
   const mergedCustomers = useMemo(() => {
@@ -288,6 +294,13 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
       const tier = getLoyaltyLevel(merged.customer_loyalty.total_points || 0);
       merged.customer_loyalty.loyalty_tiers = merged.customer_loyalty.loyalty_tiers || { name: tier.name };
+
+      // توليد بروموكود ثابت بناءً على الهاتف والمستوى
+      if (phone) {
+        const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
+        const abbr = abbrMap[merged.customer_loyalty.loyalty_tiers.name] || 'BR';
+        merged.promoCode = `RY${phone.slice(-4)}${abbr}`;
+      }
 
       merged.gender_type = maleCount === 0 && femaleCount === 0 ? undefined : maleCount >= femaleCount ? 'male' : 'female';
 
@@ -658,7 +671,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                       className="h-11 px-4 rounded-xl border-2 gap-2 bg-background hover:bg-muted transition-all"
                     >
                       <Filter className="h-4 w-4" />
-                      فلترة متقدمة
+                      الفلاتر
                     </Button>
                   </div>
                   
@@ -884,25 +897,53 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="text-center p-4 space-y-4">
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
-                          <Target className="h-6 w-6 text-white" />
+                    <div className="text-center p-4 space-y-6">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg">
+                          <MapPin className="h-6 w-6 text-white" />
                         </div>
-                        <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                          نظام المسابقات الشهرية
+                        <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          إحصائيات المدن - الشهر الحالي
                         </h3>
                       </div>
-                      <p className="text-muted-foreground mb-4">
-                        اختر عشوائياً الفائز من كل مدينة حسب الأداء والنشاط
-                      </p>
-                      <Button 
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white gap-2"
-                        onClick={() => setShowTopProvincesDialog(true)}
-                      >
-                        <Trophy className="h-4 w-4" />
-                        اختيار الفائزين
-                      </Button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {cityDiscountsData.topCities?.length ? (
+                          cityDiscountsData.topCities.map((c, idx) => (
+                            <Card key={c.city_name || idx} className="border-0 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/30 dark:to-blue-900/20 shadow-xl">
+                              <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm text-muted-foreground">المدينة</p>
+                                    <p className="text-lg font-bold">{c.city_name || 'غير محدد'}</p>
+                                  </div>
+                                  <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">#{idx + 1}</Badge>
+                                </div>
+                                <div className="mt-4 grid grid-cols-2 gap-3">
+                                  <div className="rounded-lg p-3 bg-white/70 dark:bg-slate-800/60 border border-border/50">
+                                    <p className="text-xs text-muted-foreground">عدد الطلبات</p>
+                                    <p className="text-xl font-bold text-blue-600">{c.total_orders?.toLocaleString('ar') || 0}</p>
+                                  </div>
+                                  <div className="rounded-lg p-3 bg-white/70 dark:bg-slate-800/60 border border-border/50">
+                                    <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
+                                    <p className="text-xl font-bold text-emerald-600">{Number(c.total_amount || 0).toLocaleString('ar')} د.ع</p>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))
+                        ) : (
+                          <div className="col-span-full text-muted-foreground">لا توجد بيانات لهذا الشهر</div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <Button 
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => setShowTopProvincesDialog(true)}
+                        >
+                          <Trophy className="h-4 w-4" /> اختيار الفائزين الشهري
+                        </Button>
+                      </div>
                     </div>
                   </motion.div>
                 )}
