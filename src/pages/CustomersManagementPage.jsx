@@ -52,6 +52,7 @@ const CustomersManagementPage = () => {
   const [showTopCustomersDialog, setShowTopCustomersDialog] = useState(false);
   const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
   // Sample data for demonstration
   const sampleCustomers = [
@@ -369,29 +370,76 @@ const CustomersManagementPage = () => {
                 <div className="flex flex-row gap-2">
                   <Button
                     variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 border-indigo-200 hover:border-indigo-300"
+                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border-blue-500/30 hover:border-purple-500/50 text-blue-600 hover:text-purple-600"
                     onClick={() => {
-                      // فلترة متقدمة - يمكن إضافة المنطق هنا
-                      console.log('فلترة متقدمة');
+                      // فلترة متقدمة
+                      setShowAdvancedFilter(!showAdvancedFilter);
                     }}
                   >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-indigo-600" />
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
                     فلترة متقدمة
                   </Button>
                   
                   <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-slate-50 to-blue-50 hover:from-slate-100 hover:to-blue-100 border-slate-200 hover:border-blue-300 transition-all">
+                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-blue-500/5 to-purple-500/5 hover:from-blue-500/10 hover:to-purple-500/10 border-blue-500/20 hover:border-purple-500/40 transition-all text-blue-700">
                       <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white/95 backdrop-blur-sm border-2 border-slate-200 shadow-xl z-50">
-                      <SelectItem value="all" className="hover:bg-blue-50">جميع المدن</SelectItem>
+                    <SelectContent className="bg-white/98 backdrop-blur-sm border-2 border-blue-500/20 shadow-xl z-50 rounded-xl">
+                      <SelectItem value="all" className="hover:bg-blue-500/10 rounded-lg">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
-                        <SelectItem key={city} value={city} className="hover:bg-blue-50">{city}</SelectItem>
+                        <SelectItem key={city} value={city} className="hover:bg-blue-500/10 rounded-lg">{city}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+              
+              {/* Advanced Filter Options */}
+              {showAdvancedFilter && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-4 p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-xl border border-blue-200/50"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <Select value={genderFilter} onValueChange={setGenderFilter}>
+                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                        <SelectValue placeholder="الجنس" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
+                        <SelectItem value="all">جميع الأجناس</SelectItem>
+                        <SelectItem value="male">ذكر</SelectItem>
+                        <SelectItem value="female">أنثى</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select>
+                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                        <SelectValue placeholder="مستوى الولاء" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
+                        <SelectItem value="bronze">برونزي</SelectItem>
+                        <SelectItem value="silver">فضي</SelectItem>
+                        <SelectItem value="gold">ذهبي</SelectItem>
+                        <SelectItem value="diamond">ماسي</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select>
+                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                        <SelectValue placeholder="النقاط" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
+                        <SelectItem value="no-points">بدون نقاط</SelectItem>
+                        <SelectItem value="low">1-500 نقطة</SelectItem>
+                        <SelectItem value="medium">501-1500 نقطة</SelectItem>
+                        <SelectItem value="high">أكثر من 1500</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>

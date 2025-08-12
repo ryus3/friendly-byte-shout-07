@@ -794,35 +794,33 @@ const filteredOrders = useMemo(() => {
   }
 
   return (
-    <>
-      <Helmet>
-        <title>متابعة الموظفين - RYUS</title>
-        <meta name="description" content="متابعة أداء وطلبات الموظفين" />
-      </Helmet>
-      
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-6"
-      >
-        {/* العنوان الرئيسي */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
-            <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
+      <div className="container mx-auto p-2 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 w-full max-w-full">
+        <Helmet>
+          <title>متابعة الموظفين - RYUS</title>
+          <meta name="description" content="متابعة أداء وطلبات الموظفين" />
+        </Helmet>
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-4 sm:space-y-6"
+        >
+          {/* العنوان الرئيسي */}
+          <div className="flex flex-col gap-2 text-center">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">متابعة الموظفين</h1>
+            <p className="text-muted-foreground text-base sm:text-lg">نظرة شاملة على أداء فريق العمل</p>
           </div>
-          
-        </div>
 
-        {/* الفلاتر */}
-        <Card>
-          <CardContent className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-center">
+          {/* الفلاتر */}
+          <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl">
+            <CardContent className="p-3 sm:p-4 grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 items-center">
             <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className="h-10 text-sm border-2 rounded-lg bg-white/80 hover:bg-white transition-colors">
                 <SelectValue placeholder="الحالة" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white/98 border-2 rounded-lg shadow-xl z-50">
                 <SelectItem value="all">كل الحالات</SelectItem>
                 <SelectItem value="pending">قيد التجهيز</SelectItem>
                 <SelectItem value="shipped">تم الشحن</SelectItem>
@@ -835,10 +833,10 @@ const filteredOrders = useMemo(() => {
             </Select>
             
             <Select value={filters.employeeId} onValueChange={(value) => handleFilterChange('employeeId', value)}>
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className="h-10 text-sm border-2 rounded-lg bg-white/80 hover:bg-white transition-colors">
                 <SelectValue placeholder="الموظف" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white/98 border-2 rounded-lg shadow-xl z-50">
                 <SelectItem value="all">كل الموظفين</SelectItem>
                 {employees.map(emp => (
                   <SelectItem key={emp.user_id} value={emp.user_id}>
@@ -847,6 +845,42 @@ const filteredOrders = useMemo(() => {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={filters.profitStatus} onValueChange={(value) => handleFilterChange('profitStatus', value)}>
+              <SelectTrigger className="h-10 text-sm border-2 rounded-lg bg-white/80 hover:bg-white transition-colors">
+                <SelectValue placeholder="حالة الربح" />
+              </SelectTrigger>
+              <SelectContent className="bg-white/98 border-2 rounded-lg shadow-xl z-50">
+                <SelectItem value="all">كل الأرباح</SelectItem>
+                <SelectItem value="pending">معلق</SelectItem>
+                <SelectItem value="settled">مسدد</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.timePeriod} onValueChange={(value) => handleFilterChange('timePeriod', value)}>
+              <SelectTrigger className="h-10 text-sm border-2 rounded-lg bg-white/80 hover:bg-white transition-colors">
+                <SelectValue placeholder="الفترة" />
+              </SelectTrigger>
+              <SelectContent className="bg-white/98 border-2 rounded-lg shadow-xl z-50">
+                <SelectItem value="all">كل الأوقات</SelectItem>
+                <SelectItem value="today">اليوم</SelectItem>
+                <SelectItem value="week">هذا الأسبوع</SelectItem>
+                <SelectItem value="month">هذا الشهر</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2 col-span-full lg:col-span-1">
+              <Button 
+                onClick={() => refetchProducts()}
+                variant="outline" 
+                size="sm"
+                className="gap-2 border-2 hover:scale-105 transition-transform"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                تحديث
+              </Button>
+            </div>
 
             <Select value={filters.profitStatus} onValueChange={(value) => handleFilterChange('profitStatus', value)}>
               <SelectTrigger className="h-9 text-sm">
@@ -998,8 +1032,9 @@ const filteredOrders = useMemo(() => {
           timePeriod={filters.timePeriod} // تمرير فلتر الفترة
         />
 
-      </motion.div>
-    </>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 
