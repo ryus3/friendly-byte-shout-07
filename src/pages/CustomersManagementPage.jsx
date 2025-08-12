@@ -149,7 +149,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       bgColor: 'bg-gradient-to-br from-yellow-100 to-orange-100',
       textColor: 'text-yellow-700',
       discount: 10,
-      benefits: ['خصم 10% شهرياً', 'توصيل مجاني دائماً']
+      benefits: ['خصم 10% شهرياً', 'توصيل مجاني']
     },
     {
       name: 'ماسي',
@@ -160,7 +160,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       bgColor: 'bg-gradient-to-br from-cyan-100 to-blue-100',
       textColor: 'text-cyan-700',
       discount: 15,
-      benefits: ['خصم 15% شهرياً', 'توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم']
+      benefits: ['خصم 15% شهرياً', 'توصيل مجاني']
     }
   ];
 
@@ -316,10 +316,10 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
               </div>
               <div className="text-right">
                 <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  إدارة العملاء ونظام الولاء
+                  إدارة العملاء
                 </h1>
                 <p className="text-lg text-muted-foreground mt-2">
-                  إدارة شاملة للعملاء والولاء والاشعارات والخصومات
+                  إدارة شاملة للعملاء
                 </p>
               </div>
             </div>
@@ -344,14 +344,14 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
               {/* Decorative circles */}
               <div className="absolute -top-4 -right-4 w-16 h-16 bg-white/10 rounded-full" />
               <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-white/10 rounded-full" />
               <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-white/5 rounded-full" />
               
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-300 to-purple-300" />
-              <CardContent className="p-6 sm:p-8 relative z-10">
+              <CardContent className="p-6 sm:p-8 relative z-10 min-h-[152px]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-1">عملاء مع نقاط</p>
@@ -370,14 +370,14 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
               {/* Decorative circles */}
               <div className="absolute -top-6 -left-6 w-20 h-20 bg-white/10 rounded-full" />
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full" />
               <div className="absolute top-1/3 left-1/3 w-6 h-6 bg-white/5 rounded-full" />
               
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-300 to-teal-300" />
-              <CardContent className="p-6 sm:p-8 relative z-10">
+              <CardContent className="p-6 sm:p-8 relative z-10 min-h-[152px]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-1">إجمالي النقاط</p>
@@ -397,7 +397,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             transition={{ delay: 0.3 }}
             className="sm:col-span-2 lg:col-span-1"
           >
-            <Card className="border-0 bg-gradient-to-br from-rose-500 via-pink-600 to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-rose-500 via-pink-600 to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative h-full">
               {/* Decorative circles */}
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full" />
               <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-white/10 rounded-full" />
@@ -592,24 +592,18 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                         <p className="font-bold">خصم {level.discount}% شهرياً</p>
                       </div>
                     )}
-                      {level.name === 'ذهبي' && (
-                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
-                          <Truck className="h-4 w-4" />
-                          توصيل مجاني دائماً
-                        </Button>
-                      )}
-                      {level.name === 'ماسي' && (
-                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
-                          <Truck className="h-4 w-4" />
-                          توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم
-                        </Button>
-                      )}
-                      {level.name === 'فضي' && (
-                        <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
-                          <Truck className="h-4 w-4" />
-                          توصيل مجاني
-                        </Button>
-                      )}
+                    {(level.name === 'ذهبي' || level.name === 'ماسي') && (
+                      <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
+                        <Truck className="h-4 w-4" />
+                        توصيل مجاني
+                      </Button>
+                    )}
+                    {level.name === 'فضي' && (
+                      <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
+                        <Truck className="h-4 w-4" />
+                        توصيل مجاني
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -856,22 +850,13 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                               خصم {loyaltyLevel.discount}% شهرياً
                             </Button>
                           )}
-                          {loyaltyLevel.name === 'ذهبي' && (
+                          {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
                             <Button 
                               size="sm" 
                               className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
                             >
                               <Truck className="h-4 w-4" />
-                              توصيل مجاني دائماً
-                            </Button>
-                          )}
-                          {loyaltyLevel.name === 'ماسي' && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
-                            >
-                              <Truck className="h-4 w-4" />
-                              توصيل مجاني مرة واحدة شهرياً عند استخدام النقاط مع الخصم
+                              توصيل مجاني
                             </Button>
                           )}
                           {loyaltyLevel.name === 'فضي' && (
