@@ -211,10 +211,6 @@ const CustomersManagementPage = () => {
     setShowDetailsDialog(true);
   };
 
-  const handleRefresh = () => {
-    // Data is auto-updated via context
-  };
-
   const getLoyaltyLevel = (points = 0) => {
     if (points >= 3000) return loyaltyLevels[3];
     if (points >= 1500) return loyaltyLevels[2];
@@ -233,7 +229,7 @@ const CustomersManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
       <div className="container mx-auto p-2 sm:p-4 lg:p-8 space-y-6 sm:space-y-8">
         {/* Modern Header */}
         <motion.div 
@@ -249,10 +245,10 @@ const CustomersManagementPage = () => {
               </div>
               <div className="text-right">
                 <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  إدارة العملاء ونظام الولاء
+                  إدارة العملاء
                 </h1>
                 <p className="text-lg text-muted-foreground mt-2">
-                  إدارة شاملة للعملاء والولاء والاشعارات والخصومات
+                  عرض وإدارة جميع العملاء وبياناتهم
                 </p>
               </div>
             </div>
@@ -277,13 +273,13 @@ const CustomersManagementPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
               {/* Decorative circles */}
               <div className="absolute -top-4 -right-4 w-16 h-16 bg-white/10 rounded-full" />
               <div className="absolute -bottom-6 -left-6 w-20 h-20 bg-white/10 rounded-full" />
               <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-white/5 rounded-full" />
               
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-300 to-purple-300" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-300 to-purple-300" />
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex items-center justify-between">
                   <div>
@@ -303,13 +299,13 @@ const CustomersManagementPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="border-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-orange-500 via-red-600 to-pink-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
               {/* Decorative circles */}
               <div className="absolute -top-6 -left-6 w-20 h-20 bg-white/10 rounded-full" />
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full" />
               <div className="absolute top-1/3 left-1/3 w-6 h-6 bg-white/5 rounded-full" />
               
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-300 to-teal-300" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-300 to-pink-300" />
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex items-center justify-between">
                   <div>
@@ -330,13 +326,13 @@ const CustomersManagementPage = () => {
             transition={{ delay: 0.3 }}
             className="sm:col-span-2 lg:col-span-1"
           >
-            <Card className="border-0 bg-gradient-to-br from-rose-500 via-pink-600 to-orange-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+            <Card className="border-0 bg-gradient-to-br from-violet-500 via-purple-600 to-indigo-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
               {/* Decorative circles */}
               <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full" />
               <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-white/10 rounded-full" />
               <div className="absolute top-2/3 right-1/4 w-10 h-10 bg-white/5 rounded-full" />
               
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-300 to-pink-300" />
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-300 to-indigo-300" />
               <CardContent className="p-6 sm:p-8 relative z-10">
                 <div className="flex items-center justify-between">
                   <div>
@@ -370,436 +366,449 @@ const CustomersManagementPage = () => {
                     className="pr-10 sm:pr-12 h-10 sm:h-12 text-base sm:text-lg border-2 focus:border-primary/50 rounded-xl"
                   />
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                <div className="flex flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border-blue-200"
+                  >
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
+                    فلترة متقدمة
+                  </Button>
+                  
                   <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="w-full sm:w-40 h-10 sm:h-12 rounded-xl border-2">
-                      <SelectValue placeholder="المدينة" />
+                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-white/80">
+                      <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white/95 backdrop-blur-sm border-2 z-50">
                       <SelectItem value="all">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
                         <SelectItem key={city} value={city}>{city}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowTopCustomersDialog(true)}
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base"
-                  >
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    أفضل العملاء
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base"
-                  >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
-                    فلترة متقدمة
-                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Loyalty Levels */}
+        {/* Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="space-y-6"
         >
-          <h2 className="text-2xl sm:text-3xl font-bold text-center bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            مستويات الولاء
-          </h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-            {loyaltyLevels.map((level, index) => (
+          <div className="flex flex-row gap-1 justify-center bg-white/80 dark:bg-slate-800/80 p-1 rounded-2xl backdrop-blur-sm border-2 border-primary/10 max-w-2xl mx-auto">
+            <Button
+              variant={activeTab === 'customers' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('customers')}
+              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+                activeTab === 'customers' 
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+              }`}
+            >
+              <Users className="h-4 w-4 ml-2" />
+              العملاء (4)
+            </Button>
+            <Button
+              variant={activeTab === 'cityStats' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('cityStats')}
+              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+                activeTab === 'cityStats' 
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+              }`}
+            >
+              <MapPin className="h-4 w-4 ml-2" />
+              إحصائيات المدن
+            </Button>
+            <Button
+              variant={activeTab === 'cityDiscounts' ? 'default' : 'ghost'}
+              onClick={() => setActiveTab('cityDiscounts')}
+              className={`flex-1 px-4 py-3 text-base font-medium rounded-xl transition-all duration-200 ${
+                activeTab === 'cityDiscounts' 
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+              }`}
+            >
+              <Gift className="h-4 w-4 ml-2" />
+              خصومات المدن
+            </Button>
+          </div>
+
+          {/* Tab Content */}
+          <AnimatePresence mode="wait">
+            {activeTab === 'customers' && (
               <motion.div
-                key={level.name}
+                key="customers"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                whileHover={{ scale: 1.05 }}
-                className="group"
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
               >
-                <Card className={`border-0 bg-white dark:bg-slate-800 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden relative`}>
-                  <div className={`h-1 sm:h-2 bg-gradient-to-r ${level.color}`} />
-                  <CardContent className="p-3 sm:p-6 text-center space-y-2 sm:space-y-4">
-                    <div className={`w-12 h-12 sm:w-20 sm:h-20 mx-auto rounded-full bg-gradient-to-r ${level.color} flex items-center justify-center text-white group-hover:scale-110 transition-transform`}>
-                      {React.cloneElement(level.icon, { className: "h-4 w-4 sm:h-6 sm:w-6" })}
-                    </div>
-                    <h3 className="text-lg sm:text-2xl font-bold">{level.name}</h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {level.maxPoints === Infinity 
-                        ? `${level.minPoints.toLocaleString()}+ نقطة`
-                        : `${level.minPoints} - ${level.maxPoints} نقطة`}
-                    </p>
-                    <div className="space-y-1 sm:space-y-2">
-                      {level.benefits.map((benefit, i) => (
-                        <Badge key={i} className="bg-gray-100 text-gray-700 dark:bg-slate-700 dark:text-slate-200 text-xs block">
-                          {benefit}
-                        </Badge>
-                      ))}
-                    </div>
-                    {level.discount > 0 && (
-                      <div className={`bg-gradient-to-r ${level.color} text-white rounded-lg p-3`}>
-                        <p className="font-bold">خصم {level.discount}% شهرياً</p>
-                      </div>
-                    )}
-                    {(level.name === 'ذهبي' || level.name === 'ماسي') && (
-                      <Button className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-full gap-2 rounded-xl">
-                        <Truck className="h-4 w-4" />
-                        توصيل مجاني دائماً
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Tabs Navigation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
-          <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm shadow-xl">
-            <CardContent className="p-4 sm:p-6">
-              {/* Horizontal Tabs */}
-              <div className="flex justify-center gap-1 sm:gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
-                <Button
-                  onClick={() => setActiveTab('customers')}
-                  variant={activeTab === 'customers' ? 'default' : 'ghost'}
-                  className={`flex-1 h-10 sm:h-12 px-2 sm:px-4 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
-                    activeTab === 'customers' 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Users className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
-                  العملاء ({filteredCustomers.length})
-                </Button>
-                
-                <Button
-                  onClick={() => setActiveTab('cities')}
-                  variant={activeTab === 'cities' ? 'default' : 'ghost'}
-                  className={`flex-1 h-10 sm:h-12 px-2 sm:px-4 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
-                    activeTab === 'cities' 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
-                  إحصائيات المدن
-                </Button>
-                
-                <Button
-                  onClick={() => setActiveTab('discounts')}
-                  variant={activeTab === 'discounts' ? 'default' : 'ghost'}
-                  className={`flex-1 h-10 sm:h-12 px-2 sm:px-4 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
-                    activeTab === 'discounts' 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <Gift className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
-                  خصومات المدن
-                </Button>
-              </div>
-
-              {/* Tab Content */}
-              <AnimatePresence mode="wait">
-                {activeTab === 'customers' && (
-                  <motion.div
-                    key="customers"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="text-center p-4">
-                      <h3 className="text-lg font-bold mb-2">إدارة العملاء</h3>
-                      <p className="text-muted-foreground">عرض وإدارة جميع العملاء والولاء</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeTab === 'cities' && (
-                  <motion.div
-                    key="cities"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="text-center p-4 space-y-4">
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
-                          <Target className="h-6 w-6 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                          نظام المسابقات الشهرية
-                        </h3>
-                      </div>
-                      <p className="text-muted-foreground mb-4">
-                        اختر عشوائياً الفائز من كل مدينة حسب الأداء والنشاط
-                      </p>
-                      <Button 
-                        className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white gap-2"
-                        onClick={() => setShowTopProvincesDialog(true)}
+                {/* Customers Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                  {filteredCustomers.map((customer, index) => {
+                    const loyaltyLevel = getLoyaltyLevel(customer.loyaltyPoints || 0);
+                    
+                    return (
+                      <motion.div
+                        key={customer.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ y: -5 }}
+                        className="group"
                       >
-                        <Trophy className="h-4 w-4" />
-                        اختيار الفائزين
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {activeTab === 'discounts' && (
-                  <motion.div
-                    key="discounts"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <div className="text-center p-4 space-y-4">
-                      <div className="flex items-center justify-center gap-3 mb-4">
-                        <div className="p-3 bg-gradient-to-r from-green-500 to-teal-500 rounded-full">
-                          <Gift className="h-6 w-6 text-white" />
-                        </div>
-                        <h3 className="text-lg font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
-                          عروض وخصومات المدن
-                        </h3>
-                      </div>
-                      <p className="text-muted-foreground mb-4">
-                        إدارة الخصومات والعروض الخاصة لكل مدينة
-                      </p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Card className="bg-gradient-to-br from-green-50 to-teal-50 dark:from-green-900 dark:to-teal-900">
-                          <CardContent className="p-4 text-center">
-                            <h4 className="font-bold text-green-700 dark:text-green-300">خصم بغداد</h4>
-                            <p className="text-2xl font-bold text-green-600">15%</p>
-                            <p className="text-sm text-muted-foreground">نشط حتى نهاية الشهر</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900">
-                          <CardContent className="p-4 text-center">
-                            <h4 className="font-bold text-blue-700 dark:text-blue-300">خصم البصرة</h4>
-                            <p className="text-2xl font-bold text-blue-600">10%</p>
-                            <p className="text-sm text-muted-foreground">نشط حتى نهاية الشهر</p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Customers Grid - Only show when customers tab is active */}
-        {activeTab === 'customers' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="space-y-6"
-          >
-            <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl sm:text-2xl font-bold">العملاء ({filteredCustomers.length})</h2>
-              <div className="flex gap-2">
-                <Badge className="bg-primary/10 text-primary text-xs sm:text-sm">
-                  مُتقدمة
-                </Badge>
-                <Badge variant="outline" className="text-xs sm:text-sm">
-                  {filteredCustomers.length} من {filteredCustomers.length}
-                </Badge>
-              </div>
-            </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            <AnimatePresence>
-              {filteredCustomers.map((customer, index) => {
-                const loyaltyLevel = getLoyaltyLevel(customer.loyaltyPoints || 0);
-                
-                return (
-                  <motion.div
-                    key={customer.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: index * 0.1 }}
-                    whileHover={{ y: -5 }}
-                    className="group"
-                  >
-                    <Card className="border-0 bg-white dark:bg-slate-800 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
-                      <div className={`h-1 bg-gradient-to-r ${loyaltyLevel.color}`} />
-                      
-                      <CardContent className="p-6">
-                        {/* Customer Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${loyaltyLevel.color} flex items-center justify-center text-white`}>
-                              {loyaltyLevel.icon}
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-lg">{customer.name}</h3>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <Phone className="h-3 w-3" />
-                                {customer.phone}
+                        <Card className="border-0 bg-white dark:bg-slate-800 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden relative">
+                          <div className={`h-1 bg-gradient-to-r ${loyaltyLevel.color}`} />
+                          
+                          <CardContent className="p-6">
+                            {/* Customer Header */}
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${loyaltyLevel.color} flex items-center justify-center text-white`}>
+                                  {loyaltyLevel.icon}
+                                </div>
+                                <div>
+                                  <h3 className="font-bold text-lg">{customer.name}</h3>
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Phone className="h-3 w-3" />
+                                    {customer.phone}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <MapPin className="h-3 w-3" />
+                                    {customer.city}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                {customer.city}
+                              
+                              <Badge className={`bg-gradient-to-r ${loyaltyLevel.color} text-white border-0`}>
+                                {loyaltyLevel.name}
+                              </Badge>
+                            </div>
+
+                            {/* Customer Stats with Points Highlight */}
+                            <div className="space-y-3 mb-4">
+                              {customer.loyaltyPoints > 0 && (
+                                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 p-3 rounded-xl border border-yellow-200 dark:border-yellow-700">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">النقاط:</span>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="h-4 w-4 text-yellow-500" />
+                                      <span className="font-bold text-yellow-600 dark:text-yellow-400">{customer.loyaltyPoints.toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">الطلبات:</span>
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4 text-blue-500" />
+                                  <span className="font-bold text-blue-600">{customer?.totalOrders || 0}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-muted-foreground">المشتريات:</span>
+                                <span className="font-bold text-green-600">
+                                  {(customer?.totalRevenue || 0).toLocaleString()} د.ع
+                                </span>
                               </div>
                             </div>
-                          </div>
-                          
-                          <Badge className={`bg-gradient-to-r ${loyaltyLevel.color} text-white border-0`}>
-                            {loyaltyLevel.name}
-                          </Badge>
-                        </div>
 
-                        {/* Customer Stats */}
-                        <div className="space-y-3 mb-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">المستوى:</span>
-                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                              كيروزتي
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">النقاط:</span>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 text-yellow-500" />
-                              <span className="font-bold text-orange-600">{customer?.loyaltyPoints || 0}</span>
+                            {/* Loyalty Benefits */}
+                            <div className="mb-4 space-y-2">
+                              {loyaltyLevel.discount > 0 && (
+                                <Button 
+                                  size="sm" 
+                                  className="w-full bg-green-500 hover:bg-green-600 text-white gap-2 rounded-lg"
+                                >
+                                  <Sparkles className="h-4 w-4" />
+                                  خصم {loyaltyLevel.discount}% شهرياً
+                                </Button>
+                              )}
+                              {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
+                                <Button 
+                                  size="sm" 
+                                  className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
+                                >
+                                  <Truck className="h-4 w-4" />
+                                  توصيل مجاني دائماً
+                                </Button>
+                              )}
                             </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                              {customer.pointsExpiry || 'غير محدد'}
-                            </Badge>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">الطلبات:</span>
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-blue-500" />
-                              <span className="font-bold text-blue-600">{customer?.totalOrders || 0}</span>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2 pt-4 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 gap-2 hover:bg-primary hover:text-white transition-colors"
+                                onClick={() => handleCustomerSelect(customer)}
+                              >
+                                <Eye className="h-4 w-4" />
+                                التفاصيل
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="gap-2 hover:bg-orange-500 hover:text-white transition-colors"
+                              >
+                                <Gift className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="gap-2 hover:bg-blue-500 hover:text-white transition-colors"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">المشتريات:</span>
-                            <span className="font-bold text-green-600">
-                              {(customer?.totalRevenue || 0).toLocaleString()} د.ع
-                            </span>
-                          </div>
-                          
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-muted-foreground">برومو كود:</span>
-                            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 text-xs">
-                              {customer.promoCode || 'غير متوفر'}
-                            </Badge>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
 
-                        {/* Loyalty Benefits */}
-                        <div className="mb-4 space-y-2">
-                          {loyaltyLevel.discount > 0 && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-green-500 hover:bg-green-600 text-white gap-2 rounded-lg"
-                            >
-                              <Sparkles className="h-4 w-4" />
-                              خصم {loyaltyLevel.discount}% شهرياً
-                            </Button>
-                          )}
-                          {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
-                            >
-                              <Truck className="h-4 w-4" />
-                              توصيل مجاني دائماً
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 pt-4 border-t">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 gap-2 hover:bg-primary hover:text-white transition-colors"
-                            onClick={() => handleCustomerSelect(customer)}
-                          >
-                            <Eye className="h-4 w-4" />
-                            التفاصيل
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-2 hover:bg-orange-500 hover:text-white transition-colors"
-                          >
-                            <Gift className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="gap-2 hover:bg-blue-500 hover:text-white transition-colors"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
+                {filteredCustomers.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center py-8 sm:py-12"
+                  >
+                    <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                      <CardContent className="p-12">
+                        <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+                        <h3 className="text-xl font-semibold mb-2">لا توجد نتائج</h3>
+                        <p className="text-muted-foreground mb-4">
+                          لم يتم العثور على عملاء مطابقين لمعايير البحث
+                        </p>
+                        <Button 
+                          onClick={() => {
+                            setSearchTerm('');
+                            setCityFilter('all');
+                            setGenderFilter('all');
+                          }}
+                          className="gap-2"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          إعادة تعيين البحث
+                        </Button>
                       </CardContent>
                     </Card>
                   </motion.div>
-                );
-              })}
-            </AnimatePresence>
-            </div>
+                )}
+              </motion.div>
+            )}
 
-            {filteredCustomers.length === 0 && (
+            {activeTab === 'cityStats' && (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center py-8 sm:py-12"
+                key="cityStats"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
               >
-              <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
-                <CardContent className="p-12">
-                  <Users className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">لا توجد نتائج</h3>
-                  <p className="text-muted-foreground mb-4">
-                    لم يتم العثور على عملاء مطابقين لمعايير البحث
+                <div className="text-center space-y-4">
+                  <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    إحصائيات المدن
+                  </h3>
+                  <p className="text-muted-foreground text-lg">
+                    عرض إحصائيات المبيعات والأداء لكل مدينة
                   </p>
-                  <Button 
-                    onClick={() => {
-                      setSearchTerm('');
-                      setCityFilter('all');
-                      setGenderFilter('all');
-                    }}
-                    className="gap-2"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                    إعادة تعيين البحث
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-          </motion.div>
-        )}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { city: 'بغداد', orders: 45, revenue: '2,250,000', customers: 28, growth: '+12%' },
+                    { city: 'البصرة', orders: 32, revenue: '1,680,000', customers: 19, growth: '+8%' },
+                    { city: 'أربيل', orders: 28, revenue: '1,420,000', customers: 15, growth: '+15%' },
+                    { city: 'النجف', orders: 18, revenue: '920,000', customers: 12, growth: '+5%' }
+                  ].map((cityData, index) => (
+                    <Card key={cityData.city} className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-lg transition-all">
+                      <CardContent className="p-6 text-center space-y-4">
+                        <div className={`w-16 h-16 mx-auto rounded-full bg-gradient-to-r ${
+                          index === 0 ? 'from-yellow-400 to-orange-500' :
+                          index === 1 ? 'from-blue-400 to-cyan-500' :
+                          index === 2 ? 'from-green-400 to-teal-500' :
+                          'from-purple-400 to-pink-500'
+                        } flex items-center justify-center text-white`}>
+                          <MapPin className="h-8 w-8" />
+                        </div>
+                        <h4 className="text-xl font-bold">{cityData.city}</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>الطلبات:</span>
+                            <span className="font-bold">{cityData.orders}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>العملاء:</span>
+                            <span className="font-bold">{cityData.customers}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>المبيعات:</span>
+                            <span className="font-bold text-green-600">{cityData.revenue} د.ع</span>
+                          </div>
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            {cityData.growth}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'cityDiscounts' && (
+              <motion.div
+                key="cityDiscounts"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+                className="space-y-6"
+              >
+                <div className="text-center space-y-4">
+                  <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    خصومات المدن الشهرية
+                  </h3>
+                  <p className="text-muted-foreground text-lg">
+                    نظام الخصومات التلقائية للمدن الفائزة شهرياً
+                  </p>
+                </div>
+                
+                {/* نظام الخصومات الاحترافي */}
+                <div className="grid gap-6">
+                  {/* بطاقة المدينة الفائزة */}
+                  <Card className="border-0 bg-gradient-to-br from-purple-500 via-pink-600 to-orange-700 text-white shadow-2xl overflow-hidden relative">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
+                    <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full" />
+                    <CardContent className="p-8 relative z-10">
+                      <div className="text-center space-y-6">
+                        <div className="flex justify-center">
+                          <div className="p-4 bg-white/20 rounded-full backdrop-blur-sm">
+                            <Crown className="h-12 w-12" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-2xl font-bold mb-2">المدينة الفائزة هذا الشهر</h4>
+                          <p className="text-3xl font-bold bg-white/20 py-2 px-6 rounded-xl backdrop-blur-sm inline-block">
+                            بغداد
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <Truck className="h-6 w-6" />
+                              <span className="font-bold">توصيل مجاني</span>
+                            </div>
+                            <p className="text-sm opacity-90">عميل واحد عشوائي</p>
+                          </div>
+                          <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm">
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <Gift className="h-6 w-6" />
+                              <span className="font-bold">خصم 5% + توصيل مجاني</span>
+                            </div>
+                            <p className="text-sm opacity-90">عميل واحد عشوائي</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* شرح النظام */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20">
+                      <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                          <div className="w-16 h-16 mx-auto bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                            <Target className="h-8 w-8 text-white" />
+                          </div>
+                          <h5 className="text-xl font-bold text-blue-700 dark:text-blue-300">كيف يعمل النظام؟</h5>
+                          <div className="space-y-3 text-sm text-blue-600 dark:text-blue-400">
+                            <p>• يتم اختيار أفضل مدينة شراء كل شهر</p>
+                            <p>• عندما يطلب عميل جديد من هذه المدينة</p>
+                            <p>• النظام يختار تلقائياً شخص للتوصيل المجاني</p>
+                            <p>• وشخص آخر للخصم 5% + توصيل مجاني</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20">
+                      <CardContent className="p-6">
+                        <div className="text-center space-y-4">
+                          <div className="w-16 h-16 mx-auto bg-gradient-to-r from-amber-500 to-orange-600 rounded-full flex items-center justify-center">
+                            <Sparkles className="h-8 w-8 text-white" />
+                          </div>
+                          <h5 className="text-xl font-bold text-amber-700 dark:text-amber-300">الفوائد للعملاء</h5>
+                          <div className="space-y-3 text-sm text-amber-600 dark:text-amber-400">
+                            <p>• توصيل مجاني للعملاء الجدد</p>
+                            <p>• خصومات حصرية شهرية</p>
+                            <p>• تحفيز للطلب من المدن الفائزة</p>
+                            <p>• نظام عادل وشفاف للاختيار</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* إحصائيات المدن */}
+                  <Card className="border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-center flex items-center justify-center gap-3">
+                        <MapPin className="h-6 w-6 text-blue-600" />
+                        إحصائيات المدن الشهرية
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                          { city: 'بغداد', orders: 45, revenue: '2,250,000', status: 'فائزة' },
+                          { city: 'البصرة', orders: 32, revenue: '1,680,000', status: 'ثانية' },
+                          { city: 'أربيل', orders: 28, revenue: '1,420,000', status: 'ثالثة' },
+                          { city: 'النجف', orders: 18, revenue: '920,000', status: 'رابعة' }
+                        ].map((cityData, index) => (
+                          <div key={cityData.city} className={`
+                            p-4 rounded-xl border-2 transition-all
+                            ${index === 0 
+                              ? 'bg-gradient-to-br from-yellow-50 to-amber-100 border-yellow-300 dark:from-yellow-900/20 dark:to-amber-900/20' 
+                              : 'bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600'
+                            }
+                          `}>
+                            <div className="text-center space-y-2">
+                              <h6 className="font-bold text-lg">{cityData.city}</h6>
+                              <div className="space-y-1 text-sm">
+                                <p><span className="font-medium">الطلبات:</span> {cityData.orders}</p>
+                                <p><span className="font-medium">المبيعات:</span> {cityData.revenue} د.ع</p>
+                                <Badge className={`
+                                  ${index === 0 
+                                    ? 'bg-yellow-500 hover:bg-yellow-600' 
+                                    : 'bg-slate-500 hover:bg-slate-600'
+                                  }
+                                `}>
+                                  {cityData.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
       {/* Dialogs */}
