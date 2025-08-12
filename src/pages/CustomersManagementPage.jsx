@@ -190,7 +190,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   // طلبات المستخدم الحالي فقط (لمنع احتساب مبيعات الآخرين)
   const eligibleOrdersByUser = useMemo(() => {
     if (!currentUserId) return [];
-    return eligibleOrders.filter((o) => o.created_by === currentUserId);
+    return eligibleOrders.filter(
+      (o) => (o.created_by && o.created_by === currentUserId) || (o.user_id && o.user_id === currentUserId)
+    );
   }, [eligibleOrders, currentUserId]);
 
   // تحديد جنس المنتج من تصنيف الفئات (رجالي/نسائي)
@@ -979,9 +981,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             <div className="flex items-center justify-between px-2">
               <h2 className="text-xl sm:text-2xl font-bold">العملاء ({filteredCustomers.length})</h2>
               <div className="flex gap-2">
-                <Badge className="bg-primary/10 text-primary text-xs sm:text-sm">
-                  مُتقدمة
-                </Badge>
                 <Badge variant="outline" className="text-xs sm:text-sm">
                   {filteredCustomers.length} من {filteredCustomers.length}
                 </Badge>
