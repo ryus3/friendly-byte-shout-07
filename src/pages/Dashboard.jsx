@@ -660,16 +660,29 @@ const Dashboard = () => {
                     />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                    {!canViewAllData && (
-                      <motion.div key="my-received-profits" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
-                        <EmployeeReceivedProfitsCard />
-                      </motion.div>
-                    )}
-                    {allStatCards.slice(0, 8).map((stat, index) => (
-                         <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                    {canViewAllData ? (
+                      allStatCards.slice(0, 8).map((stat, index) => (
+                        <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                          <StatCard {...stat} />
+                        </motion.div>
+                      ))
+                    ) : (
+                      <>
+                        {allStatCards.slice(0, 2).map((stat, index) => (
+                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                             <StatCard {...stat} />
-                         </motion.div>
-                    ))}
+                          </motion.div>
+                        ))}
+                        <motion.div key="my-received-profits" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                          <EmployeeReceivedProfitsCard />
+                        </motion.div>
+                        {allStatCards.slice(2, 8).map((stat, index) => (
+                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (index + 2) * 0.05 }}>
+                            <StatCard {...stat} />
+                          </motion.div>
+                        ))}
+                      </>
+                    )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <TopListCard 
