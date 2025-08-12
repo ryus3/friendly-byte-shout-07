@@ -26,10 +26,7 @@ import { ar } from 'date-fns/locale';
 
 const CustomerCard = ({ 
   customer, 
-  onViewDetails, 
-  onSendNotification, 
-  onApplyDiscount,
-  tierIcons = {},
+  onSelect,
   index = 0
 }) => {
   const [customMessage, setCustomMessage] = useState('');
@@ -41,7 +38,7 @@ const CustomerCard = ({
       'Crown': Crown,
       'Gem': Gem,
       'Star': Star,
-      ...tierIcons
+      'Star': Star
     };
     return iconMap[iconName] || Star;
   };
@@ -347,64 +344,34 @@ const CustomerCard = ({
              </div>
            )}
           
-          {/* أزرار الإجراءات */}
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewDetails(customer.id)}
-              className="flex-1 group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-            >
-              <Eye className="h-4 w-4 mr-1 group-hover/btn:scale-110 transition-transform duration-200" />
-              التفاصيل
-            </Button>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="group/btn hover:bg-blue-500 hover:text-white transition-all duration-300"
-                >
-                  <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>إرسال إشعار مخصص - {customer.name}</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="اكتب رسالتك هنا..."
-                    value={customMessage}
-                    onChange={(e) => setCustomMessage(e.target.value)}
-                    className="min-h-[100px]"
-                    dir="rtl"
-                  />
-                  <Button
-                    onClick={() => {
-                      onSendNotification(customer.id, customMessage);
-                      setCustomMessage('');
-                    }}
-                    className="w-full"
-                    disabled={!customMessage.trim()}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    إرسال الإشعار
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onApplyDiscount(customer.id)}
-              className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
-            >
-              <Gift className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-            </Button>
-          </div>
+           {/* أزرار الإجراءات */}
+           <div className="flex gap-2 pt-2">
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => onSelect && onSelect(customer)}
+               className="flex-1 group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+             >
+               <Eye className="h-4 w-4 mr-1 group-hover/btn:scale-110 transition-transform duration-200" />
+               التفاصيل
+             </Button>
+             
+             <Button
+               variant="outline"
+               size="sm"
+               className="group/btn hover:bg-blue-500 hover:text-white transition-all duration-300"
+             >
+               <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
+             </Button>
+             
+             <Button
+               variant="outline"
+               size="sm"
+               className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
+             >
+               <Gift className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
+             </Button>
+           </div>
         </CardContent>
         
         {/* شريط تدرج خفيف في الأسفل */}
