@@ -113,8 +113,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     }
   ];
 
-  // Use sample data if no customers exist
-  const displayCustomers = customers && customers.length > 0 ? customers : sampleCustomers;
+  // عرض العملاء الحقيقيين فقط بدون بيانات تجريبية
+  const displayCustomers = Array.isArray(customers) ? customers : [];
+
 
   // Loyalty levels configuration
   const loyaltyLevels = [
@@ -138,7 +139,8 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       bgColor: 'bg-gradient-to-br from-gray-100 to-gray-200',
       textColor: 'text-gray-700',
       discount: 5,
-      benefits: ['خصم 5% شهرياً', 'نقاط مضاعفة', 'توصيل مجاني']
+      benefits: ['خصم 5% شهرياً', 'توصيل مجاني']
+
     },
     {
       name: 'ذهبي',
@@ -355,7 +357,8 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-1">عملاء مع نقاط</p>
-                    <p className="text-3xl sm:text-4xl font-bold">{customerStats.customersWithPoints || 4}</p>
+                    <p className="text-3xl sm:text-4xl font-bold">{customerStats.customersWithPoints || 0}</p>
+
                   </div>
                   <div className="p-3 sm:p-4 bg-white/20 rounded-full backdrop-blur-sm">
                     <Star className="h-6 w-6 sm:h-8 sm:w-8" />
@@ -381,7 +384,8 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-1">إجمالي النقاط</p>
-                    <p className="text-3xl sm:text-4xl font-bold">{(customerStats.totalLoyaltyPoints || 6150).toLocaleString()}</p>
+                    <p className="text-3xl sm:text-4xl font-bold">{(customerStats.totalLoyaltyPoints || 0).toLocaleString()}</p>
+
                   </div>
                   <div className="p-3 sm:p-4 bg-white/20 rounded-full backdrop-blur-sm">
                     <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8" />
@@ -408,7 +412,8 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm opacity-90 mb-1">إجمالي المبيعات</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{(customerStats.totalRevenue || 535000).toLocaleString()} د.ع</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{(customerStats.totalRevenue || 0).toLocaleString()} د.ع</p>
+
                   </div>
                   <div className="p-3 sm:p-4 bg-white/20 rounded-full backdrop-blur-sm">
                     <Trophy className="h-6 w-6 sm:h-8 sm:w-8" />

@@ -177,6 +177,8 @@ return this.fetch('all_data', async () => {
     aiOrders,
     profitRules,
     profiles,
+    customerLoyalty,
+    loyaltyTiers,
     
     // بيانات المرشحات
     colors,
@@ -225,6 +227,8 @@ return this.fetch('all_data', async () => {
     supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
     supabase.from('employee_profit_rules').select('*'),
     supabase.from('profiles').select('user_id, full_name, employee_code, status'),
+    supabase.from('customer_loyalty').select('*'),
+    supabase.from('loyalty_tiers').select('*'),
     
     // بيانات المرشحات
     supabase.from('colors').select('*').order('name'),
