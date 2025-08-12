@@ -110,7 +110,7 @@ const CustomersManagementPage = () => {
     }
   ];
 
-  // Use sample data if no customers exist
+  // Use real data from context first, fall back to sample data if needed
   const displayCustomers = customers && customers.length > 0 ? customers : sampleCustomers;
 
   // Filter customers based on permissions and search criteria
@@ -231,9 +231,9 @@ const CustomersManagementPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 overflow-x-hidden">
-      <div className="container mx-auto p-2 sm:p-4 lg:p-8 space-y-6 sm:space-y-8">
+      <div className="w-full max-w-full px-2 sm:px-4 lg:px-8 py-4 mx-auto space-y-6 sm:space-y-8">
         {/* Modern Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-6"
@@ -370,24 +370,24 @@ const CustomersManagementPage = () => {
                 <div className="flex flex-row gap-2">
                   <Button
                     variant="outline"
-                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border-blue-500/30 hover:border-purple-500/50 text-blue-600 hover:text-purple-600"
+                    className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl border-2 gap-2 hover:scale-105 transition-transform text-sm sm:text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-blue-600 hover:border-purple-600 text-white hover:text-white"
                     onClick={() => {
                       // فلترة متقدمة
                       setShowAdvancedFilter(!showAdvancedFilter);
                     }}
                   >
-                    <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                     فلترة متقدمة
                   </Button>
                   
                   <Select value={cityFilter} onValueChange={setCityFilter}>
-                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-blue-500/5 to-purple-500/5 hover:from-blue-500/10 hover:to-purple-500/10 border-blue-500/20 hover:border-purple-500/40 transition-all text-blue-700">
+                    <SelectTrigger className="flex-1 h-10 sm:h-12 rounded-xl border-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 border-blue-600 hover:border-purple-600 transition-all text-white">
                       <SelectValue placeholder="اختر المدينة" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white/98 backdrop-blur-sm border-2 border-blue-500/20 shadow-xl z-50 rounded-xl">
-                      <SelectItem value="all" className="hover:bg-blue-500/10 rounded-lg">جميع المدن</SelectItem>
+                    <SelectContent className="bg-white border-2 border-blue-600 shadow-2xl z-50 rounded-xl backdrop-blur-none">
+                      <SelectItem value="all" className="hover:bg-blue-50 rounded-lg text-slate-800 font-medium">جميع المدن</SelectItem>
                       {uniqueCities.map(city => (
-                        <SelectItem key={city} value={city} className="hover:bg-blue-500/10 rounded-lg">{city}</SelectItem>
+                        <SelectItem key={city} value={city} className="hover:bg-blue-50 rounded-lg text-slate-800 font-medium">{city}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -400,41 +400,41 @@ const CustomersManagementPage = () => {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 p-4 bg-gradient-to-r from-blue-50/50 to-purple-50/50 rounded-xl border border-blue-200/50"
+                  className="mt-4 p-4 bg-white border-2 border-blue-200 rounded-xl shadow-lg"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Select value={genderFilter} onValueChange={setGenderFilter}>
-                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
                         <SelectValue placeholder="الجنس" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
-                        <SelectItem value="all">جميع الأجناس</SelectItem>
-                        <SelectItem value="male">ذكر</SelectItem>
-                        <SelectItem value="female">أنثى</SelectItem>
+                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
+                        <SelectItem value="all" className="text-slate-800 hover:bg-blue-50">جميع الأجناس</SelectItem>
+                        <SelectItem value="male" className="text-slate-800 hover:bg-blue-50">ذكر</SelectItem>
+                        <SelectItem value="female" className="text-slate-800 hover:bg-blue-50">أنثى</SelectItem>
                       </SelectContent>
                     </Select>
                     
                     <Select>
-                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
                         <SelectValue placeholder="مستوى الولاء" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
-                        <SelectItem value="bronze">برونزي</SelectItem>
-                        <SelectItem value="silver">فضي</SelectItem>
-                        <SelectItem value="gold">ذهبي</SelectItem>
-                        <SelectItem value="diamond">ماسي</SelectItem>
+                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
+                        <SelectItem value="bronze" className="text-slate-800 hover:bg-blue-50">برونزي</SelectItem>
+                        <SelectItem value="silver" className="text-slate-800 hover:bg-blue-50">فضي</SelectItem>
+                        <SelectItem value="gold" className="text-slate-800 hover:bg-blue-50">ذهبي</SelectItem>
+                        <SelectItem value="diamond" className="text-slate-800 hover:bg-blue-50">ماسي</SelectItem>
                       </SelectContent>
                     </Select>
                     
                     <Select>
-                      <SelectTrigger className="h-10 rounded-lg border border-blue-300/50 bg-white/80">
+                      <SelectTrigger className="h-10 rounded-lg border-2 border-blue-300 bg-white text-slate-800">
                         <SelectValue placeholder="النقاط" />
                       </SelectTrigger>
-                      <SelectContent className="bg-white/98 border-blue-200 rounded-lg z-50">
-                        <SelectItem value="no-points">بدون نقاط</SelectItem>
-                        <SelectItem value="low">1-500 نقطة</SelectItem>
-                        <SelectItem value="medium">501-1500 نقطة</SelectItem>
-                        <SelectItem value="high">أكثر من 1500</SelectItem>
+                      <SelectContent className="bg-white border-2 border-blue-200 rounded-lg shadow-xl z-50 backdrop-blur-none">
+                        <SelectItem value="no-points" className="text-slate-800 hover:bg-blue-50">بدون نقاط</SelectItem>
+                        <SelectItem value="low" className="text-slate-800 hover:bg-blue-50">1-500 نقطة</SelectItem>
+                        <SelectItem value="medium" className="text-slate-800 hover:bg-blue-50">501-1500 نقطة</SelectItem>
+                        <SelectItem value="high" className="text-slate-800 hover:bg-blue-50">أكثر من 1500</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
