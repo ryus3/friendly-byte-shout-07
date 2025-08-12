@@ -10,9 +10,12 @@ import { Users, TrendingUp, Award, Star, Crown, Diamond, Medal } from "lucide-re
 import { startOfMonth, startOfYear, subMonths, startOfWeek } from 'date-fns';
 
 const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedPeriod, setSelectedPeriod] = useState(() =>
+    (typeof localStorage !== 'undefined' && localStorage.getItem('topCustomersPeriod')) || 'all'
+  );
   
   const periods = [
+    { key: 'all', label: 'الكل' },
     { key: 'week', label: 'أسبوع' },
     { key: 'month', label: 'شهر' },
     { key: '3months', label: '3 أشهر' },
@@ -44,6 +47,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
   };
 
   useEffect(() => {
+    try { if (typeof localStorage !== 'undefined') localStorage.setItem('topCustomersPeriod', selectedPeriod); } catch {}
     setDateRange(getDateRangeFor(selectedPeriod));
   }, [selectedPeriod, setDateRange]);
 
