@@ -92,6 +92,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   }, []);
   
   const [selectedOrders, setSelectedOrders] = useState([]);
+  const [statFilter, setStatFilter] = useState('all'); // all | needs_review | telegram | ai_chat | store | pending
 
 // إذا تم تمرير معرّف للتمييز عند الفتح، حدده تلقائياً مع التمرير إليه
 useEffect(() => {
@@ -247,9 +248,26 @@ useEffect(() => {
   const aiChatCount = visibleOrders.filter(order => order.source === 'ai_chat').length;
   const storeCount = visibleOrders.filter(order => order.source === 'web' || order.source === 'store').length;
 
+  const filteredOrders = useMemo(() => {
+    switch (statFilter) {
+      case 'needs_review':
+        return visibleOrders.filter(orderNeedsReview);
+      case 'telegram':
+        return visibleOrders.filter(order => order.source === 'telegram');
+      case 'ai_chat':
+        return visibleOrders.filter(order => order.source === 'ai_chat');
+      case 'store':
+        return visibleOrders.filter(order => order.source === 'web' || order.source === 'store');
+      case 'pending':
+        return visibleOrders.filter(order => order.status === 'pending');
+      default:
+        return visibleOrders;
+    }
+  }, [visibleOrders, statFilter]);
+
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedOrders(visibleOrders.map(order => order.id));
+      setSelectedOrders(filteredOrders.map(order => order.id));
     } else {
       setSelectedOrders([]);
     }
@@ -391,7 +409,13 @@ useEffect(() => {
             {/* Stats Overview */}
             <div className="grid grid-cols-5 gap-3 mb-4" dir="ltr">
               {/* Needs Review Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
+              <Card
+                onClick={() => setStatFilter(statFilter === 'needs_review' ? 'all' : 'needs_review')}
+                className={cn(
+                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px] cursor-pointer",
+                  statFilter === 'needs_review' && 'ring-2 ring-white/70'
+                )}
+              >
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
@@ -414,7 +438,13 @@ useEffect(() => {
               </Card>
 
               {/* AI Chat Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white min-h-[100px]">
+              <Card
+                onClick={() => setStatFilter(statFilter === 'ai_chat' ? 'all' : 'ai_chat')}
+                className={cn(
+                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white min-h-[100px] cursor-pointer",
+                  statFilter === 'ai_chat' && 'ring-2 ring-white/70'
+                )}
+              >
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
@@ -437,7 +467,13 @@ useEffect(() => {
               </Card>
 
               {/* Store Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white min-h-[100px]">
+              <Card
+                onClick={() => setStatFilter(statFilter === 'store' ? 'all' : 'store')}
+                className={cn(
+                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-amber-500 to-orange-600 text-white min-h-[100px] cursor-pointer",
+                  statFilter === 'store' && 'ring-2 ring-white/70'
+                )}
+              >
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
@@ -460,7 +496,13 @@ useEffect(() => {
               </Card>
 
               {/* Telegram Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white min-h-[100px]">
+              <Card
+                onClick={() => setStatFilter(statFilter === 'telegram' ? 'all' : 'telegram')}
+                className={cn(
+                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white min-h-[100px] cursor-pointer",
+                  statFilter === 'telegram' && 'ring-2 ring-white/70'
+                )}
+              >
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">
@@ -483,7 +525,13 @@ useEffect(() => {
               </Card>
 
               {/* Total Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-700 text-white min-h-[100px]">
+              <Card
+                onClick={() => setStatFilter('all')}
+                className={cn(
+                  "relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-700 text-white min-h-[100px] cursor-pointer",
+                  statFilter === 'all' && 'ring-2 ring-white/70'
+                )}
+              >
                 <CardContent className="p-3">
                   <div className="text-center space-y-1">
                     <div className="flex justify-center">

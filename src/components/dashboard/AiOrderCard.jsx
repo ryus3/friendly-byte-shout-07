@@ -35,7 +35,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   
   const formatDateTime = (date) => {
     try {
-      return new Date(date).toLocaleString('ar-IQ', {
+      return new Date(date).toLocaleString('en-US', {
         year: 'numeric', month: '2-digit', day: '2-digit',
         hour: '2-digit', minute: '2-digit', hour12: false
       });
