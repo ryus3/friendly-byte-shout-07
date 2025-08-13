@@ -91,6 +91,16 @@ export const SuperProvider = ({ children }) => {
   // أرباح وفواتير التسوية من السياق المتخصص (مع بقاء التوصيل عبر المزود الموحد)
   const { settlementInvoices } = useProfits() || { settlementInvoices: [] };
   
+  // استدعاء useProductsDB في المكان الصحيح
+  const {
+    addProduct: dbAddProduct,
+    updateProduct: dbUpdateProduct,
+    deleteProducts: dbDeleteProducts,
+    updateVariantStock: dbUpdateVariantStock,
+    getLowStockProducts: dbGetLowStockProducts,
+    refetch: dbRefetchProducts,
+  } = useProductsDB();
+  
   // حالة البيانات الموحدة - نفس البنية القديمة بالضبط
   const [allData, setAllData] = useState({
     products: [],
@@ -511,14 +521,7 @@ export const SuperProvider = ({ children }) => {
   // ===============================
 
   // توصيل وظائف قاعدة البيانات القديمة (CRUD) عبر hook موحد
-  const {
-    addProduct: dbAddProduct,
-    updateProduct: dbUpdateProduct,
-    deleteProducts: dbDeleteProducts,
-    updateVariantStock: dbUpdateVariantStock,
-    getLowStockProducts: dbGetLowStockProducts,
-    refetch: dbRefetchProducts,
-  } = useProductsDB();
+  // تم نقل استدعاء useProductsDB إلى أعلى الملف لضمان ترتيب الهوكس
 
   // إنشاء طلب جديد - يدعم النموذجين: (payload) أو (customerInfo, cartItems, ...)
   const createOrder = useCallback(async (arg1, cartItemsArg, trackingNumberArg, discountArg, statusArg, qrLinkArg, deliveryPartnerDataArg) => {
