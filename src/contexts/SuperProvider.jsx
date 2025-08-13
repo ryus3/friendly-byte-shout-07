@@ -616,17 +616,30 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // حذف طلبات
+  // حذف طلبات مع تحديث فوري
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
       if (isAiOrder) {
-        const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
-        if (error) throw error;
-        // تحديث الحالة محلياً
+        // تحديث فوري محلياً أولاً
         setAllData(prev => ({
           ...prev,
           aiOrders: (prev.aiOrders || []).filter(o => !orderIds.includes(o.id))
         }));
+        
+        // بث أحداث الحذف فوراً
+        orderIds.forEach(id => {
+          try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
+        });
+        
+        // الحذف الفعلي في الخلفية
+        const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
+        if (error) {
+          // في حالة الفشل، أعد الطلبات للقائمة
+          console.error('Delete failed, will refresh data:', error);
+          superAPI.invalidate('all_data');
+          await fetchAllData();
+          throw error;
+        }
         superAPI.invalidate('all_data');
         toast({ title: 'تم الحذف', description: 'تم حذف الطلبات الذكية نهائياً', variant: 'success' });
         orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {} });

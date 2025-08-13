@@ -38,7 +38,51 @@ const AiOrdersManager = ({ onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
-const [selectedOrders, setSelectedOrders] = useState([]);
+  
+  // تزامن مع البيانات من Context عند التحديث
+  useEffect(() => {
+    setOrders(ordersFromContext);
+  }, [ordersFromContext]);
+  
+  // مستمعات Real-time للتحديثات الفورية
+  useEffect(() => {
+    const handleAiOrderCreated = (event) => {
+      const newOrder = event.detail;
+      if (newOrder?.id) {
+        setOrders(prev => {
+          // تجنب التكرار
+          if (prev.some(o => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      }
+    };
+
+    const handleAiOrderDeleted = (event) => {
+      const deletedId = event.detail?.id;
+      if (deletedId) {
+        setOrders(prev => prev.filter(o => o.id !== deletedId));
+      }
+    };
+
+    const handleAiOrderApproved = (event) => {
+      const approvedId = event.detail?.id;
+      if (approvedId) {
+        setOrders(prev => prev.filter(o => o.id !== approvedId));
+      }
+    };
+
+    window.addEventListener('aiOrderCreated', handleAiOrderCreated);
+    window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    window.addEventListener('aiOrderApproved', handleAiOrderApproved);
+
+    return () => {
+      window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
+      window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+      window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
+    };
+  }, []);
+  
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
 // إذا تم تمرير معرّف للتمييز عند الفتح، حدده تلقائياً
 useEffect(() => {
@@ -112,64 +156,6 @@ useEffect(() => {
     }
     return list;
   }, [baseVisible, employeeFilter, allUsers, matchesOrderByProfile]);
-
-  // مزامنة الطلبات المحلية عند تغيّر بيانات السياق
-  useEffect(() => {
-    setOrders(ordersFromContext);
-  }, [ordersFromContext]);
-
-  // Force refresh when opening to fetch latest ai_orders even if cache is warm
-  useEffect(() => {
-    refreshAll?.();
-  }, []);
-
-  useEffect(() => {
-    const handleDeleted = (e) => {
-      const id = e?.detail?.id;
-      if (id) setOrders(prev => prev.filter(o => o.id !== id));
-    };
-    const handleApproved = (e) => {
-      const id = e?.detail?.id;
-      if (id) setOrders(prev => prev.filter(o => o.id !== id));
-    };
-    window.addEventListener('aiOrderDeleted', handleDeleted);
-    window.addEventListener('aiOrderApproved', handleApproved);
-    return () => {
-      window.removeEventListener('aiOrderDeleted', handleDeleted);
-      window.removeEventListener('aiOrderApproved', handleApproved);
-    };
-  }, []);
-
-  // Realtime updates for ai_orders: insert/update/delete
-  useEffect(() => {
-    try {
-      const channel = supabase
-        .channel('ai-orders-realtime')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ai_orders' }, (payload) => {
-          const newOrder = payload.new;
-          setOrders((prev) => {
-            if (prev.some(o => o.id === newOrder.id)) return prev;
-            if (!isAdmin && !matchesCurrentUser(newOrder)) return prev;
-            return [newOrder, ...prev];
-          });
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ai_orders' }, (payload) => {
-          const updated = payload.new;
-          setOrders((prev) => prev.map(o => (o.id === updated.id ? updated : o)));
-        })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'ai_orders' }, (payload) => {
-          const removed = payload.old;
-          setOrders((prev) => prev.filter(o => o.id !== removed.id));
-        })
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    } catch (e) {
-      // no-op
-    }
-  }, [isAdmin, matchesCurrentUser]);
 
   // Availability helpers based on products
   const variants = useMemo(() => {
@@ -266,25 +252,79 @@ useEffect(() => {
 
   const handleBulkAction = async (action) => {
     if (selectedOrders.length === 0) return;
+    
     try {
       if (action === 'approve') {
-        const results = await Promise.all(selectedOrders.map(id => approveAiOrder?.(id)));
-        const okIds = selectedOrders.filter((_, i) => results[i]?.success);
-        okIds.forEach(id => window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } })));
-        setOrders(prev => prev.filter(o => !okIds.includes(o.id)));
-        toast({ title: 'تمت الموافقة', description: `تمت الموافقة على ${okIds.length} طلب`, variant: 'success' });
+        // تحديث فوري محلياً أولاً
+        const approvedIds = [...selectedOrders];
+        setOrders(prev => prev.filter(o => !approvedIds.includes(o.id)));
+        toast({ title: 'تتم المعالجة...', description: `جاري الموافقة على ${approvedIds.length} طلب`, variant: 'default' });
+        
+        // المعالجة الفعلية في الخلفية
+        const results = await Promise.all(approvedIds.map(id => approveAiOrder?.(id)));
+        const successIds = approvedIds.filter((_, i) => results[i]?.success);
+        const failedIds = approvedIds.filter((_, i) => !results[i]?.success);
+        
+        // إضافة الطلبات الفاشلة للقائمة مرة أخرى
+        if (failedIds.length > 0) {
+          const failedOrders = ordersFromContext.filter(o => failedIds.includes(o.id));
+          setOrders(prev => [...failedOrders, ...prev]);
+        }
+        
+        // إشعار النجاح والفشل
+        if (successIds.length > 0) {
+          successIds.forEach(id => {
+            try { window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } })); } catch {}
+          });
+          toast({ title: 'تمت الموافقة', description: `تمت الموافقة على ${successIds.length} طلب بنجاح`, variant: 'success' });
+        }
+        if (failedIds.length > 0) {
+          toast({ title: 'تنبيه', description: `فشل في الموافقة على ${failedIds.length} طلب`, variant: 'destructive' });
+        }
+        
       } else if (action === 'delete') {
-        const results = await Promise.all(selectedOrders.map(id => supabase.rpc('delete_ai_order_safe', { p_order_id: id })));
-        const okIds = results.map((r, i) => (!r.error ? selectedOrders[i] : null)).filter(Boolean);
-        okIds.forEach(id => window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })));
-        setOrders(prev => prev.filter(o => !okIds.includes(o.id)));
-        toast({ title: 'تم الحذف', description: `تم حذف ${okIds.length} طلب`, variant: 'success' });
+        // تحديث فوري محلياً أولاً
+        const deletedIds = [...selectedOrders];
+        setOrders(prev => prev.filter(o => !deletedIds.includes(o.id)));
+        toast({ title: 'تتم المعالجة...', description: `جاري حذف ${deletedIds.length} طلب`, variant: 'default' });
+        
+        // الحذف الفعلي في الخلفية
+        const results = await Promise.all(deletedIds.map(async (id) => {
+          try {
+            const { data, error } = await supabase.rpc('delete_ai_order_safe', { p_order_id: id });
+            return { id, success: !error && data?.success !== false };
+          } catch {
+            return { id, success: false };
+          }
+        }));
+        
+        const successIds = results.filter(r => r.success).map(r => r.id);
+        const failedIds = results.filter(r => !r.success).map(r => r.id);
+        
+        // إضافة الطلبات الفاشلة للقائمة مرة أخرى
+        if (failedIds.length > 0) {
+          const failedOrders = ordersFromContext.filter(o => failedIds.includes(o.id));
+          setOrders(prev => [...failedOrders, ...prev]);
+        }
+        
+        // إشعار النجاح والفشل
+        if (successIds.length > 0) {
+          successIds.forEach(id => {
+            try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
+          });
+          toast({ title: 'تم الحذف', description: `تم حذف ${successIds.length} طلب بنجاح`, variant: 'success' });
+        }
+        if (failedIds.length > 0) {
+          toast({ title: 'تنبيه', description: `فشل في حذف ${failedIds.length} طلب`, variant: 'destructive' });
+        }
       }
     } catch (e) {
+      // في حالة خطأ شامل، أعد تحميل البيانات
+      console.error('Bulk action error:', e);
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء تنفيذ العملية', variant: 'destructive' });
+      try { await refreshAll?.(); } catch (_) {}
     } finally {
       setSelectedOrders([]);
-      try { await refreshAll?.(); } catch (_) {}
     }
   };
 
