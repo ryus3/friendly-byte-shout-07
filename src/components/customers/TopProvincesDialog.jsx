@@ -91,6 +91,7 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
             customer_province: o.customer_province,
             customer_city: o.customer_city,
             final_amount: o.final_amount || o.total_amount || 0,
+            delivery_fee: o.delivery_fee || 0,
             status: o.status,
             created_at: o.created_at
           }));
@@ -101,6 +102,7 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
             customer_province,
             customer_city,
             final_amount,
+            delivery_fee,
             status,
             created_at
           `)
@@ -132,13 +134,17 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
         }
         
         provinceMap[province].total_orders += 1;
-        provinceMap[province].total_amount += parseFloat(order.final_amount || 0);
+        // حساب المبلغ الصافي بدون توصيل
+        const gross = parseFloat(order.final_amount || 0);
+        const delivery = parseFloat(order.delivery_fee || 0);
+        const netAmount = Math.max(0, gross - delivery);
+        provinceMap[province].total_amount += netAmount;
         if (order.customer_city) {
           provinceMap[province].cities.add(order.customer_city);
         }
         
         totalOrders += 1;
-        totalRevenue += parseFloat(order.final_amount || 0);
+        totalRevenue += netAmount;
       });
 
       // تحويل إلى مصفوفة وحساب متوسط قيمة الطلب

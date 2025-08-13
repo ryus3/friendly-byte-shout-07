@@ -152,7 +152,9 @@ const useOrdersAnalytics = () => {
     const provinceStats = new Map();
     completedOrders.forEach(order => {
       const regionName = order.customer_city || order.customer_province || 'غير محدد';
-      const revenue = order.final_amount || order.total_amount || 0;
+      const gross = order.final_amount || order.total_amount || 0;
+      const delivery = order.delivery_fee || 0;
+      const revenue = Math.max(0, gross - delivery); // إيرادات صافية بدون توصيل
       
       if (provinceStats.has(regionName)) {
         const existing = provinceStats.get(regionName);
