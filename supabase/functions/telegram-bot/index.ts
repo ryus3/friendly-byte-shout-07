@@ -988,15 +988,16 @@ const SIZE_SYNONYMS: Record<string, string[]> = {
 function sizeSynonymsRegex(): RegExp {
   const all = Object.values(SIZE_SYNONYMS).flat().map(s => s.replace(/\s+/g, '\\s*'));
   const base = ['s','m','l','xl','xxl','xxxl'];
-  const pattern = `\\b(?:${[...base, ...all].join('|')})\\b`;
+  // استخدم حدود كلمات مرنة تناسب العربية بالمسافات بدلاً من \\b
+  const pattern = `(?:^|\\s)(?:${[...base, ...all].join('|')})(?:\\s|$)`;
   return new RegExp(pattern, 'gi');
 }
 
 function detectStandardSize(text: string): string | null {
   const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
-  // نماذج رقمية مثل 2xl / 3xl
-  if (/(\b|\s)(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)(\b|\s)/i.test(t)) return 'XXXL';
-  if (/(\b|\s)(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)(\b|\s)/i.test(t)) return 'XXL';
+  // أنماط XL المتعددة
+  if (/(^|\s)((?:اكس\s*){3}(?:لارج)?|x\s*x\s*x\s*l|xxx\s*l|3\s*اكس|٣\s*اكس|3xl|٣xl)(\s|$)/i.test(t)) return 'XXXL';
+  if (/(^|\s)((?:اكس\s*){2}(?:لارج)?|2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين(?:\s*لارج)?|دبل\s*اكس)(\s|$)/i.test(t)) return 'XXL';
   if (/(^|\s)(xl|x\s*l|x|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل|اكس)(\s|$)/i.test(t)) return 'XL';
   // أساسية
   if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
@@ -1054,6 +1055,9 @@ async function parseProduct(productText: string) {
     const std = detectStandardSize(text);
     if (std) size = std;
   }
+  
+  // سجل النتيجة للمراجعة
+  try { console.log('parseProduct.size', { text, detected: size || null, normalized: normalizeSizeLabel(size || '') }); } catch {}
   
   // جلب الألوان من قاعدة البيانات
   const { data: colorsData } = await supabase.from('colors').select('name') || {};
