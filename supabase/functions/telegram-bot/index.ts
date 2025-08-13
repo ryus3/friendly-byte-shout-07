@@ -958,9 +958,16 @@ function normalizeDigits(input: string): string {
 function preNormalizeSizeTokens(input: string): string {
   const t = normalizeDigits(String(input)).toLowerCase();
   return t
-    .replace(/ا\s*ك\s*س\s*ي\s*ن(?:\s*لارج)?/g, '2xl')
-    .replace(/اكسين(?:\s*لارج)?/g, '2xl')
-    .replace(/دبل\s*اكس/g, '2xl')
+    // جميع متغيرات XXL
+    .replace(/ا\s*ك\s*س\s*ي\s*ن(?:\s*لارج)?/g, 'xxl')
+    .replace(/اكسين(?:\s*لارج)?/g, 'xxl')
+    .replace(/دبل\s*اكس/g, 'xxl')
+    .replace(/2\s*اكس/g, 'xxl')
+    .replace(/٢\s*اكس/g, 'xxl')
+    .replace(/xxl/g, 'xxl')
+    .replace(/XXL/g, 'xxl')
+    .replace(/XXl/g, 'xxl')
+    .replace(/Xxl/g, 'xxl')
     .replace(/ثلاث(?:ة)?\s*اكس/g, '3xl');
 }
 
@@ -1005,14 +1012,23 @@ function sizeSynonymsRegex(): RegExp {
 
 function detectStandardSize(text: string): string | null {
   const t = preNormalizeSizeTokens(text).replace(/\s+/g, ' ').trim();
-  // أنماط XL المتعددة
+  const originalText = text.toLowerCase().trim();
+  
+  // أولاً: فحص مباشر لجميع متغيرات XXL
+  if (/(^|\s)(اكسين|اكسين\s*لارج|xxl|XXL|XXl|Xxl|2\s*اكس|٢\s*اكس)(\s|$)/i.test(originalText)) {
+    return 'XXL';
+  }
+  
+  // ثانياً: أنماط XL المتعددة بعد التطبيع
   if (/(^|\s)((?:اكس\s*){3}(?:لارج)?|x\s*x\s*x\s*l|xxx\s*l|3\s*اكس|٣\s*اكس|3xl|٣xl)(\s|$)/i.test(t)) return 'XXXL';
-  if (/(^|\s)((?:اكس\s*){2}(?:لارج)?|2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين(?:\s*لارج)?|دبل\s*اكس)(\s|$)/i.test(t)) return 'XXL';
-  if (/(^|\s)(xl|x\s*l|x|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل|اكس)(\s|$)/i.test(t)) return 'XL';
+  if (/(^|\s)(xxl|2xl|٢xl|دبل\s*اكس)(\s|$)/i.test(t)) return 'XXL';
+  if (/(^|\s)(xl|x\s*l|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل)(\s|$)/i.test(t) && !/(اكسين|اكسين\s*لارج)/i.test(originalText)) return 'XL';
+  
   // أساسية
   if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
   if (/(^|\s)(m|medium|ميديم|مديم|متوسط|وسط)(\s|$)/i.test(t)) return 'M';
   if (/(^|\s)(s|small|سمول|صغير)(\s|$)/i.test(t)) return 'S';
+  
   return null;
 }
 
