@@ -21,9 +21,9 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
-  // استخدام النظام الموحد مع تطبيق فلترة المستخدم
+  // استخدام النظام الموحد مع فلترة خاصة للعملاء
   const { orders: allOrders, loading: systemLoading } = useSuper();
-  const { filterDataByUser } = usePermissions();
+  const { user } = usePermissions();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -45,12 +45,23 @@ const CityStatisticsContent = () => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
+  // فلترة خاصة لبيانات المستخدم الحالي فقط (حتى لو كان مديراً)
+  const filterOrdersByCurrentUser = (orders) => {
+    if (!orders || !user) return [];
+    return orders.filter(order => 
+      order.created_by === user.user_id || 
+      order.created_by === user.id ||
+      order.employee_id === user.user_id ||
+      order.employee_id === user.id
+    );
+  };
+
   // حساب إحصائيات المدن باستخدام النظام الموحد
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // استخدام البيانات من النظام الموحد مع تطبيق فلترة المستخدم
-      const userFilteredOrders = filterDataByUser(allOrders || []);
+      // استخدام فلترة خاصة للمستخدم الحالي فقط
+      const userFilteredOrders = filterOrdersByCurrentUser(allOrders || []);
       const validOrders = userFilteredOrders.filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
@@ -160,8 +171,8 @@ const CityStatisticsContent = () => {
     // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة باستخدام phoneUtils
     const allUniqueCustomers = new Set();
     
-    // جلب كل الطلبات الصالحة من النظام الموحد مع تطبيق فلترة المستخدم
-    const userFilteredOrders = filterDataByUser(allOrders || []);
+    // جلب كل الطلبات الصالحة للمستخدم الحالي فقط
+    const userFilteredOrders = filterOrdersByCurrentUser(allOrders || []);
     const validOrders = userFilteredOrders.filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
