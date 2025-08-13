@@ -24,41 +24,27 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// دالة تنسيق رقم الواتساب للرابط - إصلاح جذري
+// دالة تنسيق رقم الواتساب للرابط - حل نهائي
 const formatWhatsAppLink = (phone) => {
   if (!phone) return null;
   
-  // إزالة كل شيء عدا الأرقام
-  let cleanNumber = String(phone).replace(/\D/g, '');
+  // تنظيف الرقم من أي رموز
+  let cleanNumber = String(phone).replace(/[^\d]/g, '');
   
-  console.log('📱 Original phone:', phone);
-  console.log('🧹 Clean number:', cleanNumber);
-  
-  // التعامل مع الأرقام العراقية
-  if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
-    // مثال: 07728020024 -> 9647728020024
-    const result = '964' + cleanNumber.substring(1);
-    console.log('✅ Iraq mobile result:', result);
-    return result;
+  // إزالة كود البلد إذا كان موجود
+  if (cleanNumber.startsWith('00964')) {
+    cleanNumber = cleanNumber.substring(5);
+  } else if (cleanNumber.startsWith('964')) {
+    cleanNumber = cleanNumber.substring(3);
   }
   
-  if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
-    // مثال: 7728020024 -> 9647728020024  
-    const result = '964' + cleanNumber;
-    console.log('✅ Iraq mobile (no 0) result:', result);
-    return result;
+  // إزالة الصفر من البداية إذا كان موجود
+  if (cleanNumber.startsWith('0')) {
+    cleanNumber = cleanNumber.substring(1);
   }
   
-  // إذا كان يبدأ بـ 964 بالفعل
-  if (cleanNumber.startsWith('964')) {
-    console.log('✅ Already formatted:', cleanNumber);
-    return cleanNumber;
-  }
-  
-  // الحالة الافتراضية
-  const result = '964' + cleanNumber.replace(/^0/, '');
-  console.log('✅ Default result:', result);
-  return result;
+  // إضافة كود العراق
+  return '964' + cleanNumber;
 };
 
 const CustomerCard = ({ 
