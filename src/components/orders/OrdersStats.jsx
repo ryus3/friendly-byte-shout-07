@@ -37,8 +37,18 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     onStatCardClick(status, globalPeriod);
   };
   
+  const aiOrdersCount = useMemo(() => {
+    const list = Array.isArray(aiOrders) ? aiOrders : [];
+    const ids = new Set();
+    for (const o of list) {
+      const key = o?.id ?? o?.order_id ?? o?.uuid ?? `${o?.source || 'src'}-${o?.created_at || ''}`;
+      ids.add(String(key));
+    }
+    return ids.size;
+  }, [aiOrders]);
+  
   const statsData = useMemo(() => [
-    { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrders.length, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
+    { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrdersCount, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
     { key: 'total', title: 'إجمالي الطلبات', icon: ShoppingCart, colors: ['blue-500', 'cyan-500'], value: getStats('all'), onClick: createClickHandler('all'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
@@ -46,7 +56,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'returned', title: 'راجع للمخزن', icon: RotateCcw, colors: ['orange-500', 'red-500'], value: getStats('returned_in_stock'), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: FolderArchive, colors: ['indigo-500', 'purple-500'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
-  ], [orders, aiOrders, globalPeriod]);
+  ], [orders, aiOrdersCount, globalPeriod]);
 
   return (
     <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4">

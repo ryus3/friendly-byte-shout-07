@@ -124,6 +124,30 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     return new Set(list.map(p => p.id));
   }, [products, filterProductsByPermissions]);
 
+  // تطبيع أسماء المقاسات (يدعم: اكس، اكسين، 3 اكس، XL, XXL, 3XL ...)
+  const normalizeSize = (s) => {
+    if (!s) return '';
+    let str = String(s).trim().toLowerCase();
+    // أرقام عربية -> إنجليزية
+    const digits = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+    str = str.replace(/[٠-٩]/g, (d) => digits[d]);
+    // أشكال شائعة
+    str = str.replace(/اكسات/g, 'اكس');
+    str = str.replace(/ثلاثة\s*اكس|ثلاث\s*اكس|3\s*اكس|٣\s*اكس/g, 'xxx');
+    str = str.replace(/اكسين/g, 'xx');
+    str = str.replace(/اكس/g, 'x');
+    str = str.replace(/لارج|large|lrg/g, '');
+    str = str.replace(/\s|-/g, '');
+    // حالات قياسية
+    if (/^(3xl|xxxl|xxx|3x)$/.test(str)) return 'xxxl';
+    if (/^(2xl|xxl|xx|2x)$/.test(str)) return 'xxl';
+    if (/^(xl|x)$/.test(str)) return 'xl';
+    if (str.includes('xxx') || str.includes('3x')) return 'xxxl';
+    if (str.includes('xx') || str.includes('2x')) return 'xxl';
+    if (str.includes('x')) return 'xl';
+    return str;
+  };
+
   const items = useMemo(() => (
     Array.isArray(order.items) ? order.items : (order.order_data?.items || [])
   ), [order]);
@@ -153,9 +177,10 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       const matches = variants.filter(v => lower(v.product_name) === vname || lower(v.product_name).includes(vname));
       if (!matches.length) return null;
       if (color || size) {
-        return matches.find(v => lower(v.color || v.color_name) === lower(color) && lower(v.size || v.size_name) === lower(size))
+        const ns = normalizeSize(size);
+        return matches.find(v => lower(v.color || v.color_name) === lower(color) && normalizeSize(v.size || v.size_name) === ns)
           || matches.find(v => lower(v.color || v.color_name) === lower(color))
-          || matches.find(v => lower(v.size || v.size_name) === lower(size))
+          || matches.find(v => normalizeSize(v.size || v.size_name) === ns)
           || matches[0];
       }
       return matches[0];
@@ -249,8 +274,8 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
         }
       }
       if (sizeRaw) {
-        const ls = lower(sizeRaw);
-        const bySize = filtered.filter(v => lower(v.size) === ls || lower(v.size_name) === ls);
+        const ls = normalizeSize(sizeRaw);
+        const bySize = filtered.filter(v => normalizeSize(v.size || v.size_name) === ls);
         if (bySize.length === 0) {
           reasons.push(`${name}: المقاس ${sizeRaw} غير متوفر`);
         } else {
@@ -266,9 +291,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
           // تحديد السبب الحقيقي بدقة
           const sameProduct = matches;
           const sameColor = colorRaw ? sameProduct.filter(v => lower(v.color) === lower(colorRaw)) : [];
-          const sameSize = sizeRaw ? sameProduct.filter(v => lower(v.size) === lower(sizeRaw)) : [];
+          const sameSize = sizeRaw ? sameProduct.filter(v => normalizeSize(v.size || v.size_name) === normalizeSize(sizeRaw)) : [];
 
-          const anyOtherSizeInSameColorHasStock = sizeRaw && sameColor.some(v => lower(v.size) !== lower(sizeRaw) && stock(v) > 0);
+          const anyOtherSizeInSameColorHasStock = sizeRaw && sameColor.some(v => normalizeSize(v.size || v.size_name) !== normalizeSize(sizeRaw) && stock(v) > 0);
           const anyOtherColorInSameSizeHasStock = colorRaw && sameSize.some(v => lower(v.color) !== lower(colorRaw) && stock(v) > 0);
 
           if (anyOtherSizeInSameColorHasStock) {
