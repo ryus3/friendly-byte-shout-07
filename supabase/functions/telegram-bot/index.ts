@@ -362,6 +362,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     // صلاحيات الأقسام والمنتجات للموظف - CRITICAL SECURITY
     let allowAllProducts = false;
     let allowedDeptIds: string[] = [];
+    let allowedCategoryIds: string[] = [];
     let allowedProductIds: string[] = [];
     
     if (employee?.user_id) {
@@ -383,6 +384,24 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               allowAllProducts = true;
             } else if (Array.isArray((deptPerm as any).allowed_items)) {
               allowedDeptIds = ((deptPerm as any).allowed_items as any[]).map((id: any) => String(id));
+            }
+          }
+
+          // صلاحيات التصنيفات - IMPORTANT: هذا يتحكم في المنتجات الرجالية/النسائية
+          if (!allowAllProducts) {
+            const { data: categoryPerm } = await supabase
+              .from('user_product_permissions')
+              .select('has_full_access, allowed_items')
+              .eq('user_id', employee.user_id)
+              .eq('permission_type', 'category')
+              .maybeSingle();
+              
+            if (categoryPerm) {
+              if ((categoryPerm as any).has_full_access) {
+                allowAllProducts = true;
+              } else if (Array.isArray((categoryPerm as any).allowed_items)) {
+                allowedCategoryIds = ((categoryPerm as any).allowed_items as any[]).map((id: any) => String(id));
+              }
             }
           }
           
@@ -597,6 +616,10 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
             product_departments (
               department_id,
               departments (id, name)
+            ),
+            product_categories (
+              category_id,
+              categories (id, name)
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -625,6 +648,10 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                 product_departments (
                   department_id,
                   departments (id, name)
+                ),
+                product_categories (
+                  category_id,
+                  categories (id, name)
                 )
               `)
               .or(searchQuery)
@@ -649,6 +676,28 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               bestMatch = product;
               break;
             }
+            }
+          }
+
+          // التحقق من صلاحيات التصنيفات - CRITICAL: فحص المنتجات الرجالية/النسائية
+          if (!allowAllProducts && allowedCategoryIds.length > 0) {
+            const productCategoryIds = (bestMatch.product_categories || []).map((pc: any) => String(pc.category_id));
+            const hasAllowedCategory = productCategoryIds.some(catId => allowedCategoryIds.includes(catId));
+            
+            if (!hasAllowedCategory) {
+              console.log(`❌ CATEGORY PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name} with categories [${productCategoryIds.join(',')}]. Allowed categories: [${allowedCategoryIds.join(',')}]`);
+              item.available = false;
+              item.availability = 'not_permitted';
+              (item as any).permission_scope = { 
+                scope: 'category', 
+                allowed: allowedCategoryIds, 
+                product_categories: productCategoryIds,
+                employee_code: employeeCode,
+                product_name: bestMatch.name,
+                reason: 'category_restriction'
+              };
+              item.price = 0;
+              continue;
             }
           }
 
