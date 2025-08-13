@@ -577,7 +577,7 @@ useEffect(() => {
                 <div dir="rtl">
                   <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-blue-600" />
-                    قائمة الطلبات الذكية ({visibleOrders.length})
+                    قائمة الطلبات الذكية ({filteredOrders.length})
                   </CardTitle>
                   
                   {(isAdmin || isDepartmentManager) && (
@@ -602,11 +602,11 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {visibleOrders.length > 0 && (
+                  {filteredOrders.length > 0 && (
                     <>
                       <div className="flex items-center gap-2">
                         <Checkbox
-                          checked={selectedOrders.length === visibleOrders.length}
+                          checked={selectedOrders.length === filteredOrders.length}
                           onCheckedChange={handleSelectAll}
                         />
                         <span className="text-xs text-slate-600 dark:text-slate-400">تحديد الكل</span>
@@ -637,7 +637,7 @@ useEffect(() => {
               </CardHeader>
               
               <CardContent className="p-3 space-y-3">
-                {visibleOrders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                       <Bot className="w-6 h-6 text-slate-400" />
@@ -650,7 +650,7 @@ useEffect(() => {
                     </p>
                   </div>
                 ) : (
-                  [...visibleOrders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
+                  [...filteredOrders].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).map((order) => (
                     <AiOrderCard 
                       key={order.id} 
                       order={order}
