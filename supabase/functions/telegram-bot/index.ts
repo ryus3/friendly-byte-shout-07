@@ -927,9 +927,13 @@ function sizeSynonymsRegex(): RegExp {
 
 function detectStandardSize(text: string): string | null {
   const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
+  
+  // تحقق محدد من "اكسين" أولاً
+  if (/اكسين/i.test(t)) return 'XXL';
+  
   // نماذج رقمية مثل 2xl / 3xl
   if (/(\b|\s)(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)(\b|\s)/i.test(t)) return 'XXXL';
-  if (/(\b|\s)(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)(\b|\s)/i.test(t)) return 'XXL';
+  if (/(\b|\s)(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين\s*لارج|دبل\s*اكس)(\b|\s)/i.test(t)) return 'XXL';
   if (/(^|\s)(xl|x\s*l|x|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل|اكس)(\s|$)/i.test(t)) return 'XL';
   // أساسية
   if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
