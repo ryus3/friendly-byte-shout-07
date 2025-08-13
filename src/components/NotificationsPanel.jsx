@@ -163,11 +163,11 @@ const typeColorMap = {
     dot: 'bg-purple-500'
   },
   ai_order: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-primary dark:border-primary',
+    bg: 'bg-gradient-to-tr from-indigo-50 via-violet-50 to-blue-50 dark:from-indigo-900/10 dark:via-violet-900/10 dark:to-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-0',
     text: 'text-foreground', 
-    icon: 'text-primary',
-    dot: 'bg-primary'
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    dot: 'bg-violet-500'
   },
   new_registration: { 
     bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
@@ -237,14 +237,15 @@ const NotificationsPanel = () => {
     if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'ai_order') {
-      setShowAiOrdersManager(true);
+      // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم عبر حدث عام
+      window.dispatchEvent(new CustomEvent('openAiOrdersManager'));
+      setIsOpen(false);
+      return;
     } else if (notification.type === 'low_stock' || notification.type === 'stock_warning') {
       // استخراج اسم المنتج من الرسالة للفلترة الدقيقة
       const productMatch = notification.message.match(/المنتج "([^"]+)"/);
       const productName = productMatch ? productMatch[1] : '';
-      
       if (productName) {
-        // التنقل للمخزون مع البحث عن المنتج المحدد
         navigate(`/inventory?search=${encodeURIComponent(productName)}&filter=low_stock`);
       } else {
         navigate('/inventory?filter=low_stock');
@@ -255,16 +256,13 @@ const NotificationsPanel = () => {
         const data = notification.data || {};
         const orderId = data.order_id;
         const employeeName = data.employee_name;
-        
         console.log('🔔 إشعار طلب موظف:', { orderId, employeeName, data });
         navigate(`/employee-follow-up?highlight=${orderId}`);
       } else {
         // استخراج رقم الطلب من الرسالة
         const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
         const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-        
         if (orderNumber) {
-          // التنقل للطلبات مع البحث عن الطلب المحدد
           navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
         } else {
           navigate('/orders?status=pending');
@@ -274,7 +272,6 @@ const NotificationsPanel = () => {
       // استخراج رقم الطلب المكتمل
       const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
       const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-      
       if (orderNumber) {
         navigate(`/orders?search=${encodeURIComponent(orderNumber)}&status=completed`);
       } else {
@@ -283,23 +280,17 @@ const NotificationsPanel = () => {
     } else if (notification.type === 'profit_settlement_request' || notification.type === 'settlement_request') {
       // طلب تحاسب من موظف - التوجه لصفحة متابعة الموظفين مع الفلترة
       console.log('🔔 إشعار طلب التحاسب:', notification);
-      
       const data = notification.data || {};
       const employeeId = data.employee_id || data.employeeId;
       const orderIds = data.order_ids || data.orderIds || [];
-      
       console.log('🔍 بيانات طلب التحاسب:', { employeeId, orderIds, data });
-      
       if (employeeId && orderIds && orderIds.length > 0) {
-        // توجيه مع معاملات الفلترة
         console.log('📍 توجيه لصفحة متابعة الموظفين مع الطلبات المحددة');
         navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);
       } else {
-        // توجيه عادي إذا لم تكن البيانات متوفرة
         console.warn('⚠️ بيانات التحاسب غير مكتملة، توجيه عادي');
         navigate('/employee-follow-up');
       }
-      
     } else if (notification.type === 'profit_settlement') {
       navigate('/employee-follow-up');
     } else if (notification.related_entity_type) {
@@ -366,11 +357,17 @@ const NotificationsPanel = () => {
     }
   };
 
-  // دمج الإشعارات من النظامين
-  const allNotifications = [
+  // دمج الإشعارات من النظامين مع إزالة التكرار
+  const merged = [
     ...notifications.filter(n => n.type !== 'welcome'),
     ...systemNotifications
-  ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  ];
+  const uniqueMap = new Map();
+  for (const n of merged) {
+    const key = n.id || `${n.type}|${n.title}|${n.message}|${new Date(n.created_at).toISOString().slice(0,16)}`;
+    if (!uniqueMap.has(key)) uniqueMap.set(key, n);
+  }
+  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   
   const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
@@ -447,6 +444,9 @@ const NotificationsPanel = () => {
                       exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                       className="relative group"
                     >
+                      {notificationType === 'ai_order' && (
+                        <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 rounded-r bg-gradient-to-b from-indigo-500 via-violet-500 to-blue-500 opacity-90" />
+                      )}
                       <div 
                         className={cn(
                           "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
