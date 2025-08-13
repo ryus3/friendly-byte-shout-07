@@ -483,7 +483,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
                       
                       try {
-                        const res = await approveAiOrder?.(order);
+                        const res = await approveAiOrder?.(order.id);
                         if (res?.success) {
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                           toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });

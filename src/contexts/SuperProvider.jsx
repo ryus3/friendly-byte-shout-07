@@ -125,6 +125,7 @@ export const SuperProvider = ({ children }) => {
     expenses: [] 
   });
   const lastFetchAtRef = useRef(0);
+  const pendingAiDeletesRef = useRef(new Set());
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
     if (!user) return;
@@ -227,6 +228,8 @@ export const SuperProvider = ({ children }) => {
         } : null
       });
       
+      // تصفية الطلبات الذكية قيد الحذف التفاؤلي لمنع الوميض
+      processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));
       setAllData(processedData);
       
       // تحديث accounting بنفس الطريقة القديمة
@@ -380,6 +383,7 @@ export const SuperProvider = ({ children }) => {
   useEffect(() => {
     const handleAiOrderCreated = (event) => {
       console.log('🔥 AI Order Created Event:', event.detail);
+      try { pendingAiDeletesRef.current.delete(event.detail.id); } catch {}
       setAllData(prevData => ({
         ...prevData,
         aiOrders: [...(prevData.aiOrders || []), event.detail]
@@ -398,6 +402,7 @@ export const SuperProvider = ({ children }) => {
 
     const handleAiOrderDeleted = (event) => {
       console.log('🔥 AI Order Deleted Event:', event.detail);
+      try { pendingAiDeletesRef.current.add(event.detail.id); } catch {}
       setAllData(prevData => ({
         ...prevData,
         aiOrders: (prevData.aiOrders || []).filter(order => order.id !== event.detail.id)
