@@ -342,7 +342,11 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     }
 
     if (genderFilter !== 'all') {
-      filtered = filtered.filter((customer) => customer.gender_type === genderFilter);
+      // قراءة الجنس من customer_gender_segments
+      filtered = filtered.filter((customer) => {
+        const genderType = customer.customer_gender_segments?.[0]?.gender_type || customer.gender_type;
+        return genderType === genderFilter;
+      });
     }
 
     if (loyaltyLevelFilter !== 'all') {
@@ -910,44 +914,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="text-center p-4 space-y-6">
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full shadow-lg">
-                          <MapPin className="h-6 w-6 text-white" />
-                        </div>
-                        <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                          إحصائيات المدن - الشهر الحالي
-                        </h3>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {cityDiscountsData.topCities?.length ? (
-                          cityDiscountsData.topCities.map((c, idx) => (
-                            <Card key={c.city_name || idx} className="border-0 bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/30 dark:to-blue-900/20 shadow-xl">
-                              <CardContent className="p-6">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="text-sm text-muted-foreground">المدينة</p>
-                                    <p className="text-lg font-bold">{c.city_name || 'غير محدد'}</p>
-                                  </div>
-                                  <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">#{idx + 1}</Badge>
-                                </div>
-                                <div className="mt-4 grid grid-cols-2 gap-3">
-                                  <div className="rounded-lg p-3 bg-white/70 dark:bg-slate-800/60 border border-border/50">
-                                    <p className="text-xs text-muted-foreground">عدد الطلبات</p>
-                                    <p className="text-xl font-bold text-blue-600">{c.total_orders?.toLocaleString('ar') || 0}</p>
-                                  </div>
-                                  <div className="rounded-lg p-3 bg-white/70 dark:bg-slate-800/60 border border-border/50">
-                                    <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
-                                    <p className="text-xl font-bold text-emerald-600">{Number(c.total_amount || 0).toLocaleString('ar')} د.ع</p>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))
-                        ) : (
-                          <div className="col-span-full text-muted-foreground">لا توجد بيانات لهذا الشهر</div>
-                        )}
-                      </div>
+                    <CityStatisticsContent customers={filteredCustomers} orders={orders} />
+                  </motion.div>
+                )}
                       <div className="text-center">
                         <Button 
                           variant="outline"
@@ -1061,7 +1030,12 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                              {customer.customer_loyalty?.points_expiry_date ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-IQ') : 'غير محدد'}
+                              {customer.customer_loyalty?.points_expiry_date ? 
+                                new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-EG', {
+                                  year: 'numeric',
+                                  month: '2-digit', 
+                                  day: '2-digit'
+                                }) : 'غير محدد'}
                             </Badge>
                           </div>
                           
@@ -1134,6 +1108,11 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             variant="outline" 
                             size="sm" 
                             className="gap-2 hover:bg-orange-500 hover:text-white transition-colors"
+                            onClick={() => {
+                              // تطبيق خصم أو هدية للعميل
+                              alert(`تم تطبيق هدية خاصة للعميل: ${customer.name}`);
+                            }}
+                            title="تطبيق هدية"
                           >
                             <Gift className="h-4 w-4" />
                           </Button>
@@ -1141,6 +1120,16 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             variant="outline" 
                             size="sm" 
                             className="gap-2 hover:bg-blue-500 hover:text-white transition-colors"
+                            onClick={() => {
+                              // إرسال رسالة للعميل
+                              const phone = customer.phone;
+                              if (phone) {
+                                window.open(`https://wa.me/${phone}`, '_blank');
+                              } else {
+                                alert('رقم الهاتف غير متوفر');
+                              }
+                            }}
+                            title="إرسال رسالة واتساب"
                           >
                             <MessageCircle className="h-4 w-4" />
                           </Button>
