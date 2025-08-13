@@ -1034,14 +1034,16 @@ async function parseProduct(productText: string) {
   const { data: sizesData } = await supabase.from('sizes').select('name') || {};
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
-  // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
-  let size = '';
-  const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
-  const sizeMatch = text.match(basicSizeRegex);
-  
-  if (sizeMatch) {
-    size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
-  } else {
+  // استخراج المقاس مع دعم المقاسات (كشف مبكر لصيغ العربية مثل اكسين)
+  let size = detectStandardSize(text) || '';
+  if (!size) {
+    const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
+    const sizeMatch = text.match(basicSizeRegex);
+    if (sizeMatch) {
+      size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+    }
+  }
+  if (!size) {
     // البحث في المقاسات من قاعدة البيانات
     for (const dbSize of dbSizes) {
       if (text.toLowerCase().includes(dbSize.toLowerCase())) {
@@ -1050,11 +1052,8 @@ async function parseProduct(productText: string) {
       }
     }
   }
-  // مطابقة الصيغ العربية والإنجليزية إلى مقاس قياسي إن لم نجد أعلاه
-  if (!size) {
-    const std = detectStandardSize(text);
-    if (std) size = std;
-  }
+  // تطبيع نهائي للمقاس
+  if (size) size = normalizeSizeLabel(size);
   
   // سجل النتيجة للمراجعة
   try { console.log('parseProduct.size', { text, detected: size || null, normalized: normalizeSizeLabel(size || '') }); } catch {}
