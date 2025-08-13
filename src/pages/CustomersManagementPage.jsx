@@ -17,6 +17,7 @@ import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
+import { toast } from '@/hooks/use-toast';
 import { 
   Users, 
   Search, 
@@ -58,7 +59,7 @@ const CustomersManagementPage = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
 const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('customers');
+  const [activeTab, setActiveTab] = useState('customers'); // customers | cityStats | cityDiscounts
   const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
 
   // Sample data for demonstration
@@ -304,7 +305,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       }
 
       // قراءة الجنس من جدول تصنيف الجنس في قاعدة البيانات
-      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || null;
+      merged.gender_type = c.customer_gender_segments && c.customer_gender_segments.length > 0 
+        ? c.customer_gender_segments[0].gender_type 
+        : null;
 
       return merged;
     });
@@ -342,7 +345,13 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     }
 
     if (genderFilter !== 'all') {
-      filtered = filtered.filter((customer) => customer.gender_type === genderFilter);
+      filtered = filtered.filter((customer) => {
+        const genderType = customer.gender_type || 
+          (customer.customer_gender_segments && customer.customer_gender_segments.length > 0 
+            ? customer.customer_gender_segments[0].gender_type 
+            : null);
+        return genderType === genderFilter;
+      });
     }
 
     if (loyaltyLevelFilter !== 'all') {
@@ -1060,9 +1069,16 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
-                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                              {customer.customer_loyalty?.points_expiry_date ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-IQ') : 'غير محدد'}
-                            </Badge>
+                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                               {customer.customer_loyalty?.points_expiry_date 
+                                 ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-EG', {
+                                     year: 'numeric',
+                                     month: '2-digit', 
+                                     day: '2-digit'
+                                   })
+                                 : 'غير محدد'
+                               }
+                             </Badge>
                           </div>
                           
                           <div className="flex justify-between items-center">
@@ -1094,12 +1110,52 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             <Button 
                               size="sm" 
                               className="w-full bg-green-500 hover:bg-green-600 text-white gap-2 rounded-lg"
+                              onClick={() => {
+                                toast({
+                                  title: `خصم ${loyaltyLevel.discount}%`,
+                                  description: `متاح لعضوية ${loyaltyLevel.name}`,
+                                  variant: "success"
+                                });
+                              }}
                             >
                               <Sparkles className="h-4 w-4" />
                               خصم {loyaltyLevel.discount}% شهرياً
                             </Button>
                           )}
+                          
                           {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
+                            <Button 
+                              size="sm" 
+                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
+                              onClick={() => {
+                                toast({
+                                  title: "توصيل مجاني",
+                                  description: `متاح لعضوية ${loyaltyLevel.name}`,
+                                  variant: "success"
+                                });
+                              }}
+                            >
+                              <Truck className="h-4 w-4" />
+                              توصيل مجاني
+                            </Button>
+                          )}
+                          
+                          {customer.customer_loyalty?.total_points >= 3000 && (
+                            <Button 
+                              size="sm" 
+                              className="w-full bg-purple-500 hover:bg-purple-600 text-white gap-2 rounded-lg"
+                              onClick={() => {
+                                toast({
+                                  title: "🎁 مكافأة خاصة",
+                                  description: "مؤهل لمكافأة 3000 نقطة!",
+                                  variant: "success"
+                                });
+                              }}
+                            >
+                              <Gift className="h-4 w-4" />
+                              مكافأة خاصة
+                            </Button>
+                          )}
                             <Button 
                               size="sm" 
                               className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
