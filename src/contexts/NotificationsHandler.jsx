@@ -91,11 +91,49 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
+    // إشعارات طلبات تليجرام (AI Orders) - للمدير فوراً
+    const aiOrdersChannel = supabase
+      .channel('ai-orders-notifications-handler-admin')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_orders' },
+        async (payload) => {
+          try {
+            // محاولة جلب اسم الموظف
+            let employeeName = 'موظف';
+            if (payload.new?.created_by) {
+              const { data: emp } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('user_id', payload.new.created_by)
+                .single();
+              if (emp?.full_name) employeeName = emp.full_name;
+            }
+            addNotification({
+              type: 'new_ai_order',
+              title: 'طلب جديد من تليجرام',
+              message: `تم استلام طلب جديد من ${employeeName}`,
+              icon: 'MessageSquare',
+              color: 'amber',
+              data: { ai_order_id: payload.new?.id || null },
+              user_id: null,
+            });
+            // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
+            try { window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new })); } catch {}
+          } catch (e) {
+            console.error('AI order notification error:', e);
+          }
+        }
+      )
+      .subscribe();
+
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
+
 
     return () => {
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(aiOrdersChannel);
     };
     
   }, [user, fetchAdminData, addNotification]);
