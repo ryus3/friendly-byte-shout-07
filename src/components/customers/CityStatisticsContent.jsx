@@ -50,22 +50,33 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         order.receipt_received === true
       );
 
-      // تطبيق الفلترة الزمنية
+      // تطبيق الفلترة الزمنية بشكل صحيح
       let filteredOrders = validOrders;
       if (timeFilter !== 'all') {
         const range = timeRanges.find(r => r.value === timeFilter);
         if (range && range.months) {
+          const now = new Date();
           const startDate = new Date();
-          startDate.setMonth(startDate.getMonth() - range.months);
-          filteredOrders = validOrders.filter(order => 
-            new Date(order.created_at) >= startDate
-          );
+          
+          if (timeFilter === '1month') {
+            // الشهر الحالي فقط
+            startDate.setDate(1); // أول يوم في الشهر
+            startDate.setHours(0, 0, 0, 0);
+          } else {
+            // باقي الفترات
+            startDate.setMonth(now.getMonth() - range.months);
+          }
+          
+          filteredOrders = validOrders.filter(order => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= startDate;
+          });
         }
       }
 
       // تجميع البيانات حسب المدينة
       const cityGroups = {};
-      const phoneCustomers = new Set();
+      const allUniqueCustomers = new Set(); // مجموعة شاملة للعملاء الفريدين
 
       filteredOrders.forEach(order => {
         const city = order.customer_city || 'غير محدد';
@@ -84,8 +95,10 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         cityGroups[city].totalOrders += 1;
         cityGroups[city].totalRevenue += revenue;
         
+        // إضافة العميل للمدينة وللمجموعة الشاملة
         if (order.customer_phone) {
           cityGroups[city].uniqueCustomers.add(order.customer_phone);
+          allUniqueCustomers.add(order.customer_phone); // العملاء الفريدين عالمياً
         }
       });
 
@@ -94,11 +107,16 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         city: group.city,
         totalOrders: group.totalOrders,
         totalRevenue: group.totalRevenue,
-        uniqueCustomers: group.uniqueCustomers.size,
+        uniqueCustomers: group.uniqueCustomers.size, // عملاء المدينة
         averageOrderValue: group.totalOrders > 0 ? group.totalRevenue / group.totalOrders : 0
       }));
 
-      setCityStats(statsArray);
+      // حفظ البيانات مع العملاء الفريدين الصحيحين
+      setCityStats(statsArray.map(stat => ({
+        ...stat,
+        globalUniqueCustomers: allUniqueCustomers.size // العدد الصحيح للعملاء الفريدين
+      })));
+
     } catch (error) {
       console.error('خطأ في جلب إحصائيات المدن:', error);
     } finally {
@@ -129,15 +147,51 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     return sorted;
   }, [cityStats, sortBy]);
 
-  // إحصائيات إجمالية
+  // إحصائيات إجمالية مع حساب صحيح للعملاء الفريدين
   const totalStats = useMemo(() => {
+    const allUniqueCustomers = new Set();
+    
+    // جمع كل العملاء الفريدين من كل المدن
+    const filteredOrders = (orders || []).filter(order => 
+      ['completed', 'delivered'].includes(order.status) && 
+      order.receipt_received === true
+    );
+
+    // تطبيق نفس الفلترة الزمنية
+    let finalOrders = filteredOrders;
+    if (timeFilter !== 'all') {
+      const range = timeRanges.find(r => r.value === timeFilter);
+      if (range && range.months) {
+        const now = new Date();
+        const startDate = new Date();
+        
+        if (timeFilter === '1month') {
+          startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
+        } else {
+          startDate.setMonth(now.getMonth() - range.months);
+        }
+        
+        finalOrders = filteredOrders.filter(order => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= startDate;
+        });
+      }
+    }
+
+    finalOrders.forEach(order => {
+      if (order.customer_phone) {
+        allUniqueCustomers.add(order.customer_phone);
+      }
+    });
+
     return cityStats.reduce((acc, city) => ({
       totalOrders: acc.totalOrders + city.totalOrders,
       totalRevenue: acc.totalRevenue + city.totalRevenue,
-      totalCustomers: acc.totalCustomers + city.uniqueCustomers,
+      totalCustomers: allUniqueCustomers.size, // العدد الصحيح للعملاء الفريدين
       totalCities: cityStats.length
     }), { totalOrders: 0, totalRevenue: 0, totalCustomers: 0, totalCities: 0 });
-  }, [cityStats]);
+  }, [cityStats, timeFilter, orders]);
 
   return (
     <div className="space-y-6">
