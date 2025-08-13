@@ -14,7 +14,8 @@ import {
   ShoppingCart,
   DollarSign,
   TrendingUp,
-  Award
+  Award,
+  MessageCircle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -30,6 +31,44 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ').format(amount) + ' د.ع';
   };
+
+  // تنسيق رقم الواتساب
+  const formatWhatsAppNumber = (phone) => {
+    if (!phone) return null;
+    let cleanNumber = phone.replace(/\D/g, '');
+    
+    // إذا بدأ بـ 07، أضف كود الدولة
+    if (cleanNumber.startsWith('07')) {
+      return '964' + cleanNumber.substring(1);
+    }
+    // إذا بدأ بـ 7، أضف كود الدولة مع الصفر
+    if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
+      return '964' + cleanNumber;
+    }
+    // إذا بدأ بـ 964، استخدمه كما هو
+    if (cleanNumber.startsWith('964')) {
+      return cleanNumber;
+    }
+    
+    return cleanNumber;
+  };
+
+  // حساب تاريخ انتهاء صلاحية النقاط الافتراضي (سنة من تاريخ آخر طلب)
+  const getDefaultPointsExpiry = () => {
+    if (loyalty?.last_order_date) {
+      const lastOrderDate = new Date(loyalty.last_order_date);
+      const expiryDate = new Date(lastOrderDate);
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      return expiryDate;
+    }
+    return null;
+  };
+
+  const pointsExpiryDate = loyalty?.points_expiry_date 
+    ? new Date(loyalty.points_expiry_date)
+    : getDefaultPointsExpiry();
+
+  const whatsappNumber = formatWhatsAppNumber(customer.phone);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,10 +92,23 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">الهاتف:</span>
-                    <span>{customer.phone || 'غير متوفر'}</span>
+                  <div className="flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">الهاتف:</span>
+                      <span>{customer.phone || 'غير متوفر'}</span>
+                    </div>
+                    {whatsappNumber && (
+                      <a
+                        href={`https://wa.me/${whatsappNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                        واتساب
+                      </a>
+                    )}
                   </div>
                   
                   {customer.email && (
@@ -91,23 +143,26 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                      </div>
                    )}
                    
-                   {/* صلاحية النقاط */}
-                   {loyalty?.points_expiry_date && loyalty?.total_points > 0 && (
-                     <div className="flex items-center gap-2">
-                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                       <span className="font-medium">صلاحية النقاط:</span>
-                       <Badge 
-                         className={`
-                           ${new Date(loyalty.points_expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                             ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400' 
-                             : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400'
-                           } border
-                         `}
-                       >
-                         {format(new Date(loyalty.points_expiry_date), 'd MMM yyyy', { locale: ar })}
-                       </Badge>
-                     </div>
-                   )}
+                    {/* صلاحية النقاط */}
+                    {loyalty?.total_points > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">صلاحية النقاط:</span>
+                        <Badge 
+                          className={`
+                            ${pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                              ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400' 
+                              : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400'
+                            } border
+                          `}
+                        >
+                          {pointsExpiryDate 
+                            ? format(pointsExpiryDate, 'd MMM yyyy', { locale: ar })
+                            : 'سنة واحدة من آخر طلب'
+                          }
+                        </Badge>
+                      </div>
+                    )}
                  </div>
               </CardContent>
             </Card>
