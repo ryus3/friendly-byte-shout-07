@@ -417,9 +417,6 @@ export const SuperProvider = ({ children }) => {
         }
         return; // لا إعادة جلب للطلبات الذكية
       }
-        }
-        return;
-      }
 
       // تمرير إشعار للإستماع المنفصل
       if (table === 'notifications' && payload.eventType === 'INSERT') {
