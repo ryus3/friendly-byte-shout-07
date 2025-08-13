@@ -145,6 +145,34 @@ const Dashboard = () => {
         pendingRegs: false,
         aiOrders: false,
     });
+
+    // إضافة listener للتحديثات اللحظية للطلبات الذكية
+    useEffect(() => {
+        const handleAiOrderCreated = (event) => {
+            console.log('🔥 AI Order Created Event:', event.detail);
+            // تحديث فوري للإحصائيات
+        };
+
+        const handleAiOrderUpdated = (event) => {
+            console.log('🔥 AI Order Updated Event:', event.detail);
+            // تحديث فوري للإحصائيات
+        };
+
+        const handleAiOrderDeleted = (event) => {
+            console.log('🔥 AI Order Deleted Event:', event.detail);
+            // تحديث فوري للإحصائيات
+        };
+
+        window.addEventListener('aiOrderCreated', handleAiOrderCreated);
+        window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
+        window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+
+        return () => {
+            window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
+            window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
+            window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+        };
+    }, []);
     
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
     const [topProductsOpen, setTopProductsOpen] = useState(false);
@@ -599,7 +627,7 @@ const Dashboard = () => {
             <Helmet><title>لوحة التحكم - RYUS</title></Helmet>
             <AnimatePresence>
                 {dialogs.pendingRegs && <PendingRegistrations onClose={() => setDialogs(d => ({ ...d, pendingRegs: false }))} />}
-                {dialogs.aiOrders && <AiOrdersManager onClose={() => setDialogs(d => ({ ...d, aiOrders: false }))} />}
+                {dialogs.aiOrders && <AiOrdersManager open={dialogs.aiOrders} onClose={() => setDialogs(d => ({ ...d, aiOrders: false }))} />}
                 {dialog.open && (
                     <SummaryDialog
                         open={dialog.open}

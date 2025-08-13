@@ -34,7 +34,7 @@ import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
-const AiOrdersManager = ({ onClose, highlightId }) => {
+const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
@@ -327,6 +327,9 @@ useEffect(() => {
       setSelectedOrders([]);
     }
   };
+
+  // عدم عرض الحوار إذا لم يكن مفتوحاً
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
