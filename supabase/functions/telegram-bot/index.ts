@@ -954,6 +954,16 @@ function normalizeDigits(input: string): string {
   return input.replace(/[٠-٩]/g, (d) => map[d] || d);
 }
 
+// تحويل بعض الكلمات العربية إلى رموز مقاسات قبل المطابقة
+function preNormalizeSizeTokens(input: string): string {
+  const t = normalizeDigits(String(input)).toLowerCase();
+  return t
+    .replace(/ا\s*ك\s*س\s*ي\s*ن(?:\s*لارج)?/g, '2xl')
+    .replace(/اكسين(?:\s*لارج)?/g, '2xl')
+    .replace(/دبل\s*اكس/g, '2xl')
+    .replace(/ثلاث(?:ة)?\s*اكس/g, '3xl');
+}
+
 // تطبيع المقاسات إلى صيغة قياسية (S, M, L, XL, XXL, XXXL)
 function normalizeSizeLabel(input?: string | null): string {
   if (!input) return '';
@@ -994,7 +1004,7 @@ function sizeSynonymsRegex(): RegExp {
 }
 
 function detectStandardSize(text: string): string | null {
-  const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
+  const t = preNormalizeSizeTokens(text).replace(/\s+/g, ' ').trim();
   // أنماط XL المتعددة
   if (/(^|\s)((?:اكس\s*){3}(?:لارج)?|x\s*x\s*x\s*l|xxx\s*l|3\s*اكس|٣\s*اكس|3xl|٣xl)(\s|$)/i.test(t)) return 'XXXL';
   if (/(^|\s)((?:اكس\s*){2}(?:لارج)?|2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين(?:\s*لارج)?|دبل\s*اكس)(\s|$)/i.test(t)) return 'XXL';
