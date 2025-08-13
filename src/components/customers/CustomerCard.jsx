@@ -23,28 +23,22 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { normalizePhone } from '@/utils/phoneUtils';
 
-// دالة تنسيق رقم الواتساب للرابط - حل نهائي
-const formatWhatsAppLink = (phone) => {
-  if (!phone) return null;
+// دالة تنسيق رقم الواتساب للعراق - تحويل موحد
+const formatWhatsAppNumber = (phone) => {
+  if (!phone) return '';
   
-  // تنظيف الرقم من أي رموز
-  let cleanNumber = String(phone).replace(/[^\d]/g, '');
+  // استخدام دالة التطبيع الموحدة من phoneUtils
+  const normalized = normalizePhone(phone);
+  if (!normalized) return '';
   
-  // إزالة كود البلد إذا كان موجود
-  if (cleanNumber.startsWith('00964')) {
-    cleanNumber = cleanNumber.substring(5);
-  } else if (cleanNumber.startsWith('964')) {
-    cleanNumber = cleanNumber.substring(3);
+  // تحويل من 07728020024 إلى 9647728020024
+  if (normalized.startsWith('0') && normalized.length === 11) {
+    return '964' + normalized.substring(1);
   }
   
-  // إزالة الصفر من البداية إذا كان موجود
-  if (cleanNumber.startsWith('0')) {
-    cleanNumber = cleanNumber.substring(1);
-  }
-  
-  // إضافة كود العراق
-  return '964' + cleanNumber;
+  return normalized;
 };
 
 const CustomerCard = ({ 
@@ -379,22 +373,22 @@ const CustomerCard = ({
                التفاصيل
              </Button>
              
-               {customer.phone ? (
-                 <a
-                   href={`https://wa.me/${formatWhatsAppLink(customer.phone)}?text=مرحباً ${customer.name || 'عزيزي العميل'}، أتواصل معك من خلال متجرنا`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   title={`إرسال رسالة واتساب إلى ${customer.phone}`}
-                 >
-                   <Button
-                     variant="outline"
-                     size="sm"
-                     className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
-                   >
+                {customer.phone ? (
+                  <a
+                    href={`https://wa.me/${formatWhatsAppNumber(customer.phone)}?text=مرحباً ${customer.name || 'عزيزي العميل'}، أتواصل معك من خلال متجرنا`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`إرسال رسالة واتساب إلى ${customer.phone}`}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
+                    >
                       <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-                      <span className="mr-1">{formatWhatsAppLink(customer.phone)}</span>
-                   </Button>
-                 </a>
+                      <span className="mr-1">{formatWhatsAppNumber(customer.phone)}</span>
+                    </Button>
+                  </a>
                ) : (
                  <Button
                    variant="outline"
