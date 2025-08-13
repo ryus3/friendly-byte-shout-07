@@ -1,12 +1,11 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.d5846899fdcf4512951eed232156255d',
-  appName: 'نظام RYUS للمخزون',
+  appId: 'app.lovable.5a9f8315d7f447089260f85606ca37a8',
+  appName: 'نظام RYUS',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
-    url: 'https://d5846899-fdcf-4512-951e-ed232156255d.lovableproject.com?forceHideBadge=true',
+    url: 'https://5a9f8315-d7f4-4708-9260-f85606ca37a8.lovableproject.com?forceHideBadge=true',
     cleartext: true
   },
   plugins: {
