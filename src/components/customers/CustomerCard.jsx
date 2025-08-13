@@ -385,32 +385,33 @@ const CustomerCard = ({
                التفاصيل
              </Button>
              
-              {customer.phone ? (
-                <a
-                  href={`https://wa.me/${formatWhatsAppLink(customer.phone)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={`إرسال رسالة واتساب إلى ${customer.phone}`}
-                >
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
-                  >
-                    <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-                  </Button>
-                </a>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled
-                  className="group/btn opacity-50"
-                  title="رقم الهاتف غير متوفر"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-              )}
+               {customer.phone ? (
+                 <a
+                   href={`https://wa.me/${formatWhatsAppLink(customer.phone)}?text=مرحباً ${customer.name || 'عزيزي العميل'}، أتواصل معك من خلال متجرنا`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   title={`إرسال رسالة واتساب إلى ${customer.phone}`}
+                 >
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
+                   >
+                     <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
+                     <span className="mr-1">{customer.phone}</span>
+                   </Button>
+                 </a>
+               ) : (
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   disabled
+                   className="group/btn opacity-50"
+                   title="رقم الهاتف غير متوفر"
+                 >
+                   <MessageCircle className="h-4 w-4" />
+                 </Button>
+               )}
              
              <Button
                variant="outline"
