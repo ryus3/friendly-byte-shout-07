@@ -130,11 +130,7 @@ class SuperAPI {
   invalidate(key) {
     this.cache.delete(key);
     this.timestamps.delete(key);
-    // تنظيف النسخة المحفوظة محلياً أيضاً حتى لا نظهر بيانات قديمة
-    if (typeof window !== 'undefined') {
-      try { localStorage.removeItem(this.persistPrefix + key); } catch {}
-    }
-    console.log(`🗑️ تم حذف cache: ${key} (بما في ذلك التخزين المحلي)`);
+    console.log(`🗑️ تم حذف cache: ${key}`);
   }
 
   // حذف جميع البيانات

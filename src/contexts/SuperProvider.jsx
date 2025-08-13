@@ -358,11 +358,14 @@ export const SuperProvider = ({ children }) => {
     const reloadTimerRef = { current: null };
 
     const handleRealtimeUpdate = (table, payload) => {
-      // إزالة التأخير المبالغ فيه: جلب فوري تقريباً
+      console.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
+      // منع الإغراق بالطلبات: تأجيل وإلغاء السابق
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
+        // تبريد لمنع التكرار السريع
+        if (Date.now() - (lastFetchAtRef.current || 0) < 1500) return;
         fetchAllData();
-      }, 100);
+      }, 800);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
