@@ -252,23 +252,22 @@ const NotificationsPanel = () => {
         navigate('/inventory?filter=low_stock');
       }
     } else if (notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
-      // لطلبات الموظفين - توجيه لصفحة متابعة الموظفين
-      if (notification.type === 'new_order_employee') {
-        const data = notification.data || {};
-        const orderId = data.order_id;
-        const employeeName = data.employee_name;
-        console.log('🔔 إشعار طلب موظف:', { orderId, employeeName, data });
-        navigate(`/employee-follow-up?highlight=${orderId}`);
-      } else {
-        // استخراج رقم الطلب من الرسالة
-        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
-        const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-        if (orderNumber) {
-          navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
-        } else {
-          navigate('/orders?status=pending');
-        }
+      // استخراج بيانات الطلب: نحاول من data أولاً ثم من النص
+      const data = notification.data || {};
+      const orderId = data.order_id || data.id || null;
+      const orderNumberFromData = data.order_number || data.orderNo || null;
+      let orderNumber = orderNumberFromData;
+      if (!orderNumber) {
+        const orderMatch = notification.message.match(/ORD\d+/) || notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+        orderNumber = orderMatch ? (orderMatch[0] || orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
       }
+      // افتح صفحة متابعة الطلبات مع تمرير رقم الطلب وتظليل السجل
+      const query = new URLSearchParams();
+      if (orderNumber) query.set('order', orderNumber);
+      if (orderId) query.set('highlight', orderId);
+      navigate(`/employee-follow-up?${query.toString()}`);
+      // اطلب تحديثاً فورياً احتياطياً
+      window.dispatchEvent(new CustomEvent('orderCreated', { detail: { id: orderId, orderNumber } }));
     } else if (notification.type === 'order_completed') {
       // استخراج رقم الطلب المكتمل
       const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
@@ -358,14 +357,15 @@ const NotificationsPanel = () => {
     }
   };
 
-  // دمج الإشعارات من النظامين مع إزالة التكرار
+  // دمج الإشعارات من النظامين مع إزالة التكرار القوي (حسب النوع والعنوان والنص)
   const merged = [
     ...notifications.filter(n => n.type !== 'welcome'),
     ...systemNotifications
   ];
+  const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
   const uniqueMap = new Map();
   for (const n of merged) {
-    const key = n.id || `${n.type}|${n.title}|${n.message}|${new Date(n.created_at).toISOString().slice(0,16)}`;
+    const key = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
     if (!uniqueMap.has(key)) uniqueMap.set(key, n);
   }
   const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));

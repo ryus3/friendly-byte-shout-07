@@ -78,6 +78,8 @@ const OrderList = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
+            data-order-id={order.id}
+            data-order-number={order.order_number}
           >
             <MemoizedOrderCard
               order={order}

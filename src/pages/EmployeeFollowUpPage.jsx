@@ -35,6 +35,7 @@ const EmployeeFollowUpPage = () => {
     calculateManagerProfit, 
     calculateProfit, 
     updateOrder, 
+    refreshOrders,
     refetchProducts, 
     settlementInvoices, 
     deleteOrders,
@@ -48,6 +49,7 @@ const EmployeeFollowUpPage = () => {
   const employeeFromUrl = searchParams.get('employee');
   const ordersFromUrl = searchParams.get('orders');
   const highlightFromUrl = searchParams.get('highlight');
+  const orderNumberFromUrl = searchParams.get('order');
   
   // الفلاتر - تطبيق URL فوراً إذا كان من التحاسب وإضافة فلتر الفترة
   const [filters, setFilters] = useState({
@@ -260,8 +262,8 @@ const EmployeeFollowUpPage = () => {
         },
         (payload) => {
           console.log('🔄 Real-time update for orders:', payload);
-          // إعادة تحديث الطلبات
-          refetchProducts && refetchProducts();
+          // إعادة تحديث الطلبات فوراً
+          refreshOrders && refreshOrders();
         }
       )
       .subscribe();
@@ -418,6 +420,19 @@ const filteredOrders = useMemo(() => {
   
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+
+  // تحديد وإبراز طلب عند الوصول من الإشعار برقم الطلب
+  useEffect(() => {
+    if (!orderNumberFromUrl || !Array.isArray(orders) || orders.length === 0) return;
+    const found = orders.find(o => o?.order_number === orderNumberFromUrl || o?.id === orderNumberFromUrl);
+    if (found) {
+      setSelectedOrders(prev => (prev.includes(found.id) ? prev : [...prev, found.id]));
+      setTimeout(() => {
+        const el = document.querySelector(`[data-order-id="${found.id}"]`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [orderNumberFromUrl, orders]);
 
   // الإحصائيات
   const stats = useMemo(() => {
