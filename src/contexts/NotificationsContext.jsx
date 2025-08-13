@@ -88,7 +88,7 @@ export const NotificationsProvider = ({ children }) => {
                 if (isAdmin) {
                     shouldShow = true;
                 } else {
-                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'cash_correction', 'balance_correction', 'main_cash_correction'];
+                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'cash_correction', 'balance_correction', 'main_cash_correction', 'ai_order'];
                     if (!adminOnlyGlobalTypes.includes(newNotification.type)) {
                         shouldShow = true;
                     }

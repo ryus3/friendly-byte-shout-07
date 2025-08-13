@@ -6,17 +6,25 @@ import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
-  const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading, error } = useOrdersAnalytics();
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const { analytics, loading, error, setDateRange } = useOrdersAnalytics();
 
   const periods = [
-    { key: 'week', label: 'الأسبوع الماضي' },
     { key: 'month', label: 'الشهر الماضي' },
     { key: '3months', label: '3 أشهر' },
-    { key: '6months', label: '6 أشهر' },
     { key: 'year', label: 'السنة الماضية' },
     { key: 'all', label: 'كل الفترات' }
   ];
+  // ربط الفلترة الحقيقية عبر hook التحليلات
+  useEffect(() => {
+    const now = new Date();
+    let start, end = now;
+    if (selectedPeriod === 'month') start = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    else if (selectedPeriod === '3months') start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+    else if (selectedPeriod === 'year') start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    else start = new Date(1970, 0, 1);
+    setDateRange({ start: start.toISOString(), end: end.toISOString() });
+  }, [selectedPeriod, setDateRange]);
 
   // استخدام البيانات من useOrdersAnalytics مع أسماء الحقول الصحيحة
   const provinceStats = analytics.topProvinces || [];
