@@ -363,7 +363,10 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     let allowAllProducts = false;
     let allowedDeptIds: string[] = [];
     let allowedCategoryIds: string[] = [];
+    let allowedProductTypeIds: string[] = [];
+    let allowedSeasonOccasionIds: string[] = [];
     let allowedProductIds: string[] = [];
+    let permissionsLoaded = false;
     
     if (employee?.user_id) {
       try {
@@ -371,62 +374,56 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         allowAllProducts = (role === 'admin' || role === 'manager');
         
         if (!allowAllProducts) {
-          // صلاحيات الأقسام
-          const { data: deptPerm } = await supabase
+          // جلب جميع صلاحيات المنتجات للموظف في استعلام واحد
+          const { data: allPermissions } = await supabase
             .from('user_product_permissions')
-            .select('has_full_access, allowed_items')
-            .eq('user_id', employee.user_id)
-            .eq('permission_type', 'department')
-            .maybeSingle();
+            .select('permission_type, has_full_access, allowed_items')
+            .eq('user_id', employee.user_id);
             
-          if (deptPerm) {
-            if ((deptPerm as any).has_full_access) {
-              allowAllProducts = true;
-            } else if (Array.isArray((deptPerm as any).allowed_items)) {
-              allowedDeptIds = ((deptPerm as any).allowed_items as any[]).map((id: any) => String(id));
-            }
-          }
-
-          // صلاحيات التصنيفات - IMPORTANT: هذا يتحكم في المنتجات الرجالية/النسائية
-          if (!allowAllProducts) {
-            const { data: categoryPerm } = await supabase
-              .from('user_product_permissions')
-              .select('has_full_access, allowed_items')
-              .eq('user_id', employee.user_id)
-              .eq('permission_type', 'category')
-              .maybeSingle();
-              
-            if (categoryPerm) {
-              if ((categoryPerm as any).has_full_access) {
+          if (allPermissions && allPermissions.length > 0) {
+            permissionsLoaded = true;
+            
+            for (const perm of allPermissions) {
+              if (perm.has_full_access) {
+                // إذا كان لديه صلاحية كاملة لأي نوع، فهو يستطيع الوصول لكل شيء
                 allowAllProducts = true;
-              } else if (Array.isArray((categoryPerm as any).allowed_items)) {
-                allowedCategoryIds = ((categoryPerm as any).allowed_items as any[]).map((id: any) => String(id));
-              }
-            }
-          }
-          
-          // صلاحيات المنتجات الفردية
-          if (!allowAllProducts) {
-            const { data: prodPerm } = await supabase
-              .from('user_product_permissions')
-              .select('has_full_access, allowed_items')
-              .eq('user_id', employee.user_id)
-              .eq('permission_type', 'product')
-              .maybeSingle();
-              
-            if (prodPerm) {
-              if ((prodPerm as any).has_full_access) {
-                allowAllProducts = true;
-              } else if (Array.isArray((prodPerm as any).allowed_items)) {
-                allowedProductIds = ((prodPerm as any).allowed_items as any[]).map((id: any) => String(id));
+                break;
+              } else if (Array.isArray(perm.allowed_items)) {
+                const items = perm.allowed_items.map((id: any) => String(id));
+                
+                switch (perm.permission_type) {
+                  case 'department':
+                    allowedDeptIds = items;
+                    break;
+                  case 'category':
+                    allowedCategoryIds = items;
+                    break;
+                  case 'product_type':
+                    allowedProductTypeIds = items;
+                    break;
+                  case 'season_occasion':
+                    allowedSeasonOccasionIds = items;
+                    break;
+                  case 'product':
+                    allowedProductIds = items;
+                    break;
+                }
               }
             }
           }
         }
         
-        console.log(`🔐 Employee ${employeeCode} permissions: allowAll=${allowAllProducts}, departments=[${allowedDeptIds.join(',')}], products=[${allowedProductIds.join(',')}]`);
+        console.log(`🔐 Employee ${employeeCode} permissions:`, {
+          allowAll: allowAllProducts,
+          permissionsLoaded,
+          departments: allowedDeptIds,
+          categories: allowedCategoryIds,
+          productTypes: allowedProductTypeIds,
+          seasonOccasions: allowedSeasonOccasionIds,
+          products: allowedProductIds
+        });
       } catch (err) {
-        console.error('Error getting employee permissions:', err);
+        console.error('❌ Error getting employee permissions:', err);
       }
     }
 
