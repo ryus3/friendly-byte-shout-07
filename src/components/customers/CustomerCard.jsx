@@ -32,12 +32,12 @@ const formatWhatsAppLink = (phone) => {
   
   // إذا بدأ بـ 07 (الصيغة المحلية العراقية)
   if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
-    return '964' + cleanNumber.substring(1);
+    return '9647' + cleanNumber.substring(2); // نأخذ من الرقم الثاني بعد 07
   }
   
   // إذا بدأ بـ 7 فقط وطوله 10 أرقام
   if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
-    return '964' + cleanNumber;
+    return '9647' + cleanNumber.substring(1);
   }
   
   // إذا بدأ بـ 964 مسبقاً
@@ -50,7 +50,7 @@ const formatWhatsAppLink = (phone) => {
     return cleanNumber.substring(2);
   }
   
-  return '964' + cleanNumber.replace(/^0/, '');
+  return '9647' + cleanNumber.replace(/^07/, '').replace(/^7/, '').replace(/^0/, '');
 };
 
 const CustomerCard = ({ 
