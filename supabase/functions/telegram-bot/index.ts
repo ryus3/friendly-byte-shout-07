@@ -359,72 +359,29 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const defaultDeliveryFee = Number(settingsData?.value) || 5000;
     const currentDeliveryFee = defaultDeliveryFee;
 
-    // صلاحيات الأقسام والمنتجات للموظف - CRITICAL SECURITY
+    // صلاحيات الأقسام للموظف
     let allowAllProducts = false;
     let allowedDeptIds: string[] = [];
-    let allowedCategoryIds: string[] = [];
-    let allowedProductTypeIds: string[] = [];
-    let allowedSeasonOccasionIds: string[] = [];
-    let allowedProductIds: string[] = [];
-    let permissionsLoaded = false;
-    
     if (employee?.user_id) {
       try {
         const role = await determineUserRole(employee.user_id);
         allowAllProducts = (role === 'admin' || role === 'manager');
-        
         if (!allowAllProducts) {
-          // جلب جميع صلاحيات المنتجات للموظف في استعلام واحد
-          const { data: allPermissions } = await supabase
+          const { data: deptPerm } = await supabase
             .from('user_product_permissions')
-            .select('permission_type, has_full_access, allowed_items')
-            .eq('user_id', employee.user_id);
-            
-          if (allPermissions && allPermissions.length > 0) {
-            permissionsLoaded = true;
-            
-            for (const perm of allPermissions) {
-              if (perm.has_full_access) {
-                // إذا كان لديه صلاحية كاملة لأي نوع، فهو يستطيع الوصول لكل شيء
-                allowAllProducts = true;
-                break;
-              } else if (Array.isArray(perm.allowed_items)) {
-                const items = perm.allowed_items.map((id: any) => String(id));
-                
-                switch (perm.permission_type) {
-                  case 'department':
-                    allowedDeptIds = items;
-                    break;
-                  case 'category':
-                    allowedCategoryIds = items;
-                    break;
-                  case 'product_type':
-                    allowedProductTypeIds = items;
-                    break;
-                  case 'season_occasion':
-                    allowedSeasonOccasionIds = items;
-                    break;
-                  case 'product':
-                    allowedProductIds = items;
-                    break;
-                }
-              }
+            .select('has_full_access, allowed_items')
+            .eq('user_id', employee.user_id)
+            .eq('permission_type', 'department')
+            .maybeSingle();
+          if (deptPerm) {
+            if ((deptPerm as any).has_full_access) {
+              allowAllProducts = true;
+            } else if (Array.isArray((deptPerm as any).allowed_items)) {
+              allowedDeptIds = ((deptPerm as any).allowed_items as any[]).map((id: any) => String(id));
             }
           }
         }
-        
-        console.log(`🔐 Employee ${employeeCode} permissions:`, {
-          allowAll: allowAllProducts,
-          permissionsLoaded,
-          departments: allowedDeptIds,
-          categories: allowedCategoryIds,
-          productTypes: allowedProductTypeIds,
-          seasonOccasions: allowedSeasonOccasionIds,
-          products: allowedProductIds
-        });
-      } catch (err) {
-        console.error('❌ Error getting employee permissions:', err);
-      }
+      } catch (_) {}
     }
 
     let phoneFound = false;
@@ -613,10 +570,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
             product_departments (
               department_id,
               departments (id, name)
-            ),
-            product_categories (
-              category_id,
-              categories (id, name)
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -645,10 +598,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                 product_departments (
                   department_id,
                   departments (id, name)
-                ),
-                product_categories (
-                  category_id,
-                  categories (id, name)
                 )
               `)
               .or(searchQuery)
@@ -673,136 +622,19 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               bestMatch = product;
               break;
             }
-            }
           }
-
-          // التحقق الشامل من صلاحيات المنتج - CRITICAL SECURITY
-          if (!allowAllProducts && bestMatch) {
-            // فحص صلاحيات الأقسام
-            if (allowedDeptIds.length > 0) {
-              const productDeptIds = (bestMatch.product_departments || []).map((pd: any) => String(pd.department_id));
-              const hasAllowedDept = productDeptIds.some((deptId: string) => allowedDeptIds.includes(deptId));
-              if (productDeptIds.length > 0 && !hasAllowedDept) {
-                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Department restriction`);
-                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا القسم للمنتج "${bestMatch.name}"`);
-                item.available = false;
-                item.availability = 'not_permitted';
-                continue;
-              }
-            }
-
-            // فحص صلاحيات التصنيفات
-            if (allowedCategoryIds.length > 0) {
-              const productCategoryIds = (bestMatch.product_categories || []).map((pc: any) => String(pc.category_id));
-              const hasAllowedCategory = productCategoryIds.some((catId: string) => allowedCategoryIds.includes(catId));
-              if (productCategoryIds.length > 0 && !hasAllowedCategory) {
-                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Category restriction`);
-                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا التصنيف للمنتج "${bestMatch.name}"`);
-                item.available = false;
-                item.availability = 'not_permitted';
-                continue;
-              }
-            }
-
-            // فحص صلاحيات أنواع المنتجات  
-            if (allowedProductTypeIds.length > 0) {
-              const { data: productTypes } = await supabase
-                .from('product_product_types')
-                .select('product_type_id')
-                .eq('product_id', bestMatch.id);
-              
-              const productTypeIds = (productTypes || []).map((ppt: any) => String(ppt.product_type_id));
-              const hasAllowedType = productTypeIds.some((typeId: string) => allowedProductTypeIds.includes(typeId));
-              if (productTypeIds.length > 0 && !hasAllowedType) {
-                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Product type restriction`);
-                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا النوع من المنتجات للمنتج "${bestMatch.name}"`);
-                item.available = false;
-                item.availability = 'not_permitted';
-                continue;
-              }
-            }
-
-            // فحص صلاحيات المواسم والمناسبات
-            if (allowedSeasonOccasionIds.length > 0) {
-              const { data: productSeasons } = await supabase
-                .from('product_seasons_occasions')
-                .select('season_occasion_id')
-                .eq('product_id', bestMatch.id);
-              
-              const seasonIds = (productSeasons || []).map((pso: any) => String(pso.season_occasion_id));
-              const hasAllowedSeason = seasonIds.some((seasonId: string) => allowedSeasonOccasionIds.includes(seasonId));
-              if (seasonIds.length > 0 && !hasAllowedSeason) {
-                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Season/occasion restriction`);
-                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا الموسم أو المناسبة للمنتج "${bestMatch.name}"`);
-                item.available = false;
-                item.availability = 'not_permitted';
-                continue;
-              }
-            }
-
-            // فحص صلاحيات المنتجات المحددة
-            if (allowedProductIds.length > 0) {
-              if (!allowedProductIds.includes(String(bestMatch.id))) {
-                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Specific product restriction`);
-                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا المنتج تحديداً "${bestMatch.name}"`);
-                item.available = false;
-                item.availability = 'not_permitted';
-                continue;
-              }
-            }
-          }
-            if (!permissionCheck.allowed) {
-              console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: ${permissionCheck.reason}, Scope: ${permissionCheck.scope}`);
-              
-              // رد للمستخدم يخبره أنه ليس لديه صلاحية
-              await sendTelegramMessage(chatId, `❌ عذراً، ${permissionCheck.reason} للمنتج "${bestMatch.name}"`);
-              
+        }
+        
+        if (bestMatch) {
+          // التحقق من صلاحيات الأقسام قبل المتابعة
+          if (!allowAllProducts) {
+            const productDeptIds = ((bestMatch as any).product_departments || []).map((pd: any) => String(pd?.department_id || pd?.departments?.id || '')).filter(Boolean);
+            const intersect = productDeptIds.filter((id: string) => allowedDeptIds.includes(id));
+            // لا تقيّد بالأقسام إذا لم يُحدد للمستخدم أقسام مسموحة أصلاً
+            if ((allowedDeptIds && allowedDeptIds.length > 0) && productDeptIds.length > 0 && intersect.length === 0) {
               item.available = false;
               item.availability = 'not_permitted';
-              (item as any).permission_scope = { 
-                scope: permissionCheck.scope, 
-                employee_code: employeeCode,
-                product_name: bestMatch.name,
-                reason: permissionCheck.reason
-              };
-              item.price = 0;
-              continue;
-            }
-          }
-
-          // التحقق من صلاحيات المنتجات الفردية - ADDITIONAL SECURITY CHECK
-          if (!allowAllProducts && allowedProductIds.length > 0) {
-            const productId = String(bestMatch.id);
-            if (!allowedProductIds.includes(productId)) {
-              console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name} (ID: ${productId}). Allowed products: [${allowedProductIds.join(',')}]`);
-              item.available = false;
-              item.availability = 'not_permitted';
-              (item as any).permission_scope = { 
-                scope: 'product', 
-                allowed: allowedProductIds, 
-                product_id: productId,
-                employee_code: employeeCode,
-                product_name: bestMatch.name,
-                reason: 'individual_product_restriction'
-              };
-              item.price = 0;
-              continue;
-            }
-          }
-            
-            // إذا لم يُحدد للمنتج أقسام ولكن للموظف قيود، ارفض الوصول
-            if (productDeptIds.length === 0 && allowedDeptIds.length > 0) {
-              console.log(`❌ PERMISSION DENIED: Employee ${employeeCode} attempted to access uncategorized product ${bestMatch.name}. Employee has department restrictions.`);
-              item.available = false;
-              item.availability = 'not_permitted';
-              (item as any).permission_scope = { 
-                scope: 'department', 
-                allowed: allowedDeptIds, 
-                product_departments: [],
-                employee_code: employeeCode,
-                product_name: bestMatch.name,
-                reason: 'uncategorized_product_restricted_user'
-              };
+              (item as any).permission_scope = { scope: 'department', allowed: allowedDeptIds, product_departments: productDeptIds };
               item.price = 0;
               continue;
             }
@@ -954,7 +786,7 @@ const warnList = (unavailableItems.length ? unavailableItems : items).map(item =
       if (rq >= sq && sq > 0) return ` — ${variantDesc ? `${variantDesc} محجوز بالكامل` : 'محجوز بالكامل'}`;
       return ` — غير متاح حالياً${variantDesc ? ` (${variantDesc})` : ''}`;
     }
-    if (item.availability === 'not_permitted') return ' — ⛔ هذا المنتج غير ضمن صلاحياتك كموظف';
+    if (item.availability === 'not_permitted') return ' — هذا المنتج غير ضمن صلاحياتك';
     if (item.availability === 'not_found') return ' — لا يوجد هكذا منتج لدينا رجاءا';
     return '';
   })();
@@ -972,35 +804,23 @@ const totalAvailable = availableItems.reduce((sum, item) => sum + ((item.price |
 const deliveryFeeApplied = (deliveryType === 'توصيل') ? Number(currentDeliveryFee || 0) : 0;
 const totalWithDelivery = totalAvailable + deliveryFeeApplied;
 
-// فحص وجود منتجات مرفوضة بسبب الصلاحيات
-const permissionDeniedItems = unavailableItems.filter(item => item.availability === 'not_permitted');
-const hasPermissionIssues = permissionDeniedItems.length > 0;
-
 let message = '';
 if (unavailableItemsCount > 0 && availableItemsCount > 0) {
-  const warningText = hasPermissionIssues ? 
-    '⚠️ بعض المنتجات ليست ضمن صلاحياتك كموظف. الرجاء التواصل مع المدير لتعديل الصلاحيات.' :
-    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة';
-    
+message = [
+  '⚠️ تنبيه توفر',
+  `📱 الهاتف : ${customerPhone || '—'}`,
+  okList,
+  warnList,
+  '',
+  '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
+].join('\n');
+} else if (unavailableItemsCount > 0) {
   message = [
     '⚠️ تنبيه توفر',
     `📱 الهاتف : ${customerPhone || '—'}`,
-    okList,
     warnList,
     '',
-    warningText
-  ].join('\n');
-} else if (unavailableItemsCount > 0) {
-  const warningText = hasPermissionIssues ? 
-    '⛔ جميع المنتجات المطلوبة ليست ضمن صلاحياتك. الرجاء التواصل مع المدير أو اختيار منتجات أخرى.' :
-    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة';
-    
-  message = [
-    hasPermissionIssues ? '⛔ رفض صلاحيات' : '⚠️ تنبيه توفر',
-    `📱 الهاتف : ${customerPhone || '—'}`,
-    warnList,
-    '',
-    warningText
+    '⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة'
   ].join('\n');
 } else {
   message = [
@@ -1010,31 +830,6 @@ if (unavailableItemsCount > 0 && availableItemsCount > 0) {
     okList,
     `• المبلغ الاجمالي : ${totalWithDelivery.toLocaleString()} د.ع`
   ].join('\n');
-}
-
-// إضافة تنبيه خاص للموظفين عند وجود مشاكل صلاحيات
-if (hasPermissionIssues) {
-  const employeeName = employee?.full_name || employeeCode;
-  console.log(`🚨 SECURITY ALERT: Employee ${employeeName} (${employeeCode}) attempted to access ${permissionDeniedItems.length} unauthorized product(s) via Telegram bot`);
-  
-  // إضافة إشعار للمديرين
-  try {
-    await supabase.from('notifications').insert({
-      title: 'محاولة وصول غير مصرح بها',
-      message: `الموظف ${employeeName} (${employeeCode}) حاول الوصول لمنتجات ليست ضمن صلاحياته عبر بوت التليغرام`,
-      type: 'security_alert',
-      priority: 'high',
-      data: {
-        employee_code: employeeCode,
-        employee_name: employeeName,
-        denied_products: permissionDeniedItems.map(item => item.product_name || item.name),
-        chat_id: chatId,
-        timestamp: new Date().toISOString()
-      }
-    });
-  } catch (notifError) {
-    console.error('Failed to create security notification:', notifError);
-  }
 }
 
 await sendTelegramMessage(chatId, message, 'HTML');
