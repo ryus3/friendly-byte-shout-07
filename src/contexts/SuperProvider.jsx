@@ -361,7 +361,7 @@ export const SuperProvider = ({ children }) => {
     const reloadTimerRef = { current: null };
 
     const handleRealtimeUpdate = (table, payload) => {
-      console.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
+      console.log(`🔄 SuperProvider: تحديث فوري في ${table}`, payload);
       if (table === 'ai_orders') {
         const type = payload.eventType;
         const rowNew = payload.new || {};
@@ -381,16 +381,38 @@ export const SuperProvider = ({ children }) => {
             aiOrders: (prev.aiOrders || []).filter(o => o.id !== rowOld.id)
           }));
         }
-        // لا تقم بإعادة الجلب للـ ai_orders لتجنب الوميض
         return;
       }
 
-      // للجداول الأخرى: إعادة جلب مهدَّأ
+      // تحديث مباشر للطلبات لضمان التزامن اللحظي
+      if (table === 'orders') {
+        const type = payload.eventType;
+        const rowNew = payload.new || {};
+        const rowOld = payload.old || {};
+        if (type === 'INSERT') {
+          setAllData(prev => ({ ...prev, orders: [rowNew, ...(prev.orders || [])] }));
+        } else if (type === 'UPDATE') {
+          setAllData(prev => ({
+            ...prev,
+            orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
+          }));
+        } else if (type === 'DELETE') {
+          setAllData(prev => ({ ...prev, orders: (prev.orders || []).filter(o => o.id !== rowOld.id) }));
+        }
+        return;
+      }
+
+      // تمرير إشعار للإستماع المنفصل
+      if (table === 'notifications' && payload.eventType === 'INSERT') {
+        window.dispatchEvent(new CustomEvent('notificationCreated', { detail: payload.new }));
+        return;
+      }
+
+      // غير ذلك: إعادة جلب سريعة لضمان الاتساق
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
-        if (Date.now() - (lastFetchAtRef.current || 0) < 1500) return;
         fetchAllData();
-      }, 800);
+      }, 300);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
