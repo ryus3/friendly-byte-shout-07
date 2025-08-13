@@ -17,7 +17,6 @@ import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
-import { toast } from '@/hooks/use-toast';
 import { 
   Users, 
   Search, 
@@ -59,7 +58,7 @@ const CustomersManagementPage = () => {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
 const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState('customers'); // customers | cityStats | cityDiscounts
+  const [activeTab, setActiveTab] = useState('customers');
   const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
 
   // Sample data for demonstration
@@ -305,9 +304,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       }
 
       // قراءة الجنس من جدول تصنيف الجنس في قاعدة البيانات
-      merged.gender_type = c.customer_gender_segments && c.customer_gender_segments.length > 0 
-        ? c.customer_gender_segments[0].gender_type 
-        : null;
+      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || null;
 
       return merged;
     });
@@ -345,13 +342,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     }
 
     if (genderFilter !== 'all') {
-      filtered = filtered.filter((customer) => {
-        // قراءة الجنس من customer_gender_segments
-        const genderType = customer.customer_gender_segments && customer.customer_gender_segments.length > 0 
-          ? customer.customer_gender_segments[0].gender_type 
-          : customer.gender_type;
-        return genderType === genderFilter;
-      });
+      filtered = filtered.filter((customer) => customer.gender_type === genderFilter);
     }
 
     if (loyaltyLevelFilter !== 'all') {
@@ -416,36 +407,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
   // قائمة المدن الفريدة لواجهة الفلترة
   const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
-  // معالج أزرار المكافآت
-  const handleRewardAction = (customer, actionType) => {
-    const actions = {
-      discount: `تطبيق خصم خاص للعميل ${customer.name}`,
-      free_delivery: `توصيل مجاني للعميل ${customer.name}`,
-      special_reward: `مكافأة خاصة للعميل ${customer.name}`
-    };
-    
-    toast({
-      title: "تم تنفيذ الإجراء",
-      description: actions[actionType],
-      duration: 3000
-    });
-  };
-
-  // معالج أزرار المكافآت
-  const handleRewardAction = (customer, actionType) => {
-    const actions = {
-      discount: `تطبيق خصم خاص للعميل ${customer.name}`,
-      free_delivery: `توصيل مجاني للعميل ${customer.name}`,
-      special_reward: `مكافأة خاصة للعميل ${customer.name}`
-    };
-    
-    toast({
-      title: "تم تنفيذ الإجراء",
-      description: actions[actionType],
-      duration: 3000
-    });
-  };
-
   const handleRefresh = () => {};
 
   // تصدير CSV شامل مع الجنس والمشتريات بدون التوصيل
@@ -1020,28 +981,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
           </Card>
         </motion.div>
 
-        {/* City Statistics Tab Content */}
-        {activeTab === 'cityStats' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <CityStatisticsContent customers={displayCustomers} orders={orders || []} />
-          </motion.div>
-        )}
-
-        {/* City Discounts Tab Content */}
-        {activeTab === 'cityDiscounts' && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <CityDiscountsContent data={cityDiscountsData} />
-          </motion.div>
-        )}
-
         {/* Customers Grid - Only show when customers tab is active */}
         {activeTab === 'customers' && (
           <motion.div
@@ -1121,16 +1060,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                           
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-muted-foreground">صلاحية النقاط:</span>
-                             <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-                               {customer.customer_loyalty?.points_expiry_date 
-                                 ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-EG', {
-                                     year: 'numeric',
-                                     month: '2-digit', 
-                                     day: '2-digit'
-                                   })
-                                 : 'غير محدد'
-                               }
-                             </Badge>
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                              {customer.customer_loyalty?.points_expiry_date ? new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar-IQ') : 'غير محدد'}
+                            </Badge>
                           </div>
                           
                           <div className="flex justify-between items-center">
@@ -1162,52 +1094,12 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                             <Button 
                               size="sm" 
                               className="w-full bg-green-500 hover:bg-green-600 text-white gap-2 rounded-lg"
-                              onClick={() => {
-                                toast({
-                                  title: `خصم ${loyaltyLevel.discount}%`,
-                                  description: `متاح لعضوية ${loyaltyLevel.name}`,
-                                  variant: "success"
-                                });
-                              }}
                             >
                               <Sparkles className="h-4 w-4" />
                               خصم {loyaltyLevel.discount}% شهرياً
                             </Button>
                           )}
-                          
                           {(loyaltyLevel.name === 'ذهبي' || loyaltyLevel.name === 'ماسي') && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
-                              onClick={() => {
-                                toast({
-                                  title: "توصيل مجاني",
-                                  description: `متاح لعضوية ${loyaltyLevel.name}`,
-                                  variant: "success"
-                                });
-                              }}
-                            >
-                              <Truck className="h-4 w-4" />
-                              توصيل مجاني
-                            </Button>
-                          )}
-                          
-                          {customer.customer_loyalty?.total_points >= 3000 && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-purple-500 hover:bg-purple-600 text-white gap-2 rounded-lg"
-                              onClick={() => {
-                                toast({
-                                  title: "🎁 مكافأة خاصة",
-                                  description: "مؤهل لمكافأة 3000 نقطة!",
-                                  variant: "success"
-                                });
-                              }}
-                            >
-                              <Gift className="h-4 w-4" />
-                              مكافأة خاصة
-                            </Button>
-                          )}
                             <Button 
                               size="sm" 
                               className="w-full bg-blue-500 hover:bg-blue-600 text-white gap-2 rounded-lg"
