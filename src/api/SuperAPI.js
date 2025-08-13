@@ -413,7 +413,7 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    const tables = ['orders', 'products', 'inventory', 'expenses', 'ai_orders'];
+    const tables = ['orders', 'products', 'inventory', 'expenses', 'ai_orders', 'notifications'];
     
     tables.forEach(table => {
       const channel = supabase
@@ -425,10 +425,13 @@ return this.fetch('all_data', async () => {
         }, (payload) => {
           console.log(`🔄 تحديث فوري في ${table}:`, payload);
           
-          // لا تبطل الكاش عند ai_orders لتجنب الوميض
-          if (table !== 'ai_orders') {
-            // حذف البيانات المحفوظة بشكل مجمّع لتقليل إعادة الجلب
-            this.debouncedInvalidateAll();
+          // معالجة فورية للطلبات والحذف بدون تأخير
+          if (table === 'orders' || table === 'ai_orders') {
+            // لا تبطل الكاش - دع SuperProvider يتعامل مع التحديث مباشرة
+            console.log(`⚡ تحديث فوري لـ ${table} - تجاوز الكاش`);
+          } else {
+            // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
+            this.debouncedInvalidateAll(200); // تقليل الوقت للاستجابة السريعة
           }
           
           if (callback) callback(table, payload);
@@ -438,7 +441,7 @@ return this.fetch('all_data', async () => {
       this.subscriptions.set(table, channel);
     });
     
-    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة');
+    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة مع التحديث المباشر');
   }
 
   /**
