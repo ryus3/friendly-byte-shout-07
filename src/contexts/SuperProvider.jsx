@@ -379,12 +379,14 @@ export const SuperProvider = ({ children }) => {
   // تحديث فوري أيضاً عبر أحداث المتصفح (احتياطي عند تأخر Realtime)
   useEffect(() => {
     const handler = () => { try { if (Date.now() - (lastFetchAtRef.current || 0) > 1500) fetchAllData(); } catch {} };
+    window.addEventListener('aiOrderCreated', handler);
     window.addEventListener('aiOrderApproved', handler);
     window.addEventListener('aiOrderDeleted', handler);
     window.addEventListener('orderCreated', handler);
     window.addEventListener('orderUpdated', handler);
     window.addEventListener('orderDeleted', handler);
     return () => {
+      window.removeEventListener('aiOrderCreated', handler);
       window.removeEventListener('aiOrderApproved', handler);
       window.removeEventListener('aiOrderDeleted', handler);
       window.removeEventListener('orderCreated', handler);
