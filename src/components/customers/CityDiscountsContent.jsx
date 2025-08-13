@@ -2,108 +2,58 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 import Loader from "@/components/ui/loader";
-import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown, Filter } from "lucide-react";
+import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
-import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns';
 
 const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthlyBenefits: initialMonthlyBenefits = [], topCities: initialTopCities = [] }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!(initialCityDiscounts.length || initialMonthlyBenefits.length || initialTopCities.length));
   const [cityDiscounts, setCityDiscounts] = useState(initialCityDiscounts);
   const [monthlyBenefits, setMonthlyBenefits] = useState(initialMonthlyBenefits);
   const [topCities, setTopCities] = useState(initialTopCities);
-  const [dateRange, setDateRange] = useState({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date())
-  });
 
-  const fetchCityDiscountsData = async (fromDate, toDate) => {
-    try {
-      setLoading(true);
-      
-      const fromMonth = fromDate.getMonth() + 1;
-      const fromYear = fromDate.getFullYear();
-      const toMonth = toDate.getMonth() + 1;
-      const toYear = toDate.getFullYear();
+  useEffect(() => {
+    const fetchCityDiscountsData = async () => {
+      try {
+        setLoading(!(cityDiscounts.length || monthlyBenefits.length || topCities.length));
+        const month = new Date().getMonth() + 1;
+        const year = new Date().getFullYear();
 
-      // جلب البيانات حسب النطاق الزمني
-      let discountsQuery = supabase
-        .from('city_random_discounts')
-        .select('*');
-      
-      let benefitsQuery = supabase
-        .from('city_monthly_benefits')
-        .select('*');
-      
-      let citiesQuery = supabase
-        .from('city_order_stats')
-        .select('*');
+        const { data: discounts } = await supabase
+          .from('city_random_discounts')
+          .select('*')
+          .eq('discount_month', month)
+          .eq('discount_year', year);
 
-      // إضافة فلترة حسب النطاق الزمني
-      if (fromYear === toYear && fromMonth === toMonth) {
-        discountsQuery = discountsQuery.eq('discount_month', fromMonth).eq('discount_year', fromYear);
-        benefitsQuery = benefitsQuery.eq('month', fromMonth).eq('year', fromYear);
-        citiesQuery = citiesQuery.eq('month', fromMonth).eq('year', fromYear);
-      } else {
-        // للنطاقات المتعددة الأشهر
-        const monthYearPairs = [];
-        let currentDate = new Date(fromYear, fromMonth - 1);
-        const endDate = new Date(toYear, toMonth - 1);
-        
-        while (currentDate <= endDate) {
-          monthYearPairs.push({
-            month: currentDate.getMonth() + 1,
-            year: currentDate.getFullYear()
-          });
-          currentDate.setMonth(currentDate.getMonth() + 1);
-        }
-        
-        const monthFilters = monthYearPairs.map(pair => `(month.eq.${pair.month},year.eq.${pair.year})`).join(',');
-        const discountFilters = monthYearPairs.map(pair => `(discount_month.eq.${pair.month},discount_year.eq.${pair.year})`).join(',');
-        
-        if (monthYearPairs.length > 1) {
-          discountsQuery = discountsQuery.or(discountFilters);
-          benefitsQuery = benefitsQuery.or(monthFilters);
-          citiesQuery = citiesQuery.or(monthFilters);
-        }
+        const { data: benefits } = await supabase
+          .from('city_monthly_benefits')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year);
+
+        const { data: cities } = await supabase
+          .from('city_order_stats')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year)
+          .order('total_amount', { ascending: false })
+          .limit(5);
+
+        setCityDiscounts(discounts || []);
+        setMonthlyBenefits(benefits || []);
+        setTopCities(cities || []);
+      } catch (e) {
+        console.error('Error fetching city discounts data:', e);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const [
-        { data: discounts },
-        { data: benefits },
-        { data: cities }
-      ] = await Promise.all([
-        discountsQuery,
-        benefitsQuery,
-        citiesQuery.order('total_amount', { ascending: false }).limit(10)
-      ]);
-
-      setCityDiscounts(discounts || []);
-      setMonthlyBenefits(benefits || []);
-      setTopCities(cities || []);
-    } catch (e) {
-      console.error('Error fetching city discounts data:', e);
-    } finally {
+    if (!(initialCityDiscounts.length && initialMonthlyBenefits.length && initialTopCities.length)) {
+      fetchCityDiscountsData();
+    } else {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    // عرض البيانات فوراً إذا توفرت
-    if (initialCityDiscounts.length > 0) setCityDiscounts(initialCityDiscounts);
-    if (initialMonthlyBenefits.length > 0) setMonthlyBenefits(initialMonthlyBenefits);
-    if (initialTopCities.length > 0) setTopCities(initialTopCities);
-    
-    // جلب البيانات حسب النطاق الزمني المحدد
-    fetchCityDiscountsData(dateRange.from, dateRange.to);
-  }, [dateRange]);
-
-  useEffect(() => {
-    // عرض البيانات الأولية فوراً
-    if (initialCityDiscounts.length > 0) setCityDiscounts(initialCityDiscounts);
-    if (initialMonthlyBenefits.length > 0) setMonthlyBenefits(initialMonthlyBenefits);
-    if (initialTopCities.length > 0) setTopCities(initialTopCities);
   }, [initialCityDiscounts, initialMonthlyBenefits, initialTopCities]);
 
   const getCurrentMonthName = () => {
@@ -134,26 +84,6 @@ const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthl
       </div>
 
       <div className="p-6 space-y-8">
-        {/* Time Filter */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-lg p-4 shadow-sm border">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white">
-              <Filter className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-foreground">فلترة زمنية</h3>
-              <p className="text-sm text-muted-foreground">اختر الفترة لعرض خصومات المدن</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <DateRangePicker
-              date={dateRange}
-              onDateChange={setDateRange}
-              className="w-auto"
-            />
-          </div>
-        </motion.div>
-
         {/* System Explanation */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="border-0 bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-xl">
