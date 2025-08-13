@@ -24,28 +24,6 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
   
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
-  // تطبيع مبسط للأرقام والمقاسات لالتقاط "اكسين" => XXL في البحث
-  const normalizeDigits = (s = '') => s.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
-  const normalizeSizeQuery = (input = '') => {
-    const t = normalizeDigits(String(input)).toLowerCase().replace(/\s+/g, ' ').trim();
-    if (!t) return '';
-    if (/(^|\s)(اكسين(?:\s*لارج)?|2\s*x\s*l|2xl|٢\s*اكس|٢xl|xxl)(\s|$)/i.test(t)) return 'xxl';
-    if (/(^|\s)(ثلاث(?:ة)?\s*اكس|3\s*x\s*l|3xl|٣\s*اكس|٣xl|xxxl)(\s|$)/i.test(t)) return 'xxxl';
-    if (/(^|\s)(xl|x\s*l|اكس(?:\s*لارج)?)(\s|$)/i.test(t)) return 'xl';
-    if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'l';
-    if (/(^|\s)(m|medium|مديم|ميديم|متوسط|وسط)(\s|$)/i.test(t)) return 'm';
-    if (/(^|\s)(s|small|سمول|صغير)(\s|$)/i.test(t)) return 's';
-    return '';
-  };
-  const normalizeSizeLabel = (s = '') => {
-    const key = normalizeSizeQuery(s);
-    if (key) return key.toUpperCase();
-    const t = normalizeDigits(String(s)).toUpperCase().trim();
-    if (t === '2XL' || t === '2 X L') return 'XXL';
-    if (t === '3XL' || t === '3 X L') return 'XXXL';
-    return t;
-  };
-  
   // حفظ إعدادات العرض والفلاتر
   const [savedViewMode, setSavedViewMode] = useLocalStorage('productViewMode', 'grid');
   const [savedFilters, setSavedFilters] = useLocalStorage('productFilters', {});
@@ -89,23 +67,15 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
   };
 
   const searchResults = useMemo(() => {
-    const term = (filters.searchTerm || '').trim();
-    if (!term) return [];
-    const termLower = term.toLowerCase();
-    const sizeKey = normalizeSizeQuery(term); // e.g. "اكسين" => 'xxl'
-
-    return products.filter(product => {
-      const inName = product.name?.toLowerCase().includes(termLower);
-      const inBrand = product.brand && product.brand.toLowerCase().includes(termLower);
-      const inVariants = Array.isArray(product.variants) && product.variants.some(v => {
-        const sku = v.sku?.toLowerCase() || '';
-        const barcode = v.barcode?.toLowerCase() || '';
-        const color = (v.color || v.color_name || '').toLowerCase();
-        const sizeMatch = sizeKey ? (normalizeSizeLabel(v.size || v.size_name || '') === sizeKey.toUpperCase()) : false;
-        return sku.includes(termLower) || barcode.includes(termLower) || color.includes(termLower) || sizeMatch;
-      });
-      return inName || inBrand || inVariants;
-    }).slice(0, 10);
+    if (!filters.searchTerm) return [];
+    return products.filter(product => 
+      product.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      (product.brand && product.brand.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+      product.variants?.some(v => 
+        v.sku?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        v.barcode?.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      )
+    ).slice(0, 10);
   }, [filters.searchTerm, products]);
 
   return (
