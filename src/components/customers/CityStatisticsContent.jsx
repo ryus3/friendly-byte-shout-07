@@ -149,16 +149,16 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
 
   // إحصائيات إجمالية مع حساب صحيح للعملاء الفريدين
   const totalStats = useMemo(() => {
+    // جمع كل العملاء الفريدين من البيانات المفلترة
     const allUniqueCustomers = new Set();
     
-    // جمع كل العملاء الفريدين من كل المدن
-    const filteredOrders = (orders || []).filter(order => 
+    // استخدام نفس منطق الفلترة المطبق في fetchCityStats
+    const validOrders = (orders || []).filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
     );
 
-    // تطبيق نفس الفلترة الزمنية
-    let finalOrders = filteredOrders;
+    let filteredOrders = validOrders;
     if (timeFilter !== 'all') {
       const range = timeRanges.find(r => r.value === timeFilter);
       if (range && range.months) {
@@ -172,25 +172,30 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           startDate.setMonth(now.getMonth() - range.months);
         }
         
-        finalOrders = filteredOrders.filter(order => {
+        filteredOrders = validOrders.filter(order => {
           const orderDate = new Date(order.created_at);
           return orderDate >= startDate;
         });
       }
     }
 
-    finalOrders.forEach(order => {
+    // جمع العملاء الفريدين
+    filteredOrders.forEach(order => {
       if (order.customer_phone) {
         allUniqueCustomers.add(order.customer_phone);
       }
     });
 
-    return cityStats.reduce((acc, city) => ({
-      totalOrders: acc.totalOrders + city.totalOrders,
-      totalRevenue: acc.totalRevenue + city.totalRevenue,
+    // حساب الإحصائيات من بيانات المدن
+    const totalOrders = cityStats.reduce((acc, city) => acc + city.totalOrders, 0);
+    const totalRevenue = cityStats.reduce((acc, city) => acc + city.totalRevenue, 0);
+
+    return {
+      totalOrders,
+      totalRevenue,
       totalCustomers: allUniqueCustomers.size, // العدد الصحيح للعملاء الفريدين
       totalCities: cityStats.length
-    }), { totalOrders: 0, totalRevenue: 0, totalCustomers: 0, totalCities: 0 });
+    };
   }, [cityStats, timeFilter, orders]);
 
   return (
@@ -238,16 +243,6 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
               ))}
             </SelectContent>
           </Select>
-
-          <Button 
-            onClick={fetchCityStats} 
-            disabled={loading}
-            variant="outline"
-            size="icon"
-            className="bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
         </div>
       </div>
 
