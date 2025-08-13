@@ -917,18 +917,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     <CityStatisticsContent customers={filteredCustomers} orders={orders} />
                   </motion.div>
                 )}
-                      <div className="text-center">
-                        <Button 
-                          variant="outline"
-                          className="gap-2"
-                          onClick={() => setShowTopProvincesDialog(true)}
-                        >
-                          <Trophy className="h-4 w-4" /> اختيار الفائزين الشهري
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
 
                 {activeTab === 'discounts' && (
                   <motion.div
@@ -938,13 +926,23 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-<CityDiscountsContent 
-            cityDiscounts={cityDiscountsData.cityDiscounts}
-            monthlyBenefits={cityDiscountsData.monthlyBenefits}
-            topCities={cityDiscountsData.topCities}
-          />
+                    <CityDiscountsContent 
+                      cityDiscounts={cityDiscountsData.cityDiscounts}
+                      monthlyBenefits={cityDiscountsData.monthlyBenefits}
+                      topCities={cityDiscountsData.topCities}
+                    />
+                    <div className="text-center mt-6">
+                      <Button 
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => setShowTopProvincesDialog(true)}
+                      >
+                        <Trophy className="h-4 w-4" /> اختيار الفائزين الشهري
+                      </Button>
+                    </div>
                   </motion.div>
                 )}
+
               </AnimatePresence>
             </CardContent>
           </Card>
