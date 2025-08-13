@@ -230,7 +230,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     return m;
   }, [eligibleOrdersByUser]);
 
-  // دمج العملاء على مستوى رقم الهاتف + حساب المشتريات بدون التوصيل + تحديد الجنس
+  // دمج العملاء على مستوى رقم الهاتف + حساب المشتريات بدون التوصيل + قراءة الجنس من قاعدة البيانات
   const mergedCustomers = useMemo(() => {
     const map = new Map();
 
@@ -266,8 +266,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
       let ordersCount = 0;
       let spentNoDelivery = 0;
-      let maleCount = 0;
-      let femaleCount = 0;
 
       relatedOrders.forEach((o) => {
         ordersCount += 1;
@@ -281,15 +279,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
           : 0;
         const revenueNoDelivery = totalAmount > 0 ? Math.max(0, totalAmount - deliveryFee) : itemsTotal;
         spentNoDelivery += revenueNoDelivery;
-
-        if (Array.isArray(o.items)) {
-          o.items.forEach((it) => {
-            const pid = it.product_id || it.products?.id;
-            const g = pid ? productGenderMap.get(pid) : null;
-            if (g === 'male') maleCount++;
-            else if (g === 'female') femaleCount++;
-          });
-        }
       });
 
       const merged = {
@@ -312,13 +301,14 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
         merged.promoCode = `RY${phone.slice(-4)}${abbr}`;
       }
 
-      merged.gender_type = maleCount === 0 && femaleCount === 0 ? undefined : maleCount >= femaleCount ? 'male' : 'female';
+      // قراءة الجنس من جدول تصنيف الجنس في قاعدة البيانات
+      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || null;
 
       return merged;
     });
 
     return result;
-  }, [displayCustomers, ordersByPhone, productGenderMap]);
+  }, [displayCustomers, ordersByPhone]);
 
   // فصل العملاء لكل مستخدم (حتى المدير) بالاعتماد على منشئ الطلبات/العميل
   const myCustomers = useMemo(() => {
@@ -507,6 +497,17 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     };
 
     fetchCityDiscountsData();
+    
+    // تحديث تصنيف جنس العملاء تلقائياً عند تحميل الصفحة
+    const updateGenderClassification = async () => {
+      try {
+        await supabase.rpc('update_customer_gender_classification');
+      } catch (error) {
+        console.log('خطأ في تحديث تصنيف الجنس:', error);
+      }
+    };
+    
+    updateGenderClassification();
   }, []);
 
   if (loading) {

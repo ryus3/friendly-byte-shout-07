@@ -223,6 +223,11 @@ return this.fetch('all_data', async () => {
       customer_loyalty (
         *,
         loyalty_tiers (*)
+      ),
+      customer_gender_segments (
+        gender_type,
+        confidence_score,
+        last_analysis_date
       )
     `).order('created_at', { ascending: false }),
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),

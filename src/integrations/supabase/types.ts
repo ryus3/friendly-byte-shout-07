@@ -3503,6 +3503,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_customer_gender_classification: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_customer_phone_loyalty: {
         Args: {
           p_phone: string
