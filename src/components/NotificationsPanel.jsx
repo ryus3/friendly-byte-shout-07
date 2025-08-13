@@ -93,7 +93,7 @@ const iconMap = {
   order_completed: OrderSuccessIcon,
   order_shipped: OrderIcon,
   new_order: OrderIcon,
-  new_order_employee: OrderIcon,
+  new_order_employee: SystemIcon,
   new_registration: UserRegistrationIcon,
   profit_settlement: ProfitIcon,
   profit_settlement_request: ProfitSettlementIcon,
@@ -156,11 +156,11 @@ const typeColorMap = {
     dot: 'bg-primary'
   },
   new_order_employee: { 
-    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-purple-500 dark:border-purple-400',
+    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
     text: 'text-foreground', 
-    icon: 'text-purple-600 dark:text-purple-400',
-    dot: 'bg-purple-500'
+    icon: 'text-yellow-600 dark:text-yellow-400',
+    dot: 'bg-yellow-500'
   },
   ai_order: { 
     bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
