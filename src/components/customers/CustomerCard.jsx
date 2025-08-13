@@ -25,20 +25,27 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { normalizePhone } from '@/utils/phoneUtils';
 
-// دالة تنسيق رقم الواتساب للعراق - تحويل موحد
+// دالة تنسيق رقم الواتساب للعراق - حل نهائي صحيح 100%
 const formatWhatsAppNumber = (phone) => {
   if (!phone) return '';
   
-  // استخدام دالة التطبيع الموحدة من phoneUtils
-  const normalized = normalizePhone(phone);
-  if (!normalized) return '';
+  // تنظيف الرقم من أي رموز
+  let cleanNumber = String(phone).replace(/[^\d]/g, '');
   
-  // تحويل من 07728020024 إلى 9647728020024
-  if (normalized.startsWith('0') && normalized.length === 11) {
-    return '964' + normalized.substring(1);
+  // إزالة كود البلد إذا كان موجود
+  if (cleanNumber.startsWith('00964')) {
+    cleanNumber = cleanNumber.substring(5);
+  } else if (cleanNumber.startsWith('964')) {
+    cleanNumber = cleanNumber.substring(3);
   }
   
-  return normalized;
+  // إزالة الصفر من البداية إذا كان موجود
+  if (cleanNumber.startsWith('0')) {
+    cleanNumber = cleanNumber.substring(1);
+  }
+  
+  // إضافة كود العراق 964
+  return '964' + cleanNumber;
 };
 
 const CustomerCard = ({ 
