@@ -11,6 +11,7 @@ import CustomerDetailsDialog from "@/components/customers/CustomerDetailsDialog"
 import EnhancedExportDialog from "@/components/customers/EnhancedExportDialog";
 import TopProvincesDialog from "@/components/customers/TopProvincesDialog";
 import CityDiscountsContent from "@/components/customers/CityDiscountsContent";
+import CityStatisticsContent from "@/components/customers/CityStatisticsContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -38,7 +39,8 @@ import {
   MessageCircle,
   Truck,
   Sparkles,
-  UserPlus
+  UserPlus,
+  BarChart3
 } from "lucide-react";
 
 const CustomersManagementPage = () => {
