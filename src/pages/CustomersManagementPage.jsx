@@ -304,7 +304,10 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
       }
 
       // قراءة الجنس من جدول تصنيف الجنس في قاعدة البيانات
-      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || null;
+      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || 
+                          c.customer_gender_segments?.gender_type ||
+                          c.gender_type ||
+                          null;
 
       return merged;
     });
@@ -344,7 +347,19 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     if (genderFilter !== 'all') {
       // قراءة الجنس من customer_gender_segments
       filtered = filtered.filter((customer) => {
-        const genderType = customer.customer_gender_segments?.[0]?.gender_type || customer.gender_type;
+        // البحث في customer_gender_segments المصفوفة أو الخاصية gender_type المباشرة
+        const genderType = customer.customer_gender_segments?.[0]?.gender_type || 
+                          customer.gender_type ||
+                          customer.customer_gender_segments?.gender_type;
+        
+        console.log('Customer gender filter:', {
+          name: customer.name,
+          phone: customer.phone,
+          genderType,
+          filterValue: genderFilter,
+          segments: customer.customer_gender_segments
+        });
+        
         return genderType === genderFilter;
       });
     }
