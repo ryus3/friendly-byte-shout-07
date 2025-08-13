@@ -1,123 +1,60 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Loader from "@/components/ui/loader";
-import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown, RefreshCw, BarChart3 } from "lucide-react";
+import { Gift, MapPin, Percent, Calendar, Award, Target, CheckCircle, Users, Truck, TrendingUp, Trophy, Sparkles, Crown } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
-import { useSuper } from "@/contexts/SuperProvider";
-import { usePermissions } from "@/hooks/usePermissions";
-import { useAuth } from "@/contexts/UnifiedAuthContext";
-import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthlyBenefits: initialMonthlyBenefits = [], topCities: initialTopCities = [] }) => {
-  // استخدام البيانات الموحدة
-  const { orders: allOrders, loading: systemLoading } = useSuper();
-  const { user } = usePermissions();
-  const { user: authUser } = useAuth();
-  
-  const [loading, setLoading] = useState(false);
-  const [timeFilter, setTimeFilter] = useState('current_month');
+  const [loading, setLoading] = useState(!(initialCityDiscounts.length || initialMonthlyBenefits.length || initialTopCities.length));
   const [cityDiscounts, setCityDiscounts] = useState(initialCityDiscounts);
   const [monthlyBenefits, setMonthlyBenefits] = useState(initialMonthlyBenefits);
+  const [topCities, setTopCities] = useState(initialTopCities);
 
-  
-  // المستخدم الحالي
-  const currentUserId = authUser?.user_id || authUser?.id || user?.user_id || user?.id || null;
+  useEffect(() => {
+    const fetchCityDiscountsData = async () => {
+      try {
+        setLoading(!(cityDiscounts.length || monthlyBenefits.length || topCities.length));
+        const month = new Date().getMonth() + 1;
+        const year = new Date().getFullYear();
 
-  // فترات زمنية للفلترة
-  const timeRanges = [
-    { value: 'current_month', label: 'الشهر الحالي', months: 0 },
-    { value: '1month', label: 'الشهر الماضي', months: 1 },
-    { value: '3months', label: '3 أشهر', months: 3 },
-    { value: '6months', label: '6 أشهر', months: 6 },
-    { value: '12months', label: 'السنة الحالية', months: 12 }
-  ];
+        const { data: discounts } = await supabase
+          .from('city_random_discounts')
+          .select('*')
+          .eq('discount_month', month)
+          .eq('discount_year', year);
 
-  // فلترة الطلبات للمستخدم الحالي
-  const filterOrdersByCurrentUser = (orders) => {
-    if (!orders || !currentUserId) return [];
-    return orders.filter(order => 
-      (order.created_by && order.created_by === currentUserId) || 
-      (order.user_id && order.user_id === currentUserId)
-    );
-  };
+        const { data: benefits } = await supabase
+          .from('city_monthly_benefits')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year);
 
-  // حساب أفضل المدن من البيانات الموحدة
-  const calculateTopCities = useMemo(() => {
-    if (!allOrders) return [];
+        const { data: cities } = await supabase
+          .from('city_order_stats')
+          .select('*')
+          .eq('month', month)
+          .eq('year', year)
+          .order('total_amount', { ascending: false })
+          .limit(5);
 
-    // فلترة الطلبات للمستخدم الحالي
-    const eligibleOrders = (allOrders || []).filter(order => 
-      ['completed', 'delivered'].includes(order.status) && 
-      order.receipt_received === true
-    );
-    
-    const eligibleOrdersByUser = filterOrdersByCurrentUser(eligibleOrders);
-
-    // تطبيق الفلترة الزمنية
-    let filteredOrders = eligibleOrdersByUser;
-    if (timeFilter !== 'current_month') {
-      const range = timeRanges.find(r => r.value === timeFilter);
-      if (range && range.months > 0) {
-        const now = new Date();
-        const startDate = new Date();
-        startDate.setMonth(now.getMonth() - range.months);
-        
-        filteredOrders = eligibleOrdersByUser.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate >= startDate;
-        });
+        setCityDiscounts(discounts || []);
+        setMonthlyBenefits(benefits || []);
+        setTopCities(cities || []);
+      } catch (e) {
+        console.error('Error fetching city discounts data:', e);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (!(initialCityDiscounts.length && initialMonthlyBenefits.length && initialTopCities.length)) {
+      fetchCityDiscountsData();
     } else {
-      // الشهر الحالي فقط
-      const now = new Date();
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      filteredOrders = eligibleOrdersByUser.filter(order => {
-        const orderDate = new Date(order.created_at);
-        return orderDate >= startDate;
-      });
+      setLoading(false);
     }
-
-    // تجميع البيانات حسب المدينة
-    const cityGroups = {};
-    filteredOrders.forEach(order => {
-      const city = order.customer_city || 'غير محدد';
-      const revenue = (order.total_amount || 0) - (order.delivery_fee || 0);
-      
-      if (!cityGroups[city]) {
-        cityGroups[city] = {
-          city_name: city,
-          total_orders: 0,
-          total_amount: 0,
-          unique_customers: new Set()
-        };
-      }
-
-      cityGroups[city].total_orders += 1;
-      cityGroups[city].total_amount += revenue;
-      
-      const phone = extractOrderPhone(order);
-      if (phone) {
-        const normalizedPhone = normalizePhone(phone);
-        if (normalizedPhone) {
-          cityGroups[city].unique_customers.add(normalizedPhone);
-        }
-      }
-    });
-
-    // تحويل لمصفوفة وترتيب
-    return Object.values(cityGroups)
-      .map(group => ({
-        ...group,
-        unique_customers: group.unique_customers.size
-      }))
-      .sort((a, b) => b.total_amount - a.total_amount)
-      .slice(0, 5);
-  }, [allOrders, timeFilter, currentUserId]);
+  }, [initialCityDiscounts, initialMonthlyBenefits, initialTopCities]);
 
   const getCurrentMonthName = () => {
     const months = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -135,33 +72,13 @@ const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthl
   return (
     <div className="bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-xl overflow-hidden">
       <div className="p-6 border-b bg-gradient-to-r from-orange-500 to-red-500 text-white">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-white/20 rounded-full">
-              <Gift className="h-8 w-8" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold">نظام خصومات المدن - {getCurrentMonthName()} {new Date().getFullYear()}</h2>
-              <p className="text-white/90 mt-1">برنامج مكافآت شهري تلقائي للمدن الأكثر نشاطاً</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-white/20 rounded-full">
+            <Gift className="h-8 w-8" />
           </div>
-          
-          <div className="flex gap-3">
-            <Select value={timeFilter} onValueChange={setTimeFilter}>
-              <SelectTrigger className="w-[200px] bg-white/20 border-white/30 text-white">
-                <Calendar className="h-4 w-4 mr-2" />
-                <SelectValue>
-                  {timeRanges.find(r => r.value === timeFilter)?.label || "اختر الفترة"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent className="bg-white dark:bg-slate-800 border-2 rounded-xl shadow-xl z-50">
-                {timeRanges.map(range => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div>
+            <h2 className="text-2xl font-bold">نظام خصومات المدن - {getCurrentMonthName()} {new Date().getFullYear()}</h2>
+            <p className="text-white/90 mt-1">برنامج مكافآت شهري تلقائي للمدن الأكثر نشاطاً</p>
           </div>
         </div>
       </div>
@@ -287,26 +204,21 @@ const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthl
           </motion.div>
         )}
 
-        {/* Top Performing Cities - من البيانات الموحدة */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="border-0 shadow-xl bg-white dark:bg-slate-800">
-            <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
-              <CardTitle className="flex items-center gap-3">
-                <TrendingUp className="h-6 w-6" />
-                أفضل المدن أداءً - {timeRanges.find(r => r.value === timeFilter)?.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              {(systemLoading || loading) ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin mr-2" />
-                  <span>جارٍ تحميل البيانات...</span>
-                </div>
-              ) : calculateTopCities.length > 0 ? (
+        {/* Top Performing Cities */}
+        {topCities.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <Card className="border-0 shadow-xl bg-white dark:bg-slate-800">
+              <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-3">
+                  <TrendingUp className="h-6 w-6" />
+                  أفضل المدن أداءً هذا الشهر
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
                 <div className="space-y-4">
-                  {calculateTopCities.map((city, index) => (
-                    <motion.div key={`${city.city_name}-${index}`} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-xl">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                  {topCities.map((city, index) => (
+                    <motion.div key={city.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 * index }} className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-700 dark:to-slate-800 rounded-xl">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
                         index === 0 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
                         index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
                         index === 2 ? 'bg-gradient-to-r from-orange-400 to-red-500' :
@@ -314,41 +226,21 @@ const CityDiscountsContent = ({ cityDiscounts: initialCityDiscounts = [], monthl
                       }`}>{index + 1}</div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-lg">{city.city_name}</h4>
-                        <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Trophy className="h-4 w-4" />
-                            {city.total_orders} طلب
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {city.unique_customers} عميل
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <BarChart3 className="h-4 w-4" />
-                            {city.total_amount?.toLocaleString()} د.ع
-                          </span>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{city.total_orders} طلب</span>
+                          <span>{city.total_amount?.toLocaleString()} د.ع</span>
                         </div>
                       </div>
                       {index < 3 && (
-                        <Trophy className={`h-8 w-8 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-500' : 'text-orange-500'}`} />
+                        <Trophy className={`h-6 w-6 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-500' : 'text-orange-500'}`} />
                       )}
                     </motion.div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <TrendingUp className="h-16 w-16 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="text-lg font-semibold text-muted-foreground mb-2">
-                    لا توجد بيانات للفترة المحددة
-                  </h3>
-                  <p className="text-muted-foreground">
-                    جرب تغيير الفترة الزمنية لعرض المزيد من البيانات
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </div>
   );
