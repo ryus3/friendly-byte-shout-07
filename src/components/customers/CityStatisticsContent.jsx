@@ -17,11 +17,13 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useSuper } from "@/contexts/SuperProvider";
+import { usePermissions } from "@/hooks/usePermissions";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
-  // استخدام النظام الموحد بدلاً من البيانات الممررة
+  // استخدام النظام الموحد مع نظام الصلاحيات
   const { orders: allOrders, loading: systemLoading } = useSuper();
+  const { filterDataByUser } = usePermissions();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -43,12 +45,15 @@ const CityStatisticsContent = () => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
-  // حساب إحصائيات المدن باستخدام النظام الموحد
+  // حساب إحصائيات المدن باستخدام النظام الموحد مع تطبيق فلتر المستخدم
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // استخدام البيانات من النظام الموحد (مفلترة تلقائياً)
-      const validOrders = (allOrders || []).filter(order => 
+      // تطبيق فلتر المستخدم على الطلبات من النظام الموحد
+      const userFilteredOrders = filterDataByUser(allOrders || []);
+      
+      // فلترة الطلبات المكتملة والمستلمة فقط
+      const validOrders = userFilteredOrders.filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
       );
@@ -154,11 +159,14 @@ const CityStatisticsContent = () => {
     const totalOrders = cityStats.reduce((acc, city) => acc + city.totalOrders, 0);
     const totalRevenue = cityStats.reduce((acc, city) => acc + city.totalRevenue, 0);
     
-    // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة باستخدام phoneUtils
+    // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة للمستخدم باستخدام phoneUtils
     const allUniqueCustomers = new Set();
     
-    // جلب كل الطلبات الصالحة من النظام الموحد
-    const validOrders = (allOrders || []).filter(order => 
+    // تطبيق فلتر المستخدم على الطلبات من النظام الموحد
+    const userFilteredOrders = filterDataByUser(allOrders || []);
+    
+    // جلب كل الطلبات الصالحة للمستخدم
+    const validOrders = userFilteredOrders.filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
     );
