@@ -34,12 +34,18 @@ import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
-const AiOrdersManager = ({ onClose }) => {
+const AiOrdersManager = ({ onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
-  const [selectedOrders, setSelectedOrders] = useState([]);
+const [selectedOrders, setSelectedOrders] = useState([]);
 
+// إذا تم تمرير معرّف للتمييز عند الفتح، حدده تلقائياً
+useEffect(() => {
+  if (highlightId) {
+    setSelectedOrders(prev => (prev.includes(highlightId) ? prev : [...prev, highlightId]));
+  }
+}, [highlightId]);
   const { user, allUsers = [] } = useAuth();
   const [telegramCode, setTelegramCode] = useState(null);
   useEffect(() => {
@@ -542,7 +548,7 @@ const AiOrdersManager = ({ onClose }) => {
                     <AiOrderCard 
                       key={order.id} 
                       order={order}
-                      isSelected={selectedOrders.includes(order.id)}
+                      isSelected={selectedOrders.includes(order.id) || (highlightId && order.id === highlightId)}
                       onSelect={(checked) => handleSelectOrder(order.id, checked)}
                     />
                   ))

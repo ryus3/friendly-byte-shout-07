@@ -181,12 +181,15 @@ const Layout = ({ children }) => {
   const [dialogs, setDialogs] = useState({ cart: false, quickOrder: false });
   const [aiOrdersOpen, setAiOrdersOpen] = useState(false);
   const [aiOrderForEdit, setAiOrderForEdit] = useState(null);
+  const [aiOrderHighlightId, setAiOrderHighlightId] = useState(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { user } = useAuth();
 
   // Listen for AI orders manager events
   useEffect(() => {
     const handleOpenAiOrders = (event) => {
+      const id = event?.detail?.aiOrderId || null;
+      setAiOrderHighlightId(id);
       setAiOrdersOpen(true);
     };
     
@@ -405,7 +408,10 @@ const Layout = ({ children }) => {
         
         <AnimatePresence>
           {aiOrdersOpen && (
-            <AiOrdersManager onClose={() => setAiOrdersOpen(false)} />
+            <AiOrdersManager 
+              highlightId={aiOrderHighlightId}
+              onClose={() => { setAiOrdersOpen(false); setAiOrderHighlightId(null); }} 
+            />
           )}
         </AnimatePresence>
       </div>

@@ -163,8 +163,8 @@ const typeColorMap = {
     dot: 'bg-purple-500'
   },
   ai_order: { 
-    bg: 'bg-gradient-to-tr from-indigo-50 via-violet-50 to-blue-50 dark:from-indigo-900/10 dark:via-violet-900/10 dark:to-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-0',
+    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-transparent',
     text: 'text-foreground', 
     icon: 'text-indigo-600 dark:text-indigo-400',
     dot: 'bg-violet-500'
@@ -237,8 +237,9 @@ const NotificationsPanel = () => {
     if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'ai_order') {
-      // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم عبر حدث عام
-      window.dispatchEvent(new CustomEvent('openAiOrdersManager'));
+      // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم مع تحديد الطلب
+      const aiOrderId = notification?.data?.ai_order_id || notification?.data?.id || notification?.related_entity_id;
+      window.dispatchEvent(new CustomEvent('openAiOrdersManager', { detail: { aiOrderId } }));
       setIsOpen(false);
       return;
     } else if (notification.type === 'low_stock' || notification.type === 'stock_warning') {
