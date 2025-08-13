@@ -12,6 +12,8 @@ const __dirname = path.dirname(__filename);
 
 // Use direct path to vite executable
 const viteExecutable = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
+console.log('🔍 Looking for Vite at:', viteExecutable);
+console.log('📁 Current directory:', __dirname);
 
 const port = process.env.PORT || '5173';
 const host = process.env.HOST || '::';
