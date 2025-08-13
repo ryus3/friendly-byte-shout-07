@@ -134,6 +134,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     // أشكال شائعة
     str = str.replace(/اكسات/g, 'اكس');
     str = str.replace(/ثلاثة\s*اكس|ثلاث\s*اكس|3\s*اكس|٣\s*اكس/g, 'xxx');
+    str = str.replace(/(2|٢)\s*اكس/g, 'xx');
     str = str.replace(/اكسين/g, 'xx');
     str = str.replace(/اكس/g, 'x');
     str = str.replace(/لارج|large|lrg/g, '');

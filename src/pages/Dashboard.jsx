@@ -315,6 +315,49 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
+    const aiOrdersCount = useMemo(() => {
+        const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
+        const lower = (v) => (v ?? '').toString().trim().toLowerCase();
+        const normalizeSize = (s) => {
+            if (!s) return '';
+            let str = String(s).trim().toLowerCase();
+            const digits = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+            str = str.replace(/[٠-٩]/g, (d) => digits[d]);
+            str = str.replace(/اكسات/g, 'اكس');
+            str = str.replace(/ثلاثة\s*اكس|ثلاث\s*اكس|3\s*اكس|٣\s*اكس/g, 'xxx');
+            str = str.replace(/(2|٢)\s*اكس/g, 'xx');
+            str = str.replace(/اكسين/g, 'xx');
+            str = str.replace(/اكس/g, 'x');
+            str = str.replace(/\s|-/g, '');
+            if (/^(3xl|xxxl|xxx|3x)$/.test(str)) return 'xxxl';
+            if (/^(2xl|xxl|xx|2x)$/.test(str)) return 'xxl';
+            if (/^(xl|x)$/.test(str)) return 'xl';
+            if (str.includes('xxx') || str.includes('3x')) return 'xxxl';
+            if (str.includes('xx') || str.includes('2x')) return 'xxl';
+            if (str.includes('x')) return 'xl';
+            return str;
+        };
+        const keys = new Set();
+        for (const o of list) {
+            const idKey = o?.id ?? o?.order_id ?? o?.uuid;
+            let key = idKey ? `id:${idKey}` : '';
+            if (!key) {
+                const ts = o?.created_at ? new Date(o.created_at).toISOString().slice(0,16) : '';
+                const by = (o?.created_by ?? o?.user_id ?? o?.order_data?.created_by ?? '').toString().trim().toUpperCase();
+                const items = Array.isArray(o?.items) ? o.items : (o?.order_data?.items || []);
+                const itemSig = JSON.stringify(items.map(it => ({
+                    n: lower(it.product_name || it.name || it.product),
+                    c: lower(it.color),
+                    s: normalizeSize(it.size),
+                    q: Number(it.quantity || 1)
+                })));
+                key = `sig:${by}:${ts}:${itemSig}`;
+            }
+            keys.add(key);
+        }
+        return keys.size;
+    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
+
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
@@ -573,7 +616,7 @@ const Dashboard = () => {
     const allStatCards = [
         // إزالة شروط الصلاحيات مؤقتاً لإصلاح المشكلة
         { 
-            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (canViewAllData ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
+            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: aiOrdersCount, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
         },
         canViewAllData && { 
             key: 'pendingRegs', title: 'طلبات التسجيل الجديدة', value: pendingRegistrationsCount, icon: UserPlus, colors: ['indigo-500', 'violet-500'], onClick: () => setDialogs(d => ({ ...d, pendingRegs: true }))
