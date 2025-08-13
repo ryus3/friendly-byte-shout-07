@@ -16,9 +16,12 @@ import {
   Filter,
   RefreshCw
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useSuper } from "@/contexts/SuperProvider";
+import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
-const CityStatisticsContent = ({ customers = [], orders = [] }) => {
+const CityStatisticsContent = () => {
+  // استخدام النظام الموحد بدلاً من البيانات الممررة
+  const { orders: allOrders, loading: systemLoading } = useSuper();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -40,17 +43,17 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
-  // جلب إحصائيات المدن من قاعدة البيانات مع فلترة المستخدم
+  // حساب إحصائيات المدن باستخدام النظام الموحد
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // استخدام البيانات الممررة من العمليات المحددة للمستخدم
-      const validOrders = (orders || []).filter(order => 
+      // استخدام البيانات من النظام الموحد (مفلترة تلقائياً)
+      const validOrders = (allOrders || []).filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
       );
 
-      // تطبيق الفلترة الزمنية بشكل صحيح
+      // تطبيق الفلترة الزمنية
       let filteredOrders = validOrders;
       if (timeFilter !== 'all') {
         const range = timeRanges.find(r => r.value === timeFilter);
@@ -59,11 +62,9 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           const startDate = new Date();
           
           if (timeFilter === '1month') {
-            // الشهر الحالي فقط
-            startDate.setDate(1); // أول يوم في الشهر
+            startDate.setDate(1);
             startDate.setHours(0, 0, 0, 0);
           } else {
-            // باقي الفترات
             startDate.setMonth(now.getMonth() - range.months);
           }
           
@@ -74,9 +75,8 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         }
       }
 
-      // تجميع البيانات حسب المدينة
+      // تجميع البيانات حسب المدينة مع استخدام phoneUtils
       const cityGroups = {};
-      const allUniqueCustomers = new Set(); // مجموعة شاملة للعملاء الفريدين
 
       filteredOrders.forEach(order => {
         const city = order.customer_city || 'غير محدد';
@@ -95,10 +95,13 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         cityGroups[city].totalOrders += 1;
         cityGroups[city].totalRevenue += revenue;
         
-        // إضافة العميل للمدينة وللمجموعة الشاملة
-        if (order.customer_phone) {
-          cityGroups[city].uniqueCustomers.add(order.customer_phone);
-          allUniqueCustomers.add(order.customer_phone); // العملاء الفريدين عالمياً
+        // استخدام phoneUtils لاستخراج وتنسيق الهاتف
+        const phone = extractOrderPhone(order);
+        if (phone) {
+          const normalizedPhone = normalizePhone(phone);
+          if (normalizedPhone) {
+            cityGroups[city].uniqueCustomers.add(normalizedPhone);
+          }
         }
       });
 
@@ -107,15 +110,11 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         city: group.city,
         totalOrders: group.totalOrders,
         totalRevenue: group.totalRevenue,
-        uniqueCustomers: group.uniqueCustomers.size, // عملاء المدينة
+        uniqueCustomers: group.uniqueCustomers.size,
         averageOrderValue: group.totalOrders > 0 ? group.totalRevenue / group.totalOrders : 0
       }));
 
-      // حفظ البيانات مع العملاء الفريدين الصحيحين
-      setCityStats(statsArray.map(stat => ({
-        ...stat,
-        globalUniqueCustomers: allUniqueCustomers.size // العدد الصحيح للعملاء الفريدين
-      })));
+      setCityStats(statsArray);
 
     } catch (error) {
       console.error('خطأ في جلب إحصائيات المدن:', error);
@@ -125,8 +124,10 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
   };
 
   useEffect(() => {
-    fetchCityStats();
-  }, [timeFilter, orders]);  // إضافة orders كـ dependency
+    if (allOrders) {
+      fetchCityStats();
+    }
+  }, [timeFilter, allOrders]);
 
   // ترتيب البيانات
   const sortedStats = useMemo(() => {
@@ -147,17 +148,17 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     return sorted;
   }, [cityStats, sortBy]);
 
-  // إحصائيات إجمالية - حساب صحيح للعملاء الفريدين
+  // إحصائيات إجمالية - حساب صحيح للعملاء الفريدين باستخدام النظام الموحد
   const totalStats = useMemo(() => {
     // حساب الإحصائيات من بيانات المدن المحسوبة مسبقاً
     const totalOrders = cityStats.reduce((acc, city) => acc + city.totalOrders, 0);
     const totalRevenue = cityStats.reduce((acc, city) => acc + city.totalRevenue, 0);
     
-    // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة (بدون تجميع حسب المدن)
+    // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة باستخدام phoneUtils
     const allUniqueCustomers = new Set();
     
-    // جلب كل الطلبات الصالحة
-    const validOrders = (orders || []).filter(order => 
+    // جلب كل الطلبات الصالحة من النظام الموحد
+    const validOrders = (allOrders || []).filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
     );
@@ -184,13 +185,13 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
       }
     }
 
-    // حساب العملاء الفريدين من كل الطلبات المفلترة مباشرة
+    // حساب العملاء الفريدين باستخدام phoneUtils
     filteredOrders.forEach(order => {
-      if (order.customer_phone) {
-        // تنظيف رقم الهاتف لضمان عدم التكرار بسبب المساحات أو التنسيق
-        const cleanPhone = order.customer_phone.toString().trim().replace(/\s+/g, '');
-        if (cleanPhone) {
-          allUniqueCustomers.add(cleanPhone);
+      const phone = extractOrderPhone(order);
+      if (phone) {
+        const normalizedPhone = normalizePhone(phone);
+        if (normalizedPhone) {
+          allUniqueCustomers.add(normalizedPhone);
         }
       }
     });
@@ -201,7 +202,7 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
       totalCustomers: allUniqueCustomers.size, // العدد الصحيح للعملاء الفريدين
       totalCities: cityStats.length
     };
-  }, [cityStats, timeFilter, orders]);
+  }, [cityStats, timeFilter, allOrders]);
 
   return (
     <div className="space-y-6">
@@ -335,7 +336,7 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {(loading || systemLoading) ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-6 w-6 animate-spin mr-2" />
               <span>جارٍ تحميل البيانات...</span>
