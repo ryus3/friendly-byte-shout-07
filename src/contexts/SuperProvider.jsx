@@ -376,24 +376,44 @@ export const SuperProvider = ({ children }) => {
     };
   }, [user, fetchAllData]);
 
-  // تحديث فوري أيضاً عبر أحداث المتصفح (احتياطي عند تأخر Realtime)
+  // تحديث فوري للأحداث المخصصة بدلاً من إعادة تحميل كامل
   useEffect(() => {
-    const handler = () => { try { if (Date.now() - (lastFetchAtRef.current || 0) > 1500) fetchAllData(); } catch {} };
-    window.addEventListener('aiOrderCreated', handler);
-    window.addEventListener('aiOrderApproved', handler);
-    window.addEventListener('aiOrderDeleted', handler);
-    window.addEventListener('orderCreated', handler);
-    window.addEventListener('orderUpdated', handler);
-    window.addEventListener('orderDeleted', handler);
-    return () => {
-      window.removeEventListener('aiOrderCreated', handler);
-      window.removeEventListener('aiOrderApproved', handler);
-      window.removeEventListener('aiOrderDeleted', handler);
-      window.removeEventListener('orderCreated', handler);
-      window.removeEventListener('orderUpdated', handler);
-      window.removeEventListener('orderDeleted', handler);
+    const handleAiOrderCreated = (event) => {
+      console.log('🔥 AI Order Created Event:', event.detail);
+      setAllData(prevData => ({
+        ...prevData,
+        aiOrders: [...(prevData.aiOrders || []), event.detail]
+      }));
     };
-  }, [fetchAllData]);
+
+    const handleAiOrderUpdated = (event) => {
+      console.log('🔥 AI Order Updated Event:', event.detail);
+      setAllData(prevData => ({
+        ...prevData,
+        aiOrders: (prevData.aiOrders || []).map(order => 
+          order.id === event.detail.id ? { ...order, ...event.detail } : order
+        )
+      }));
+    };
+
+    const handleAiOrderDeleted = (event) => {
+      console.log('🔥 AI Order Deleted Event:', event.detail);
+      setAllData(prevData => ({
+        ...prevData,
+        aiOrders: (prevData.aiOrders || []).filter(order => order.id !== event.detail.id)
+      }));
+    };
+    
+    window.addEventListener('aiOrderCreated', handleAiOrderCreated);
+    window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
+    window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+
+    return () => {
+      window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
+      window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
+      window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    };
+  }, []);
 
   // إعادة التحقق عند عودة التبويب للتركيز إذا انتهت صلاحية الكاش
   useEffect(() => {

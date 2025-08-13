@@ -478,15 +478,24 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
-                      const res = await approveAiOrder(order.id);
-                      if (res?.success) {
-                        // ضمان حذف الطلب الذكي حتى لو فشلت RLS في الدالة الداخلية
-                        try { await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id }); } catch {}
-                        window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: order.id } }));
-                        toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
-                        try { await refreshAll?.(); } catch (e) {}
-                      } else {
-                        toast({ title: 'فشل الموافقة', description: res?.error || 'حدث خطأ غير متوقع', variant: 'destructive' });
+                      // تحديث فوري optimistic
+                      window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: { ...order, status: 'approved' } }));
+                      toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
+                      
+                      try {
+                        const res = await approveAiOrder?.(order);
+                        if (res?.success) {
+                          window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
+                          toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });
+                        } else {
+                          // استرجاع البيانات في حالة الفشل
+                          window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: order }));
+                          toast({ title: 'فشلت الموافقة', description: res?.error || 'حدث خطأ أثناء معالجة الطلب', variant: 'destructive' });
+                        }
+                      } catch (error) {
+                        // استرجاع البيانات في حالة الخطأ
+                        window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: order }));
+                        toast({ title: 'خطأ في الشبكة', description: 'تعذر الاتصال بالخادم', variant: 'destructive' });
                       }
                     }}
                   >
@@ -527,13 +536,23 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={async () => {
-                      const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id });
-                      if (rpcErr || rpcRes?.success === false) {
-                        toast({ title: 'فشل الحذف', description: rpcErr?.message || rpcRes?.error || 'تعذر حذف الطلب الذكي', variant: 'destructive' });
-                      } else {
-                        window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
-                        toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
-                        try { await refreshAll?.(); } catch (e) {}
+                      // تحديث فوري optimistic
+                      window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
+                      toast({ title: 'جاري الحذف...', description: 'تم حذف الطلب الذكي', variant: 'default' });
+                      
+                      try {
+                        const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id });
+                        if (rpcErr || rpcRes?.success === false) {
+                          // استرجاع البيانات في حالة الفشل
+                          window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: order }));
+                          toast({ title: 'فشل الحذف', description: rpcErr?.message || rpcRes?.error || 'تعذر حذف الطلب الذكي', variant: 'destructive' });
+                        } else {
+                          toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
+                        }
+                      } catch (error) {
+                        // استرجاع البيانات في حالة الخطأ
+                        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: order }));
+                        toast({ title: 'خطأ في الشبكة', description: 'تعذر الاتصال بالخادم', variant: 'destructive' });
                       }
                     }}
                   >
