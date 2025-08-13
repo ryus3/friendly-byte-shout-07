@@ -28,29 +28,41 @@ import { ar } from 'date-fns/locale';
 const formatWhatsAppLink = (phone) => {
   if (!phone) return null;
   
-  let cleanNumber = phone.replace(/\D/g, '');
+  console.log('Original phone:', phone); // للتتبع
   
-  // إذا بدأ بـ 07 (الصيغة المحلية العراقية)
+  let cleanNumber = phone.replace(/\D/g, '');
+  console.log('Clean number:', cleanNumber); // للتتبع
+  
+  // إذا بدأ بـ 07 (الصيغة المحلية العراقية) 11 رقم
   if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
-    return '964' + cleanNumber.substring(1); // نزيل الصفر الأول فقط
+    const result = '964' + cleanNumber.substring(1); // إزالة الصفر الأول
+    console.log('Result for 07:', result); // للتتبع
+    return result;
   }
   
   // إذا بدأ بـ 7 فقط وطوله 10 أرقام
   if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
-    return '964' + cleanNumber;
+    const result = '964' + cleanNumber;
+    console.log('Result for 7:', result); // للتتبع
+    return result;
   }
   
   // إذا بدأ بـ 964 مسبقاً
   if (cleanNumber.startsWith('964')) {
+    console.log('Already has 964:', cleanNumber); // للتتبع
     return cleanNumber;
   }
   
   // إذا بدأ بـ 00964
   if (cleanNumber.startsWith('00964')) {
-    return cleanNumber.substring(2);
+    const result = cleanNumber.substring(2);
+    console.log('Result for 00964:', result); // للتتبع
+    return result;
   }
   
-  return '964' + cleanNumber.replace(/^0/, '');
+  const result = '964' + cleanNumber.replace(/^0/, '');
+  console.log('Default result:', result); // للتتبع
+  return result;
 };
 
 const CustomerCard = ({ 
