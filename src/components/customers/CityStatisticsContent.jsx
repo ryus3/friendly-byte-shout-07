@@ -17,11 +17,13 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useSuper } from "@/contexts/SuperProvider";
+import { usePermissions } from "@/hooks/usePermissions";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
-  // استخدام النظام الموحد بدلاً من البيانات الممررة
+  // استخدام النظام الموحد مع تطبيق فلترة المستخدم
   const { orders: allOrders, loading: systemLoading } = useSuper();
+  const { filterDataByUser } = usePermissions();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -47,8 +49,9 @@ const CityStatisticsContent = () => {
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // استخدام البيانات من النظام الموحد (مفلترة تلقائياً)
-      const validOrders = (allOrders || []).filter(order => 
+      // استخدام البيانات من النظام الموحد مع تطبيق فلترة المستخدم
+      const userFilteredOrders = filterDataByUser(allOrders || []);
+      const validOrders = userFilteredOrders.filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
       );
@@ -157,8 +160,9 @@ const CityStatisticsContent = () => {
     // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة باستخدام phoneUtils
     const allUniqueCustomers = new Set();
     
-    // جلب كل الطلبات الصالحة من النظام الموحد
-    const validOrders = (allOrders || []).filter(order => 
+    // جلب كل الطلبات الصالحة من النظام الموحد مع تطبيق فلترة المستخدم
+    const userFilteredOrders = filterDataByUser(allOrders || []);
+    const validOrders = userFilteredOrders.filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
     );
