@@ -39,10 +39,19 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
+  // إزالة التكرار وترتيب الأحدث أولاً من السياق
+  const dedupedContextOrders = useMemo(() => {
+    const map = new Map();
+    for (const o of ordersFromContext) {
+      if (o && o.id && !map.has(o.id)) map.set(o.id, o);
+    }
+    return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [ordersFromContext]);
+  
   // تزامن مع البيانات من Context عند التحديث
   useEffect(() => {
-    setOrders(ordersFromContext);
-  }, [ordersFromContext]);
+    setOrders(dedupedContextOrders);
+  }, [dedupedContextOrders]);
   
   // مستمعات Real-time للتحديثات الفورية
   useEffect(() => {
@@ -84,12 +93,16 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   
   const [selectedOrders, setSelectedOrders] = useState([]);
 
-// إذا تم تمرير معرّف للتمييز عند الفتح، حدده تلقائياً
+// إذا تم تمرير معرّف للتمييز عند الفتح، حدده تلقائياً مع التمرير إليه
 useEffect(() => {
   if (highlightId) {
     setSelectedOrders(prev => (prev.includes(highlightId) ? prev : [...prev, highlightId]));
+    setTimeout(() => {
+      const el = document.getElementById(`ai-order-${highlightId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   }
-}, [highlightId]);
+}, [highlightId, orders]);
   const { user, allUsers = [] } = useAuth();
   const [telegramCode, setTelegramCode] = useState(null);
   useEffect(() => {
@@ -329,7 +342,7 @@ useEffect(() => {
   };
 
   // عدم عرض الحوار إذا لم يكن مفتوحاً
-  if (!open) return null;
+  if (open === false) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
@@ -338,6 +351,8 @@ useEffect(() => {
           className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl min-h-[90vh] overflow-hidden mx-4 my-8"
           onClick={e => e.stopPropagation()}
           dir="rtl"
+          role="dialog"
+          aria-modal="true"
         >
           {/* Header */}
           <div className="relative p-4 pb-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg overflow-hidden">

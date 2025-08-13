@@ -892,9 +892,9 @@ const SIZE_SYNONYMS: Record<string, string[]> = {
   'S': ['s','small','سمول','صغير'],
   'M': ['m','medium','ميديم','مديم','متوسط','وسط'],
   'L': ['l','large','لارج','كبير'],
-  'XL': ['xl','x l','اكس لارج','اكس ال','إكس إل','اكسل'],
-  'XXL': ['xxl','2xl','٢xl','٢ اكس','2 اكس','اكسين','اكسين لارج','دبل اكس'],
-  'XXXL': ['xxxl','3xl','٣xl','3 اكس','٣ اكس','ثلاثة اكس','ثلاث اكس','ثري اكس']
+  'XL': ['xl','x l','x','اكس','اكس لارج','اكس ال','إكس إل','اكسل'],
+  'XXL': ['xxl','2xl','٢xl','٢ اكس','2 اكس','اكسين','اكسين لارج','دبل اكس','xx-l','x x l'],
+  'XXXL': ['xxxl','3xl','٣xl','3 اكس','٣ اكس','ثلاثة اكس','ثلاث اكس','ثري اكس','xxx l','x x x l']
 };
 
 function sizeSynonymsRegex(): RegExp {
@@ -907,9 +907,9 @@ function sizeSynonymsRegex(): RegExp {
 function detectStandardSize(text: string): string | null {
   const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
   // نماذج رقمية مثل 2xl / 3xl
-  if (/\b(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)\b/i.test(t)) return 'XXXL';
-  if (/\b(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)\b/i.test(t)) return 'XXL';
-  if (/(^|\s)(xl|x\s*l|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل)(\s|$)/i.test(t)) return 'XL';
+  if (/(\b|\s)(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)(\b|\s)/i.test(t)) return 'XXXL';
+  if (/(\b|\s)(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)(\b|\s)/i.test(t)) return 'XXL';
+  if (/(^|\s)(xl|x\s*l|x|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل|اكس)(\s|$)/i.test(t)) return 'XL';
   // أساسية
   if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
   if (/(^|\s)(m|medium|ميديم|مديم|متوسط|وسط)(\s|$)/i.test(t)) return 'M';

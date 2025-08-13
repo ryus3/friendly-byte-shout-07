@@ -29,13 +29,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 const AiOrderCard = ({ order, isSelected, onSelect }) => {
-  // المعاينة ملغاة - التفاصيل تظهر دائماً
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
   
-  const formatTimeEnglish = (date) => {
-    return new Date(date).toLocaleTimeString('en-US', { hour12: false });
+  const formatDateTime = (date) => {
+    try {
+      return new Date(date).toLocaleString('ar-IQ', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+    } catch { return String(date); }
   };
 
   const getStatusColor = (status) => {
@@ -332,7 +336,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const isProblematic = availability !== 'available' || needsReview;
 
   return (
-    <Card className={cn(
+    <Card id={`ai-order-${order.id}`} className={cn(
       "relative overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 shadow-md",
       "bg-gradient-to-br from-white via-slate-50 to-blue-50/30 dark:from-slate-800 dark:via-slate-700 dark:to-blue-900/20",
       isSelected && "ring-2 ring-blue-500"
@@ -376,7 +380,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                   {getStatusText(order.status)}
                 </Badge>
               </div>
-              <div className="text-xs opacity-90">{formatDateEnglish(order.created_at)}</div>
+              <div className="text-xs opacity-90">{formatDateTime(order.created_at)}</div>
             </div>
           </div>
           {/* Alerts */}
