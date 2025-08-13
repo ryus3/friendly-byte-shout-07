@@ -678,64 +678,79 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
           // التحقق الشامل من صلاحيات المنتج - CRITICAL SECURITY
           if (!allowAllProducts && bestMatch) {
-            const checkProductPermission = async (): Promise<{ allowed: boolean, reason?: string, scope?: string }> => {
-              // فحص صلاحيات الأقسام
-              if (allowedDeptIds.length > 0) {
-                const productDeptIds = (bestMatch.product_departments || []).map((pd: any) => String(pd.department_id));
-                const hasAllowedDept = productDeptIds.some((deptId: string) => allowedDeptIds.includes(deptId));
-                if (productDeptIds.length > 0 && !hasAllowedDept) {
-                  return { allowed: false, reason: 'ليس لديك صلاحية لهذا القسم', scope: 'department' };
-                }
+            // فحص صلاحيات الأقسام
+            if (allowedDeptIds.length > 0) {
+              const productDeptIds = (bestMatch.product_departments || []).map((pd: any) => String(pd.department_id));
+              const hasAllowedDept = productDeptIds.some((deptId: string) => allowedDeptIds.includes(deptId));
+              if (productDeptIds.length > 0 && !hasAllowedDept) {
+                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Department restriction`);
+                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا القسم للمنتج "${bestMatch.name}"`);
+                item.available = false;
+                item.availability = 'not_permitted';
+                continue;
               }
+            }
 
-              // فحص صلاحيات التصنيفات
-              if (allowedCategoryIds.length > 0) {
-                const productCategoryIds = (bestMatch.product_categories || []).map((pc: any) => String(pc.category_id));
-                const hasAllowedCategory = productCategoryIds.some((catId: string) => allowedCategoryIds.includes(catId));
-                if (productCategoryIds.length > 0 && !hasAllowedCategory) {
-                  return { allowed: false, reason: 'ليس لديك صلاحية لهذا التصنيف', scope: 'category' };
-                }
+            // فحص صلاحيات التصنيفات
+            if (allowedCategoryIds.length > 0) {
+              const productCategoryIds = (bestMatch.product_categories || []).map((pc: any) => String(pc.category_id));
+              const hasAllowedCategory = productCategoryIds.some((catId: string) => allowedCategoryIds.includes(catId));
+              if (productCategoryIds.length > 0 && !hasAllowedCategory) {
+                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Category restriction`);
+                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا التصنيف للمنتج "${bestMatch.name}"`);
+                item.available = false;
+                item.availability = 'not_permitted';
+                continue;
               }
+            }
 
-              // فحص صلاحيات أنواع المنتجات  
-              if (allowedProductTypeIds.length > 0) {
-                const { data: productTypes } = await supabase
-                  .from('product_product_types')
-                  .select('product_type_id')
-                  .eq('product_id', bestMatch.id);
-                
-                const productTypeIds = (productTypes || []).map((ppt: any) => String(ppt.product_type_id));
-                const hasAllowedType = productTypeIds.some((typeId: string) => allowedProductTypeIds.includes(typeId));
-                if (productTypeIds.length > 0 && !hasAllowedType) {
-                  return { allowed: false, reason: 'ليس لديك صلاحية لهذا النوع من المنتجات', scope: 'product_type' };
-                }
+            // فحص صلاحيات أنواع المنتجات  
+            if (allowedProductTypeIds.length > 0) {
+              const { data: productTypes } = await supabase
+                .from('product_product_types')
+                .select('product_type_id')
+                .eq('product_id', bestMatch.id);
+              
+              const productTypeIds = (productTypes || []).map((ppt: any) => String(ppt.product_type_id));
+              const hasAllowedType = productTypeIds.some((typeId: string) => allowedProductTypeIds.includes(typeId));
+              if (productTypeIds.length > 0 && !hasAllowedType) {
+                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Product type restriction`);
+                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا النوع من المنتجات للمنتج "${bestMatch.name}"`);
+                item.available = false;
+                item.availability = 'not_permitted';
+                continue;
               }
+            }
 
-              // فحص صلاحيات المواسم والمناسبات
-              if (allowedSeasonOccasionIds.length > 0) {
-                const { data: productSeasons } = await supabase
-                  .from('product_seasons_occasions')
-                  .select('season_occasion_id')
-                  .eq('product_id', bestMatch.id);
-                
-                const seasonIds = (productSeasons || []).map((pso: any) => String(pso.season_occasion_id));
-                const hasAllowedSeason = seasonIds.some((seasonId: string) => allowedSeasonOccasionIds.includes(seasonId));
-                if (seasonIds.length > 0 && !hasAllowedSeason) {
-                  return { allowed: false, reason: 'ليس لديك صلاحية لهذا الموسم أو المناسبة', scope: 'season_occasion' };
-                }
+            // فحص صلاحيات المواسم والمناسبات
+            if (allowedSeasonOccasionIds.length > 0) {
+              const { data: productSeasons } = await supabase
+                .from('product_seasons_occasions')
+                .select('season_occasion_id')
+                .eq('product_id', bestMatch.id);
+              
+              const seasonIds = (productSeasons || []).map((pso: any) => String(pso.season_occasion_id));
+              const hasAllowedSeason = seasonIds.some((seasonId: string) => allowedSeasonOccasionIds.includes(seasonId));
+              if (seasonIds.length > 0 && !hasAllowedSeason) {
+                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Season/occasion restriction`);
+                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا الموسم أو المناسبة للمنتج "${bestMatch.name}"`);
+                item.available = false;
+                item.availability = 'not_permitted';
+                continue;
               }
+            }
 
-              // فحص صلاحيات المنتجات المحددة
-              if (allowedProductIds.length > 0) {
-                if (!allowedProductIds.includes(String(bestMatch.id))) {
-                  return { allowed: false, reason: 'ليس لديك صلاحية لهذا المنتج تحديداً', scope: 'product' };
-                }
+            // فحص صلاحيات المنتجات المحددة
+            if (allowedProductIds.length > 0) {
+              if (!allowedProductIds.includes(String(bestMatch.id))) {
+                console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: Specific product restriction`);
+                await sendTelegramMessage(chatId, `❌ عذراً، ليس لديك صلاحية لهذا المنتج تحديداً "${bestMatch.name}"`);
+                item.available = false;
+                item.availability = 'not_permitted';
+                continue;
               }
-
-              return { allowed: true };
-            };
-
-            const permissionCheck = await checkProductPermission();
+            }
+          }
             if (!permissionCheck.allowed) {
               console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: ${permissionCheck.reason}, Scope: ${permissionCheck.scope}`);
               
