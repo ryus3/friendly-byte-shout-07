@@ -914,7 +914,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <CityStatisticsContent customers={filteredCustomers} orders={orders} />
+                    <CityStatisticsContent customers={filteredCustomers} orders={eligibleOrdersByUser} />
                   </motion.div>
                 )}
 

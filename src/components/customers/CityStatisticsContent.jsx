@@ -40,44 +40,34 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
-  // جلب إحصائيات المدن من قاعدة البيانات
+  // جلب إحصائيات المدن من قاعدة البيانات مع فلترة المستخدم
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('orders')
-        .select(`
-          customer_city,
-          total_amount,
-          delivery_fee,
-          customer_phone,
-          customer_name,
-          created_at,
-          status,
-          receipt_received
-        `)
-        .in('status', ['completed', 'delivered'])
-        .eq('receipt_received', true);
+      // استخدام البيانات الممررة من العمليات المحددة للمستخدم
+      const validOrders = (orders || []).filter(order => 
+        ['completed', 'delivered'].includes(order.status) && 
+        order.receipt_received === true
+      );
 
       // تطبيق الفلترة الزمنية
+      let filteredOrders = validOrders;
       if (timeFilter !== 'all') {
         const range = timeRanges.find(r => r.value === timeFilter);
         if (range && range.months) {
           const startDate = new Date();
           startDate.setMonth(startDate.getMonth() - range.months);
-          query = query.gte('created_at', startDate.toISOString());
+          filteredOrders = validOrders.filter(order => 
+            new Date(order.created_at) >= startDate
+          );
         }
       }
-
-      const { data: ordersData, error } = await query;
-      
-      if (error) throw error;
 
       // تجميع البيانات حسب المدينة
       const cityGroups = {};
       const phoneCustomers = new Set();
 
-      ordersData.forEach(order => {
+      filteredOrders.forEach(order => {
         const city = order.customer_city || 'غير محدد';
         const revenue = (order.total_amount || 0) - (order.delivery_fee || 0);
         
@@ -118,7 +108,7 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
 
   useEffect(() => {
     fetchCityStats();
-  }, [timeFilter]);
+  }, [timeFilter, orders]);  // إضافة orders كـ dependency
 
   // ترتيب البيانات
   const sortedStats = useMemo(() => {
@@ -158,17 +148,19 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
             📊 إحصائيات المدن
           </h2>
           <p className="text-muted-foreground">
-            تحليل شامل للمبيعات حسب المدن مع فلترة زمنية متقدمة
+            تحليل شامل للمبيعات حسب المدن ({timeRanges.find(r => r.value === timeFilter)?.label})
           </p>
         </div>
         
         <div className="flex gap-3 w-full sm:w-auto">
           <Select value={timeFilter} onValueChange={setTimeFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] bg-white dark:bg-slate-800">
               <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="اختر الفترة" />
+              <SelectValue>
+                {timeRanges.find(r => r.value === timeFilter)?.label || "اختر الفترة"}
+              </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-slate-800 border-2 rounded-xl shadow-xl z-50">
               {timeRanges.map(range => (
                 <SelectItem key={range.value} value={range.value}>
                   {range.label}
@@ -178,11 +170,13 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           </Select>
 
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] bg-white dark:bg-slate-800">
               <BarChart3 className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="ترتيب حسب" />
+              <SelectValue>
+                {sortOptions.find(o => o.value === sortBy)?.label || "ترتيب حسب"}
+              </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white dark:bg-slate-800 border-2 rounded-xl shadow-xl z-50">
               {sortOptions.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -196,6 +190,7 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
             disabled={loading}
             variant="outline"
             size="icon"
+            className="bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
@@ -209,14 +204,14 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <CardContent className="p-6">
+          <Card className="border-0 bg-gradient-to-br from-blue-500 to-blue-600 text-white h-32">
+            <CardContent className="p-4 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">إجمالي المدن</p>
+                <div className="flex-1">
+                  <p className="text-sm opacity-90 mb-1">إجمالي المدن</p>
                   <p className="text-2xl font-bold">{totalStats.totalCities}</p>
                 </div>
-                <MapPin className="h-8 w-8 opacity-80" />
+                <MapPin className="h-8 w-8 opacity-80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -227,14 +222,14 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <CardContent className="p-6">
+          <Card className="border-0 bg-gradient-to-br from-green-500 to-green-600 text-white h-32">
+            <CardContent className="p-4 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">إجمالي الطلبات</p>
+                <div className="flex-1">
+                  <p className="text-sm opacity-90 mb-1">إجمالي الطلبات</p>
                   <p className="text-2xl font-bold">{totalStats.totalOrders.toLocaleString()}</p>
                 </div>
-                <Trophy className="h-8 w-8 opacity-80" />
+                <Trophy className="h-8 w-8 opacity-80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -245,14 +240,14 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-            <CardContent className="p-6">
+          <Card className="border-0 bg-gradient-to-br from-purple-500 to-purple-600 text-white h-32">
+            <CardContent className="p-4 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">إجمالي العملاء</p>
+                <div className="flex-1">
+                  <p className="text-sm opacity-90 mb-1">إجمالي العملاء</p>
                   <p className="text-2xl font-bold">{totalStats.totalCustomers.toLocaleString()}</p>
                 </div>
-                <Users className="h-8 w-8 opacity-80" />
+                <Users className="h-8 w-8 opacity-80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -263,14 +258,14 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <Card className="border-0 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <CardContent className="p-6">
+          <Card className="border-0 bg-gradient-to-br from-orange-500 to-orange-600 text-white h-32">
+            <CardContent className="p-4 h-full flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm opacity-90">إجمالي المبيعات</p>
+                <div className="flex-1">
+                  <p className="text-sm opacity-90 mb-1">إجمالي المبيعات</p>
                   <p className="text-2xl font-bold">{totalStats.totalRevenue.toLocaleString()} د.ع</p>
                 </div>
-                <DollarSign className="h-8 w-8 opacity-80" />
+                <DollarSign className="h-8 w-8 opacity-80 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -282,7 +277,7 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            تفاصيل المدن ({timeRanges.find(r => r.value === timeFilter)?.label})
+            تفاصيل المدن - {timeRanges.find(r => r.value === timeFilter)?.label} (ترتيب حسب: {sortOptions.find(o => o.value === sortBy)?.label})
           </CardTitle>
         </CardHeader>
         <CardContent>
