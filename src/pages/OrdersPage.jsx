@@ -64,10 +64,10 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
-  // Realtime updates للطلبات
+  // إشعارات فقط للطلبات الجديدة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
     const channel = supabase
-      .channel('orders-realtime')
+      .channel('orders-notifications-only')
       .on(
         'postgres_changes',
         {
@@ -77,9 +77,9 @@ const OrdersPage = () => {
         },
         (payload) => {
           const newOrder = payload.new;
-          console.log('New order created:', newOrder);
+          console.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
           
-          // إشعار فوري عند إنشاء طلب جديد
+          // إشعار فوري عند إنشاء طلب جديد فقط
           toast({
             title: (
               <div className="flex items-center gap-2">
@@ -121,22 +121,7 @@ const OrdersPage = () => {
             };
             createNotification();
           }
-          
-          // تحديث البيانات
-          refetchProducts();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('Order updated:', payload.new);
-          // تحديث البيانات عند تحديث طلب
-          refetchProducts();
+          // لا حاجة لـ refetchProducts - SuperProvider يتولى التحديث الفوري
         }
       )
       .subscribe();
@@ -144,7 +129,7 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetchProducts]);
+  }, [hasPermission]); // إزالة refetchProducts من dependencies
 
   // مستمعون عامّون لأحداث النظام المحلية لضمان التحديث حتى إن لم تصل Realtime
   useEffect(() => {

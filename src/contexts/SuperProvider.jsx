@@ -361,43 +361,62 @@ export const SuperProvider = ({ children }) => {
     const reloadTimerRef = { current: null };
 
     const handleRealtimeUpdate = (table, payload) => {
-      console.log(`🔄 SuperProvider: تحديث فوري في ${table}`, payload);
+      console.log(`🔄 SuperProvider: تحديث فوري لحظي في ${table}`, payload);
+      
+      // تحديث مباشر فوري للطلبات - بدون إعادة جلب
+      if (table === 'orders') {
+        const type = payload.eventType;
+        const rowNew = payload.new || {};
+        const rowOld = payload.old || {};
+        
+        if (type === 'INSERT') {
+          console.log('➕ إضافة طلب جديد فورياً');
+          setAllData(prev => ({ 
+            ...prev, 
+            orders: [rowNew, ...(prev.orders || [])] 
+          }));
+        } else if (type === 'UPDATE') {
+          console.log('🔄 تحديث طلب فورياً');
+          setAllData(prev => ({
+            ...prev,
+            orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
+          }));
+        } else if (type === 'DELETE') {
+          console.log('🗑️ حذف طلب فورياً');
+          setAllData(prev => ({ 
+            ...prev, 
+            orders: (prev.orders || []).filter(o => o.id !== rowOld.id) 
+          }));
+        }
+        return; // لا إعادة جلب للطلبات
+      }
+
+      // تحديث مباشر فوري لطلبات الذكاء الاصطناعي
       if (table === 'ai_orders') {
         const type = payload.eventType;
         const rowNew = payload.new || {};
         const rowOld = payload.old || {};
+        
         if (type === 'INSERT') {
+          console.log('➕ إضافة طلب ذكي جديد فورياً');
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
-          setAllData(prev => ({ ...prev, aiOrders: [...(prev.aiOrders || []), rowNew] }));
+          setAllData(prev => ({ ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] }));
         } else if (type === 'UPDATE') {
+          console.log('🔄 تحديث طلب ذكي فورياً');
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
           }));
         } else if (type === 'DELETE') {
+          console.log('🗑️ حذف طلب ذكي فورياً');
           try { pendingAiDeletesRef.current.add(rowOld.id); } catch {}
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).filter(o => o.id !== rowOld.id)
           }));
         }
-        return;
+        return; // لا إعادة جلب للطلبات الذكية
       }
-
-      // تحديث مباشر للطلبات لضمان التزامن اللحظي
-      if (table === 'orders') {
-        const type = payload.eventType;
-        const rowNew = payload.new || {};
-        const rowOld = payload.old || {};
-        if (type === 'INSERT') {
-          setAllData(prev => ({ ...prev, orders: [rowNew, ...(prev.orders || [])] }));
-        } else if (type === 'UPDATE') {
-          setAllData(prev => ({
-            ...prev,
-            orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
-          }));
-        } else if (type === 'DELETE') {
-          setAllData(prev => ({ ...prev, orders: (prev.orders || []).filter(o => o.id !== rowOld.id) }));
         }
         return;
       }
