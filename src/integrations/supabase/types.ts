@@ -2919,6 +2919,27 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_processed_updates: {
+        Row: {
+          chat_id: number
+          message_id: number
+          processed_at: string
+          update_id: number
+        }
+        Insert: {
+          chat_id: number
+          message_id: number
+          processed_at?: string
+          update_id: number
+        }
+        Update: {
+          chat_id?: number
+          message_id?: number
+          processed_at?: string
+          update_id?: number
+        }
+        Relationships: []
+      }
       user_product_permissions: {
         Row: {
           allowed_items: Json
