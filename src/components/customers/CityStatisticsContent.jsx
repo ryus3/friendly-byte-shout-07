@@ -147,51 +147,48 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     return sorted;
   }, [cityStats, sortBy]);
 
-  // إحصائيات إجمالية - حساب بسيط ومباشر
+  // إحصائيات إجمالية - حساب صحيح للعملاء الفريدين
   const totalStats = useMemo(() => {
     // حساب الإحصائيات من بيانات المدن المحسوبة مسبقاً
     const totalOrders = cityStats.reduce((acc, city) => acc + city.totalOrders, 0);
     const totalRevenue = cityStats.reduce((acc, city) => acc + city.totalRevenue, 0);
     
-    // حساب العملاء الفريدين من جميع المدن بدون تكرار
+    // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة (بدون تجميع حسب المدن)
     const allUniqueCustomers = new Set();
-    cityStats.forEach(city => {
-      // استخراج العملاء من كل مدينة وإضافتهم للمجموعة الشاملة
-      // نحتاج لإعادة حساب العملاء من الطلبات الأصلية لكل مدينة
-      const validOrders = (orders || []).filter(order => 
-        ['completed', 'delivered'].includes(order.status) && 
-        order.receipt_received === true &&
-        (order.customer_city || 'غير محدد') === city.city
-      );
+    
+    // جلب كل الطلبات الصالحة
+    const validOrders = (orders || []).filter(order => 
+      ['completed', 'delivered'].includes(order.status) && 
+      order.receipt_received === true
+    );
 
-      // تطبيق نفس الفلترة الزمنية المستخدمة في fetchCityStats
-      let filteredOrders = validOrders;
-      if (timeFilter !== 'all') {
-        const range = timeRanges.find(r => r.value === timeFilter);
-        if (range && range.months) {
-          const now = new Date();
-          const startDate = new Date();
-          
-          if (timeFilter === '1month') {
-            startDate.setDate(1);
-            startDate.setHours(0, 0, 0, 0);
-          } else {
-            startDate.setMonth(now.getMonth() - range.months);
-          }
-          
-          filteredOrders = validOrders.filter(order => {
-            const orderDate = new Date(order.created_at);
-            return orderDate >= startDate;
-          });
+    // تطبيق الفلترة الزمنية
+    let filteredOrders = validOrders;
+    if (timeFilter !== 'all') {
+      const range = timeRanges.find(r => r.value === timeFilter);
+      if (range && range.months) {
+        const now = new Date();
+        const startDate = new Date();
+        
+        if (timeFilter === '1month') {
+          startDate.setDate(1);
+          startDate.setHours(0, 0, 0, 0);
+        } else {
+          startDate.setMonth(now.getMonth() - range.months);
         }
+        
+        filteredOrders = validOrders.filter(order => {
+          const orderDate = new Date(order.created_at);
+          return orderDate >= startDate;
+        });
       }
+    }
 
-      // إضافة كل عميل فريد من هذه المدينة للمجموعة العامة
-      filteredOrders.forEach(order => {
-        if (order.customer_phone) {
-          allUniqueCustomers.add(order.customer_phone);
-        }
-      });
+    // حساب العملاء الفريدين من كل الطلبات المفلترة مباشرة
+    filteredOrders.forEach(order => {
+      if (order.customer_phone) {
+        allUniqueCustomers.add(order.customer_phone);
+      }
     });
 
     return {
