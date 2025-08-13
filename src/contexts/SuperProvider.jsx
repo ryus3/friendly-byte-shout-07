@@ -362,10 +362,32 @@ export const SuperProvider = ({ children }) => {
 
     const handleRealtimeUpdate = (table, payload) => {
       console.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
-      // منع الإغراق بالطلبات: تأجيل وإلغاء السابق
+      if (table === 'ai_orders') {
+        const type = payload.eventType;
+        const rowNew = payload.new || {};
+        const rowOld = payload.old || {};
+        if (type === 'INSERT') {
+          try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
+          setAllData(prev => ({ ...prev, aiOrders: [...(prev.aiOrders || []), rowNew] }));
+        } else if (type === 'UPDATE') {
+          setAllData(prev => ({
+            ...prev,
+            aiOrders: (prev.aiOrders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
+          }));
+        } else if (type === 'DELETE') {
+          try { pendingAiDeletesRef.current.add(rowOld.id); } catch {}
+          setAllData(prev => ({
+            ...prev,
+            aiOrders: (prev.aiOrders || []).filter(o => o.id !== rowOld.id)
+          }));
+        }
+        // لا تقم بإعادة الجلب للـ ai_orders لتجنب الوميض
+        return;
+      }
+
+      // للجداول الأخرى: إعادة جلب مهدَّأ
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
-        // تبريد لمنع التكرار السريع
         if (Date.now() - (lastFetchAtRef.current || 0) < 1500) return;
         fetchAllData();
       }, 800);

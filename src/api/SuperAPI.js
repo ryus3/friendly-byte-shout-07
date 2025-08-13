@@ -425,8 +425,11 @@ return this.fetch('all_data', async () => {
         }, (payload) => {
           console.log(`🔄 تحديث فوري في ${table}:`, payload);
           
-          // حذف البيانات المحفوظة بشكل مجمّع لتقليل إعادة الجلب
-          this.debouncedInvalidateAll();
+          // لا تبطل الكاش عند ai_orders لتجنب الوميض
+          if (table !== 'ai_orders') {
+            // حذف البيانات المحفوظة بشكل مجمّع لتقليل إعادة الجلب
+            this.debouncedInvalidateAll();
+          }
           
           if (callback) callback(table, payload);
         })
