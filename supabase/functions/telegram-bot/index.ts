@@ -1061,12 +1061,24 @@ async function parseProduct(productText: string) {
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
   // استخراج المقاس مع دعم المقاسات (كشف مبكر لصيغ العربية مثل اكسين)
-  let size = detectStandardSize(text) || '';
+  console.log('🔍 parseProduct analyzing text:', text);
+  
+  // أولاً: فحص مباشر لجميع متغيرات اكسين = XXL
+  let size = '';
+  if (/(اكسين|اكسين\s*لارج|xxl|XXL|XXl|Xxl|2\s*اكس|٢\s*اكس)/i.test(text)) {
+    size = 'XXL';
+    console.log('✅ Found XXL directly:', size);
+  } else {
+    size = detectStandardSize(text) || '';
+    console.log('🔍 detectStandardSize result:', size);
+  }
+  
   if (!size) {
     const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
     const sizeMatch = text.match(basicSizeRegex);
     if (sizeMatch) {
       size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+      console.log('🔍 Basic regex found:', size);
     }
   }
   if (!size) {
@@ -1074,6 +1086,7 @@ async function parseProduct(productText: string) {
     for (const dbSize of dbSizes) {
       if (text.toLowerCase().includes(dbSize.toLowerCase())) {
         size = dbSize;
+        console.log('🔍 DB size found:', size);
         break;
       }
     }
@@ -1082,7 +1095,7 @@ async function parseProduct(productText: string) {
   if (size) size = normalizeSizeLabel(size);
   
   // سجل النتيجة للمراجعة
-  try { console.log('parseProduct.size', { text, detected: size || null, normalized: normalizeSizeLabel(size || '') }); } catch {}
+  console.log('📦 parseProduct final size result:', { text, detected: size || null, normalized: normalizeSizeLabel(size || '') });
   
   // جلب الألوان من قاعدة البيانات
   const { data: colorsData } = await supabase.from('colors').select('name') || {};
