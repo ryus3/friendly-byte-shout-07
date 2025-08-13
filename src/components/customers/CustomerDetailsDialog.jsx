@@ -35,22 +35,36 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
   // تنسيق رقم الواتساب
   const formatWhatsAppNumber = (phone) => {
     if (!phone) return null;
+    
+    // إزالة كل شيء عدا الأرقام
     let cleanNumber = phone.replace(/\D/g, '');
     
-    // إذا بدأ بـ 07، أضف كود الدولة
-    if (cleanNumber.startsWith('07')) {
-      return '964' + cleanNumber.substring(1);
+    // إذا بدأ بـ 07 (الصيغة المحلية العراقية)
+    if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
+      return '964' + cleanNumber.substring(1); // نزيل الصفر ونضيف كود الدولة
     }
-    // إذا بدأ بـ 7، أضف كود الدولة مع الصفر
+    
+    // إذا بدأ بـ 7 فقط وطوله 10 أرقام
     if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
       return '964' + cleanNumber;
     }
-    // إذا بدأ بـ 964، استخدمه كما هو
+    
+    // إذا بدأ بـ 964 مسبقاً
     if (cleanNumber.startsWith('964')) {
       return cleanNumber;
     }
     
-    return cleanNumber;
+    // إذا بدأ بـ 00964
+    if (cleanNumber.startsWith('00964')) {
+      return cleanNumber.substring(2); // نزيل الـ 00
+    }
+    
+    // إذا لم يطابق أي صيغة، نحاول إضافة كود الدولة للأرقام التي تبدأ بـ 7
+    if (cleanNumber.match(/^7\d{9}$/)) {
+      return '964' + cleanNumber;
+    }
+    
+    return cleanNumber.startsWith('964') ? cleanNumber : '964' + cleanNumber.replace(/^0/, '');
   };
 
   // حساب تاريخ انتهاء صلاحية النقاط الافتراضي (سنة من تاريخ آخر طلب)
