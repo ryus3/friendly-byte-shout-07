@@ -147,43 +147,48 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     return sorted;
   }, [cityStats, sortBy]);
 
-  // إحصائيات إجمالية مع حساب صحيح للعملاء الفريدين
+  // إحصائيات إجمالية - استخدام بيانات المدن المحسوبة مسبقاً
   const totalStats = useMemo(() => {
-    // جمع كل العملاء الفريدين من البيانات المفلترة
+    // حساب العملاء الفريدين من جميع المدن (دون تكرار)
     const allUniqueCustomers = new Set();
     
-    // استخدام نفس منطق الفلترة المطبق في fetchCityStats
-    const validOrders = (orders || []).filter(order => 
-      ['completed', 'delivered'].includes(order.status) && 
-      order.receipt_received === true
-    );
+    // جمع العملاء الفريدين من كل مدينة
+    cityStats.forEach(city => {
+      // نحتاج لإعادة حساب العملاء الفريدين من الطلبات الأصلية
+      const validOrders = (orders || []).filter(order => 
+        ['completed', 'delivered'].includes(order.status) && 
+        order.receipt_received === true &&
+        (order.customer_city || 'غير محدد') === city.city
+      );
 
-    let filteredOrders = validOrders;
-    if (timeFilter !== 'all') {
-      const range = timeRanges.find(r => r.value === timeFilter);
-      if (range && range.months) {
-        const now = new Date();
-        const startDate = new Date();
-        
-        if (timeFilter === '1month') {
-          startDate.setDate(1);
-          startDate.setHours(0, 0, 0, 0);
-        } else {
-          startDate.setMonth(now.getMonth() - range.months);
+      // تطبيق نفس الفلترة الزمنية
+      let filteredOrders = validOrders;
+      if (timeFilter !== 'all') {
+        const range = timeRanges.find(r => r.value === timeFilter);
+        if (range && range.months) {
+          const now = new Date();
+          const startDate = new Date();
+          
+          if (timeFilter === '1month') {
+            startDate.setDate(1);
+            startDate.setHours(0, 0, 0, 0);
+          } else {
+            startDate.setMonth(now.getMonth() - range.months);
+          }
+          
+          filteredOrders = validOrders.filter(order => {
+            const orderDate = new Date(order.created_at);
+            return orderDate >= startDate;
+          });
         }
-        
-        filteredOrders = validOrders.filter(order => {
-          const orderDate = new Date(order.created_at);
-          return orderDate >= startDate;
-        });
       }
-    }
 
-    // جمع العملاء الفريدين
-    filteredOrders.forEach(order => {
-      if (order.customer_phone) {
-        allUniqueCustomers.add(order.customer_phone);
-      }
+      // إضافة العملاء الفريدين لهذه المدينة
+      filteredOrders.forEach(order => {
+        if (order.customer_phone) {
+          allUniqueCustomers.add(order.customer_phone);
+        }
+      });
     });
 
     // حساب الإحصائيات من بيانات المدن
