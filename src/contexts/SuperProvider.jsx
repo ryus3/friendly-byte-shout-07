@@ -510,7 +510,17 @@ export const SuperProvider = ({ children }) => {
   // وظائف متوافقة مع InventoryContext
   // ===============================
 
-  // توصيل وظائف قاعدة البيانات القديمة (CRUD) عبر hook موحد
+  // ===============================
+  // وظائف متوافقة مع InventoryContext
+  // ===============================
+
+  // توصيل وظائف قاعدة البيانات القديمة (CRUD) عبر hook محمي
+  // استدعاء useProductsDB دائماً لاحترام قواعد React hooks
+  const productsHookResult = useProductsDB();
+  
+  // تحديد إذا كان يجب استخدام الوظائف الفعلية أم الاحتياطية
+  const shouldUseRealFunctions = !!user;
+  
   const {
     addProduct: dbAddProduct,
     updateProduct: dbUpdateProduct,
@@ -518,7 +528,14 @@ export const SuperProvider = ({ children }) => {
     updateVariantStock: dbUpdateVariantStock,
     getLowStockProducts: dbGetLowStockProducts,
     refetch: dbRefetchProducts,
-  } = useProductsDB();
+  } = shouldUseRealFunctions ? productsHookResult : {
+    addProduct: async () => ({ success: false }),
+    updateProduct: async () => ({ success: false }),
+    deleteProducts: async () => ({ success: false }),
+    updateVariantStock: async () => ({ success: false }),
+    getLowStockProducts: async () => [],
+    refetch: async () => {}
+  };
 
   // إنشاء طلب جديد - يدعم النموذجين: (payload) أو (customerInfo, cartItems, ...)
   const createOrder = useCallback(async (arg1, cartItemsArg, trackingNumberArg, discountArg, statusArg, qrLinkArg, deliveryPartnerDataArg) => {
