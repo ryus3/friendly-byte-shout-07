@@ -18,12 +18,14 @@ import {
 } from "lucide-react";
 import { useSuper } from "@/contexts/SuperProvider";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
-  // استخدام النظام الموحد مع فلترة خاصة للعملاء
+  // استخدام النظام الموحد مع نفس منطق صفحة إدارة العملاء
   const { orders: allOrders, loading: systemLoading } = useSuper();
   const { user } = usePermissions();
+  const { user: authUser } = useAuth();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -45,30 +47,33 @@ const CityStatisticsContent = () => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
-  // فلترة خاصة لبيانات المستخدم الحالي فقط (حتى لو كان مديراً)
+  // المستخدم الحالي - نفس منطق صفحة إدارة العملاء
+  const currentUserId = authUser?.user_id || authUser?.id || user?.user_id || user?.id || null;
+
+  // فلترة الطلبات للمستخدم الحالي فقط - نفس منطق eligibleOrdersByUser
   const filterOrdersByCurrentUser = (orders) => {
-    if (!orders || !user) return [];
+    if (!orders || !currentUserId) return [];
     return orders.filter(order => 
-      order.created_by === user.user_id || 
-      order.created_by === user.id ||
-      order.employee_id === user.user_id ||
-      order.employee_id === user.id
+      (order.created_by && order.created_by === currentUserId) || 
+      (order.user_id && order.user_id === currentUserId)
     );
   };
 
-  // حساب إحصائيات المدن باستخدام النظام الموحد
+  // حساب إحصائيات المدن باستخدام نفس منطق صفحة إدارة العملاء
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // استخدام فلترة خاصة للمستخدم الحالي فقط
-      const userFilteredOrders = filterOrdersByCurrentUser(allOrders || []);
-      const validOrders = userFilteredOrders.filter(order => 
+      // الطلبات الصالحة (مكتملة/تم التسليم مع إيصال)
+      const eligibleOrders = (allOrders || []).filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
       );
 
+      // طلبات المستخدم الحالي فقط - نفس منطق صفحة إدارة العملاء
+      const eligibleOrdersByUser = filterOrdersByCurrentUser(eligibleOrders);
+
       // تطبيق الفلترة الزمنية
-      let filteredOrders = validOrders;
+      let filteredOrders = eligibleOrdersByUser;
       if (timeFilter !== 'all') {
         const range = timeRanges.find(r => r.value === timeFilter);
         if (range && range.months) {
@@ -82,7 +87,7 @@ const CityStatisticsContent = () => {
             startDate.setMonth(now.getMonth() - range.months);
           }
           
-          filteredOrders = validOrders.filter(order => {
+          filteredOrders = eligibleOrdersByUser.filter(order => {
             const orderDate = new Date(order.created_at);
             return orderDate >= startDate;
           });
@@ -171,15 +176,16 @@ const CityStatisticsContent = () => {
     // حساب العملاء الفريدين مباشرة من كل الطلبات المفلترة باستخدام phoneUtils
     const allUniqueCustomers = new Set();
     
-    // جلب كل الطلبات الصالحة للمستخدم الحالي فقط
-    const userFilteredOrders = filterOrdersByCurrentUser(allOrders || []);
-    const validOrders = userFilteredOrders.filter(order => 
+    // جلب كل الطلبات الصالحة للمستخدم الحالي فقط - نفس منطق صفحة إدارة العملاء
+    const eligibleOrders = (allOrders || []).filter(order => 
       ['completed', 'delivered'].includes(order.status) && 
       order.receipt_received === true
     );
+    
+    const eligibleOrdersByUser = filterOrdersByCurrentUser(eligibleOrders);
+    let validOrders = eligibleOrdersByUser;
 
     // تطبيق الفلترة الزمنية
-    let filteredOrders = validOrders;
     if (timeFilter !== 'all') {
       const range = timeRanges.find(r => r.value === timeFilter);
       if (range && range.months) {
@@ -193,7 +199,7 @@ const CityStatisticsContent = () => {
           startDate.setMonth(now.getMonth() - range.months);
         }
         
-        filteredOrders = validOrders.filter(order => {
+        validOrders = eligibleOrdersByUser.filter(order => {
           const orderDate = new Date(order.created_at);
           return orderDate >= startDate;
         });
@@ -201,7 +207,7 @@ const CityStatisticsContent = () => {
     }
 
     // حساب العملاء الفريدين باستخدام phoneUtils
-    filteredOrders.forEach(order => {
+    validOrders.forEach(order => {
       const phone = extractOrderPhone(order);
       if (phone) {
         const normalizedPhone = normalizePhone(phone);
