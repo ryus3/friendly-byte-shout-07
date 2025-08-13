@@ -346,10 +346,10 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
     if (genderFilter !== 'all') {
       filtered = filtered.filter((customer) => {
-        const genderType = customer.gender_type || 
-          (customer.customer_gender_segments && customer.customer_gender_segments.length > 0 
-            ? customer.customer_gender_segments[0].gender_type 
-            : null);
+        // قراءة الجنس من customer_gender_segments
+        const genderType = customer.customer_gender_segments && customer.customer_gender_segments.length > 0 
+          ? customer.customer_gender_segments[0].gender_type 
+          : customer.gender_type;
         return genderType === genderFilter;
       });
     }
@@ -416,6 +416,36 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
   // قائمة المدن الفريدة لواجهة الفلترة
   const uniqueCities = [...new Set(filteredCustomers.map(c => c.city).filter(Boolean))];
+  // معالج أزرار المكافآت
+  const handleRewardAction = (customer, actionType) => {
+    const actions = {
+      discount: `تطبيق خصم خاص للعميل ${customer.name}`,
+      free_delivery: `توصيل مجاني للعميل ${customer.name}`,
+      special_reward: `مكافأة خاصة للعميل ${customer.name}`
+    };
+    
+    toast({
+      title: "تم تنفيذ الإجراء",
+      description: actions[actionType],
+      duration: 3000
+    });
+  };
+
+  // معالج أزرار المكافآت
+  const handleRewardAction = (customer, actionType) => {
+    const actions = {
+      discount: `تطبيق خصم خاص للعميل ${customer.name}`,
+      free_delivery: `توصيل مجاني للعميل ${customer.name}`,
+      special_reward: `مكافأة خاصة للعميل ${customer.name}`
+    };
+    
+    toast({
+      title: "تم تنفيذ الإجراء",
+      description: actions[actionType],
+      duration: 3000
+    });
+  };
+
   const handleRefresh = () => {};
 
   // تصدير CSV شامل مع الجنس والمشتريات بدون التوصيل
@@ -989,6 +1019,28 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* City Statistics Tab Content */}
+        {activeTab === 'cityStats' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CityStatisticsContent customers={displayCustomers} orders={orders || []} />
+          </motion.div>
+        )}
+
+        {/* City Discounts Tab Content */}
+        {activeTab === 'cityDiscounts' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <CityDiscountsContent data={cityDiscountsData} />
+          </motion.div>
+        )}
 
         {/* Customers Grid - Only show when customers tab is active */}
         {activeTab === 'customers' && (
