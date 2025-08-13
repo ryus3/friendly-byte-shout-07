@@ -187,7 +187,11 @@ const CityStatisticsContent = ({ customers = [], orders = [] }) => {
     // حساب العملاء الفريدين من كل الطلبات المفلترة مباشرة
     filteredOrders.forEach(order => {
       if (order.customer_phone) {
-        allUniqueCustomers.add(order.customer_phone);
+        // تنظيف رقم الهاتف لضمان عدم التكرار بسبب المساحات أو التنسيق
+        const cleanPhone = order.customer_phone.toString().trim().replace(/\s+/g, '');
+        if (cleanPhone) {
+          allUniqueCustomers.add(cleanPhone);
+        }
       }
     });
 
