@@ -391,8 +391,8 @@ const CustomerCard = ({
                      size="sm"
                      className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
                    >
-                     <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
-                     <span className="mr-1">{customer.phone}</span>
+                      <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
+                      <span className="mr-1">{formatWhatsAppLink(customer.phone)}</span>
                    </Button>
                  </a>
                ) : (
