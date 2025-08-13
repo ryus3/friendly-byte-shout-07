@@ -255,38 +255,13 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       if (lowerLine.includes('منتج') || lowerLine.includes('product') || 
           (!phoneFound && !cityFound && !lowerLine.includes('عنوان') && !lowerLine.includes('منطقة') && !lowerLine.includes('محافظة'))) {
         
-        // Enhanced product parsing with size recognition
+        // Enhanced product parsing
         let productName = line
         let quantity = 1
         let price = 0
-        let detectedSize = null
         
         // Remove product prefix if exists
         productName = productName.replace(/^(منتج:?\s*)?/, '').trim()
-        
-        // Enhanced size detection including "اكسين" for XXL
-        const sizePatterns = {
-          'XXL': ['xxl', 'اكسين', 'اكس اكس لارج', 'اكس اكس ال', '2xl', '٢xl'],
-          'XL': ['xl', 'اكس لارج', 'اكس ال', 'كبير جداً'],
-          'L': ['large', 'لارج', 'ل', 'كبير', 'واسع'],
-          'M': ['medium', 'ميديوم', 'متوسط', 'وسط', 'م'],
-          'S': ['small', 'سمول', 'صغير', 'ص'],
-          'XS': ['xs', 'اكس سمول', 'صغير جداً']
-        }
-        
-        // Check for size in the product name
-        for (const [size, patterns] of Object.entries(sizePatterns)) {
-          for (const pattern of patterns) {
-            const regex = new RegExp(`\\b${pattern}\\b`, 'gi')
-            if (regex.test(productName)) {
-              detectedSize = size
-              // Remove size from product name for cleaner search
-              productName = productName.replace(regex, '').trim()
-              break
-            }
-          }
-          if (detectedSize) break
-        }
         
         // Parse different formats:
         // "قميص أحمر 2 قطعة x 25000"
