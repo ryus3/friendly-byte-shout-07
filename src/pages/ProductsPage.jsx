@@ -105,29 +105,6 @@ const ProductsPage = () => {
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // أدوات تطبيع مبسطة لفهم "اكسين" كـ XXL داخل البحث
-  const normalizeDigits = (s = '') => s.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString());
-  const normalizeSizeQuery = (input = '') => {
-    const t = normalizeDigits(String(input)).toLowerCase().replace(/\s+/g, ' ').trim();
-    if (!t) return '';
-    if (/(^|\s)(اكسين(?:\s*لارج)?|2\s*x\s*l|2xl|٢\s*اكس|٢xl|xxl)(\s|$)/i.test(t)) return 'xxl';
-    if (/(^|\s)(ثلاث(?:ة)?\s*اكس|3\s*x\s*l|3xl|٣\s*اكس|٣xl|xxxl)(\s|$)/i.test(t)) return 'xxxl';
-    if (/(^|\s)(xl|x\s*l|اكس(?:\s*لارج)?)(\s|$)/i.test(t)) return 'xl';
-    if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'l';
-    if (/(^|\s)(m|medium|مديم|ميديم|متوسط|وسط)(\s|$)/i.test(t)) return 'm';
-    if (/(^|\s)(s|small|سمول|صغير)(\s|$)/i.test(t)) return 's';
-    return '';
-  };
-
-  const normalizeSizeLabel = (s = '') => {
-    const q = normalizeSizeQuery(s);
-    if (q) return q.toUpperCase();
-    const t = normalizeDigits(String(s)).toUpperCase().trim();
-    if (t === '2XL' || t === '2 X L') return 'XXL';
-    if (t === '3XL' || t === '3 X L') return 'XXXL';
-    return t;
-  };
-
   // إزالة الإجبار على تغيير وضع العرض حسب الشاشة - دع المستخدم يختار
   
   // دعم البحث من الشريط السفلي

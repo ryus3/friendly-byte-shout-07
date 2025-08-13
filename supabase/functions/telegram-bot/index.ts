@@ -645,59 +645,26 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
           
           // البحث عن التنويع المطابق للون والمقاس
           if (bestMatch.product_variants && bestMatch.product_variants.length > 0) {
-            const variantsList = bestMatch.product_variants;
-
-            // قوائم المقاسات والألوان المتاحة بعد التطبيع
-            const availableSizes = Array.from(new Set(
-              variantsList.map(v => normalizeSizeLabel(v.sizes?.name)).filter(Boolean)
-            ));
-            const availableColors = Array.from(new Set(
-              variantsList.map(v => (v.colors?.name || '').toLowerCase()).filter(Boolean)
-            ));
-
-            // إذا حدّد المستخدم مقاساً غير موجود أصلاً، اعتبره غير متاح ولا تُنشئ طلباً لاحقاً
-            if (item.size) {
-              const reqSize = normalizeSizeLabel(item.size);
-              const hasSize = availableSizes.includes(reqSize);
-              if (!hasSize) {
-                item.available = false;
-                item.availability = 'size_not_found';
-                (item as any).requested_size = reqSize;
-                (item as any).available_sizes = availableSizes;
-              }
-            }
-
-            // إذا حدّد المستخدم لوناً غير موجود أصلاً
-            if (item.available !== false && item.color) {
-              const reqColor = String(item.color).toLowerCase();
-              const hasColor = availableColors.some(c => c.includes(reqColor) || reqColor.includes(c));
-              if (!hasColor) {
-                item.available = false;
-                item.availability = 'color_not_found';
-                (item as any).requested_color = item.color;
-                (item as any).available_colors = availableColors;
-              }
-            }
-
+            
             // البحث بالباركود أولاً (أدق طريقة)
-            if (item.available !== false && item.barcode) {
-              selectedVariant = variantsList.find(variant => 
+            if (item.barcode) {
+              selectedVariant = bestMatch.product_variants.find(variant => 
                 variant.barcode === item.barcode
               );
             }
             
             // إذا لم نجد بالباركود، ابحث باللون والمقاس
-            if (item.available !== false && !selectedVariant && (item.color || item.size)) {
-              selectedVariant = variantsList.find(variant => {
-                const colorMatch = !item.color || (variant.colors?.name && variant.colors.name.toLowerCase().includes(String(item.color).toLowerCase()));
+            if (!selectedVariant && (item.color || item.size)) {
+              selectedVariant = bestMatch.product_variants.find(variant => {
+                const colorMatch = !item.color || (variant.colors?.name && variant.colors.name.toLowerCase().includes(item.color.toLowerCase()));
                 const sizeMatch = !item.size || normalizeSizeLabel(variant.sizes?.name) === normalizeSizeLabel(item.size);
                 return colorMatch && sizeMatch;
               });
             }
             
-            // لا تقم بالرجوع لأول تنويع إذا كان المستخدم حدّد مقاس/لون ولم نجد مطابقاً
-            if (!selectedVariant && !(item.color || item.size)) {
-              selectedVariant = variantsList[0];
+            // إذا لم نجد مطابقة دقيقة، خذ أول تنويع متاح
+            if (!selectedVariant) {
+              selectedVariant = bestMatch.product_variants[0];
             }
             
             if (selectedVariant) {
@@ -762,36 +729,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
-    // إنشاء الطلب الذكي — لكن أولاً: إن كانت كل العناصر غير متاحة (قياس/لون غير موجودين أو نفاد/غير موجود)
-    const allUnavailable = (items.length > 0) && items.every((it: any) => {
-      const a = String(it.availability || '').toLowerCase();
-      if (it.available === false) return true;
-      return ['size_not_found','color_not_found','not_found','out'].includes(a);
-    });
-    if (allUnavailable) {
-      const lines = items.map((item: any) => {
-        const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
-        const reason = item.availability === 'size_not_found' ? ' — القياس المطلوب غير موجود'
-          : item.availability === 'color_not_found' ? ' — اللون المطلوب غير موجود'
-          : item.availability === 'not_found' ? ' — لا يوجد هكذا منتج لدينا'
-          : ' — غير متاح حالياً';
-        return `❌ غير متاح ${base}${reason}`;
-      }).join('\n');
-
-      const msg = [
-        '⚠️ تنبيه توفر',
-        `📱 الهاتف : ${customerPhone || '—'}`,
-        lines,
-        '',
-        '⚠️ المنتج بالمقاس/اللون المطلوب غير موجود حالياً، لن يتم إنشاء طلب. الرجاء اختيار بديل داخل الموقع ثم إعادة الإرسال.'
-      ].join('\n');
-
-      await sendTelegramMessage(chatId, msg, 'HTML');
-      console.log('All items unavailable — order will not be created');
-      return true;
-    }
-
     // إنشاء الطلب الذكي
+    const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
+      p_order_data: {
         original_text: text,
         processed_at: new Date().toISOString(),
         telegram_user_id: chatId,
@@ -834,13 +774,6 @@ const warnList = (unavailableItems.length ? unavailableItems : items).map(item =
       if (miss.need_color) return ' — بدون لون';
       if (miss.need_size) return ' — بدون قياس';
       return ' — يحتاج تحديد اللون والمقاس';
-    }
-    if (item.availability === 'size_not_found') {
-      const avail = (item.available_sizes || []).join(', ');
-      return ` — القياس المطلوب غير موجود${avail ? ` (المتاح: ${avail})` : ''}`;
-    }
-    if (item.availability === 'color_not_found') {
-      return ' — اللون المطلوب غير موجود';
     }
     if (item.availability === 'insufficient') {
       const av = item.available_quantity ?? 0;
@@ -954,23 +887,6 @@ function normalizeDigits(input: string): string {
   return input.replace(/[٠-٩]/g, (d) => map[d] || d);
 }
 
-// تحويل بعض الكلمات العربية إلى رموز مقاسات قبل المطابقة
-function preNormalizeSizeTokens(input: string): string {
-  const t = normalizeDigits(String(input)).toLowerCase();
-  return t
-    // جميع متغيرات XXL
-    .replace(/ا\s*ك\s*س\s*ي\s*ن(?:\s*لارج)?/g, 'xxl')
-    .replace(/اكسين(?:\s*لارج)?/g, 'xxl')
-    .replace(/دبل\s*اكس/g, 'xxl')
-    .replace(/2\s*اكس/g, 'xxl')
-    .replace(/٢\s*اكس/g, 'xxl')
-    .replace(/xxl/g, 'xxl')
-    .replace(/XXL/g, 'xxl')
-    .replace(/XXl/g, 'xxl')
-    .replace(/Xxl/g, 'xxl')
-    .replace(/ثلاث(?:ة)?\s*اكس/g, '3xl');
-}
-
 // تطبيع المقاسات إلى صيغة قياسية (S, M, L, XL, XXL, XXXL)
 function normalizeSizeLabel(input?: string | null): string {
   if (!input) return '';
@@ -1005,30 +921,20 @@ const SIZE_SYNONYMS: Record<string, string[]> = {
 function sizeSynonymsRegex(): RegExp {
   const all = Object.values(SIZE_SYNONYMS).flat().map(s => s.replace(/\s+/g, '\\s*'));
   const base = ['s','m','l','xl','xxl','xxxl'];
-  // استخدم حدود كلمات مرنة تناسب العربية بالمسافات بدلاً من \\b
-  const pattern = `(?:^|\\s)(?:${[...base, ...all].join('|')})(?:\\s|$)`;
+  const pattern = `\\b(?:${[...base, ...all].join('|')})\\b`;
   return new RegExp(pattern, 'gi');
 }
 
 function detectStandardSize(text: string): string | null {
-  const t = preNormalizeSizeTokens(text).replace(/\s+/g, ' ').trim();
-  const originalText = text.toLowerCase().trim();
-  
-  // أولاً: فحص مباشر لجميع متغيرات XXL
-  if (/(^|\s)(اكسين|اكسين\s*لارج|xxl|XXL|XXl|Xxl|2\s*اكس|٢\s*اكس)(\s|$)/i.test(originalText)) {
-    return 'XXL';
-  }
-  
-  // ثانياً: أنماط XL المتعددة بعد التطبيع
-  if (/(^|\s)((?:اكس\s*){3}(?:لارج)?|x\s*x\s*x\s*l|xxx\s*l|3\s*اكس|٣\s*اكس|3xl|٣xl)(\s|$)/i.test(t)) return 'XXXL';
-  if (/(^|\s)(xxl|2xl|٢xl|دبل\s*اكس)(\s|$)/i.test(t)) return 'XXL';
-  if (/(^|\s)(xl|x\s*l|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل)(\s|$)/i.test(t) && !/(اكسين|اكسين\s*لارج)/i.test(originalText)) return 'XL';
-  
+  const t = normalizeDigits(text).toLowerCase().replace(/\s+/g, ' ').trim();
+  // نماذج رقمية مثل 2xl / 3xl
+  if (/(\b|\s)(3\s*x\s*l|3xl|٣\s*اكس|٣xl|ثلاثة\s*اكس|ثلاث\s*اكس)(\b|\s)/i.test(t)) return 'XXXL';
+  if (/(\b|\s)(2\s*x\s*l|2xl|٢\s*اكس|٢xl|اكسين|اكسين\s*لارج|دبل\s*اكس)(\b|\s)/i.test(t)) return 'XXL';
+  if (/(^|\s)(xl|x\s*l|x|اكس\s*لارج|اكس\s*ال|إكس\s*إل|اكسل|اكس)(\s|$)/i.test(t)) return 'XL';
   // أساسية
   if (/(^|\s)(l|large|لارج|كبير)(\s|$)/i.test(t)) return 'L';
   if (/(^|\s)(m|medium|ميديم|مديم|متوسط|وسط)(\s|$)/i.test(t)) return 'M';
   if (/(^|\s)(s|small|سمول|صغير)(\s|$)/i.test(t)) return 'S';
-  
   return null;
 }
 
@@ -1060,42 +966,27 @@ async function parseProduct(productText: string) {
   const { data: sizesData } = await supabase.from('sizes').select('name') || {};
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
-  // استخراج المقاس مع دعم المقاسات (كشف مبكر لصيغ العربية مثل اكسين)
-  console.log('🔍 parseProduct analyzing text:', text);
-  
-  // أولاً: فحص مباشر لجميع متغيرات اكسين = XXL
+  // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
   let size = '';
-  if (/(اكسين|اكسين\s*لارج|xxl|XXL|XXl|Xxl|2\s*اكس|٢\s*اكس)/i.test(text)) {
-    size = 'XXL';
-    console.log('✅ Found XXL directly:', size);
-  } else {
-    size = detectStandardSize(text) || '';
-    console.log('🔍 detectStandardSize result:', size);
-  }
+  const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
+  const sizeMatch = text.match(basicSizeRegex);
   
-  if (!size) {
-    const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
-    const sizeMatch = text.match(basicSizeRegex);
-    if (sizeMatch) {
-      size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
-      console.log('🔍 Basic regex found:', size);
-    }
-  }
-  if (!size) {
+  if (sizeMatch) {
+    size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+  } else {
     // البحث في المقاسات من قاعدة البيانات
     for (const dbSize of dbSizes) {
       if (text.toLowerCase().includes(dbSize.toLowerCase())) {
         size = dbSize;
-        console.log('🔍 DB size found:', size);
         break;
       }
     }
   }
-  // تطبيع نهائي للمقاس
-  if (size) size = normalizeSizeLabel(size);
-  
-  // سجل النتيجة للمراجعة
-  console.log('📦 parseProduct final size result:', { text, detected: size || null, normalized: normalizeSizeLabel(size || '') });
+  // مطابقة الصيغ العربية والإنجليزية إلى مقاس قياسي إن لم نجد أعلاه
+  if (!size) {
+    const std = detectStandardSize(text);
+    if (std) size = std;
+  }
   
   // جلب الألوان من قاعدة البيانات
   const { data: colorsData } = await supabase.from('colors').select('name') || {};
