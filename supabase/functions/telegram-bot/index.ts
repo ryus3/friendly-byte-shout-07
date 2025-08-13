@@ -678,7 +678,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
           // التحقق الشامل من صلاحيات المنتج - CRITICAL SECURITY
           if (!allowAllProducts && bestMatch) {
-            const checkProductPermission = (): { allowed: boolean, reason?: string, scope?: string } => {
+            const checkProductPermission = async (): Promise<{ allowed: boolean, reason?: string, scope?: string }> => {
               // فحص صلاحيات الأقسام
               if (allowedDeptIds.length > 0) {
                 const productDeptIds = (bestMatch.product_departments || []).map((pd: any) => String(pd.department_id));
@@ -735,7 +735,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               return { allowed: true };
             };
 
-            const permissionCheck = checkProductPermission();
+            const permissionCheck = await checkProductPermission();
             if (!permissionCheck.allowed) {
               console.log(`❌ PRODUCT PERMISSION DENIED: Employee ${employeeCode} attempted to access product ${bestMatch.name}. Reason: ${permissionCheck.reason}, Scope: ${permissionCheck.scope}`);
               
