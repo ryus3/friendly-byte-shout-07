@@ -24,16 +24,15 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// دالة تنسيق رقم الواتساب
-const formatWhatsAppNumber = (phone) => {
+// دالة تنسيق رقم الواتساب للرابط
+const formatWhatsAppLink = (phone) => {
   if (!phone) return null;
   
-  // إزالة كل شيء عدا الأرقام
   let cleanNumber = phone.replace(/\D/g, '');
   
   // إذا بدأ بـ 07 (الصيغة المحلية العراقية)
   if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
-    return '964' + cleanNumber.substring(1); // نزيل الصفر ونضيف كود الدولة
+    return '964' + cleanNumber.substring(1);
   }
   
   // إذا بدأ بـ 7 فقط وطوله 10 أرقام
@@ -48,15 +47,10 @@ const formatWhatsAppNumber = (phone) => {
   
   // إذا بدأ بـ 00964
   if (cleanNumber.startsWith('00964')) {
-    return cleanNumber.substring(2); // نزيل الـ 00
+    return cleanNumber.substring(2);
   }
   
-  // إذا لم يطابق أي صيغة، نحاول إضافة كود الدولة للأرقام التي تبدأ بـ 7
-  if (cleanNumber.match(/^7\d{9}$/)) {
-    return '964' + cleanNumber;
-  }
-  
-  return cleanNumber.startsWith('964') ? cleanNumber : '964' + cleanNumber.replace(/^0/, '');
+  return '964' + cleanNumber.replace(/^0/, '');
 };
 
 const CustomerCard = ({ 
@@ -391,11 +385,12 @@ const CustomerCard = ({
                التفاصيل
              </Button>
              
-              {formatWhatsAppNumber(customer.phone) ? (
+              {customer.phone ? (
                 <a
-                  href={`https://wa.me/${formatWhatsAppNumber(customer.phone)}`}
+                  href={`https://wa.me/${formatWhatsAppLink(customer.phone)}`}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title={`إرسال رسالة واتساب إلى ${customer.phone}`}
                 >
                   <Button
                     variant="outline"
@@ -411,6 +406,7 @@ const CustomerCard = ({
                   size="sm"
                   disabled
                   className="group/btn opacity-50"
+                  title="رقم الهاتف غير متوفر"
                 >
                   <MessageCircle className="h-4 w-4" />
                 </Button>
