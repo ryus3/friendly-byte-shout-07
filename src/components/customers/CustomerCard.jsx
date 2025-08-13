@@ -24,44 +24,40 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// دالة تنسيق رقم الواتساب للرابط
+// دالة تنسيق رقم الواتساب للرابط - إصلاح جذري
 const formatWhatsAppLink = (phone) => {
   if (!phone) return null;
   
-  console.log('Original phone:', phone); // للتتبع
+  // إزالة كل شيء عدا الأرقام
+  let cleanNumber = String(phone).replace(/\D/g, '');
   
-  let cleanNumber = phone.replace(/\D/g, '');
-  console.log('Clean number:', cleanNumber); // للتتبع
+  console.log('📱 Original phone:', phone);
+  console.log('🧹 Clean number:', cleanNumber);
   
-  // إذا بدأ بـ 07 (الصيغة المحلية العراقية) 11 رقم
+  // التعامل مع الأرقام العراقية
   if (cleanNumber.startsWith('07') && cleanNumber.length === 11) {
-    const result = '964' + cleanNumber.substring(1); // إزالة الصفر الأول
-    console.log('Result for 07:', result); // للتتبع
+    // مثال: 07728020024 -> 9647728020024
+    const result = '964' + cleanNumber.substring(1);
+    console.log('✅ Iraq mobile result:', result);
     return result;
   }
   
-  // إذا بدأ بـ 7 فقط وطوله 10 أرقام
   if (cleanNumber.startsWith('7') && cleanNumber.length === 10) {
+    // مثال: 7728020024 -> 9647728020024  
     const result = '964' + cleanNumber;
-    console.log('Result for 7:', result); // للتتبع
+    console.log('✅ Iraq mobile (no 0) result:', result);
     return result;
   }
   
-  // إذا بدأ بـ 964 مسبقاً
+  // إذا كان يبدأ بـ 964 بالفعل
   if (cleanNumber.startsWith('964')) {
-    console.log('Already has 964:', cleanNumber); // للتتبع
+    console.log('✅ Already formatted:', cleanNumber);
     return cleanNumber;
   }
   
-  // إذا بدأ بـ 00964
-  if (cleanNumber.startsWith('00964')) {
-    const result = cleanNumber.substring(2);
-    console.log('Result for 00964:', result); // للتتبع
-    return result;
-  }
-  
+  // الحالة الافتراضية
   const result = '964' + cleanNumber.replace(/^0/, '');
-  console.log('Default result:', result); // للتتبع
+  console.log('✅ Default result:', result);
   return result;
 };
 
