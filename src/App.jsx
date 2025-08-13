@@ -12,6 +12,8 @@ import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
+import { useCapacitor } from '@/hooks/useCapacitor';
+import MobileBottomNav from '@/components/mobile/MobileBottomNav';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -92,6 +94,7 @@ function ScrollToTop() {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  const { isNative, platform } = useCapacitor();
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
@@ -147,6 +150,9 @@ function AppContent() {
       <Toaster />
       <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
+      
+      {/* شريط التنقل السفلي للهاتف فقط */}
+      {isNative && platform === 'android' && user && <MobileBottomNav />}
     </div>
   )
 }
