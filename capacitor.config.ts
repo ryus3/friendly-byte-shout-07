@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.5a9f8315d7f447089260f85606ca37a8',
+  appId: 'com.ryus.inventory',
   appName: 'متجر RYUS',
   webDir: 'dist',
   server: {
@@ -10,16 +10,19 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
-      backgroundColor: '#ffffff',
+      launchShowDuration: 3000,
+      backgroundColor: '#1e293b',
       showSpinner: true,
       androidSpinnerStyle: 'large',
       iosSpinnerStyle: 'small',
       spinnerColor: '#3b82f6'
     },
     StatusBar: {
-      style: 'default',
-      backgroundColor: '#ffffff'
+      style: 'dark',
+      backgroundColor: '#1e293b'
+    },
+    App: {
+      deepLinkingEnabled: true
     }
   }
 };
