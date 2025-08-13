@@ -656,8 +656,8 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
             // إذا لم نجد بالباركود، ابحث باللون والمقاس
             if (!selectedVariant && (item.color || item.size)) {
               selectedVariant = bestMatch.product_variants.find(variant => {
-                const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
-                const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
+                const colorMatch = !item.color || (variant.colors?.name && variant.colors.name.toLowerCase().includes(item.color.toLowerCase()));
+                const sizeMatch = !item.size || normalizeSizeLabel(variant.sizes?.name) === normalizeSizeLabel(item.size);
                 return colorMatch && sizeMatch;
               });
             }
@@ -887,6 +887,27 @@ function normalizeDigits(input: string): string {
   return input.replace(/[٠-٩]/g, (d) => map[d] || d);
 }
 
+// تطبيع المقاسات إلى صيغة قياسية (S, M, L, XL, XXL, XXXL)
+function normalizeSizeLabel(input?: string | null): string {
+  if (!input) return '';
+  const t = normalizeDigits(String(input)).toLowerCase().replace(/\s+/g, ' ').trim();
+  // كشف سريع عبر الدالة القياسية
+  const std = detectStandardSize(t);
+  if (std) return std.toUpperCase();
+  // مطابقة مع قاموس المرادفات
+  const entries: [string, string[]][] = Object.entries(SIZE_SYNONYMS);
+  for (const [stdKey, synonyms] of entries) {
+    for (const s of synonyms) {
+      const re = new RegExp(`(^|\\s)${s.replace(/\s+/g, '\\s*')}(\\s|$)`, 'i');
+      if (re.test(t)) return stdKey.toUpperCase();
+    }
+  }
+  // حالات مثل 2xl/3xl مباشرة
+  if (/^2\s*x\s*l$/i.test(t) || /^2xl$/i.test(t)) return 'XXL';
+  if (/^3\s*x\s*l$/i.test(t) || /^3xl$/i.test(t)) return 'XXXL';
+  return t.toUpperCase();
+}
+
 // جميع صيغ المقاسات الشائعة بالعربي والإنجليزي
 const SIZE_SYNONYMS: Record<string, string[]> = {
   'S': ['s','small','سمول','صغير'],
@@ -1004,7 +1025,10 @@ async function parseProduct(productText: string) {
   productName = productName.replace(/\b\d{8,}\b/g, '').trim();
   
   // إزالة المقاس
-  productName = productName.replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '').trim();
+  productName = productName
+    .replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '')
+    .replace(sizeSynonymsRegex(), '')
+    .trim();
   
   // إزالة اللون إذا وُجد
   if (color && colorIndex !== -1) {
@@ -1018,6 +1042,7 @@ async function parseProduct(productText: string) {
         .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '') // إزالة الكمية
         .replace(/\b\d{8,}\b/g, '') // إزالة الباركود
         .replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '') // إزالة المقاس
+        .replace(sizeSynonymsRegex(), '') // إزالة صيغ المقاس العربية
         .replace(/\s+/g, ' ')
         .trim();
     }
@@ -1029,7 +1054,7 @@ async function parseProduct(productText: string) {
   return {
     name: productName || text,
     quantity: quantity,
-    size: size,
+    size: normalizeSizeLabel(size) || size,
     color: color,
     barcode: barcode,
     price: 0, // سيتم حسابه لاحقاً
