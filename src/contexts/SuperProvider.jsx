@@ -590,10 +590,25 @@ export const SuperProvider = ({ children }) => {
     }
   }, [allData.settings, user]);
 
-  // تحديث طلب - نفس الواجهة القديمة
+  // تحديث طلب - نفس الواجهة القديمة مع تحديث فوري محلي
   const updateOrder = useCallback(async (orderId, updates) => {
     try {
+      // تحديث فوري محلياً أولاً لتحسين الإحساس باللحظية
+      setAllData(prev => ({
+        ...prev,
+        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updates } : o),
+      }));
+      // إرسال حدث متصفح فوري
+      window.dispatchEvent(new CustomEvent('orderUpdated', { detail: { id: orderId, updates } }));
+
       const updatedOrder = await superAPI.updateOrder(orderId, updates);
+
+      // توحيد الحالة النهائية بعد عودة الخادم
+      setAllData(prev => ({
+        ...prev,
+        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updatedOrder } : o),
+      }));
+
       return { success: true, data: updatedOrder };
     } catch (error) {
       console.error('Error in updateOrder:', error);
@@ -614,12 +629,17 @@ export const SuperProvider = ({ children }) => {
         }));
         superAPI.invalidate('all_data');
         toast({ title: 'تم الحذف', description: 'تم حذف الطلبات الذكية نهائياً', variant: 'success' });
+        orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {} });
         return { success: true };
       }
-      // حذف طلبات عادية (قيد التجهيز فقط) بدون تعقيد زائد هنا
+      // حذف طلبات عادية (قيد التجهيز فقط) بتحديث تفاؤلي
+      setAllData(prev => ({ ...prev, orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) }));
+      orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); } catch {} });
+
       const { error } = await supabase.from('orders').delete().in('id', orderIds);
       if (error) throw error;
       superAPI.invalidate('all_data');
+      // تحديث موحّد بعد التأكيد
       await fetchAllData();
       return { success: true };
     } catch (error) {
