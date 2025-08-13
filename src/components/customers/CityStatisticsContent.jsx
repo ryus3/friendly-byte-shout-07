@@ -17,13 +17,11 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useSuper } from "@/contexts/SuperProvider";
-import { usePermissions } from '@/hooks/usePermissions';
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
-  // استخدام النظام الموحد والصلاحيات لفلترة بيانات المستخدم
+  // استخدام النظام الموحد بدلاً من البيانات الممررة
   const { orders: allOrders, loading: systemLoading } = useSuper();
-  const { filterDataByUser } = usePermissions();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timeFilter, setTimeFilter] = useState('all');
@@ -45,13 +43,12 @@ const CityStatisticsContent = () => {
     { value: 'average', label: 'متوسط قيمة الطلب' }
   ];
 
-  // حساب إحصائيات المدن باستخدام النظام الموحد - طلبات المستخدم فقط
+  // حساب إحصائيات المدن باستخدام النظام الموحد
   const fetchCityStats = async () => {
     setLoading(true);
     try {
-      // فلترة بيانات المستخدم أولاً (حتى للمديرين)
-      const userOrders = filterDataByUser(allOrders || [], 'created_by');
-      const validOrders = userOrders.filter(order => 
+      // استخدام البيانات من النظام الموحد (مفلترة تلقائياً)
+      const validOrders = (allOrders || []).filter(order => 
         ['completed', 'delivered'].includes(order.status) && 
         order.receipt_received === true
       );
