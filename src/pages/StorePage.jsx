@@ -59,6 +59,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import DefaultProductImage from '@/components/ui/default-product-image';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import TrendingHeroSlider from '@/components/store/TrendingHeroSlider';
 
 // Import professional images
 import categoryWomen from '@/assets/category-women.jpg';
@@ -169,8 +170,11 @@ const StorePage = () => {
       {/* Main Navigation Bar */}
       <SheinNavigation />
 
-      {/* Flash Sale Banner */}
-      <FlashSaleBanner bannerSettings={bannerSettings} setBannerSettings={setBannerSettings} />
+      {/* Trending Hero Slider */}
+      <TrendingHeroSlider 
+        onProductClick={(product) => console.log('Product clicked:', product)}
+        onCTAClick={(slide) => console.log('CTA clicked:', slide)}
+      />
 
       {/* Trending Collections Row */}
       <TrendingCollectionsRow collections={trendingCollections} />

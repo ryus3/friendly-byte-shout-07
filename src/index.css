@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700&family=Changa:wght@400;500;600;700;800&family=Amiri:wght@400;700&family=El+Messiri:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Almarai:wght@300;400;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;900&family=Cairo:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -120,7 +120,7 @@
   }
   body, html {
     @apply bg-background text-foreground;
-    font-family: 'Readex Pro', 'Tajawal', 'Cairo', sans-serif;
+    font-family: 'IBM Plex Sans Arabic', 'Almarai', 'Tajawal', sans-serif;
     direction: rtl;
     height: 100dvh;
     -webkit-text-size-adjust: 100%;
@@ -129,19 +129,31 @@
     transition: all 0.3s ease;
   }
   .font-brand {
-    font-family: 'Changa', serif;
+    font-family: 'Almarai', sans-serif;
+    font-weight: 800;
   }
   .font-display {
-    font-family: 'El Messiri', serif;
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+    font-weight: 600;
   }
   .font-headline {
-    font-family: 'Changa', sans-serif;
+    font-family: 'Almarai', sans-serif;
+    font-weight: 700;
   }
   .font-tajawal {
     font-family: 'Tajawal', sans-serif;
   }
   .font-cairo {
     font-family: 'Cairo', sans-serif;
+  }
+  .font-ibm-arabic {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+  }
+  .font-almarai {
+    font-family: 'Almarai', sans-serif;
+  }
+  .font-noto-arabic {
+    font-family: 'Noto Sans Arabic', sans-serif;
   }
 }
 
