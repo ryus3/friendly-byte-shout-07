@@ -45,7 +45,8 @@ import {
   Shirt,
   Gem,
   Palette,
-  Dumbbell
+  Dumbbell,
+  Pen
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,6 +92,15 @@ const StorePage = () => {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
+
+  // إعدادات البانر القابلة للتعديل
+  const [bannerSettings, setBannerSettings] = useState({
+    discount: '80',
+    mainText: 'خصم يصل إلى',
+    subText: 'تخفيضات نهاية الموسم',
+    buttonText: 'تسوق الآن',
+    isEditable: true
+  });
 
   // Sample data for Professional E-commerce interface with real images
   const sheinCategories = [
@@ -160,7 +170,7 @@ const StorePage = () => {
       <SheinNavigation />
 
       {/* Flash Sale Banner */}
-      <FlashSaleBanner />
+      <FlashSaleBanner bannerSettings={bannerSettings} setBannerSettings={setBannerSettings} />
 
       {/* Trending Collections Row */}
       <TrendingCollectionsRow collections={trendingCollections} />
@@ -292,32 +302,157 @@ const SheinNavigation = () => {
   );
 };
 
-// Flash Sale Banner
-const FlashSaleBanner = () => {
+// Flash Sale Banner - احترافي قابل للتعديل
+const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedSettings, setEditedSettings] = useState(bannerSettings);
+
+  const handleSave = () => {
+    setBannerSettings(editedSettings);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedSettings(bannerSettings);
+    setIsEditing(false);
+  };
+
   return (
-    <div className="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 text-white py-8 px-4 relative overflow-hidden">
+    <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 dark:from-purple-700 dark:via-pink-700 dark:to-red-700 text-white py-12 px-4 overflow-hidden">
+      {/* خلفية متحركة */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-orange-500/30 to-red-500/20 animate-pulse"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-30">
+          <div className="absolute top-4 right-8 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
+          <div className="absolute top-8 left-12 w-1 h-1 bg-white rounded-full animate-pulse"></div>
+          <div className="absolute bottom-6 right-16 w-3 h-3 bg-yellow-200 rounded-full animate-bounce"></div>
+          <div className="absolute bottom-8 left-8 w-1.5 h-1.5 bg-orange-300 rounded-full animate-ping"></div>
+        </div>
+      </div>
+
       <motion.div
-        animate={{ rotate: [0, 5, -5, 0] }}
-        transition={{ duration: 2, repeat: Infinity }}
-        className="text-center"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 text-center"
       >
-        <div className="text-4xl font-bold mb-2">
-          خصم يصل إلى <span className="text-6xl">80%</span>
-        </div>
-        <div className="text-2xl font-bold mb-4">
-          تخفيضات نهاية الموسم <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">تخفيضات</span>
-        </div>
-        <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-2 rounded border-2 border-white">
-          تسوق الآن &lt;
-        </Button>
+        {!isEditing ? (
+          <>
+            <motion.div
+              animate={{ 
+                scale: [1, 1.05, 1],
+                textShadow: [
+                  '0 0 20px rgba(255,255,255,0.5)',
+                  '0 0 30px rgba(255,255,255,0.8)',
+                  '0 0 20px rgba(255,255,255,0.5)'
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+              className="font-headline text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg"
+            >
+              {bannerSettings.mainText} <span className="text-5xl md:text-7xl font-black bg-gradient-to-r from-yellow-300 via-yellow-200 to-white bg-clip-text text-transparent animate-pulse">{bannerSettings.discount}%</span>
+            </motion.div>
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="font-display text-xl md:text-2xl font-semibold mb-6"
+            >
+              {bannerSettings.subText} <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full font-black text-lg shadow-lg">تخفيضات</span>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: 2 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-block"
+            >
+              <Button className="bg-gradient-to-r from-white to-yellow-100 text-purple-700 hover:from-yellow-100 hover:to-white font-black px-8 py-3 rounded-full border-4 border-yellow-300 shadow-2xl text-lg font-headline transition-all duration-300 hover:shadow-yellow-300/50">
+                {bannerSettings.buttonText} ⭐
+              </Button>
+            </motion.div>
+            
+            {bannerSettings.isEditable && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                onClick={() => setIsEditing(true)}
+                className="absolute top-4 left-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300"
+              >
+                <Pen className="w-5 h-5 text-white" />
+              </motion.button>
+            )}
+          </>
+        ) : (
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 max-w-md mx-auto">
+            <h3 className="font-headline text-xl font-bold mb-4">تعديل البانر</h3>
+            <div className="space-y-4 text-right">
+              <div>
+                <Label className="text-white font-medium">نسبة الخصم</Label>
+                <Input
+                  value={editedSettings.discount}
+                  onChange={(e) => setEditedSettings({...editedSettings, discount: e.target.value})}
+                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
+                  placeholder="80"
+                />
+              </div>
+              <div>
+                <Label className="text-white font-medium">النص الرئيسي</Label>
+                <Input
+                  value={editedSettings.mainText}
+                  onChange={(e) => setEditedSettings({...editedSettings, mainText: e.target.value})}
+                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
+                />
+              </div>
+              <div>
+                <Label className="text-white font-medium">النص الفرعي</Label>
+                <Input
+                  value={editedSettings.subText}
+                  onChange={(e) => setEditedSettings({...editedSettings, subText: e.target.value})}
+                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
+                />
+              </div>
+              <div>
+                <Label className="text-white font-medium">نص الزر</Label>
+                <Input
+                  value={editedSettings.buttonText}
+                  onChange={(e) => setEditedSettings({...editedSettings, buttonText: e.target.value})}
+                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
+                />
+              </div>
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={handleSave}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold"
+                >
+                  حفظ
+                </Button>
+                <Button 
+                  onClick={handleCancel}
+                  variant="outline"
+                  className="flex-1 border-white text-white hover:bg-white/20"
+                >
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
       
-      {/* Decorative elements */}
-      <div className="absolute top-2 right-4">
-        <Flame className="w-8 h-8 text-yellow-300 animate-pulse" />
+      {/* تأثيرات بصرية متحركة */}
+      <div className="absolute top-4 right-8">
+        <motion.div
+          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        >
+          <Sparkles className="w-8 h-8 text-yellow-300" />
+        </motion.div>
       </div>
-      <div className="absolute bottom-2 left-4">
-        <Zap className="w-8 h-8 text-yellow-300 animate-bounce" />
+      <div className="absolute bottom-4 left-8">
+        <motion.div
+          animate={{ y: [-5, 5, -5], rotate: [0, 10, -10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <Gift className="w-8 h-8 text-orange-300" />
+        </motion.div>
       </div>
     </div>
   );
