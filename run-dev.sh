@@ -1,4 +1,8 @@
 #!/bin/bash
-# Fix for vite not found error
-export PATH="./node_modules/.bin:$PATH"
-./node_modules/.bin/vite --host :: --port 8080 --cors
+# Make vite executable and run
+chmod +x vite 2>/dev/null || true
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+    exec ./vite.bat
+else
+    exec ./vite
+fi
