@@ -1,8 +1,25 @@
-#!/bin/bash
-cd "$(dirname "$0")"
-if [ -f "./node_modules/vite/bin/vite.js" ]; then
-    exec node ./node_modules/vite/bin/vite.js --host 0.0.0.0 --port 8080
-else
-    echo "❌ Vite not found in node_modules"
-    exit 1
-fi
+#!/usr/bin/env node
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
+
+if (fs.existsSync(vitePath)) {
+  const child = spawn('node', [vitePath, '--host', '0.0.0.0', '--port', '8080'], {
+    stdio: 'inherit',
+    cwd: __dirname
+  });
+  
+  child.on('error', (err) => {
+    console.error('❌ Vite error:', err.message);
+    process.exit(1);
+  });
+  
+  child.on('exit', (code) => {
+    process.exit(code || 0);
+  });
+} else {
+  console.error('❌ Vite not found at:', vitePath);
+  process.exit(1);
+}
