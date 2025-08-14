@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('./vite.js');
+require('./run-vite.js');
