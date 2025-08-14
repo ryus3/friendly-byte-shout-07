@@ -2,9 +2,9 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, AlertTriangle, Loader2, RefreshCw, CheckCircle } from 'lucide-react';
+import { Camera, AlertTriangle, Loader2, RefreshCw, CheckCircle, Zap, ZapOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useEnhancedQRScanner } from '@/hooks/useEnhancedQRScanner';
+import { useQRScanner } from '@/hooks/useQRScanner';
 
 /**
  * قارئ QR موحد ومبسط - يعمل على جميع الأجهزة
@@ -17,15 +17,23 @@ const UnifiedQRScanner = ({
   description = "وجه الكاميرا نحو QR Code",
   elementId = "unified-qr-reader"
 }) => {
-  // استخدام القارئ المحسن للآيفون
-  const { isScanning, error, startScanning, stopScanning } = useEnhancedQRScanner(onScanSuccess);
+  // استخدام القارئ الأصلي مع الفلاش
+  const { 
+    isScanning, 
+    error, 
+    hasFlash, 
+    flashEnabled, 
+    startScanning, 
+    stopScanning, 
+    toggleFlash 
+  } = useQRScanner(onScanSuccess);
 
   // بدء المسح عند فتح الحوار
   useEffect(() => {
     if (open && !isScanning && !error) {
       const timer = setTimeout(() => {
         startScanning(elementId);
-      }, 800); // تأخير أطول للآيفون
+      }, 500);
       return () => clearTimeout(timer);
     } else if (!open) {
       stopScanning();
@@ -70,6 +78,26 @@ const UnifiedQRScanner = ({
               style={{ minHeight: '350px', maxHeight: '450px' }}
             />
             
+            {/* أزرار التحكم في الكاميرا */}
+            {isScanning && (
+              <div className="absolute top-4 right-4 flex gap-2">
+                {hasFlash && (
+                  <Button
+                    onClick={toggleFlash}
+                    variant={flashEnabled ? "default" : "outline"}
+                    size="sm"
+                    className="bg-black/50 hover:bg-black/70 text-white border-white/30"
+                  >
+                    {flashEnabled ? (
+                      <Zap className="w-4 h-4" />
+                    ) : (
+                      <ZapOff className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+              </div>
+            )}
+            
             {/* طبقة التحميل */}
             {!isScanning && !error && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-xl">
@@ -80,7 +108,6 @@ const UnifiedQRScanner = ({
                 </div>
               </div>
             )}
-          </div>
           
           {/* رسائل الحالة */}
           {isScanning && (
@@ -93,8 +120,14 @@ const UnifiedQRScanner = ({
               <p className="text-sm font-medium text-green-600">
                 📱 وجه الكاميرا نحو الرمز للحصول على أفضل النتائج
               </p>
+              {hasFlash && (
+                <p className="text-xs text-green-500 mt-1">
+                  💡 استخدم زر الفلاش في الأعلى للإضاءة
+                </p>
+              )}
             </div>
           )}
+          </div>
 
           {/* رسائل الخطأ */}
           {error && (

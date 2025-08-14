@@ -1,5 +1,5 @@
 import React from 'react';
-import NativeQRScanner from '@/components/qr/NativeQRScanner';
+import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 
 /**
  * مكون توافق عكسي لـ BarcodeScannerDialog
@@ -7,11 +7,13 @@ import NativeQRScanner from '@/components/qr/NativeQRScanner';
  */
 const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   return (
-    <NativeQRScanner
+    <UnifiedQRScanner
       open={open}
       onOpenChange={onOpenChange}
       onScanSuccess={onScanSuccess}
-      title="قارئ QR Code المحسن"
+      title="قارئ الباركود الذكي"
+      description="📱 يقرأ: QR Codes وجميع أنواع الباركود. وجه الكاميرا للكود للحصول على تفاصيل كاملة"
+      elementId="barcode-scanner-reader"
     />
   );
 };
