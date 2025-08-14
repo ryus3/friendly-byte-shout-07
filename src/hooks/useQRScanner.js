@@ -227,14 +227,17 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         errorMsg = 'لا توجد كاميرا متاحة على هذا الجهاز';
       } else if (err.message.includes('NotReadableError')) {
         errorMsg = 'الكاميرا مستخدمة من تطبيق آخر، يرجى إغلاق التطبيقات الأخرى';
-      } else if (err.message.includes('OverconstrainedError') || err.message.includes('environment')) {
-        errorMsg = 'إعدادات الكاميرا غير مدعومة، جاري المحاولة بإعدادات بديلة...';
+      } else if (err.message.includes('OverconstrainedError') || err.message.includes('config has invalid')) {
+        console.log('🔄 Retrying with basic camera config...');
+        errorMsg = 'جاري إعادة المحاولة بإعدادات كاميرا أبسط...';
         
-        // محاولة إعادة التشغيل بإعدادات أبسط
+        // محاولة إعادة التشغيل بدون facingMode
         setTimeout(() => {
-          console.log('🔄 Retrying with simpler camera config...');
-          setSelectedCamera(null); // استخدام إعدادات أبسط
-          startScanning(elementId);
+          console.log('🔄 Retrying with first available camera...');
+          if (availableCameras.length > 0) {
+            setSelectedCamera(availableCameras[0]);
+            startScanning(elementId);
+          }
         }, 1000);
         return;
       } else if (err.message.includes('غير موجود')) {

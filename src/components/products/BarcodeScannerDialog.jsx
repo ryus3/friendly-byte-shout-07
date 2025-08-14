@@ -1,16 +1,17 @@
 import React from 'react';
-import MobileQRScanner from '@/components/qr/MobileQRScanner';
+import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 
 /**
- * قارئ الباركود الأصلي مع الفلاش والشكل الجميل
+ * قارئ الباركود الأصلي - يستخدم useQRScanner مع الفلاش
  */
 const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   return (
-    <MobileQRScanner
+    <UnifiedQRScanner
       open={open}
       onOpenChange={onOpenChange}
       onScanSuccess={onScanSuccess}
       title="🔍 قارئ الباركود الذكي"
+      description="📱 يقرأ: QR Codes وجميع أنواع الباركود. وجه الكاميرا للكود للحصول على تفاصيل كاملة"
       elementId="barcode-scanner-reader"
     />
   );
