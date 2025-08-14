@@ -2,9 +2,9 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, AlertTriangle, Loader2, RefreshCw, CheckCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useEnhancedQRScanner } from '@/hooks/useEnhancedQRScanner';
 
 /**
  * قارئ QR موحد ومبسط - يعمل على جميع الأجهزة
@@ -17,113 +17,27 @@ const UnifiedQRScanner = ({
   description = "وجه الكاميرا نحو QR Code",
   elementId = "unified-qr-reader"
 }) => {
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState(null);
-  const readerRef = useRef(null);
-
-  // بدء المسح
-  const startScanning = async () => {
-    console.log('🚀 بدء قارئ QR الموحد');
-    
-    try {
-      setError(null);
-      setIsScanning(false);
-
-      // التحقق من وجود العنصر
-      const element = document.getElementById(elementId);
-      if (!element) {
-        throw new Error(`العنصر ${elementId} غير موجود`);
-      }
-
-      // إنشاء قارئ QR
-      const html5QrCode = new Html5Qrcode(elementId);
-      readerRef.current = html5QrCode;
-
-      // إعدادات بسيطة ومضمونة
-      const config = {
-        fps: 10,
-        qrbox: { width: 300, height: 300 }
-      };
-
-      // بدء المسح
-      await html5QrCode.start(
-        // إعدادات كاميرا بسيطة
-        { 
-          width: 640, 
-          height: 480 
-        },
-        config,
-        // عند نجاح المسح
-        (decodedText) => {
-          console.log('✅ تم قراءة QR Code:', decodedText);
-          
-          toast({
-            title: "✅ تم قراءة QR Code بنجاح",
-            description: `الكود: ${decodedText.substring(0, 30)}${decodedText.length > 30 ? '...' : ''}`,
-            variant: "success"
-          });
-
-          onScanSuccess?.(decodedText);
-        },
-        // تجاهل أخطاء عدم وجود كود
-        () => {}
-      );
-
-      setIsScanning(true);
-      console.log('✅ تم تشغيل قارئ QR بنجاح');
-
-    } catch (err) {
-      console.error('❌ خطأ في قارئ QR:', err);
-      
-      let errorMsg = 'خطأ في تشغيل الكاميرا';
-      
-      if (err.message.includes('Permission denied') || err.message.includes('NotAllowedError')) {
-        errorMsg = 'يرجى السماح للكاميرا في إعدادات المتصفح';
-      } else if (err.message.includes('NotFoundError')) {
-        errorMsg = 'لا توجد كاميرا متاحة على هذا الجهاز';
-      } else if (err.message.includes('NotReadableError')) {
-        errorMsg = 'الكاميرا مستخدمة من تطبيق آخر';
-      }
-      
-      setError(errorMsg);
-      setIsScanning(false);
-    }
-  };
-
-  // إيقاف المسح
-  const stopScanning = async () => {
-    console.log('⏹️ إيقاف قارئ QR');
-    
-    try {
-      if (readerRef.current && readerRef.current.isScanning) {
-        await readerRef.current.stop();
-      }
-      readerRef.current = null;
-    } catch (err) {
-      console.error('⚠️ خطأ في إيقاف القارئ:', err);
-    }
-    
-    setIsScanning(false);
-  };
+  // استخدام القارئ المحسن للآيفون
+  const { isScanning, error, startScanning, stopScanning } = useEnhancedQRScanner(onScanSuccess);
 
   // بدء المسح عند فتح الحوار
   useEffect(() => {
     if (open && !isScanning && !error) {
       const timer = setTimeout(() => {
-        startScanning();
-      }, 500); // تأخير أطول للتأكد من تحميل DOM
+        startScanning(elementId);
+      }, 800); // تأخير أطول للآيفون
       return () => clearTimeout(timer);
     } else if (!open) {
       stopScanning();
     }
-  }, [open]);
+  }, [open, isScanning, error, startScanning, stopScanning, elementId]);
 
   // تنظيف عند إغلاق المكون
   useEffect(() => {
     return () => {
       stopScanning();
     };
-  }, []);
+  }, [stopScanning]);
 
   const handleClose = () => {
     stopScanning();
@@ -131,8 +45,7 @@ const UnifiedQRScanner = ({
   };
 
   const handleRetry = () => {
-    setError(null);
-    startScanning();
+    startScanning(elementId);
   };
 
   return (

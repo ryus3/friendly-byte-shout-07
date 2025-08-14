@@ -32,46 +32,60 @@ export const useSimpleQRScanner = (onScanSuccess) => {
         qrbox: { width: 250, height: 250 }
       };
 
-      // بدء المسح بإعدادات بسيطة
-      await html5QrCode.start(
-        { facingMode: "environment" }, // إعدادات بسيطة
-        config,
-        (decodedText) => {
-          console.log('✅ QR Code found:', decodedText);
-          
-          toast({
-            title: "✅ تم قراءة QR Code",
-            description: `الكود: ${decodedText.substring(0, 30)}`,
-            variant: "success"
-          });
-
-          onScanSuccess?.(decodedText);
+      // تجربة إعدادات مختلفة للكاميرا للآيفون
+      const cameraConfigs = [
+        // 1. الكاميرا الخلفية للآيفون
+        { 
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
+          facingMode: { exact: "environment" }
         },
-        (errorMessage) => {
-          // تجاهل أخطاء عدم وجود كود
-        }
-      ).catch(async (err) => {
-        // إذا فشل، نجرب بدون facingMode
-        console.log('⚠️ Retrying without facingMode...');
-        await html5QrCode.start(
-          true, // استخدام الكاميرا الافتراضية
-          config,
-          (decodedText) => {
-            console.log('✅ QR Code found:', decodedText);
-            
-            toast({
-              title: "✅ تم قراءة QR Code",
-              description: `الكود: ${decodedText.substring(0, 30)}`,
-              variant: "success"
-            });
+        // 2. الكاميرا الخلفية العادية
+        { facingMode: "environment" },
+        // 3. أي كاميرا
+        { facingMode: "user" },
+        // 4. بدون قيود
+        true
+      ];
 
-            onScanSuccess?.(decodedText);
-          },
-          (errorMessage) => {
-            // تجاهل أخطاء عدم وجود كود
-          }
-        );
-      });
+      let started = false;
+      for (const cameraConfig of cameraConfigs) {
+        if (started) break;
+        
+        try {
+          await html5QrCode.start(
+            cameraConfig,
+            config,
+            (decodedText) => {
+              console.log('✅ QR Code found:', decodedText);
+              
+              // اهتزاز للآيفون
+              if (navigator.vibrate) {
+                navigator.vibrate(200);
+              }
+              
+              toast({
+                title: "✅ تم قراءة QR Code",
+                description: `الكود: ${decodedText.substring(0, 30)}`,
+                variant: "success"
+              });
+
+              onScanSuccess?.(decodedText);
+            },
+            () => {} // تجاهل أخطاء عدم وجود كود
+          );
+          
+          started = true;
+          break;
+        } catch (configError) {
+          console.log('⚠️ فشل في إعداد الكاميرا:', cameraConfig, configError.message);
+          continue;
+        }
+      }
+
+      if (!started) {
+        throw new Error('فشل في تشغيل جميع إعدادات الكاميرا');
+      }
 
       setIsScanning(true);
       console.log('✅ Simple QR Scanner started');
