@@ -52,6 +52,7 @@ import { Label } from '@/components/ui/label';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import DefaultProductImage from '@/components/ui/default-product-image';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 const StorePage = () => {
   const { products, categories } = useSuper();
@@ -84,11 +85,11 @@ const StorePage = () => {
   ];
 
   const trendingCollections = [
-    { id: 1, name: 'Premium Style', image: '👗', description: 'أناقة بلا حدود' },
-    { id: 2, name: 'Ageless', image: '👔', description: 'خالدة الطراز' },
-    { id: 3, name: 'Fave Stores', image: '⭐', description: 'متاجر مفضلة' },
-    { id: 4, name: 'Date', image: '🌹', description: 'مناسبات خاصة' },
-    { id: 5, name: 'Street', image: '🔥', description: 'موضة الشارع' }
+    { id: 1, name: 'أناقة مميزة', image: '👗', description: 'أناقة بلا حدود' },
+    { id: 2, name: 'كلاسيكي', image: '👔', description: 'خالدة الطراز' },
+    { id: 3, name: 'متاجر مفضلة', image: '⭐', description: 'متاجر مفضلة' },
+    { id: 4, name: 'مناسبات', image: '🌹', description: 'مناسبات خاصة' },
+    { id: 5, name: 'موضة الشارع', image: '🔥', description: 'موضة الشارع' }
   ];
 
   const sampleProducts = [
@@ -194,8 +195,9 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             
-            {/* Left Icons */}
+            {/* Right Icons (معكوس للعربية) */}
             <div className="flex items-center gap-2">
+              <ThemeSwitcher />
               <Heart className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               <Camera className="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </div>
@@ -206,14 +208,14 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="New Fall Fashion Women"
-                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pr-10 text-center"
+                  placeholder="ابحث عن المنتجات..."
+                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pl-10 text-center"
                 />
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
 
-            {/* Right Icons */}
+            {/* Left Icons (معكوس للعربية) */}
             <div className="flex items-center gap-2">
               <Mail className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               <div className="relative">
@@ -222,7 +224,7 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
                   onClick={onCartClick}
                 />
                 {cartItemsCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-2 -left-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {cartItemsCount}
                   </span>
                 )}
@@ -230,9 +232,9 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
             </div>
           </div>
 
-          {/* SHEIN Brand */}
+          {/* RYUS Brand */}
           <div className="text-center mt-2">
-            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider">
+            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider font-brand">
               RYUS
             </h1>
           </div>
@@ -244,11 +246,11 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
 
 // Main Navigation
 const SheinNavigation = () => {
-  const navItems = ['Home', 'Men', 'Kids', 'Curve', 'Women', 'All'];
+  const navItems = ['الرئيسية', 'رجالي', 'أطفال', 'مقاسات كبيرة', 'نسائي', 'الكل'];
   
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-      <div className="flex justify-center space-x-8 py-3">
+      <div className="flex justify-center space-x-reverse space-x-8 py-3">
         {navItems.map((item, index) => (
           <button
             key={item}
@@ -276,13 +278,13 @@ const FlashSaleBanner = () => {
         className="text-center"
       >
         <div className="text-4xl font-bold mb-2">
-          UP TO <span className="text-6xl">80%</span> OFF
+          خصم يصل إلى <span className="text-6xl">80%</span>
         </div>
         <div className="text-2xl font-bold mb-4">
-          End of season <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">SALE</span>
+          تخفيضات نهاية الموسم <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">تخفيضات</span>
         </div>
         <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-2 rounded border-2 border-white">
-          SHOP NOW &gt;
+          تسوق الآن &lt;
         </Button>
       </motion.div>
       
@@ -349,8 +351,8 @@ const SuperDealsSection = ({ products }) => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="text-2xl">⚡</div>
-          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">Super Deals</span>
-          <Badge className="bg-red-500 text-white text-xs">-16% 🔥</Badge>
+          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">عروض مميزة</span>
+          <Badge className="bg-red-500 text-white text-xs">خصم 16% 🔥</Badge>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
       </div>
@@ -366,8 +368,8 @@ const SuperDealsSection = ({ products }) => {
 
 // Product Recommendations
 const ProductRecommendations = ({ products }) => {
-  const [activeTab, setActiveTab] = useState('Deals');
-  const tabs = ['Deals', 'New In', 'For You'];
+  const [activeTab, setActiveTab] = useState('عروض');
+  const tabs = ['عروض', 'جديد', 'مخصص لك'];
 
   return (
     <div className="bg-white dark:bg-gray-900 p-4">
@@ -413,9 +415,9 @@ const ProductCard = ({ product, compact = false }) => {
         </div>
         
         {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-col gap-1">
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
           {product.flashSale && (
-            <Badge className="bg-red-500 text-white text-xs px-1 py-0">Flash Sale</Badge>
+            <Badge className="bg-red-500 text-white text-xs px-1 py-0">عرض خاطف</Badge>
           )}
           {product.newIn && (
             <Badge className="bg-green-500 text-white text-xs px-1 py-0">جديد</Badge>
@@ -428,15 +430,15 @@ const ProductCard = ({ product, compact = false }) => {
         {/* Favorite Button */}
         <button
           onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
+          className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
         >
           <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
         </button>
 
         {/* Discount Badge */}
         {product.discount > 0 && (
-          <div className="absolute bottom-2 left-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-            -{product.discount}%
+          <div className="absolute bottom-2 right-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
+            خصم {product.discount}%
           </div>
         )}
       </div>
