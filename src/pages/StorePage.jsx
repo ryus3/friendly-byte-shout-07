@@ -447,10 +447,12 @@ const ProductCard = ({ product, index, isFavorite, onToggleFavorite, onAddToCart
   const [isHovered, setIsHovered] = useState(false);
   
   const totalStock = product.variants?.reduce((sum, variant) => sum + (variant.quantity || 0), 0) || 0;
-  const hasDiscount = product.discount_percentage > 0;
+  const productPrice = product.price || 0;
+  const discountPercentage = product.discount_percentage || 0;
+  const hasDiscount = discountPercentage > 0;
   const finalPrice = hasDiscount 
-    ? product.price - (product.price * product.discount_percentage / 100)
-    : product.price;
+    ? productPrice - (productPrice * discountPercentage / 100)
+    : productPrice;
 
   return (
     <motion.div
@@ -552,11 +554,11 @@ const ProductCard = ({ product, index, isFavorite, onToggleFavorite, onAddToCart
             {/* الأسعار */}
             <div className="flex items-center gap-2">
               <span className="text-2xl font-bold text-primary">
-                {finalPrice.toLocaleString()} د.ع
+                {(finalPrice || 0).toLocaleString()} د.ع
               </span>
-              {hasDiscount && (
+              {hasDiscount && productPrice > 0 && (
                 <span className="text-lg text-muted-foreground line-through">
-                  {product.price.toLocaleString()} د.ع
+                  {productPrice.toLocaleString()} د.ع
                 </span>
               )}
             </div>
@@ -581,8 +583,8 @@ const ProductCard = ({ product, index, isFavorite, onToggleFavorite, onAddToCart
 
 // سلة التسوق الجانبية
 const CartSidebar = ({ isOpen, onClose, cart }) => {
-  const totalAmount = cart.reduce((sum, item) => sum + item.total, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalAmount = cart.reduce((sum, item) => sum + (item.total || 0), 0);
+  const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 0), 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -623,7 +625,7 @@ const CartSidebar = ({ isOpen, onClose, cart }) => {
                         {item.color} • {item.size} • {item.quantity}
                       </p>
                       <p className="text-sm font-bold text-primary">
-                        {item.total.toLocaleString()} د.ع
+                        {(item.total || 0).toLocaleString()} د.ع
                       </p>
                     </div>
                   </div>
@@ -632,7 +634,7 @@ const CartSidebar = ({ isOpen, onClose, cart }) => {
               <div className="border-t pt-4 space-y-4">
                 <div className="flex justify-between text-lg font-bold">
                   <span>المجموع:</span>
-                  <span className="text-primary">{totalAmount.toLocaleString()} د.ع</span>
+                  <span className="text-primary">{(totalAmount || 0).toLocaleString()} د.ع</span>
                 </div>
                 <Button className="w-full bg-gradient-to-r from-primary to-purple-500 text-white">
                   إتمام الطلب
