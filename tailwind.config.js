@@ -17,8 +17,10 @@ module.exports = {
     },
     extend: {
       fontFamily: {
-        cairo: ['Cairo', 'sans-serif'],
-        tajawal: ['Tajawal', 'sans-serif'],
+        'arabic': ['Noto Sans Arabic', 'sans-serif'],
+        'readex': ['Readex Pro', 'sans-serif'],
+        'amiri': ['Amiri', 'serif'],
+        'brand': ['Readex Pro', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
