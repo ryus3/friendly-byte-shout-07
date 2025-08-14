@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
 import { useNotifications } from './NotificationsContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();

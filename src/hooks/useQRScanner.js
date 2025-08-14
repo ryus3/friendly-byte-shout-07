@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 
 /**
  * Hook موحد لقارئ QR Code في جميع أنحاء التطبيق
- * يدعم إعدادات محسنة وإدارة أخطاء أفضل
+ * مع إصلاحات شاملة لمشاكل الكاميرا والأخطاء
  */
 export const useQRScanner = (onScanSuccess, onScanError) => {
   const [isScanning, setIsScanning] = useState(false);
@@ -19,9 +19,17 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
   const videoTrackRef = useRef(null);
   const lastScanTimeRef = useRef(0);
 
+  console.log('🔍 QR Scanner Hook - State:', {
+    isScanning,
+    error,
+    camerasCount: cameras.length,
+    selectedCamera: selectedCamera?.label || 'none'
+  });
+
   // تنظيف الماسح عند إلغاء المكون
   useEffect(() => {
     return () => {
+      console.log('🧹 QR Scanner cleanup');
       stopScanning();
     };
   }, []);
@@ -29,7 +37,10 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
   // الحصول على الكاميرات المتاحة
   const getCameras = useCallback(async () => {
     try {
+      console.log('📷 Getting available cameras...');
       const devices = await Html5Qrcode.getCameras();
+      console.log('📷 Available cameras:', devices.length);
+      
       setCameras(devices);
       
       // اختيار الكاميرا الخلفية تلقائياً
@@ -39,10 +50,13 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         camera.label.toLowerCase().includes('environment')
       );
       
-      setSelectedCamera(backCamera || devices[0]);
+      const chosen = backCamera || devices[0];
+      setSelectedCamera(chosen);
+      console.log('📷 Selected camera:', chosen?.label || 'none');
+      
       return devices;
     } catch (err) {
-      console.error('خطأ في الحصول على الكاميرات:', err);
+      console.error('❌ Error getting cameras:', err);
       setError('لا يمكن الوصول للكاميرات');
       return [];
     }
@@ -50,26 +64,37 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
 
   // بدء المسح
   const startScanning = useCallback(async (elementId = 'qr-reader') => {
+    console.log('🚀 Starting QR Scanner with element:', elementId);
+    
     try {
       setError(null);
       setIsScanning(false);
 
+      // التحقق من توفر Element
+      const element = document.getElementById(elementId);
+      if (!element) {
+        throw new Error(`العنصر ${elementId} غير موجود`);
+      }
+
       // التحقق من الكاميرات
+      console.log('📷 Checking cameras...');
       const availableCameras = await getCameras();
       if (!availableCameras.length) {
         throw new Error('لا توجد كاميرا متاحة');
       }
 
+      console.log('🔧 Creating Html5Qrcode instance...');
       // إنشاء قارئ جديد
       const html5QrCode = new Html5Qrcode(elementId);
       readerRef.current = html5QrCode;
 
       // إعدادات محسنة للمسح
       const config = {
-        fps: 15, // تقليل سرعة الإطارات لتحسين الأداء
+        fps: 10, // تقليل سرعة الإطارات لتحسين الأداء
         qrbox: function(viewfinderWidth, viewfinderHeight) {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.7);
+          const size = Math.floor(minEdge * 0.8);
+          console.log('📐 QR Box size:', size);
           return {
             width: size,
             height: size
@@ -77,45 +102,58 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         },
         aspectRatio: 1.0,
         disableFlip: false,
-        // دعم تنسيقات متعددة
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
           Html5QrcodeSupportedFormats.DATA_MATRIX,
-          Html5QrcodeSupportedFormats.AZTEC,
           Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.UPC_A
-        ],
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
+          Html5QrcodeSupportedFormats.EAN_13
+        ]
       };
 
-      // إعدادات الكاميرا المحسنة - إصلاح خطأ environment
+      // إعدادات الكاميرا المحسنة والآمنة
       let cameraConfig;
       if (selectedCamera?.id) {
+        console.log('📷 Using specific camera:', selectedCamera.label);
         cameraConfig = selectedCamera.id;
       } else {
-        // استخدام إعدادات آمنة للكاميرا
+        console.log('📷 Using default camera config');
+        // استخدام إعدادات آمنة تعمل على جميع الأجهزة
         cameraConfig = {
-          facingMode: "environment",
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 }
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 },
+          aspectRatio: { ideal: 1.7777777778 }
         };
+        
+        // إضافة facingMode بحذر
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(device => device.kind === 'videoinput');
+          
+          if (videoDevices.length > 1) {
+            // إذا كان هناك أكثر من كاميرا، استخدم environment
+            cameraConfig.facingMode = 'environment';
+          }
+          // إذا كان هناك كاميرا واحدة فقط، لا نحدد facingMode
+        } catch (e) {
+          console.log('⚠️ Could not enumerate devices, using basic config');
+        }
       }
 
-      // بدء المسح مع إعدادات محسنة
+      console.log('🎯 Camera config:', cameraConfig);
+
+      // بدء المسح مع معالجة الأخطاء المحسنة
       await html5QrCode.start(
         cameraConfig,
         config,
         (decodedText, decodedResult) => {
           // منع المسح المتكرر
           const now = Date.now();
-          if (now - lastScanTimeRef.current < 1000) {
+          if (now - lastScanTimeRef.current < 1500) {
             return;
           }
           lastScanTimeRef.current = now;
 
+          console.log('✅ QR Code scanned:', decodedText.substring(0, 50));
           setScanCount(prev => prev + 1);
           
           // معالجة النتيجة
@@ -129,34 +167,38 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
                 qr_id: jsonData.id,
                 barcode: decodedText
               };
+              console.log('📦 Product QR detected:', result.product_name);
             }
           } catch (e) {
-            // QR Code بسيط
+            console.log('📄 Simple QR Code detected');
             result = decodedText;
           }
 
-          // صوت نجاح
+          // صوت نجاح محسن
           try {
-            const context = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = context.createOscillator();
-            const gainNode = context.createGain();
+            // إنشاء صوت بسيط وفعال
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
             oscillator.connect(gainNode);
-            gainNode.connect(context.destination);
+            gainNode.connect(audioContext.destination);
             
-            oscillator.frequency.value = 800;
-            gainNode.gain.value = 0.1;
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
             
-            oscillator.start();
-            oscillator.stop(context.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
           } catch (e) {
-            console.log('لا يمكن تشغيل الصوت');
+            console.log('🔇 Audio not available');
           }
 
           toast({
             title: "✅ تم قراءة QR Code",
             description: typeof result === 'object' 
-              ? `${result.product_name || 'منتج'} - ${result.color || 'افتراضي'}` 
+              ? `منتج: ${result.product_name || 'غير محدد'}` 
               : `الكود: ${result.substring(0, 30)}${result.length > 30 ? '...' : ''}`,
             variant: "success"
           });
@@ -164,38 +206,43 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
           onScanSuccess?.(result);
         },
         (errorMessage) => {
-          // تجاهل أخطاء عدم وجود كود
-          if (!errorMessage.includes('No QR code found')) {
-            console.log('QR Scan Error:', errorMessage);
+          // تجاهل أخطاء عدم وجود كود - هذا طبيعي
+          if (!errorMessage.includes('No QR code found') && 
+              !errorMessage.includes('QR code parse error')) {
+            console.log('⚠️ QR Scan Error:', errorMessage);
           }
         }
       );
 
-      // إعداد الفلاش
-      await setupFlash();
-      
+      console.log('✅ QR Scanner started successfully');
       setIsScanning(true);
 
     } catch (err) {
-      console.error('خطأ في بدء المسح:', err);
+      console.error('❌ QR Scanner start error:', err);
       
-      // رسائل خطأ أفضل
+      // رسائل خطأ أوضح وأكثر فائدة
       let errorMsg = 'خطأ غير معروف في قارئ QR';
       
-      if (err.message.includes('Permission denied')) {
-        errorMsg = 'يرجى السماح للكاميرا في إعدادات المتصفح';
-      } else if (err.message.includes('NotFoundError')) {
+      if (err.message.includes('Permission denied') || err.message.includes('NotAllowedError')) {
+        errorMsg = 'يرجى السماح للكاميرا في إعدادات المتصفح والمحاولة مرة أخرى';
+      } else if (err.message.includes('NotFoundError') || err.message.includes('لا توجد كاميرا')) {
         errorMsg = 'لا توجد كاميرا متاحة على هذا الجهاز';
-      } else if (err.message.includes('NotAllowedError')) {
-        errorMsg = 'تم رفض الإذن للوصول للكاميرا';
       } else if (err.message.includes('NotReadableError')) {
-        errorMsg = 'الكاميرا مستخدمة من تطبيق آخر';
-      } else if (err.message.includes('OverconstrainedError')) {
-        errorMsg = 'إعدادات الكاميرا غير مدعومة';
-      } else if (err.message.includes('environment')) {
-        errorMsg = 'إعدادات الكاميرا الخلفية غير مدعومة، سيتم استخدام الكاميرا المتاحة';
+        errorMsg = 'الكاميرا مستخدمة من تطبيق آخر، يرجى إغلاق التطبيقات الأخرى';
+      } else if (err.message.includes('OverconstrainedError') || err.message.includes('environment')) {
+        errorMsg = 'إعدادات الكاميرا غير مدعومة، جاري المحاولة بإعدادات بديلة...';
+        
+        // محاولة إعادة التشغيل بإعدادات أبسط
+        setTimeout(() => {
+          console.log('🔄 Retrying with simpler camera config...');
+          setSelectedCamera(null); // استخدام إعدادات أبسط
+          startScanning(elementId);
+        }, 1000);
+        return;
+      } else if (err.message.includes('غير موجود')) {
+        errorMsg = `العنصر ${elementId} غير موجود في الصفحة`;
       } else {
-        errorMsg = `خطأ في تشغيل الماسح: ${err.message}`;
+        errorMsg = `خطأ تقني: ${err.message}`;
       }
       
       setError(errorMsg);
@@ -206,44 +253,29 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
 
   // إيقاف المسح
   const stopScanning = useCallback(async () => {
+    console.log('⏹️ Stopping QR Scanner...');
+    
     try {
-      if (readerRef.current && readerRef.current.isScanning) {
-        await readerRef.current.stop();
+      if (readerRef.current) {
+        if (readerRef.current.isScanning) {
+          await readerRef.current.stop();
+          console.log('✅ QR Scanner stopped');
+        }
+        // تنظيف المرجع
+        readerRef.current = null;
       }
+      
       if (videoTrackRef.current) {
         videoTrackRef.current.stop();
         videoTrackRef.current = null;
+        console.log('📹 Video track stopped');
       }
     } catch (err) {
-      console.error('خطأ في إيقاف المسح:', err);
+      console.error('⚠️ Error stopping scanner:', err);
     }
     
     setIsScanning(false);
     setFlashEnabled(false);
-    readerRef.current = null;
-  }, []);
-
-  // إعداد الفلاش
-  const setupFlash = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
-      
-      const track = stream.getVideoTracks()[0];
-      videoTrackRef.current = track;
-      
-      const capabilities = track.getCapabilities();
-      setHasFlash(!!capabilities.torch);
-      
-    } catch (err) {
-      console.log('Flash not supported:', err);
-      setHasFlash(false);
-    }
   }, []);
 
   // تبديل الفلاش
@@ -268,7 +300,7 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         variant: "success"
       });
     } catch (err) {
-      console.error('خطأ في الفلاش:', err);
+      console.error('❌ Flash error:', err);
       toast({
         title: "❌ خطأ في الفلاش",
         description: "لا يمكن التحكم في الفلاش",
@@ -281,10 +313,10 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
   const switchCamera = useCallback(async (cameraId) => {
     const camera = cameras.find(c => c.id === cameraId);
     if (camera) {
+      console.log('🔄 Switching to camera:', camera.label);
       setSelectedCamera(camera);
       if (isScanning) {
         await stopScanning();
-        // إعادة بدء المسح مع الكاميرا الجديدة
         setTimeout(() => startScanning(), 500);
       }
     }

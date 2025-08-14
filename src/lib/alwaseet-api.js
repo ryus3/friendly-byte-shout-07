@@ -1,6 +1,6 @@
 // This file contains functions to interact with the Al-Waseet delivery company API.
 
-import { supabase } from './customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 const handleApiCall = async (endpoint, method, token, payload, queryParams) => {
   const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {

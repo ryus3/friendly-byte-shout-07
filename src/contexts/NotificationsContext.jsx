@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast.js';
 import { Bell, UserPlus, AlertTriangle, ShoppingCart, Bot, CheckCircle } from 'lucide-react';
 
