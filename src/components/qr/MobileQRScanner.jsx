@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, AlertTriangle, Loader2, RefreshCw, Smartphone } from 'lucide-react';
+import { Camera, AlertTriangle, Loader2, RefreshCw, Smartphone, Zap, ZapOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 /**
@@ -20,6 +20,8 @@ const MobileQRScanner = ({
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState(null);
   const [cameras, setCameras] = useState([]);
+  const [hasFlash, setHasFlash] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const readerRef = useRef(null);
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
@@ -148,6 +150,18 @@ const MobileQRScanner = ({
           scanningStarted = true;
           setIsScanning(true);
           setIsInitializing(false);
+          
+          // فحص دعم الفلاش
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const videoTrack = stream.getVideoTracks()[0];
+            const capabilities = videoTrack.getCapabilities();
+            setHasFlash(!!capabilities.torch);
+            stream.getTracks().forEach(track => track.stop());
+          } catch (err) {
+            console.log('⚠️ Flash check failed:', err);
+          }
+          
           console.log('✅ تم تشغيل قارئ QR بنجاح مع:', cameraOption);
           break;
 
@@ -198,8 +212,32 @@ const MobileQRScanner = ({
       console.error('⚠️ خطأ في إيقاف القارئ:', err);
     }
     
+    setHasFlash(false);
+    setFlashEnabled(false);
     setIsScanning(false);
     setIsInitializing(false);
+  };
+
+  // تبديل الفلاش
+  const toggleFlash = async () => {
+    if (!hasFlash || !isScanning) return;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const track = stream.getVideoTracks()[0];
+      await track.applyConstraints({
+        advanced: [{ torch: !flashEnabled }]
+      });
+      setFlashEnabled(!flashEnabled);
+      stream.getTracks().forEach(track => track.stop());
+      
+      toast({
+        title: flashEnabled ? "تم إطفاء الفلاش" : "تم تشغيل الفلاش",
+        duration: 1000
+      });
+    } catch (err) {
+      console.error('❌ Flash toggle failed:', err);
+    }
   };
 
   // إدارة دورة حياة المكون
@@ -267,6 +305,24 @@ const MobileQRScanner = ({
                 </div>
               </div>
             )}
+            
+            {/* زر الفلاش */}
+            {isScanning && hasFlash && (
+              <div className="absolute top-3 right-3">
+                <Button
+                  onClick={toggleFlash}
+                  variant={flashEnabled ? "default" : "outline"}
+                  size="sm"
+                  className="bg-black/60 hover:bg-black/80 text-white border-white/30 shadow-lg"
+                >
+                  {flashEnabled ? (
+                    <Zap className="w-4 h-4" />
+                  ) : (
+                    <ZapOff className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
           
           {/* رسائل الحالة */}
@@ -278,8 +334,13 @@ const MobileQRScanner = ({
                 <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full"></div>
               </div>
               <p className="text-xs font-medium text-green-600">
-                وجه الهاتف نحو QR Code بثبات
+                🎯 وجه الكاميرا نحو QR Code للحصول على أفضل النتائج
               </p>
+              {hasFlash && (
+                <p className="text-xs text-green-500 mt-1">
+                  💡 استخدم زر الفلاش في الأعلى للإضاءة في الظلام
+                </p>
+              )}
             </div>
           )}
 
