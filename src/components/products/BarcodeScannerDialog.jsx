@@ -1,5 +1,5 @@
 import React from 'react';
-import MobileQRScanner from '@/components/qr/MobileQRScanner';
+import NativeQRScanner from '@/components/qr/NativeQRScanner';
 
 /**
  * مكون توافق عكسي لـ BarcodeScannerDialog
@@ -7,12 +7,11 @@ import MobileQRScanner from '@/components/qr/MobileQRScanner';
  */
 const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   return (
-    <MobileQRScanner
+    <NativeQRScanner
       open={open}
       onOpenChange={onOpenChange}
       onScanSuccess={onScanSuccess}
-      title="قارئ الباركود للهاتف"
-      elementId="barcode-scanner-reader"
+      title="قارئ QR Code المحسن"
     />
   );
 };
