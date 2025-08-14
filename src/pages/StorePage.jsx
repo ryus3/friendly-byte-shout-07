@@ -40,7 +40,12 @@ import {
   Tag,
   Globe,
   Eye,
-  Share
+  Share,
+  Crown,
+  Shirt,
+  Gem,
+  Palette,
+  Dumbbell
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -53,6 +58,25 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import DefaultProductImage from '@/components/ui/default-product-image';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+
+// Import professional images
+import categoryWomen from '@/assets/category-women.jpg';
+import categoryMen from '@/assets/category-men.jpg';
+import categoryKids from '@/assets/category-kids.jpg';
+import categoryShoes from '@/assets/category-shoes.jpg';
+import categoryAccessories from '@/assets/category-accessories.jpg';
+import categoryBags from '@/assets/category-bags.jpg';
+import categoryHome from '@/assets/category-home.jpg';
+import categorySports from '@/assets/category-sports.jpg';
+import categoryBeauty from '@/assets/category-beauty.jpg';
+import categoryElectronics from '@/assets/category-electronics.jpg';
+
+import productDress from '@/assets/product-dress.jpg';
+import productShirt from '@/assets/product-shirt.jpg';
+import productSneakers from '@/assets/product-sneakers.jpg';
+import productHandbag from '@/assets/product-handbag.jpg';
+import productSmartwatch from '@/assets/product-smartwatch.jpg';
+import productSunglasses from '@/assets/product-sunglasses.jpg';
 
 const StorePage = () => {
   const { products, categories } = useSuper();
@@ -68,37 +92,37 @@ const StorePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
 
-  // Sample data for Shein-like interface
+  // Sample data for Professional E-commerce interface with real images
   const sheinCategories = [
-    { id: 1, name: 'نسائي', image: '👗', color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
-    { id: 2, name: 'رجالي', image: '👔', color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
-    { id: 3, name: 'أطفال', image: '🧸', color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
-    { id: 4, name: 'أحذية', image: '👟', color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
-    { id: 5, name: 'إكسسوارات', image: '💍', color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
-    { id: 6, name: 'حقائب', image: '👜', color: 'bg-gradient-to-br from-red-400 to-pink-500' },
-    { id: 7, name: 'منزل ومطبخ', image: '🏠', color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
-    { id: 8, name: 'رياضة وخارجي', image: '⚽', color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
-    { id: 9, name: 'جمال وصحة', image: '💄', color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
-    { id: 10, name: 'الملابس الداخلية', image: '🩱', color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
-    { id: 11, name: 'مجوهرات', image: '💎', color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
-    { id: 12, name: 'إلكترونيات', image: '📱', color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
+    { id: 1, name: 'نسائي', image: categoryWomen, icon: Crown, color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
+    { id: 2, name: 'رجالي', image: categoryMen, icon: Shirt, color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
+    { id: 3, name: 'أطفال', image: categoryKids, icon: Heart, color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
+    { id: 4, name: 'أحذية', image: categoryShoes, icon: Tag, color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
+    { id: 5, name: 'إكسسوارات', image: categoryAccessories, icon: Gem, color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
+    { id: 6, name: 'حقائب', image: categoryBags, icon: ShoppingBag, color: 'bg-gradient-to-br from-red-400 to-pink-500' },
+    { id: 7, name: 'منزل ومطبخ', image: categoryHome, icon: Home, color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
+    { id: 8, name: 'رياضة وخارجي', image: categorySports, icon: Dumbbell, color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
+    { id: 9, name: 'جمال وصحة', image: categoryBeauty, icon: Sparkles, color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
+    { id: 10, name: 'الملابس الداخلية', image: categoryWomen, icon: Palette, color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
+    { id: 11, name: 'مجوهرات', image: categoryAccessories, icon: Gem, color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
+    { id: 12, name: 'إلكترونيات', image: categoryElectronics, icon: Zap, color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
   ];
 
   const trendingCollections = [
-    { id: 1, name: 'أناقة مميزة', image: '👗', description: 'أناقة بلا حدود' },
-    { id: 2, name: 'كلاسيكي', image: '👔', description: 'خالدة الطراز' },
-    { id: 3, name: 'متاجر مفضلة', image: '⭐', description: 'متاجر مفضلة' },
-    { id: 4, name: 'مناسبات', image: '🌹', description: 'مناسبات خاصة' },
-    { id: 5, name: 'موضة الشارع', image: '🔥', description: 'موضة الشارع' }
+    { id: 1, name: 'أناقة مميزة', icon: Crown, description: 'أناقة بلا حدود' },
+    { id: 2, name: 'كلاسيكي', icon: Shirt, description: 'خالدة الطراز' },
+    { id: 3, name: 'متاجر مفضلة', icon: Star, description: 'متاجر مفضلة' },
+    { id: 4, name: 'مناسبات', icon: Heart, description: 'مناسبات خاصة' },
+    { id: 5, name: 'موضة الشارع', icon: TrendingUp, description: 'موضة الشارع' }
   ];
 
   const sampleProducts = [
-    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: '👗', category: 'نسائي', trending: true },
-    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: '👔', category: 'رجالي', newIn: true },
-    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: '👟', category: 'أحذية', flashSale: true },
-    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: '👜', category: 'حقائب', trending: true },
-    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: '⌚', category: 'إلكترونيات', newIn: true },
-    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: '🕶️', category: 'إكسسوارات', flashSale: true }
+    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: productDress, category: 'نسائي', trending: true },
+    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: productShirt, category: 'رجالي', newIn: true },
+    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: productSneakers, category: 'أحذية', flashSale: true },
+    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: productHandbag, category: 'حقائب', trending: true },
+    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: productSmartwatch, category: 'إلكترونيات', newIn: true },
+    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: productSunglasses, category: 'إكسسوارات', flashSale: true }
   ];
 
   useEffect(() => {
@@ -289,8 +313,12 @@ const FlashSaleBanner = () => {
       </motion.div>
       
       {/* Decorative elements */}
-      <div className="absolute top-2 right-4 text-2xl">🔥</div>
-      <div className="absolute bottom-2 left-4 text-2xl">⚡</div>
+      <div className="absolute top-2 right-4">
+        <Flame className="w-8 h-8 text-yellow-300 animate-pulse" />
+      </div>
+      <div className="absolute bottom-2 left-4">
+        <Zap className="w-8 h-8 text-yellow-300 animate-bounce" />
+      </div>
     </div>
   );
 };
@@ -306,8 +334,8 @@ const TrendingCollectionsRow = ({ collections }) => {
             whileHover={{ scale: 1.05 }}
             className="flex-shrink-0 w-24 text-center"
           >
-            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mb-2 flex items-center justify-center text-2xl">
-              {collection.image}
+            <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-lg mx-auto mb-2 flex items-center justify-center shadow-sm">
+              <collection.icon className="w-8 h-8 text-primary" />
             </div>
             <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
               {collection.name}
@@ -329,10 +357,17 @@ const SheinCategoriesGrid = ({ categories }) => {
             key={category.id}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-center cursor-pointer"
+            className="text-center cursor-pointer group"
           >
-            <div className={`w-20 h-20 ${category.color} rounded-full mx-auto mb-2 flex items-center justify-center text-2xl shadow-lg`}>
-              {category.image}
+            <div className="relative w-20 h-20 mx-auto mb-2 rounded-full overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
+              <img 
+                src={category.image} 
+                alt={category.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-center justify-center">
+                <category.icon className="w-6 h-6 text-white drop-shadow-lg" />
+              </div>
             </div>
             <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
               {category.name}
@@ -350,7 +385,7 @@ const SuperDealsSection = ({ products }) => {
     <div className="bg-white dark:bg-gray-900 p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="text-2xl">⚡</div>
+          <Zap className="w-6 h-6 text-yellow-500" />
           <span className="text-lg font-bold text-gray-800 dark:text-gray-200">عروض مميزة</span>
           <Badge className="bg-red-500 text-white text-xs">خصم 16% 🔥</Badge>
         </div>
@@ -410,8 +445,12 @@ const ProductCard = ({ product, compact = false }) => {
       className={`bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm ${compact ? 'w-32' : ''}`}
     >
       <div className="relative">
-        <div className={`${compact ? 'h-32' : 'h-48'} bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-4xl`}>
-          {product.image}
+        <div className={`${compact ? 'h-32' : 'h-48'} rounded-lg overflow-hidden`}>
+          <img 
+            src={product.image} 
+            alt={product.name}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
         </div>
         
         {/* Badges */}
@@ -696,8 +735,12 @@ const MobileMenu = ({ isOpen, onClose, categories }) => {
           <div className="space-y-4">
             {categories.map((category) => (
               <div key={category.id} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
-                <div className={`w-8 h-8 ${category.color} rounded-full flex items-center justify-center text-sm`}>
-                  {category.image}
+                <div className="w-8 h-8 rounded-full overflow-hidden">
+                  <img 
+                    src={category.image} 
+                    alt={category.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="text-sm font-medium">{category.name}</span>
               </div>
