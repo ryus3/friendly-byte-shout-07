@@ -110,21 +110,31 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         ]
       };
 
-      // إعدادات الكاميرا المحسنة والآمنة
+      // إعدادات الكاميرا المحسنة
       let cameraConfig;
       if (selectedCamera?.id) {
         console.log('📷 Using specific camera:', selectedCamera.label);
         cameraConfig = selectedCamera.id;
       } else {
-        console.log('📷 Using default camera config');
-        // استخدام إعدادات آمنة تعمل على جميع الأجهزة
-        cameraConfig = {
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 }
-        };
+        // البحث عن الكاميرا الخلفية
+        const backCamera = availableCameras.find(camera => 
+          camera.label && (
+            camera.label.toLowerCase().includes('back') ||
+            camera.label.toLowerCase().includes('rear') ||
+            camera.label.toLowerCase().includes('environment')
+          )
+        );
         
-        // لا نستخدم facingMode مباشرة - بدلاً من ذلك نتركه للمتصفح
-        console.log('📷 Using basic camera config without facingMode');
+        if (backCamera) {
+          console.log('📷 Using back camera:', backCamera.label);
+          cameraConfig = backCamera.id;
+        } else {
+          console.log('📷 Using first available camera');
+          cameraConfig = availableCameras[0]?.id || { 
+            width: { ideal: 1280 }, 
+            height: { ideal: 720 } 
+          };
+        }
       }
 
       console.log('🎯 Camera config:', cameraConfig);

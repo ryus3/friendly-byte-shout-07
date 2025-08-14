@@ -1,8 +1,4 @@
-#!/usr/bin/env node
-// Final vite solution for Lovable
-const { execSync } = require('child_process');
-try {
-  execSync('node node_modules/vite/bin/vite.js --host :: --port 8080', { stdio: 'inherit' });
-} catch {
-  execSync('npx vite --host :: --port 8080', { stdio: 'inherit' });
-}
+#!/bin/bash
+cd "$(dirname "$0")"
+export NODE_OPTIONS="--max-old-space-size=4096"
+exec node "./node_modules/vite/bin/vite.js" --host :: --port 8080 "$@"
