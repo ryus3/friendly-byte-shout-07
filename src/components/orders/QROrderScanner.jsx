@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { QrCode, Search, Package, RotateCcw, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';
 
 const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) => {
@@ -64,47 +64,49 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   };
 
   // بدء المسح
-  const startScanning = () => {
+  const startScanning = async () => {
     setIsScanning(true);
     setError('');
     setFoundOrder(null);
 
-    // إنشاء ماسح QR
-    setTimeout(() => {
-      html5QrCodeRef.current = new Html5QrcodeScanner(
-        "qr-reader",
+    try {
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = html5QrCode;
+
+      // عند نجاح المسح
+      const onScanSuccess = async (decodedText) => {
+        html5QrCodeRef.current?.stop();
+        setIsScanning(false);
+        
+        // البحث عن الطلب
+        await searchOrderByQR(decodedText);
+      };
+
+      // بدء المسح بإعدادات بسيطة
+      await html5QrCode.start(
+        { 
+          width: { min: 640, ideal: 1280 },
+          height: { min: 480, ideal: 720 }
+        },
         {
           fps: 10,
-          qrbox: { width: 300, height: 300 },
-          aspectRatio: 1.0,
-          showTorchButtonIfSupported: true,
-          supportedScanTypes: []
+          qrbox: { width: 300, height: 300 }
         },
-        false
+        onScanSuccess,
+        () => {} // تجاهل أخطاء المسح العادية
       );
 
-    // عند نجاح المسح
-    const onScanSuccess = async (decodedText) => {
-      html5QrCodeRef.current?.clear();
+    } catch (err) {
+      console.error('QR Scanner error:', err);
+      setError('لا يمكن الوصول للكاميرا. يرجى التأكد من صلاحيات المتصفح.');
       setIsScanning(false);
-      
-      // البحث عن الطلب
-      await searchOrderByQR(decodedText);
-    };
-
-    // عند فشل المسح
-    const onScanFailure = (error) => {
-      // لا نعرض أخطاء المسح المستمرة
-    };
-
-      html5QrCodeRef.current.render(onScanSuccess, onScanFailure);
-    }, 100);
+    }
   };
 
   // إيقاف المسح
-  const stopScanning = () => {
-    if (html5QrCodeRef.current) {
-      html5QrCodeRef.current.clear();
+  const stopScanning = async () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      await html5QrCodeRef.current.stop();
     }
     setIsScanning(false);
   };

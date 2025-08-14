@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 
 const BarcodeInventoryCard = () => {
@@ -91,7 +91,10 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
             const html5QrCode = new Html5Qrcode("reader");
             html5QrCodeRef.current = html5QrCode;
             await html5QrCode.start(
-                { facingMode: "environment" },
+                { 
+                  width: { min: 640, ideal: 1280 },
+                  height: { min: 480, ideal: 720 }
+                },
                 { fps: 5, qrbox: { width: 250, height: 150 } },
                 onScanSuccess,
                 () => {}
