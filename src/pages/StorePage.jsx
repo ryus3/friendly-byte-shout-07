@@ -1,59 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Search, 
-  ShoppingCart, 
-  Heart, 
-  Star, 
-  Eye,
-  Menu,
-  X,
-  User,
-  Minus,
-  Plus,
-  Package,
-  ChevronDown,
-  Grid3X3,
-  List,
-  SlidersHorizontal,
-  Globe,
-  Truck,
-  Shield,
-  Award,
-  MessageCircle,
-  Share2,
-  Phone,
-  Clock,
-  Gift,
-  Tag,
-  Home,
-  Sun,
-  Moon,
-  Crown,
-  Sparkles,
-  Flame,
-  Zap,
-  Filter,
-  TrendingUp,
-  ArrowRight
-} from 'lucide-react';
-
-import { useSuper } from '@/contexts/SuperProvider';
-import { useTheme } from '@/contexts/ThemeContext';
-import { Card, CardContent } from '@/components/ui/card';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useCart } from '@/hooks/useCart';
-import DefaultProductImage from '@/components/ui/default-product-image';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import {
+  Search,
+  Heart,
+  ShoppingCart,
+  Menu,
+  Star,
+  Filter,
+  SlidersHorizontal,
+  TrendingUp,
+  Flame,
+  Gift,
+  Zap,
+  Sparkles,
+  Plus,
+  Minus,
+  X,
+  MessageCircle,
+  User,
+  MapPin,
+  Phone,
+  Camera,
+  Mail,
+  Bell,
+  ChevronRight,
+  Home,
+  Grid3X3,
+  ChevronDown,
+  ShoppingBag,
+  Percent,
+  Truck,
+  Clock,
+  Tag,
+  Globe,
+  Eye,
+  Share
+} from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/components/ui/use-toast';
+import { useCart } from '@/hooks/useCart';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useSuper } from '@/contexts/SuperProvider';
+import { useTheme } from '@/contexts/ThemeContext';
+import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StorePage = () => {
   const { products, categories } = useSuper();
@@ -66,12 +64,42 @@ const StorePage = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('featured');
-  const [showQuickOrder, setShowQuickOrder] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showQuickOrder, setShowQuickOrder] = useState(false);
 
-  // فلترة المنتجات
+  // Sample data for Shein-like interface
+  const sheinCategories = [
+    { id: 1, name: 'نسائي', image: '👗', color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
+    { id: 2, name: 'رجالي', image: '👔', color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
+    { id: 3, name: 'أطفال', image: '🧸', color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
+    { id: 4, name: 'أحذية', image: '👟', color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
+    { id: 5, name: 'إكسسوارات', image: '💍', color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
+    { id: 6, name: 'حقائب', image: '👜', color: 'bg-gradient-to-br from-red-400 to-pink-500' },
+    { id: 7, name: 'منزل ومطبخ', image: '🏠', color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
+    { id: 8, name: 'رياضة وخارجي', image: '⚽', color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
+    { id: 9, name: 'جمال وصحة', image: '💄', color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
+    { id: 10, name: 'الملابس الداخلية', image: '🩱', color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
+    { id: 11, name: 'مجوهرات', image: '💎', color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
+    { id: 12, name: 'إلكترونيات', image: '📱', color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
+  ];
+
+  const trendingCollections = [
+    { id: 1, name: 'Premium Style', image: '👗', description: 'أناقة بلا حدود' },
+    { id: 2, name: 'Ageless', image: '👔', description: 'خالدة الطراز' },
+    { id: 3, name: 'Fave Stores', image: '⭐', description: 'متاجر مفضلة' },
+    { id: 4, name: 'Date', image: '🌹', description: 'مناسبات خاصة' },
+    { id: 5, name: 'Street', image: '🔥', description: 'موضة الشارع' }
+  ];
+
+  const sampleProducts = [
+    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: '👗', category: 'نسائي', trending: true },
+    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: '👔', category: 'رجالي', newIn: true },
+    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: '👟', category: 'أحذية', flashSale: true },
+    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: '👜', category: 'حقائب', trending: true },
+    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: '⌚', category: 'إلكترونيات', newIn: true },
+    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: '🕶️', category: 'إكسسوارات', flashSale: true }
+  ];
+
   useEffect(() => {
     let filtered = products?.filter(product => 
       product.is_active && 
@@ -89,317 +117,124 @@ const StorePage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      
-      {/* رأس الصفحة المتطور */}
-      <UltraModernHeader 
+      <Helmet>
+        <title>RYUS Store - أفضل متجر للأزياء العصرية</title>
+        <meta name="description" content="اكتشف أحدث صيحات الموضة والأزياء العصرية في متجر RYUS. تسوق الآن واحصل على خصومات تصل إلى 70%" />
+      </Helmet>
+
+      {/* Shein-like Header */}
+      <SheinHeader 
         cartItemsCount={cart.length} 
         onCartClick={() => setIsCartOpen(true)}
-        favorites={favorites}
-        theme={theme}
-        setTheme={setTheme}
-        onMenuClick={() => setIsMenuOpen(true)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
+        onMenuClick={() => setIsMenuOpen(true)}
       />
 
-      {/* البانر الرئيسي المبهر */}
-      <SpectacularHero />
+      {/* Main Navigation Bar */}
+      <SheinNavigation />
 
-      {/* شريط التصنيفات الحديث */}
-      <ModernCategoriesGrid 
-        categories={categories}
-        selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
-      />
+      {/* Flash Sale Banner */}
+      <FlashSaleBanner />
 
-      {/* العروض الخاصة */}
-      <FlashDealsSection />
+      {/* Trending Collections Row */}
+      <TrendingCollectionsRow collections={trendingCollections} />
 
-      {/* المحتوى الرئيسي */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* شريط الفلاتر المتقدم */}
-        <UltraFilters 
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-        />
+      {/* Categories Circle Grid */}
+      <SheinCategoriesGrid categories={sheinCategories} />
 
-        {/* النتائج */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-foreground">
-              {selectedCategory ? selectedCategory.name : 'جميع المنتجات'}
-            </h2>
-            <Badge variant="secondary" className="text-sm bg-primary/10 text-primary">
-              {filteredProducts.length} منتج
-            </Badge>
-          </div>
-        </div>
+      {/* Super Deals Section */}
+      <SuperDealsSection products={sampleProducts} />
 
-        {/* عرض المنتجات */}
-        <UltraProductGrid 
-          products={filteredProducts}
-          viewMode={viewMode}
-          favorites={favorites}
-          onToggleFavorite={(id) => setFavorites(prev => 
-            prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-          )}
-          onProductClick={setSelectedProduct}
-          onAddToCart={addToCart}
-        />
+      {/* Product Recommendations */}
+      <ProductRecommendations products={sampleProducts} />
 
-        {filteredProducts.length === 0 && (
-          <UltraEmptyState />
-        )}
-      </div>
-
-      {/* سلة التسوق المتطورة */}
-      <UltraCartSidebar
+      {/* Premium Cart Sidebar */}
+      <PremiumCartSidebar
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
         cart={cart}
         onQuickOrder={() => setShowQuickOrder(true)}
       />
 
-      {/* نافذة الطلب السريع */}
-      <UltraQuickOrderModal
+      {/* Quick Order Modal */}
+      <QuickOrderModal
         isOpen={showQuickOrder}
         onClose={() => setShowQuickOrder(false)}
         cart={cart}
       />
 
-      {/* تفاصيل المنتج */}
-      <UltraProductModal
-        product={selectedProduct}
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={addToCart}
-        favorites={favorites}
-        onToggleFavorite={(id) => setFavorites(prev => 
-          prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]
-        )}
-      />
-
-      {/* القائمة الجانبية للهاتف */}
+      {/* Mobile Menu */}
       <MobileMenu 
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        categories={categories}
-        onCategorySelect={setSelectedCategory}
+        categories={sheinCategories}
       />
 
-      {/* تذييل الصفحة */}
-      <UltraFooter />
+      {/* WhatsApp Button */}
+      <WhatsAppButton />
 
-      {/* زر الواتساب العائم */}
-      <FloatingWhatsApp />
+      {/* Bottom Navigation for Mobile */}
+      <MobileBottomNav />
     </div>
   );
 };
 
-// رأس الصفحة المتطور
-const UltraModernHeader = ({ 
-  cartItemsCount, 
-  onCartClick, 
-  favorites, 
-  theme, 
-  setTheme, 
-  onMenuClick,
-  searchQuery,
-  setSearchQuery
-}) => {
+// Shein-style Header
+const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery, onMenuClick }) => {
   return (
     <>
-      {/* شريط العروض المتحرك */}
-      <div className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 text-white py-2 overflow-hidden">
-        <motion.div
-          animate={{ x: [300, -300] }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className="whitespace-nowrap text-center font-medium"
-        >
-          🔥 عرض خاص: خصم 70% على جميع المنتجات + توصيل مجاني! ⚡ كود الخصم: RYUS70 🎉
-        </motion.div>
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white py-2 text-center text-sm font-semibold">
+        🎉 احصل على خصم 20% على طلبك الأول
       </div>
 
-      {/* الرأس الرئيسي */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/20 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      {/* Main Header */}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
             
-            {/* الشعار المتطور */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-3"
-            >
-              <div className="relative">
-                <motion.div 
-                  className="w-12 h-12 bg-gradient-to-br from-pink-500 via-purple-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-lg"
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <Crown className="w-7 h-7 text-white" />
-                </motion.div>
-                <motion.div 
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Sparkles className="w-3 h-3 text-yellow-800" />
-                </motion.div>
-              </div>
-              <div>
-                <h1 className="text-2xl font-black bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
-                  RYUS
-                </h1>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                  Premium Fashion
-                </p>
-              </div>
-            </motion.div>
+            {/* Left Icons */}
+            <div className="flex items-center gap-2">
+              <Heart className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <Camera className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            </div>
 
-            {/* شريط البحث المتطور */}
-            <div className="hidden md:flex flex-1 max-w-lg mx-8">
-              <div className="relative w-full group">
-                <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5 transition-colors group-focus-within:text-primary" />
+            {/* Center Search */}
+            <div className="flex-1 max-w-md mx-4">
+              <div className="relative">
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن أحلامك... 💭"
-                  className="pr-12 pl-6 h-12 border-2 border-border/20 focus:border-primary/50 rounded-2xl bg-muted/30 transition-all duration-300 hover:bg-muted/50 focus:bg-background text-right"
+                  placeholder="New Fall Fashion Women"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pr-10 text-center"
                 />
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <kbd className="px-2 py-1 text-xs bg-muted rounded border">⌘K</kbd>
-                </div>
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
 
-            {/* أيقونات التفاعل */}
+            {/* Right Icons */}
             <div className="flex items-center gap-2">
-              
-              {/* تبديل الثيم */}
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  variant="ghost"
-                  size="icon"
-                  className="w-11 h-11 rounded-full hover:bg-accent/50 transition-all duration-300"
-                >
-                  <motion.div
-                    animate={{ rotate: theme === 'dark' ? 180 : 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                  </motion.div>
-                </Button>
-              </motion.div>
-
-              {/* حساب المستخدم */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                    <Button variant="ghost" size="icon" className="w-11 h-11 rounded-full hover:bg-accent/50">
-                      <User className="w-5 h-5" />
-                    </Button>
-                  </motion.div>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-xl border border-border/20 shadow-xl">
-                  <DropdownMenuItem className="font-medium">تسجيل الدخول</DropdownMenuItem>
-                  <DropdownMenuItem>إنشاء حساب جديد</DropdownMenuItem>
-                  <DropdownMenuItem>طلباتي</DropdownMenuItem>
-                  <DropdownMenuItem>قائمة الأمنيات</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* المفضلة */}
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button variant="ghost" size="icon" className="w-11 h-11 rounded-full hover:bg-accent/50 relative">
-                  <Heart className="w-5 h-5" />
-                  {favorites.length > 0 && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-bold"
-                    >
-                      {favorites.length}
-                    </motion.div>
-                  )}
-                </Button>
-              </motion.div>
-
-              {/* سلة التسوق */}
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
+              <Mail className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <div className="relative">
+                <ShoppingCart 
+                  className="w-6 h-6 text-gray-600 dark:text-gray-400 cursor-pointer" 
                   onClick={onCartClick}
-                  variant="ghost"
-                  size="icon"
-                  className="w-11 h-11 rounded-full hover:bg-accent/50 relative"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  {cartItemsCount > 0 && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -left-1 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold animate-pulse"
-                    >
-                      {cartItemsCount}
-                    </motion.div>
-                  )}
-                </Button>
-              </motion.div>
-
-              {/* قائمة الهاتف */}
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <Button
-                  onClick={onMenuClick}
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden w-11 h-11 rounded-full hover:bg-accent/50"
-                >
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </motion.div>
+                />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemsCount}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* شريط التنقل المتطور */}
-        <div className="hidden md:block border-t border-border/20 bg-card/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex items-center justify-center space-x-8 space-x-reverse py-4">
-              {[
-                { label: 'الرئيسية', href: '#', icon: Home, color: 'text-blue-500' },
-                { label: 'رجالي', href: '#', icon: User, color: 'text-green-500' },
-                { label: 'نسائي', href: '#', icon: Heart, color: 'text-pink-500' },
-                { label: 'أطفال', href: '#', icon: Star, color: 'text-yellow-500' },
-                { label: 'العروض الحارة', href: '#', icon: Flame, color: 'text-red-500', badge: 'جديد' }
-              ].map((item, index) => (
-                <motion.a
-                  key={item.label}
-                  href={item.href}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="relative flex items-center gap-2 text-sm font-semibold text-foreground hover:text-primary transition-all duration-300 group py-2 px-4 rounded-full hover:bg-accent/30"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  <item.icon className={`w-4 h-4 ${item.color}`} />
-                  {item.label}
-                  {item.badge && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold"
-                    >
-                      {item.badge}
-                    </motion.div>
-                  )}
-                  <span className="absolute inset-x-0 -bottom-1 h-0.5 bg-gradient-to-r from-pink-500 to-purple-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full" />
-                </motion.a>
-              ))}
-            </nav>
+          {/* SHEIN Brand */}
+          <div className="text-center mt-2">
+            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider">
+              RYUS
+            </h1>
           </div>
         </div>
       </header>
@@ -407,772 +242,513 @@ const UltraModernHeader = ({
   );
 };
 
-// البانر الرئيسي المبهر
-const SpectacularHero = () => {
+// Main Navigation
+const SheinNavigation = () => {
+  const navItems = ['Home', 'Men', 'Kids', 'Curve', 'Women', 'All'];
+  
   return (
-    <section className="relative h-[80vh] min-h-[600px] flex items-center overflow-hidden">
-      
-      {/* خلفية متدرجة خيالية */}
-      <div className="absolute inset-0">
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-br from-violet-900 via-purple-900 to-pink-900"
-          animate={{
-            background: [
-              'linear-gradient(45deg, #7c3aed, #db2777, #dc2626)',
-              'linear-gradient(45deg, #db2777, #dc2626, #ea580c)',
-              'linear-gradient(45deg, #dc2626, #ea580c, #7c3aed)',
-              'linear-gradient(45deg, #7c3aed, #db2777, #dc2626)'
-            ]
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute inset-0 opacity-30" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }} />
-      </div>
-
-      {/* جزيئات متحركة */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-3 h-3 bg-white/20 rounded-full"
-            animate={{
-              x: [0, Math.random() * 300 - 150],
-              y: [0, Math.random() * -300],
-              opacity: [0, 1, 0],
-              scale: [0, Math.random() * 2 + 0.5, 0],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 8,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.2
-            }}
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${80 + Math.random() * 20}%`,
-            }}
-          />
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <div className="flex justify-center space-x-8 py-3">
+        {navItems.map((item, index) => (
+          <button
+            key={item}
+            className={`text-sm font-medium whitespace-nowrap px-2 py-1 ${
+              index === navItems.length - 1 
+                ? 'text-black dark:text-white border-b-2 border-black dark:border-white font-bold' 
+                : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            {item}
+          </button>
         ))}
       </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          
-          {/* النص المذهل */}
-          <motion.div 
-            initial={{ opacity: 0, x: -100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1 }}
-            className="text-center lg:text-right space-y-8"
-          >
-            
-            <motion.div
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex justify-center lg:justify-start"
-            >
-              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/30 px-8 py-4 rounded-full text-lg font-bold shadow-xl">
-                <Crown className="w-6 h-6 ml-3" />
-                RYUS Collection 2024 ✨
-              </Badge>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="space-y-6"
-            >
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight text-white">
-                <motion.span 
-                  className="block bg-gradient-to-r from-white via-pink-200 to-purple-200 bg-clip-text text-transparent"
-                  animate={{ scale: [1, 1.02, 1] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  أزياء خيالية
-                </motion.span>
-                <motion.span 
-                  className="block text-white/90"
-                  animate={{ scale: [1, 1.01, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 1.5 }}
-                >
-                  تفوق التوقعات
-                </motion.span>
-              </h1>
-              
-              <motion.p 
-                className="text-xl md:text-2xl text-white/90 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.8 }}
-              >
-                اكتشف مجموعة RYUS الحصرية التي تجمع بين الأناقة العالمية والذوق الرفيع، 
-                مصممة خصيصاً لتجعلك نجم كل مكان ✨
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-              className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start"
-            >
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  size="lg"
-                  className="bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-bold px-10 py-6 rounded-2xl shadow-2xl hover:shadow-pink-500/25 transition-all duration-300 text-lg"
-                >
-                  <ShoppingCart className="w-6 h-6 ml-3" />
-                  تسوق الآن 🛍️
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-white/40 text-white hover:bg-white/10 font-bold px-10 py-6 rounded-2xl backdrop-blur-sm text-lg"
-                >
-                  <Eye className="w-6 h-6 ml-3" />
-                  استكشف المجموعة 👀
-                </Button>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2 }}
-              className="grid grid-cols-3 gap-8 max-w-md mx-auto lg:mx-0"
-            >
-              {[
-                { number: '50K+', label: '😍 عميل سعيد' },
-                { number: '1000+', label: '✨ منتج رائع' },
-                { number: '99.9%', label: '⭐ معدل الرضا' }
-              ].map((stat, index) => (
-                <motion.div 
-                  key={index} 
-                  className="text-center"
-                  whileHover={{ scale: 1.1 }}
-                >
-                  <motion.div 
-                    className="text-3xl font-black text-white"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: index * 0.3 }}
-                  >
-                    {stat.number}
-                  </motion.div>
-                  <div className="text-sm text-white/80 font-medium">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
-
-          {/* العنصر البصري الخيالي */}
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.5 }}
-            className="relative"
-          >
-            <div className="relative w-96 h-96 mx-auto">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0 rounded-full border-4 border-white/30 border-dashed"
-              />
-              <motion.div
-                animate={{ rotate: -360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-8 rounded-full border-2 border-white/50"
-              />
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-16 rounded-full border border-white/70 border-dotted"
-              />
-              <div className="absolute inset-20 bg-gradient-to-br from-white/30 to-white/10 rounded-full backdrop-blur-lg flex items-center justify-center">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 180, 360]
-                  }}
-                  transition={{ duration: 4, repeat: Infinity }}
-                  className="text-9xl"
-                >
-                  👗
-                </motion.div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    </section>
+    </nav>
   );
 };
 
-// شبكة التصنيفات الحديثة
-const ModernCategoriesGrid = ({ categories, selectedCategory, setSelectedCategory }) => {
-  const defaultCategories = [
-    { id: 'all', name: 'الكل', icon: '🏠', color: 'from-blue-500 to-purple-500' },
-    { id: 'men', name: 'رجالي', icon: '👔', color: 'from-green-500 to-teal-500' },
-    { id: 'women', name: 'نسائي', icon: '👗', color: 'from-pink-500 to-rose-500' },
-    { id: 'kids', name: 'أطفال', icon: '🧸', color: 'from-yellow-500 to-orange-500' },
-    { id: 'accessories', name: 'إكسسوارات', icon: '💍', color: 'from-purple-500 to-indigo-500' },
-    { id: 'shoes', name: 'أحذية', icon: '👟', color: 'from-red-500 to-pink-500' },
-    { id: 'bags', name: 'حقائب', icon: '👜', color: 'from-indigo-500 to-blue-500' },
-    { id: 'watches', name: 'ساعات', icon: '⌚', color: 'from-gray-600 to-gray-800' }
-  ];
-
+// Flash Sale Banner
+const FlashSaleBanner = () => {
   return (
-    <section className="py-12 bg-gradient-to-b from-card to-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
-        >
-          <h2 className="text-3xl font-bold text-foreground mb-4">تسوق حسب الفئة</h2>
-          <p className="text-muted-foreground text-lg">اكتشف مجموعاتنا المتنوعة</p>
-        </motion.div>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-          {defaultCategories.map((category, index) => (
-            <motion.div
-              key={category.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setSelectedCategory(category.id === 'all' ? null : category)}
-              className="cursor-pointer group"
-            >
-              <div className={`
-                relative p-6 rounded-2xl bg-gradient-to-br ${category.color} 
-                shadow-lg hover:shadow-xl transition-all duration-300
-                ${selectedCategory?.id === category.id ? 'ring-4 ring-primary ring-opacity-50' : ''}
-              `}>
-                <div className="text-center">
-                  <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">
-                    {category.icon}
-                  </div>
-                  <h3 className="text-sm font-bold text-white">{category.name}</h3>
-                </div>
-                <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            </motion.div>
-          ))}
+    <div className="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 text-white py-8 px-4 relative overflow-hidden">
+      <motion.div
+        animate={{ rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="text-center"
+      >
+        <div className="text-4xl font-bold mb-2">
+          UP TO <span className="text-6xl">80%</span> OFF
         </div>
-      </div>
-    </section>
-  );
-};
-
-// قسم العروض الخاطفة
-const FlashDealsSection = () => {
-  const flashDeals = [
-    { title: 'خصم 80%', subtitle: 'على الملابس الصيفية', color: 'from-red-500 to-orange-500' },
-    { title: 'توصيل مجاني', subtitle: 'لجميع الطلبات', color: 'from-green-500 to-emerald-500' },
-    { title: 'اشتر 2 احصل على 1', subtitle: 'على الإكسسوارات', color: 'from-blue-500 to-purple-500' }
-  ];
-
-  return (
-    <section className="py-8 bg-gradient-to-r from-orange-50 to-pink-50 dark:from-orange-950/20 dark:to-pink-950/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <motion.div
-              animate={{ rotate: [0, 15, -15, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Flame className="w-8 h-8 text-red-500" />
-            </motion.div>
-            <h2 className="text-2xl font-bold text-foreground">عروض خاطفة 🔥</h2>
-          </div>
-          <Badge className="bg-red-500 text-white px-4 py-2 text-sm font-bold animate-pulse">
-            ينتهي خلال 24 ساعة!
-          </Badge>
+        <div className="text-2xl font-bold mb-4">
+          End of season <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">SALE</span>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {flashDeals.map((deal, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.2 }}
-              whileHover={{ scale: 1.02, y: -5 }}
-              className={`
-                relative p-6 rounded-2xl bg-gradient-to-br ${deal.color} 
-                text-white shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer overflow-hidden
-              `}
-            >
-              <div className="relative z-10">
-                <h3 className="text-2xl font-black mb-2">{deal.title}</h3>
-                <p className="text-white/90 font-medium">{deal.subtitle}</p>
-                <Button size="sm" variant="secondary" className="mt-4 bg-white/20 text-white border-white/30 hover:bg-white/30">
-                  اطلب الآن <ArrowRight className="w-4 h-4 mr-2" />
-                </Button>
-              </div>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12" />
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// الفلاتر المتقدمة
-const UltraFilters = ({ sortBy, setSortBy, viewMode, setViewMode }) => {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/20 p-6 mb-8 shadow-sm"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        
-        {/* الترتيب */}
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-muted-foreground">ترتيب حسب:</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-w-40 justify-between rounded-xl bg-background/50">
-                {sortBy === 'featured' && 'الأكثر مبيعاً 🔥'}
-                {sortBy === 'price-low' && 'السعر: منخفض إلى مرتفع 📈'}
-                {sortBy === 'price-high' && 'السعر: مرتفع إلى منخفض 📉'}
-                {sortBy === 'newest' && 'الأحدث أولاً ✨'}
-                {sortBy === 'popular' && 'الأكثر شعبية ⭐'}
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-background/95 backdrop-blur-xl">
-              <DropdownMenuItem onClick={() => setSortBy('featured')}>🔥 الأكثر مبيعاً</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('price-low')}>📈 السعر: منخفض إلى مرتفع</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('price-high')}>📉 السعر: مرتفع إلى منخفض</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('newest')}>✨ الأحدث أولاً</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSortBy('popular')}>⭐ الأكثر شعبية</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        {/* نوع العرض */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">العرض:</span>
-          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
-            <Button
-              onClick={() => setViewMode('grid')}
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-md"
-            >
-              <Grid3X3 className="w-4 h-4" />
-            </Button>
-            <Button
-              onClick={() => setViewMode('list')}
-              variant={viewMode === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              className="rounded-md"
-            >
-              <List className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* فلاتر إضافية */}
-        <Button variant="outline" className="rounded-xl bg-background/50">
-          <SlidersHorizontal className="w-4 h-4 ml-2" />
-          فلاتر متقدمة
+        <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-2 rounded border-2 border-white">
+          SHOP NOW &gt;
         </Button>
-      </div>
-    </motion.div>
-  );
-};
-
-// شبكة المنتجات المتطورة
-const UltraProductGrid = ({ 
-  products, 
-  viewMode, 
-  favorites, 
-  onToggleFavorite, 
-  onProductClick, 
-  onAddToCart 
-}) => {
-  if (viewMode === 'list') {
-    return (
-      <div className="space-y-4">
-        {products.map((product, index) => (
-          <UltraProductListItem
-            key={product.id}
-            product={product}
-            index={index}
-            isFavorite={favorites.includes(product.id)}
-            onToggleFavorite={() => onToggleFavorite(product.id)}
-            onClick={() => onProductClick(product)}
-            onAddToCart={() => onAddToCart(product)}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {products.map((product, index) => (
-        <UltraProductCard
-          key={product.id}
-          product={product}
-          index={index}
-          isFavorite={favorites.includes(product.id)}
-          onToggleFavorite={() => onToggleFavorite(product.id)}
-          onClick={() => onProductClick(product)}
-          onAddToCart={() => onAddToCart(product)}
-        />
-      ))}
+      </motion.div>
+      
+      {/* Decorative elements */}
+      <div className="absolute top-2 right-4 text-2xl">🔥</div>
+      <div className="absolute bottom-2 left-4 text-2xl">⚡</div>
     </div>
   );
 };
 
-// كارت المنتج المتطور
-const UltraProductCard = ({ product, index, isFavorite, onToggleFavorite, onClick, onAddToCart }) => {
-  const productPrice = product.price || 0;
-  const discountPercentage = Math.floor(Math.random() * 60) + 20;
-  const finalPrice = productPrice * (1 - discountPercentage / 100);
-
+// Trending Collections Row
+const TrendingCollectionsRow = ({ collections }) => {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className="group cursor-pointer"
-    >
-      <Card className="product-card overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
-        <div className="relative aspect-[3/4] overflow-hidden">
-          
-          {/* صورة المنتج */}
-          <motion.div 
-            onClick={onClick} 
-            className="w-full h-full relative"
-            whileHover={{ scale: 1.1 }}
-            transition={{ duration: 0.6 }}
-          >
-            {product.main_image ? (
-              <img
-                src={product.main_image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                <DefaultProductImage className="w-20 h-20 opacity-60" />
-              </div>
-            )}
-            
-            {/* تأثير التدرج عند التمرير */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          </motion.div>
-
-          {/* الشارات */}
-          <div className="absolute top-3 left-3 flex flex-col gap-2">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3 }}
-              className="bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg"
-            >
-              -{discountPercentage}%
-            </motion.div>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg"
-            >
-              توصيل مجاني
-            </motion.div>
-            {Math.random() > 0.7 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.5 }}
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg animate-pulse"
-              >
-                عرض محدود
-              </motion.div>
-            )}
-          </div>
-
-          {/* أيقونة المفضلة */}
+    <div className="bg-white dark:bg-gray-900 py-4">
+      <div className="flex justify-center space-x-4 overflow-x-auto px-4">
+        {collections.map((collection) => (
           <motion.div
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            className="absolute top-3 right-3"
+            key={collection.id}
+            whileHover={{ scale: 1.05 }}
+            className="flex-shrink-0 w-24 text-center"
           >
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleFavorite();
-              }}
-              size="icon"
-              variant="ghost"
-              className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg"
-            >
-              <Heart 
-                className={`w-5 h-5 transition-all duration-300 ${
-                  isFavorite ? 'fill-red-500 text-red-500 scale-110' : 'text-gray-600'
-                }`} 
-              />
-            </Button>
-          </motion.div>
-
-          {/* أزرار سريعة */}
-          <motion.div 
-            className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-4 group-hover:translate-y-0"
-          >
-            <div className="flex gap-2">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddToCart();
-                  }}
-                  size="sm"
-                  className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold rounded-xl shadow-lg"
-                >
-                  <ShoppingCart className="w-4 h-4 ml-1" />
-                  أضف للسلة
-                </Button>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button
-                  onClick={onClick}
-                  size="sm"
-                  variant="outline"
-                  className="bg-white/90 backdrop-blur-sm rounded-xl border-white/50 hover:bg-white shadow-lg"
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </motion.div>
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mb-2 flex items-center justify-center text-2xl">
+              {collection.image}
+            </div>
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+              {collection.name}
             </div>
           </motion.div>
-        </div>
-
-        <CardContent className="p-5">
-          <motion.div onClick={onClick} className="cursor-pointer">
-            <h3 className="font-bold text-foreground mb-2 line-clamp-2 leading-tight text-lg hover:text-primary transition-colors">
-              {product.name}
-            </h3>
-            
-            {/* التقييم */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star 
-                    key={i} 
-                    className={`w-4 h-4 ${
-                      i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                    }`} 
-                  />
-                ))}
-              </div>
-              <span className="text-sm text-muted-foreground font-medium">(4.8)</span>
-              <span className="text-xs text-green-600 font-bold">✓ معتمد</span>
-            </div>
-
-            {/* السعر */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <motion.span 
-                  className="text-xl font-black text-red-500"
-                  whileHover={{ scale: 1.05 }}
-                >
-                  {(finalPrice || 0).toLocaleString()} د.ع
-                </motion.span>
-                <span className="text-sm text-muted-foreground line-through">
-                  {(productPrice || 0).toLocaleString()} د.ع
-                </span>
-              </div>
-              <Badge className="bg-green-100 text-green-800 text-xs font-bold">
-                وفر {((productPrice || 0) - (finalPrice || 0)).toLocaleString()} د.ع
-              </Badge>
-            </div>
-          </motion.div>
-        </CardContent>
-      </Card>
-    </motion.div>
+        ))}
+      </div>
+    </div>
   );
 };
 
-// عنصر المنتج في القائمة
-const UltraProductListItem = ({ product, index, isFavorite, onToggleFavorite, onClick, onAddToCart }) => {
-  const productPrice = product.price || 0;
+// Categories Grid (Circle Style like Shein)
+const SheinCategoriesGrid = ({ categories }) => {
+  return (
+    <div className="bg-white dark:bg-gray-900 p-4">
+      <div className="grid grid-cols-3 gap-4">
+        {categories.map((category) => (
+          <motion.div
+            key={category.id}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="text-center cursor-pointer"
+          >
+            <div className={`w-20 h-20 ${category.color} rounded-full mx-auto mb-2 flex items-center justify-center text-2xl shadow-lg`}>
+              {category.image}
+            </div>
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
+              {category.name}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Super Deals Section
+const SuperDealsSection = ({ products }) => {
+  return (
+    <div className="bg-white dark:bg-gray-900 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="text-2xl">⚡</div>
+          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">Super Deals</span>
+          <Badge className="bg-red-500 text-white text-xs">-16% 🔥</Badge>
+        </div>
+        <ChevronRight className="w-5 h-5 text-gray-400" />
+      </div>
+
+      <div className="flex space-x-3 overflow-x-auto pb-4">
+        {products.slice(0, 4).map((product) => (
+          <ProductCard key={product.id} product={product} compact />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Product Recommendations
+const ProductRecommendations = ({ products }) => {
+  const [activeTab, setActiveTab] = useState('Deals');
+  const tabs = ['Deals', 'New In', 'For You'];
+
+  return (
+    <div className="bg-white dark:bg-gray-900 p-4">
+      {/* Tabs */}
+      <div className="flex justify-center mb-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-6 py-2 mx-1 rounded-full text-sm font-medium ${
+              activeTab === tab
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Product Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Product Card Component
+const ProductCard = ({ product, compact = false }) => {
+  const [isFavorite, setIsFavorite] = useState(false);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -30 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.1 }}
-      whileHover={{ scale: 1.01, x: 5 }}
-      className="product-list-item bg-card/50 backdrop-blur-sm border border-border/20 shadow-sm hover:shadow-lg transition-all duration-300"
+      whileHover={{ scale: 1.02 }}
+      className={`bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm ${compact ? 'w-32' : ''}`}
     >
-      <div className="flex items-center gap-6 w-full">
+      <div className="relative">
+        <div className={`${compact ? 'h-32' : 'h-48'} bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-4xl`}>
+          {product.image}
+        </div>
         
-        {/* صورة المنتج */}
-        <motion.div 
-          onClick={onClick}
-          className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 cursor-pointer relative group"
-          whileHover={{ scale: 1.05 }}
-        >
-          {product.main_image ? (
-            <img
-              src={product.main_image}
-              alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-              <DefaultProductImage className="w-10 h-10 opacity-60" />
-            </div>
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {product.flashSale && (
+            <Badge className="bg-red-500 text-white text-xs px-1 py-0">Flash Sale</Badge>
           )}
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-        </motion.div>
+          {product.newIn && (
+            <Badge className="bg-green-500 text-white text-xs px-1 py-0">جديد</Badge>
+          )}
+          {product.trending && (
+            <Badge className="bg-purple-500 text-white text-xs px-1 py-0">رائج</Badge>
+          )}
+        </div>
 
-        {/* معلومات المنتج */}
-        <div className="flex-1 min-w-0">
-          <h3 
-            onClick={onClick}
-            className="font-bold text-foreground mb-2 cursor-pointer hover:text-primary transition-colors text-lg"
-          >
-            {product.name}
-          </h3>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex items-center">
+        {/* Favorite Button */}
+        <button
+          onClick={() => setIsFavorite(!isFavorite)}
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
+        >
+          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+        </button>
+
+        {/* Discount Badge */}
+        {product.discount > 0 && (
+          <div className="absolute bottom-2 left-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
+            -{product.discount}%
+          </div>
+        )}
+      </div>
+
+      <div className={`p-2 ${compact ? 'p-1' : ''}`}>
+        <div className={`text-gray-800 dark:text-gray-200 font-medium ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
+          {product.name}
+        </div>
+        
+        <div className="flex items-center gap-1 mb-1">
+          <span className={`text-red-500 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
+            {(product.price || 0).toLocaleString()} د.ع
+          </span>
+          {product.originalPrice > product.price && (
+            <span className={`text-gray-400 line-through ${compact ? 'text-xs' : 'text-xs'}`}>
+              {(product.originalPrice || 0).toLocaleString()}
+            </span>
+          )}
+        </div>
+
+        {!compact && (
+          <div className="flex items-center gap-1">
+            <div className="flex">
               {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`w-4 h-4 ${i < 4 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+                <Star
+                  key={i}
+                  className={`w-3 h-3 ${i < Math.floor(product.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
                 />
               ))}
             </div>
-            <span className="text-sm text-muted-foreground">(4.8)</span>
-            <Badge className="bg-green-100 text-green-800 text-xs">متوفر</Badge>
+            <span className="text-xs text-gray-500">({product.reviews}+)</span>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-xl font-black text-foreground">
-              {(productPrice || 0).toLocaleString()} د.ع
-            </div>
-            <Badge className="bg-red-100 text-red-800 text-xs font-bold">توصيل مجاني</Badge>
-          </div>
-        </div>
-
-        {/* الأزرار */}
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-            <Button
-              onClick={onToggleFavorite}
-              size="icon"
-              variant="ghost"
-              className="w-12 h-12 rounded-full hover:bg-red-50 hover:text-red-500"
-            >
-              <Heart 
-                className={`w-5 h-5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
-              />
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              onClick={onAddToCart}
-              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold px-6 py-3 rounded-xl"
-            >
-              <ShoppingCart className="w-5 h-5 ml-2" />
-              أضف للسلة
-            </Button>
-          </motion.div>
-        </div>
+        )}
       </div>
     </motion.div>
   );
 };
 
-// Placeholder components - سأضعها فارغة للحد من الكود
-const UltraCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => (
-  <Sheet open={isOpen} onOpenChange={onClose}>
-    <SheetContent>
-      <div className="p-4">
-        <h2>سلة التسوق قيد التطوير...</h2>
-        <Button onClick={onClose}>إغلاق</Button>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+// Premium Cart Sidebar
+const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
+  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-const UltraQuickOrderModal = ({ isOpen, onClose, cart }) => (
-  <Sheet open={isOpen} onOpenChange={onClose}>
-    <SheetContent>
-      <div className="p-4">
-        <h2>الطلب السريع قيد التطوير...</h2>
-        <Button onClick={onClose}>إغلاق</Button>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 z-50"
+          />
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 z-50 shadow-xl"
+          >
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold">حقيبة التسوق</h2>
+                <Button variant="ghost" size="sm" onClick={onClose}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
 
-const UltraProductModal = ({ product, isOpen, onClose, onAddToCart, favorites, onToggleFavorite }) => (
-  <Sheet open={isOpen} onOpenChange={onClose}>
-    <SheetContent>
-      <div className="p-4">
-        <h2>تفاصيل المنتج قيد التطوير...</h2>
-        <Button onClick={onClose}>إغلاق</Button>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">سلة التسوق فارغة</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item) => (
+                    <div key={item.id} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                        <DefaultProductImage />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium">{item.name}</h3>
+                        <p className="text-sm text-gray-500">{(item.price || 0).toLocaleString()} د.ع</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button variant="outline" size="sm">
+                            <Minus className="w-3 h-3" />
+                          </Button>
+                          <span className="text-sm">{item.quantity}</span>
+                          <Button variant="outline" size="sm">
+                            <Plus className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-const MobileMenu = ({ isOpen, onClose, categories, onCategorySelect }) => (
-  <Sheet open={isOpen} onOpenChange={onClose}>
-    <SheetContent>
-      <div className="p-4">
-        <h2>القائمة قيد التطوير...</h2>
-        <Button onClick={onClose}>إغلاق</Button>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+            {cart.length > 0 && (
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between mb-4">
+                  <span className="font-medium">المجموع:</span>
+                  <span className="font-bold">{total.toLocaleString()} د.ع</span>
+                </div>
+                <Button onClick={onQuickOrder} className="w-full bg-black text-white hover:bg-gray-800">
+                  أضف إلى عربة التسوق بنجاح
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
 
-const UltraFooter = () => (
-  <footer className="bg-card border-t border-border/20 py-12">
-    <div className="max-w-7xl mx-auto px-4 text-center">
-      <h3 className="text-2xl font-bold text-foreground mb-4">RYUS Brand</h3>
-      <p className="text-muted-foreground">© 2024 جميع الحقوق محفوظة</p>
+// Quick Order Modal
+const QuickOrderModal = ({ isOpen, onClose, cart }) => {
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    phone: '',
+    city: '',
+    address: '',
+    notes: ''
+  });
+
+  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const deliveryFee = 5000;
+  const grandTotal = total + deliveryFee;
+
+  const handleSubmit = () => {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.city) {
+      toast({
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "تم إرسال الطلب",
+      description: "سيتم التواصل معك قريباً لتأكيد الطلب",
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>تسجيل الدخول / الاشتراك</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="name">الاسم الكامل *</Label>
+            <Input
+              id="name"
+              value={customerInfo.name}
+              onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="أدخل اسمك الكامل"
+              className="text-right"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone">رقم الهاتف *</Label>
+            <Input
+              id="phone"
+              value={customerInfo.phone}
+              onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="07xxxxxxxx"
+              className="text-right"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="city">المحافظة *</Label>
+            <Select
+              value={customerInfo.city}
+              onValueChange={(value) => setCustomerInfo(prev => ({ ...prev, city: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المحافظة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="baghdad">بغداد</SelectItem>
+                <SelectItem value="basra">البصرة</SelectItem>
+                <SelectItem value="mosul">الموصل</SelectItem>
+                <SelectItem value="erbil">أربيل</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="address">العنوان التفصيلي</Label>
+            <Textarea
+              id="address"
+              value={customerInfo.address}
+              onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
+              placeholder="الحي، الشارع، رقم الدار..."
+              className="text-right"
+            />
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="font-medium mb-2">ملخص الطلب</h3>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>المجموع الفرعي:</span>
+                <span>{total.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between">
+                <span>رسوم التوصيل:</span>
+                <span>{deliveryFee.toLocaleString()} د.ع</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>المجموع الكلي:</span>
+                <span>{grandTotal.toLocaleString()} د.ع</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={onClose} variant="outline" className="flex-1">
+              إلغاء
+            </Button>
+            <Button onClick={handleSubmit} className="flex-1 bg-black text-white hover:bg-gray-800">
+              حساب / تسجيل
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Mobile Menu
+const MobileMenu = ({ isOpen, onClose, categories }) => {
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-80">
+        <div className="py-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold">القائمة</h2>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {categories.map((category) => (
+              <div key={category.id} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
+                <div className={`w-8 h-8 ${category.color} rounded-full flex items-center justify-center text-sm`}>
+                  {category.image}
+                </div>
+                <span className="text-sm font-medium">{category.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+// WhatsApp Button
+const WhatsAppButton = () => {
+  return (
+    <motion.a
+      href="https://wa.me/9647801234567"
+      target="_blank"
+      rel="noopener noreferrer"
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      className="fixed bottom-20 left-4 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg z-40"
+    >
+      <MessageCircle className="w-8 h-8 text-white" />
+    </motion.a>
+  );
+};
+
+// Mobile Bottom Navigation
+const MobileBottomNav = () => {
+  const navItems = [
+    { icon: User, label: 'أنا', active: false },
+    { icon: ShoppingBag, label: 'حقيبة التسوق', active: false },
+    { icon: Sparkles, label: 'trends', active: true },
+    { icon: Search, label: 'الفئات', active: false },
+    { icon: Home, label: 'متجر', active: false }
+  ];
+
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-40">
+      <div className="flex items-center justify-around py-2">
+        {navItems.map((item, index) => (
+          <div key={index} className="flex flex-col items-center p-2">
+            <div className={`p-2 rounded-full ${item.active ? 'bg-purple-100 dark:bg-purple-900' : ''}`}>
+              <item.icon className={`w-5 h-5 ${item.active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
+            </div>
+            <span className={`text-xs mt-1 ${item.active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
-  </footer>
-);
-
-const FloatingWhatsApp = () => (
-  <motion.button
-    className="fixed bottom-6 left-6 w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-2xl z-50 flex items-center justify-center"
-    whileHover={{ scale: 1.1 }}
-    whileTap={{ scale: 0.9 }}
-    animate={{ y: [0, -10, 0] }}
-    transition={{ duration: 2, repeat: Infinity }}
-  >
-    <MessageCircle className="w-8 h-8" />
-  </motion.button>
-);
-
-const UltraEmptyState = () => (
-  <div className="text-center py-20">
-    <div className="text-8xl mb-6">🛍️</div>
-    <h3 className="text-2xl font-bold text-foreground mb-4">لا توجد منتجات</h3>
-    <p className="text-muted-foreground text-lg">جرب البحث عن شيء آخر</p>
-  </div>
-);
+  );
+};
 
 export default StorePage;
