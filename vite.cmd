@@ -1,2 +1,3 @@
 @echo off
-node start-dev-final.js
+echo Starting vite development server...
+node node_modules/vite/bin/vite.js --host :: --port 8080

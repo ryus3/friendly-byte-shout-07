@@ -1,2 +1,9 @@
 #!/usr/bin/env node
-require('./run-vite.js');
+console.log('🚀 Starting Vite Development Server...');
+const { execSync } = require('child_process');
+try {
+  execSync('node node_modules/vite/bin/vite.js --host :: --port 8080', { stdio: 'inherit' });
+} catch (error) {
+  console.error('Failed to start vite:', error.message);
+  process.exit(1);
+}
