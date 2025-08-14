@@ -227,14 +227,14 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         errorMsg = 'لا توجد كاميرا متاحة على هذا الجهاز';
       } else if (err.message.includes('NotReadableError')) {
         errorMsg = 'الكاميرا مستخدمة من تطبيق آخر، يرجى إغلاق التطبيقات الأخرى';
-      } else if (err.message && (err.message.includes('OverconstrainedError') || err.message.includes('config has invalid'))) {
-        console.log('🔄 Camera config issue, retrying with basic settings...');
-        errorMsg = 'جاري إعادة المحاولة بإعدادات كاميرا مختلفة...';
+      } else if (err.message.includes('OverconstrainedError') || err.message.includes('config has invalid')) {
+        console.log('🔄 Retrying with basic camera config...');
+        errorMsg = 'جاري إعادة المحاولة بإعدادات كاميرا أبسط...';
         
-        // إعادة المحاولة بأول كاميرا متاحة
+        // محاولة إعادة التشغيل بدون facingMode
         setTimeout(() => {
           console.log('🔄 Retrying with first available camera...');
-          if (availableCameras && availableCameras.length > 0) {
+          if (availableCameras.length > 0) {
             setSelectedCamera(availableCameras[0]);
             startScanning(elementId);
           }
