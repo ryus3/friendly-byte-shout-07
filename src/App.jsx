@@ -37,6 +37,7 @@ const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx')
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
 const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPage.jsx'));
+const StorePage = lazy(() => import('@/pages/StorePage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -141,6 +142,9 @@ function AppContent() {
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
           <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
           <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
+
+          {/* متجر إلكتروني للعملاء - بدون حماية */}
+          <Route path="/store" element={<StorePage />} />
 
         </Routes>
       </Suspense>
