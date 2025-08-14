@@ -348,7 +348,7 @@ const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
                 ]
               }}
               transition={{ duration: 3, repeat: Infinity }}
-              className="font-headline text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg"
+              className="font-tajawal text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg"
             >
               {bannerSettings.mainText} <span className="text-5xl md:text-7xl font-black bg-gradient-to-r from-yellow-300 via-yellow-200 to-white bg-clip-text text-transparent animate-pulse">{bannerSettings.discount}%</span>
             </motion.div>
@@ -356,7 +356,7 @@ const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
-              className="font-display text-xl md:text-2xl font-semibold mb-6"
+              className="font-tajawal text-xl md:text-2xl font-semibold mb-6"
             >
               {bannerSettings.subText} <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full font-black text-lg shadow-lg">تخفيضات</span>
             </motion.div>
@@ -365,7 +365,7 @@ const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
               whileTap={{ scale: 0.95 }}
               className="inline-block"
             >
-              <Button className="bg-gradient-to-r from-white to-yellow-100 text-purple-700 hover:from-yellow-100 hover:to-white font-black px-8 py-3 rounded-full border-4 border-yellow-300 shadow-2xl text-lg font-headline transition-all duration-300 hover:shadow-yellow-300/50">
+              <Button className="bg-gradient-to-r from-white to-yellow-100 text-purple-700 hover:from-yellow-100 hover:to-white font-black px-8 py-3 rounded-full border-4 border-yellow-300 shadow-2xl text-lg font-tajawal transition-all duration-300 hover:shadow-yellow-300/50">
                 {bannerSettings.buttonText} ⭐
               </Button>
             </motion.div>
@@ -382,7 +382,7 @@ const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
           </>
         ) : (
           <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 max-w-md mx-auto">
-            <h3 className="font-headline text-xl font-bold mb-4">تعديل البانر</h3>
+            <h3 className="font-tajawal text-xl font-bold mb-4">تعديل البانر</h3>
             <div className="space-y-4 text-right">
               <div>
                 <Label className="text-white font-medium">نسبة الخصم</Label>
@@ -472,7 +472,7 @@ const TrendingCollectionsRow = ({ collections }) => {
             <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-lg mx-auto mb-2 flex items-center justify-center shadow-sm">
               <collection.icon className="w-8 h-8 text-primary" />
             </div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 font-tajawal">
               {collection.name}
             </div>
           </motion.div>
@@ -504,7 +504,7 @@ const SheinCategoriesGrid = ({ categories }) => {
                 <category.icon className="w-6 h-6 text-white drop-shadow-lg" />
               </div>
             </div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight font-tajawal">
               {category.name}
             </div>
           </motion.div>
@@ -521,7 +521,7 @@ const SuperDealsSection = ({ products }) => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Zap className="w-6 h-6 text-yellow-500" />
-          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">عروض مميزة</span>
+          <span className="text-lg font-bold text-gray-800 dark:text-gray-200 font-tajawal">عروض مميزة</span>
           <Badge className="bg-red-500 text-white text-xs">خصم 16% 🔥</Badge>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -618,7 +618,7 @@ const ProductCard = ({ product, compact = false }) => {
       </div>
 
       <div className={`p-2 ${compact ? 'p-1' : ''}`}>
-        <div className={`text-gray-800 dark:text-gray-200 font-medium ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
+        <div className={`text-gray-800 dark:text-gray-200 font-medium font-tajawal ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
           {product.name}
         </div>
         
@@ -674,7 +674,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
           >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">حقيبة التسوق</h2>
+                <h2 className="text-lg font-bold font-tajawal">حقيبة التسوق</h2>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="w-4 h-4" />
                 </Button>

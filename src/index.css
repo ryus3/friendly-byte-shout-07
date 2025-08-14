@@ -120,7 +120,7 @@
   }
   body, html {
     @apply bg-background text-foreground;
-    font-family: 'Readex Pro', 'Changa', sans-serif;
+    font-family: 'Readex Pro', 'Tajawal', 'Cairo', sans-serif;
     direction: rtl;
     height: 100dvh;
     -webkit-text-size-adjust: 100%;
@@ -136,6 +136,12 @@
   }
   .font-headline {
     font-family: 'Changa', sans-serif;
+  }
+  .font-tajawal {
+    font-family: 'Tajawal', sans-serif;
+  }
+  .font-cairo {
+    font-family: 'Cairo', sans-serif;
   }
 }
 
