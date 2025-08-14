@@ -119,24 +119,12 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         console.log('📷 Using default camera config');
         // استخدام إعدادات آمنة تعمل على جميع الأجهزة
         cameraConfig = {
-          width: { min: 640, ideal: 1280 },
-          height: { min: 480, ideal: 720 },
-          aspectRatio: { ideal: 1.7777777778 }
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 }
         };
         
-        // إضافة facingMode بحذر
-        try {
-          const devices = await navigator.mediaDevices.enumerateDevices();
-          const videoDevices = devices.filter(device => device.kind === 'videoinput');
-          
-          if (videoDevices.length > 1) {
-            // إذا كان هناك أكثر من كاميرا، استخدم environment
-            cameraConfig.facingMode = 'environment';
-          }
-          // إذا كان هناك كاميرا واحدة فقط، لا نحدد facingMode
-        } catch (e) {
-          console.log('⚠️ Could not enumerate devices, using basic config');
-        }
+        // لا نستخدم facingMode مباشرة - بدلاً من ذلك نتركه للمتصفح
+        console.log('📷 Using basic camera config without facingMode');
       }
 
       console.log('🎯 Camera config:', cameraConfig);

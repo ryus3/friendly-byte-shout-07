@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Smartphone
 } from 'lucide-react';
-import { useQRScanner } from '@/hooks/useQRScanner';
+import { useSimpleQRScanner } from '@/hooks/useSimpleQRScanner';
 
 /**
  * مكون QR Scanner موحد للاستخدام في جميع أنحاء التطبيق
@@ -28,17 +28,10 @@ const UnifiedQRScanner = ({
 }) => {
   const {
     isScanning,
-    hasFlash,
-    flashEnabled,
     error,
-    scanCount,
-    cameras,
-    selectedCamera,
     startScanning,
-    stopScanning,
-    toggleFlash,
-    switchCamera
-  } = useQRScanner(onScanSuccess);
+    stopScanning
+  } = useSimpleQRScanner(onScanSuccess);
 
   // بدء المسح عند فتح الحوار
   React.useEffect(() => {
@@ -76,57 +69,19 @@ const UnifiedQRScanner = ({
         
         <div className="space-y-4">
           {/* أدوات التحكم */}
-          <div className="flex justify-between items-center gap-2">
-            {/* اختيار الكاميرا */}
-            {cameras.length > 1 && (
-              <Select 
-                value={selectedCamera?.id} 
-                onValueChange={switchCamera}
-                disabled={isScanning}
+          {error && (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                className="flex items-center gap-1"
               >
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="اختر الكاميرا" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cameras.map((camera) => (
-                    <SelectItem key={camera.id} value={camera.id}>
-                      <div className="flex items-center gap-2">
-                        <Camera className="w-4 h-4" />
-                        {camera.label.includes('back') || camera.label.includes('rear') ? 'خلفية' : 'أمامية'}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* أزرار التحكم */}
-            <div className="flex gap-2">
-              {hasFlash && isScanning && (
-                <Button
-                  variant={flashEnabled ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleFlash}
-                  className="flex items-center gap-1"
-                >
-                  {flashEnabled ? <FlashlightOff className="w-4 h-4" /> : <Flashlight className="w-4 h-4" />}
-                  {flashEnabled ? "إطفاء" : "فلاش"}
-                </Button>
-              )}
-
-              {error && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRetry}
-                  className="flex items-center gap-1"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  إعادة محاولة
-                </Button>
-              )}
+                <RefreshCw className="w-4 h-4" />
+                إعادة محاولة
+              </Button>
             </div>
-          </div>
+          )}
 
           {/* منطقة المسح */}
           <div className="relative">
@@ -163,11 +118,6 @@ const UnifiedQRScanner = ({
                 <p className="text-xs text-blue-600 font-medium">
                   📱 وجه الكاميرا نحو الرمز للحصول على أفضل النتائج
                 </p>
-                {scanCount > 0 && (
-                  <p className="text-xs text-primary font-bold">
-                    📊 تم قراءة {scanCount} رمز
-                  </p>
-                )}
               </div>
             </div>
           )}
