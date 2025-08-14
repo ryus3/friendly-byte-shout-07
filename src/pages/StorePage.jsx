@@ -55,7 +55,7 @@ import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StorePage = () => {
   const { products, categories } = useSuper();
-  const { cart, addToCart } = useCart();
+  const { cart = [], addToCart } = useCart();
   const { theme, setTheme } = useTheme();
   
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,7 +124,7 @@ const StorePage = () => {
 
       {/* Shein-like Header */}
       <SheinHeader 
-        cartItemsCount={cart.length} 
+        cartItemsCount={(cart || []).length} 
         onCartClick={() => setIsCartOpen(true)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -477,7 +477,7 @@ const ProductCard = ({ product, compact = false }) => {
 
 // Premium Cart Sidebar
 const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = (cart || []).reduce((sum, item) => sum + ((item?.price || 0) * (item?.quantity || 1)), 0);
 
   return (
     <AnimatePresence>
@@ -506,26 +506,26 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {cart.length === 0 ? (
+              {(cart || []).length === 0 ? (
                 <div className="text-center py-8">
                   <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">سلة التسوق فارغة</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {cart.map((item) => (
+                  {(cart || []).map((item) => (
                     <div key={item.id} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                       <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
                         <DefaultProductImage />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium">{item.name}</h3>
+                        <h3 className="text-sm font-medium">{item?.name || 'منتج'}</h3>
                         <p className="text-sm text-gray-500">{(item?.price || 0).toLocaleString()} د.ع</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="sm">
                             <Minus className="w-3 h-3" />
                           </Button>
-                          <span className="text-sm">{item.quantity}</span>
+                          <span className="text-sm">{item?.quantity || 1}</span>
                           <Button variant="outline" size="sm">
                             <Plus className="w-3 h-3" />
                           </Button>
@@ -537,7 +537,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
               )}
             </div>
 
-            {cart.length > 0 && (
+            {(cart || []).length > 0 && (
               <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between mb-4">
                   <span className="font-medium">المجموع:</span>
@@ -565,7 +565,7 @@ const QuickOrderModal = ({ isOpen, onClose, cart }) => {
     notes: ''
   });
 
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const total = (cart || []).reduce((sum, item) => sum + ((item?.price || 0) * (item?.quantity || 1)), 0);
   const deliveryFee = 5000;
   const grandTotal = total + deliveryFee;
 
