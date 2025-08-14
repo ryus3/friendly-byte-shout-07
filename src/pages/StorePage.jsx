@@ -40,13 +40,7 @@ import {
   Tag,
   Globe,
   Eye,
-  Share,
-  Crown,
-  Shirt,
-  Gem,
-  Palette,
-  Dumbbell,
-  Pen
+  Share
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,26 +52,6 @@ import { Label } from '@/components/ui/label';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useTheme } from '@/contexts/ThemeContext';
 import DefaultProductImage from '@/components/ui/default-product-image';
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
-
-// Import professional images
-import categoryWomen from '@/assets/category-women.jpg';
-import categoryMen from '@/assets/category-men.jpg';
-import categoryKids from '@/assets/category-kids.jpg';
-import categoryShoes from '@/assets/category-shoes.jpg';
-import categoryAccessories from '@/assets/category-accessories.jpg';
-import categoryBags from '@/assets/category-bags.jpg';
-import categoryHome from '@/assets/category-home.jpg';
-import categorySports from '@/assets/category-sports.jpg';
-import categoryBeauty from '@/assets/category-beauty.jpg';
-import categoryElectronics from '@/assets/category-electronics.jpg';
-
-import productDress from '@/assets/product-dress.jpg';
-import productShirt from '@/assets/product-shirt.jpg';
-import productSneakers from '@/assets/product-sneakers.jpg';
-import productHandbag from '@/assets/product-handbag.jpg';
-import productSmartwatch from '@/assets/product-smartwatch.jpg';
-import productSunglasses from '@/assets/product-sunglasses.jpg';
 
 const StorePage = () => {
   const { products, categories } = useSuper();
@@ -93,46 +67,37 @@ const StorePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
 
-  // إعدادات البانر القابلة للتعديل
-  const [bannerSettings, setBannerSettings] = useState({
-    discount: '80',
-    mainText: 'خصم يصل إلى',
-    subText: 'تخفيضات نهاية الموسم',
-    buttonText: 'تسوق الآن',
-    isEditable: true
-  });
-
-  // Sample data for Professional E-commerce interface with real images
+  // Sample data for Shein-like interface
   const sheinCategories = [
-    { id: 1, name: 'نسائي', image: categoryWomen, icon: Crown, color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
-    { id: 2, name: 'رجالي', image: categoryMen, icon: Shirt, color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
-    { id: 3, name: 'أطفال', image: categoryKids, icon: Heart, color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
-    { id: 4, name: 'أحذية', image: categoryShoes, icon: Tag, color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
-    { id: 5, name: 'إكسسوارات', image: categoryAccessories, icon: Gem, color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
-    { id: 6, name: 'حقائب', image: categoryBags, icon: ShoppingBag, color: 'bg-gradient-to-br from-red-400 to-pink-500' },
-    { id: 7, name: 'منزل ومطبخ', image: categoryHome, icon: Home, color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
-    { id: 8, name: 'رياضة وخارجي', image: categorySports, icon: Dumbbell, color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
-    { id: 9, name: 'جمال وصحة', image: categoryBeauty, icon: Sparkles, color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
-    { id: 10, name: 'الملابس الداخلية', image: categoryWomen, icon: Palette, color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
-    { id: 11, name: 'مجوهرات', image: categoryAccessories, icon: Gem, color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
-    { id: 12, name: 'إلكترونيات', image: categoryElectronics, icon: Zap, color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
+    { id: 1, name: 'نسائي', image: '👗', color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
+    { id: 2, name: 'رجالي', image: '👔', color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
+    { id: 3, name: 'أطفال', image: '🧸', color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
+    { id: 4, name: 'أحذية', image: '👟', color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
+    { id: 5, name: 'إكسسوارات', image: '💍', color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
+    { id: 6, name: 'حقائب', image: '👜', color: 'bg-gradient-to-br from-red-400 to-pink-500' },
+    { id: 7, name: 'منزل ومطبخ', image: '🏠', color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
+    { id: 8, name: 'رياضة وخارجي', image: '⚽', color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
+    { id: 9, name: 'جمال وصحة', image: '💄', color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
+    { id: 10, name: 'الملابس الداخلية', image: '🩱', color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
+    { id: 11, name: 'مجوهرات', image: '💎', color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
+    { id: 12, name: 'إلكترونيات', image: '📱', color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
   ];
 
   const trendingCollections = [
-    { id: 1, name: 'أناقة مميزة', icon: Crown, description: 'أناقة بلا حدود' },
-    { id: 2, name: 'كلاسيكي', icon: Shirt, description: 'خالدة الطراز' },
-    { id: 3, name: 'متاجر مفضلة', icon: Star, description: 'متاجر مفضلة' },
-    { id: 4, name: 'مناسبات', icon: Heart, description: 'مناسبات خاصة' },
-    { id: 5, name: 'موضة الشارع', icon: TrendingUp, description: 'موضة الشارع' }
+    { id: 1, name: 'Premium Style', image: '👗', description: 'أناقة بلا حدود' },
+    { id: 2, name: 'Ageless', image: '👔', description: 'خالدة الطراز' },
+    { id: 3, name: 'Fave Stores', image: '⭐', description: 'متاجر مفضلة' },
+    { id: 4, name: 'Date', image: '🌹', description: 'مناسبات خاصة' },
+    { id: 5, name: 'Street', image: '🔥', description: 'موضة الشارع' }
   ];
 
   const sampleProducts = [
-    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: productDress, category: 'نسائي', trending: true },
-    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: productShirt, category: 'رجالي', newIn: true },
-    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: productSneakers, category: 'أحذية', flashSale: true },
-    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: productHandbag, category: 'حقائب', trending: true },
-    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: productSmartwatch, category: 'إلكترونيات', newIn: true },
-    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: productSunglasses, category: 'إكسسوارات', flashSale: true }
+    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: '👗', category: 'نسائي', trending: true },
+    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: '👔', category: 'رجالي', newIn: true },
+    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: '👟', category: 'أحذية', flashSale: true },
+    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: '👜', category: 'حقائب', trending: true },
+    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: '⌚', category: 'إلكترونيات', newIn: true },
+    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: '🕶️', category: 'إكسسوارات', flashSale: true }
   ];
 
   useEffect(() => {
@@ -170,7 +135,7 @@ const StorePage = () => {
       <SheinNavigation />
 
       {/* Flash Sale Banner */}
-      <FlashSaleBanner bannerSettings={bannerSettings} setBannerSettings={setBannerSettings} />
+      <FlashSaleBanner />
 
       {/* Trending Collections Row */}
       <TrendingCollectionsRow collections={trendingCollections} />
@@ -229,9 +194,8 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             
-            {/* Right Icons (معكوس للعربية) */}
+            {/* Left Icons */}
             <div className="flex items-center gap-2">
-              <ThemeSwitcher />
               <Heart className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               <Camera className="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </div>
@@ -242,14 +206,14 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن المنتجات..."
-                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pl-10 text-center"
+                  placeholder="New Fall Fashion Women"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pr-10 text-center"
                 />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
 
-            {/* Left Icons (معكوس للعربية) */}
+            {/* Right Icons */}
             <div className="flex items-center gap-2">
               <Mail className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               <div className="relative">
@@ -258,7 +222,7 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
                   onClick={onCartClick}
                 />
                 {cartItemsCount > 0 && (
-                  <span className="absolute -top-2 -left-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {cartItemsCount}
                   </span>
                 )}
@@ -266,9 +230,9 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
             </div>
           </div>
 
-          {/* RYUS Brand */}
+          {/* SHEIN Brand */}
           <div className="text-center mt-2">
-            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider font-brand">
+            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider">
               RYUS
             </h1>
           </div>
@@ -280,11 +244,11 @@ const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery,
 
 // Main Navigation
 const SheinNavigation = () => {
-  const navItems = ['الرئيسية', 'رجالي', 'أطفال', 'مقاسات كبيرة', 'نسائي', 'الكل'];
+  const navItems = ['Home', 'Men', 'Kids', 'Curve', 'Women', 'All'];
   
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-      <div className="flex justify-center space-x-reverse space-x-8 py-3">
+      <div className="flex justify-center space-x-8 py-3">
         {navItems.map((item, index) => (
           <button
             key={item}
@@ -302,158 +266,29 @@ const SheinNavigation = () => {
   );
 };
 
-// Flash Sale Banner - احترافي قابل للتعديل
-const FlashSaleBanner = ({ bannerSettings, setBannerSettings }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedSettings, setEditedSettings] = useState(bannerSettings);
-
-  const handleSave = () => {
-    setBannerSettings(editedSettings);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditedSettings(bannerSettings);
-    setIsEditing(false);
-  };
-
+// Flash Sale Banner
+const FlashSaleBanner = () => {
   return (
-    <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 dark:from-purple-700 dark:via-pink-700 dark:to-red-700 text-white py-12 px-4 overflow-hidden">
-      {/* خلفية متحركة */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 via-orange-500/30 to-red-500/20 animate-pulse"></div>
-        <div className="absolute top-0 left-0 w-full h-full opacity-30">
-          <div className="absolute top-4 right-8 w-2 h-2 bg-yellow-300 rounded-full animate-ping"></div>
-          <div className="absolute top-8 left-12 w-1 h-1 bg-white rounded-full animate-pulse"></div>
-          <div className="absolute bottom-6 right-16 w-3 h-3 bg-yellow-200 rounded-full animate-bounce"></div>
-          <div className="absolute bottom-8 left-8 w-1.5 h-1.5 bg-orange-300 rounded-full animate-ping"></div>
-        </div>
-      </div>
-
+    <div className="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 text-white py-8 px-4 relative overflow-hidden">
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 text-center"
+        animate={{ rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="text-center"
       >
-        {!isEditing ? (
-          <>
-            <motion.div
-              animate={{ 
-                scale: [1, 1.05, 1],
-                textShadow: [
-                  '0 0 20px rgba(255,255,255,0.5)',
-                  '0 0 30px rgba(255,255,255,0.8)',
-                  '0 0 20px rgba(255,255,255,0.5)'
-                ]
-              }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="font-tajawal text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg"
-            >
-              {bannerSettings.mainText} <span className="text-5xl md:text-7xl font-black bg-gradient-to-r from-yellow-300 via-yellow-200 to-white bg-clip-text text-transparent animate-pulse">{bannerSettings.discount}%</span>
-            </motion.div>
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="font-tajawal text-xl md:text-2xl font-semibold mb-6"
-            >
-              {bannerSettings.subText} <span className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black px-3 py-1 rounded-full font-black text-lg shadow-lg">تخفيضات</span>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 2 }}
-              whileTap={{ scale: 0.95 }}
-              className="inline-block"
-            >
-              <Button className="bg-gradient-to-r from-white to-yellow-100 text-purple-700 hover:from-yellow-100 hover:to-white font-black px-8 py-3 rounded-full border-4 border-yellow-300 shadow-2xl text-lg font-tajawal transition-all duration-300 hover:shadow-yellow-300/50">
-                {bannerSettings.buttonText} ⭐
-              </Button>
-            </motion.div>
-            
-            {bannerSettings.isEditable && (
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                onClick={() => setIsEditing(true)}
-                className="absolute top-4 left-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 transition-all duration-300"
-              >
-                <Pen className="w-5 h-5 text-white" />
-              </motion.button>
-            )}
-          </>
-        ) : (
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 max-w-md mx-auto">
-            <h3 className="font-tajawal text-xl font-bold mb-4">تعديل البانر</h3>
-            <div className="space-y-4 text-right">
-              <div>
-                <Label className="text-white font-medium">نسبة الخصم</Label>
-                <Input
-                  value={editedSettings.discount}
-                  onChange={(e) => setEditedSettings({...editedSettings, discount: e.target.value})}
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                  placeholder="80"
-                />
-              </div>
-              <div>
-                <Label className="text-white font-medium">النص الرئيسي</Label>
-                <Input
-                  value={editedSettings.mainText}
-                  onChange={(e) => setEditedSettings({...editedSettings, mainText: e.target.value})}
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-              </div>
-              <div>
-                <Label className="text-white font-medium">النص الفرعي</Label>
-                <Input
-                  value={editedSettings.subText}
-                  onChange={(e) => setEditedSettings({...editedSettings, subText: e.target.value})}
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-              </div>
-              <div>
-                <Label className="text-white font-medium">نص الزر</Label>
-                <Input
-                  value={editedSettings.buttonText}
-                  onChange={(e) => setEditedSettings({...editedSettings, buttonText: e.target.value})}
-                  className="bg-white/20 border-white/30 text-white placeholder-white/70"
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={handleSave}
-                  className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold"
-                >
-                  حفظ
-                </Button>
-                <Button 
-                  onClick={handleCancel}
-                  variant="outline"
-                  className="flex-1 border-white text-white hover:bg-white/20"
-                >
-                  إلغاء
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <div className="text-4xl font-bold mb-2">
+          UP TO <span className="text-6xl">80%</span> OFF
+        </div>
+        <div className="text-2xl font-bold mb-4">
+          End of season <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">SALE</span>
+        </div>
+        <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-2 rounded border-2 border-white">
+          SHOP NOW &gt;
+        </Button>
       </motion.div>
       
-      {/* تأثيرات بصرية متحركة */}
-      <div className="absolute top-4 right-8">
-        <motion.div
-          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
-          transition={{ duration: 4, repeat: Infinity }}
-        >
-          <Sparkles className="w-8 h-8 text-yellow-300" />
-        </motion.div>
-      </div>
-      <div className="absolute bottom-4 left-8">
-        <motion.div
-          animate={{ y: [-5, 5, -5], rotate: [0, 10, -10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <Gift className="w-8 h-8 text-orange-300" />
-        </motion.div>
-      </div>
+      {/* Decorative elements */}
+      <div className="absolute top-2 right-4 text-2xl">🔥</div>
+      <div className="absolute bottom-2 left-4 text-2xl">⚡</div>
     </div>
   );
 };
@@ -469,10 +304,10 @@ const TrendingCollectionsRow = ({ collections }) => {
             whileHover={{ scale: 1.05 }}
             className="flex-shrink-0 w-24 text-center"
           >
-            <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 dark:from-primary/30 dark:to-primary/20 rounded-lg mx-auto mb-2 flex items-center justify-center shadow-sm">
-              <collection.icon className="w-8 h-8 text-primary" />
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mb-2 flex items-center justify-center text-2xl">
+              {collection.image}
             </div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 font-tajawal">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
               {collection.name}
             </div>
           </motion.div>
@@ -492,19 +327,12 @@ const SheinCategoriesGrid = ({ categories }) => {
             key={category.id}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-center cursor-pointer group"
+            className="text-center cursor-pointer"
           >
-            <div className="relative w-20 h-20 mx-auto mb-2 rounded-full overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
-              <img 
-                src={category.image} 
-                alt={category.name}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-center justify-center">
-                <category.icon className="w-6 h-6 text-white drop-shadow-lg" />
-              </div>
+            <div className={`w-20 h-20 ${category.color} rounded-full mx-auto mb-2 flex items-center justify-center text-2xl shadow-lg`}>
+              {category.image}
             </div>
-            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight font-tajawal">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
               {category.name}
             </div>
           </motion.div>
@@ -520,9 +348,9 @@ const SuperDealsSection = ({ products }) => {
     <div className="bg-white dark:bg-gray-900 p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Zap className="w-6 h-6 text-yellow-500" />
-          <span className="text-lg font-bold text-gray-800 dark:text-gray-200 font-tajawal">عروض مميزة</span>
-          <Badge className="bg-red-500 text-white text-xs">خصم 16% 🔥</Badge>
+          <div className="text-2xl">⚡</div>
+          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">Super Deals</span>
+          <Badge className="bg-red-500 text-white text-xs">-16% 🔥</Badge>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />
       </div>
@@ -538,8 +366,8 @@ const SuperDealsSection = ({ products }) => {
 
 // Product Recommendations
 const ProductRecommendations = ({ products }) => {
-  const [activeTab, setActiveTab] = useState('عروض');
-  const tabs = ['عروض', 'جديد', 'مخصص لك'];
+  const [activeTab, setActiveTab] = useState('Deals');
+  const tabs = ['Deals', 'New In', 'For You'];
 
   return (
     <div className="bg-white dark:bg-gray-900 p-4">
@@ -580,18 +408,14 @@ const ProductCard = ({ product, compact = false }) => {
       className={`bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm ${compact ? 'w-32' : ''}`}
     >
       <div className="relative">
-        <div className={`${compact ? 'h-32' : 'h-48'} rounded-lg overflow-hidden`}>
-          <img 
-            src={product.image} 
-            alt={product.name}
-            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-          />
+        <div className={`${compact ? 'h-32' : 'h-48'} bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-4xl`}>
+          {product.image}
         </div>
         
         {/* Badges */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.flashSale && (
-            <Badge className="bg-red-500 text-white text-xs px-1 py-0">عرض خاطف</Badge>
+            <Badge className="bg-red-500 text-white text-xs px-1 py-0">Flash Sale</Badge>
           )}
           {product.newIn && (
             <Badge className="bg-green-500 text-white text-xs px-1 py-0">جديد</Badge>
@@ -604,21 +428,21 @@ const ProductCard = ({ product, compact = false }) => {
         {/* Favorite Button */}
         <button
           onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-2 left-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
         >
           <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
         </button>
 
         {/* Discount Badge */}
         {product.discount > 0 && (
-          <div className="absolute bottom-2 right-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-            خصم {product.discount}%
+          <div className="absolute bottom-2 left-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
+            -{product.discount}%
           </div>
         )}
       </div>
 
       <div className={`p-2 ${compact ? 'p-1' : ''}`}>
-        <div className={`text-gray-800 dark:text-gray-200 font-medium font-tajawal ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
+        <div className={`text-gray-800 dark:text-gray-200 font-medium ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
           {product.name}
         </div>
         
@@ -674,7 +498,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
           >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold font-tajawal">حقيبة التسوق</h2>
+                <h2 className="text-lg font-bold">حقيبة التسوق</h2>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="w-4 h-4" />
                 </Button>
@@ -870,12 +694,8 @@ const MobileMenu = ({ isOpen, onClose, categories }) => {
           <div className="space-y-4">
             {categories.map((category) => (
               <div key={category.id} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
-                <div className="w-8 h-8 rounded-full overflow-hidden">
-                  <img 
-                    src={category.image} 
-                    alt={category.name}
-                    className="w-full h-full object-cover"
-                  />
+                <div className={`w-8 h-8 ${category.color} rounded-full flex items-center justify-center text-sm`}>
+                  {category.image}
                 </div>
                 <span className="text-sm font-medium">{category.name}</span>
               </div>
