@@ -448,11 +448,11 @@ const ProductCard = ({ product, compact = false }) => {
         
         <div className="flex items-center gap-1 mb-1">
           <span className={`text-red-500 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
-            {(product.price || 0).toLocaleString()} د.ع
+            {(product?.price || 0).toLocaleString()} د.ع
           </span>
-          {product.originalPrice > product.price && (
+          {(product?.originalPrice || 0) > (product?.price || 0) && (
             <span className={`text-gray-400 line-through ${compact ? 'text-xs' : 'text-xs'}`}>
-              {(product.originalPrice || 0).toLocaleString()}
+              {(product?.originalPrice || 0).toLocaleString()}
             </span>
           )}
         </div>
@@ -520,7 +520,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-sm font-medium">{item.name}</h3>
-                        <p className="text-sm text-gray-500">{(item.price || 0).toLocaleString()} د.ع</p>
+                        <p className="text-sm text-gray-500">{(item?.price || 0).toLocaleString()} د.ع</p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button variant="outline" size="sm">
                             <Minus className="w-3 h-3" />
@@ -541,7 +541,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
               <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-between mb-4">
                   <span className="font-medium">المجموع:</span>
-                  <span className="font-bold">{total.toLocaleString()} د.ع</span>
+                  <span className="font-bold">{(total || 0).toLocaleString()} د.ع</span>
                 </div>
                 <Button onClick={onQuickOrder} className="w-full bg-black text-white hover:bg-gray-800">
                   أضف إلى عربة التسوق بنجاح
@@ -650,16 +650,16 @@ const QuickOrderModal = ({ isOpen, onClose, cart }) => {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>المجموع الفرعي:</span>
-                <span>{total.toLocaleString()} د.ع</span>
+                <span>{(total || 0).toLocaleString()} د.ع</span>
               </div>
               <div className="flex justify-between">
                 <span>رسوم التوصيل:</span>
-                <span>{deliveryFee.toLocaleString()} د.ع</span>
+                <span>{(deliveryFee || 0).toLocaleString()} د.ع</span>
               </div>
               <Separator />
               <div className="flex justify-between font-medium">
                 <span>المجموع الكلي:</span>
-                <span>{grandTotal.toLocaleString()} د.ع</span>
+                <span>{(grandTotal || 0).toLocaleString()} د.ع</span>
               </div>
             </div>
           </div>
