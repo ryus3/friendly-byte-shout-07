@@ -40,15 +40,7 @@ import {
   Tag,
   Globe,
   Eye,
-  Share,
-  Crown,
-  Gem,
-  Shirt,
-  Watch,
-  Smartphone,
-  Palette,
-  Sun,
-  Moon
+  Share
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -75,106 +67,37 @@ const StorePage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
 
-  // بيانات التصنيفات العربية الاحترافية
-  const arabicCategories = [
-    { id: 1, name: 'أزياء نسائية', icon: Crown, color: 'from-pink-500 to-rose-500', bgColor: 'bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20' },
-    { id: 2, name: 'أزياء رجالية', icon: Shirt, color: 'from-blue-500 to-indigo-500', bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20' },
-    { id: 3, name: 'أزياء الأطفال', icon: Heart, color: 'from-yellow-500 to-orange-500', bgColor: 'bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20' },
-    { id: 4, name: 'الأحذية', icon: Gem, color: 'from-purple-500 to-violet-500', bgColor: 'bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20' },
-    { id: 5, name: 'الإكسسوارات', icon: Sparkles, color: 'from-emerald-500 to-teal-500', bgColor: 'bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20' },
-    { id: 6, name: 'الحقائب', icon: ShoppingBag, color: 'from-red-500 to-pink-500', bgColor: 'bg-gradient-to-br from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20' },
-    { id: 7, name: 'الساعات', icon: Watch, color: 'from-amber-500 to-yellow-500', bgColor: 'bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20' },
-    { id: 8, name: 'الإلكترونيات', icon: Smartphone, color: 'from-gray-500 to-slate-500', bgColor: 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20' },
-    { id: 9, name: 'الجمال والعناية', icon: Palette, color: 'from-rose-500 to-pink-500', bgColor: 'bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20' }
+  // Sample data for Shein-like interface
+  const sheinCategories = [
+    { id: 1, name: 'نسائي', image: '👗', color: 'bg-gradient-to-br from-pink-400 to-rose-500' },
+    { id: 2, name: 'رجالي', image: '👔', color: 'bg-gradient-to-br from-blue-400 to-indigo-500' },
+    { id: 3, name: 'أطفال', image: '🧸', color: 'bg-gradient-to-br from-yellow-400 to-orange-500' },
+    { id: 4, name: 'أحذية', image: '👟', color: 'bg-gradient-to-br from-purple-400 to-violet-500' },
+    { id: 5, name: 'إكسسوارات', image: '💍', color: 'bg-gradient-to-br from-emerald-400 to-teal-500' },
+    { id: 6, name: 'حقائب', image: '👜', color: 'bg-gradient-to-br from-red-400 to-pink-500' },
+    { id: 7, name: 'منزل ومطبخ', image: '🏠', color: 'bg-gradient-to-br from-amber-400 to-yellow-500' },
+    { id: 8, name: 'رياضة وخارجي', image: '⚽', color: 'bg-gradient-to-br from-green-400 to-emerald-500' },
+    { id: 9, name: 'جمال وصحة', image: '💄', color: 'bg-gradient-to-br from-rose-400 to-pink-500' },
+    { id: 10, name: 'الملابس الداخلية', image: '🩱', color: 'bg-gradient-to-br from-purple-400 to-indigo-500' },
+    { id: 11, name: 'مجوهرات', image: '💎', color: 'bg-gradient-to-br from-cyan-400 to-blue-500' },
+    { id: 12, name: 'إلكترونيات', image: '📱', color: 'bg-gradient-to-br from-slate-400 to-gray-500' }
   ];
 
   const trendingCollections = [
-    { id: 1, name: 'الأسلوب الراقي', icon: Crown, description: 'مجموعة أنيقة ومميزة' },
-    { id: 2, name: 'العصرية الخالدة', icon: Gem, description: 'قطع كلاسيكية لا تنتهي صلاحيتها' },
-    { id: 3, name: 'المتاجر المفضلة', icon: Star, description: 'أفضل التصميمات المنتقاة' },
-    { id: 4, name: 'المناسبات الخاصة', icon: Heart, description: 'إطلالات مناسبات استثنائية' },
-    { id: 5, name: 'موضة الشارع', icon: TrendingUp, description: 'آخر صيحات الموضة العالمية' }
+    { id: 1, name: 'Premium Style', image: '👗', description: 'أناقة بلا حدود' },
+    { id: 2, name: 'Ageless', image: '👔', description: 'خالدة الطراز' },
+    { id: 3, name: 'Fave Stores', image: '⭐', description: 'متاجر مفضلة' },
+    { id: 4, name: 'Date', image: '🌹', description: 'مناسبات خاصة' },
+    { id: 5, name: 'Street', image: '🔥', description: 'موضة الشارع' }
   ];
 
   const sampleProducts = [
-    {
-      id: 1,
-      name: 'فستان سهرة أنيق بتطريز راقي',
-      price: 125000,
-      originalPrice: 195000,
-      discount: 36,
-      rating: 4.9,
-      reviews: 847,
-      image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=400&fit=crop&crop=center',
-      category: 'أزياء نسائية',
-      trending: true,
-      isNew: false
-    },
-    {
-      id: 2,
-      name: 'قميص رجالي قطني فاخر',
-      price: 85000,
-      originalPrice: 125000,
-      discount: 32,
-      rating: 4.7,
-      reviews: 523,
-      image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=400&fit=crop&crop=center',
-      category: 'أزياء رجالية',
-      newIn: true,
-      isNew: true
-    },
-    {
-      id: 3,
-      name: 'حذاء رياضي عصري متطور',
-      price: 145000,
-      originalPrice: 210000,
-      discount: 31,
-      rating: 4.8,
-      reviews: 1203,
-      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop&crop=center',
-      category: 'الأحذية',
-      flashSale: true,
-      isNew: false
-    },
-    {
-      id: 4,
-      name: 'حقيبة يد جلدية أنيقة',
-      price: 165000,
-      originalPrice: 245000,
-      discount: 33,
-      rating: 4.6,
-      reviews: 674,
-      image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop&crop=center',
-      category: 'الحقائب',
-      trending: true,
-      isNew: false
-    },
-    {
-      id: 5,
-      name: 'ساعة ذكية متطورة',
-      price: 285000,
-      originalPrice: 385000,
-      discount: 26,
-      rating: 4.9,
-      reviews: 1456,
-      image: 'https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=400&h=400&fit=crop&crop=center',
-      category: 'الإلكترونيات',
-      newIn: true,
-      isNew: true
-    },
-    {
-      id: 6,
-      name: 'نظارة شمسية كلاسيكية',
-      price: 95000,
-      originalPrice: 145000,
-      discount: 34,
-      rating: 4.5,
-      reviews: 389,
-      image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop&crop=center',
-      category: 'الإكسسوارات',
-      flashSale: true,
-      isNew: false
-    }
+    { id: 1, name: 'فستان صيفي أنيق', price: 45000, originalPrice: 75000, discount: 40, rating: 4.8, reviews: 523, image: '👗', category: 'نسائي', trending: true },
+    { id: 2, name: 'قميص رجالي كلاسيكي', price: 32000, originalPrice: 48000, discount: 33, rating: 4.6, reviews: 234, image: '👔', category: 'رجالي', newIn: true },
+    { id: 3, name: 'حذاء رياضي عصري', price: 89000, originalPrice: 125000, discount: 29, rating: 4.9, reviews: 867, image: '👟', category: 'أحذية', flashSale: true },
+    { id: 4, name: 'حقيبة يد أنيقة', price: 67000, originalPrice: 95000, discount: 29, rating: 4.7, reviews: 345, image: '👜', category: 'حقائب', trending: true },
+    { id: 5, name: 'ساعة ذكية متطورة', price: 156000, originalPrice: 220000, discount: 29, rating: 4.8, reviews: 654, image: '⌚', category: 'إلكترونيات', newIn: true },
+    { id: 6, name: 'نظارة شمسية كلاسيكية', price: 23000, originalPrice: 35000, discount: 34, rating: 4.5, reviews: 189, image: '🕶️', category: 'إكسسوارات', flashSale: true }
   ];
 
   useEffect(() => {
@@ -193,43 +116,40 @@ const StorePage = () => {
   }, [products, searchQuery, selectedCategory]);
 
   return (
-    <div className="min-h-screen bg-background font-arabic">
+    <div className="min-h-screen bg-background">
       <Helmet>
-        <title>RYUS | متجر الأزياء العصرية - أحدث صيحات الموضة</title>
-        <meta name="description" content="اكتشف أحدث صيحات الموضة والأزياء العصرية في متجر RYUS. تسوق الآن واحصل على خصومات مذهلة تصل إلى 80% على جميع المنتجات" />
-        <meta name="keywords" content="أزياء، موضة، ملابس، متجر، تسوق، خصومات، RYUS" />
+        <title>RYUS Store - أفضل متجر للأزياء العصرية</title>
+        <meta name="description" content="اكتشف أحدث صيحات الموضة والأزياء العصرية في متجر RYUS. تسوق الآن واحصل على خصومات تصل إلى 70%" />
       </Helmet>
 
-      {/* الهيدر العربي الاحترافي */}
-      <ArabicHeader 
+      {/* Shein-like Header */}
+      <SheinHeader 
         cartItemsCount={(cart || []).length} 
         onCartClick={() => setIsCartOpen(true)}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onMenuClick={() => setIsMenuOpen(true)}
-        theme={theme}
-        setTheme={setTheme}
       />
 
-      {/* شريط التنقل الرئيسي */}
-      <MainNavigation />
+      {/* Main Navigation Bar */}
+      <SheinNavigation />
 
-      {/* بانر التخفيضات الفلاش */}
+      {/* Flash Sale Banner */}
       <FlashSaleBanner />
 
-      {/* مجموعات الترندات */}
-      <TrendingSection collections={trendingCollections} />
+      {/* Trending Collections Row */}
+      <TrendingCollectionsRow collections={trendingCollections} />
 
-      {/* شبكة التصنيفات العربية */}
-      <ArabicCategoriesGrid categories={arabicCategories} />
+      {/* Categories Circle Grid */}
+      <SheinCategoriesGrid categories={sheinCategories} />
 
-      {/* قسم العروض الخاصة */}
-      <SpecialDealsSection products={sampleProducts} />
+      {/* Super Deals Section */}
+      <SuperDealsSection products={sampleProducts} />
 
-      {/* توصيات المنتجات */}
+      {/* Product Recommendations */}
       <ProductRecommendations products={sampleProducts} />
 
-      {/* سلة التسوق الاحترافية */}
+      {/* Premium Cart Sidebar */}
       <PremiumCartSidebar
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -237,131 +157,84 @@ const StorePage = () => {
         onQuickOrder={() => setShowQuickOrder(true)}
       />
 
-      {/* نافذة الطلب السريع */}
+      {/* Quick Order Modal */}
       <QuickOrderModal
         isOpen={showQuickOrder}
         onClose={() => setShowQuickOrder(false)}
         cart={cart}
       />
 
-      {/* القائمة الجانبية للهاتف */}
+      {/* Mobile Menu */}
       <MobileMenu 
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
-        categories={arabicCategories}
+        categories={sheinCategories}
       />
 
-      {/* زر الواتساب */}
+      {/* WhatsApp Button */}
       <WhatsAppButton />
 
-      {/* التنقل السفلي للهاتف */}
+      {/* Bottom Navigation for Mobile */}
       <MobileBottomNav />
     </div>
   );
 };
 
-// الهيدر العربي الاحترافي
-const ArabicHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery, onMenuClick, theme, setTheme }) => {
+// Shein-style Header
+const SheinHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery, onMenuClick }) => {
   return (
     <>
-      {/* البانر العلوي */}
-      <div className="bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground py-3 text-center">
-        <motion.div
-          animate={{ opacity: [1, 0.7, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-sm font-medium font-arabic"
-        >
-          🎉 عرض خاص: خصم 25% على طلبك الأول + شحن مجاني للطلبات فوق 100 ألف دينار
-        </motion.div>
+      {/* Top Banner */}
+      <div className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 text-white py-2 text-center text-sm font-semibold">
+        🎉 احصل على خصم 20% على طلبك الأول
       </div>
 
-      {/* الهيدر الرئيسي */}
-      <header className="bg-card border-b border-border/20 sticky top-0 z-50 backdrop-blur-lg">
-        <div className="px-4 py-4">
+      {/* Main Header */}
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             
-            {/* الأيقونات اليسرى */}
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-full hover:bg-accent/50 transition-colors"
-              >
-                <Heart className="w-5 h-5 text-muted-foreground hover:text-primary" />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-full hover:bg-accent/50 transition-colors"
-              >
-                <Camera className="w-5 h-5 text-muted-foreground hover:text-primary" />
-              </motion.button>
+            {/* Left Icons */}
+            <div className="flex items-center gap-2">
+              <Heart className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <Camera className="w-6 h-6 text-gray-600 dark:text-gray-400" />
             </div>
 
-            {/* البحث الوسطي */}
-            <div className="flex-1 max-w-lg mx-6">
+            {/* Center Search */}
+            <div className="flex-1 max-w-md mx-4">
               <div className="relative">
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ابحث عن منتجاتك المفضلة..."
-                  className="w-full bg-muted/50 border-0 rounded-2xl py-3 px-5 pr-12 text-center font-arabic placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-primary/20"
+                  placeholder="New Fall Fashion Women"
+                  className="w-full bg-gray-100 dark:bg-gray-800 border-0 rounded-full py-2 px-4 pr-10 text-center"
                 />
-                <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
 
-            {/* الأيقونات اليمنى */}
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-2 rounded-full hover:bg-accent/50 transition-colors"
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                ) : (
-                  <Moon className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                )}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 rounded-full hover:bg-accent/50 transition-colors"
-              >
-                <Bell className="w-5 h-5 text-muted-foreground hover:text-primary" />
-              </motion.button>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="relative"
-              >
-                <button
+            {/* Right Icons */}
+            <div className="flex items-center gap-2">
+              <Mail className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              <div className="relative">
+                <ShoppingCart 
+                  className="w-6 h-6 text-gray-600 dark:text-gray-400 cursor-pointer" 
                   onClick={onCartClick}
-                  className="p-2 rounded-full hover:bg-accent/50 transition-colors"
-                >
-                  <ShoppingCart className="w-5 h-5 text-muted-foreground hover:text-primary" />
-                  {cartItemsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                      {cartItemsCount}
-                    </span>
-                  )}
-                </button>
-              </motion.div>
+                />
+                {cartItemsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItemsCount}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* اسم العلامة التجارية */}
-          <div className="text-center mt-4">
-            <motion.h1 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-3xl font-bold font-brand bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent tracking-wider"
-            >
+          {/* SHEIN Brand */}
+          <div className="text-center mt-2">
+            <h1 className="text-2xl font-bold text-black dark:text-white tracking-wider">
               RYUS
-            </motion.h1>
-            <p className="text-xs text-muted-foreground mt-1 font-arabic">متجر الأزياء العصرية</p>
+            </h1>
           </div>
         </div>
       </header>
@@ -369,120 +242,97 @@ const ArabicHeader = ({ cartItemsCount, onCartClick, searchQuery, setSearchQuery
   );
 };
 
-// التنقل الرئيسي
-const MainNavigation = () => {
-  const navItems = [
-    { name: 'الرئيسية', active: true },
-    { name: 'نسائي', active: false },
-    { name: 'رجالي', active: false },
-    { name: 'أطفال', active: false },
-    { name: 'اكسسوارات', active: false },
-    { name: 'العروض', active: false }
-  ];
+// Main Navigation
+const SheinNavigation = () => {
+  const navItems = ['Home', 'Men', 'Kids', 'Curve', 'Women', 'All'];
   
   return (
-    <nav className="bg-card border-b border-border/10 overflow-x-auto">
-      <div className="flex justify-center space-x-reverse space-x-8 py-4 px-4">
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <div className="flex justify-center space-x-8 py-3">
         {navItems.map((item, index) => (
-          <motion.button
-            key={item.name}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`text-sm font-medium whitespace-nowrap px-4 py-2 rounded-lg transition-all duration-300 ${
-              item.active 
-                ? 'bg-primary text-primary-foreground shadow-lg' 
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+          <button
+            key={item}
+            className={`text-sm font-medium whitespace-nowrap px-2 py-1 ${
+              index === navItems.length - 1 
+                ? 'text-black dark:text-white border-b-2 border-black dark:border-white font-bold' 
+                : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
             }`}
           >
-            {item.name}
-          </motion.button>
+            {item}
+          </button>
         ))}
       </div>
     </nav>
   );
 };
 
-// بانر التخفيضات الفلاش
+// Flash Sale Banner
 const FlashSaleBanner = () => {
   return (
-    <div className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-white py-12 px-4 relative overflow-hidden">
+    <div className="bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 text-white py-8 px-4 relative overflow-hidden">
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="text-center relative z-10"
+        animate={{ rotate: [0, 5, -5, 0] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="text-center"
       >
-        <motion.div
-          animate={{ rotate: [0, 3, -3, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-5xl font-bold mb-4 font-brand"
-        >
-          خصم يصل إلى <span className="text-7xl">80%</span>
-        </motion.div>
-        <div className="text-2xl font-bold mb-6 font-arabic">
-          تصفية نهاية الموسم <span className="bg-yellow-400 text-red-600 px-4 py-2 rounded-xl">تخفيضات هائلة</span>
+        <div className="text-4xl font-bold mb-2">
+          UP TO <span className="text-6xl">80%</span> OFF
         </div>
-        <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-3 rounded-2xl text-lg font-arabic shadow-lg">
-          تسوق الآن ← 
+        <div className="text-2xl font-bold mb-4">
+          End of season <span className="bg-yellow-400 text-red-600 px-2 py-1 rounded">SALE</span>
+        </div>
+        <Button className="bg-white text-red-600 hover:bg-gray-100 font-bold px-8 py-2 rounded border-2 border-white">
+          SHOP NOW &gt;
         </Button>
       </motion.div>
       
-      {/* عناصر زخرفية */}
-      <div className="absolute top-4 right-8 text-4xl animate-bounce">🔥</div>
-      <div className="absolute bottom-4 left-8 text-4xl animate-pulse">⚡</div>
-      <div className="absolute top-1/2 right-1/4 text-3xl animate-spin" style={{ animationDuration: '3s' }}>✨</div>
+      {/* Decorative elements */}
+      <div className="absolute top-2 right-4 text-2xl">🔥</div>
+      <div className="absolute bottom-2 left-4 text-2xl">⚡</div>
     </div>
   );
 };
 
-// قسم الترندات
-const TrendingSection = ({ collections }) => {
+// Trending Collections Row
+const TrendingCollectionsRow = ({ collections }) => {
   return (
-    <div className="bg-card py-6">
-      <div className="px-4">
-        <h2 className="text-xl font-bold text-center mb-6 font-arabic">المجموعات الرائجة</h2>
-        <div className="flex justify-center space-x-reverse space-x-6 overflow-x-auto pb-4">
-          {collections.map((collection) => (
-            <motion.div
-              key={collection.id}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0 w-28 text-center cursor-pointer"
-            >
-              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl mx-auto mb-3 flex items-center justify-center border border-primary/20 shadow-lg">
-                <collection.icon className="w-8 h-8 text-primary" />
-              </div>
-              <div className="text-xs font-medium text-foreground font-arabic mb-1">
-                {collection.name}
-              </div>
-              <div className="text-xs text-muted-foreground font-arabic">
-                {collection.description}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+    <div className="bg-white dark:bg-gray-900 py-4">
+      <div className="flex justify-center space-x-4 overflow-x-auto px-4">
+        {collections.map((collection) => (
+          <motion.div
+            key={collection.id}
+            whileHover={{ scale: 1.05 }}
+            className="flex-shrink-0 w-24 text-center"
+          >
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-lg mx-auto mb-2 flex items-center justify-center text-2xl">
+              {collection.image}
+            </div>
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200">
+              {collection.name}
+            </div>
+          </motion.div>
+        ))}
       </div>
     </div>
   );
 };
 
-// شبكة التصنيفات العربية
-const ArabicCategoriesGrid = ({ categories }) => {
+// Categories Grid (Circle Style like Shein)
+const SheinCategoriesGrid = ({ categories }) => {
   return (
-    <div className="bg-muted/30 p-6">
-      <h2 className="text-2xl font-bold text-center mb-8 font-arabic">تسوق حسب الفئة</h2>
-      <div className="grid grid-cols-3 gap-6">
+    <div className="bg-white dark:bg-gray-900 p-4">
+      <div className="grid grid-cols-3 gap-4">
         {categories.map((category) => (
           <motion.div
             key={category.id}
-            whileHover={{ scale: 1.05, y: -5 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="text-center cursor-pointer group"
+            className="text-center cursor-pointer"
           >
-            <div className={`w-24 h-24 ${category.bgColor} rounded-3xl mx-auto mb-4 flex items-center justify-center shadow-lg border border-border/20 group-hover:shadow-xl transition-all duration-300`}>
-              <category.icon className={`w-10 h-10 bg-gradient-to-r ${category.color} bg-clip-text text-transparent`} />
+            <div className={`w-20 h-20 ${category.color} rounded-full mx-auto mb-2 flex items-center justify-center text-2xl shadow-lg`}>
+              {category.image}
             </div>
-            <div className="text-sm font-medium text-foreground font-arabic group-hover:text-primary transition-colors">
+            <div className="text-xs font-medium text-gray-800 dark:text-gray-200 leading-tight">
               {category.name}
             </div>
           </motion.div>
@@ -492,20 +342,20 @@ const ArabicCategoriesGrid = ({ categories }) => {
   );
 };
 
-// قسم العروض الخاصة
-const SpecialDealsSection = ({ products }) => {
+// Super Deals Section
+const SuperDealsSection = ({ products }) => {
   return (
-    <div className="bg-card p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="text-3xl">⚡</div>
-          <span className="text-xl font-bold text-foreground font-arabic">عروض خاصة</span>
-          <Badge className="bg-red-500 text-white text-sm font-arabic">خصم 40% 🔥</Badge>
+    <div className="bg-white dark:bg-gray-900 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="text-2xl">⚡</div>
+          <span className="text-lg font-bold text-gray-800 dark:text-gray-200">Super Deals</span>
+          <Badge className="bg-red-500 text-white text-xs">-16% 🔥</Badge>
         </div>
-        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+        <ChevronRight className="w-5 h-5 text-gray-400" />
       </div>
 
-      <div className="flex space-x-reverse space-x-4 overflow-x-auto pb-4">
+      <div className="flex space-x-3 overflow-x-auto pb-4">
         {products.slice(0, 4).map((product) => (
           <ProductCard key={product.id} product={product} compact />
         ))}
@@ -514,34 +364,32 @@ const SpecialDealsSection = ({ products }) => {
   );
 };
 
-// توصيات المنتجات
+// Product Recommendations
 const ProductRecommendations = ({ products }) => {
-  const [activeTab, setActiveTab] = useState('العروض');
-  const tabs = ['العروض', 'الجديد', 'لك'];
+  const [activeTab, setActiveTab] = useState('Deals');
+  const tabs = ['Deals', 'New In', 'For You'];
 
   return (
-    <div className="bg-muted/20 p-6">
-      {/* التبويبات */}
-      <div className="flex justify-center mb-8">
+    <div className="bg-white dark:bg-gray-900 p-4">
+      {/* Tabs */}
+      <div className="flex justify-center mb-4">
         {tabs.map((tab) => (
-          <motion.button
+          <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className={`px-8 py-3 mx-2 rounded-2xl text-sm font-medium transition-all duration-300 font-arabic ${
+            className={`px-6 py-2 mx-1 rounded-full text-sm font-medium ${
               activeTab === tab
-                ? 'bg-primary text-primary-foreground shadow-lg'
-                : 'bg-card text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
             }`}
           >
             {tab}
-          </motion.button>
+          </button>
         ))}
       </div>
 
-      {/* شبكة المنتجات */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Product Grid */}
+      <div className="grid grid-cols-2 gap-3">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
@@ -550,72 +398,67 @@ const ProductRecommendations = ({ products }) => {
   );
 };
 
-// كارت المنتج
+// Product Card Component
 const ProductCard = ({ product, compact = false }) => {
   const [isFavorite, setIsFavorite] = useState(false);
 
   return (
     <motion.div
-      whileHover={{ scale: 1.02, y: -5 }}
-      whileTap={{ scale: 0.98 }}
-      className={`bg-card rounded-2xl overflow-hidden shadow-lg border border-border/20 hover:shadow-xl transition-all duration-300 ${compact ? 'w-40' : ''}`}
+      whileHover={{ scale: 1.02 }}
+      className={`bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm ${compact ? 'w-32' : ''}`}
     >
       <div className="relative">
-        <img 
-          src={product.image} 
-          alt={product.name}
-          className={`${compact ? 'h-40' : 'h-56'} w-full object-cover`}
-        />
+        <div className={`${compact ? 'h-32' : 'h-48'} bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-4xl`}>
+          {product.image}
+        </div>
         
-        {/* الشارات */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
+        {/* Badges */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1">
           {product.flashSale && (
-            <Badge className="bg-red-500 text-white text-xs px-2 py-1 font-arabic">فلاش سيل</Badge>
+            <Badge className="bg-red-500 text-white text-xs px-1 py-0">Flash Sale</Badge>
           )}
           {product.newIn && (
-            <Badge className="bg-green-500 text-white text-xs px-2 py-1 font-arabic">جديد</Badge>
+            <Badge className="bg-green-500 text-white text-xs px-1 py-0">جديد</Badge>
           )}
           {product.trending && (
-            <Badge className="bg-purple-500 text-white text-xs px-2 py-1 font-arabic">رائج</Badge>
+            <Badge className="bg-purple-500 text-white text-xs px-1 py-0">رائج</Badge>
           )}
         </div>
 
-        {/* زر المفضلة */}
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
+        {/* Favorite Button */}
+        <button
           onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-card/90 backdrop-blur-sm flex items-center justify-center shadow-md border border-border/20"
+          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm"
         >
-          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-        </motion.button>
+          <Heart className={`w-4 h-4 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+        </button>
 
-        {/* شارة الخصم */}
+        {/* Discount Badge */}
         {product.discount > 0 && (
-          <div className="absolute bottom-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg font-arabic">
+          <div className="absolute bottom-2 left-2 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
             -{product.discount}%
           </div>
         )}
       </div>
 
-      <div className={`p-4 ${compact ? 'p-3' : ''}`}>
-        <div className={`text-foreground font-medium ${compact ? 'text-sm' : 'text-base'} line-clamp-2 mb-2 font-arabic`}>
+      <div className={`p-2 ${compact ? 'p-1' : ''}`}>
+        <div className={`text-gray-800 dark:text-gray-200 font-medium ${compact ? 'text-xs' : 'text-sm'} line-clamp-2 mb-1`}>
           {product.name}
         </div>
         
-        <div className="flex items-center gap-2 mb-2">
-          <span className={`text-primary font-bold ${compact ? 'text-sm' : 'text-lg'} font-arabic`}>
+        <div className="flex items-center gap-1 mb-1">
+          <span className={`text-red-500 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
             {(product?.price || 0).toLocaleString()} د.ع
           </span>
           {(product?.originalPrice || 0) > (product?.price || 0) && (
-            <span className={`text-muted-foreground line-through ${compact ? 'text-xs' : 'text-sm'} font-arabic`}>
+            <span className={`text-gray-400 line-through ${compact ? 'text-xs' : 'text-xs'}`}>
               {(product?.originalPrice || 0).toLocaleString()}
             </span>
           )}
         </div>
 
         {!compact && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <div className="flex">
               {[...Array(5)].map((_, i) => (
                 <Star
@@ -624,7 +467,7 @@ const ProductCard = ({ product, compact = false }) => {
                 />
               ))}
             </div>
-            <span className="text-xs text-muted-foreground font-arabic">({(product?.reviews || 0).toLocaleString()}+)</span>
+            <span className="text-xs text-gray-500">({product.reviews}+)</span>
           </div>
         )}
       </div>
@@ -632,7 +475,7 @@ const ProductCard = ({ product, compact = false }) => {
   );
 };
 
-// سلة التسوق الاحترافية
+// Premium Cart Sidebar
 const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
   const total = (cart || []).reduce((sum, item) => sum + ((item?.price || 0) * (item?.quantity || 1)), 0);
 
@@ -651,63 +494,57 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            className="fixed right-0 top-0 h-full w-96 bg-card z-50 shadow-2xl"
+            className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-900 z-50 shadow-xl"
           >
-            <div className="p-6 border-b border-border/20">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold font-arabic">سلة التسوق</h2>
+                <h2 className="text-lg font-bold">حقيبة التسوق</h2>
                 <Button variant="ghost" size="sm" onClick={onClose}>
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4">
               {(cart || []).length === 0 ? (
-                <div className="text-center py-12">
-                  <ShoppingBag className="w-20 h-20 text-muted-foreground/50 mx-auto mb-4" />
-                  <p className="text-muted-foreground font-arabic">سلة التسوق فارغة</p>
-                  <p className="text-sm text-muted-foreground font-arabic mt-2">اكتشف منتجاتنا الرائعة وأضفها هنا</p>
+                <div className="text-center py-8">
+                  <ShoppingBag className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">سلة التسوق فارغة</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {(cart || []).map((item) => (
-                    <motion.div 
-                      key={item.id} 
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-4 p-4 bg-muted/30 rounded-2xl border border-border/20"
-                    >
-                      <div className="w-20 h-20 bg-muted rounded-xl flex items-center justify-center overflow-hidden">
+                    <div key={item.id} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
                         <DefaultProductImage />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-sm font-medium font-arabic mb-1">{item?.name || 'منتج'}</h3>
-                        <p className="text-sm text-primary font-bold font-arabic">{(item?.price || 0).toLocaleString()} د.ع</p>
-                        <div className="flex items-center gap-3 mt-3">
-                          <Button variant="outline" size="sm" className="w-8 h-8 rounded-full p-0">
+                        <h3 className="text-sm font-medium">{item?.name || 'منتج'}</h3>
+                        <p className="text-sm text-gray-500">{(item?.price || 0).toLocaleString()} د.ع</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Button variant="outline" size="sm">
                             <Minus className="w-3 h-3" />
                           </Button>
-                          <span className="text-sm font-medium">{item?.quantity || 1}</span>
-                          <Button variant="outline" size="sm" className="w-8 h-8 rounded-full p-0">
+                          <span className="text-sm">{item?.quantity || 1}</span>
+                          <Button variant="outline" size="sm">
                             <Plus className="w-3 h-3" />
                           </Button>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
             {(cart || []).length > 0 && (
-              <div className="p-6 border-t border-border/20 bg-muted/20">
-                <div className="flex justify-between mb-6">
-                  <span className="font-medium font-arabic">المجموع:</span>
-                  <span className="font-bold text-lg text-primary font-arabic">{(total || 0).toLocaleString()} د.ع</span>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between mb-4">
+                  <span className="font-medium">المجموع:</span>
+                  <span className="font-bold">{(total || 0).toLocaleString()} د.ع</span>
                 </div>
-                <Button onClick={onQuickOrder} className="w-full bg-primary text-primary-foreground hover:bg-primary/90 py-3 rounded-2xl font-arabic">
-                  إتمام الطلب
+                <Button onClick={onQuickOrder} className="w-full bg-black text-white hover:bg-gray-800">
+                  أضف إلى عربة التسوق بنجاح
                 </Button>
               </div>
             )}
@@ -718,7 +555,7 @@ const PremiumCartSidebar = ({ isOpen, onClose, cart, onQuickOrder }) => {
   );
 };
 
-// نافذة الطلب السريع
+// Quick Order Modal
 const QuickOrderModal = ({ isOpen, onClose, cart }) => {
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -743,7 +580,7 @@ const QuickOrderModal = ({ isOpen, onClose, cart }) => {
     }
 
     toast({
-      title: "تم إرسال الطلب بنجاح",
+      title: "تم إرسال الطلب",
       description: "سيتم التواصل معك قريباً لتأكيد الطلب",
     });
     onClose();
@@ -751,90 +588,88 @@ const QuickOrderModal = ({ isOpen, onClose, cart }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold font-arabic">إتمام الطلب</DialogTitle>
+          <DialogTitle>تسجيل الدخول / الاشتراك</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="name" className="font-arabic">الاسم الكامل *</Label>
+            <Label htmlFor="name">الاسم الكامل *</Label>
             <Input
               id="name"
               value={customerInfo.name}
               onChange={(e) => setCustomerInfo(prev => ({ ...prev, name: e.target.value }))}
               placeholder="أدخل اسمك الكامل"
-              className="text-right font-arabic mt-2"
+              className="text-right"
             />
           </div>
 
           <div>
-            <Label htmlFor="phone" className="font-arabic">رقم الهاتف *</Label>
+            <Label htmlFor="phone">رقم الهاتف *</Label>
             <Input
               id="phone"
               value={customerInfo.phone}
               onChange={(e) => setCustomerInfo(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="07xxxxxxxx"
-              className="text-right font-arabic mt-2"
+              className="text-right"
             />
           </div>
 
           <div>
-            <Label htmlFor="city" className="font-arabic">المحافظة *</Label>
+            <Label htmlFor="city">المحافظة *</Label>
             <Select
               value={customerInfo.city}
               onValueChange={(value) => setCustomerInfo(prev => ({ ...prev, city: value }))}
             >
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="اختر المحافظة" className="font-arabic" />
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المحافظة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="baghdad" className="font-arabic">بغداد</SelectItem>
-                <SelectItem value="basra" className="font-arabic">البصرة</SelectItem>
-                <SelectItem value="mosul" className="font-arabic">الموصل</SelectItem>
-                <SelectItem value="erbil" className="font-arabic">أربيل</SelectItem>
-                <SelectItem value="najaf" className="font-arabic">النجف</SelectItem>
-                <SelectItem value="karbala" className="font-arabic">كربلاء</SelectItem>
+                <SelectItem value="baghdad">بغداد</SelectItem>
+                <SelectItem value="basra">البصرة</SelectItem>
+                <SelectItem value="mosul">الموصل</SelectItem>
+                <SelectItem value="erbil">أربيل</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label htmlFor="address" className="font-arabic">العنوان التفصيلي</Label>
+            <Label htmlFor="address">العنوان التفصيلي</Label>
             <Textarea
               id="address"
               value={customerInfo.address}
               onChange={(e) => setCustomerInfo(prev => ({ ...prev, address: e.target.value }))}
               placeholder="الحي، الشارع، رقم الدار..."
-              className="text-right font-arabic mt-2"
+              className="text-right"
             />
           </div>
 
-          <div className="bg-muted/50 p-4 rounded-2xl">
-            <h3 className="font-medium mb-3 font-arabic">ملخص الطلب</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between font-arabic">
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <h3 className="font-medium mb-2">ملخص الطلب</h3>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
                 <span>المجموع الفرعي:</span>
                 <span>{(total || 0).toLocaleString()} د.ع</span>
               </div>
-              <div className="flex justify-between font-arabic">
+              <div className="flex justify-between">
                 <span>رسوم التوصيل:</span>
                 <span>{(deliveryFee || 0).toLocaleString()} د.ع</span>
               </div>
               <Separator />
-              <div className="flex justify-between font-medium text-lg font-arabic">
+              <div className="flex justify-between font-medium">
                 <span>المجموع الكلي:</span>
-                <span className="text-primary">{(grandTotal || 0).toLocaleString()} د.ع</span>
+                <span>{(grandTotal || 0).toLocaleString()} د.ع</span>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <Button onClick={onClose} variant="outline" className="flex-1 font-arabic">
+          <div className="flex gap-2">
+            <Button onClick={onClose} variant="outline" className="flex-1">
               إلغاء
             </Button>
-            <Button onClick={handleSubmit} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-arabic">
-              تأكيد الطلب
+            <Button onClick={handleSubmit} className="flex-1 bg-black text-white hover:bg-gray-800">
+              حساب / تسجيل
             </Button>
           </div>
         </div>
@@ -843,32 +678,27 @@ const QuickOrderModal = ({ isOpen, onClose, cart }) => {
   );
 };
 
-// القائمة الجانبية للهاتف
+// Mobile Menu
 const MobileMenu = ({ isOpen, onClose, categories }) => {
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent side="right" className="w-80">
-        <div className="py-6">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-xl font-bold font-arabic">القائمة الرئيسية</h2>
+        <div className="py-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold">القائمة</h2>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="w-4 h-4" />
             </Button>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {categories.map((category) => (
-              <motion.div 
-                key={category.id} 
-                whileHover={{ x: 5 }}
-                className="flex items-center gap-4 p-3 hover:bg-accent/50 rounded-xl cursor-pointer transition-colors"
-              >
-                <div className={`w-10 h-10 ${category.bgColor} rounded-xl flex items-center justify-center`}>
-                  <category.icon className={`w-5 h-5 bg-gradient-to-r ${category.color} bg-clip-text text-transparent`} />
+              <div key={category.id} className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
+                <div className={`w-8 h-8 ${category.color} rounded-full flex items-center justify-center text-sm`}>
+                  {category.image}
                 </div>
-                <span className="text-sm font-medium font-arabic">{category.name}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground mr-auto" />
-              </motion.div>
+                <span className="text-sm font-medium">{category.name}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -877,7 +707,7 @@ const MobileMenu = ({ isOpen, onClose, categories }) => {
   );
 };
 
-// زر الواتساب
+// WhatsApp Button
 const WhatsAppButton = () => {
   return (
     <motion.a
@@ -886,39 +716,35 @@ const WhatsAppButton = () => {
       rel="noopener noreferrer"
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      className="fixed bottom-24 left-6 w-16 h-16 bg-green-500 rounded-full flex items-center justify-center shadow-lg z-40 hover:shadow-xl transition-shadow"
+      className="fixed bottom-20 left-4 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg z-40"
     >
       <MessageCircle className="w-8 h-8 text-white" />
     </motion.a>
   );
 };
 
-// التنقل السفلي للهاتف
+// Mobile Bottom Navigation
 const MobileBottomNav = () => {
   const navItems = [
-    { icon: User, label: 'الحساب', active: false },
-    { icon: ShoppingBag, label: 'السلة', active: false },
-    { icon: Sparkles, label: 'الرائج', active: true },
-    { icon: Search, label: 'البحث', active: false },
-    { icon: Home, label: 'الرئيسية', active: false }
+    { icon: User, label: 'أنا', active: false },
+    { icon: ShoppingBag, label: 'حقيبة التسوق', active: false },
+    { icon: Sparkles, label: 'trends', active: true },
+    { icon: Search, label: 'الفئات', active: false },
+    { icon: Home, label: 'متجر', active: false }
   ];
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border/20 z-40">
-      <div className="flex items-center justify-around py-3">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-40">
+      <div className="flex items-center justify-around py-2">
         {navItems.map((item, index) => (
-          <motion.div 
-            key={index} 
-            whileTap={{ scale: 0.95 }}
-            className="flex flex-col items-center p-2"
-          >
-            <div className={`p-2 rounded-xl transition-colors ${item.active ? 'bg-primary/20' : ''}`}>
-              <item.icon className={`w-5 h-5 ${item.active ? 'text-primary' : 'text-muted-foreground'}`} />
+          <div key={index} className="flex flex-col items-center p-2">
+            <div className={`p-2 rounded-full ${item.active ? 'bg-purple-100 dark:bg-purple-900' : ''}`}>
+              <item.icon className={`w-5 h-5 ${item.active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`} />
             </div>
-            <span className={`text-xs mt-1 font-arabic ${item.active ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+            <span className={`text-xs mt-1 ${item.active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}>
               {item.label}
             </span>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>
