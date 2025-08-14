@@ -1,14 +1,1 @@
-#!/usr/bin/env node
-const path = require('path');
-const { spawn } = require('child_process');
-
-// مسار vite المباشر
-const viteBin = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
-
-// تشغيل vite مباشرة
-const child = spawn(process.execPath, [viteBin, '--host', '::', '--port', '8080'], {
-  stdio: 'inherit',
-  env: process.env
-});
-
-child.on('exit', process.exit);
+node ./node_modules/vite/bin/vite.js --host 0.0.0.0 --port 8080
