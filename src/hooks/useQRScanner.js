@@ -66,7 +66,7 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
 
       // إعدادات محسنة للمسح
       const config = {
-        fps: 25, // تحسين سرعة الإطارات
+        fps: 15, // تقليل سرعة الإطارات لتحسين الأداء
         qrbox: function(viewfinderWidth, viewfinderHeight) {
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
           const size = Math.floor(minEdge * 0.7);
@@ -91,12 +91,20 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         }
       };
 
-      // إعدادات الكاميرا المحسنة
-      const cameraConfig = selectedCamera 
-        ? { deviceId: { exact: selectedCamera.id } }
-        : { facingMode: { ideal: "environment" } }; // استخدام ideal بدلاً من exact
+      // إعدادات الكاميرا المحسنة - إصلاح خطأ environment
+      let cameraConfig;
+      if (selectedCamera?.id) {
+        cameraConfig = selectedCamera.id;
+      } else {
+        // استخدام إعدادات آمنة للكاميرا
+        cameraConfig = {
+          facingMode: "environment",
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 }
+        };
+      }
 
-      // بدء المسح
+      // بدء المسح مع إعدادات محسنة
       await html5QrCode.start(
         cameraConfig,
         config,
@@ -170,11 +178,25 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
 
     } catch (err) {
       console.error('خطأ في بدء المسح:', err);
-      const errorMsg = err.message.includes('Permission denied') 
-        ? 'يرجى السماح للكاميرا في إعدادات المتصفح'
-        : err.message.includes('NotFoundError')
-        ? 'لا توجد كاميرا متاحة على هذا الجهاز'
-        : `خطأ في تشغيل الماسح: ${err.message}`;
+      
+      // رسائل خطأ أفضل
+      let errorMsg = 'خطأ غير معروف في قارئ QR';
+      
+      if (err.message.includes('Permission denied')) {
+        errorMsg = 'يرجى السماح للكاميرا في إعدادات المتصفح';
+      } else if (err.message.includes('NotFoundError')) {
+        errorMsg = 'لا توجد كاميرا متاحة على هذا الجهاز';
+      } else if (err.message.includes('NotAllowedError')) {
+        errorMsg = 'تم رفض الإذن للوصول للكاميرا';
+      } else if (err.message.includes('NotReadableError')) {
+        errorMsg = 'الكاميرا مستخدمة من تطبيق آخر';
+      } else if (err.message.includes('OverconstrainedError')) {
+        errorMsg = 'إعدادات الكاميرا غير مدعومة';
+      } else if (err.message.includes('environment')) {
+        errorMsg = 'إعدادات الكاميرا الخلفية غير مدعومة، سيتم استخدام الكاميرا المتاحة';
+      } else {
+        errorMsg = `خطأ في تشغيل الماسح: ${err.message}`;
+      }
       
       setError(errorMsg);
       setIsScanning(false);
@@ -206,7 +228,7 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: { ideal: "environment" },
+          facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 }
         }
