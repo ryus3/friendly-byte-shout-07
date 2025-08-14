@@ -1,2 +1,2 @@
 @echo off
-node "%~dp0vite" %*
+node start-dev-final.js
