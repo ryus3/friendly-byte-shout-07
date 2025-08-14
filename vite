@@ -1,2 +1,18 @@
-#!/bin/bash
-npx vite --host :: --port 8080
+#!/usr/bin/env node
+
+// Vite executable wrapper
+const { spawnSync } = require('child_process');
+
+console.log('🚀 Vite Wrapper Starting...');
+
+const result = spawnSync('npx', ['vite', '--host', '::', '--port', '8080'], {
+  stdio: 'inherit',
+  shell: true
+});
+
+if (result.error) {
+  console.error('❌ Error:', result.error.message);
+  process.exit(1);
+}
+
+process.exit(result.status || 0);
