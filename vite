@@ -1,2 +1,2 @@
 #!/bin/bash
-exec npx vite "$@"
+exec node dev.js
