@@ -1,238 +1,147 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
-/**
- * قارئ QR مبسط ومضمون 100%
- */
 export const useQRScanner = (onScanSuccess) => {
-  console.log('🚀 [QR SCANNER] تم إنشاء useQRScanner جديد');
+  console.log('🔥 [QR] تم تحميل useQRScanner - النسخة الجديدة!');
   
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
   const [hasFlash, setHasFlash] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const readerRef = useRef(null);
-  const videoTrackRef = useRef(null);
 
-  // تنظيف عند إلغاء المكون
-  useEffect(() => {
-    return () => {
-      stopScanning();
-    };
-  }, []);
-
-  // بدء المسح - بأبسط طريقة ممكنة
-  const startScanning = async (elementId = 'qr-reader') => {
-    console.log('🚀 [QR SCANNER] محاولة بدء المسح للعنصر:', elementId);
+  const startScanning = useCallback(async (elementId = 'qr-reader') => {
+    console.log('🚀 [QR] بدء المسح - العنصر:', elementId);
     
     try {
       setError(null);
       setIsScanning(false);
-      setHasFlash(false);
 
-      // التحقق من Element
+      // التحقق من وجود العنصر
       const element = document.getElementById(elementId);
       if (!element) {
-        console.error('❌ [QR SCANNER] العنصر غير موجود:', elementId);
-        throw new Error(`العنصر ${elementId} غير موجود`);
+        console.error('❌ [QR] العنصر غير موجود:', elementId);
+        throw new Error(`لا يمكن العثور على العنصر: ${elementId}`);
       }
+
+      console.log('✅ [QR] تم العثور على العنصر');
+
+      // إنشاء قارئ QR
+      const qrCodeReader = new Html5Qrcode(elementId);
+      readerRef.current = qrCodeReader;
+
+      // محاولة تشغيل الكاميرا
+      console.log('📱 [QR] محاولة تشغيل الكاميرا...');
       
-      console.log('✅ [QR SCANNER] تم العثور على العنصر:', element);
-
-      console.log('🚀 [QR SCANNER] بدء مسح QR (النسخة المبسطة)...');
-
-      // إنشاء قارئ جديد
-      if (readerRef.current) {
-        console.log('🔄 [QR SCANNER] تنظيف القارئ السابق...');
-        try {
-          await readerRef.current.stop();
-          await readerRef.current.clear();
-        } catch (e) {
-          console.log('⚠️ [QR SCANNER] تنظيف القارئ السابق:', e.message);
-        }
-      }
-
-      console.log('📱 [QR SCANNER] إنشاء قارئ HTML5...');
-      const html5QrCode = new Html5Qrcode(elementId);
-      readerRef.current = html5QrCode;
-
-      // إعدادات مبسطة جداً
+      // إعداد بسيط جداً
       const config = {
         fps: 10,
-        qrbox: { width: 250, height: 250 }
+        qrbox: { width: 200, height: 200 }
       };
-      
-      console.log('📷 [QR SCANNER] إعدادات المسح:', config);
 
-      // إعدادات الكاميرا - التجربة الأبسط أولاً
-      const cameraConfigs = [
-        // 1. أبسط إعداد - الكاميرا الافتراضية
-        { facingMode: "environment" },
-        // 2. إعداد احتياطي
-        { facingMode: { ideal: "environment" } },
-        // 3. أي كاميرا متاحة
-        { facingMode: "user" }
-      ];
-      
-      console.log('📷 [QR SCANNER] إعدادات الكاميرا المتاحة:', cameraConfigs);
-
-      let scannerStarted = false;
-      let currentConfig = null;
-
-      // جرب كل إعداد حتى يعمل واحد
-      for (const config_camera of cameraConfigs) {
-        if (scannerStarted) break;
+      // محاولة استخدام كاميرا خلفية
+      try {
+        await qrCodeReader.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => {
+            console.log('🎉 [QR] نجح المسح!', decodedText);
+            if (onScanSuccess) onScanSuccess(decodedText);
+          },
+          (errorMessage) => {
+            // تجاهل أخطاء عدم وجود QR
+          }
+        );
         
+        console.log('✅ [QR] تم تشغيل الكاميرا الخلفية');
+        setIsScanning(true);
+        setHasFlash(true); // تفعيل زر الفلاش افتراضياً
+        
+      } catch (backCameraError) {
+        console.log('⚠️ [QR] فشل الكاميرا الخلفية، جرب الأمامية:', backCameraError.message);
+        
+        // محاولة الكاميرا الأمامية
         try {
-          console.log('🔍 [QR SCANNER] جاري تجربة إعداد الكاميرا:', config_camera);
-          
-          await html5QrCode.start(
-            config_camera,
+          await qrCodeReader.start(
+            { facingMode: "user" },
             config,
             (decodedText) => {
-              console.log('✅ [QR SCANNER] تم مسح QR بنجاح!', decodedText);
-              if (onScanSuccess) {
-                console.log('📤 [QR SCANNER] استدعاء callback للنتيجة');
-                onScanSuccess(decodedText);
-              }
+              console.log('🎉 [QR] نجح المسح!', decodedText);
+              if (onScanSuccess) onScanSuccess(decodedText);
             },
             (errorMessage) => {
-              // تجاهل أخطاء المسح العادية لتجنب الإزعاج
-              if (!errorMessage.includes('NotFoundException')) {
-                console.log('📷 [QR SCANNER] رسالة مسح:', errorMessage);
-              }
+              // تجاهل أخطاء عدم وجود QR
             }
           );
           
-          scannerStarted = true;
-          currentConfig = config_camera;
-          console.log('✅ [QR SCANNER] نجح تشغيل الكاميرا بالإعداد:', config_camera);
+          console.log('✅ [QR] تم تشغيل الكاميرا الأمامية');
           setIsScanning(true);
+          setHasFlash(false); // الكاميرا الأمامية عادة بدون فلاش
           
-          // محاولة تفعيل الفلاش بعد ثانية واحدة
-          setTimeout(() => {
-            console.log('💡 [QR SCANNER] فحص دعم الفلاش...');
-            checkFlashSupport(html5QrCode);
-          }, 1000);
-          
-          break;
-          
-        } catch (startError) {
-          console.log('❌ [QR SCANNER] فشل الإعداد:', config_camera, 'الخطأ:', startError.message);
-          // لا نرمي الخطأ، فقط ننتقل للإعداد التالي
+        } catch (frontCameraError) {
+          console.error('❌ [QR] فشل في تشغيل أي كاميرا:', frontCameraError.message);
+          throw new Error('لا يمكن الوصول للكاميرا. تأكد من السماح للموقع باستخدام الكاميرا');
         }
-      }
-
-      if (!scannerStarted) {
-        throw new Error('فشل في تشغيل أي كاميرا متاحة. تأكد من السماح للكاميرا في المتصفح.');
       }
 
     } catch (err) {
-      console.error('خطأ عام في تشغيل المسح:', err);
-      setError(err.message || 'خطأ في تشغيل الكاميرا');
+      console.error('💥 [QR] خطأ عام:', err);
+      setError(err.message);
       setIsScanning(false);
     }
-  };
+  }, [onScanSuccess]);
 
-  // فحص دعم الفلاش
-  const checkFlashSupport = async (html5QrCode) => {
+  const stopScanning = useCallback(async () => {
+    console.log('🛑 [QR] إيقاف المسح...');
     try {
-      // طريقة 1: فحص capabilities
-      const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
-      if (capabilities && capabilities.torch) {
-        setHasFlash(true);
-        videoTrackRef.current = capabilities;
-        console.log('✅ الفلاش مدعوم (capabilities)');
-        return;
-      }
-
-      // طريقة 2: فحص MediaStreamTrack
-      const mediaStream = html5QrCode.getRunningTrackMediaStream();
-      if (mediaStream) {
-        const videoTrack = mediaStream.getVideoTracks()[0];
-        if (videoTrack && videoTrack.getCapabilities) {
-          const trackCapabilities = videoTrack.getCapabilities();
-          if (trackCapabilities.torch) {
-            setHasFlash(true);
-            videoTrackRef.current = videoTrack;
-            console.log('✅ الفلاش مدعوم (MediaStreamTrack)');
-            return;
-          }
-        }
-      }
-
-      console.log('❌ الفلاش غير مدعوم في هذا الجهاز');
-      setHasFlash(false);
-      
-    } catch (e) {
-      console.log('❌ خطأ في فحص الفلاش:', e.message);
-      setHasFlash(false);
-    }
-  };
-
-  // إيقاف المسح
-  const stopScanning = async () => {
-    try {
-      if (readerRef.current) {
-        if (isScanning) {
-          await readerRef.current.stop();
-        }
+      if (readerRef.current && isScanning) {
+        await readerRef.current.stop();
         await readerRef.current.clear();
-        readerRef.current = null;
+        console.log('✅ [QR] تم إيقاف المسح');
       }
+    } catch (err) {
+      console.error('❌ [QR] خطأ في الإيقاف:', err);
+    } finally {
       setIsScanning(false);
       setHasFlash(false);
       setFlashEnabled(false);
-      videoTrackRef.current = null;
-      console.log('✅ تم إيقاف المسح بنجاح');
-    } catch (err) {
-      console.error('خطأ في إيقاف المسح:', err);
+      readerRef.current = null;
     }
-  };
+  }, [isScanning]);
 
-  // تفعيل/إلغاء الفلاش
-  const toggleFlash = async () => {
+  const toggleFlash = useCallback(async () => {
+    console.log('💡 [QR] تبديل الفلاش...');
+    
+    if (!hasFlash) {
+      console.log('❌ [QR] الفلاش غير متاح');
+      return;
+    }
+
     try {
-      if (!hasFlash || !videoTrackRef.current) {
-        console.log('❌ الفلاش غير متاح');
-        return;
-      }
-      
       const newState = !flashEnabled;
       
-      // طريقة 1: applyConstraints
-      try {
-        await videoTrackRef.current.applyConstraints({
-          advanced: [{ torch: newState }]
-        });
-        setFlashEnabled(newState);
-        console.log('✅ تم تغيير الفلاش إلى:', newState);
-        return;
-      } catch (constraintError) {
-        console.log('❌ فشل applyConstraints:', constraintError.message);
-      }
-
-      // طريقة 2: torch مباشرة
-      try {
-        if (videoTrackRef.current.torch !== undefined) {
-          videoTrackRef.current.torch = newState;
-          setFlashEnabled(newState);
-          console.log('✅ تم تغيير الفلاش (مباشر):', newState);
-          return;
+      // محاولة تفعيل الفلاش (هذا قد لا يعمل على جميع الأجهزة)
+      if (readerRef.current) {
+        const mediaStream = readerRef.current.getRunningTrackMediaStream();
+        if (mediaStream) {
+          const videoTracks = mediaStream.getVideoTracks();
+          if (videoTracks.length > 0) {
+            const track = videoTracks[0];
+            if (track.applyConstraints) {
+              await track.applyConstraints({
+                advanced: [{ torch: newState }]
+              });
+              setFlashEnabled(newState);
+              console.log('✅ [QR] تم تغيير الفلاش:', newState);
+            }
+          }
         }
-      } catch (torchError) {
-        console.log('❌ فشل torch مباشر:', torchError.message);
       }
-
-      // إذا فشلت كل الطرق
-      console.log('❌ فشل في تفعيل الفلاش - سيتم إخفاء الزر');
-      setHasFlash(false);
-      
     } catch (err) {
-      console.error('❌ خطأ عام في الفلاش:', err.message);
+      console.log('⚠️ [QR] الفلاش غير مدعوم:', err.message);
       setHasFlash(false);
     }
-  };
+  }, [hasFlash, flashEnabled]);
 
   return {
     isScanning,

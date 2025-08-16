@@ -1,14 +1,11 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, AlertTriangle, Loader2, RefreshCw, CheckCircle, Zap, ZapOff } from 'lucide-react';
+import { Camera, AlertTriangle, Loader2, RefreshCw, Zap, ZapOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useQRScanner } from '@/hooks/useQRScanner';
 
-/**
- * قارئ QR موحد ومبسط - يعمل على جميع الأجهزة
- */
 const UnifiedQRScanner = ({ 
   open, 
   onOpenChange, 
@@ -17,7 +14,8 @@ const UnifiedQRScanner = ({
   description = "وجه الكاميرا نحو QR Code",
   elementId = "unified-qr-reader"
 }) => {
-  // استخدام القارئ الأصلي مع الفلاش
+  console.log('🔥 [QR Component] تم تحميل UnifiedQRScanner!');
+  
   const { 
     isScanning, 
     error, 
@@ -28,31 +26,37 @@ const UnifiedQRScanner = ({
     toggleFlash 
   } = useQRScanner(onScanSuccess);
 
-  // بدء المسح عند فتح الحوار
-  useEffect(() => {
+  React.useEffect(() => {
+    console.log('🔄 [QR Component] تغير حالة open:', open);
+    
     if (open && !isScanning && !error) {
+      console.log('⏰ [QR Component] سيبدأ المسح خلال 500ms...');
       const timer = setTimeout(() => {
+        console.log('🚀 [QR Component] بدء المسح الآن!');
         startScanning(elementId);
       }, 500);
       return () => clearTimeout(timer);
     } else if (!open) {
+      console.log('🛑 [QR Component] إغلاق المسح...');
       stopScanning();
     }
   }, [open, isScanning, error, startScanning, stopScanning, elementId]);
 
-  // تنظيف عند إغلاق المكون
-  useEffect(() => {
+  React.useEffect(() => {
     return () => {
+      console.log('🧹 [QR Component] تنظيف المكون...');
       stopScanning();
     };
   }, [stopScanning]);
 
   const handleClose = () => {
+    console.log('❌ [QR Component] المستخدم أغلق الحوار');
     stopScanning();
     onOpenChange(false);
   };
 
   const handleRetry = () => {
+    console.log('🔄 [QR Component] إعادة المحاولة...');
     startScanning(elementId);
   };
 
@@ -79,22 +83,20 @@ const UnifiedQRScanner = ({
             />
             
             {/* أزرار التحكم في الكاميرا */}
-            {isScanning && (
+            {isScanning && hasFlash && (
               <div className="absolute top-4 right-4 flex gap-2">
-                {hasFlash && (
-                  <Button
-                    onClick={toggleFlash}
-                    variant={flashEnabled ? "default" : "outline"}
-                    size="sm"
-                    className="bg-black/50 hover:bg-black/70 text-white border-white/30"
-                  >
-                    {flashEnabled ? (
-                      <Zap className="w-4 h-4" />
-                    ) : (
-                      <ZapOff className="w-4 h-4" />
-                    )}
-                  </Button>
-                )}
+                <Button
+                  onClick={toggleFlash}
+                  variant={flashEnabled ? "default" : "outline"}
+                  size="sm"
+                  className="bg-black/50 hover:bg-black/70 text-white border-white/30"
+                >
+                  {flashEnabled ? (
+                    <Zap className="w-4 h-4" />
+                  ) : (
+                    <ZapOff className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
             )}
             
@@ -149,17 +151,20 @@ const UnifiedQRScanner = ({
           )}
 
           {/* نصائح الاستخدام */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-blue-700 mb-2">
-              <CheckCircle className="w-4 h-4" />
-              <span className="font-semibold text-sm">نصائح للاستخدام:</span>
+          {!error && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-blue-700 mb-2">
+                <Camera className="w-4 h-4" />
+                <span className="font-semibold text-sm">نصائح للاستخدام:</span>
+              </div>
+              <ul className="text-xs text-blue-600 space-y-1">
+                <li>• تأكد من وجود إضاءة كافية</li>
+                <li>• اجعل QR Code واضحاً ومسطحاً</li>
+                <li>• احتفظ بمسافة مناسبة (10-20 سم)</li>
+                <li>• اسمح للموقع بالوصول للكاميرا</li>
+              </ul>
             </div>
-            <ul className="text-xs text-blue-600 space-y-1">
-              <li>• تأكد من وجود إضاءة كافية</li>
-              <li>• اجعل QR Code واضحاً ومسطحاً</li>
-              <li>• احتفظ بمسافة مناسبة (10-20 سم)</li>
-            </ul>
-          </div>
+          )}
         </div>
         
         <div className="flex justify-center pt-2">
