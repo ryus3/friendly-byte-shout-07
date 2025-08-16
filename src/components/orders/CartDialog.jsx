@@ -35,44 +35,75 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
   };
   
   const handleScanSuccess = useCallback((decodedText) => {
-    // البحث في المنتجات
+    console.log('🔍 [Cart] Scanned QR:', decodedText);
+    
     let foundVariant = null;
     let foundProduct = null;
 
-    for (const p of products) {
-        foundVariant = p.variants.find(v => 
+    try {
+      // محاولة تحليل QR code كـ JSON (النظام الجديد)
+      const qrData = JSON.parse(decodedText);
+      console.log('📦 [Cart] Parsed QR Data:', qrData);
+      
+      if (qrData.type === 'product' || qrData.type === 'variant') {
+        // البحث بمعرف المنتج والمتغير من QR JSON
+        foundProduct = products.find(p => p.id === qrData.product_id);
+        if (foundProduct && qrData.variant_id) {
+          foundVariant = foundProduct.variants?.find(v => v.id === qrData.variant_id);
+        }
+        
+        if (foundProduct && foundVariant) {
+          console.log('✅ [Cart] Found product from QR JSON:', foundProduct.name, foundVariant.color, foundVariant.size);
+        }
+      }
+    } catch (jsonError) {
+      console.log('📝 [Cart] Not JSON, trying direct search:', decodedText);
+      
+      // البحث المباشر (النظام القديم)
+      for (const p of products) {
+        foundVariant = p.variants?.find(v => 
           v.sku === decodedText || 
           v.barcode === decodedText ||
           v.id?.toString() === decodedText
         );
         if (foundVariant) {
-            foundProduct = p;
-            break;
+          foundProduct = p;
+          console.log('✅ [Cart] Found product from direct search:', foundProduct.name, foundVariant.color, foundVariant.size);
+          break;
         }
+      }
+      
+      // البحث في جدول qr_codes
+      if (!foundProduct) {
+        console.log('🔍 [Cart] Searching in QR codes table...');
+        // هذا سيتطلب استعلام قاعدة بيانات، لكن سنحاول البحث المحلي أولاً
+      }
     }
     
     if (foundProduct && foundVariant) {
-      if(foundVariant.quantity > 0) {
+      const availableQuantity = (foundVariant.quantity || 0) - (foundVariant.reserved || 0);
+      if (availableQuantity > 0) {
         addToCart(foundProduct, foundVariant, 1);
         toast({ 
           title: "✅ تمت إضافة المنتج!", 
           description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`,
-          variant: "success"
         });
+        console.log('🛒 [Cart] Product added successfully');
       } else {
         toast({ 
           title: "⚠️ نفذت الكمية", 
           description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`, 
           variant: "destructive" 
         });
+        console.log('❌ [Cart] Out of stock');
       }
     } else {
-      // رسالة عدم العثور على المنتج
       toast({ 
         title: "❌ لم يتم العثور على المنتج", 
-        description: `الكود المقروء: ${decodedText}\n\nهذا المنتج غير موجود في النظام أو تم حذفه.`, 
+        description: `الكود المقروء: ${decodedText}`, 
         variant: "destructive" 
       });
+      console.log('❌ [Cart] Product not found');
     }
   }, [products, addToCart]);
   

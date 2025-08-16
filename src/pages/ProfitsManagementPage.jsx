@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const ProfitsManagementPage = () => {
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = useUnifiedPermissionsSystem();
   
   // استخدام النظام الموحد بدلاً من ProfitsContext المنفصل
   const { profits, orders, loading } = useInventory();
