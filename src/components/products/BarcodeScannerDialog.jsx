@@ -34,6 +34,14 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
     try {
       setError(null);
       
+      // طلب صلاحية الكاميرا أولاً
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (permissionError) {
+        setError("🚫 يجب السماح للكاميرا أولاً. اضغط 'السماح' عند ظهور الطلب.");
+        return;
+      }
+      
       // التحقق من دعم الكاميرا
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras || cameras.length === 0) {

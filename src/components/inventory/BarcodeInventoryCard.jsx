@@ -87,6 +87,14 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
     const startScanning = async () => {
         setCameraError(null);
         try {
+            // طلب صلاحية الكاميرا أولاً
+            try {
+                await navigator.mediaDevices.getUserMedia({ video: true });
+            } catch (permissionError) {
+                setCameraError("🚫 يجب السماح للكاميرا أولاً. اضغط 'السماح' عند ظهور الطلب.");
+                return;
+            }
+            
             await Html5Qrcode.getCameras();
             const html5QrCode = new Html5Qrcode("reader");
             html5QrCodeRef.current = html5QrCode;
