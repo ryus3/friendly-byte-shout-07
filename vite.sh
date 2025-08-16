@@ -1,3 +1,2 @@
 #!/bin/bash
-echo "🔧 تشغيل vite بشكل مباشر..."
-npm run build:dev && npm run preview || npx --yes vite@latest --host 0.0.0.0 --port 8080
+node ./node_modules/vite/bin/vite.js --host :: --port 8080
