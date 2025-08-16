@@ -13,6 +13,8 @@ const UnifiedQRScanner = ({
   description = "وجه الكاميرا نحو QR Code",
   elementId = "unified-qr-reader"
 }) => {
+  console.log('🔥 [QR Component] تم إنشاء UnifiedQRScanner - النسخة النظيفة!');
+  
   const [isScanning, setIsScanning] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [hasFlash, setHasFlash] = React.useState(false);
@@ -111,20 +113,32 @@ const UnifiedQRScanner = ({
   // تفعيل الفلاش
   const toggleFlash = React.useCallback(async () => {
     try {
-      if (!streamRef.current || !hasFlash) return;
+      console.log('💡 [QR] محاولة تفعيل الفلاش... hasFlash:', hasFlash, 'streamRef:', !!streamRef.current);
+      
+      if (!streamRef.current || !hasFlash) {
+        console.log('❌ [QR] الفلاش غير متاح');
+        return;
+      }
 
       const track = streamRef.current.getVideoTracks()[0];
-      if (!track) return;
+      if (!track) {
+        console.log('❌ [QR] لا يوجد track للفيديو');
+        return;
+      }
 
       const newState = !flashEnabled;
+      console.log('🔄 [QR] تغيير الفلاش من', flashEnabled, 'إلى', newState);
+      
       await track.applyConstraints({
         advanced: [{ torch: newState }]
       });
+      
       setFlashEnabled(newState);
-      console.log('💡 [QR] تم تغيير الفلاش:', newState);
+      console.log('✅ [QR] تم تغيير الفلاش بنجاح:', newState);
     } catch (err) {
-      console.log('⚠️ [QR] خطأ في الفلاش:', err.message);
+      console.error('❌ [QR] خطأ في الفلاش:', err.message);
       setHasFlash(false);
+      setFlashEnabled(false);
     }
   }, [hasFlash, flashEnabled]);
 
