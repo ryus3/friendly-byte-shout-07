@@ -21,87 +21,56 @@ const SimpleQRScanner = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // بدء الكاميرا
+  // بدء الكاميرا - أبسط طريقة ممكنة
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🚀 [Simple QR] بدء تشغيل الكاميرا...');
+      console.log('🚀 بدء تشغيل الكاميرا...');
 
-      // فحص دعم المتصفح
+      // التحقق من دعم المتصفح
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('المتصفح لا يدعم الوصول للكاميرا');
+        setError('المتصفح لا يدعم الكاميرا');
+        setIsLoading(false);
+        return;
       }
 
-      let stream;
-      
-      // محاولة الحصول على الكاميرا مع عدة إعدادات
-      try {
-        // الطريقة الأولى: كاميرا خلفية
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: "environment",
-            width: 640,
-            height: 480
-          }
-        });
-        console.log('✅ [Simple QR] نجح تشغيل الكاميرا الخلفية');
-      } catch (envError) {
-        console.log('⚠️ [Simple QR] فشل في الكاميرا الخلفية، محاولة أي كاميرا...');
-        // الطريقة الثانية: أي كاميرا متاحة
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: 640,
-            height: 480
-          }
-        });
-        console.log('✅ [Simple QR] نجح تشغيل كاميرا افتراضية');
-      }
+      // طلب الكاميرا بأبسط الإعدادات
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true
+      });
 
-      if (!stream) {
-        throw new Error('فشل في الحصول على تدفق الكاميرا');
-      }
-
+      console.log('✅ تم الحصول على تدفق الكاميرا');
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        videoRef.current.onloadedmetadata = () => {
-          console.log('📺 [Simple QR] تم تحميل بيانات الفيديو');
-          if (videoRef.current) {
-            videoRef.current.play().then(() => {
-              console.log('▶️ [Simple QR] بدء تشغيل الفيديو');
-              startScanning();
-              console.log('✅ [Simple QR] الكاميرا تعمل بنجاح!');
-              setIsLoading(false);
-            }).catch((playError) => {
-              console.error('❌ [Simple QR] خطأ في تشغيل الفيديو:', playError);
-              setError('فشل في تشغيل الفيديو: ' + playError.message);
-              setIsLoading(false);
-            });
-          }
-        };
+        // انتظار تحميل الفيديو
+        await new Promise((resolve, reject) => {
+          videoRef.current.onloadedmetadata = resolve;
+          videoRef.current.onerror = reject;
+        });
+
+        // تشغيل الفيديو
+        await videoRef.current.play();
+        console.log('✅ الفيديو يعمل');
         
-        videoRef.current.onerror = (videoError) => {
-          console.error('❌ [Simple QR] خطأ في الفيديو:', videoError);
-          setError('خطأ في الفيديو');
-          setIsLoading(false);
-        };
+        // بدء المسح
+        startScanning();
+        setIsLoading(false);
       }
 
     } catch (err) {
-      console.error('❌ [Simple QR] خطأ في الكاميرا:', err);
-      let errorMessage = 'فشل في تشغيل الكاميرا';
+      console.error('❌ خطأ في الكاميرا:', err);
+      let errorMessage = 'خطأ في تشغيل الكاميرا';
       
       if (err.name === 'NotAllowedError') {
-        errorMessage = 'تم رفض الإذن للوصول للكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح.';
+        errorMessage = 'تم رفض إذن الكاميرا. اسمح للموقع بالوصول للكاميرا';
       } else if (err.name === 'NotFoundError') {
-        errorMessage = 'لم يتم العثور على كاميرا. تأكد من وجود كاميرا متصلة بالجهاز.';
+        errorMessage = 'لا توجد كاميرا متاحة';
       } else if (err.name === 'NotReadableError') {
-        errorMessage = 'الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مرة أخرى.';
-      } else {
-        errorMessage = `خطأ في الكاميرا: ${err.message}`;
+        errorMessage = 'الكاميرا مستخدمة في تطبيق آخر';
       }
       
       setError(errorMessage);
