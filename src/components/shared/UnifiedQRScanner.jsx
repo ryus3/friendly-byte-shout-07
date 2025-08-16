@@ -79,6 +79,16 @@ const UnifiedQRScanner = ({
         </DialogHeader>
         
         <div className="space-y-4">
+          {typeof window !== 'undefined' && window.top !== window.self && (
+            <Alert variant="destructive">
+              <AlertDescription className="space-y-2 text-sm">
+                قد يمنع المتصفح تشغيل الكاميرا داخل وضع المعاينة. افتح القارئ في نافذة مستقلة.
+                <div className="pt-2">
+                  <Button size="sm" onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}>فتح القارئ في نافذة مستقلة</Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           {/* منطقة المسح */}
           <div className="relative">
             <div 
