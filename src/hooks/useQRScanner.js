@@ -79,9 +79,14 @@ export const useQRScanner = (onScanSuccess) => {
         if (stream && stream.torch) {
           setHasFlash(true);
           videoTrackRef.current = stream;
+          console.log('✅ تم تفعيل دعم الفلاش');
+        } else {
+          console.log('❌ لا يوجد دعم للفلاش في هذا الجهاز');
+          setHasFlash(false);
         }
       } catch (e) {
-        console.log('لا يوجد دعم للفلاش');
+        console.log('❌ لا يوجد دعم للفلاش:', e.message);
+        setHasFlash(false);
       }
 
     } catch (err) {
@@ -110,15 +115,22 @@ export const useQRScanner = (onScanSuccess) => {
   // تفعيل/إلغاء الفلاش
   const toggleFlash = async () => {
     try {
+      if (!hasFlash) {
+        console.log('❌ الفلاش غير مدعوم على هذا الجهاز');
+        return;
+      }
+      
       if (videoTrackRef.current && hasFlash) {
         const newState = !flashEnabled;
         await videoTrackRef.current.applyConstraints({
           advanced: [{ torch: newState }]
         });
         setFlashEnabled(newState);
+        console.log('✅ تم تغيير حالة الفلاش إلى:', newState);
       }
     } catch (err) {
-      console.error('خطأ في تغيير الفلاش:', err);
+      console.error('❌ خطأ في تغيير الفلاش:', err.message);
+      setHasFlash(false); // تعطيل الفلاش في حالة الخطأ
     }
   };
 
