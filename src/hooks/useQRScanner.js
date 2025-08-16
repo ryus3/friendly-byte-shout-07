@@ -44,16 +44,27 @@ export const useQRScanner = (onScanSuccess) => {
         aspectRatio: 1.0
       };
 
-      // إعدادات الكاميرا - تفضيل الكاميرا الخلفية إن وجدت
-      let cameraConfig = { facingMode: "environment" };
+      // إعدادات الكاميرا - استخدام الكاميرا الافتراضية أولاً
+      let cameraConfig = "environment";
       try {
         const cameras = await Html5Qrcode.getCameras();
-        if (cameras && cameras.length) {
-          const back = cameras.find(c => (c.label || '').toLowerCase().includes('back') || (c.label || '').toLowerCase().includes('rear') || (c.label || '').toLowerCase().includes('environment'));
-          cameraConfig = (back || cameras[0]).id;
+        if (cameras && cameras.length > 0) {
+          // البحث عن الكاميرا الخلفية
+          const backCamera = cameras.find(camera => 
+            camera.label.toLowerCase().includes('back') || 
+            camera.label.toLowerCase().includes('rear') ||
+            camera.label.toLowerCase().includes('environment')
+          );
+          if (backCamera) {
+            cameraConfig = backCamera.id;
+            console.log('✅ استخدام الكاميرا الخلفية:', backCamera.label);
+          } else {
+            cameraConfig = cameras[0].id;
+            console.log('✅ استخدام الكاميرا الأولى:', cameras[0].label);
+          }
         }
       } catch (e) {
-        console.log('تعذر الحصول على الكاميرات، سيتم استخدام facingMode:', e);
+        console.log('⚠️ سيتم استخدام الكاميرا الافتراضية:', e.message);
       }
 
       // بدء المسح
