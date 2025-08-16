@@ -32,14 +32,27 @@ const UnifiedQRScanner = ({
       setError(null);
       console.log('🚀 [QR] بدء تشغيل الكاميرا...');
 
-      // طلب الكاميرا
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: "environment",
-          width: { ideal: 640, min: 320 },
-          height: { ideal: 480, min: 240 }
-        }
-      });
+      // طلب الكاميرا مع تجربة عدة إعدادات
+      let stream;
+      try {
+        // محاولة الكاميرا الخلفية أولاً
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: "environment",  // بدون "ideal" أو "exact"
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 }
+          }
+        });
+      } catch (envError) {
+        console.log('⚠️ [QR] فشل في الكاميرا الخلفية، محاولة أي كاميرا...');
+        // إذا فشلت، جربِّ أي كاميرا متاحة
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 640, min: 320 },
+            height: { ideal: 480, min: 240 }
+          }
+        });
+      }
 
       streamRef.current = stream;
       

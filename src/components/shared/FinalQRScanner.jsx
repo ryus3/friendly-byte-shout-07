@@ -45,7 +45,7 @@ const FinalQRScanner = ({
         console.log('📱 [Final QR] محاولة الكاميرا الخلفية...');
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
-            facingMode: { ideal: "environment" },
+            facingMode: "environment",  // إزالة "ideal"
             width: { ideal: 640 },
             height: { ideal: 480 }
           }

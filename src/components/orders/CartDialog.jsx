@@ -9,7 +9,7 @@ import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import SimpleQRScanner from '@/components/shared/SimpleQRScanner';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const CartDialog = ({ open, onOpenChange, onCheckout }) => {
@@ -225,14 +225,13 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <UnifiedQRScanner
-      open={isScannerOpen}
-      onOpenChange={setIsScannerOpen}
-      onScanSuccess={handleScanSuccess}
-      title="🔍 قارئ الباركود للسلة"
-      description="📱 امسح باركود المنتج لإضافته للسلة"
-      elementId="cart-barcode-scanner"
-    />
+      {/* QR Scanner */}
+      <SimpleQRScanner
+        open={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+        onScanSuccess={handleScanSuccess}
+        title="مسح المنتجات للسلة"
+      />
     <ProductSelectionDialog
         open={isProductSelectorOpen}
         onOpenChange={setIsProductSelectorOpen}

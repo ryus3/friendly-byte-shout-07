@@ -17,7 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PermissionBasedProductGrid from '@/components/products/PermissionBasedProductGrid';
 import ProductList from '@/components/products/ProductList';
 import ProductFilters from '@/components/products/ProductFilters';
-import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
+import SimpleQRScanner from '@/components/shared/SimpleQRScanner';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
 import FinalQRScanner from '@/components/shared/FinalQRScanner';
