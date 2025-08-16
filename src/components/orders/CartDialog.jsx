@@ -9,7 +9,7 @@ import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import SimpleQRScanner from '@/components/shared/SimpleQRScanner';
+import WorkingQRScanner from '@/components/shared/WorkingQRScanner';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const CartDialog = ({ open, onOpenChange, onCheckout }) => {
@@ -227,11 +227,11 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
       </DialogContent>
     </Dialog>
       {/* QR Scanner */}
-      <SimpleQRScanner
+      <WorkingQRScanner
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
         onScanSuccess={handleScanSuccess}
-        title="مسح المنتجات للسلة"
+        title="قارئ QR"
       />
     <ProductSelectionDialog
         open={isProductSelectorOpen}
