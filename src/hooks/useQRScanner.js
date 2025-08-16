@@ -84,21 +84,50 @@ export const useQRScanner = (onScanSuccess) => {
 
       setIsScanning(true);
       
-      // التحقق من دعم الفلاش
-      try {
-        const stream = html5QrCode.getRunningTrackCameraCapabilities();
-        if (stream && stream.torch) {
-          setHasFlash(true);
-          videoTrackRef.current = stream;
-          console.log('✅ تم تفعيل دعم الفلاش');
-        } else {
-          console.log('❌ لا يوجد دعم للفلاش في هذا الجهاز');
+      // التحقق من دعم الفلاش بعد تأخير
+      setTimeout(async () => {
+        try {
+          const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+          console.log('🔍 Camera capabilities:', capabilities);
+          
+          if (capabilities && capabilities.torch) {
+            setHasFlash(true);
+            videoTrackRef.current = capabilities;
+            console.log('✅ تم تفعيل دعم الفلاش');
+          } else {
+            // محاولة أخرى للحصول على MediaStreamTrack
+            try {
+              const mediaStream = html5QrCode.getRunningTrackMediaStream();
+              if (mediaStream) {
+                const videoTrack = mediaStream.getVideoTracks()[0];
+                if (videoTrack && videoTrack.getCapabilities) {
+                  const trackCapabilities = videoTrack.getCapabilities();
+                  if (trackCapabilities.torch) {
+                    setHasFlash(true);
+                    videoTrackRef.current = videoTrack;
+                    console.log('✅ تم تفعيل الفلاش عبر MediaStreamTrack');
+                  } else {
+                    console.log('❌ لا يوجد دعم للفلاش في الكاميرا');
+                    setHasFlash(false);
+                  }
+                } else {
+                  console.log('❌ getCapabilities غير مدعومة');
+                  setHasFlash(false);
+                }
+              } else {
+                console.log('❌ لا يوجد MediaStream');
+                setHasFlash(false);
+              }
+            } catch (mediaError) {
+              console.log('❌ خطأ في MediaStream:', mediaError.message);
+              setHasFlash(false);
+            }
+          }
+        } catch (e) {
+          console.log('❌ لا يوجد دعم للفلاش:', e.message);
           setHasFlash(false);
         }
-      } catch (e) {
-        console.log('❌ لا يوجد دعم للفلاش:', e.message);
-        setHasFlash(false);
-      }
+      }, 1000);
 
     } catch (err) {
       console.error('خطأ في تشغيل المسح:', err);
@@ -126,22 +155,38 @@ export const useQRScanner = (onScanSuccess) => {
   // تفعيل/إلغاء الفلاش
   const toggleFlash = async () => {
     try {
-      if (!hasFlash) {
-        console.log('❌ الفلاش غير مدعوم على هذا الجهاز');
+      if (!hasFlash || !videoTrackRef.current) {
+        console.log('❌ الفلاش غير مدعوم أو غير متاح');
         return;
       }
       
-      if (videoTrackRef.current && hasFlash) {
-        const newState = !flashEnabled;
+      const newState = !flashEnabled;
+      
+      // محاولة استخدام applyConstraints
+      try {
         await videoTrackRef.current.applyConstraints({
           advanced: [{ torch: newState }]
         });
         setFlashEnabled(newState);
         console.log('✅ تم تغيير حالة الفلاش إلى:', newState);
+      } catch (constraintError) {
+        // محاولة بديلة إذا فشلت الطريقة الأولى
+        try {
+          if (videoTrackRef.current.torch !== undefined) {
+            videoTrackRef.current.torch = newState;
+            setFlashEnabled(newState);
+            console.log('✅ تم تغيير الفلاش (طريقة بديلة):', newState);
+          } else {
+            throw new Error('خاصية torch غير مدعومة');
+          }
+        } catch (torchError) {
+          console.error('❌ الفلاش غير مدعوم:', torchError.message);
+          setHasFlash(false);
+        }
       }
     } catch (err) {
-      console.error('❌ خطأ في تغيير الفلاش:', err.message);
-      setHasFlash(false); // تعطيل الفلاش في حالة الخطأ
+      console.error('❌ خطأ عام في الفلاش:', err.message);
+      setHasFlash(false);
     }
   };
 
