@@ -5,6 +5,8 @@ import { Html5Qrcode } from 'html5-qrcode';
  * قارئ QR مبسط ومضمون 100%
  */
 export const useQRScanner = (onScanSuccess) => {
+  console.log('🚀 [QR SCANNER] تم إنشاء useQRScanner جديد');
+  
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
   const [hasFlash, setHasFlash] = useState(false);
@@ -21,6 +23,8 @@ export const useQRScanner = (onScanSuccess) => {
 
   // بدء المسح - بأبسط طريقة ممكنة
   const startScanning = async (elementId = 'qr-reader') => {
+    console.log('🚀 [QR SCANNER] محاولة بدء المسح للعنصر:', elementId);
+    
     try {
       setError(null);
       setIsScanning(false);
@@ -29,21 +33,26 @@ export const useQRScanner = (onScanSuccess) => {
       // التحقق من Element
       const element = document.getElementById(elementId);
       if (!element) {
+        console.error('❌ [QR SCANNER] العنصر غير موجود:', elementId);
         throw new Error(`العنصر ${elementId} غير موجود`);
       }
+      
+      console.log('✅ [QR SCANNER] تم العثور على العنصر:', element);
 
-      console.log('🚀 بدء مسح QR (النسخة المبسطة)...');
+      console.log('🚀 [QR SCANNER] بدء مسح QR (النسخة المبسطة)...');
 
       // إنشاء قارئ جديد
       if (readerRef.current) {
+        console.log('🔄 [QR SCANNER] تنظيف القارئ السابق...');
         try {
           await readerRef.current.stop();
           await readerRef.current.clear();
         } catch (e) {
-          console.log('تنظيف القارئ السابق');
+          console.log('⚠️ [QR SCANNER] تنظيف القارئ السابق:', e.message);
         }
       }
 
+      console.log('📱 [QR SCANNER] إنشاء قارئ HTML5...');
       const html5QrCode = new Html5Qrcode(elementId);
       readerRef.current = html5QrCode;
 
@@ -52,6 +61,8 @@ export const useQRScanner = (onScanSuccess) => {
         fps: 10,
         qrbox: { width: 250, height: 250 }
       };
+      
+      console.log('📷 [QR SCANNER] إعدادات المسح:', config);
 
       // إعدادات الكاميرا - التجربة الأبسط أولاً
       const cameraConfigs = [
@@ -62,6 +73,8 @@ export const useQRScanner = (onScanSuccess) => {
         // 3. أي كاميرا متاحة
         { facingMode: "user" }
       ];
+      
+      console.log('📷 [QR SCANNER] إعدادات الكاميرا المتاحة:', cameraConfigs);
 
       let scannerStarted = false;
       let currentConfig = null;
@@ -71,36 +84,41 @@ export const useQRScanner = (onScanSuccess) => {
         if (scannerStarted) break;
         
         try {
-          console.log('🔍 جاري تجربة إعداد الكاميرا:', config_camera);
+          console.log('🔍 [QR SCANNER] جاري تجربة إعداد الكاميرا:', config_camera);
           
           await html5QrCode.start(
             config_camera,
             config,
             (decodedText) => {
-              console.log('✅ تم مسح QR بنجاح:', decodedText);
+              console.log('✅ [QR SCANNER] تم مسح QR بنجاح!', decodedText);
               if (onScanSuccess) {
+                console.log('📤 [QR SCANNER] استدعاء callback للنتيجة');
                 onScanSuccess(decodedText);
               }
             },
             (errorMessage) => {
-              // تجاهل أخطاء المسح العادية
+              // تجاهل أخطاء المسح العادية لتجنب الإزعاج
+              if (!errorMessage.includes('NotFoundException')) {
+                console.log('📷 [QR SCANNER] رسالة مسح:', errorMessage);
+              }
             }
           );
           
           scannerStarted = true;
           currentConfig = config_camera;
-          console.log('✅ نجح تشغيل الكاميرا بالإعداد:', config_camera);
+          console.log('✅ [QR SCANNER] نجح تشغيل الكاميرا بالإعداد:', config_camera);
           setIsScanning(true);
           
           // محاولة تفعيل الفلاش بعد ثانية واحدة
           setTimeout(() => {
+            console.log('💡 [QR SCANNER] فحص دعم الفلاش...');
             checkFlashSupport(html5QrCode);
           }, 1000);
           
           break;
           
         } catch (startError) {
-          console.log('❌ فشل الإعداد:', config_camera, 'الخطأ:', startError.message);
+          console.log('❌ [QR SCANNER] فشل الإعداد:', config_camera, 'الخطأ:', startError.message);
           // لا نرمي الخطأ، فقط ننتقل للإعداد التالي
         }
       }
