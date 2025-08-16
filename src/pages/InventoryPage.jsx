@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import InventoryStats from '@/components/inventory/InventoryStats';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 
 import UnifiedInventoryStats from '@/components/inventory/UnifiedInventoryStats';
@@ -818,10 +818,13 @@ const InventoryPage = () => {
         />
       )}
 
-      <BarcodeScannerDialog
+      <UnifiedQRScanner
         open={isBarcodeScannerOpen}
         onOpenChange={setIsBarcodeScannerOpen}
         onScanSuccess={handleBarcodeScan}
+        title="🔍 قارئ باركود المخزون"
+        description="📱 امسح باركود المنتج لعرض تفاصيله"
+        elementId="inventory-barcode-scanner"
       />
       
       <ReservedStockDialog 
