@@ -44,8 +44,17 @@ export const useQRScanner = (onScanSuccess) => {
         aspectRatio: 1.0
       };
 
-      // إعدادات الكاميرا
-      const cameraConfig = { facingMode: "environment" };
+      // إعدادات الكاميرا - تفضيل الكاميرا الخلفية إن وجدت
+      let cameraConfig = { facingMode: "environment" };
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length) {
+          const back = cameras.find(c => (c.label || '').toLowerCase().includes('back') || (c.label || '').toLowerCase().includes('rear') || (c.label || '').toLowerCase().includes('environment'));
+          cameraConfig = (back || cameras[0]).id;
+        }
+      } catch (e) {
+        console.log('تعذر الحصول على الكاميرات، سيتم استخدام facingMode:', e);
+      }
 
       // بدء المسح
       await html5QrCode.start(
