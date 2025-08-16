@@ -25,10 +25,23 @@ const ProductCard = React.memo(({ product, onSelect }) => {
 
   const reservedStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
+    
+    console.log('🔍 ProductCard - Reserved stock calculation for:', product.name, product.variants);
+    
     return product.variants.reduce((sum, v) => {
       // قراءة المخزون المحجوز من جدول inventory مباشرة
       const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
       const reserved = parseInt(invObj?.reserved_quantity) || parseInt(v.reserved_quantity) || parseInt(v.reserved) || 0;
+      
+      console.log('🔍 Variant reserved calculation:', {
+        variant_id: v.id,
+        color: v.color,
+        size: v.size,
+        inventory: invObj,
+        reserved_quantity: invObj?.reserved_quantity,
+        calculated_reserved: reserved
+      });
+      
       return sum + (isNaN(reserved) ? 0 : reserved);
     }, 0);
   }, [product.variants]);
