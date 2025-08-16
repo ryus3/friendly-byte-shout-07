@@ -1,8 +1,10 @@
 #!/bin/bash
-echo "🔧 تشغيل التطبيق..."
+echo "🔧 إصلاح وتشغيل vite..."
 
-# تحديث package.json
-npm pkg set scripts.dev="npx vite --host 0.0.0.0 --port 8080"
+# إنشاء package.json مؤقت مع script صحيح
+cp package.json package.json.backup
+cat package.json | sed 's/"dev": "vite"/"dev": "npx vite --host 0.0.0.0 --port 8080"/' > package-temp.json
+mv package-temp.json package.json
 
-echo "✅ تم تحديث package.json - تشغيل التطبيق..."
+echo "✅ تم إصلاح package.json - تشغيل التطبيق..."
 npm run dev
