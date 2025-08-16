@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Camera, X, Zap, ZapOff, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import jsQR from 'jsqr';
 
 const RealQRScanner = ({ 
   open, 
@@ -28,18 +29,38 @@ const RealQRScanner = ({
       setError(null);
       console.log('🚀 [Real QR] بدء تشغيل الكاميرا...');
 
-      // محاولة الكاميرا الخلفية أولاً، ثم الأمامية
+      // الحصول على قائمة الكاميرات المتاحة
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      
+      console.log('📹 [Real QR] الكاميرات المتاحة:', videoDevices.length);
+      
       let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: { ideal: "environment" },
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          }
-        });
-      } catch (err) {
-        console.log('⚠️ [Real QR] الكاميرا الخلفية غير متاحة، محاولة الأمامية...');
+      
+      // محاولة استخدام الكاميرا الخلفية أولاً
+      const backCamera = videoDevices.find(device => 
+        device.label.toLowerCase().includes('back') || 
+        device.label.toLowerCase().includes('rear') ||
+        device.label.toLowerCase().includes('environment')
+      );
+      
+      if (backCamera) {
+        console.log('🎯 [Real QR] استخدام الكاميرا الخلفية:', backCamera.label);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+              deviceId: { exact: backCamera.deviceId },
+              width: { ideal: 640 },
+              height: { ideal: 480 }
+            }
+          });
+        } catch (err) {
+          console.log('⚠️ [Real QR] فشل في الكاميرا الخلفية، محاولة الأمامية...');
+        }
+      }
+      
+      // إذا لم تنجح الخلفية، استخدم أي كاميرا متاحة
+      if (!stream) {
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 640 },
@@ -108,25 +129,18 @@ const RealQRScanner = ({
     }
   };
 
-  // كشف نمط QR بسيط
+  // كشف QR باستخدام jsQR
   const detectQRPattern = (imageData) => {
-    // محاكاة بسيطة - في الواقع نحتاج مكتبة jsQR
-    // هنا سنعمل محاكاة للاختبار
-    const pixels = imageData.data;
-    let darkPixels = 0;
-    let totalPixels = pixels.length / 4;
-
-    for (let i = 0; i < pixels.length; i += 4) {
-      const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-      if (brightness < 128) darkPixels++;
-    }
-
-    // إذا كان هناك نمط معين من البكسل المظلمة، قد يكون QR
-    const darkRatio = darkPixels / totalPixels;
-    if (darkRatio > 0.3 && darkRatio < 0.7) {
-      // محاكاة QR تم العثور عليه
-      const simulatedQR = `TEST_QR_${Date.now()}`;
-      handleQRDetected(simulatedQR);
+    try {
+      console.log('🔍 [Real QR] فحص QR من البيانات...');
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      
+      if (code) {
+        console.log('🎯 [Real QR] QR Code وُجد!', code.data);
+        handleQRDetected(code.data);
+      }
+    } catch (err) {
+      console.log('⚠️ [Real QR] خطأ في فحص QR:', err.message);
     }
   };
 

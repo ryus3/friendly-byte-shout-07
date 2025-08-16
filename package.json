@@ -54,6 +54,7 @@
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^3.0.1",
+    "jsqr": "^1.4.0",
     "lovable-tagger": "^1.1.9",
     "lucide-react": "^0.395.0",
     "npm": "^11.5.2",
