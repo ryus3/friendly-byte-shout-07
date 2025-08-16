@@ -2,9 +2,8 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, AlertTriangle, Loader2, RefreshCw, Zap, ZapOff } from 'lucide-react';
+import { Camera, AlertTriangle, Loader2, RefreshCw, Zap, ZapOff, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useQRScanner } from '@/hooks/useQRScanner';
 
 const UnifiedQRScanner = ({ 
   open, 
@@ -14,20 +13,124 @@ const UnifiedQRScanner = ({
   description = "وجه الكاميرا نحو QR Code",
   elementId = "unified-qr-reader"
 }) => {
-  const { 
-    isScanning, 
-    error, 
-    hasFlash, 
-    flashEnabled, 
-    startScanning, 
-    stopScanning, 
-    toggleFlash 
-  } = useQRScanner(onScanSuccess);
+  const [isScanning, setIsScanning] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const [hasFlash, setHasFlash] = React.useState(false);
+  const [flashEnabled, setFlashEnabled] = React.useState(false);
+  const [cameraReady, setCameraReady] = React.useState(false);
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
 
-  // محاكاة scan عند النقر على الشاشة
+  // فحص إذا كان في iframe
+  const isInIframe = typeof window !== 'undefined' && window.top !== window.self;
+
+  // بدء الكاميرا
+  const startCamera = React.useCallback(async () => {
+    try {
+      setError(null);
+      console.log('🚀 [QR] بدء تشغيل الكاميرا...');
+
+      // طلب الكاميرا
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: "environment",
+          width: { ideal: 640, min: 320 },
+          height: { ideal: 480, min: 240 }
+        }
+      });
+
+      streamRef.current = stream;
+      
+      // البحث عن عنصر الفيديو أو إنشاؤه
+      const container = document.getElementById(elementId);
+      if (!container) {
+        throw new Error('لا يمكن العثور على حاوي القارئ');
+      }
+
+      let video = container.querySelector('video');
+      if (!video) {
+        video = document.createElement('video');
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = 'cover';
+        video.autoplay = true;
+        video.playsInline = true;
+        video.muted = true;
+        container.appendChild(video);
+      }
+
+      video.srcObject = stream;
+      videoRef.current = video;
+      
+      video.onloadedmetadata = () => {
+        video.play().then(() => {
+          setIsScanning(true);
+          setCameraReady(true);
+          console.log('✅ [QR] الكاميرا تعمل!');
+          
+          // فحص الفلاش
+          setTimeout(() => {
+            const track = stream.getVideoTracks()[0];
+            if (track && track.getCapabilities) {
+              const capabilities = track.getCapabilities();
+              if (capabilities.torch) {
+                setHasFlash(true);
+                console.log('💡 [QR] الفلاش متاح');
+              }
+            }
+          }, 1000);
+        }).catch(e => {
+          console.error('خطأ في تشغيل الفيديو:', e);
+          setError('فشل في تشغيل الفيديو: ' + e.message);
+        });
+      };
+
+    } catch (err) {
+      console.error('❌ [QR] خطأ في الكاميرا:', err);
+      setError('فشل في تشغيل الكاميرا: ' + err.message);
+      setIsScanning(false);
+    }
+  }, [elementId]);
+
+  // إيقاف الكاميرا
+  const stopCamera = React.useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsScanning(false);
+    setCameraReady(false);
+    setHasFlash(false);
+    setFlashEnabled(false);
+    console.log('🛑 [QR] تم إيقاف الكاميرا');
+  }, []);
+
+  // تفعيل الفلاش
+  const toggleFlash = React.useCallback(async () => {
+    try {
+      if (!streamRef.current || !hasFlash) return;
+
+      const track = streamRef.current.getVideoTracks()[0];
+      if (!track) return;
+
+      const newState = !flashEnabled;
+      await track.applyConstraints({
+        advanced: [{ torch: newState }]
+      });
+      setFlashEnabled(newState);
+      console.log('💡 [QR] تم تغيير الفلاش:', newState);
+    } catch (err) {
+      console.log('⚠️ [QR] خطأ في الفلاش:', err.message);
+      setHasFlash(false);
+    }
+  }, [hasFlash, flashEnabled]);
+
+  // محاكاة مسح عند النقر
   const handleVideoClick = () => {
-    if (isScanning && onScanSuccess) {
-      // محاكاة قراءة QR code للاختبار
+    if (cameraReady && onScanSuccess) {
       const testCode = prompt('أدخل QR Code للاختبار:');
       if (testCode) {
         onScanSuccess(testCode);
@@ -35,34 +138,34 @@ const UnifiedQRScanner = ({
           title: "تم مسح QR Code",
           description: `القيمة: ${testCode}`,
         });
+        handleClose();
       }
     }
   };
 
-  React.useEffect(() => {
-    if (open && !isScanning && !error) {
-      const timer = setTimeout(() => {
-        startScanning(elementId);
-      }, 500);
-      return () => clearTimeout(timer);
-    } else if (!open) {
-      stopScanning();
-    }
-  }, [open, isScanning, error, startScanning, stopScanning, elementId]);
-
-  React.useEffect(() => {
-    return () => {
-      stopScanning();
-    };
-  }, [stopScanning]);
-
-  const handleClose = () => {
-    stopScanning();
-    onOpenChange(false);
+  // فتح في نافذة جديدة
+  const openInNewWindow = () => {
+    const url = window.location.href.split('?')[0] + '?qr=1';
+    window.open(url, '_blank', 'width=400,height=600,scrollbars=yes,resizable=yes');
   };
 
-  const handleRetry = () => {
-    startScanning(elementId);
+  // بدء الكاميرا عند الفتح
+  React.useEffect(() => {
+    if (open && !isScanning) {
+      setTimeout(startCamera, 500);
+    } else if (!open) {
+      stopCamera();
+    }
+  }, [open, isScanning, startCamera, stopCamera]);
+
+  // تنظيف عند إزالة المكون
+  React.useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
+
+  const handleClose = () => {
+    stopCamera();
+    onOpenChange(false);
   };
 
   return (
@@ -79,16 +182,20 @@ const UnifiedQRScanner = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          {typeof window !== 'undefined' && window.top !== window.self && (
-            <Alert variant="destructive">
-              <AlertDescription className="space-y-2 text-sm">
-                قد يمنع المتصفح تشغيل الكاميرا داخل وضع المعاينة. افتح القارئ في نافذة مستقلة.
-                <div className="pt-2">
-                  <Button size="sm" onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}>فتح القارئ في نافذة مستقلة</Button>
-                </div>
+          {/* تحذير iframe */}
+          {isInIframe && (
+            <Alert>
+              <ExternalLink className="h-4 w-4" />
+              <AlertDescription className="space-y-2">
+                <p className="text-sm">قد لا تعمل الكاميرا في وضع المعاينة. جرب فتح القارئ في نافذة منفصلة:</p>
+                <Button size="sm" onClick={openInNewWindow} variant="outline">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  فتح في نافذة جديدة
+                </Button>
               </AlertDescription>
             </Alert>
           )}
+
           {/* منطقة المسح */}
           <div className="relative">
             <div 
@@ -97,7 +204,7 @@ const UnifiedQRScanner = ({
               className="w-full rounded-xl overflow-hidden border-4 border-primary/50 bg-black shadow-2xl cursor-pointer"
               style={{ minHeight: '350px', maxHeight: '450px' }}
             >
-              {!isScanning && !error && (
+              {!cameraReady && !error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80 rounded-xl">
                   <div className="text-center text-white">
                     <Loader2 className="w-12 h-12 animate-spin mx-auto mb-3" />
@@ -107,7 +214,7 @@ const UnifiedQRScanner = ({
                 </div>
               )}
               
-              {isScanning && (
+              {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="w-48 h-48 border-4 border-white/50 rounded-lg">
                     <div className="w-full h-full border-2 border-green-500/70 rounded-lg animate-pulse"></div>
@@ -116,9 +223,9 @@ const UnifiedQRScanner = ({
               )}
             </div>
             
-            {/* أزرار التحكم */}
-            {isScanning && hasFlash && (
-              <div className="absolute top-4 right-4 flex gap-2">
+            {/* زر الفلاش */}
+            {cameraReady && hasFlash && (
+              <div className="absolute top-4 right-4">
                 <Button
                   onClick={toggleFlash}
                   variant={flashEnabled ? "default" : "outline"}
@@ -135,8 +242,8 @@ const UnifiedQRScanner = ({
             )}
           </div>
 
-          {/* رسائل الحالة */}
-          {isScanning && (
+          {/* حالة النشاط */}
+          {cameraReady && (
             <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
@@ -161,7 +268,7 @@ const UnifiedQRScanner = ({
               <AlertDescription className="space-y-2">
                 <p>{error}</p>
                 <Button
-                  onClick={handleRetry}
+                  onClick={startCamera}
                   variant="outline"
                   size="sm"
                   className="mt-2"
@@ -171,21 +278,6 @@ const UnifiedQRScanner = ({
                 </Button>
               </AlertDescription>
             </Alert>
-          )}
-
-          {/* نصائح */}
-          {!error && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="flex items-center gap-2 text-blue-700 mb-2">
-                <Camera className="w-4 h-4" />
-                <span className="font-semibold text-sm">نصائح:</span>
-              </div>
-              <ul className="text-xs text-blue-600 space-y-1">
-                <li>• اسمح للموقع بالوصول للكاميرا</li>
-                <li>• انقر على الشاشة لمحاكاة مسح QR</li>
-                <li>• استخدم زر الفلاش في الإضاءة المنخفضة</li>
-              </ul>
-            </div>
           )}
         </div>
         
