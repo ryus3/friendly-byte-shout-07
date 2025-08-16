@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { toast } from '@/components/ui/use-toast';
 import UnifiedPurchasesStats from '@/components/purchases/UnifiedPurchasesStats';
 import UnifiedPurchasesToolbar from '@/components/purchases/UnifiedPurchasesToolbar';
