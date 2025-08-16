@@ -15,10 +15,19 @@ function startVite() {
     // Method 1: npx vite (most reliable)
     () => {
       console.log('📦 Using npx vite...');
-      execSync('npx vite --host 0.0.0.0 --port 8080', {
+      const { spawn } = require('child_process');
+      const child = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '8080'], {
         stdio: 'inherit',
         cwd: projectRoot,
         env: { ...process.env, NODE_ENV: 'development' }
+      });
+      
+      return new Promise((resolve, reject) => {
+        child.on('error', reject);
+        child.on('exit', (code) => {
+          if (code === 0) resolve();
+          else reject(new Error(`vite exited with code ${code}`));
+        });
       });
     },
     
