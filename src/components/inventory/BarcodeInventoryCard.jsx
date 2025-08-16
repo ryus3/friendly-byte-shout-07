@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -7,8 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/hooks/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import { toast } from '@/components/ui/use-toast';
 
 
 const BarcodeInventoryCard = () => {
@@ -40,14 +40,17 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
     const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
+    const [cameraError, setCameraError] = useState(null);
     const [showResults, setShowResults] = useState(false);
-    const [scannerOpen, setScannerOpen] = useState(false);
+    const html5QrCodeRef = useRef(null);
     const audioRef = useRef(null);
 
     useEffect(() => {
         audioRef.current = new Audio('https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/e2e50337c7635c754d7764d1f2b60434.mp3');
         return () => {
-            setScannerOpen(false);
+            if (html5QrCodeRef.current?.isScanning) {
+                stopScanning();
+            }
         };
     }, []);
 
@@ -81,13 +84,28 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
         }
     };
 
-    const startScanning = () => {
-        setScannerOpen(true);
-        setIsScanning(true);
+    const startScanning = async () => {
+        setCameraError(null);
+        try {
+            await Html5Qrcode.getCameras();
+            const html5QrCode = new Html5Qrcode("reader");
+            html5QrCodeRef.current = html5QrCode;
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 5, qrbox: { width: 250, height: 150 } },
+                onScanSuccess,
+                () => {}
+            );
+            setIsScanning(true);
+        } catch (err) {
+            setCameraError("لا يمكن الوصول للكاميرا. يرجى التأكد من صلاحيات المتصفح.");
+        }
     };
 
-    const stopScanning = () => {
-        setScannerOpen(false);
+    const stopScanning = async () => {
+        if (html5QrCodeRef.current?.isScanning) {
+            await html5QrCodeRef.current.stop();
+        }
         setIsScanning(false);
     };
 
@@ -115,6 +133,17 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-hidden">
                     <div className="lg:col-span-2 flex flex-col gap-4">
+                        <div id="reader" className="w-full bg-secondary rounded-lg overflow-hidden aspect-video">
+                            {cameraError && (
+                                <div className="flex items-center justify-center h-full">
+                                    <Alert variant="destructive" className="w-auto">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        <AlertTitle>خطأ في الكاميرا!</AlertTitle>
+                                        <AlertDescription>{cameraError}</AlertDescription>
+                                    </Alert>
+                                </div>
+                            )}
+                        </div>
                         <div className="flex gap-2 justify-center">
                             {!isScanning ? (
                                 <Button onClick={startScanning} size="lg">
@@ -130,9 +159,6 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
                                     </Button>
                                 </>
                             )}
-                        </div>
-                        <div className="text-center text-sm text-muted-foreground">
-                            سيتم فتح نافذة القارئ الموحد؛ وجه الكاميرا إلى QR/Barcode
                         </div>
                     </div>
 
@@ -163,14 +189,6 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
                 <InventoryResultDialog open={showResults} onOpenChange={setShowResults} results={scannedItems} />
             </DialogContent>
         </Dialog>
-        <UnifiedQRScanner 
-            open={scannerOpen}
-            onOpenChange={(open) => { setScannerOpen(open); setIsScanning(open); }}
-            onScanSuccess={onScanSuccess}
-            title="الجرد بـ QR Code"
-            description="امسح الباركود/QR للمنتجات"
-            elementId="inventory-qr-reader"
-        />
     );
 };
 

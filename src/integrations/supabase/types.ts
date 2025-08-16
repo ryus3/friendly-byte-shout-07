@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
+  // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -3035,11 +3035,11 @@ export type Database = {
       add_purchase_cost_record: {
         Args: {
           p_product_id: string
-          p_purchase_date: string
+          p_variant_id: string
           p_purchase_id: string
           p_quantity: number
           p_unit_cost: number
-          p_variant_id: string
+          p_purchase_date: string
         }
         Returns: undefined
       }
@@ -3050,9 +3050,9 @@ export type Database = {
       apply_city_benefit: {
         Args: {
           p_benefit_id: string
+          p_order_id: string
           p_customer_id: string
           p_customer_phone: string
-          p_order_id: string
         }
         Returns: Json
       }
@@ -3061,11 +3061,11 @@ export type Database = {
         Returns: undefined
       }
       auth_with_username: {
-        Args: { password_input: string; username_input: string }
+        Args: { username_input: string; password_input: string }
         Returns: {
-          error_message: string
           success: boolean
           user_email: string
+          error_message: string
         }[]
       }
       auto_apply_city_benefits: {
@@ -3079,8 +3079,8 @@ export type Database = {
       calculate_fifo_cost: {
         Args: {
           p_product_id: string
-          p_quantity_sold: number
           p_variant_id: string
+          p_quantity_sold: number
         }
         Returns: number
       }
@@ -3099,13 +3099,13 @@ export type Database = {
       calculate_real_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: {
-          capital_amount: number
-          employee_dues_paid: number
           final_balance: number
+          capital_amount: number
           net_profit: number
+          total_sales: number
           total_expenses: number
           total_purchases: number
-          total_sales: number
+          employee_dues_paid: number
         }[]
       }
       calculate_sold_quantity: {
@@ -3125,18 +3125,18 @@ export type Database = {
         Returns: Json
       }
       check_user_permission: {
-        Args: { p_permission_name: string; p_user_id: string }
+        Args: { p_user_id: string; p_permission_name: string }
         Returns: boolean
       }
       check_user_role: {
-        Args: { p_role_name: string; p_user_id: string }
+        Args: { p_user_id: string; p_role_name: string }
         Returns: boolean
       }
       check_user_variant_permission: {
         Args: {
-          p_item_id: string
-          p_permission_type: string
           p_user_id: string
+          p_permission_type: string
+          p_item_id: string
         }
         Returns: boolean
       }
@@ -3179,7 +3179,7 @@ export type Database = {
         }[]
       }
       finalize_stock_item: {
-        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
       }
       fix_existing_purchase_shipping: {
@@ -3208,19 +3208,19 @@ export type Database = {
       }
       generate_product_barcode: {
         Args: {
-          p_color_name?: string
-          p_product_id?: string
           p_product_name: string
+          p_color_name?: string
           p_size_name?: string
+          p_product_id?: string
         }
         Returns: string
       }
       generate_product_qrcode: {
         Args: {
-          p_color_name?: string
-          p_product_id?: string
           p_product_name: string
+          p_color_name?: string
           p_size_name?: string
+          p_product_id?: string
           p_variant_id?: string
         }
         Returns: Json
@@ -3239,8 +3239,8 @@ export type Database = {
       }
       get_customer_auto_discount: {
         Args: {
-          p_customer_city: string
           p_customer_phone: string
+          p_customer_city: string
           p_order_subtotal: number
         }
         Returns: Json
@@ -3252,99 +3252,99 @@ export type Database = {
       get_employee_by_telegram_id: {
         Args: { p_telegram_chat_id: number }
         Returns: {
+          user_id: string
           employee_code: string
           full_name: string
           role: string
-          user_id: string
         }[]
       }
       get_filters_data: {
         Args: Record<PropertyKey, never>
         Returns: {
+          departments: Json
           categories: Json
           colors: Json
-          departments: Json
+          sizes: Json
           product_types: Json
           seasons_occasions: Json
-          sizes: Json
         }[]
       }
       get_inventory_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          archived_products_count: number
-          departments_data: Json
-          high_stock_count: number
-          low_stock_count: number
-          medium_stock_count: number
-          out_of_stock_count: number
-          reserved_stock_count: number
-          total_inventory_value: number
           total_products: number
           total_variants: number
+          high_stock_count: number
+          medium_stock_count: number
+          low_stock_count: number
+          out_of_stock_count: number
+          reserved_stock_count: number
+          archived_products_count: number
+          total_inventory_value: number
+          departments_data: Json
         }[]
       }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          last_sold_date: string
-          orders_count: number
+          variant_id: string
           product_id: string
           sold_quantity: number
-          total_cost: number
+          orders_count: number
           total_revenue: number
-          variant_id: string
+          total_cost: number
+          last_sold_date: string
         }[]
       }
       get_sales_summary_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          total_cogs: number
-          total_delivery_fees: number
           total_orders: number
           total_products_sold: number
           total_revenue: number
+          total_cogs: number
+          total_delivery_fees: number
         }[]
       }
       get_unified_inventory_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          archived_products_count: number
-          departments_data: Json
-          high_stock_count: number
-          low_stock_count: number
-          medium_stock_count: number
-          out_of_stock_count: number
-          reserved_stock_count: number
-          total_inventory_value: number
           total_products: number
           total_variants: number
+          high_stock_count: number
+          medium_stock_count: number
+          low_stock_count: number
+          out_of_stock_count: number
+          reserved_stock_count: number
+          archived_products_count: number
+          total_inventory_value: number
+          departments_data: Json
         }[]
       }
       get_unified_orders_analytics: {
         Args: Record<PropertyKey, never>
         Returns: {
-          completed_orders: number
+          total_orders: number
           pending_orders: number
-          pending_profits: Json
+          completed_orders: number
+          total_revenue: number
           top_customers: Json
           top_products: Json
           top_provinces: Json
-          total_orders: number
-          total_revenue: number
+          pending_profits: Json
         }[]
       }
       get_unified_orders_analytics_by_user: {
         Args: Record<PropertyKey, never>
         Returns: {
-          completed_orders: number
+          total_orders: number
           pending_orders: number
-          pending_profits: Json
+          completed_orders: number
+          total_revenue: number
           top_customers: Json
           top_products: Json
           top_provinces: Json
-          total_orders: number
-          total_revenue: number
+          pending_profits: Json
         }[]
       }
       get_unified_profits_analytics: {
@@ -3354,8 +3354,8 @@ export type Database = {
       get_user_allowed_filters: {
         Args: { p_user_id: string }
         Returns: {
-          allowed_categories: Json
           allowed_departments: Json
+          allowed_categories: Json
           allowed_products: Json
           has_full_access: boolean
         }[]
@@ -3371,31 +3371,31 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: {
           city_name: string
-          total_amount: number
           total_orders: number
+          total_amount: number
         }[]
       }
       get_user_customers_with_loyalty: {
         Args: { p_user_id: string }
         Returns: {
-          address: string
-          city: string
-          created_at: string
-          created_by: string
-          current_tier_id: string
-          email: string
           id: string
           name: string
           phone: string
+          email: string
+          city: string
           province: string
-          tier_color: string
-          tier_discount_percentage: number
-          tier_icon: string
-          tier_name: string
-          total_orders: number
-          total_points: number
-          total_spent: number
+          address: string
+          created_by: string
+          created_at: string
           updated_at: string
+          total_points: number
+          total_orders: number
+          total_spent: number
+          current_tier_id: string
+          tier_name: string
+          tier_color: string
+          tier_icon: string
+          tier_discount_percentage: number
         }[]
       }
       get_user_highest_role: {
@@ -3403,7 +3403,7 @@ export type Database = {
         Returns: string
       }
       get_user_product_access: {
-        Args: { p_permission_type: string; p_user_id: string }
+        Args: { p_user_id: string; p_permission_type: string }
         Returns: Json
       }
       is_admin_or_deputy: {
@@ -3424,33 +3424,33 @@ export type Database = {
       }
       pay_employee_dues_with_invoice: {
         Args: {
+          p_employee_id: string
           p_amount: number
           p_description?: string
-          p_employee_id: string
-          p_order_ids?: string[]
           p_paid_by?: string
+          p_order_ids?: string[]
           p_profit_ids?: string[]
         }
         Returns: Json
       }
       process_telegram_order: {
         Args: {
-          p_customer_address?: string
+          p_order_data: Json
           p_customer_name: string
           p_customer_phone?: string
-          p_employee_code?: string
-          p_items?: Json
-          p_order_data: Json
-          p_telegram_chat_id?: number
+          p_customer_address?: string
           p_total_amount?: number
+          p_items?: Json
+          p_telegram_chat_id?: number
+          p_employee_code?: string
         }
         Returns: string
       }
       record_discount_usage: {
         Args: {
           p_customer_id: string
-          p_discount_amount: number
           p_discount_type: string
+          p_discount_amount: number
           p_order_id: string
         }
         Returns: undefined
@@ -3460,7 +3460,7 @@ export type Database = {
         Returns: undefined
       }
       release_reserved_stock: {
-        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: Json
       }
       release_stock_for_order: {
@@ -3468,11 +3468,11 @@ export type Database = {
         Returns: undefined
       }
       release_stock_item: {
-        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: Json
       }
       reserve_stock_for_order: {
-        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: Json
       }
       run_maintenance: {
@@ -3489,13 +3489,13 @@ export type Database = {
       }
       update_cash_source_balance: {
         Args: {
-          p_amount: number
           p_cash_source_id: string
-          p_created_by?: string
-          p_description?: string
+          p_amount: number
           p_movement_type: string
-          p_reference_id?: string
           p_reference_type: string
+          p_reference_id?: string
+          p_description?: string
+          p_created_by?: string
         }
         Returns: Json
       }
@@ -3509,12 +3509,12 @@ export type Database = {
       }
       update_customer_phone_loyalty: {
         Args: {
-          p_customer_city?: string
+          p_phone: string
           p_customer_name?: string
+          p_customer_city?: string
           p_customer_province?: string
           p_order_amount?: number
           p_order_date?: string
-          p_phone: string
         }
         Returns: string
       }
@@ -3535,16 +3535,16 @@ export type Database = {
         Returns: undefined
       }
       update_variant_stock_from_purchase: {
-        Args: { p_cost_price: number; p_quantity_change: number; p_sku: string }
+        Args: { p_sku: string; p_quantity_change: number; p_cost_price: number }
         Returns: undefined
       }
       update_variant_stock_from_purchase_with_cost: {
         Args: {
-          p_cost_price: number
-          p_purchase_date: string
-          p_purchase_id: string
-          p_quantity_change: number
           p_sku: string
+          p_quantity_change: number
+          p_cost_price: number
+          p_purchase_id: string
+          p_purchase_date: string
         }
         Returns: undefined
       }

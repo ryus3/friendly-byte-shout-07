@@ -14,11 +14,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import PrintLabelsDialog from '@/components/manage-products/PrintLabelsDialog';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 
 const ManageProductsPage = () => {
@@ -152,13 +152,10 @@ const ManageProductsPage = () => {
         products={selectedProducts}
       />
 
-       <UnifiedQRScanner
+       <BarcodeScannerDialog
           open={isScannerOpen}
           onOpenChange={setIsScannerOpen}
           onScanSuccess={handleScanSuccess}
-          title="🔍 قارئ باركود إدارة المنتجات"
-          description="📱 امسح باركود المنتج للبحث عنه"
-          elementId="manage-products-barcode-scanner"
         />
         
 

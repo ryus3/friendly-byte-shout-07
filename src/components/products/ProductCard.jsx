@@ -26,8 +26,7 @@ const ProductCard = React.memo(({ product, onSelect }) => {
   const reservedStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
-      // استخدام الحقل الموحد reserved_quantity من SuperProvider
-      const reserved = v.reserved_quantity || v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
+      const reserved = v.inventory?.[0]?.reserved_stock || v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
       return sum + reserved;
     }, 0);
   }, [product.variants]);

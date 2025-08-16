@@ -2,12 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-// Helper function لاستخراج UUID المستخدم
-const getUserUUID = (user) => {
-  return user?.id || user?.user_id || user?.sub || null;
-};
+import { supabase } from '@/lib/customSupabaseClient';
 
 export const useProductsDB = () => {
   const [products, setProducts] = useState([]);

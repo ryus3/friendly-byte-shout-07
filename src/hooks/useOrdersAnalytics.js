@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { getUserUUID } from '@/utils/userIdUtils';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 

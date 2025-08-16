@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import AddEditColorDialog from '@/components/manage-variants/AddEditColorDialog';
 import AddEditSizeDialog from '@/components/manage-variants/AddEditSizeDialog';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 
 const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const { products, settings } = useInventory();
@@ -302,14 +302,7 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
             </Dialog>
             <AddEditColorDialog open={isColorDialogOpen} onOpenChange={setIsColorDialogOpen} onSuccess={handleCreateColor} />
             <AddEditSizeDialog open={isSizeDialogOpen} onOpenChange={setIsSizeDialogOpen} onSuccessfulSubmit={handleCreateSize} />
-            <UnifiedQRScanner 
-                open={isScannerOpen} 
-                onOpenChange={setIsScannerOpen} 
-                onScanSuccess={handleBarcodeScan}
-                title="🔍 قارئ باركود المنتجات"
-                description="📱 امسح باركود المنتج لاختياره"
-                elementId="purchase-barcode-scanner"
-            />
+            <BarcodeScannerDialog open={isScannerOpen} onOpenChange={setIsScannerOpen} onScanSuccess={handleBarcodeScan} />
         </>
     );
 };

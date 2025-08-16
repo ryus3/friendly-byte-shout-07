@@ -12,8 +12,8 @@ import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import { toast } from '@/components/ui/use-toast';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
@@ -290,13 +290,10 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
           )}
         </div>
       </SheetContent>
-      <UnifiedQRScanner
+      <BarcodeScannerDialog
         open={isQRCodeOpen}
         onOpenChange={setIsQRCodeOpen}
         onScanSuccess={handleQRCodeScan}
-        title="قارئ QR"
-        description="وجه الكاميرا نحو QR المنتج"
-        elementId="bottom-nav-qr-reader"
       />
     </Sheet>
   );

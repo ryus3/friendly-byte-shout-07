@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
@@ -38,7 +38,6 @@ import { supabase } from '@/integrations/supabase/client';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { toast } from '@/components/ui/use-toast';
 import EmployeeReceivedProfitsCard from '@/components/shared/EmployeeReceivedProfitsCard';
-import QRTestComponent from '@/components/debug/QRTestComponent';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -780,10 +779,9 @@ const Dashboard = () => {
                       onViewAll={() => setTopProductsOpen(true)}
                     />
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                     <StockAlertsCard />
                     <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
-                    <QRTestComponent />
                 </div>
             </div>
             

@@ -5,7 +5,7 @@ import { useInventory } from '@/contexts/SuperProvider';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import InventoryStats from '@/components/inventory/InventoryStats';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 
 import UnifiedInventoryStats from '@/components/inventory/UnifiedInventoryStats';
@@ -27,7 +27,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Checkbox } from '@/components/ui/checkbox';
 import InventoryItem from '@/components/inventory/InventoryItem';
 import { generateInventoryReportPDF } from '@/utils/pdfGenerator';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
 
@@ -818,13 +818,10 @@ const InventoryPage = () => {
         />
       )}
 
-      <UnifiedQRScanner
+      <BarcodeScannerDialog
         open={isBarcodeScannerOpen}
         onOpenChange={setIsBarcodeScannerOpen}
         onScanSuccess={handleBarcodeScan}
-        title="🔍 قارئ باركود المخزون"
-        description="📱 امسح باركود المنتج لعرض تفاصيله"
-        elementId="inventory-barcode-scanner"
       />
       
       <ReservedStockDialog 

@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { QrCode, Search, Package, RotateCcw, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/customSupabaseClient';
+import { toast } from '@/components/ui/use-toast';
 import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 
 const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) => {
   const [isScanning, setIsScanning] = useState(false);
   const [manualInput, setManualInput] = useState('');
   const [foundOrder, setFoundOrder] = useState(null);
   const [error, setError] = useState('');
+  const scannerRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
   // تنبيه عميل مكرر عند العثور على طلب يحتوي رقم هاتف
   useDuplicateCustomerAlert(foundOrder?.customer_phone, { trigger: !!foundOrder });
 
@@ -63,13 +65,47 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
 
   // بدء المسح
   const startScanning = () => {
+    setIsScanning(true);
     setError('');
     setFoundOrder(null);
-    setIsScanning(true);
+
+    // إنشاء ماسح QR
+    setTimeout(() => {
+      html5QrCodeRef.current = new Html5QrcodeScanner(
+        "qr-reader",
+        {
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true,
+          supportedScanTypes: []
+        },
+        false
+      );
+
+    // عند نجاح المسح
+    const onScanSuccess = async (decodedText) => {
+      html5QrCodeRef.current?.clear();
+      setIsScanning(false);
+      
+      // البحث عن الطلب
+      await searchOrderByQR(decodedText);
+    };
+
+    // عند فشل المسح
+    const onScanFailure = (error) => {
+      // لا نعرض أخطاء المسح المستمرة
+    };
+
+      html5QrCodeRef.current.render(onScanSuccess, onScanFailure);
+    }, 100);
   };
 
   // إيقاف المسح
   const stopScanning = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.clear();
+    }
     setIsScanning(false);
   };
 
@@ -118,130 +154,122 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   };
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md w-full sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 gradient-text">
-              <QrCode className="h-5 w-5" />
-              مسح QR للطلبات
-            </DialogTitle>
-          </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md w-full sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 gradient-text">
+            <QrCode className="h-5 w-5" />
+            مسح QR للطلبات
+          </DialogTitle>
+        </DialogHeader>
 
-          <div className="space-y-4">
-            {!foundOrder ? (
-              <>
-                {/* خيارات المسح */}
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={startScanning}
-                    disabled={isScanning}
-                    className="flex items-center gap-2 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
-                    variant={isScanning ? "secondary" : "default"}
-                  >
-                    <QrCode className="h-4 w-4" />
-                    {isScanning ? 'جاري المسح...' : 'مسح QR'}
-                  </Button>
-                  
-                  <Button
-                    onClick={stopScanning}
-                    disabled={!isScanning}
-                    variant="outline"
-                  >
-                    إيقاف المسح
+        <div className="space-y-4">
+          {!foundOrder ? (
+            <>
+              {/* خيارات المسح */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  onClick={startScanning}
+                  disabled={isScanning}
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
+                  variant={isScanning ? "secondary" : "default"}
+                >
+                  <QrCode className="h-4 w-4" />
+                  {isScanning ? 'جاري المسح...' : 'مسح QR'}
+                </Button>
+                
+                <Button
+                  onClick={stopScanning}
+                  disabled={!isScanning}
+                  variant="outline"
+                >
+                  إيقاف المسح
+                </Button>
+              </div>
+
+              {/* المسح بالكاميرا */}
+              {isScanning && (
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <div id="qr-reader" ref={scannerRef}></div>
+                </div>
+              )}
+
+              {/* البحث اليدوي */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">أو أدخل QR ID يدوياً:</label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="QR-ORD-123456"
+                    value={manualInput}
+                    onChange={(e) => setManualInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
+                  />
+                  <Button onClick={handleManualSearch} size="icon">
+                    <Search className="h-4 w-4" />
                   </Button>
                 </div>
+              </div>
 
-                {/* البحث اليدوي */}
+              {/* عرض الأخطاء */}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </>
+          ) : (
+            /* عرض تفاصيل الطلب المكتشف */
+            <div className="space-y-4">
+              <Alert>
+                <Package className="h-4 w-4" />
+                <AlertDescription>
+                  تم العثور على الطلب: <strong>#{foundOrder.order_number}</strong>
+                </AlertDescription>
+              </Alert>
+
+              <div className="bg-muted rounded-lg p-4 space-y-2">
+                <div><strong>العميل:</strong> {foundOrder.customer_name}</div>
+                <div><strong>الهاتف:</strong> {foundOrder.customer_phone}</div>
+                <div><strong>الحالة:</strong> {getStatusLabel(foundOrder.status)}</div>
+                <div><strong>المبلغ:</strong> {foundOrder.final_amount?.toLocaleString()} د.ع</div>
+                <div><strong>QR ID:</strong> {foundOrder.qr_id}</div>
+              </div>
+
+              {/* أزرار خاصة للطلبات الراجعة */}
+              {(foundOrder.status === 'returned' || foundOrder.status === 'cancelled') && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">أو أدخل QR ID يدوياً:</label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="QR-ORD-123456"
-                      value={manualInput}
-                      onChange={(e) => setManualInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
-                    />
-                    <Button onClick={handleManualSearch} size="icon">
-                      <Search className="h-4 w-4" />
+                  <Alert>
+                    <RotateCcw className="h-4 w-4" />
+                    <AlertDescription>
+                      هذا طلب راجع. ماذا تريد أن تفعل؟
+                    </AlertDescription>
+                  </Alert>
+                  
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button
+                      onClick={() => handleReturnedOrder('return_to_stock')}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Package className="h-4 w-4 ml-2" />
+                      استلام في المخزن
                     </Button>
                   </div>
                 </div>
+              )}
 
-                {/* عرض الأخطاء */}
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-              </>
-            ) : (
-              /* عرض تفاصيل الطلب المكتشف */
-              <div className="space-y-4">
-                <Alert>
-                  <Package className="h-4 w-4" />
-                  <AlertDescription>
-                    تم العثور على الطلب: <strong>#{foundOrder.order_number}</strong>
-                  </AlertDescription>
-                </Alert>
-
-                <div className="bg-muted rounded-lg p-4 space-y-2">
-                  <div><strong>العميل:</strong> {foundOrder.customer_name}</div>
-                  <div><strong>الهاتف:</strong> {foundOrder.customer_phone}</div>
-                  <div><strong>الحالة:</strong> {getStatusLabel(foundOrder.status)}</div>
-                  <div><strong>المبلغ:</strong> {foundOrder.final_amount?.toLocaleString()} د.ع</div>
-                  <div><strong>QR ID:</strong> {foundOrder.qr_id}</div>
-                </div>
-
-                {/* أزرار خاصة للطلبات الراجعة */}
-                {(foundOrder.status === 'returned' || foundOrder.status === 'cancelled') && (
-                  <div className="space-y-2">
-                    <Alert>
-                      <RotateCcw className="h-4 w-4" />
-                      <AlertDescription>
-                        هذا طلب راجع. ماذا تريد أن تفعل؟
-                      </AlertDescription>
-                    </Alert>
-                    
-                    <div className="grid grid-cols-1 gap-2">
-                      <Button
-                        onClick={() => handleReturnedOrder('return_to_stock')}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        <Package className="h-4 w-4 ml-2" />
-                        استلام في المخزن
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  onClick={() => setFoundOrder(null)}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <ArrowLeft className="h-4 w-4 ml-2" />
-                  البحث عن طلب آخر
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* القارئ الموحد */}
-      <UnifiedQRScanner
-        open={isScanning}
-        onOpenChange={setIsScanning}
-        onScanSuccess={async (text) => {
-          setIsScanning(false);
-          await searchOrderByQR(text);
-        }}
-        title="مسح QR للطلبات"
-        description="وجه الكاميرا نحو رمز الطلب"
-        elementId="qr-order-reader"
-      />
-    </>
+              <Button
+                onClick={() => setFoundOrder(null)}
+                variant="outline"
+                className="w-full"
+              >
+                <ArrowLeft className="h-4 w-4 ml-2" />
+                البحث عن طلب آخر
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

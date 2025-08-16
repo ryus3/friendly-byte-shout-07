@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, createContext, useContext } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * نظام الصلاحيات الموحد النهائي

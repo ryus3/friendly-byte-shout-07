@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
@@ -11,7 +12,6 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 
 const BarcodeInventoryPage = () => {
     const { allProducts } = useInventory(); // جلب كل المنتجات
@@ -19,14 +19,17 @@ const BarcodeInventoryPage = () => {
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
     const [lastScanned, setLastScanned] = useState(null);
+    const [cameraError, setCameraError] = useState(null);
     const [showResults, setShowResults] = useState(false);
-    const [scannerOpen, setScannerOpen] = useState(false);
+    const html5QrCodeRef = useRef(null);
     const audioRef = useRef(null);
 
     useEffect(() => {
         audioRef.current = new Audio('https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/e2e50337c7635c754d7764d1f2b60434.mp3');
         return () => {
-            setScannerOpen(false);
+            if (html5QrCodeRef.current?.isScanning) {
+                stopScanning();
+            }
         };
     }, []);
 
@@ -68,13 +71,28 @@ const BarcodeInventoryPage = () => {
         }
     };
 
-    const startScanning = () => {
-        setScannerOpen(true);
-        setIsScanning(true);
+    const startScanning = async () => {
+        setCameraError(null);
+        try {
+            await Html5Qrcode.getCameras();
+            const html5QrCode = new Html5Qrcode("reader");
+            html5QrCodeRef.current = html5QrCode;
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 5, qrbox: { width: 250, height: 150 } },
+                onScanSuccess,
+                (errorMessage) => {}
+            );
+            setIsScanning(true);
+        } catch (err) {
+            setCameraError("لا يمكن الوصول للكاميرا. يرجى التأكد من صلاحيات المتصفح.");
+        }
     };
 
-    const stopScanning = () => {
-        setScannerOpen(false);
+    const stopScanning = async () => {
+        if (html5QrCodeRef.current?.isScanning) {
+            await html5QrCodeRef.current.stop();
+        }
         setIsScanning(false);
     };
 
@@ -123,8 +141,16 @@ const BarcodeInventoryPage = () => {
                             <CardTitle className="flex items-center gap-2"><Camera /> شاشة المسح</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-center h-full">
-                            <div className="w-full h-full max-h-[350px] aspect-video bg-secondary rounded-lg overflow-hidden flex items-center justify-center text-muted-foreground text-sm">
-                                سيتم فتح نافذة القارئ الموحد عند البدء
+                            <div id="reader" className="w-full h-full max-h-[350px] aspect-video bg-secondary rounded-lg overflow-hidden">
+                                {cameraError && (
+                                    <div className="flex items-center justify-center h-full">
+                                        <Alert variant="destructive" className="w-auto">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <AlertTitle>خطأ في الكاميرا!</AlertTitle>
+                                            <AlertDescription>{cameraError}</AlertDescription>
+                                        </Alert>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -169,15 +195,6 @@ const BarcodeInventoryPage = () => {
                 open={showResults}
                 onOpenChange={setShowResults}
                 results={scannedItems}
-            />
-
-            <UnifiedQRScanner 
-                open={scannerOpen}
-                onOpenChange={(open) => { setScannerOpen(open); setIsScanning(open); }}
-                onScanSuccess={(text) => onScanSuccess(text)}
-                title="الجرد بالباركود"
-                description="وجه الكاميرا نحو QR/Barcode"
-                elementId="barcode-inventory-page-reader"
             />
         </>
     );

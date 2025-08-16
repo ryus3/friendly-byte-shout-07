@@ -31,19 +31,19 @@ const QRButton = ({
 }) => {
   return (
     <Button
-      variant={variant}
+      variant="ghost"
       size={size}
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center gap-2 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl",
-        children ? "px-3" : "h-9 w-9 p-0",  // إذا كان هناك نص، أضف padding
+        "h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl",
+        "flex items-center justify-center",
         className
       )}
       {...props}
     >
       <QRIcon size={size === "sm" ? 16 : size === "lg" ? 24 : 16} className="text-white" />
-      {children && <span className="text-white">{children}</span>}
+      {children}
     </Button>
   );
 };

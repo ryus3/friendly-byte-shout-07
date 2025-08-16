@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { useVariants } from '@/contexts/VariantsContext';
@@ -17,10 +17,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PermissionBasedProductGrid from '@/components/products/PermissionBasedProductGrid';
 import ProductList from '@/components/products/ProductList';
 import ProductFilters from '@/components/products/ProductFilters';
-import SimpleQRScanner from '@/components/shared/SimpleQRScanner';
+import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
-import FinalQRScanner from '@/components/shared/FinalQRScanner';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
@@ -340,11 +340,10 @@ const ProductsPage = () => {
         onCreateOrder={handleCreateOrder}
       />
 
-      <SimpleQRScanner
+      <BarcodeScannerDialog
         open={dialogs.barcodeScanner}
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
         onScanSuccess={handleBarcodeScan}
-        title="🔍 قارئ باركود المنتجات"
       />
 
       <AdvancedProductFilters

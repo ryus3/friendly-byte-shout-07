@@ -5,7 +5,7 @@
 
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { 
   getUserUUID, 
   getEmployeeCode, 

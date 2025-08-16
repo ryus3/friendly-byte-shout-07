@@ -9,7 +9,7 @@ import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const CartDialog = ({ open, onOpenChange, onCheckout }) => {
@@ -35,75 +35,44 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
   };
   
   const handleScanSuccess = useCallback((decodedText) => {
-    console.log('🔍 [Cart] Scanned QR:', decodedText);
-    
+    // البحث في المنتجات
     let foundVariant = null;
     let foundProduct = null;
 
-    try {
-      // محاولة تحليل QR code كـ JSON (النظام الجديد)
-      const qrData = JSON.parse(decodedText);
-      console.log('📦 [Cart] Parsed QR Data:', qrData);
-      
-      if (qrData.type === 'product' || qrData.type === 'variant') {
-        // البحث بمعرف المنتج والمتغير من QR JSON
-        foundProduct = products.find(p => p.id === qrData.product_id);
-        if (foundProduct && qrData.variant_id) {
-          foundVariant = foundProduct.variants?.find(v => v.id === qrData.variant_id);
-        }
-        
-        if (foundProduct && foundVariant) {
-          console.log('✅ [Cart] Found product from QR JSON:', foundProduct.name, foundVariant.color, foundVariant.size);
-        }
-      }
-    } catch (jsonError) {
-      console.log('📝 [Cart] Not JSON, trying direct search:', decodedText);
-      
-      // البحث المباشر (النظام القديم)
-      for (const p of products) {
-        foundVariant = p.variants?.find(v => 
+    for (const p of products) {
+        foundVariant = p.variants.find(v => 
           v.sku === decodedText || 
           v.barcode === decodedText ||
           v.id?.toString() === decodedText
         );
         if (foundVariant) {
-          foundProduct = p;
-          console.log('✅ [Cart] Found product from direct search:', foundProduct.name, foundVariant.color, foundVariant.size);
-          break;
+            foundProduct = p;
+            break;
         }
-      }
-      
-      // البحث في جدول qr_codes
-      if (!foundProduct) {
-        console.log('🔍 [Cart] Searching in QR codes table...');
-        // هذا سيتطلب استعلام قاعدة بيانات، لكن سنحاول البحث المحلي أولاً
-      }
     }
     
     if (foundProduct && foundVariant) {
-      const availableQuantity = (foundVariant.quantity || 0) - (foundVariant.reserved || 0);
-      if (availableQuantity > 0) {
+      if(foundVariant.quantity > 0) {
         addToCart(foundProduct, foundVariant, 1);
         toast({ 
           title: "✅ تمت إضافة المنتج!", 
           description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`,
+          variant: "success"
         });
-        console.log('🛒 [Cart] Product added successfully');
       } else {
         toast({ 
           title: "⚠️ نفذت الكمية", 
           description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`, 
           variant: "destructive" 
         });
-        console.log('❌ [Cart] Out of stock');
       }
     } else {
+      // رسالة عدم العثور على المنتج
       toast({ 
         title: "❌ لم يتم العثور على المنتج", 
-        description: `الكود المقروء: ${decodedText}`, 
+        description: `الكود المقروء: ${decodedText}\n\nهذا المنتج غير موجود في النظام أو تم حذفه.`, 
         variant: "destructive" 
       });
-      console.log('❌ [Cart] Product not found');
     }
   }, [products, addToCart]);
   
@@ -142,9 +111,8 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
                 size="sm" 
                 onClick={() => setIsScannerOpen(true)} 
                 className="hover:bg-primary/10 border-primary/30" 
-                title="مسح QR للمنتجات"
               >
-                مسح QR
+                <span className="sr-only">مسح</span>
               </QRButton>
             </div>
           </DialogTitle>
@@ -226,15 +194,11 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-      {/* QR Scanner */}
-      <UnifiedQRScanner
-        open={isScannerOpen}
-        onOpenChange={setIsScannerOpen}
-        onScanSuccess={handleScanSuccess}
-        title="قارئ QR"
-        description="وجه الكاميرا نحو QR المنتج"
-        elementId="cart-qr-reader"
-      />
+    <BarcodeScannerDialog
+      open={isScannerOpen}
+      onOpenChange={setIsScannerOpen}
+      onScanSuccess={handleScanSuccess}
+    />
     <ProductSelectionDialog
         open={isProductSelectorOpen}
         onOpenChange={setIsProductSelectorOpen}
