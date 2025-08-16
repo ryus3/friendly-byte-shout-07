@@ -2,8 +2,6 @@ import React, { useMemo } from 'react';
 import { useVariants } from '@/contexts/VariantsContext';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { getProductReserved } from '@/lib/inventory-utils';
-
 
 const ProductListItem = React.memo(({ product, onSelect }) => {
   const { colors: allColors } = useVariants();
@@ -16,7 +14,15 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
     }, 0);
   }, [product.variants]);
   
-  const reservedStock = useMemo(() => getProductReserved(product), [product.variants]);
+  const reservedStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return 0;
+    return product.variants.reduce((sum, v) => {
+      // قراءة المخزون المحجوز من جدول inventory مباشرة
+      const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
+      const reserved = parseInt(invObj?.reserved_quantity ?? invObj?.reserved_stock) || parseInt(v.reserved_quantity ?? v.reserved_stock) || parseInt(v.reserved) || 0;
+      return sum + (isNaN(reserved) ? 0 : reserved);
+    }, 0);
+  }, [product.variants]);
 
   const availableColorsWithHex = useMemo(() => {
     if (!product || !product.variants) return [];
