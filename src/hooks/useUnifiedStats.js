@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 
 export const useUnifiedStats = () => {
   const { orders, products, customers, expenses, cashSources, computed } = useSuper();

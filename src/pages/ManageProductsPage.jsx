@@ -18,7 +18,7 @@ import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 
 const ManageProductsPage = () => {
