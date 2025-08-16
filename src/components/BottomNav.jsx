@@ -294,7 +294,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
         open={isQRCodeOpen}
         onOpenChange={setIsQRCodeOpen}
         onScanSuccess={handleQRCodeScan}
-        title="🔍 قارئ الباركود الذكي"
+        title="قارئ QR"
       />
     </Sheet>
   );
