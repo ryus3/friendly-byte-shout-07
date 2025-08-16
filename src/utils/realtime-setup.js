@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 // إعداد Real-time للجداول المطلوبة بدون إعادة تحميل الصفحة
 export const setupRealtime = () => {
