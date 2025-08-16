@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 // import removed to avoid circular dependency with SuperProvider
 import { useAuth } from './UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 
 // إعادة توجيه ProfitsContext للنظام الموحد
 
