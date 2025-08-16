@@ -13,7 +13,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities';
 import Loader from '@/components/ui/loader';
 import { Progress } from "@/components/ui/progress";
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
