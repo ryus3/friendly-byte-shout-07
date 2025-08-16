@@ -17,8 +17,10 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
   const reservedStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
-      const reserved = v.inventory?.[0]?.reserved_stock || v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
-      return sum + reserved;
+      // قراءة المخزون المحجوز من جدول inventory مباشرة
+      const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
+      const reserved = parseInt(invObj?.reserved_quantity) || parseInt(v.reserved_quantity) || parseInt(v.reserved) || 0;
+      return sum + (isNaN(reserved) ? 0 : reserved);
     }, 0);
   }, [product.variants]);
 
