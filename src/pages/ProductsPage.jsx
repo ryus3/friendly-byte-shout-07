@@ -20,7 +20,7 @@ import ProductFilters from '@/components/products/ProductFilters';
 import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import SimpleQRReader from '@/components/shared/SimpleQRReader';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
@@ -340,13 +340,11 @@ const ProductsPage = () => {
         onCreateOrder={handleCreateOrder}
       />
 
-      <UnifiedQRScanner
+      <SimpleQRReader
         open={dialogs.barcodeScanner}
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
         onScanSuccess={handleBarcodeScan}
         title="🔍 قارئ باركود المنتجات"
-        description="📱 امسح باركود المنتج لعرضه"
-        elementId="products-barcode-scanner"
       />
 
       <AdvancedProductFilters
