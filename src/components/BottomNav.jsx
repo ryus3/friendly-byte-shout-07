@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import UnifiedQRScanner from '@/components/shared/UnifiedQRScanner';
+import SimpleQRScanner from '@/components/shared/SimpleQRScanner';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
@@ -290,13 +290,11 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
           )}
         </div>
       </SheetContent>
-      <UnifiedQRScanner
+      <SimpleQRScanner
         open={isQRCodeOpen}
         onOpenChange={setIsQRCodeOpen}
         onScanSuccess={handleQRCodeScan}
         title="🔍 قارئ الباركود الذكي"
-        description="📱 يقرأ: QR Codes وجميع أنواع الباركود. وجه الكاميرا للكود للحصول على تفاصيل كاملة"
-        elementId="barcode-scanner-reader"
       />
     </Sheet>
   );

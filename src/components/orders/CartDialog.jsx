@@ -142,8 +142,9 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
                 size="sm" 
                 onClick={() => setIsScannerOpen(true)} 
                 className="hover:bg-primary/10 border-primary/30" 
+                title="مسح QR للمنتجات"
               >
-                <span className="sr-only">مسح</span>
+                مسح QR
               </QRButton>
             </div>
           </DialogTitle>

@@ -340,7 +340,7 @@ const ProductsPage = () => {
         onCreateOrder={handleCreateOrder}
       />
 
-      <FinalQRScanner
+      <SimpleQRScanner
         open={dialogs.barcodeScanner}
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
         onScanSuccess={handleBarcodeScan}
