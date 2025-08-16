@@ -131,8 +131,7 @@ export const useQRScanner = (onScanSuccess, onScanError) => {
         } else {
           console.log('📷 Using first available camera');
           cameraConfig = availableCameras[0]?.id || { 
-            width: { ideal: 1280 }, 
-            height: { ideal: 720 } 
+            facingMode: "user" 
           };
         }
       }
