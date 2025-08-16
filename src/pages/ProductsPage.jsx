@@ -20,7 +20,7 @@ import ProductFilters from '@/components/products/ProductFilters';
 import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
-import RealQRScanner from '@/components/shared/RealQRScanner';
+import FinalQRScanner from '@/components/shared/FinalQRScanner';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
@@ -340,7 +340,7 @@ const ProductsPage = () => {
         onCreateOrder={handleCreateOrder}
       />
 
-      <RealQRScanner
+      <FinalQRScanner
         open={dialogs.barcodeScanner}
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
         onScanSuccess={handleBarcodeScan}

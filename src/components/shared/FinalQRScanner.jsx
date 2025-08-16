@@ -6,12 +6,13 @@ import { Camera, X, Zap, ZapOff, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import jsQR from 'jsqr';
 
-const RealQRScanner = ({ 
+const FinalQRScanner = ({ 
   open, 
   onOpenChange, 
   onScanSuccess, 
   title = "مسح QR Code" 
 }) => {
+  const { toast } = useToast();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -22,63 +23,44 @@ const RealQRScanner = ({
   const [hasFlash, setHasFlash] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
 
-  // بدء الكاميرا مع فحص الأذونات
+  // بدء الكاميرا مع فحص الأذونات الكامل
   const startCamera = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('🚀 [Real QR] بدء تشغيل الكاميرا...');
+      console.log('🚀 [Final QR] بدء تشغيل الكاميرا...');
 
       // فحص دعم المتصفح
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('المتصفح لا يدعم الوصول للكاميرا');
+        throw new Error('المتصفح لا يدعم الوصول للكاميرا. يرجى استخدام متصفح حديث.');
       }
 
-      // طلب أذونات الكاميرا صراحة
-      console.log('🔐 [Real QR] طلب أذونات الكاميرا...');
-      
-      // الحصول على قائمة الكاميرات المتاحة
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
-      console.log('📹 [Real QR] الكاميرات المتاحة:', videoDevices.length);
-      console.log('📹 [Real QR] قائمة الكاميرات:', videoDevices.map(d => ({ label: d.label, deviceId: d.deviceId })));
+      // طلب أذونات الكاميرا
+      console.log('🔐 [Final QR] طلب أذونات الكاميرا...');
       
       let stream;
       
-      // محاولة استخدام الكاميرا الخلفية أولاً
-      const backCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('rear') ||
-        device.label.toLowerCase().includes('environment')
-      );
-      
-      if (backCamera) {
-        console.log('🎯 [Real QR] محاولة استخدام الكاميرا الخلفية:', backCamera.label);
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: { 
-              deviceId: { exact: backCamera.deviceId },
-              width: { ideal: 640 },
-              height: { ideal: 480 }
-            }
-          });
-          console.log('✅ [Real QR] نجح تشغيل الكاميرا الخلفية');
-        } catch (err) {
-          console.log('⚠️ [Real QR] فشل في الكاميرا الخلفية:', err.message);
-        }
-      }
-      
-      // إذا لم تنجح الخلفية، استخدم أي كاميرا متاحة
-      if (!stream) {
-        console.log('🔄 [Real QR] محاولة استخدام أي كاميرا متاحة...');
+      // محاولة الحصول على الكاميرا الخلفية أولاً
+      try {
+        console.log('📱 [Final QR] محاولة الكاميرا الخلفية...');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: { ideal: "environment" },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        });
+        console.log('✅ [Final QR] نجح تشغيل الكاميرا الخلفية');
+      } catch (backCameraError) {
+        console.log('⚠️ [Final QR] فشل في الكاميرا الخلفية، محاولة أي كاميرا متاحة...');
+        // محاولة أي كاميرا متاحة
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             width: { ideal: 640 },
             height: { ideal: 480 }
           }
         });
-        console.log('✅ [Real QR] نجح تشغيل كاميرا افتراضية');
+        console.log('✅ [Final QR] نجح تشغيل كاميرا افتراضية');
       }
 
       if (!stream) {
@@ -91,45 +73,56 @@ const RealQRScanner = ({
         videoRef.current.srcObject = stream;
         
         // انتظار تحميل الفيديو
-        await new Promise((resolve, reject) => {
-          videoRef.current.onloadedmetadata = () => {
-            console.log('📺 [Real QR] تم تحميل بيانات الفيديو');
-            resolve();
-          };
-          videoRef.current.onerror = reject;
-        });
-        
-        await videoRef.current.play();
-        console.log('▶️ [Real QR] بدء تشغيل الفيديو');
-        
-        // فحص دعم الفلاش
-        const track = stream.getVideoTracks()[0];
-        console.log('🔍 [Real QR] فحص قدرات الكاميرا:', track.getCapabilities?.());
-        
-        const capabilities = track.getCapabilities?.();
-        if (capabilities?.torch) {
-          setHasFlash(true);
-          console.log('💡 [Real QR] الفلاش متاح!');
-        } else {
-          console.log('❌ [Real QR] الفلاش غير متاح');
-        }
+        videoRef.current.onloadedmetadata = () => {
+          console.log('📺 [Final QR] تم تحميل بيانات الفيديو');
+          if (videoRef.current) {
+            videoRef.current.play().then(() => {
+              console.log('▶️ [Final QR] بدء تشغيل الفيديو');
+              
+              // فحص دعم الفلاش
+              const track = stream.getVideoTracks()[0];
+              const capabilities = track.getCapabilities?.();
+              console.log('🔍 [Final QR] قدرات الكاميرا:', capabilities);
+              
+              if (capabilities?.torch) {
+                setHasFlash(true);
+                console.log('💡 [Final QR] الفلاش متاح!');
+              } else {
+                console.log('❌ [Final QR] الفلاش غير متاح');
+                setHasFlash(false);
+              }
 
-        // بدء مسح QR
-        startScanning();
-        console.log('✅ [Real QR] الكاميرا تعمل بنجاح!');
+              // بدء مسح QR
+              startScanning();
+              console.log('✅ [Final QR] الكاميرا تعمل بنجاح!');
+              setIsLoading(false);
+            }).catch((playError) => {
+              console.error('❌ [Final QR] خطأ في تشغيل الفيديو:', playError);
+              setError('فشل في تشغيل الفيديو: ' + playError.message);
+              setIsLoading(false);
+            });
+          }
+        };
+        
+        videoRef.current.onerror = (videoError) => {
+          console.error('❌ [Final QR] خطأ في الفيديو:', videoError);
+          setError('خطأ في الفيديو');
+          setIsLoading(false);
+        };
       }
 
-      setIsLoading(false);
     } catch (err) {
-      console.error('❌ [Real QR] خطأ في الكاميرا:', err);
+      console.error('❌ [Final QR] خطأ في الكاميرا:', err);
       let errorMessage = 'فشل في تشغيل الكاميرا';
       
       if (err.name === 'NotAllowedError') {
-        errorMessage = 'تم رفض الإذن للوصول للكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح.';
+        errorMessage = 'تم رفض الإذن للوصول للكاميرا. يرجى السماح بالوصول للكاميرا في إعدادات المتصفح والمحاولة مرة أخرى.';
       } else if (err.name === 'NotFoundError') {
         errorMessage = 'لم يتم العثور على كاميرا. تأكد من وجود كاميرا متصلة بالجهاز.';
       } else if (err.name === 'NotReadableError') {
         errorMessage = 'الكاميرا مستخدمة من تطبيق آخر. أغلق التطبيقات الأخرى وحاول مرة أخرى.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage = 'لا يمكن الوصول للكاميرا بالإعدادات المطلوبة. جربِّ كاميرا أخرى.';
       } else {
         errorMessage = `خطأ في الكاميرا: ${err.message}`;
       }
@@ -143,14 +136,15 @@ const RealQRScanner = ({
   const startScanning = () => {
     if (intervalRef.current) return;
     
+    console.log('🔍 [Final QR] بدء مسح QR...');
     intervalRef.current = setInterval(() => {
       scanQRCode();
-    }, 500); // مسح كل نصف ثانية
+    }, 100); // مسح كل 100ms لسرعة أفضل
   };
 
   // مسح QR من الفيديو
   const scanQRCode = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current || !streamRef.current) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -158,47 +152,37 @@ const RealQRScanner = ({
 
     if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
 
+    // تحديد حجم canvas حسب حجم الفيديو
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
+    if (canvas.width === 0 || canvas.height === 0) return;
+    
+    // رسم الفيديو على canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     try {
       // الحصول على بيانات الصورة
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
       
-      // محاولة قراءة QR بسيطة (محاكاة)
-      // في التطبيق الحقيقي يجب استخدام مكتبة مثل jsQR
-      detectQRPattern(imageData);
-    } catch (err) {
-      // تجاهل الأخطاء في المسح
-    }
-  };
-
-  // كشف QR باستخدام jsQR
-  const detectQRPattern = (imageData) => {
-    try {
-      console.log('🔍 [Real QR] فحص QR من البيانات... حجم الصورة:', imageData.width, 'x', imageData.height);
+      // استخدام jsQR لفحص QR
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert"
       });
       
-      if (code) {
-        console.log('🎯 [Real QR] QR Code وُجد!', code.data);
+      if (code && code.data) {
+        console.log('🎯 [Final QR] QR Code وُجد!', code.data);
         handleQRDetected(code.data);
-        return true;
-      } else {
-        console.log('🔍 [Real QR] لم يتم العثور على QR في هذا الإطار');
-        return false;
       }
     } catch (err) {
-      console.log('⚠️ [Real QR] خطأ في فحص QR:', err.message);
-      return false;
+      // تجاهل أخطاء المسح البسيطة
+      console.log('⚠️ [Final QR] خطأ طفيف في المسح:', err.message);
     }
   };
 
   // عند العثور على QR
   const handleQRDetected = (qrCode) => {
-    console.log('🎯 [Real QR] تم العثور على QR:', qrCode);
+    console.log('🎯 [Final QR] تم العثور على QR:', qrCode);
     stopCamera();
     onScanSuccess?.(qrCode);
     toast({
@@ -210,13 +194,18 @@ const RealQRScanner = ({
 
   // إيقاف الكاميرا
   const stopCamera = () => {
+    console.log('🛑 [Final QR] إيقاف الكاميرا...');
+    
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('🛑 [Final QR] تم إيقاف track:', track.kind);
+      });
       streamRef.current = null;
     }
     
@@ -226,21 +215,26 @@ const RealQRScanner = ({
     
     setHasFlash(false);
     setFlashEnabled(false);
-    console.log('🛑 [Real QR] تم إيقاف الكاميرا');
+    console.log('✅ [Final QR] تم إيقاف الكاميرا بالكامل');
   };
 
   // تفعيل الفلاش
   const toggleFlash = async () => {
-    console.log('💡 [Real QR] محاولة تبديل الفلاش...');
-    console.log('💡 [Real QR] الحالة الحالية:', { hasFlash, flashEnabled, streamExists: !!streamRef.current });
+    console.log('💡 [Final QR] محاولة تبديل الفلاش...');
+    console.log('💡 [Final QR] الحالة الحالية:', { hasFlash, flashEnabled, streamExists: !!streamRef.current });
     
     if (!streamRef.current) {
-      console.log('❌ [Real QR] لا يوجد تدفق كاميرا');
+      console.log('❌ [Final QR] لا يوجد تدفق كاميرا');
+      toast({
+        title: "خطأ",
+        description: "الكاميرا غير نشطة",
+        variant: "destructive"
+      });
       return;
     }
 
     if (!hasFlash) {
-      console.log('❌ [Real QR] الفلاش غير متاح');
+      console.log('❌ [Final QR] الفلاش غير متاح');
       toast({
         title: "الفلاش غير متاح",
         description: "هذا الجهاز لا يدعم الفلاش أو الكاميرا المستخدمة لا تحتوي على فلاش",
@@ -251,28 +245,32 @@ const RealQRScanner = ({
 
     try {
       const track = streamRef.current.getVideoTracks()[0];
-      console.log('🔍 [Real QR] قدرات الكاميرا:', track.getCapabilities?.());
+      if (!track) {
+        throw new Error('لا يوجد track للفيديو');
+      }
+      
+      console.log('🔍 [Final QR] قدرات الكاميرا:', track.getCapabilities?.());
       
       const newState = !flashEnabled;
-      console.log('💡 [Real QR] محاولة تعيين الفلاش إلى:', newState);
+      console.log('💡 [Final QR] محاولة تعيين الفلاش إلى:', newState);
       
       await track.applyConstraints({
         advanced: [{ torch: newState }]
       });
       
       setFlashEnabled(newState);
-      console.log('✅ [Real QR] تم تغيير الفلاش بنجاح إلى:', newState);
+      console.log('✅ [Final QR] تم تغيير الفلاش بنجاح إلى:', newState);
       
       toast({
         title: newState ? "تم تشغيل الفلاش" : "تم إطفاء الفلاش",
         description: newState ? "الفلاش نشط الآن" : "تم إطفاء الفلاش"
       });
     } catch (err) {
-      console.error('❌ [Real QR] خطأ في الفلاش:', err);
+      console.error('❌ [Final QR] خطأ في الفلاش:', err);
       setHasFlash(false);
       toast({
         title: "خطأ في الفلاش",
-        description: `فشل في تشغيل الفلاش: ${err.message}`,
+        description: `فشل في التحكم بالفلاش: ${err.message}`,
         variant: "destructive"
       });
     }
@@ -289,12 +287,17 @@ const RealQRScanner = ({
   // تشغيل عند الفتح
   useEffect(() => {
     if (open) {
+      console.log('📱 [Final QR] فتح الماسح الضوئي');
       startCamera();
     } else {
+      console.log('❌ [Final QR] إغلاق الماسح الضوئي');
       stopCamera();
     }
     
-    return () => stopCamera();
+    return () => {
+      console.log('🧹 [Final QR] تنظيف الماسح الضوئي');
+      stopCamera();
+    };
   }, [open]);
 
   return (
@@ -320,13 +323,18 @@ const RealQRScanner = ({
             
             {/* مؤشر المسح */}
             {!isLoading && !error && (
-              <div className="absolute inset-4 border-2 border-white rounded-lg opacity-50">
-                <div className="w-full h-full border border-green-500 rounded-lg animate-pulse"></div>
+              <div className="absolute inset-4 border-2 border-white rounded-lg opacity-75">
+                <div className="w-full h-full border-2 border-green-500 rounded-lg animate-pulse"></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-black/50 text-white px-3 py-1 rounded text-sm">
+                    وجّه الكاميرا نحو QR Code
+                  </div>
+                </div>
               </div>
             )}
 
             {/* زر الفلاش */}
-            {hasFlash && (
+            {hasFlash && !isLoading && !error && (
               <Button
                 onClick={toggleFlash}
                 size="sm"
@@ -339,10 +347,11 @@ const RealQRScanner = ({
 
             {/* حالة التحميل */}
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70">
                 <div className="text-white text-center">
                   <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
                   <p>جاري تشغيل الكاميرا...</p>
+                  <p className="text-xs mt-1 opacity-75">يرجى السماح بالوصول للكاميرا</p>
                 </div>
               </div>
             )}
@@ -355,15 +364,25 @@ const RealQRScanner = ({
           {error && (
             <Alert variant="destructive">
               <AlertDescription>
-                {error}
-                <Button
-                  onClick={startCamera}
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 ml-2"
-                >
-                  إعادة المحاولة
-                </Button>
+                <div className="space-y-2">
+                  <p>{error}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={startCamera}
+                      size="sm"
+                      variant="outline"
+                    >
+                      إعادة المحاولة
+                    </Button>
+                    <Button
+                      onClick={() => window.location.reload()}
+                      size="sm"
+                      variant="outline"
+                    >
+                      إعادة تحميل الصفحة
+                    </Button>
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -371,7 +390,7 @@ const RealQRScanner = ({
           {/* أزرار */}
           <div className="flex gap-2">
             <Button onClick={simulateScan} variant="outline" className="flex-1">
-              محاكاة مسح للاختبار
+              اختبار QR
             </Button>
             <Button onClick={() => onOpenChange(false)} variant="outline">
               <X className="w-4 h-4" />
@@ -383,4 +402,4 @@ const RealQRScanner = ({
   );
 };
 
-export default RealQRScanner;
+export default FinalQRScanner;
