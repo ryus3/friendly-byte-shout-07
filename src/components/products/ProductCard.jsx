@@ -4,12 +4,12 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUnifiedData } from '@/utils/unifiedDataSystem';
+import { useInventory } from '@/contexts/InventoryContext';
 import { cn } from '@/lib/utils';
 
 const ProductCard = React.memo(({ product, onSelect }) => {
   const { colors: allColors } = useVariants();
-  const { settings } = useUnifiedData();
+  const { settings } = useInventory();
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '200px 0px',
