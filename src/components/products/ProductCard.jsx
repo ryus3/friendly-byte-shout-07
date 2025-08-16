@@ -4,12 +4,12 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useUnifiedData } from '@/utils/unifiedDataSystem';
 import { cn } from '@/lib/utils';
 
 const ProductCard = React.memo(({ product, onSelect }) => {
   const { colors: allColors } = useVariants();
-  const { settings } = useInventory();
+  const { settings } = useUnifiedData();
   const { ref, inView } = useInView({
     triggerOnce: true,
     rootMargin: '200px 0px',
@@ -28,8 +28,8 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     return product.variants.reduce((sum, v) => {
       // قراءة المخزون المحجوز من جدول inventory مباشرة
       const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
-      const reserved = invObj?.reserved_quantity || v.reserved_quantity || v.reserved || 0;
-      return sum + reserved;
+      const reserved = parseInt(invObj?.reserved_quantity) || parseInt(v.reserved_quantity) || parseInt(v.reserved) || 0;
+      return sum + (isNaN(reserved) ? 0 : reserved);
     }, 0);
   }, [product.variants]);
 
