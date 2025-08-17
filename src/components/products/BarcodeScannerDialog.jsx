@@ -4,9 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, AlertTriangle, Flashlight, FlashlightOff } from 'lucide-react';
+import { Camera, AlertTriangle, Flashlight, FlashlightOff, ShoppingCart } from 'lucide-react';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useCart } from '@/hooks/useCart';
+import { findProductByBarcode } from '@/lib/barcode-utils';
 
-const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
+const BarcodeScannerDialog = ({ 
+  open, 
+  onOpenChange, 
+  onScanSuccess,
+  mode = 'scan', // 'scan', 'cart'
+  title = "قارئ الـ QR Code الذكي"
+}) => {
   const readerRef = useRef(null);
   const videoTrackRef = useRef(null);
   const lastScanTimeRef = useRef(0);
@@ -15,6 +24,10 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [hasFlash, setHasFlash] = useState(false);
   const [scanCount, setScanCount] = useState(0);
+
+  // إضافة تكامل السلة
+  const { products } = useInventory();
+  const { addFromQRScan } = useCart();
 
   useEffect(() => {
     if (open) {
@@ -94,7 +107,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           console.log("🎯 تم قراءة QR Code:", decodedText);
           setScanCount(prev => prev + 1);
           
-          // محاولة تحليل QR Code مع دعم أفضل للمنتجات
+          // معالجة QR Code مع تكامل السلة
           let parsedData = decodedText;
           let productInfo = null;
           
@@ -108,26 +121,55 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
                 barcode: decodedText
               };
               console.log("📦 بيانات المنتج JSON:", productInfo);
+              
+              // إضافة للسلة إذا كان الوضع 'cart'
+              if (mode === 'cart') {
+                const added = addFromQRScan(productInfo, products);
+                if (added) {
+                  toast({
+                    title: "✅ تم إضافة المنتج للسلة",
+                    description: `${productInfo.product_name || 'منتج'} - ${productInfo.color || 'افتراضي'} - ${productInfo.size || 'افتراضي'}`,
+                    variant: "success"
+                  });
+                }
+              } else {
+                toast({
+                  title: "✅ تم قراءة QR Code للمنتج",
+                  description: `${productInfo.product_name || 'منتج'} - ${productInfo.color || 'افتراضي'} - ${productInfo.size || 'افتراضي'}`,
+                  variant: "success"
+                });
+              }
+            }
+          } catch (e) {
+            // QR Code بسيط - البحث بالباركود
+            console.log("📄 QR Code بسيط:", decodedText);
+            
+            // إضافة للسلة إذا كان الوضع 'cart'
+            if (mode === 'cart') {
+              const added = addFromQRScan(decodedText, products);
+              if (added) {
+                // البحث عن المنتج لعرض اسمه
+                const foundProduct = findProductByBarcode(decodedText, products);
+                if (foundProduct) {
+                  toast({
+                    title: "✅ تم إضافة المنتج للسلة",
+                    description: `${foundProduct.product.name} - ${foundProduct.variant.color} - ${foundProduct.variant.size}`,
+                    variant: "success"
+                  });
+                }
+              }
+            } else {
+              // التحقق من نوع QR Code
+              const displayText = decodedText.startsWith('QR_') 
+                ? `كود QR: ${decodedText}` 
+                : `معرف: ${decodedText.substring(0, 20)}${decodedText.length > 20 ? '...' : ''}`;
+                
               toast({
-                title: "✅ تم قراءة QR Code للمنتج",
-                description: `${productInfo.product_name || 'منتج'} - ${productInfo.color || 'افتراضي'} - ${productInfo.size || 'افتراضي'}`,
+                title: "✅ تم قراءة QR Code",
+                description: displayText,
                 variant: "success"
               });
             }
-          } catch (e) {
-            // QR Code بسيط - معرف المنتج مباشرة
-            console.log("📄 QR Code بسيط:", decodedText);
-            
-            // التحقق من نوع QR Code
-            const displayText = decodedText.startsWith('QR_') 
-              ? `كود QR: ${decodedText}` 
-              : `معرف: ${decodedText.substring(0, 20)}${decodedText.length > 20 ? '...' : ''}`;
-              
-            toast({
-              title: "✅ تم قراءة QR Code",
-              description: displayText,
-              variant: "success"
-            });
           }
           
           // صوت نجاح
@@ -212,20 +254,28 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       <DialogContent className="max-w-lg w-[95vw] p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary text-lg">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="3" y="3" width="5" height="5" fill="currentColor"/>
-              <rect x="3" y="16" width="5" height="5" fill="currentColor"/>
-              <rect x="16" y="3" width="5" height="5" fill="currentColor"/>
-              <rect x="9" y="9" width="6" height="6" fill="currentColor"/>
-              <rect x="5" y="5" width="1" height="1" fill="white"/>
-              <rect x="5" y="18" width="1" height="1" fill="white"/>
-              <rect x="18" y="5" width="1" height="1" fill="white"/>
-            </svg>
-            قارئ الـ QR Code الذكي
+            {mode === 'cart' ? (
+              <ShoppingCart className="w-6 h-6" />
+            ) : (
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="3" width="5" height="5" fill="currentColor"/>
+                <rect x="3" y="16" width="5" height="5" fill="currentColor"/>
+                <rect x="16" y="3" width="5" height="5" fill="currentColor"/>
+                <rect x="9" y="9" width="6" height="6" fill="currentColor"/>
+                <rect x="5" y="5" width="1" height="1" fill="white"/>
+                <rect x="5" y="18" width="1" height="1" fill="white"/>
+                <rect x="18" y="5" width="1" height="1" fill="white"/>
+              </svg>
+            )}
+            {title}
           </DialogTitle>
           <DialogDescription className="text-sm">
             📱 <strong>يقرأ:</strong> QR Codes التفاصيلية للمنتجات<br/>
-            🎯 <strong>وجه الكاميرا للكود</strong> للحصول على تفاصيل كاملة
+            {mode === 'cart' ? (
+              <>🛒 <strong>يضيف تلقائياً للسلة</strong> عند المسح</>
+            ) : (
+              <>🎯 <strong>وجه الكاميرا للكود</strong> للحصول على تفاصيل كاملة</>
+            )}
           </DialogDescription>
         </DialogHeader>
         
