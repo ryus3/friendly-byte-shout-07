@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useContext } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Camera, AlertTriangle, Flashlight, FlashlightOff, ShoppingCart, Package, Search } from 'lucide-react';
-import { InventoryContext } from '@/contexts/InventoryContext';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart';
 import { findProductByBarcode } from '@/lib/barcode-utils';
 
@@ -29,7 +29,7 @@ const EnhancedBarcodeScannerDialog = ({
   const [foundProduct, setFoundProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
 
-  const { products } = useContext(InventoryContext) || {};
+  const { allProducts: products } = useInventory();
   const { addFromQRScan } = useCart();
 
   useEffect(() => {
