@@ -2615,6 +2615,39 @@ export type Database = {
         }
         Relationships: []
       }
+      security_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           created_at: string
@@ -3421,6 +3454,10 @@ export type Database = {
       link_telegram_user: {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
+      }
+      log_sensitive_access: {
+        Args: { p_action: string; p_record_id?: string; p_table_name: string }
+        Returns: undefined
       }
       migrate_existing_customers_to_phone_loyalty: {
         Args: Record<PropertyKey, never>
