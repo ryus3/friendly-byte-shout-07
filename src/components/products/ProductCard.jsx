@@ -27,8 +27,9 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     if (!product.variants || product.variants.length === 0) return 0;
     
     return product.variants.reduce((sum, v) => {
-      // استخدام نفس المنطق البسيط المستخدم في صفحة الجرد التفصيلي
-      const reserved = v.reserved_quantity || v.reserved || 0;
+      // الوصول الصحيح للمخزون المحجوز من جدول inventory
+      const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
+      const reserved = invObj?.reserved_quantity || v.reserved_quantity || v.reserved || 0;
       return sum + reserved;
     }, 0);
   }, [product.variants]);
