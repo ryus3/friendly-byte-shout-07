@@ -74,18 +74,20 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
       html5QrCodeRef.current = new Html5QrcodeScanner(
         "qr-reader",
         {
-          fps: 30,
+          fps: 15, // تقليل fps للاستقرار في الهواتف
           qrbox: function(viewfinderWidth, viewfinderHeight) {
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            return Math.floor(minEdge * 0.7);
+            return Math.floor(minEdge * 0.8); // زيادة حجم المسح للهواتف
           },
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.EAN_13
-          ]
+          videoConstraints: {
+            facingMode: { ideal: "environment" },
+            aspectRatio: { ideal: 1 },
+            frameRate: { ideal: 15, max: 30 }
+          },
+          rememberLastUsedCamera: true, // تذكر الكاميرا المستخدمة
+          supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
         },
         false
       );

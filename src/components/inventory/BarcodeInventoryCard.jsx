@@ -100,7 +100,18 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
             html5QrCodeRef.current = html5QrCode;
             await html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 5, qrbox: { width: 250, height: 150 } },
+                { 
+                  fps: 10, 
+                  qrbox: function(viewfinderWidth, viewfinderHeight) {
+                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                    return { width: Math.floor(minEdge * 0.8), height: Math.floor(minEdge * 0.6) };
+                  },
+                  aspectRatio: 1.33,
+                  videoConstraints: {
+                    facingMode: { ideal: "environment" },
+                    frameRate: { ideal: 10, max: 20 }
+                  }
+                },
                 onScanSuccess,
                 () => {}
             );

@@ -78,35 +78,49 @@ const BarcodeScannerDialog = ({
 
       setDiagnosticInfo(`📱 تم العثور على ${cameras.length} كاميرا`);
 
-      // طلب صلاحية الكاميرا
-      setDiagnosticInfo('🔐 طلب صلاحية الكاميرا...');
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" } 
-        });
-        stream.getTracks().forEach(track => track.stop()); // إغلاق الستريم المؤقت
-        setDiagnosticInfo('✅ تم منح صلاحية الكاميرا');
-      } catch (permissionError) {
-        throw new Error('يجب السماح للكاميرا أولاً. اضغط "السماح" عند ظهور الطلب ثم أعد المحاولة.');
-      }
-
       // إنشاء ماسح جديد
       setDiagnosticInfo('⚙️ إعداد ماسح QR...');
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-      // إعدادات مبسطة وموثوقة
+      // إعدادات محسنة للهواتف المحمولة
       const config = {
-        fps: 20, // تقليل fps للاستقرار
-        qrbox: { width: 250, height: 250 }, // حجم ثابت ومناسب
+        fps: 15, // تقليل fps للاستقرار
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+          // حساب QR box ديناميكياً حسب حجم الشاشة
+          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+          const qrboxSize = Math.floor(minEdge * 0.8);
+          return { width: qrboxSize, height: qrboxSize };
+        },
         aspectRatio: 1.0,
-        disableFlip: false
+        disableFlip: false,
+        showTorchButtonIfSupported: true, // زر الفلاش للهواتف
+        videoConstraints: {
+          facingMode: { ideal: "environment" },
+          aspectRatio: { ideal: 1 },
+          frameRate: { ideal: 15, max: 30 }
+        }
       };
 
       setDiagnosticInfo('🚀 بدء المسح...');
 
+      // محاولة استخدام كاميرا خلفية محددة أولاً
+      let cameraConfig = { facingMode: "environment" };
+      
+      // للهواتف المحمولة - استخدام كاميرا محددة
+      if (cameras.length > 1) {
+        const backCamera = cameras.find(camera => 
+          camera.label.toLowerCase().includes('back') ||
+          camera.label.toLowerCase().includes('rear') ||
+          camera.label.toLowerCase().includes('environment')
+        );
+        if (backCamera) {
+          cameraConfig = backCamera.id;
+        }
+      }
+
       await html5QrCode.start(
-        { facingMode: "environment" },
+        cameraConfig,
         config,
         async (decodedText, decodedResult) => {
           await handleScanResult(decodedText);
