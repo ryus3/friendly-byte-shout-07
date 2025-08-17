@@ -22,12 +22,15 @@ const EnhancedBarcodeScannerDialog = ({
   const lastScanTimeRef = useRef(0);
   const [error, setError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [hasFlash, setHasFlash] = useState(false);
   const [scanCount, setScanCount] = useState(0);
   const [manualInput, setManualInput] = useState('');
   const [foundProduct, setFoundProduct] = useState(null);
   const [quantity, setQuantity] = useState(1);
+  const [diagnosticMode, setDiagnosticMode] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState('غير محدد');
 
   const { allProducts: products } = useInventory();
   const { addFromQRScan } = useCart();
@@ -50,73 +53,129 @@ const EnhancedBarcodeScannerDialog = ({
   const startScanner = async () => {
     try {
       setError(null);
+      setIsInitializing(true);
+      setCameraStatus('🔍 جاري فحص الكاميرا...');
       
-      // طلب صلاحية الكاميرا
+      console.log("🚀 بدء تشغيل قارئ QR...");
+
+      // التحقق من دعم MediaDevices
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("المتصفح لا يدعم الكاميرا");
+      }
+
+      // طلب صلاحية الكاميرا بطريقة محسنة
+      let stream;
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        setCameraStatus('📷 طلب صلاحية الكاميرا...');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+        setCameraStatus('✅ تم الحصول على صلاحية الكاميرا');
+        
+        // إيقاف الـ stream الذي استخدمناه للاختبار
+        stream.getTracks().forEach(track => track.stop());
       } catch (permissionError) {
-        setError("🚫 يجب السماح للكاميرا أولاً. اضغط 'السماح' عند ظهور الطلب.");
+        console.error("خطأ في صلاحية الكاميرا:", permissionError);
+        const errorMsg = permissionError?.message || "خطأ غير محدد";
+        setError(`🚫 فشل في الوصول للكاميرا: ${errorMsg}. يرجى السماح للكاميرا في إعدادات المتصفح.`);
+        setCameraStatus('❌ فشل في الوصول للكاميرا');
+        setIsInitializing(false);
         return;
       }
       
       // التحقق من الكاميرات المتاحة
-      const cameras = await Html5Qrcode.getCameras();
-      if (!cameras || cameras.length === 0) {
-        setError("لا توجد كاميرا متاحة");
+      try {
+        setCameraStatus('🔎 فحص الكاميرات المتاحة...');
+        const cameras = await Html5Qrcode.getCameras();
+        console.log("📷 الكاميرات المتاحة:", cameras);
+        
+        if (!cameras || cameras.length === 0) {
+          throw new Error("لا توجد كاميرا متاحة على هذا الجهاز");
+        }
+        setCameraStatus(`📱 تم العثور على ${cameras.length} كاميرا`);
+      } catch (cameraError) {
+        console.error("خطأ في فحص الكاميرات:", cameraError);
+        const errorMsg = cameraError?.message || "خطأ غير محدد";
+        setError(`❌ خطأ في فحص الكاميرات: ${errorMsg}`);
+        setCameraStatus('❌ فشل في فحص الكاميرات');
+        setIsInitializing(false);
         return;
       }
 
-      const html5QrCode = new Html5Qrcode("reader");
-      readerRef.current = html5QrCode;
+      // إنشاء قارئ QR
+      try {
+        setCameraStatus('⚙️ إعداد قارئ QR...');
+        const html5QrCode = new Html5Qrcode("reader");
+        readerRef.current = html5QrCode;
 
-      // إعدادات محسنة للهواتف المحمولة
-      const config = {
-        fps: 30,
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.85);
-          return { width: size, height: size };
-        },
-        aspectRatio: 1.0,
-        disableFlip: false,
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.QR_CODE,
-          Html5QrcodeSupportedFormats.DATA_MATRIX,
-          Html5QrcodeSupportedFormats.CODE_128,
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.UPC_A
-        ],
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      };
+        // إعدادات بسيطة ومتوافقة
+        const config = {
+          fps: 20, // تقليل FPS لتحسين الأداء
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.7); // تقليل الحجم
+            return { width: size, height: size };
+          },
+          aspectRatio: 1.0,
+          disableFlip: false,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.EAN_13
+          ]
+          // إزالة experimentalFeatures لتجنب المشاكل
+        };
 
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        async (decodedText, decodedResult) => {
-          // منع المسح المتكرر
-          const now = Date.now();
-          if (now - lastScanTimeRef.current < 1000) return;
-          lastScanTimeRef.current = now;
-          
-          console.log("🎯 تم قراءة كود:", decodedText);
-          setScanCount(prev => prev + 1);
-          
-          await handleScanResult(decodedText);
-        },
-        (errorMessage) => {
-          // تجاهل أخطاء عدم وجود كود
-        }
-      );
+        setCameraStatus('🚀 بدء المسح...');
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          async (decodedText, decodedResult) => {
+            // منع المسح المتكرر
+            const now = Date.now();
+            if (now - lastScanTimeRef.current < 1000) return;
+            lastScanTimeRef.current = now;
+            
+            console.log("🎯 تم قراءة كود:", decodedText);
+            setScanCount(prev => prev + 1);
+            
+            await handleScanResult(decodedText);
+          },
+          (errorMessage) => {
+            // تجاهل أخطاء عدم وجود كود - هذا طبيعي
+            if (diagnosticMode) {
+              console.log("🔍 لا يوجد كود في الإطار:", errorMessage);
+            }
+          }
+        );
 
-      // إعداد الفلاش
-      await setupFlash();
-      setIsScanning(true);
+        setCameraStatus('✅ قارئ QR يعمل بنجاح');
+        setIsScanning(true);
+        setIsInitializing(false);
+
+        // إعداد الفلاش بشكل منفصل (لا يؤثر على الوظيفة الأساسية)
+        setupFlash().catch(flashError => {
+          console.log("⚠️ الفلاش غير متاح:", flashError);
+        });
+
+      } catch (startError) {
+        console.error("خطأ في بدء قارئ QR:", startError);
+        const errorMsg = startError?.message || "خطأ غير محدد";
+        setError(`❌ فشل في بدء قارئ QR: ${errorMsg}`);
+        setCameraStatus('❌ فشل في بدء القارئ');
+        setIsInitializing(false);
+      }
 
     } catch (err) {
-      console.error("خطأ في تشغيل المسح:", err);
-      setError(`خطأ في تشغيل قارئ الباركود: ${err.message}`);
+      console.error("خطأ عام في تشغيل المسح:", err);
+      const errorMsg = err?.message || "خطأ غير محدد";
+      setError(`❌ خطأ في تشغيل قارئ الباركود: ${errorMsg}`);
+      setCameraStatus('❌ خطأ عام');
+      setIsInitializing(false);
       setIsScanning(false);
     }
   };
@@ -127,11 +186,49 @@ const EnhancedBarcodeScannerDialog = ({
         video: { facingMode: "environment" }
       });
       const track = stream.getVideoTracks()[0];
-      videoTrackRef.current = track;
-      const capabilities = track.getCapabilities();
-      setHasFlash(!!capabilities.torch);
+      if (track) {
+        videoTrackRef.current = track;
+        const capabilities = track.getCapabilities();
+        const hasFlashSupport = !!(capabilities && capabilities.torch);
+        setHasFlash(hasFlashSupport);
+        console.log("💡 فحص الفلاش:", hasFlashSupport ? "متاح" : "غير متاح");
+      }
     } catch (e) {
-      console.log("Flash not supported");
+      console.log("⚠️ الفلاش غير مدعوم:", e?.message || "خطأ غير محدد");
+      setHasFlash(false);
+    }
+  };
+
+  const testCameraAccess = async () => {
+    try {
+      setDiagnosticMode(true);
+      setCameraStatus('🔍 اختبار الوصول للكاميرا...');
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStatus('✅ الكاميرا تعمل بنجاح');
+      
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      const capabilities = track.getCapabilities();
+      
+      console.log("📷 إعدادات الكاميرا:", settings);
+      console.log("🔧 قدرات الكاميرا:", capabilities);
+      
+      toast({
+        title: "✅ اختبار الكاميرا نجح",
+        description: `الدقة: ${settings.width}x${settings.height}`,
+        variant: "success"
+      });
+      
+      stream.getTracks().forEach(track => track.stop());
+    } catch (error) {
+      setCameraStatus('❌ فشل اختبار الكاميرا');
+      const errorMsg = error?.message || "خطأ غير محدد";
+      toast({
+        title: "❌ فشل اختبار الكاميرا",
+        description: errorMsg,
+        variant: "destructive"
+      });
     }
   };
 
@@ -214,7 +311,14 @@ const EnhancedBarcodeScannerDialog = ({
   };
 
   const toggleFlash = async () => {
-    if (!videoTrackRef.current || !hasFlash) return;
+    if (!videoTrackRef.current || !hasFlash) {
+      toast({
+        title: "⚠️ الفلاش غير متاح",
+        description: "هذا الجهاز لا يدعم الفلاش أو الكاميرا غير نشطة",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       await videoTrackRef.current.applyConstraints({
@@ -228,9 +332,10 @@ const EnhancedBarcodeScannerDialog = ({
       });
     } catch (err) {
       console.error("خطأ في الفلاش:", err);
+      const errorMsg = err?.message || "خطأ غير محدد";
       toast({
         title: "❌ خطأ في الفلاش",
-        description: "لا يمكن تشغيل الفلاش على هذا الجهاز",
+        description: `فشل تشغيل الفلاش: ${errorMsg}`,
         variant: "destructive"
       });
     }
@@ -294,20 +399,52 @@ const EnhancedBarcodeScannerDialog = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* أزرار التحكم */}
-          {isScanning && (
-            <div className="flex justify-center gap-3">
-              {hasFlash && (
+          {/* أزرار التحكم والتشخيص */}
+          <div className="flex justify-center gap-2 flex-wrap">
+            {isScanning && hasFlash && (
+              <Button
+                variant={flashEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={toggleFlash}
+                className="flex items-center gap-2"
+              >
+                {flashEnabled ? <FlashlightOff className="w-4 h-4" /> : <Flashlight className="w-4 h-4" />}
+                {flashEnabled ? "إطفاء الفلاش" : "تشغيل الفلاش"}
+              </Button>
+            )}
+            
+            {!isScanning && !isInitializing && (
+              <>
                 <Button
-                  variant={flashEnabled ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={toggleFlash}
+                  onClick={testCameraAccess}
                   className="flex items-center gap-2"
                 >
-                  {flashEnabled ? <FlashlightOff className="w-4 h-4" /> : <Flashlight className="w-4 h-4" />}
-                  {flashEnabled ? "إطفاء الفلاش" : "تشغيل الفلاش"}
+                  <Camera className="w-4 h-4" />
+                  اختبار الكاميرا
                 </Button>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDiagnosticMode(!diagnosticMode)}
+                  className="flex items-center gap-2"
+                >
+                  🔧 {diagnosticMode ? 'إخفاء' : 'عرض'} التشخيص
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* معلومات التشخيص */}
+          {diagnosticMode && (
+            <div className="bg-muted rounded-lg p-3 text-sm space-y-2">
+              <h4 className="font-semibold text-primary">🔧 معلومات التشخيص:</h4>
+              <div><strong>حالة الكاميرا:</strong> {cameraStatus}</div>
+              <div><strong>حالة المسح:</strong> {isScanning ? '🟢 نشط' : '🔴 متوقف'}</div>
+              <div><strong>الفلاش:</strong> {hasFlash ? '✅ متاح' : '❌ غير متاح'}</div>
+              <div><strong>عدد المسح:</strong> {scanCount}</div>
+              <div><strong>المتصفح:</strong> {navigator.userAgent.split(' ')[0]}</div>
             </div>
           )}
 
@@ -386,11 +523,20 @@ const EnhancedBarcodeScannerDialog = ({
             </div>
           )}
           
-          {!isScanning && !error && (
+          {isInitializing && (
             <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="text-blue-600">
                 <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                <span className="font-medium">🔄 جاري تشغيل قارئ الباركود المحسن...</span>
+                <span className="font-medium">🔄 {cameraStatus}</span>
+              </div>
+            </div>
+          )}
+          
+          {!isScanning && !isInitializing && !error && (
+            <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
+              <div className="text-orange-600">
+                <span className="font-medium">📱 اضغط زر "اختبار الكاميرا" للبدء</span>
+                <p className="text-sm mt-2">أو أعد فتح النافذة لبدء المسح تلقائياً</p>
               </div>
             </div>
           )}
