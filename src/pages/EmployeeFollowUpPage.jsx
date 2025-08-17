@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useInventory } from '@/contexts/InventoryContext';
 
 import { supabase } from '@/lib/customSupabaseClient';
@@ -28,7 +28,7 @@ import { toast } from '@/hooks/use-toast';
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
   const { allUsers } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = useUnifiedPermissionsSystem();
   const { 
     orders, 
     loading, 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { Helmet } from 'react-helmet-async';
 import SystemStatusDashboard from './SystemStatusDashboard';
 import ManagerDashboardSection from './ManagerDashboardSection';
@@ -9,7 +9,7 @@ import ManagerDashboardSection from './ManagerDashboardSection';
  * يعرض المحتوى المناسب حسب صلاحيات المستخدم
  */
 const UnifiedDashboard = () => {
-  const { hasPermission, canViewAllData, isAdmin } = usePermissions();
+  const { hasPermission, canViewAllData, isAdmin } = useUnifiedPermissionsSystem();
 
   return (
     <>

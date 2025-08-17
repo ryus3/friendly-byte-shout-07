@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import ProfitStats from './ProfitStats';
 
@@ -18,7 +18,7 @@ const UnifiedProfitStats = ({
   showEmployeeReceivedCard = false,
   employeeReceivedCardProps = {}
 }) => {
-  const { canViewAllProfits, user } = usePermissions();
+  const { canViewAllProfits, user } = useUnifiedPermissionsSystem();
   const { profitData, unifiedNetProfit, loading } = useUnifiedProfits(dateRange);
 
   if (loading) {

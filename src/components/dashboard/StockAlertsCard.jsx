@@ -5,14 +5,14 @@ import { Package, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import StockAlertsWindow from './StockAlertsWindow';
 import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { products, settings, refetchProducts } = useInventory(); // المنتجات المفلترة تلقائياً
-  const { canManageFinances, isAdmin } = usePermissions();
+  const { canManageFinances, isAdmin } = useUnifiedPermissionsSystem();
   const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   

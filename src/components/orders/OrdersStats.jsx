@@ -2,11 +2,11 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package, RotateCcw, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 
 const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globalPeriod }) => {
-  const { canViewAllData, isSalesEmployee } = usePermissions();
+  const { canViewAllData, isSalesEmployee } = useUnifiedPermissionsSystem();
 
   const handlePeriodChange = (stat, period) => {
     const statusMap = {

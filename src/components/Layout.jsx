@@ -24,7 +24,7 @@ import { Helmet } from 'react-helmet-async';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = useUnifiedPermissionsSystem();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();

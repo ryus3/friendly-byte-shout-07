@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import EmployeeList from './EmployeeList';
 
 /**
@@ -8,7 +8,7 @@ import EmployeeList from './EmployeeList';
  * نواب المدير: يرون الموظفين بصلاحيات محدودة
  */
 const UnifiedEmployeeList = ({ users, onEdit, ...props }) => {
-  const { hasPermission, canViewAllData, canManageEmployees } = usePermissions();
+  const { hasPermission, canViewAllData, canManageEmployees } = useUnifiedPermissionsSystem();
   
   // فحص صلاحية إدارة الموظفين
   const canManage = hasPermission('manage_employees') || 
@@ -25,7 +25,7 @@ const UnifiedEmployeeList = ({ users, onEdit, ...props }) => {
 
   // فلترة الموظفين حسب الصلاحيات
   const filteredUsers = canViewAllData ? users : 
-    users.filter(user => user.id === usePermissions().user?.id);
+    users.filter(user => user.id === useUnifiedPermissionsSystem().user?.id);
 
   return (
     <EmployeeList

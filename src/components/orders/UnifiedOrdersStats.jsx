@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import OrdersStats from './OrdersStats';
 
@@ -7,7 +7,7 @@ import OrdersStats from './OrdersStats';
  * مكون موحد لإحصائيات الطلبات - تم الإصلاح لاستخدام النظام الموحد
  */
 const UnifiedOrdersStats = ({ onFilterChange, onCardClick, dateRange }) => {
-  const { canViewAllOrders, filterDataByUser, user } = usePermissions();
+  const { canViewAllOrders, filterDataByUser, user } = useUnifiedPermissionsSystem();
   const { orders, loading } = useInventory(); // البيانات من النظام الموحد
 
   // تصفية الطلبات حسب صلاحيات المستخدم - البيانات مفلترة مسبقاً في SuperProvider

@@ -14,7 +14,7 @@ import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import usePermissions from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useInventory } from '@/contexts/InventoryContext';
 
 
@@ -23,7 +23,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [employees, setEmployees] = useState([]);
   const { user, allUsers } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin } = useUnifiedPermissionsSystem();
   const { orders } = useInventory();
 
   // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة

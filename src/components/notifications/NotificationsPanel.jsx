@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { ar } from 'date-fns/locale';
  * لوحة الإشعارات الأساسية
  */
 const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className = "" }) => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = useUnifiedPermissionsSystem();
   const {
     notifications,
     unreadCount,

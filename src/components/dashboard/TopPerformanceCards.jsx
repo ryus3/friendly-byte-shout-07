@@ -9,12 +9,12 @@ import {
   Package
 } from 'lucide-react';
 import { normalizePhone } from '@/utils/phoneUtils';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { useInventory } from '@/contexts/InventoryContext';
 import { getUserUUID } from '@/utils/userIdUtils';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
-  const { isAdmin, user } = usePermissions();
+  const { isAdmin, user } = useUnifiedPermissionsSystem();
   const { profits } = useInventory();
   const userUUID = getUserUUID(user);
   const isOrderCompletedForAnalytics = (order) => {

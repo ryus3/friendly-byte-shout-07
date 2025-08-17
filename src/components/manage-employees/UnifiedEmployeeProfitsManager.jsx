@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import EmployeeProfitsManager from './EmployeeProfitsManager';
 
 /**
@@ -8,7 +8,7 @@ import EmployeeProfitsManager from './EmployeeProfitsManager';
  * الموظفون: يرون أرباحهم فقط
  */
 const UnifiedEmployeeProfitsManager = (props) => {
-  const { hasPermission, canViewAllData, canManageEmployees } = usePermissions();
+  const { hasPermission, canViewAllData, canManageEmployees } = useUnifiedPermissionsSystem();
   
   // فحص صلاحية إدارة أرباح الموظفين
   const canManageProfits = hasPermission('manage_employee_profits') || 

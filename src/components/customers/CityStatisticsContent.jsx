@@ -17,14 +17,14 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useSuper } from "@/contexts/SuperProvider";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useUnifiedPermissionsSystem } from "@/hooks/useUnifiedPermissionsSystem";
 import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 
 const CityStatisticsContent = () => {
   // استخدام النظام الموحد مع نفس منطق صفحة إدارة العملاء
   const { orders: allOrders, loading: systemLoading } = useSuper();
-  const { user } = usePermissions();
+  const { user } = useUnifiedPermissionsSystem();
   const { user: authUser } = useAuth();
   const [cityStats, setCityStats] = useState([]);
   const [loading, setLoading] = useState(false);

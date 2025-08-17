@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import ProductPermissionsManager from './ProductPermissionsManager';
 
 /**
@@ -8,7 +8,7 @@ import ProductPermissionsManager from './ProductPermissionsManager';
  * نواب المدير: يديرون صلاحيات محدودة
  */
 const UnifiedProductPermissionsManager = ({ user, onClose, onUpdate, ...props }) => {
-  const { hasPermission, canViewAllData, canManageEmployees } = usePermissions();
+  const { hasPermission, canViewAllData, canManageEmployees } = useUnifiedPermissionsSystem();
   
   // فحص صلاحية إدارة صلاحيات المنتجات
   const canManagePermissions = hasPermission('manage_product_permissions') || 

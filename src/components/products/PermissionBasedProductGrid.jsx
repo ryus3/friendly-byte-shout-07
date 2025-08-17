@@ -1,12 +1,12 @@
 import React from 'react';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import ProductGrid from './ProductGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Eye, Package } from 'lucide-react';
 
 const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
-  const { isAdmin } = usePermissions();
+  const { isAdmin } = useUnifiedPermissionsSystem();
   
   // فلترة المنتجات حسب صلاحيات المستخدم باستخدام useFilteredProducts
   const filteredProducts = useFilteredProducts(products || []);
