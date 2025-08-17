@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   calculateFinancialMetrics,
@@ -23,7 +23,7 @@ import {
 export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();
   const { user } = useAuth();
-  const { canViewAllData, hasPermission } = useUnifiedPermissionsSystem();
+  const { canViewAllData, hasPermission } = usePermissions();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

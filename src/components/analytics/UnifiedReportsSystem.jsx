@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import UnifiedAnalyticsSystem from './UnifiedAnalyticsSystem';
 
 /**
@@ -7,7 +7,7 @@ import UnifiedAnalyticsSystem from './UnifiedAnalyticsSystem';
  * يعرض التحليلات والتقارير المناسبة حسب صلاحيات المستخدم
  */
 const UnifiedReportsSystem = () => {
-  const { hasPermission, canViewAllData } = useUnifiedPermissionsSystem();
+  const { hasPermission, canViewAllData } = usePermissions();
 
   return (
     <div className="space-y-6">

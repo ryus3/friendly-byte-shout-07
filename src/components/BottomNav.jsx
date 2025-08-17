@@ -61,7 +61,7 @@ const MenuSheet = ({ children, open, onOpenChange }) => (
 
 const MenuContent = ({ onClose }) => {
   const { user } = useAuth();
-  const { hasPermission } = useUnifiedPermissionsSystem();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
 

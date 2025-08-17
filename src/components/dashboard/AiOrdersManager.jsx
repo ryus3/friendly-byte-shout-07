@@ -32,7 +32,7 @@ import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
@@ -136,7 +136,7 @@ useEffect(() => {
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
-  const { isDepartmentManager } = useUnifiedPermissionsSystem();
+  const { isDepartmentManager } = usePermissions();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
     const candidates = [employeeCode, userUUID, telegramCode]

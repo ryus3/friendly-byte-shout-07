@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import NotificationsPanel from './NotificationsPanel';
 
 /**
@@ -7,7 +7,7 @@ import NotificationsPanel from './NotificationsPanel';
  * يستخدم النظام الموحد للصلاحيات
  */
 const UnifiedNotificationsPanel = (props) => {
-  const { hasPermission, canViewAllData } = useUnifiedPermissionsSystem();
+  const { hasPermission, canViewAllData } = usePermissions();
 
   // تحديد الإشعارات المتاحة حسب الصلاحيات
   const allowedNotificationTypes = React.useMemo(() => {

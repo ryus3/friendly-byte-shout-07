@@ -1,11 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const StockMonitoringSystem = () => {
   const { addNotification } = useNotifications();
-  const { user, hasPermission } = useUnifiedPermissionsSystem();
+  const { user, hasPermission } = usePermissions();
   const notificationHistory = useRef(new Set());
   const lastCheckTime = useRef(Date.now());
 

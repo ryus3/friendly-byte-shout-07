@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
@@ -94,7 +94,7 @@ const Dashboard = () => {
         canManageEmployees,
         hasPermission,
         filterDataByUser
-    } = useUnifiedPermissionsSystem();
+    } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext

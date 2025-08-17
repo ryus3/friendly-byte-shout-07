@@ -40,7 +40,7 @@ const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPa
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
-  const { hasPermission, loading: permissionsLoading } = useUnifiedPermissionsSystem();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   
   // انتظار تحميل البيانات الأساسية أولاً
   if (loading) {

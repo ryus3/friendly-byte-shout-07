@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import CustomerStats from './CustomerStats';
 
@@ -7,7 +7,7 @@ import CustomerStats from './CustomerStats';
  * مكون موحد لإحصائيات العملاء - تم الإصلاح لاستخدام النظام الموحد
  */
 const UnifiedCustomersStats = ({ onStatClick }) => {
-  const { canViewAllCustomers, filterDataByUser, user } = useUnifiedPermissionsSystem();
+  const { canViewAllCustomers, filterDataByUser, user } = usePermissions();
   const { customers, loading } = useInventory(); // البيانات من النظام الموحد
 
   // تصفية العملاء حسب صلاحيات المستخدم - البيانات مفلترة مسبقاً في SuperProvider

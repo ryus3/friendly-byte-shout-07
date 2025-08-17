@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bell, BellOff, User, Users } from 'lucide-react';
@@ -10,7 +10,7 @@ const PermissionBasedNotifications = ({ notifications, children }) => {
     isAdmin,
     isSalesEmployee,
     user 
-  } = useUnifiedPermissionsSystem();
+  } = usePermissions();
 
   // فلترة الإشعارات حسب المستخدم
   const filteredNotifications = useMemo(() => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import SettlementRequestCard from './SettlementRequestCard';
 
 /**
@@ -7,7 +7,7 @@ import SettlementRequestCard from './SettlementRequestCard';
  * يستخدم نظام الصلاحيات الموحد لتحديد المستخدمين المؤهلين
  */
 const UnifiedSettlementRequestCard = ({ pendingProfit, onSettle, ...props }) => {
-  const { hasPermission, isEmployee } = useUnifiedPermissionsSystem();
+  const { hasPermission, isEmployee } = usePermissions();
   
   // الموظفون يرون كارت التسوية إذا كان لديهم أرباح معلقة
   // المديرون لا يرون الكارت (لأنهم لا يحتاجون تسوية)

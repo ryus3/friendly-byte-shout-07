@@ -5,7 +5,7 @@ import { useInventory } from '@/contexts/SuperProvider';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { scrollToTopInstant } from '@/utils/scrollToTop';

@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
