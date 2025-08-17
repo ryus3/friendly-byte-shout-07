@@ -65,32 +65,27 @@ const BarcodeScannerDialog = ({
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-        // إعدادات محسنة لقراءة QR Codes
+      // إعدادات محسنة وموثوقة للماسح
         const config = {
           fps: 30,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
-            // منطقة مربعة مُحسنة للـ QR Code
+            // منطقة مربعة محسنة
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.floor(minEdge * 0.8);
+            const size = Math.floor(minEdge * 0.7);
             return {
               width: size,
-              height: size // مربع للـ QR Code
+              height: size
             };
           },
           aspectRatio: 1.0,
           disableFlip: false,
-          // تركيز على QR Codes بشكل أساسي
+          // تركيز على QR Codes الأساسية فقط
           formatsToSupport: [
             Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.DATA_MATRIX,
-            Html5QrcodeSupportedFormats.AZTEC,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.UPC_A
-          ],
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          }
+            Html5QrcodeSupportedFormats.EAN_13
+          ]
+          // إزالة experimentalFeatures المسببة للمشاكل
         };
 
       await html5QrCode.start(
@@ -187,19 +182,10 @@ const BarcodeScannerDialog = ({
         }
       );
 
-      // التحقق من دعم الفلاش
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }
-        });
-        const track = stream.getVideoTracks()[0];
-        videoTrackRef.current = track;
-        const capabilities = track.getCapabilities();
-        setHasFlash(!!capabilities.torch);
-        // لا نوقف الستريم هنا لأن الكاميرا تعمل
-      } catch (e) {
-        console.log("Flash not supported");
-      }
+      // إعداد الفلاش بطريقة آمنة منفصلة
+      setTimeout(() => {
+        initializeFlashSupport();
+      }, 1000);
 
       setIsScanning(true);
 
@@ -226,13 +212,54 @@ const BarcodeScannerDialog = ({
     setFlashEnabled(false);
   };
 
+  // إعداد دعم الفلاش بطريقة منفصلة وآمنة
+  const initializeFlashSupport = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+      });
+      const track = stream.getVideoTracks()[0];
+      videoTrackRef.current = track;
+      const capabilities = track.getCapabilities();
+      setHasFlash(!!capabilities.torch);
+      
+      // إيقاف الستريم المؤقت
+      track.stop();
+    } catch (e) {
+      console.log("Flash not supported:", e);
+      setHasFlash(false);
+    }
+  };
+
   const toggleFlash = async () => {
-    if (!videoTrackRef.current || !hasFlash) return;
+    if (!hasFlash) {
+      toast({
+        title: "❌ الفلاش غير مدعوم",
+        description: "هذا الجهاز لا يدعم الفلاش",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
-      await videoTrackRef.current.applyConstraints({
+      // الحصول على الستريم الحالي من الماسح
+      const videoElement = document.querySelector('#reader video');
+      if (!videoElement || !videoElement.srcObject) {
+        toast({
+          title: "❌ خطأ في الكاميرا",
+          description: "لا يمكن الوصول للكاميرا",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const stream = videoElement.srcObject;
+      const track = stream.getVideoTracks()[0];
+      
+      await track.applyConstraints({
         advanced: [{ torch: !flashEnabled }]
       });
+      
       setFlashEnabled(!flashEnabled);
       
       toast({
@@ -243,10 +270,16 @@ const BarcodeScannerDialog = ({
       console.error("خطأ في الفلاش:", err);
       toast({
         title: "❌ خطأ في الفلاش",
-        description: "لا يمكن تشغيل الفلاش على هذا الجهاز",
+        description: "فشل في تشغيل الفلاش - جرب إعادة تشغيل الماسح",
         variant: "destructive"
       });
     }
+  };
+
+  // إعادة تشغيل الماسح في حالة الأخطاء
+  const restartScanner = async () => {
+    await stopScanner();
+    setTimeout(() => startScanner(), 500);
   };
 
   return (
@@ -280,9 +313,9 @@ const BarcodeScannerDialog = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* أزرار التحكم */}
+          {/* أزرار التحكم المحسنة */}
           {isScanning && (
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center gap-2 flex-wrap">
               {hasFlash && (
                 <Button
                   variant={flashEnabled ? "default" : "outline"}
@@ -294,6 +327,15 @@ const BarcodeScannerDialog = ({
                   {flashEnabled ? "إطفاء الفلاش" : "تشغيل الفلاش"}
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={restartScanner}
+                className="flex items-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                إعادة تشغيل
+              </Button>
             </div>
           )}
 
@@ -337,7 +379,8 @@ const BarcodeScannerDialog = ({
             <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="text-blue-600">
                 <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                <span className="font-medium">🔄 جاري تشغيل قارئ الباركود المحسن...</span>
+                <span className="font-medium">🔄 جاري تشغيل الماسح المحسن...</span>
+                <p className="text-xs text-blue-500 mt-1">يتم إعداد الكاميرا والفلاش...</p>
               </div>
             </div>
           )}

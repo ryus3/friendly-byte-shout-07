@@ -77,14 +77,15 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
           fps: 30,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            return Math.floor(minEdge * 0.8);
+            return Math.floor(minEdge * 0.7);
           },
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
-          supportedScanTypes: [],
-          experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-          }
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.EAN_13
+          ]
         },
         false
       );

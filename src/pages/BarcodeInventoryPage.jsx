@@ -92,7 +92,19 @@ const BarcodeInventoryPage = () => {
             html5QrCodeRef.current = html5QrCode;
             await html5QrCode.start(
                 { facingMode: "environment" },
-                { fps: 5, qrbox: { width: 250, height: 150 } },
+                {
+                    fps: 30,
+                    qrbox: function(viewfinderWidth, viewfinderHeight) {
+                        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                        return Math.floor(minEdge * 0.7);
+                    },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13
+                    ]
+                },
                 onScanSuccess,
                 (errorMessage) => {}
             );
