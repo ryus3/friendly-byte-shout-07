@@ -86,7 +86,7 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
               )}
             </div>
             
-            {/* معلومات المخزون - المتوفر والمحجوز بشكل مضغوط */}
+            {/* معلومات المخزون - المتوفر بشكل مضغوط */}
             <div className="text-left text-sm">
               <div className="flex items-center gap-3">
                 <span className="text-green-600 font-medium">
