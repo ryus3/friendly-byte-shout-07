@@ -23,16 +23,6 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     }, 0);
   }, [product.variants]);
 
-  const reservedStock = useMemo(() => {
-    if (!product.variants || product.variants.length === 0) return 0;
-    
-    return product.variants.reduce((sum, v) => {
-      // الوصول الصحيح للمخزون المحجوز من جدول inventory
-      const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
-      const reserved = invObj?.reserved_quantity || v.reserved_quantity || v.reserved || 0;
-      return sum + reserved;
-    }, 0);
-  }, [product.variants]);
 
   const uniqueColorsWithHex = useMemo(() => {
     if (!product || !product.variants) return [];
@@ -75,11 +65,6 @@ const ProductCard = React.memo(({ product, onSelect }) => {
         <Badge className={cn("shadow-md", getStockLevelClass())}>
           {totalStock} قطعة
         </Badge>
-        {reservedStock > 0 && (
-          <Badge variant="secondary" className="shadow-md bg-amber-500/80 text-white">
-            محجوز: {reservedStock}
-          </Badge>
-        )}
       </div>
       <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden relative">
         {inView ? (
