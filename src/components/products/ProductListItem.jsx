@@ -13,6 +13,16 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
       return sum + quantity;
     }, 0);
   }, [product.variants]);
+
+  const reservedStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return 0;
+    return product.variants.reduce((sum, v) => {
+      const reserved = v.inventory?.[0]?.reserved_stock || 
+                      v.inventory?.[0]?.reserved_quantity || 
+                      v.reserved || 0;
+      return sum + reserved;
+    }, 0);
+  }, [product.variants]);
   
 
   const availableColorsWithHex = useMemo(() => {
@@ -86,12 +96,17 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
               )}
             </div>
             
-            {/* معلومات المخزون - المتوفر بشكل مضغوط */}
+            {/* معلومات المخزون - المتوفر والمحجوز بشكل مضغوط */}
             <div className="text-left text-sm">
               <div className="flex items-center gap-3">
                 <span className="text-green-600 font-medium">
                   متوفر: <span className="font-bold">{(totalStock || 0).toLocaleString()}</span>
                 </span>
+                {reservedStock > 0 && (
+                  <span className="text-amber-600 font-medium">
+                    محجوز: <span className="font-bold">{reservedStock.toLocaleString()}</span>
+                  </span>
+                )}
               </div>
             </div>
           </div>
