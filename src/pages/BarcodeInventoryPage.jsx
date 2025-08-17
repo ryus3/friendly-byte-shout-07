@@ -10,17 +10,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
+import { useCart } from '@/hooks/useCart';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BarcodeInventoryPage = () => {
     const { allProducts } = useInventory(); // جلب كل المنتجات
     const products = useFilteredProducts(allProducts); // تطبيق الفلترة حسب الصلاحيات
+    const { addFromQRScan } = useCart();
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
     const [lastScanned, setLastScanned] = useState(null);
     const [cameraError, setCameraError] = useState(null);
     const [showResults, setShowResults] = useState(false);
+    const [showCartOptions, setShowCartOptions] = useState(false);
+    const [selectedForCart, setSelectedForCart] = useState([]);
     const html5QrCodeRef = useRef(null);
     const audioRef = useRef(null);
 
@@ -55,13 +59,22 @@ const BarcodeInventoryPage = () => {
                     productName: product.name,
                     variantInfo: `${variant.color} / ${variant.size}`,
                     sku: variant.sku,
+                    barcode: variant.barcode || decodedText,
                     image: variant.image || product.images?.[0],
                     scannedCount: (prev[key]?.scannedCount || 0) + 1,
                     systemCount: variant.quantity,
+                    product,
+                    variant
                 }
             }));
             setLastScanned({ name: product.name, image: variant.image || product.images?.[0] });
             audioRef.current?.play();
+            
+            toast({
+                title: "✅ تم مسح المنتج",
+                description: `${product.name} - ${variant.color} / ${variant.size}`,
+                variant: 'success',
+            });
         } else {
             toast({
                 title: "باركود غير معروف",
@@ -103,6 +116,35 @@ const BarcodeInventoryPage = () => {
 
     const totalScannedCount = useMemo(() => Object.values(scannedItems).reduce((sum, item) => sum + item.scannedCount, 0), [scannedItems]);
 
+    const handleAddSelectedToCart = () => {
+        let addedCount = 0;
+        selectedForCart.forEach(key => {
+            const item = scannedItems[key];
+            if (item && item.product && item.variant) {
+                const success = addFromQRScan(item.barcode, products);
+                if (success) addedCount++;
+            }
+        });
+        
+        if (addedCount > 0) {
+            toast({
+                title: "✅ تمت الإضافة للسلة",
+                description: `تم إضافة ${addedCount} منتج للسلة`,
+                variant: "success"
+            });
+            setSelectedForCart([]);
+            setShowCartOptions(false);
+        }
+    };
+
+    const toggleItemSelection = (key) => {
+        setSelectedForCart(prev => 
+            prev.includes(key) 
+                ? prev.filter(k => k !== key)
+                : [...prev, key]
+        );
+    };
+
     return (
         <>
             <Helmet>
@@ -131,6 +173,14 @@ const BarcodeInventoryPage = () => {
                                 <ListChecks className="w-5 h-5 ml-2" />
                                 إنهاء والمقارنة
                             </Button>
+                            <Button 
+                                onClick={() => setShowCartOptions(!showCartOptions)} 
+                                variant="outline" 
+                                size="lg"
+                                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                            >
+                                🛒 إضافة للسلة
+                            </Button>
                         </div>
                     )}
                 </div>
@@ -157,8 +207,23 @@ const BarcodeInventoryPage = () => {
 
                     <Card className="h-[450px] flex flex-col">
                         <CardHeader>
-                            <CardTitle>المنتجات الممسوحة</CardTitle>
-                            <CardDescription>الإجمالي: {totalScannedCount} قطعة</CardDescription>
+                            <CardTitle className="flex items-center justify-between">
+                                المنتجات الممسوحة
+                                {showCartOptions && (
+                                    <Button 
+                                        onClick={handleAddSelectedToCart}
+                                        disabled={selectedForCart.length === 0}
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700"
+                                    >
+                                        إضافة المحدد ({selectedForCart.length})
+                                    </Button>
+                                )}
+                            </CardTitle>
+                            <CardDescription>
+                                الإجمالي: {totalScannedCount} قطعة
+                                {showCartOptions && " - انقر لتحديد المنتجات للإضافة للسلة"}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="flex-1 overflow-hidden">
                             <ScrollArea className="h-full pr-4">
@@ -172,7 +237,27 @@ const BarcodeInventoryPage = () => {
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0 }}
                                             >
-                                                <div className="flex items-center gap-3 p-2 bg-secondary/50 rounded-md">
+                                                <div 
+                                                    className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${
+                                                        showCartOptions 
+                                                            ? selectedForCart.includes(key)
+                                                                ? 'bg-blue-100 border-2 border-blue-500'
+                                                                : 'bg-secondary/50 hover:bg-blue-50 border-2 border-transparent'
+                                                            : 'bg-secondary/50'
+                                                    }`}
+                                                    onClick={() => showCartOptions && toggleItemSelection(key)}
+                                                >
+                                                    {showCartOptions && (
+                                                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                                            selectedForCart.includes(key) 
+                                                                ? 'bg-blue-500 border-blue-500' 
+                                                                : 'border-gray-300'
+                                                        }`}>
+                                                            {selectedForCart.includes(key) && (
+                                                                <CheckCircle className="w-3 h-3 text-white" />
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     <img src={item.image} alt={item.productName} className="w-12 h-12 rounded-md object-cover"/>
                                                     <div className="flex-1">
                                                         <p className="font-semibold text-sm truncate">{item.productName}</p>

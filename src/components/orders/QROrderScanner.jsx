@@ -69,16 +69,22 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
     setError('');
     setFoundOrder(null);
 
-    // إنشاء ماسح QR
+    // إنشاء ماسح QR محسن للهواتف المحمولة
     setTimeout(() => {
       html5QrCodeRef.current = new Html5QrcodeScanner(
         "qr-reader",
         {
-          fps: 10,
-          qrbox: { width: 300, height: 300 },
+          fps: 30,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            return Math.floor(minEdge * 0.8);
+          },
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
-          supportedScanTypes: []
+          supportedScanTypes: [],
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
         },
         false
       );
@@ -118,17 +124,53 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
     await searchOrderByQR(manualInput.trim());
   };
 
-  // التعامل مع الطلبات الراجعة
+  // التعامل مع الطلبات الراجعة مع تحديث المخزون
   const handleReturnedOrder = async (action) => {
     if (!foundOrder) return;
 
     try {
       if (action === 'return_to_stock') {
+        // تحديث حالة الطلب إلى راجع للمخزن
         await onUpdateOrderStatus(foundOrder.id, 'returned_in_stock');
+        
+        // تحديث المخزون - إعادة كميات المنتجات للمخزن
+        if (foundOrder.order_items && foundOrder.order_items.length > 0) {
+          const updatePromises = foundOrder.order_items.map(async (item) => {
+            if (item.product_variants && item.variant_id) {
+              // تحديث كمية المتغير
+              const { error: updateError } = await supabase
+                .from('product_variants')
+                .update({
+                  quantity: (item.product_variants.quantity || 0) + item.quantity
+                })
+                .eq('id', item.variant_id);
+              
+              if (updateError) {
+                console.error('خطأ في تحديث المخزون:', updateError);
+              }
+            }
+          });
+          
+          await Promise.all(updatePromises);
+          
+          toast({
+            title: "✅ تم الاستلام بنجاح",
+            description: `تم استلام الطلب ${foundOrder.order_number} وإعادة ${foundOrder.order_items.length} منتج للمخزن`,
+            variant: "success"
+          });
+        } else {
+          toast({
+            title: "تم الاستلام",
+            description: "تم استلام الطلب الراجع وتحديث حالته",
+            variant: "success"
+          });
+        }
+      } else if (action === 'partial_return') {
+        // إرجاع جزئي - سيتم تطويره لاحقاً
         toast({
-          title: "تم الاستلام",
-          description: "تم استلام الطلب الراجع وإرجاعه للمخزن",
-          variant: "success"
+          title: "الإرجاع الجزئي",
+          description: "هذه الميزة قيد التطوير",
+          variant: "default"
         });
       }
       
@@ -136,9 +178,10 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
       setManualInput('');
       onClose();
     } catch (error) {
+      console.error('خطأ في معالجة الطلب الراجع:', error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء تحديث حالة الطلب",
+        description: "حدث خطأ أثناء تحديث حالة الطلب أو المخزون",
         variant: "destructive"
       });
     }
@@ -251,7 +294,14 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Package className="h-4 w-4 ml-2" />
-                      استلام في المخزن
+                      استلام في المخزن + تحديث المخزون
+                    </Button>
+                    <Button
+                      onClick={() => handleReturnedOrder('partial_return')}
+                      variant="outline"
+                      className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                    >
+                      إرجاع جزئي (قيد التطوير)
                     </Button>
                   </div>
                 </div>

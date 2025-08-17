@@ -12,7 +12,7 @@ export const useCart = () => {
 
     if (quantity > availableStock) {
       toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة هذا المنتج. الكمية المتاحة للبيع: ${availableStock}`, variant: "destructive" });
-      return;
+      return false;
     }
 
     const cartItem = {
@@ -50,7 +50,59 @@ export const useCart = () => {
     if (showToast) {
       toast({ title: "تمت الإضافة إلى السلة", description: `${product.name} (${variant.size}, ${variant.color})`, variant: 'success' });
     }
+    return true;
   }, []);
+
+  // إضافة منتج من QR Scanner
+  const addFromQRScan = useCallback((scannedData, products) => {
+    try {
+      if (scannedData?.product_id && scannedData?.variant_id) {
+        // QR Code يحتوي على معرف المنتج والمتغير
+        const product = products?.find(p => p.id === scannedData.product_id);
+        if (product) {
+          const variant = product.variants?.find(v => v.id === scannedData.variant_id);
+          if (variant) {
+            return addToCart(product, variant, 1, true);
+          }
+        }
+      } else if (scannedData?.barcode || typeof scannedData === 'string') {
+        // البحث بالباركود
+        const barcode = scannedData?.barcode || scannedData;
+        for (const product of products || []) {
+          // البحث في باركود المنتج الرئيسي
+          if (product.barcode === barcode) {
+            // استخدام أول متغير متاح
+            const firstVariant = product.variants?.[0];
+            if (firstVariant) {
+              return addToCart(product, firstVariant, 1, true);
+            }
+          }
+          // البحث في باركود المتغيرات
+          if (product.variants) {
+            for (const variant of product.variants) {
+              if (variant.barcode === barcode) {
+                return addToCart(product, variant, 1, true);
+              }
+            }
+          }
+        }
+      }
+      toast({
+        title: "المنتج غير موجود",
+        description: "لم يتم العثور على المنتج المقروء",
+        variant: "destructive"
+      });
+      return false;
+    } catch (error) {
+      console.error('خطأ في إضافة منتج من QR:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء إضافة المنتج",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [addToCart]);
 
   const removeFromCart = useCallback((itemId) => {
     setCart(prev => prev.filter(item => item.id !== itemId));
@@ -81,6 +133,7 @@ export const useCart = () => {
     cart,
     setCart,
     addToCart,
+    addFromQRScan,
     removeFromCart,
     updateCartItemQuantity,
     clearCart,
