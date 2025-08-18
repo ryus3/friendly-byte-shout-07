@@ -100,18 +100,52 @@ export const AlWaseetProvider = ({ children }) => {
 
       const partnerData = { username };
 
-      const { error: dbError } = await supabase
-        .from('delivery_partner_tokens')
-        .upsert({
-          user_id: user.id,
-          partner_name: partner,
-          token: tokenData.token,
-          expires_at: expires_at.toISOString(),
-          partner_data: partnerData,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id, partner_name' });
+      // حفظ التوكن في قاعدة البيانات مع معالجة تضارب المفاتيح
+      let dbError = null;
+      
+      try {
+        const { error } = await supabase
+          .from('delivery_partner_tokens')
+          .upsert({
+            user_id: user.id,
+            partner_name: partner,
+            token: tokenData.token,
+            expires_at: expires_at.toISOString(),
+            partner_data: partnerData,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id, partner_name' });
+        dbError = error;
+      } catch (error) {
+        dbError = error;
+      }
 
-      if (dbError) throw dbError;
+      // في حالة وجود خطأ تضارب، احذف السجل القديم وأدرج الجديد
+      if (dbError && dbError.code === '23505') {
+        await supabase
+          .from('delivery_partner_tokens')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('partner_name', partner);
+          
+        const { error: insertError } = await supabase
+          .from('delivery_partner_tokens')
+          .insert({
+            user_id: user.id,
+            partner_name: partner,
+            token: tokenData.token,
+            expires_at: expires_at.toISOString(),
+            partner_data: partnerData,
+            is_active: true
+          });
+          
+        if (insertError) {
+          console.error('خطأ في إدراج التوكن الجديد:', insertError);
+          throw new Error('فشل في حفظ بيانات تسجيل الدخول');
+        }
+      } else if (dbError) {
+        console.error('خطأ في حفظ التوكن:', dbError);
+        throw new Error('فشل في حفظ بيانات تسجيل الدخول: ' + dbError.message);
+      }
 
       setToken(tokenData.token);
       setWaseetUser(partnerData);
