@@ -8,7 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart';
 import { findProductByBarcode } from '@/lib/barcode-utils';
 
-const BarcodeScannerDialog = ({ 
+const OptimizedQRScanner = ({ 
   open, 
   onOpenChange, 
   onScanSuccess,
@@ -408,4 +408,4 @@ const BarcodeScannerDialog = ({
   );
 };
 
-export default BarcodeScannerDialog;
+export default OptimizedQRScanner;
