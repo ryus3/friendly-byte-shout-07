@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ServerCrash, Wifi, Map, Truck } from 'lucide-react';
 
-const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick }) => {
+const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, waseetUser }) => {
   const isLocal = activePartner === 'local';
   const isChoiceMode = mode === 'choice';
 
@@ -23,8 +23,18 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick }) 
   };
 
   const Icon = isLocal ? Map : (isLoggedIn ? Wifi : ServerCrash);
-  const title = isLocal ? "الوضع المحلي مفعل" : (isLoggedIn ? "متصل بشركة التوصيل" : "غير متصل");
-  const description = isLocal ? "سيتم إنشاء الطلبات داخل النظام فقط." : (isLoggedIn ? `الطلبات جاهزة للإرسال إلى شركة التوصيل.` : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.");
+  
+  const getDeliveryCompanyName = () => {
+    if (activePartner === 'alwaseet') return 'الوسيط';
+    return 'شركة التوصيل';
+  };
+  
+  const title = isLocal ? "الوضع المحلي مفعل" : (isLoggedIn ? `متصل بشركة ${getDeliveryCompanyName()}` : "غير متصل");
+  const description = isLocal 
+    ? "سيتم إنشاء الطلبات داخل النظام فقط." 
+    : isLoggedIn 
+      ? `الطلبات جاهزة للإرسال إلى شركة ${getDeliveryCompanyName()}${waseetUser?.username ? ` (${waseetUser.username})` : ''}.`
+      : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.";
   const buttonText = isLocal ? "تغيير الوضع" : (isLoggedIn ? "إدارة" : "تسجيل الدخول");
 
   return (

@@ -150,7 +150,11 @@ export const AlWaseetProvider = ({ children }) => {
       setToken(tokenData.token);
       setWaseetUser(partnerData);
       setIsLoggedIn(true);
-      setActivePartner(partner);
+      setActivePartner(partner); // تحديث الشريك النشط فوراً
+      
+      // حفظ الشريك النشط في localStorage للاستمرارية
+      localStorage.setItem('activeDeliveryPartner', partner);
+      
       toast({ title: "نجاح", description: `تم تسجيل الدخول بنجاح في ${deliveryPartners[partner].name}.` });
       return { success: true };
     } catch (error) {

@@ -220,31 +220,39 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       console.log('🔍 البحث عن العميل برقم:', formData.phone);
       
-      // استخدام دالة normalizePhone من phoneUtils للحصول على تنسيق موحد
-      const normalizedPhone = normalizePhone(formData.phone);
-      console.log('📱 الرقم بعد التطبيع:', normalizedPhone);
+      // محاولة البحث بعدة أنماط لأرقام الهواتف للتأكد من العثور على العميل
+      const searchPhones = [
+        formData.phone,  // الرقم كما هو مدخل
+        normalizePhone(formData.phone), // الرقم بعد التطبيع
+        formData.phone.startsWith('0') ? formData.phone.slice(1) : formData.phone // بدون 0 في البداية
+      ].filter(Boolean).filter((phone, index, arr) => arr.indexOf(phone) === index); // إزالة التكرارات
       
-      if (!normalizedPhone) {
-        console.log('❌ رقم هاتف غير صالح بعد التطبيع');
-        setCustomerData(null);
-        setLoyaltyDiscount(0);
-        setDiscount(0);
-        return;
-      }
+      console.log('🔍 أنماط البحث للرقم:', searchPhones);
+      
+      let loyaltyData = null;
+      let loyaltyError = null;
       
       try {
-        // البحث في جدول customer_phone_loyalty المطور للحصول على البيانات الصحيحة
-        const { data: loyaltyData, error: loyaltyError } = await supabase
-          .from('customer_phone_loyalty')
-          .select(`
-            *,
-            loyalty_tiers (
-              name,
-              discount_percentage
-            )
-          `)
-          .eq('phone_number', normalizedPhone)
-          .maybeSingle();
+        // البحث في جدول customer_phone_loyalty بجميع الأنماط
+        for (const searchPhone of searchPhones) {
+          const { data, error } = await supabase
+            .from('customer_phone_loyalty')
+            .select(`
+              *,
+              loyalty_tiers (
+                name,
+                discount_percentage
+              )
+            `)
+            .eq('phone_number', searchPhone)
+            .maybeSingle();
+            
+          if (data && !error) {
+            loyaltyData = data;
+            console.log('✅ تم العثور على بيانات الولاء بالرقم:', searchPhone, loyaltyData);
+            break;
+          }
+        }
           
         if (loyaltyError) {
           console.error('خطأ في البحث في جدول الولاء:', loyaltyError);
@@ -274,23 +282,34 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         } else {
           console.log('❌ لم يتم العثور على بيانات الولاء');
           
-          // البحث في جدول العملاء العادي كبديل
-          const { data: customerData, error: customerError } = await supabase
-            .from('customers')
-            .select(`
-              *,
-              customer_loyalty (
-                total_points,
-                total_spent,
-                current_tier_id,
-                loyalty_tiers (
-                  name,
-                  discount_percentage
+          // البحث في جدول العملاء العادي كبديل بنفس أنماط البحث
+          let customerData = null;
+          let customerError = null;
+          
+          for (const searchPhone of searchPhones) {
+            const { data, error } = await supabase
+              .from('customers')
+              .select(`
+                *,
+                customer_loyalty (
+                  total_points,
+                  total_spent,
+                  current_tier_id,
+                  loyalty_tiers (
+                    name,
+                    discount_percentage
+                  )
                 )
-              )
-            `)
-            .eq('phone', normalizedPhone)
-            .maybeSingle();
+              `)
+              .eq('phone', searchPhone)
+              .maybeSingle();
+              
+            if (data && !error) {
+              customerData = data;
+              console.log('✅ تم العثور على العميل في الجدول العادي بالرقم:', searchPhone, customerData);
+              break;
+            }
+          }
             
           if (customerData && !customerError) {
             console.log('✅ تم العثور على العميل في الجدول العادي:', customerData);
@@ -870,6 +889,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           mode={orderCreationMode}
           activePartner={activePartner}
           isLoggedIn={isWaseetLoggedIn}
+          waseetUser={waseetUser}
           onManageClick={() => setDeliveryPartnerDialogOpen(true)}
         />
 
