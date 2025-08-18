@@ -12,18 +12,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
-    const { login, loading, deliveryPartners, activePartner, setActivePartner, isLoggedIn, logout: waseetLogout, waseetUser } = useAlWaseet();
+    const { login, loading, deliveryPartners, activePartner, setActivePartner, isLoggedIn, logout: waseetLogout, waseetUser, loggedInPartners, switchPartner } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
-    const availablePartners = orderCreationMode === 'local_only'
-        ? { local: deliveryPartners.local }
-        : orderCreationMode === 'partner_only'
-        ? Object.fromEntries(Object.entries(deliveryPartners).filter(([key]) => key !== 'local'))
-        : deliveryPartners;
+    // الحصول على الشركاء المتاحة (المسجل دخول إليها + جميع الشركاء)
+    const getAvailablePartners = () => {
+        const basePartners = orderCreationMode === 'local_only'
+            ? { local: deliveryPartners.local }
+            : orderCreationMode === 'partner_only'
+            ? Object.fromEntries(Object.entries(deliveryPartners).filter(([key]) => key !== 'local'))
+            : deliveryPartners;
+
+        // إضافة خيار "إضافة شركة جديدة" للشركاء غير المسجل دخول إليها
+        const availableOptions = { ...basePartners };
+        
+        Object.keys(basePartners).forEach(key => {
+            if (key !== 'local' && !loggedInPartners[key]) {
+                availableOptions[`new_${key}`] = { 
+                    name: `${basePartners[key].name} (إضافة جديد)`,
+                    isNew: true,
+                    originalKey: key
+                };
+                delete availableOptions[key];
+            }
+        });
+
+        return availableOptions;
+    };
+
+    const availablePartners = getAvailablePartners();
 
     const [selectedPartner, setSelectedPartner] = useState(activePartner || Object.keys(availablePartners)[0]);
 
@@ -36,13 +57,26 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         if (selectedPartner === 'local') {
-            setActivePartner('local');
-            toast({ title: "تم تفعيل الوضع المحلي", description: "سيتم إنشاء الطلبات داخل النظام.", variant: 'success' });
+            switchPartner('local');
             onOpenChange(false);
             return;
         }
-        const result = await login(username, password, selectedPartner);
+
+        // إذا كان الشريك مسجل دخول بالفعل، قم بالتبديل إليه
+        if (loggedInPartners[selectedPartner]) {
+            switchPartner(selectedPartner);
+            onOpenChange(false);
+            return;
+        }
+
+        // إذا كان خيار "إضافة جديد"، استخدم المفتاح الأصلي
+        const actualPartner = selectedPartner.startsWith('new_') 
+            ? selectedPartner.replace('new_', '') 
+            : selectedPartner;
+
+        const result = await login(username, password, actualPartner);
         if (result.success) {
             onOpenChange(false);
             setUsername('');
@@ -55,6 +89,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     }
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
+
+    const shouldDisableSubmit = () => {
+        if (selectedPartner === 'local') return false;
+        if (loggedInPartners[selectedPartner]) return false; // متصل مسبقاً
+        if (selectedPartner.startsWith('new_')) return !username || !password;
+        return !username || !password;
+    };
+
+    const getSubmitButtonText = () => {
+        if (selectedPartner === 'local') return 'تفعيل الوضع المحلي';
+        if (loggedInPartners[selectedPartner]) return 'تبديل إلى هذه الشركة';
+        if (selectedPartner.startsWith('new_')) return 'تسجيل دخول جديد';
+        if (isCurrentPartnerSelected && isLoggedIn) return 'إعادة تسجيل الدخول';
+        return 'تسجيل الدخول';
+    };
 
     const renderPartnerContent = () => {
         if (selectedPartner === 'local') {
@@ -70,11 +119,31 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
+        // إذا كان الشريك مسجل دخول بالفعل
+        if (loggedInPartners[selectedPartner]) {
+            const partnerData = loggedInPartners[selectedPartner];
+            const partnerName = deliveryPartners[selectedPartner]?.name || 'شركة التوصيل';
+            
+            return (
+                <Card className="bg-green-500/10 border-green-500/30 text-foreground">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل مسبقاً</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{partnerName}</span>.</p>
+                        <p className="text-xs text-muted-foreground">اسم المستخدم: {partnerData.userData?.username}</p>
+                        <div className="text-xs text-green-600">✓ سيتم التبديل إلى هذه الشركة مباشرة</div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        // إذا كان الشريك النشط وهو مسجل دخول
         if (isCurrentPartnerSelected && isLoggedIn) {
             return (
                 <Card className="bg-green-500/10 border-green-500/30 text-foreground">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل حالياً</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner].name}</span>.</p>
@@ -88,12 +157,26 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
+        // نموذج تسجيل الدخول للشركاء الجدد
+        const isNewPartner = selectedPartner.startsWith('new_');
+        const partnerName = isNewPartner 
+            ? availablePartners[selectedPartner]?.name 
+            : deliveryPartners[selectedPartner]?.name;
+
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive"><XCircle className="w-5 h-5"/> غير متصل</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-destructive">
+                        <XCircle className="w-5 h-5"/> 
+                        {isNewPartner ? 'تسجيل دخول جديد' : 'غير متصل'}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {isNewPartner && (
+                        <div className="text-sm text-muted-foreground mb-3">
+                            سجل دخول إلى <span className="font-bold text-foreground">{partnerName?.replace(' (إضافة جديد)', '')}</span>
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <Label htmlFor="waseet-username">اسم المستخدم</Label>
                         <Input id="waseet-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="username" />
@@ -145,9 +228,9 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                     </AnimatePresence>
 
                     <DialogFooter>
-                        <Button type="submit" disabled={loading || (selectedPartner !== 'local' && !username && !isLoggedIn) || (selectedPartner !== 'local' && !password && !isLoggedIn)} className="w-full">
+                        <Button type="submit" disabled={loading || shouldDisableSubmit()} className="w-full">
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {selectedPartner === 'local' ? 'تفعيل الوضع المحلي' : (isCurrentPartnerSelected && isLoggedIn ? 'إعادة تسجيل الدخول' : 'تسجيل الدخول')}
+                            {getSubmitButtonText()}
                         </Button>
                     </DialogFooter>
                 </form>

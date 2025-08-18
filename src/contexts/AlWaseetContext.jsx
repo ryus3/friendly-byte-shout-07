@@ -18,6 +18,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 3600000); // Default to 1 hour
+  const [loggedInPartners, setLoggedInPartners] = useLocalStorage('logged_in_partners', {});
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -30,35 +31,70 @@ export const AlWaseetProvider = ({ children }) => {
 
   const fetchToken = useCallback(async () => {
     if (user) {
-      const { data, error } = await supabase
+      // جلب جميع التوكنات للمستخدم
+      const { data: allTokens, error } = await supabase
         .from('delivery_partner_tokens')
-        .select('token, expires_at, partner_data')
-        .eq('user_id', user.id)
-        .eq('partner_name', 'alwaseet')
-        .maybeSingle();
+        .select('partner_name, token, expires_at, partner_data')
+        .eq('user_id', user.id);
 
       if (error) {
-        console.error('Error fetching Al-Waseet token:', error.message);
+        console.error('Error fetching delivery tokens:', error.message);
         setToken(null);
         setWaseetUser(null);
         setIsLoggedIn(false);
+        setLoggedInPartners({});
         return;
       }
 
-      if (data && new Date(data.expires_at) > new Date()) {
-        setToken(data.token);
-        setWaseetUser(data.partner_data);
-        setIsLoggedIn(true);
-      } else {
-        if (data) {
-            await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
+      const validPartners = {};
+      let currentPartnerValid = false;
+
+      // فحص صحة جميع التوكنات
+      for (const tokenData of allTokens || []) {
+        if (new Date(tokenData.expires_at) > new Date()) {
+          validPartners[tokenData.partner_name] = {
+            token: tokenData.token,
+            userData: tokenData.partner_data,
+            expiresAt: tokenData.expires_at
+          };
+          
+          // إذا كان هذا هو الشريك النشط
+          if (tokenData.partner_name === activePartner) {
+            setToken(tokenData.token);
+            setWaseetUser(tokenData.partner_data);
+            setIsLoggedIn(true);
+            currentPartnerValid = true;
+          }
+        } else {
+          // حذف التوكنات المنتهية الصلاحية
+          await supabase.from('delivery_partner_tokens')
+            .delete()
+            .match({ user_id: user.id, partner_name: tokenData.partner_name });
         }
+      }
+
+      setLoggedInPartners(validPartners);
+
+      // إذا لم يكن الشريك النشط صالحاً
+      if (!currentPartnerValid) {
         setToken(null);
         setWaseetUser(null);
         setIsLoggedIn(false);
+        
+        // تحديد أول شريك صالح كشريك نشط
+        const firstValidPartner = Object.keys(validPartners)[0];
+        if (firstValidPartner) {
+          setActivePartner(firstValidPartner);
+          const partnerData = validPartners[firstValidPartner];
+          setToken(partnerData.token);
+          setWaseetUser(partnerData.userData);
+          setIsLoggedIn(true);
+        } else if (activePartner !== 'local') {
+          setActivePartner('local');
+        }
       }
     }
-  }, [user]);
+  }, [user, activePartner, setActivePartner, setLoggedInPartners]);
 
   useEffect(() => {
     fetchToken();
@@ -290,6 +326,43 @@ export const AlWaseetProvider = ({ children }) => {
     return () => clearInterval(intervalId);
   }, [syncInterval, isLoggedIn, activePartner]);
 
+  // دالة للتبديل السريع بين الشركاء
+  const switchPartner = useCallback((partnerKey) => {
+    if (partnerKey === 'local') {
+      setActivePartner('local');
+      setToken(null);
+      setWaseetUser(null);
+      setIsLoggedIn(false);
+      toast({ title: "تم التحديث", description: "تم تفعيل الوضع المحلي." });
+      return;
+    }
+
+    const partnerData = loggedInPartners[partnerKey];
+    if (partnerData) {
+      setActivePartner(partnerKey);
+      setToken(partnerData.token);
+      setWaseetUser(partnerData.userData);
+      setIsLoggedIn(true);
+      toast({ 
+        title: "تم التحديث", 
+        description: `تم التبديل إلى ${deliveryPartners[partnerKey]?.name || 'شركة التوصيل'}.` 
+      });
+    }
+  }, [loggedInPartners, deliveryPartners, setActivePartner]);
+
+  // الحصول على الشركاء المتاحة (المسجل دخول إليها + المحلي)
+  const getAvailablePartners = useCallback(() => {
+    const available = { local: deliveryPartners.local };
+    
+    Object.keys(loggedInPartners).forEach(partnerKey => {
+      if (deliveryPartners[partnerKey]) {
+        available[partnerKey] = deliveryPartners[partnerKey];
+      }
+    });
+
+    return available;
+  }, [loggedInPartners, deliveryPartners]);
+
   const value = {
     isLoggedIn,
     token,
@@ -299,6 +372,9 @@ export const AlWaseetProvider = ({ children }) => {
     logout,
     activePartner,
     setActivePartner,
+    switchPartner,
+    loggedInPartners,
+    getAvailablePartners,
     deliveryPartners,
     syncOrders,
     syncInterval,
