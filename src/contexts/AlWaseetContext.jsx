@@ -95,8 +95,8 @@ export const AlWaseetProvider = ({ children }) => {
 
       const tokenData = data.data;
       const expires_at = new Date();
-      const expiresInSeconds = tokenData.expires_in || 1209600; 
-      expires_at.setSeconds(expires_at.getSeconds() + expiresInSeconds);
+      // Token validity: 7 days (604800 seconds) as requested
+      expires_at.setSeconds(expires_at.getSeconds() + 604800);
 
       const partnerData = { username };
 
