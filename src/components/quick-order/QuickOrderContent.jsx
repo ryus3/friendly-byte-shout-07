@@ -22,7 +22,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
-  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
+  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders, refreshDataInstantly } = useInventory();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -848,8 +848,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         resetForm();
         
         // تحديث فوري للبيانات
-        if (refreshData) {
-          refreshData();
+        if (refreshDataInstantly) {
+          refreshDataInstantly();
         }
         
         // إشارة لإعادة تعيين navigation guard
