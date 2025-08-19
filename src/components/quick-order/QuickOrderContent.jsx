@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, startTransition } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
@@ -425,37 +425,35 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // Clear cart first to prevent cascade updates
       if (clearCart) clearCart();
       
-      // Use startTransition for smooth updates
-      startTransition(() => {
-        // Set all form data at once to prevent multiple re-renders
-        setFormData({
-          name: customerName, 
-          phone: '', 
-          second_phone: '', 
-          city_id: '', 
-          region_id: '', 
-          city: '', 
-          region: '', 
-          address: '', 
-          notes: '', 
-          details: '', 
-          quantity: 1, 
-          price: 0, 
-          size: activePartner === 'local' ? 'normal' : '', 
-          type: 'new', 
-          promocode: '',
-          defaultCustomerName: customerName
-        });
-        
-        // Reset all other state synchronously in a batch
-        setDiscount(0);
-        setLoyaltyDiscount(0);
-        setApplyLoyaltyDiscount(false);
-        setApplyLoyaltyDelivery(false);
-        setCustomerData(null);
-        setErrors({});
-        setNameTouched(false);
+      // Batch all state updates together for smooth performance
+      // Set all form data at once to prevent multiple re-renders
+      setFormData({
+        name: customerName, 
+        phone: '', 
+        second_phone: '', 
+        city_id: '', 
+        region_id: '', 
+        city: '', 
+        region: '', 
+        address: '', 
+        notes: '', 
+        details: '', 
+        quantity: 1, 
+        price: 0, 
+        size: activePartner === 'local' ? 'normal' : '', 
+        type: 'new', 
+        promocode: '',
+        defaultCustomerName: customerName
       });
+      
+      // Reset all other state synchronously in a batch
+      setDiscount(0);
+      setLoyaltyDiscount(0);
+      setApplyLoyaltyDiscount(false);
+      setApplyLoyaltyDelivery(false);
+      setCustomerData(null);
+      setErrors({});
+      setNameTouched(false);
       
       console.log('✅ مسح النموذج - تم بنجاح');
     } catch (error) {
