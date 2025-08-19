@@ -15,8 +15,16 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error details
+    // Log the error details with more context
     console.error('🚨 ErrorBoundary caught an error:', error, errorInfo);
+    console.error('🔍 Component stack:', errorInfo.componentStack);
+    console.error('🔍 Error stack:', error.stack);
+    
+    // Check for memory-related errors
+    if (error.message?.includes('memory') || error.message?.includes('Maximum call stack')) {
+      console.error('💾 Memory-related error detected');
+    }
+    
     this.setState({
       error,
       errorInfo

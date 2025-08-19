@@ -1,9 +1,10 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, memo } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import { navigationGuard, performanceMonitor } from '@/utils/navigationGuard';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
@@ -90,9 +91,42 @@ function ScrollToTop() {
   return null;
 }
 
+// Memoized wrapper component for routes to prevent memory leaks
+const RouteWrapper = memo(({ children, permission }) => {
+  return (
+    <ErrorBoundary>
+      <ProtectedRoute permission={permission}>
+        {children}
+      </ProtectedRoute>
+    </ErrorBoundary>
+  );
+});
+
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  const location = useLocation();
+
+  // Navigation guard and performance monitoring
+  useEffect(() => {
+    if (!navigationGuard.canNavigate()) {
+      console.warn('🚧 Navigation blocked - app stabilizing');
+      return;
+    }
+    
+    navigationGuard.startNavigation();
+    performanceMonitor.memory();
+    
+    // End navigation after component renders
+    const timer = setTimeout(() => {
+      navigationGuard.endNavigation();
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+      navigationGuard.endNavigation();
+    };
+  }, [location.pathname]);
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;

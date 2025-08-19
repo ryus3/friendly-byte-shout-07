@@ -417,41 +417,42 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const resetForm = useCallback(() => {
     console.log('🔄 resetForm called - الاسم الافتراضي:', defaultCustomerName, 'المستخدم:', user?.default_customer_name);
     
-    // إنشاء نموذج جديد مع الاحتفاظ بالاسم الافتراضي
-    const resetFormData = {
-      name: defaultCustomerName || user?.default_customer_name || '', 
-      phone: '', 
-      second_phone: '', 
-      city_id: '', 
-      region_id: '', 
-      city: '', 
-      region: '', 
-      address: '', 
-      notes: '', 
-      details: '', 
-      quantity: 1, 
-      price: 0, 
-      size: activePartner === 'local' ? 'normal' : '', 
-      type: 'new', 
-      promocode: '',
-      defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
-    };
-    
-    console.log('🔄 مسح النموذج - إعادة تعيين للاسم الافتراضي:', resetFormData.name);
+    const customerName = defaultCustomerName || user?.default_customer_name || '';
     
     try {
-      // مسح البيانات بشكل فوري ومنظم
-      clearCart();
-      setDiscount(0);
-      setLoyaltyDiscount(0);
-      setApplyLoyaltyDiscount(false);
-      setApplyLoyaltyDelivery(false);
-      setCustomerData(null);
-      setErrors({});
+      // Clear cart first to prevent cascade updates
+      if (clearCart) clearCart();
       
-      // إعادة تعيين النموذج مع الاسم الافتراضي
-      setFormData(resetFormData);
-      setNameTouched(false);
+      // Set form data with minimal dependencies
+      setFormData({
+        name: customerName, 
+        phone: '', 
+        second_phone: '', 
+        city_id: '', 
+        region_id: '', 
+        city: '', 
+        region: '', 
+        address: '', 
+        notes: '', 
+        details: '', 
+        quantity: 1, 
+        price: 0, 
+        size: activePartner === 'local' ? 'normal' : '', 
+        type: 'new', 
+        promocode: '',
+        defaultCustomerName: customerName
+      });
+      
+      // Reset other state asynchronously to prevent memory cascade
+      setTimeout(() => {
+        setDiscount(0);
+        setLoyaltyDiscount(0);
+        setApplyLoyaltyDiscount(false);
+        setApplyLoyaltyDelivery(false);
+        setCustomerData(null);
+        setErrors({});
+        setNameTouched(false);
+      }, 0);
       
       console.log('✅ مسح النموذج - تم بنجاح');
     } catch (error) {

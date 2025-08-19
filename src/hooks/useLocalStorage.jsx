@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 function useLocalStorage(key, initialValue) {
+  const writeTimeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
+  
   // Get value from localStorage or use initial value
   const [storedValue, setStoredValue] = useState(() => {
     try {
@@ -12,21 +15,49 @@ function useLocalStorage(key, initialValue) {
     }
   });
 
+  // Debounced localStorage write to prevent memory leaks
+  const debouncedWrite = useCallback((value) => {
+    if (writeTimeoutRef.current) {
+      clearTimeout(writeTimeoutRef.current);
+    }
+    
+    writeTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+      
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error(`❌ Error setting localStorage key "${key}":`, error);
+      }
+    }, 100);
+  }, [key]);
+
   // Update localStorage when state changes
-  const setValue = (value) => {
+  const setValue = useCallback((value) => {
+    if (!isMountedRef.current) return;
+    
     try {
       // Allow value to be a function so we have the same API as useState
       const valueToStore = value instanceof Function ? value(storedValue) : value;
-      console.log(`📝 LocalStorage: Setting key "${key}" with value:`, valueToStore);
       setStoredValue(valueToStore);
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      debouncedWrite(valueToStore);
     } catch (error) {
       console.error(`❌ Error setting localStorage key "${key}":`, error);
       // Fallback: just update state without localStorage
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
     }
-  };
+  }, [key, storedValue, debouncedWrite]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (writeTimeoutRef.current) {
+        clearTimeout(writeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return [storedValue, setValue];
 }
