@@ -39,7 +39,7 @@ const OrderDetailsForm = ({
     settingsDeliveryFee: settings?.deliveryFee
   });
   
-  const finalTotal = total - discount + deliveryFee;
+  const finalTotal = total + deliveryFee;
 
   // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {

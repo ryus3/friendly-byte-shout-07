@@ -47,8 +47,10 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
                   <div className="flex items-center gap-2 flex-wrap">
                     <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
                     {waseetUser?.username && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-white/20 backdrop-blur-sm border border-white/30 text-white/90 text-xs font-medium">
-                        {waseetUser.username.toUpperCase()}
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-400/20 to-blue-500/20 backdrop-blur-sm border border-sky-300/40 text-white font-semibold text-sm shadow-lg">
+                        <span className="bg-gradient-to-r from-sky-200 to-blue-200 bg-clip-text text-transparent">
+                          {waseetUser.username.toUpperCase()}
+                        </span>
                       </span>
                     )}
                   </div>
