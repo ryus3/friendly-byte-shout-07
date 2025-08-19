@@ -365,6 +365,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [cart, customerData]);
   
+  // مراقبة تغييرات المدينة والمنطقة لمسح الأخطاء
+  useEffect(() => {
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      if (formData.city && activePartner === 'local') {
+        delete newErrors.city;
+      }
+      if (formData.city_id && activePartner === 'alwaseet') {
+        delete newErrors.city_id;
+      }
+      if (formData.region && activePartner === 'local') {
+        delete newErrors.region;
+      }
+      if (formData.region_id && activePartner === 'alwaseet') {
+        delete newErrors.region_id;
+      }
+      return newErrors;
+    });
+  }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner]);
   
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -581,6 +600,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   const handleSelectChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // مسح الأخطاء المقابلة عند اختيار القيم
+    if (name === 'city' || name === 'city_id') {
+      setErrors(prev => ({ ...prev, city: '', city_id: '' }));
+    }
+    if (name === 'region' || name === 'region_id') {
+      setErrors(prev => ({ ...prev, region: '', region_id: '' }));
+    }
   };
   
   const validateForm = () => {
@@ -592,10 +619,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       newErrors.phone = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام.';
     }
     
-    if (activePartner === 'local' && !formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
-    else if (activePartner === 'alwaseet' && !formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
-    if (activePartner === 'local' && !formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
-    else if (activePartner === 'alwaseet' && !formData.region_id) newErrors.region_id = 'الرجاء اختيار المنطقة.';
+    // التحقق من المدينة والمنطقة حسب نوع الشريك
+    if (activePartner === 'local') {
+      if (!formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
+      if (!formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
+    } else if (activePartner === 'alwaseet') {
+      if (!formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
+      if (!formData.region_id) newErrors.region_id = 'الرجاء اختيار المنطقة.';
+    }
     const safeCartForValidation = Array.isArray(cart) ? cart : [];
     if (safeCartForValidation.length === 0) {
         toast({ title: "السلة فارغة", description: "الرجاء إضافة منتجات أولاً.", variant: "destructive" });

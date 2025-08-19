@@ -50,9 +50,10 @@ export const useDuplicateCustomerAlert = (phone, { trigger = true } = {}) => {
       : 'غير محدد';
 
     toast({
-      title: 'تنبيه عميل متكرر',
-      description: `هذا الرقم لديه ${insight.count} طلب سابق. آخر طلب بتاريخ ${dateStr}.`,
+      title: '✨ عميل معروف',
+      description: `${insight.count} طلب سابق • آخر طلب: ${dateStr}`,
       variant: 'default',
+      className: 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-800',
     });
   }, [insight, trigger]);
 

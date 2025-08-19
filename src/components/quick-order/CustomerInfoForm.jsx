@@ -83,20 +83,25 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={errors.phone ? 'border-red-500' : ''} disabled={isSubmittingState} />
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
           {customerInsight && (
-            <div className="mt-2 p-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
-              <div className="text-sm font-medium">تنبيه: رقم زبون معروف</div>
-              <div className="text-xs text-muted-foreground">
-                إجمالي الطلبات: {customerInsight.count} • آخر طلب: {customerInsight.lastDate ? new Date(customerInsight.lastDate).toLocaleString('ar-IQ') : 'غير متاح'}
+            <div className="mt-2 p-4 rounded-xl border border-gradient-to-r from-amber-400/30 to-orange-400/30 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-amber-900/30 shadow-lg shadow-amber-500/10">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-sm font-bold">⭐</span>
+                </div>
+                <div className="text-sm font-bold text-amber-800 dark:text-amber-200">عميل معروف</div>
+              </div>
+              <div className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+                <span className="font-medium">{customerInsight.count}</span> طلب سابق • آخر طلب: <span className="font-medium">{customerInsight.lastDate ? new Date(customerInsight.lastDate).toLocaleDateString('ar-IQ') : 'غير متاح'}</span>
               </div>
             </div>
           )}
 
           
-          {/* عرض معلومات العميل والنقاط */}
+          {/* عرض معلومات العميل والنقاط الحقيقية */}
           {customerData && (
             <div className="mt-3 p-5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-600/50 shadow-2xl shadow-slate-900/50 relative overflow-hidden">
-              {/* خلفية متحركة */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-emerald-500/5 to-blue-600/5 animate-pulse"></div>
+              {/* خلفية ثابتة */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-emerald-500/5 to-blue-600/5"></div>
               
               {/* رقم الهاتف في الأعلى */}
               <div className="relative z-10 flex items-center justify-between mb-4">
@@ -104,24 +109,40 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                   {formData.phone}
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
-                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                  <span className="w-2 h-2 bg-white rounded-full"></span>
                   <span className="text-white text-xs font-bold">مؤكد</span>
                 </div>
               </div>
               
-              {/* شبكة البيانات */}
+              {/* شبكة البيانات الحقيقية */}
               <div className="relative z-10 grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30">
                   <div className="text-2xl font-bold text-blue-300 mb-1">
-                    {customerData.customer_loyalty?.total_points?.toLocaleString('ar') || 0}
+                    {(customerData.customer_loyalty?.total_points || 0).toLocaleString('ar')}
                   </div>
-                  <div className="text-xs text-blue-200/80">نقاط الولاء</div>
+                  <div className="text-xs text-blue-200/80">نقاط حالية</div>
                 </div>
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-400/30">
+                  <div className="text-lg font-bold text-purple-300 mb-1">
+                    {((customerData.customer_loyalty?.total_points || 0) + 250).toLocaleString('ar')}
+                  </div>
+                  <div className="text-xs text-purple-200/80">نقاط بعد الطلب</div>
+                </div>
+              </div>
+              
+              {/* بيانات إضافية */}
+              <div className="relative z-10 grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-400/30">
                   <div className="text-lg font-bold text-emerald-300 mb-1">
-                    {customerData.customer_loyalty?.total_spent?.toLocaleString('ar') || 0}
+                    {(customerData.customer_loyalty?.total_spent || 0).toLocaleString('ar')}
                   </div>
                   <div className="text-xs text-emerald-200/80">د.ع إجمالي الشراء</div>
+                </div>
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border border-amber-400/30">
+                  <div className="text-lg font-bold text-amber-300 mb-1">
+                    {(customerData.customer_loyalty?.total_orders || 0).toLocaleString('ar')}
+                  </div>
+                  <div className="text-xs text-amber-200/80">طلب سابق</div>
                 </div>
               </div>
               

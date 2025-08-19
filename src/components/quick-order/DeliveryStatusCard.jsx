@@ -46,18 +46,16 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
                 isLoggedIn ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-5 h-5 text-emerald-300 animate-pulse" />
+                      <ShieldCheck className="w-5 h-5 text-emerald-300" />
                       <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
                     </div>
                     {waseetUser?.username && (
-                      <div className="relative inline-flex items-center px-4 py-2 rounded-xl bg-gradient-to-r from-slate-900/90 via-blue-900/90 to-slate-900/90 backdrop-blur-sm border border-blue-400/30 shadow-2xl shadow-blue-500/25 animate-pulse">
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-400/10 via-cyan-300/10 to-blue-400/10 animate-pulse"></div>
-                        <ShieldCheck className="w-4 h-4 text-emerald-400 mr-2 relative z-10" />
-                        <span className="relative z-10 bg-gradient-to-r from-sky-300 via-blue-200 to-cyan-300 bg-clip-text text-transparent font-bold text-sm tracking-wide drop-shadow-2xl">
+                      <div className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-slate-900/90 via-blue-900/90 to-slate-900/90 backdrop-blur-sm border border-blue-400/30 shadow-2xl shadow-blue-500/25">
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <span className="bg-gradient-to-r from-sky-300 via-blue-200 to-cyan-300 bg-clip-text text-transparent font-bold text-sm tracking-wide">
                           {waseetUser.username.toUpperCase()}
                         </span>
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full"></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       </div>
                     )}
                   </div>
