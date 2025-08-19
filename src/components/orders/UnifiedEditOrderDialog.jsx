@@ -442,7 +442,9 @@ const UnifiedEditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) =
             >
               <option value="">اختر المدينة</option>
               {cities.map(city => (
-                <option key={city.id} value={city.id}>{city.city}</option>
+                <option key={city.id} value={city.id}>
+                  {typeof city.city === 'string' ? city.city : city.name || `مدينة ${city.id}`}
+                </option>
               ))}
             </select>
           </div>
@@ -456,7 +458,9 @@ const UnifiedEditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) =
             >
               <option value="">اختر المنطقة</option>
               {regions.map(region => (
-                <option key={region.id} value={region.id}>{region.region}</option>
+                <option key={region.id} value={region.id}>
+                  {typeof region.region === 'string' ? region.region : region.name || `منطقة ${region.id}`}
+                </option>
               ))}
             </select>
           </div>
