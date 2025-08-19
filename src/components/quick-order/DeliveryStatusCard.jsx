@@ -39,23 +39,24 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
             </div>
-            <p className="text-sm opacity-90">
-              {isLocal ? description : (
+            <div className="text-sm opacity-90">
+              {isLocal ? (
+                <p>{description}</p>
+              ) : (
                 isLoggedIn ? (
-                  <>
-                    الطلبات جاهزة للإرسال إلى شركة التوصيل
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
                     {waseetUser?.username && (
-                      <>
-                        {' '}
-                        <span className="text-sky-200 font-medium">
-                          ( {waseetUser.username.toUpperCase()} )
-                        </span>
-                      </>
+                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-white/20 backdrop-blur-sm border border-white/30 text-white/90 text-xs font-medium">
+                        {waseetUser.username.toUpperCase()}
+                      </span>
                     )}
-                  </>
-                ) : description
+                  </div>
+                ) : (
+                  <p>{description}</p>
+                )
               )}
-            </p>
+            </div>
           </div>
         </div>
         <Button 
