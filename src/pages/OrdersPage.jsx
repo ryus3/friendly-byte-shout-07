@@ -549,16 +549,18 @@ const OrdersPage = () => {
           order={selectedOrder}
           open={dialogs.edit}
           onOpenChange={(open) => setDialogs(d => ({ ...d, edit: open }))}
-          onOrderUpdated={() => {
+          onOrderUpdated={async () => {
             setDialogs(d => ({ ...d, edit: false }));
+            await refetchProducts();
           }}
         />
         
         <QuickOrderDialog
           open={dialogs.quickOrder}
           onOpenChange={(open) => setDialogs(d => ({ ...d, quickOrder: open }))}
-          onOrderCreated={() => {
+          onOrderCreated={async () => {
               setDialogs(d => ({ ...d, quickOrder: false }));
+              await refetchProducts();
           }}
         />
         
