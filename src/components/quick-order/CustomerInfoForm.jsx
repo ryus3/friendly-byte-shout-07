@@ -120,10 +120,10 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                 <div className="text-sm font-bold text-white tracking-wide">
                   {formData.phone}
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 shadow-lg border border-white/20">
-                  <span className="text-white text-sm">👑</span>
-                  <span className="text-white text-sm font-bold tracking-wide">نظام الولاء وإدارة العملاء</span>
-                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 shadow-md border border-white/20">
+                  <span className="text-white text-xs">👑</span>
+                  <span className="text-white text-xs font-medium tracking-wide">نظام الولاء وإدارة العملاء</span>
+                  <div className="w-1 h-1 bg-white rounded-full animate-pulse"></div>
                 </div>
               </div>
               

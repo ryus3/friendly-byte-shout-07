@@ -3,20 +3,35 @@
 import { supabase } from './customSupabaseClient';
 
 const handleApiCall = async (endpoint, method, token, payload, queryParams) => {
-  const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
-    body: { endpoint, method, token, payload, queryParams }
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
+      body: { endpoint, method, token, payload, queryParams }
+    });
 
-  if (error) {
-    const errorBody = await error.context.json();
-    throw new Error(errorBody.msg || `فشل الاتصال بالخادم الوكيل: ${error.message}`);
-  }
-  
-  if (data.errNum !== "S000" || !data.status) {
-    throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
-  }
+    if (error) {
+      let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
+      try {
+        const errorBody = await error.context.json();
+        errorMessage = errorBody.msg || errorMessage;
+      } catch {
+        // If we can't parse the error body, use the default message
+      }
+      throw new Error(errorMessage);
+    }
+    
+    if (!data) {
+      throw new Error('لم يتم استلام رد من الخادم.');
+    }
+    
+    if (data.errNum !== "S000" || !data.status) {
+      throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+    }
 
-  return data.data;
+    return data.data;
+  } catch (error) {
+    console.error(`API call failed for ${endpoint}:`, error);
+    throw error;
+  }
 };
 
 export const getCities = async (token) => {
@@ -65,6 +80,11 @@ export const editAlWaseetOrder = async (orderData, token) => {
   
   const formattedData = { ...orderData };
   
+  // Validate required fields
+  if (!formattedData.qr_id) {
+    throw new Error('رقم الطلب مطلوب للتعديل.');
+  }
+  
   // Format primary phone (required)
   if (formattedData.client_mobile) {
     formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
@@ -82,6 +102,14 @@ export const editAlWaseetOrder = async (orderData, token) => {
       delete formattedData.client_mobile2; // Remove invalid secondary phone
     }
   }
+  
+  // Ensure numeric fields are properly formatted
+  formattedData.price = parseInt(formattedData.price) || 0;
+  formattedData.items_number = parseInt(formattedData.items_number) || 0;
+  formattedData.city_id = parseInt(formattedData.city_id) || 0;
+  formattedData.region_id = parseInt(formattedData.region_id) || 0;
+  formattedData.package_size = parseInt(formattedData.package_size) || 0;
+  formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
   return handleApiCall('edit-order', 'POST', token, formattedData, { token });
 };
