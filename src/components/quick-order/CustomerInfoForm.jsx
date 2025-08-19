@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 
 const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
   const [wasCleared, setWasCleared] = useState(false);
+  const nameInputRef = useRef(null);
   
   // اختيار بغداد تلقائياً إذا لم تكن المدينة محددة
   useEffect(() => {
@@ -30,6 +31,7 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
     console.log('🔄 مسح اسم العميل - قبل المسح:', { name: formData.name, defaultName: formData.defaultCustomerName, wasCleared });
     handleChange({ target: { name: 'name', value: '' } });
     setWasCleared(true);
+    setTimeout(() => nameInputRef.current?.focus(), 0);
     console.log('✅ تم مسح اسم العميل');
   };
 
@@ -59,10 +61,14 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
             <Input 
               id="name" 
               name="name" 
+              ref={nameInputRef}
               value={customerNameValue}
               onChange={(e) => {
+                if (e.target.name === 'name') {
+                  const val = e.target.value;
+                  setWasCleared(val === '');
+                }
                 handleChange(e);
-                if (wasCleared) setWasCleared(false);
               }}
               placeholder="ادخل اسم الزبون"
               required 

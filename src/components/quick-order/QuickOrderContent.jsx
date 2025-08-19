@@ -27,6 +27,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
+  const [nameTouched, setNameTouched] = useState(false);
   
   // Local storage for default customer name and delivery partner
   const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
@@ -447,21 +448,22 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
     setFormData(emptyFormData);
+    setNameTouched(false);
     
     console.log('✅ مسح النموذج - تم بنجاح');
   }, [clearCart, activePartner]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
-    if (user?.default_customer_name && user?.default_customer_name !== defaultCustomerName) {
+    if (user?.default_customer_name && user?.default_customer_name !== defaultCustomerName && !nameTouched) {
       setDefaultCustomerName(user.default_customer_name);
       setFormData(prev => ({ 
         ...prev, 
-        name: user.default_customer_name,
+        name: prev.name || user.default_customer_name,
         defaultCustomerName: user.default_customer_name
       }));
     }
-  }, [user?.default_customer_name, defaultCustomerName, setDefaultCustomerName]);
+  }, [user?.default_customer_name, defaultCustomerName, setDefaultCustomerName, nameTouched]);
 
   // تحديث شريك التوصيل الافتراضي
   useEffect(() => {
@@ -470,16 +472,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [activePartner, defaultDeliveryPartner, setDefaultDeliveryPartner]);
 
-  // تحديث الاسم في النموذج عند تغيير الافتراضي  
+  // تحديث الاسم في النموذج عند تغيير الافتراضي (دون إزعاج المستخدم)
   useEffect(() => {
-    if (defaultCustomerName && (!formData.name || formData.name !== defaultCustomerName)) {
+    if (!nameTouched && defaultCustomerName && (!formData.name || formData.name.trim() === '')) {
       setFormData(prev => ({ 
         ...prev, 
         name: defaultCustomerName,
         defaultCustomerName: defaultCustomerName
       }));
     }
-  }, [defaultCustomerName]);
+  }, [defaultCustomerName, nameTouched, formData.name]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 
@@ -613,12 +615,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // حفظ اسم الزبون كافتراضي عند تغييره
-    if (name === 'name' && value.trim() && value !== defaultCustomerName) {
-      setDefaultCustomerName(value.trim());
+    if (name === 'name') {
+      setNameTouched(true);
     }
-    
     validateField(name, value);
   };
 
