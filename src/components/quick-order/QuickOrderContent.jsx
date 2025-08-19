@@ -734,10 +734,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (activePartner === 'alwaseet') {
           if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
           
+            // تطبيع رقم الهاتف للتأكد من التوافق مع API
+            const normalizedPhone = normalizePhone(formData.phone);
+            if (!normalizedPhone) {
+              throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
+            }
+            
             const alWaseetPayload = {
               client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
-              client_mobile: formatPhoneNumber(formData.phone), 
-              client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
+              client_mobile: normalizedPhone, // استخدام الرقم المطبع
+              client_mobile2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
               city_id: formData.city_id, 
               region_id: formData.region_id, 
               location: formData.address,
@@ -764,9 +770,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
+      // تطبيع رقم الهاتف للتأكد من التوافق مع API
+      const normalizedPhone = normalizePhone(formData.phone);
+      if (!normalizedPhone) {
+        throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
+      }
+      
       const customerInfoPayload = {
         name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
-        phone: formData.phone,
+        phone: normalizedPhone, // استخدام الرقم المطبع
         address: `${formData.address}, ${region}, ${city}`,
         city: city, 
         notes: formData.notes,
@@ -802,9 +814,31 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         if(onOrderCreated) onOrderCreated();
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {
-      toast({ title: "خطأ", description: error.message || "فشل إنشاء الطلب.", variant: "destructive" });
+      console.error('Error creating order:', error);
+      
+      // معالجة أخطاء محددة
+      let errorMessage = "فشل إنشاء الطلب.";
+      if (error.message?.includes('phone') || error.message?.includes('رقم الهاتف')) {
+        errorMessage = "خطأ في رقم الهاتف. يرجى التحقق من الرقم وإعادة المحاولة.";
+      } else if (error.message?.includes('network') || error.message?.includes('شبكة')) {
+        errorMessage = "مشكلة في الاتصال. يرجى التحقق من الإنترنت وإعادة المحاولة.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast({ 
+        title: "خطأ في إنشاء الطلب", 
+        description: errorMessage, 
+        variant: "destructive",
+        duration: 6000
+      });
+      
+      // إعادة تمكين الواجهة بعد الخطأ
+      setErrors({});
     } finally { 
-        if (setIsSubmitting) setIsSubmitting(false);
+        if (setIsSubmitting) {
+          setIsSubmitting(false);
+        }
     }
   };
   

@@ -30,14 +30,21 @@ export function normalizePhone(input) {
       digits = '0' + digits;
     }
 
-    // Return valid 11-digit Iraqi number or empty
-    if (digits.startsWith('0') && digits.length === 11) {
+    // Validate Iraqi mobile number patterns
+    // Iraqi mobile should start with 07, 076X, 077X, 078X, 079X
+    const validMobilePattern = /^0(7[789]|7[0156])\d{8}$/;
+    
+    // Return valid 11-digit Iraqi number or format for API
+    if (digits.startsWith('0') && digits.length === 11 && validMobilePattern.test(digits)) {
       return digits;
     }
     
     // If exactly 10 digits and doesn't start with 0, try adding 0
-    if (digits.length === 10 && !digits.startsWith('0')) {
-      return '0' + digits;
+    if (digits.length === 10 && !digits.startsWith('0') && /^[789]/.test(digits)) {
+      const formatted = '0' + digits;
+      if (validMobilePattern.test(formatted)) {
+        return formatted;
+      }
     }
 
     // Invalid format
