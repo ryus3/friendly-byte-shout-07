@@ -45,11 +45,29 @@ const NavigationMemoryGuard = ({ children }) => {
       console.log('🔄 Order created - resetting navigation guard');
       setTimeout(() => {
         navigationGuard.forceReset();
-      }, 100);
+      }, 50);
+    };
+
+    const handleOrderCreationComplete = () => {
+      console.log('✅ Order creation complete - forcing navigation reset');
+      navigationGuard.forceReset();
+      memoryCleanup.executeAll();
+    };
+
+    const handleResetNavigationGuard = () => {
+      console.log('🔄 Manual navigation guard reset');
+      navigationGuard.forceReset();
     };
 
     window.addEventListener('orderCreated', handleOrderCreated);
-    return () => window.removeEventListener('orderCreated', handleOrderCreated);
+    window.addEventListener('orderCreationComplete', handleOrderCreationComplete);
+    window.addEventListener('resetNavigationGuard', handleResetNavigationGuard);
+    
+    return () => {
+      window.removeEventListener('orderCreated', handleOrderCreated);
+      window.removeEventListener('orderCreationComplete', handleOrderCreationComplete);
+      window.removeEventListener('resetNavigationGuard', handleResetNavigationGuard);
+    };
   }, []);
 
   return children;

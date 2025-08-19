@@ -392,6 +392,67 @@ export const SuperProvider = ({ children }) => {
     }
   }, [user]);
 
+  // دالة تحديث فورية للبيانات
+  const refreshAllData = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      console.log('🔄 SuperProvider: تحديث فوري للبيانات');
+      const data = await superAPI.getAllData();
+      
+      if (data) {
+        const filteredData = filterDataByEmployeeCode(data, user);
+        const processedData = {
+          ...filteredData,
+          products: (filteredData.products || []).map(product => ({
+            ...product,
+            variants: (product.product_variants || []).map(variant => {
+              const inventoryData = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
+              const colorName = variant.colors?.name || variant.color_name || variant.color || null;
+              const colorHex = variant.colors?.hex_code || variant.color_hex || null;
+              const sizeName = variant.sizes?.name || variant.size_name || variant.size || null;
+
+              return {
+                ...variant,
+                color: colorName || undefined,
+                color_name: colorName || undefined,
+                color_hex: colorHex || undefined,
+                size: sizeName || undefined,
+                size_name: sizeName || undefined,
+                quantity: inventoryData?.quantity ?? variant.quantity ?? 0,
+                reserved_quantity: inventoryData?.reserved_quantity ?? variant.reserved_quantity ?? 0,
+                min_stock: inventoryData?.min_stock ?? variant.min_stock ?? 5,
+                location: inventoryData?.location ?? variant.location ?? '',
+                inventory: inventoryData
+              }
+            })
+          })),
+          orders: (filteredData.orders || []).map(o => ({
+            ...o,
+            items: Array.isArray(o.order_items)
+              ? o.order_items.map(oi => ({
+                  quantity: oi.quantity || 1,
+                  price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+                  cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+                  productname: oi.products?.name,
+                  product_name: oi.products?.name,
+                  sku: oi.product_variants?.id,
+                  product_variants: oi.product_variants
+                }))
+              : (o.items || [])
+          }))
+        };
+        
+        processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));
+        setAllData(processedData);
+        
+        console.log('✅ SuperProvider: تم التحديث الفوري للبيانات');
+      }
+    } catch (error) {
+      console.error('❌ SuperProvider: خطأ في التحديث الفوري:', error);
+    }
+  }, [user]);
+
   // تحميل البيانات عند بدء التشغيل فقط عندما تكون الصفحة مرئية
   useEffect(() => {
     if (document.visibilityState === 'visible') {
