@@ -80,18 +80,24 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                   }`}>
                     {customerInsight.count > 0 && customerInsight.lastOrderDate && (
                       <div className="flex items-center gap-3">
-                        <span>إجمالي الطلبات: {customerInsight.count}</span>
-                        <span>آخر طلب: {(() => {
-                          const date = new Date(customerInsight.lastOrderDate);
-                          const diffHours = customerInsight.timeSinceLastOrderHours;
-                          if (diffHours < 24) {
-                            return `${diffHours}س`;
-                          } else if (diffHours < 48) {
-                            return `${Math.floor(diffHours / 24)} يوم`;
-                          } else {
-                            return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
-                          }
-                        })()}</span>
+                     <div className="flex items-center gap-1">
+                           <span className="text-xs">📦</span>
+                           <span>{customerInsight.count}</span>
+                         </div>
+                         <div className="flex items-center gap-1">
+                           <span className="text-xs">🕒</span>
+                           <span>{(() => {
+                             const date = new Date(customerInsight.lastOrderDate);
+                             const diffHours = customerInsight.timeSinceLastOrderHours;
+                             if (diffHours < 24) {
+                               return `${diffHours}س`;
+                             } else if (diffHours < 48) {
+                               return `${Math.floor(diffHours / 24)} يوم`;
+                             } else {
+                               return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+                             }
+                           })()}</span>
+                         </div>
                       </div>
                     )}
                   </div>

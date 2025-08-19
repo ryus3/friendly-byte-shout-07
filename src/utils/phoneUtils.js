@@ -77,3 +77,21 @@ export function formatLocalPhone(phone) {
   // Simple grouping 077 280 200 24 (optional display)
   return p;
 }
+
+// Format phone for Al-Waseet API (requires +9647XXXXXXXXX format)
+export function formatPhoneForAlWaseet(phone) {
+  if (!phone) return '';
+  
+  const normalized = normalizePhone(phone);
+  if (!normalized || normalized.length !== 11) return '';
+  
+  // Remove leading 0 and add +964
+  const withoutZero = normalized.startsWith('0') ? normalized.slice(1) : normalized;
+  return `+964${withoutZero}`;
+}
+
+// Validate if phone is suitable for Al-Waseet API
+export function isValidAlWaseetPhone(phone) {
+  const formatted = formatPhoneForAlWaseet(phone);
+  return formatted.length === 14 && formatted.startsWith('+9647');
+}

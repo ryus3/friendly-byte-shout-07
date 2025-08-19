@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Search } from 'lucide-react';
@@ -94,11 +95,17 @@ const SearchableSelectFixed = ({
       </Button>
 
       {/* Dropdown */}
-      {open && (
+      {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
-          style={{ direction: 'rtl' }}
+          className="fixed z-[9999] bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          style={{ 
+            direction: 'rtl',
+            left: buttonRef.current?.getBoundingClientRect().left || 0,
+            top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
+            width: buttonRef.current?.getBoundingClientRect().width || 'auto',
+            minWidth: '200px'
+          }}
         >
           {/* Search Input */}
           <div className="p-1 border-b border-border">
@@ -160,7 +167,8 @@ const SearchableSelectFixed = ({
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
