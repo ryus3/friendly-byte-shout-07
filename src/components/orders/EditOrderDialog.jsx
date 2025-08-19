@@ -260,8 +260,8 @@ const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
       
       // إرسال للوسيط إذا كان الطلب مرسل إليه أصلاً
       if (order.delivery_partner && order.delivery_partner !== 'محلي' && waseetToken) {
-        const alwaseetData = {
-          order_id: order.delivery_partner_data?.qr_id || order.qr_id || order.order_number,
+         const alwaseetData = {
+           order_id: order.tracking_number || order.order_number,
           name: formData.name,
           phone: formData.phone,
           city_id: formData.city_id,
@@ -307,7 +307,7 @@ const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              تعديل الطلب {order?.delivery_partner_data?.qr_id || order?.qr_id || order?.order_number}
+              تعديل الطلب {order?.tracking_number || order?.order_number}
             </DialogTitle>
           </DialogHeader>
 

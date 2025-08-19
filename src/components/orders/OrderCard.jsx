@@ -261,9 +261,9 @@ const OrderCard = ({
                   className="shrink-0 scale-125 border-2"
                 />
                 <div>
-                  <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                    {order.delivery_partner_data?.qr_id || order.qr_id || order.order_number}
-                  </h3>
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+                     {order.tracking_number || order.order_number}
+                   </h3>
                 </div>
               </div>
               
@@ -340,8 +340,8 @@ const OrderCard = ({
                     <Eye className="h-3.5 w-3.5" />
                   </Button>
 
-                  {/* Edit */}
-                  {canEdit && hasPermission('edit_orders') && (
+                   {/* Edit */}
+                   {canEdit && (
                     <Button
                       variant="ghost"
                       size="sm"
