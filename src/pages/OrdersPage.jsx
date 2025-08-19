@@ -32,7 +32,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 
 const OrdersPage = () => {
-  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts, refreshDataInstantly } = useInventory();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refreshDataInstantly } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
@@ -144,7 +144,13 @@ const OrdersPage = () => {
 
   // مستمعون عامّون لأحداث النظام المحلية لضمان التحديث حتى إن لم تصل Realtime
   useEffect(() => {
-    const handler = () => { try { refetchProducts?.(); } catch {} };
+    const handler = () => { 
+      try { 
+        refreshDataInstantly?.(); 
+      } catch (error) {
+        console.warn('⚠️ فشل في تحديث البيانات:', error);
+      }
+    };
     window.addEventListener('orderCreated', handler);
     window.addEventListener('orderUpdated', handler);
     window.addEventListener('orderDeleted', handler);
@@ -155,7 +161,7 @@ const OrdersPage = () => {
       window.removeEventListener('orderDeleted', handler);
       window.removeEventListener('aiOrderDeleted', handler);
     };
-  }, [refetchProducts]);
+  }, [refreshDataInstantly]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -329,7 +335,9 @@ const OrdersPage = () => {
   const handleSync = async () => {
     setSyncing(true);
     await syncAlWaseetOrders();
-    await refetchProducts();
+    if (refreshDataInstantly) {
+      await refreshDataInstantly();
+    }
     setSyncing(false);
   }
 
@@ -542,7 +550,7 @@ const OrdersPage = () => {
           additionalButtons={(order) => (
             <ReceiveInvoiceButton 
               order={order} 
-              onSuccess={() => refetchProducts()} 
+              onSuccess={() => refreshDataInstantly?.()} 
             />
           )}
         />
@@ -616,7 +624,9 @@ const OrdersPage = () => {
           onClose={() => setDialogs(d => ({ ...d, returnReceipt: false }))}
           order={selectedOrder}
           onSuccess={async () => {
-            await refetchProducts();
+            if (refreshDataInstantly) {
+              await refreshDataInstantly();
+            }
             toast({
               title: "تم استلام الراجع",
               description: "تم إرجاع المنتجات إلى المخزون بنجاح",

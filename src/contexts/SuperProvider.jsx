@@ -805,6 +805,9 @@ export const SuperProvider = ({ children }) => {
         orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updatedOrder } : o),
       }));
 
+      // تحديث فوري للبيانات لضمان اللحظية
+      setTimeout(() => fetchAllData(), 0);
+
       return { success: true, data: updatedOrder };
     } catch (error) {
       console.error('Error in updateOrder:', error);
@@ -1293,25 +1296,13 @@ export const SuperProvider = ({ children }) => {
     refreshDataInstantly: useCallback(async () => {
       console.log('🚀 تحديث فوري للبيانات');
       
-      // استدعاء تحديث البيانات المحلية
-      if (refreshAllData) {
-        await refreshAllData();
-      }
-      
-      // تحديث البيانات الأخرى إذا توفرت
-      try {
-        refetchInventory?.();
-        refetchProducts?.();
-        refetchOrders?.();
-        refetchCustomers?.();
-      } catch (error) {
-        console.warn('⚠️ بعض دوال التحديث غير متوفرة:', error.message);
-      }
+      // تحديث البيانات فوراً لضمان اللحظية
+      setTimeout(() => fetchAllData(), 0);
       
       // إجبار re-render للمكونات
       window.dispatchEvent(new CustomEvent('forceDataRefresh'));
       console.log('✅ تم التحديث الفوري بنجاح');
-    }, [refreshAllData, refetchInventory, refetchProducts, refetchOrders, refetchCustomers]),
+    }, [fetchAllData]),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
