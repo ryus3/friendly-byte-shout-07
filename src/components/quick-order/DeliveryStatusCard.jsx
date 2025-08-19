@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ServerCrash, Wifi, Map, Truck, Settings, ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -34,7 +35,7 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
   const description = isLocal 
     ? "سيتم إنشاء الطلبات داخل النظام فقط." 
     : isLoggedIn 
-      ? `الطلبات جاهزة للإرسال إلى شركة ${getDeliveryCompanyName()}${waseetUser?.username ? ` (${waseetUser.username})` : ''}.`
+      ? `الطلبات جاهزة للإرسال إلى شركة ${getDeliveryCompanyName()}.`
       : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.";
   const buttonText = isLocal ? "تغيير الوضع" : (isLoggedIn ? "إدارة" : "تسجيل الدخول");
 
@@ -49,7 +50,14 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <Icon className="w-7 h-7 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-xl">{title}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-bold text-xl">{title}</h3>
+              {isLoggedIn && waseetUser?.username && (
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs">
+                  {waseetUser.username}
+                </Badge>
+              )}
+            </div>
             <p className="text-sm opacity-90">{description}</p>
           </div>
         </div>
@@ -75,12 +83,11 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <Button 
               type="button" 
               size="sm" 
-              variant="outline" 
-              className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm" 
+              variant="ghost" 
+              className="bg-white/5 text-white border border-white/20 hover:bg-white/15 hover:text-white backdrop-blur-sm h-8 px-2 text-xs" 
               onClick={onManageClick}
             >
-              <Settings className="w-4 h-4 ml-2" />
-              إدارة
+              <Settings className="w-3 h-3" />
             </Button>
           </div>
         )}

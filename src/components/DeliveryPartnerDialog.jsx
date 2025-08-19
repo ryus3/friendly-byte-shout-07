@@ -21,6 +21,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     // الحصول على الشركاء المتاحة (المسجل دخول إليها + جميع الشركاء)
     const getAvailablePartners = () => {
+        // إضافة خيار "محلي" دائماً في وضع choice
         const basePartners = orderCreationMode === 'local_only'
             ? { local: deliveryPartners.local }
             : orderCreationMode === 'partner_only'
@@ -130,8 +131,10 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل مسبقاً</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{partnerName}</span>.</p>
-                        <p className="text-xs text-muted-foreground">اسم المستخدم: {partnerData.userData?.username}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{partnerName}</span>.</p>
+                            <Badge variant="success" className="text-xs">{partnerData.userData?.username}</Badge>
+                        </div>
                         <div className="text-xs text-green-600">✓ سيتم التبديل إلى هذه الشركة مباشرة</div>
                     </CardContent>
                 </Card>
@@ -146,12 +149,16 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل حالياً</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner].name}</span>.</p>
-                        <p className="text-xs text-muted-foreground">اسم المستخدم: {waseetUser?.username}</p>
-                        <Button variant="destructive" size="sm" type="button" onClick={handleLogout} className="w-full">
-                            <LogOut className="w-4 h-4 ml-2" />
-                            تسجيل الخروج
-                        </Button>
+                        <div className="flex items-center gap-2 mb-2">
+                            <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner].name}</span>.</p>
+                            <Badge variant="success" className="text-xs">{waseetUser?.username}</Badge>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="destructive" size="sm" type="button" onClick={handleLogout} className="flex-1">
+                                <LogOut className="w-4 h-4 ml-2" />
+                                تسجيل الخروج
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
             );
