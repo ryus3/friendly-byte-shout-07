@@ -773,19 +773,35 @@ export const SuperProvider = ({ children }) => {
           throw error;
         }
         superAPI.invalidate('all_data');
-        toast({ title: 'تم الحذف', description: 'تم حذف الطلبات الذكية نهائياً', variant: 'success' });
-        orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {} });
         return { success: true };
       }
-      // حذف طلبات عادية (قيد التجهيز فقط) بتحديث تفاؤلي
-      setAllData(prev => ({ ...prev, orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) }));
-      orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); } catch {} });
+      
+      // حذف طلبات عادية - تحديث تفاؤلي فوري
+      setAllData(prev => ({ 
+        ...prev, 
+        orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) 
+      }));
+      
+      // بث أحداث الحذف فوراً
+      orderIds.forEach(id => {
+        try { 
+          window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); 
+        } catch {}
+      });
 
+      // الحذف الفعلي في الخلفية - بدون fetchAllData
       const { error } = await supabase.from('orders').delete().in('id', orderIds);
-      if (error) throw error;
+      if (error) {
+        // في حالة الفشل، أعد تحميل البيانات فقط
+        console.error('Delete failed, refreshing data:', error);
+        superAPI.invalidate('all_data');
+        await fetchAllData();
+        throw error;
+      }
+      
+      // تنظيف الكاش فقط - الـ Real-time سيتولى باقي التحديثات
       superAPI.invalidate('all_data');
-      // تحديث موحّد بعد التأكيد
-      await fetchAllData();
+      
       return { success: true };
     } catch (error) {
       console.error('Error deleting orders:', error);

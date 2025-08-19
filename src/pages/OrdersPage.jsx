@@ -146,6 +146,32 @@ const OrdersPage = () => {
     };
   }, [refetchProducts]);
 
+  // مستمعات Real-time للحذف الفوري للطلبات
+  useEffect(() => {
+    const handleOrderDeleted = (event) => {
+      const deletedOrderId = event.detail?.id;
+      if (deletedOrderId) {
+        // إزالة فورية من قائمة الطلبات المحددة
+        setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
+      }
+    };
+
+    const handleAiOrderDeleted = (event) => {
+      const deletedAiOrderId = event.detail?.id;
+      if (deletedAiOrderId) {
+        console.log('🗑️ حذف طلب ذكي فوري:', deletedAiOrderId);
+      }
+    };
+
+    window.addEventListener('orderDeleted', handleOrderDeleted);
+    window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+
+    return () => {
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
+      window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusFilter = params.get('status');
