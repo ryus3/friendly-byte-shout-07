@@ -17,7 +17,7 @@ import ProductSelectionDialog from '@/components/products/ProductSelectionDialog
 import { useInventory } from '@/contexts/InventoryContext';
 import { Loader2 } from 'lucide-react';
 
-const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
+const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const { cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes, waseetToken } = useAlWaseet();
   const { products, updateOrder, settings } = useInventory();
   
@@ -44,15 +44,15 @@ const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
 
   // تحميل البيانات الأساسية عند فتح النافذة
   useEffect(() => {
-    if (isOpen) {
+    if (open) {
       if (cities.length === 0) fetchCities();
       if (packageSizes.length === 0) fetchPackageSizes();
     }
-  }, [isOpen, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
+  }, [open, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
 
   // تهيئة النموذج عند فتح النافذة
   const initializeForm = useCallback(async () => {
-    if (!order || !isOpen) return;
+    if (!order || !open) return;
     
     console.log('تهيئة نموذج تعديل الطلب:', order);
     
@@ -139,7 +139,7 @@ const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
       })));
     }
     
-  }, [order, isOpen, cities, regions, fetchRegions]);
+  }, [order, open, cities, regions, fetchRegions]);
 
   // تهيئة النموذج عند تغيير الطلب أو فتح النافذة
   useEffect(() => {
@@ -302,7 +302,7 @@ const EditOrderDialog = ({ isOpen, onOpenChange, order, onOrderUpdated }) => {
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[95vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
