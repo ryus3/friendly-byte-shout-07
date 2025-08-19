@@ -32,7 +32,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 
 const OrdersPage = () => {
-  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts, refreshDataInstantly } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
@@ -64,70 +64,79 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
-  // إشعارات فقط للطلبات الجديدة - SuperProvider يتولى التحديثات الفورية
+  // ربط Real-time Events مع SuperProvider للتحديث الفوري
   useEffect(() => {
-    const channel = supabase
-      .channel('orders-notifications-only')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          const newOrder = payload.new;
-          console.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
-          
-          // إشعار فوري عند إنشاء طلب جديد فقط
-          toast({
-            title: (
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                تم إنشاء طلب جديد بنجاح
-              </div>
-            ),
-            description: (
-              <div className="space-y-1">
-                <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
-                <p><strong>العميل:</strong> {newOrder.customer_name}</p>
-                <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
-              </div>
-            ),
-            variant: "success",
-            duration: 5000
-          });
+    console.log('🔗 تأسيس روابط Real-time في OrdersPage');
+    
+    // الاستماع لأحداث Real-time من setupRealtime()
+    const handleOrderCreated = (event) => {
+      const newOrder = event.detail;
+      console.log('📢 تم استلام حدث إنشاء طلب جديد:', newOrder.qr_id || newOrder.order_number);
+      
+      // تحديث فوري للبيانات
+      if (refreshDataInstantly) {
+        console.log('🚀 تطبيق تحديث فوري للبيانات');
+        refreshDataInstantly();
+      }
+      
+      // إشعار فوري
+      toast({
+        title: (
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            تم إنشاء طلب جديد بنجاح
+          </div>
+        ),
+        description: (
+          <div className="space-y-1">
+            <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
+            <p><strong>العميل:</strong> {newOrder.customer_name}</p>
+            <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
+          </div>
+        ),
+        variant: "success",
+        duration: 5000
+      });
+    };
 
-          // إضافة إشعار في نافذة الإشعارات للمديرين فقط
-          if (hasPermission('view_all_data') || hasPermission('manage_orders')) {
-            const createNotification = async () => {
-              try {
-                await supabase.from('notifications').insert({
-                  title: 'طلب جديد',
-                  message: `تم إنشاء طلب جديد برقم ${newOrder.qr_id || newOrder.order_number} من العميل ${newOrder.customer_name}`,
-                  type: 'order_created',
-                  priority: 'high',
-                  data: {
-                    order_id: newOrder.id,
-                    order_qr: newOrder.qr_id,
-                    customer_name: newOrder.customer_name,
-                    amount: newOrder.final_amount
-                  },
-                  user_id: null // إشعار عام للمديرين
-                });
-              } catch (error) {
-                console.error('Error creating notification:', error);
-              }
-            };
-            createNotification();
-          }
-          // لا حاجة لـ refetchProducts - SuperProvider يتولى التحديث الفوري
-        }
-      )
-      .subscribe();
+    const handleOrderUpdated = (event) => {
+      const updatedOrder = event.detail;
+      console.log('📝 تم استلام حدث تحديث طلب:', updatedOrder.qr_id || updatedOrder.order_number);
+      
+      if (refreshDataInstantly) {
+        console.log('🚀 تطبيق تحديث فوري للبيانات');
+        refreshDataInstantly();
+      }
+    };
+
+    const handleOrderDeleted = (event) => {
+      const deletedOrder = event.detail;
+      console.log('🗑️ تم استلام حدث حذف طلب:', deletedOrder.qr_id || deletedOrder.order_number);
+      
+      if (refreshDataInstantly) {
+        console.log('🚀 تطبيق تحديث فوري للبيانات');
+        refreshDataInstantly();
+      }
+    };
+
+    const handleForceDataRefresh = () => {
+      console.log('🔄 إجبار تحديث البيانات في OrdersPage');
+      // إجبار re-render فوري
+      setOrders(prev => [...prev]);
+    };
+
+    // تسجيل المستمعين
+    window.addEventListener('orderCreated', handleOrderCreated);
+    window.addEventListener('orderUpdated', handleOrderUpdated);
+    window.addEventListener('orderDeleted', handleOrderDeleted);
+    window.addEventListener('forceDataRefresh', handleForceDataRefresh);
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('🔌 إزالة روابط Real-time من OrdersPage');
+      window.removeEventListener('orderCreated', handleOrderCreated);
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
+      window.removeEventListener('forceDataRefresh', handleForceDataRefresh);
     };
   }, [hasPermission]); // إزالة refetchProducts من dependencies
 
@@ -217,50 +226,6 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
-  // Real-time listeners for instant order updates
-  useEffect(() => {
-    const handleOrderCreated = (event) => {
-      console.log('🆕 Real-time: Order created', event.detail);
-      toast({
-        title: "تم إنشاء طلب جديد",
-        description: `طلب رقم ${event.detail.order_number}`,
-        variant: "success"
-      });
-      // Instant refresh without loading state
-      refetchProducts();
-    };
-
-    const handleOrderUpdated = (event) => {
-      console.log('🔄 Real-time: Order updated', event.detail);
-      toast({
-        title: "تم تحديث الطلب",
-        description: `طلب رقم ${event.detail.order_number}`,
-        variant: "success"
-      });
-      refetchProducts();
-    };
-
-    const handleOrderDeleted = (event) => {
-      console.log('🗑️ Real-time: Order deleted', event.detail);
-      toast({
-        title: "تم حذف الطلب",
-        description: `طلب رقم ${event.detail.order_number}`,
-        variant: "success"
-      });
-      refetchProducts();
-    };
-
-    // Add event listeners for real-time updates
-    window.addEventListener('orderCreated', handleOrderCreated);
-    window.addEventListener('orderUpdated', handleOrderUpdated);
-    window.addEventListener('orderDeleted', handleOrderDeleted);
-
-    return () => {
-      window.removeEventListener('orderCreated', handleOrderCreated);
-      window.removeEventListener('orderUpdated', handleOrderUpdated);
-      window.removeEventListener('orderDeleted', handleOrderDeleted);
-    };
-  }, [refetchProducts]);
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
