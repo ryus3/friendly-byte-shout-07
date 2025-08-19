@@ -120,9 +120,9 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                 <div className="text-sm font-bold text-white tracking-wide">
                   {formData.phone}
                 </div>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 shadow-md">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full"></span>
-                  <span className="text-white text-xs font-bold">مؤكد</span>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 shadow-md">
+                  <span className="text-white text-xs">👑</span>
+                  <span className="text-white text-xs font-bold">نظام الولاء وإدارة العملاء</span>
                 </div>
               </div>
               

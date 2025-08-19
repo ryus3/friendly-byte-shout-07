@@ -414,11 +414,40 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
-    setFormData(initialFormData);
+    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
+    const emptyFormData = {
+      name: '', 
+      phone: '', 
+      second_phone: '', 
+      city_id: '', 
+      region_id: '', 
+      city: '', 
+      region: '', 
+      address: '', 
+      notes: '', 
+      details: '', 
+      quantity: 1, 
+      price: 0, 
+      size: 'normal', 
+      type: 'new', 
+      promocode: '',
+      defaultCustomerName: ''
+    };
+    
+    // مسح البيانات تدريجياً لتجنب التجمد
     clearCart();
     setDiscount(0);
+    setLoyaltyDiscount(0);
+    setApplyLoyaltyDiscount(false);
+    setApplyLoyaltyDelivery(false);
+    setCustomerData(null);
     setErrors({});
-  }, [clearCart, initialFormData]);
+    
+    // تأخير مسح رقم الهاتف قليلاً لضمان إتمام العمليات السابقة
+    setTimeout(() => {
+      setFormData(emptyFormData);
+    }, 100);
+  }, [clearCart]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
