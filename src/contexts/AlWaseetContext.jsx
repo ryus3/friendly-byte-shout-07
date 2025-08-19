@@ -16,7 +16,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'alwaseet');
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 3600000); // Default to 1 hour
 
   const [cities, setCities] = useState([]);
@@ -52,6 +52,11 @@ export const AlWaseetProvider = ({ children }) => {
       } else {
         if (data) {
             await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
+            toast({ 
+              title: "انتهت صلاحية التوكن", 
+              description: "يجب تسجيل الدخول مرة أخرى لشركة التوصيل.", 
+              variant: "destructive" 
+            });
         }
         setToken(null);
         setWaseetUser(null);
@@ -178,8 +183,9 @@ export const AlWaseetProvider = ({ children }) => {
     setCities([]);
     setRegions([]);
     setPackageSizes([]);
+    setActivePartner('alwaseet');
     toast({ title: "تم تسجيل الخروج", description: `تم تسجيل الخروج من ${partnerName}.` });
-  }, [activePartner, deliveryPartners, user]);
+  }, [activePartner, deliveryPartners, user, setActivePartner]);
   
   const syncOrders = async () => {
     if (activePartner === 'local' || !isLoggedIn) {

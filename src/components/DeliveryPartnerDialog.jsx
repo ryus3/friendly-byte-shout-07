@@ -42,6 +42,15 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             onOpenChange(false);
             return;
         }
+        
+        // إذا كان المستخدم مسجل دخول بالفعل في هذا الشريك، لا نحتاج لإدخال البيانات
+        if (isCurrentPartnerSelected && isLoggedIn) {
+            setActivePartner(selectedPartner);
+            toast({ title: "تم التبديل", description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name}.`, variant: 'success' });
+            onOpenChange(false);
+            return;
+        }
+        
         const result = await login(username, password, selectedPartner);
         if (result.success) {
             onOpenChange(false);
@@ -144,10 +153,19 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         </motion.div>
                     </AnimatePresence>
 
-                    <DialogFooter>
-                        <Button type="submit" disabled={loading || (selectedPartner !== 'local' && !username && !isLoggedIn) || (selectedPartner !== 'local' && !password && !isLoggedIn)} className="w-full">
+                     <DialogFooter>
+                        <Button 
+                            type="submit" 
+                            disabled={loading || (selectedPartner !== 'local' && !isCurrentPartnerSelected && !username) || (selectedPartner !== 'local' && !isCurrentPartnerSelected && !password)} 
+                            className="w-full"
+                        >
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {selectedPartner === 'local' ? 'تفعيل الوضع المحلي' : (isCurrentPartnerSelected && isLoggedIn ? 'إعادة تسجيل الدخول' : 'تسجيل الدخول')}
+                            {selectedPartner === 'local' 
+                                ? 'تفعيل الوضع المحلي' 
+                                : isCurrentPartnerSelected && isLoggedIn 
+                                    ? 'التبديل إلى هذا الوضع' 
+                                    : 'تسجيل الدخول'
+                            }
                         </Button>
                     </DialogFooter>
                 </form>

@@ -23,7 +23,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder } = useInventory();
   const { user } = useAuth();
-  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   
@@ -858,6 +858,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           mode={orderCreationMode}
           activePartner={activePartner}
           isLoggedIn={isWaseetLoggedIn}
+          waseetUser={waseetUser}
           onManageClick={() => setDeliveryPartnerDialogOpen(true)}
         />
 

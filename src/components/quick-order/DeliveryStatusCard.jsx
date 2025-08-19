@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ServerCrash, Wifi, Map, Truck } from 'lucide-react';
 
-const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick }) => {
+const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, waseetUser }) => {
   const isLocal = activePartner === 'local';
   const isChoiceMode = mode === 'choice';
 
@@ -23,9 +23,9 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick }) 
   };
 
   const Icon = isLocal ? Map : (isLoggedIn ? Wifi : ServerCrash);
-  const title = isLocal ? "الوضع المحلي مفعل" : (isLoggedIn ? "متصل بشركة التوصيل" : "غير متصل");
+  const title = isLocal ? "الوضع المحلي مفعل" : (isLoggedIn ? "متصل بشركة الوسيط" : "غير متصل");
   const description = isLocal ? "سيتم إنشاء الطلبات داخل النظام فقط." : (isLoggedIn ? `الطلبات جاهزة للإرسال إلى شركة التوصيل.` : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.");
-  const buttonText = isLocal ? "تغيير الوضع" : (isLoggedIn ? "إدارة" : "تسجيل الدخول");
+  const buttonText = "تغيير الوضع";
 
   return (
     <motion.div variants={cardVariants} initial="initial" animate="animate" className={`relative p-5 rounded-xl shadow-lg overflow-hidden ${getCardStyle()}`}>
@@ -35,23 +35,28 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick }) 
           <div className="w-14 h-14 rounded-lg bg-white/20 flex items-center justify-center">
             <Icon className="w-7 h-7 text-white" />
           </div>
-          <div>
-            <h3 className="font-bold text-xl">{title}</h3>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <h3 className="font-bold text-xl">{title}</h3>
+              {!isLocal && isLoggedIn && waseetUser?.username && (
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white text-base font-bold shadow-lg backdrop-blur-sm border border-blue-300/60">
+                  {waseetUser.username}
+                </div>
+              )}
+            </div>
             <p className="text-sm opacity-90">{description}</p>
           </div>
         </div>
-        {(isChoiceMode || !isLoggedIn) && (
-          <Button 
-            type="button" 
-            size="sm" 
-            variant="outline" 
-            className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm" 
-            onClick={onManageClick}
-          >
-            <Truck className="w-4 h-4 ml-2" />
-            {buttonText}
-          </Button>
-        )}
+        <Button 
+          type="button" 
+          size="sm" 
+          variant="outline" 
+          className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm" 
+          onClick={onManageClick}
+        >
+          <Truck className="w-4 h-4 ml-2" />
+          {buttonText}
+        </Button>
       </div>
     </motion.div>
   );
