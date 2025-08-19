@@ -97,7 +97,7 @@ const SearchableSelectFixed = ({
       {open && (
         <div 
           ref={dropdownRef}
-          className="absolute z-[999] w-full mt-1 bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ direction: 'rtl' }}
         >
           {/* Search Input */}

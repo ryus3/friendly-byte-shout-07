@@ -73,33 +73,27 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                      customerInsight.alertType === 'recent_duplicate' ? 'تحذير: طلب مكرر محتمل' :
                      'عميل معروف'}
                   </div>
-                   <div className={`text-xs ${
-                     customerInsight.alertType === 'vip' ? 'text-purple-700 dark:text-purple-300' :
-                     customerInsight.alertType === 'recent_duplicate' ? 'text-orange-700 dark:text-orange-300' :
-                     'text-blue-700 dark:text-blue-300'
-                   }`}>
-                     {customerInsight.count > 0 && customerInsight.lastOrderDate && (
-                       <div className="flex items-center gap-2 text-xs">
-                         <span className="flex items-center gap-1">
-                           <span className="text-[10px]">📊</span>
-                           <span>{customerInsight.count} طلب</span>
-                         </span>
-                         <span className="flex items-center gap-1">
-                           <span className="text-[10px]">📅</span>
-                           <span>آخر طلب: {(() => {
-                           const date = new Date(customerInsight.lastOrderDate);
-                           const diffHours = customerInsight.timeSinceLastOrderHours;
-                           if (diffHours < 24) {
-                             return `${diffHours}س`;
-                           } else if (diffHours < 48) {
-                             return `${Math.floor(diffHours / 24)} يوم`;
-                           } else {
-                             return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
-                           }
-                         })()}</span>
-                         </span>
-                       </div>
-                     )}
+                  <div className={`text-xs flex items-center gap-3 ${
+                    customerInsight.alertType === 'vip' ? 'text-purple-700 dark:text-purple-300' :
+                    customerInsight.alertType === 'recent_duplicate' ? 'text-orange-700 dark:text-orange-300' :
+                    'text-blue-700 dark:text-blue-300'
+                  }`}>
+                    {customerInsight.count > 0 && customerInsight.lastOrderDate && (
+                      <div className="flex items-center gap-3">
+                        <span>إجمالي الطلبات: {customerInsight.count}</span>
+                        <span>آخر طلب: {(() => {
+                          const date = new Date(customerInsight.lastOrderDate);
+                          const diffHours = customerInsight.timeSinceLastOrderHours;
+                          if (diffHours < 24) {
+                            return `${diffHours}س`;
+                          } else if (diffHours < 48) {
+                            return `${Math.floor(diffHours / 24)} يوم`;
+                          } else {
+                            return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+                          }
+                        })()}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
