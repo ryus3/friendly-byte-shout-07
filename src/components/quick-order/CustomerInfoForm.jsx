@@ -32,37 +32,15 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
-          <div className="relative">
-            <Input 
-              id="name" 
-              name="name" 
-              value={formData.name} 
-              onChange={handleChange} 
-              placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
-              required 
-              disabled={isSubmittingState}
-              className="pr-8"
-              autoComplete="off"
-            />
-            {formData.name && (
-              <button
-                type="button"
-                onClick={() => {
-                  handleChange({ target: { name: 'name', value: '' } });
-                  // تركيز الحقل بعد المسح لتمكين التعديل المباشر
-                  setTimeout(() => {
-                    const nameField = document.getElementById('name');
-                    if (nameField) nameField.focus();
-                  }, 50);
-                }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg font-bold"
-                disabled={isSubmittingState}
-                title="مسح الاسم"
-              >
-                ×
-              </button>
-            )}
-          </div>
+          <Input 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
+            required 
+            disabled={isSubmittingState} 
+          />
           {formData.defaultCustomerName && !formData.name && (
             <p className="text-xs text-green-600">سيتم استخدام الاسم الافتراضي: {formData.defaultCustomerName}</p>
           )}
