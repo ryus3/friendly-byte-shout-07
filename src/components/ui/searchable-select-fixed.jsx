@@ -68,6 +68,7 @@ const SearchableSelectFixed = ({
   };
 
   const handleOptionSelect = (optionValue) => {
+    console.log('🎯 تم اختيار القيمة:', optionValue);
     onValueChange(optionValue);
     setOpen(false);
     setSearch('');
@@ -98,13 +99,14 @@ const SearchableSelectFixed = ({
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[9999] bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed z-[9999] bg-background border border-border rounded-md shadow-lg max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
             top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
             width: buttonRef.current?.getBoundingClientRect().width || 'auto',
-            minWidth: '200px'
+            minWidth: '200px',
+            maxWidth: '400px'
           }}
         >
           {/* Search Input */}
@@ -145,14 +147,20 @@ const SearchableSelectFixed = ({
                       "touch-manipulation",
                       isSelected && "bg-accent text-accent-foreground"
                     )}
-                    onClick={() => handleOptionSelect(optionValue)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleOptionSelect(optionValue);
+                    }}
                     onTouchEnd={(e) => {
                       e.preventDefault();
+                      e.stopPropagation();
                       handleOptionSelect(optionValue);
                     }}
                     style={{ 
                       WebkitTapHighlightColor: 'rgba(0,0,0,0)',
-                      touchAction: 'manipulation'
+                      touchAction: 'manipulation',
+                      userSelect: 'none'
                     }}
                   >
                     <Check
