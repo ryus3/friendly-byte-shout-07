@@ -22,12 +22,17 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     // الحصول على الشركاء المتاحة (المسجل دخول إليها + جميع الشركاء)
     const getAvailablePartners = () => {
-        // إضافة خيار "محلي" دائماً في وضع choice
+        // إضافة خيار "محلي" دائماً في وضع choice أو local_only
         const basePartners = orderCreationMode === 'local_only'
             ? { local: deliveryPartners.local }
             : orderCreationMode === 'partner_only'
             ? Object.fromEntries(Object.entries(deliveryPartners).filter(([key]) => key !== 'local'))
             : deliveryPartners;
+
+        // تأكد من وجود خيار محلي في جميع الأحوال ما عدا partner_only
+        if (orderCreationMode !== 'partner_only' && !basePartners.local) {
+            basePartners.local = { name: 'الوضع المحلي' };
+        }
 
         // إضافة خيار "إضافة شركة جديدة" للشركاء غير المسجل دخول إليها
         const availableOptions = { ...basePartners };
@@ -151,15 +156,10 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                         <div className="flex items-center gap-2 mb-2">
-                            <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner].name}</span>.</p>
+                            <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner]?.name || 'شركة التوصيل'}</span>.</p>
                             <Badge variant="success" className="text-xs">{waseetUser?.username}</Badge>
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="destructive" size="sm" type="button" onClick={handleLogout} className="flex-1">
-                                <LogOut className="w-4 h-4 ml-2" />
-                                تسجيل الخروج
-                            </Button>
-                        </div>
+                        <div className="text-xs text-blue-600">✓ هذه الشركة مفعلة حالياً</div>
                     </CardContent>
                 </Card>
             );
@@ -202,10 +202,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Truck className="w-5 h-5"/> إدارة شركة التوصيل</DialogTitle>
-                    <DialogDescription>
-                        اختر شركة التوصيل أو قم بتفعيل الوضع المحلي.
-                    </DialogDescription>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <DialogTitle className="flex items-center gap-2"><Truck className="w-5 h-5"/> إدارة شركة التوصيل</DialogTitle>
+                            <DialogDescription>
+                                اختر شركة التوصيل أو قم بتفعيل الوضع المحلي.
+                            </DialogDescription>
+                        </div>
+                        {/* زر تسجيل خروج عام للشريك النشط */}
+                        {activePartner !== 'local' && isLoggedIn && (
+                            <Button variant="destructive" size="sm" type="button" onClick={handleLogout}>
+                                <LogOut className="w-4 h-4 ml-1" />
+                                خروج
+                            </Button>
+                        )}
+                    </div>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="py-4 space-y-4">

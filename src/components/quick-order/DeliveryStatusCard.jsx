@@ -53,7 +53,7 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
               {isLoggedIn && waseetUser?.username && (
-                <Badge variant="secondary" className="bg-yellow-400 text-gray-900 border-yellow-300 text-xs font-semibold shadow-sm">
+                <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-blue-400 text-sm font-bold shadow-md px-3 py-1">
                   {waseetUser.username}
                 </Badge>
               )}
