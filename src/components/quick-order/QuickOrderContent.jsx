@@ -19,6 +19,7 @@ import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
+import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder } = useInventory();
@@ -207,7 +208,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [customerData, setCustomerData] = useState(null);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
   
-  // جلب بيانات العميل عند إدخال رقم الهاتف
+  // جلب بيانات العميل عند إدخال رقم الهاتف - نظام موحد
   useEffect(() => {
     const fetchCustomerData = async () => {
       if (!formData.phone || formData.phone.length < 4) {
@@ -219,58 +220,83 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       console.log('🔍 البحث عن العميل برقم:', formData.phone);
       
-      // تنظيف وتطبيع رقم الهاتف
-      let cleanPhone = formData.phone.replace(/\D/g, ''); // إزالة جميع غير الأرقام
+      // استخدام دالة تطبيع الهاتف الموحدة
+      const normalizedPhone = normalizePhone(formData.phone);
       
-      console.log('📱 الرقم بعد التنظيف:', cleanPhone);
-      
-      // إنشاء جميع الأنماط المحتملة للبحث
-      const searchPatterns = new Set([
-        formData.phone.trim(),        // الرقم كما هو
-        cleanPhone               // الرقم منظف
-      ]);
-      
-      // إضافة الأنماط العراقية المختلفة
-      if (cleanPhone.startsWith('964')) {
-        // إذا بدأ بـ 964، أزل الرمز واجعله بدون صفر
-        const withoutCountryCode = cleanPhone.substring(3);
-        searchPatterns.add(withoutCountryCode);
-        searchPatterns.add(`0${withoutCountryCode}`);
-      } else if (cleanPhone.startsWith('0')) {
-        // إذا بدأ بصفر، أضف بدون صفر ومع رمز البلد
-        const withoutZero = cleanPhone.substring(1);
-        searchPatterns.add(withoutZero);
-        searchPatterns.add(`964${withoutZero}`);
-        searchPatterns.add(`+964${withoutZero}`);
-        searchPatterns.add(`00964${withoutZero}`);
-      } else {
-        // إذا لم يبدأ بصفر أو 964، أضف جميع الصيغ
-        searchPatterns.add(
-          `0${cleanPhone}`,             // 07728020024
-          `964${cleanPhone}`,           // 9647728020024
-          `+964${cleanPhone}`,          // +9647728020024
-          `00964${cleanPhone}`          // 009647728020024
-        );
+      if (!normalizedPhone) {
+        console.log('❌ رقم هاتف غير صالح');
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+        return;
       }
       
-      console.log('🔍 جميع أنماط البحث:', Array.from(searchPatterns));
+      console.log('📱 الرقم المطبع:', normalizedPhone);
       
-      let customer = null;
-      
-      // البحث بجميع الأنماط
-      for (const pattern of searchPatterns) {
-        console.log(`🔎 البحث برقم: ${pattern}`);
+      try {
+        // حساب النقاط مباشرة من الطلبات المكتملة للحساب الحالي
+        const completedOrders = orders?.filter(order => {
+          const orderPhone = normalizePhone(extractOrderPhone(order));
+          return orderPhone === normalizedPhone && 
+                 order.status === 'completed' && 
+                 order.receipt_received === true &&
+                 order.created_by === user?.id; // طلبات هذا المستخدم فقط
+        }) || [];
         
-        try {
-          const { data, error } = await supabase
-            .from('customers')
-            .select(`
-              *,
-              customer_loyalty (
-                total_points,
-                total_spent,
-                current_tier_id,
-                loyalty_tiers (
+        const totalPoints = completedOrders.length * 250; // 250 نقطة لكل طلب مكتمل
+        const totalSpent = completedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        
+        // تحديد المستوى حسب النقاط
+        let currentTier = { name_ar: 'عادي', name_en: 'NORM', discount_percentage: 0 };
+        if (totalPoints >= 1000) {
+          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 15 };
+        } else if (totalPoints >= 500) {
+          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 10 };
+        } else if (totalPoints >= 250) {
+          currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 5 };
+        }
+        
+        const customerInfo = {
+          phone: normalizedPhone,
+          total_points: totalPoints,
+          total_spent: totalSpent,
+          total_orders: completedOrders.length,
+          currentTier,
+          first_order_date: completedOrders[0]?.created_at,
+          last_order_date: completedOrders[completedOrders.length - 1]?.created_at
+        };
+        
+        console.log('✅ تم حساب بيانات العميل من الطلبات:', customerInfo);
+        setCustomerData(customerInfo);
+        
+        // حساب خصم الولاء المقرب لأقرب 500
+        const discountPercentage = currentTier.discount_percentage || 0;
+        if (discountPercentage > 0) {
+          const subtotal = Object.values(cart).reduce(
+            (sum, item) => sum + item.quantity * item.price, 0
+          );
+          const rawDiscount = (subtotal * discountPercentage) / 100;
+          const roundedDiscount = Math.round(rawDiscount / 500) * 500;
+          setLoyaltyDiscount(roundedDiscount);
+          console.log(`💰 خصم الولاء: ${discountPercentage}% = ${rawDiscount} -> ${roundedDiscount}`);
+        } else {
+          setLoyaltyDiscount(0);
+        }
+        
+        // إنشاء كود الخصم
+        const promoCode = `RY${normalizedPhone.slice(-4)}${currentTier.name_en.slice(0,2)}`;
+        setFormData(prev => ({ ...prev, promoCode }));
+        
+      } catch (error) {
+        console.error('خطأ في حساب بيانات العميل:', error);
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+      }
+    };
+
+    fetchCustomerData();
+  }, [formData.phone, orders, user?.id, cart]);
                   name,
                   discount_percentage
                 )

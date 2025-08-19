@@ -11,29 +11,37 @@ export function normalizePhone(input) {
     // Keep digits only
     let digits = s.replace(/\D/g, '');
 
-    // Remove 00964 or 964 country code if present
+    // Handle different Iraqi phone formats
+    // Remove country codes: 00964, 964
     if (digits.startsWith('00964')) {
       digits = digits.slice(5);
     } else if (digits.startsWith('964')) {
       digits = digits.slice(3);
     }
 
-    // Ensure local leading 0 for mobile numbers starting with 7
-    if (digits.startsWith('7')) {
+    // Ensure proper Iraqi mobile format
+    // Add leading 0 if missing for mobile numbers (7, 8, 9)
+    if (digits.length === 10 && /^[789]/.test(digits)) {
+      digits = '0' + digits;
+    }
+    
+    // If starts with 7, 8, or 9 and shorter than 10, add leading 0
+    if (/^[789]/.test(digits) && digits.length < 11) {
       digits = '0' + digits;
     }
 
-    // If already starts with 0 and length 11, keep as is
-    if (digits.startsWith('0') && digits.length === 11) return digits;
-
-    // If length 10 (missing leading 0), add it
-    if (!digits.startsWith('0') && digits.length === 10) {
+    // Return valid 11-digit Iraqi number or empty
+    if (digits.startsWith('0') && digits.length === 11) {
+      return digits;
+    }
+    
+    // If exactly 10 digits and doesn't start with 0, try adding 0
+    if (digits.length === 10 && !digits.startsWith('0')) {
       return '0' + digits;
     }
 
-    // Fallback: return best-effort digits (trim to 11 if longer)
-    if (digits.length > 11) return digits.slice(0, 11);
-    return digits;
+    // Invalid format
+    return '';
   } catch (_) {
     return '';
   }
