@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,7 +38,31 @@ const OrderDetailsForm = ({
     activePartner: activePartner,
     settingsDeliveryFee: settings?.deliveryFee
   });
-  const finalTotal = total + deliveryFee;
+  
+  const finalTotal = total - discount + deliveryFee;
+
+  // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
+  useEffect(() => {
+    if (activePartner === 'local' && !formData.size) {
+      handleSelectChange('size', 'normal');
+    } else if (activePartner === 'alwaseet' && packageSizes.length > 0 && !formData.size) {
+      // البحث عن الحجم "عادي" أو أول خيار متاح
+      const normalSize = packageSizes.find(size => 
+        size.size?.includes('عادي') || size.size?.includes('normal')
+      );
+      const defaultSizeId = normalSize?.id || packageSizes[0]?.id;
+      if (defaultSizeId) {
+        handleSelectChange('size', String(defaultSizeId));
+      }
+    }
+  }, [activePartner, packageSizes, formData.size, handleSelectChange]);
+
+  // تحديث السعر النهائي في الحقل تلقائياً
+  useEffect(() => {
+    if (finalTotal !== formData.price) {
+      handleChange({ target: { name: 'price', value: finalTotal } });
+    }
+  }, [finalTotal, formData.price, handleChange]);
 
   return (
     <Card>

@@ -375,14 +375,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
 
-  // جلب البيانات
-  const { 
-    settings = {}, 
-    createOrder, 
-    createAlWaseetOrder,
-    fetchCities,
-    fetchRegions
-  } = useInventory();
+  // تم دمج جلب البيانات مع الاستدعاء الأول في السطر 24
 
   // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
