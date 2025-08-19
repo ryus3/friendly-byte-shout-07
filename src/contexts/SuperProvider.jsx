@@ -767,9 +767,12 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // إنجاح العملية وإبطال الكاش
+      // إنجاح العملية وإبطال الكاش + تحديث فوري
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
+      
+      // تحديث فوري للبيانات لضمان اللحظية
+      setTimeout(() => fetchAllData(), 0);
 
       return {
         success: true,
@@ -845,8 +848,9 @@ export const SuperProvider = ({ children }) => {
       const { error } = await supabase.from('orders').delete().in('id', orderIds);
       if (error) throw error;
       superAPI.invalidate('all_data');
-      // تحديث موحّد بعد التأكيد
-      await fetchAllData();
+      
+      // تحديث فوري للبيانات لضمان اللحظية
+      setTimeout(() => fetchAllData(), 0);
       return { success: true };
     } catch (error) {
       console.error('Error deleting orders:', error);
