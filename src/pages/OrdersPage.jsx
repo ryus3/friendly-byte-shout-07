@@ -113,10 +113,25 @@ const OrdersPage = () => {
       const deletedOrder = event.detail;
       console.log('🗑️ تم استلام حدث حذف طلب:', deletedOrder.qr_id || deletedOrder.order_number);
       
+      // تحديث فوري بدون تأخير
       if (refreshDataInstantly) {
-        console.log('🚀 تطبيق تحديث فوري للبيانات');
+        console.log('⚡ تطبيق تحديث فوري ومباشر للبيانات');
         refreshDataInstantly();
+        
+        // إضافة تحديث احتياطي إضافي
+        setTimeout(() => {
+          console.log('🔄 تحديث احتياطي إضافي للتأكد');
+          refreshDataInstantly();
+        }, 50);
       }
+      
+      // إشعار فوري بالحذف
+      toast({
+        title: '🗑️ تم حذف الطلب',
+        description: `رقم الطلب: ${deletedOrder.qr_id || deletedOrder.order_number}`,
+        variant: 'default',
+        duration: 3000
+      });
     };
 
     const handleForceDataRefresh = () => {

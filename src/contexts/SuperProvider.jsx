@@ -1283,10 +1283,69 @@ export const SuperProvider = ({ children }) => {
     updateCartItemQuantity: updateCartItemQuantity || (() => {}),
     clearCart: clearCart || (() => {}),
     
-    // الوظائف الأساسية
-    createOrder: createOrder || (async () => ({ success: false })),
-    updateOrder: updateOrder || (async () => ({ success: false })),
-    deleteOrders: deleteOrders || (async () => ({ success: false })),
+  // الوظائف الأساسية
+  createOrder: createOrder || (async () => ({ success: false })),
+  updateOrder: updateOrder || (async () => ({ success: false })),
+  deleteOrders: useCallback(async (orderIds) => {
+    console.log('🗑️ SuperProvider: بدء حذف فوري للطلبات:', { orderIds });
+    
+    try {
+      // التأكد من أن orderIds مصفوفة
+      const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds];
+      
+      // إزالة فورية من الحالة المحلية (Optimistic Update)
+      setAllData(prev => {
+        const newOrders = (prev.orders || []).filter(order => !idsArray.includes(order.id));
+        const newAiOrders = (prev.aiOrders || []).filter(order => !idsArray.includes(order.id));
+        
+        console.log(`🔄 تم حذف ${prev.orders?.length - newOrders.length} طلب عادي و ${prev.aiOrders?.length - newAiOrders.length} طلب ذكي محلياً`);
+        
+        return {
+          ...prev,
+          orders: newOrders,
+          aiOrders: newAiOrders
+        };
+      });
+
+      // الحذف من قاعدة البيانات باستخدام SuperAPI المطور
+      const result = await superAPI.deleteOrders(idsArray);
+      
+      if (result.success) {
+        console.log('✅ تم حذف الطلبات من قاعدة البيانات بنجاح');
+        
+        // إشعار فوري للمستخدم
+        toast({
+          title: '✅ تم حذف الطلبات بنجاح',
+          description: `تم حذف ${idsArray.length} طلب بنجاح`,
+          variant: 'success',
+          duration: 3000
+        });
+
+        // إجبار تحديث البيانات من الخادم (fallback)
+        setTimeout(() => {
+          console.log('🔄 تحديث احتياطي من الخادم');
+          fetchAllData();
+        }, 100);
+
+        return { success: true, deletedIds: idsArray };
+      }
+    } catch (error) {
+      console.error('❌ فشل في حذف الطلبات:', error);
+      
+      // في حالة الفشل، أعد تحميل البيانات لضمان التطابق
+      console.log('🔄 إعادة تحميل البيانات بسبب فشل الحذف');
+      await fetchAllData();
+      
+      toast({
+        title: '❌ فشل في حذف الطلبات',
+        description: error.message || 'حدث خطأ غير متوقع',
+        variant: 'destructive',
+        duration: 5000
+      });
+      
+      return { success: false, error: error.message };
+    }
+  }, [fetchAllData]),
     addExpense: addExpense || (async () => ({ success: false })),
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
@@ -1294,15 +1353,28 @@ export const SuperProvider = ({ children }) => {
     refreshAll: refreshAll || (async () => {}),
     refreshAllData: refreshAllData || (async () => {}),
     refreshDataInstantly: useCallback(async () => {
-      console.log('🚀 تحديث فوري للبيانات');
+      console.log('⚡ تحديث فوري ومباشر للبيانات - نسخة محسنة');
       
-      // تحديث البيانات فوراً لضمان اللحظية
-      setTimeout(() => fetchAllData(), 0);
+      // إبطال كاش SuperAPI فوراً
+      superAPI.invalidate('all_data');
+      superAPI.invalidate('orders_only');
+      
+      // جلب البيانات الجديدة فوراً بدون تأخير
+      try {
+        const freshData = await superAPI.getAllData();
+        const filteredData = filterDataByEmployeeCode(freshData, user);
+        setAllData(filteredData);
+        console.log('✅ تم التحديث الفوري والمباشر بنجاح');
+      } catch (error) {
+        console.error('❌ خطأ في التحديث الفوري:', error);
+        // fallback للطريقة القديمة
+        fetchAllData();
+      }
       
       // إجبار re-render للمكونات
       window.dispatchEvent(new CustomEvent('forceDataRefresh'));
-      console.log('✅ تم التحديث الفوري بنجاح');
-    }, [fetchAllData]),
+      console.log('🔄 تم إرسال إشارة إعادة التصيير');
+    }, [fetchAllData, user]),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {

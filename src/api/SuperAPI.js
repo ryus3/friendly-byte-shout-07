@@ -393,6 +393,43 @@ return this.fetch('all_data', async () => {
   }
 
   /**
+   * حذف طلبات - إصلاح فوري ونهائي
+   */
+  async deleteOrders(orderIds) {
+    console.log('🗑️ SuperAPI: بدء حذف الطلبات:', { orderIds });
+    
+    // التأكد من أن orderIds مصفوفة
+    const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds];
+    
+    try {
+      // حذف من قاعدة البيانات
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .in('id', idsArray);
+      
+      if (error) {
+        console.error('❌ خطأ في حذف الطلبات:', error);
+        throw error;
+      }
+
+      console.log('✅ تم حذف الطلبات من قاعدة البيانات بنجاح');
+      
+      // إبطال الكاش فوراً - تحديث قوي
+      this.invalidate('all_data');
+      this.invalidate('orders_only');
+      this.debouncedInvalidateAll(50); // تنظيف شامل بتأخير قصير
+      
+      console.log('🔄 تم إبطال الكاش بنجاح');
+      
+      return { success: true, deletedIds: idsArray };
+    } catch (error) {
+      console.error('❌ فشل في حذف الطلبات:', error);
+      throw error;
+    }
+  }
+
+  /**
    * إضافة منتج جديد
    */
   async createProduct(productData) {
