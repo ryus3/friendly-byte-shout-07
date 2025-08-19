@@ -392,7 +392,7 @@ export const SuperProvider = ({ children }) => {
     }
   }, [user]);
 
-  // دالة تحديث فورية للبيانات
+  // دالة تحديث فورية سريعة للبيانات
   const refreshAllData = useCallback(async () => {
     if (!user) return;
     
@@ -1286,20 +1286,28 @@ export const SuperProvider = ({ children }) => {
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
     refreshAllData: refreshAllData || (async () => {}),
-    refreshDataInstantly: useCallback(() => {
-      console.log('🔄 Instant data refresh triggered');
-      // إبطال جميع الكاش فوراً
-      if (typeof queryClient?.invalidateQueries === 'function') {
-        queryClient.invalidateQueries();
+    refreshDataInstantly: useCallback(async () => {
+      console.log('🚀 تحديث فوري للبيانات');
+      
+      // استدعاء تحديث البيانات المحلية
+      if (refreshAllData) {
+        await refreshAllData();
       }
-      // تحديث البيانات المحلية
-      refetchInventory?.();
-      refetchProducts?.();
-      refetchOrders?.();
-      refetchCustomers?.();
+      
+      // تحديث البيانات الأخرى إذا توفرت
+      try {
+        refetchInventory?.();
+        refetchProducts?.();
+        refetchOrders?.();
+        refetchCustomers?.();
+      } catch (error) {
+        console.warn('⚠️ بعض دوال التحديث غير متوفرة:', error.message);
+      }
+      
       // إجبار re-render للمكونات
       window.dispatchEvent(new CustomEvent('forceDataRefresh'));
-    }, [queryClient, refetchInventory, refetchProducts, refetchOrders, refetchCustomers]),
+      console.log('✅ تم التحديث الفوري بنجاح');
+    }, [refreshAllData, refetchInventory, refetchProducts, refetchOrders, refetchCustomers]),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {

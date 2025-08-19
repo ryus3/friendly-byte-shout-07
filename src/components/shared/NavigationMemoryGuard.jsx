@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { navigationGuard, performanceMonitor } from '@/utils/navigationGuard';
 import { memoryCleanup } from '@/utils/memoryCleanup';
+import { performanceOptimizer, navigationOptimizer } from '@/utils/performance-optimizer';
 
 const NavigationMemoryGuard = ({ children }) => {
   const location = useLocation();
@@ -26,11 +27,13 @@ const NavigationMemoryGuard = ({ children }) => {
       performanceMonitor.cleanup();
     }
 
-    // Cleanup timer
+    // تنظيف محسن وسريع
     const cleanupTimer = setTimeout(() => {
       navigationGuard.endNavigation();
+      navigationOptimizer.endNavigation();
       memoryCleanup.executeAll();
-    }, 100);
+      performanceOptimizer.monitorMemory();
+    }, 50);
 
     // Cleanup function
     return () => {

@@ -121,8 +121,10 @@ const OrdersPage = () => {
 
     const handleForceDataRefresh = () => {
       console.log('🔄 إجبار تحديث البيانات في OrdersPage');
-      // إجبار re-render فوري
-      setOrders(prev => [...prev]);
+      // تحديث فوري للواجهة بدون خطأ
+      if (refreshDataInstantly) {
+        refreshDataInstantly();
+      }
     };
 
     // تسجيل المستمعين

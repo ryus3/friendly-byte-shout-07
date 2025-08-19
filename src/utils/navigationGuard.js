@@ -20,11 +20,11 @@ export const navigationGuard = {
     
     isNavigating = true;
     
-    // Auto-reset after 50ms to prevent permanent blocking
+    // Auto-reset after 10ms for faster response
     navigationTimeout = setTimeout(() => {
       isNavigating = false;
       console.log('✅ Navigation timeout reset');
-    }, 50);
+    }, 10);
     
     return true;
   },
