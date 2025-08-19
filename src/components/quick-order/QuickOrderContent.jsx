@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, startTransition } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
@@ -20,6 +20,8 @@ import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
+import { memoryCleanup, useMemoryCleanup } from '@/utils/memoryCleanup';
+import { navigationGuard } from '@/utils/navigationGuard';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
@@ -423,28 +425,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // Clear cart first to prevent cascade updates
       if (clearCart) clearCart();
       
-      // Set form data with minimal dependencies
-      setFormData({
-        name: customerName, 
-        phone: '', 
-        second_phone: '', 
-        city_id: '', 
-        region_id: '', 
-        city: '', 
-        region: '', 
-        address: '', 
-        notes: '', 
-        details: '', 
-        quantity: 1, 
-        price: 0, 
-        size: activePartner === 'local' ? 'normal' : '', 
-        type: 'new', 
-        promocode: '',
-        defaultCustomerName: customerName
-      });
-      
-      // Reset other state asynchronously to prevent memory cascade
-      setTimeout(() => {
+      // Use startTransition for smooth updates
+      startTransition(() => {
+        // Set all form data at once to prevent multiple re-renders
+        setFormData({
+          name: customerName, 
+          phone: '', 
+          second_phone: '', 
+          city_id: '', 
+          region_id: '', 
+          city: '', 
+          region: '', 
+          address: '', 
+          notes: '', 
+          details: '', 
+          quantity: 1, 
+          price: 0, 
+          size: activePartner === 'local' ? 'normal' : '', 
+          type: 'new', 
+          promocode: '',
+          defaultCustomerName: customerName
+        });
+        
+        // Reset all other state synchronously in a batch
         setDiscount(0);
         setLoyaltyDiscount(0);
         setApplyLoyaltyDiscount(false);
@@ -452,13 +455,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setCustomerData(null);
         setErrors({});
         setNameTouched(false);
-      }, 0);
+      });
       
       console.log('✅ مسح النموذج - تم بنجاح');
     } catch (error) {
       console.error('❌ خطأ في resetForm:', error);
     }
   }, [clearCart, activePartner, defaultCustomerName, user?.default_customer_name]);
+
+  // Memory cleanup on unmount
+  useMemoryCleanup(() => {
+    console.log('🧹 QuickOrderContent cleanup');
+    if (typeof clearCart === 'function') {
+      clearCart();
+    }
+  });
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
@@ -847,8 +858,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           variant: 'success',
           duration: 5000
         });
-        resetForm();
-        if(onOrderCreated) onOrderCreated();
+        
+        // Navigate immediately after order creation
+        if (navigationGuard.startNavigation()) {
+          console.log('🚀 Navigation started successfully');
+          
+          // Call onOrderCreated first
+          if(onOrderCreated) onOrderCreated();
+          
+          // Reset form after navigation guard is set
+          resetForm();
+          
+          // End navigation after short delay
+          setTimeout(() => {
+            navigationGuard.endNavigation();
+          }, 500);
+        } else {
+          console.warn('⚠️ Navigation blocked, trying fallback');
+          if(onOrderCreated) onOrderCreated();
+          resetForm();
+        }
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {
       console.error('Error creating order:', error);

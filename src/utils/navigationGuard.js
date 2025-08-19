@@ -20,11 +20,11 @@ export const navigationGuard = {
     
     isNavigating = true;
     
-    // Auto-reset after 3 seconds to prevent permanent blocking
+    // Auto-reset after 1 second for faster navigation
     navigationTimeout = setTimeout(() => {
       isNavigating = false;
       console.log('✅ Navigation timeout reset');
-    }, 3000);
+    }, 1000);
     
     return true;
   },
@@ -38,7 +38,7 @@ export const navigationGuard = {
     }
   },
 
-  // Force reset navigation state
+  // Force reset navigation state  
   forceReset: () => {
     isNavigating = false;
     if (navigationTimeout) {
@@ -46,7 +46,13 @@ export const navigationGuard = {
       navigationTimeout = null;
     }
     console.log('🔄 Navigation state force reset');
-  }
+  },
+
+  // Get navigation state for debugging
+  getState: () => ({
+    isNavigating,
+    hasTimeout: !!navigationTimeout
+  })
 };
 
 // Performance monitoring

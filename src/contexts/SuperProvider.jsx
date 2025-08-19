@@ -414,8 +414,15 @@ export const SuperProvider = ({ children }) => {
 
     const reloadTimerRef = { current: null };
 
+    const debounceTimeoutRef = useRef(null);
+    
     const handleRealtimeUpdate = (table, payload) => {
       console.log(`🔄 SuperProvider: تحديث فوري لحظي في ${table}`, payload);
+      
+      // منع multiple updates أثناء order creation
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
       
       // تحديث مباشر فوري للطلبات - بدون إعادة جلب
       if (table === 'orders') {
@@ -425,10 +432,12 @@ export const SuperProvider = ({ children }) => {
         
         if (type === 'INSERT') {
           console.log('➕ إضافة طلب جديد فورياً');
-          setAllData(prev => ({ 
-            ...prev, 
-            orders: [rowNew, ...(prev.orders || [])] 
-          }));
+          debounceTimeoutRef.current = setTimeout(() => {
+            setAllData(prev => ({ 
+              ...prev, 
+              orders: [rowNew, ...(prev.orders || [])] 
+            }));
+          }, 100);
         } else if (type === 'UPDATE') {
           console.log('🔄 تحديث طلب فورياً');
           setAllData(prev => ({

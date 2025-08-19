@@ -15,21 +15,27 @@ function useLocalStorage(key, initialValue) {
     }
   });
 
+  // Flag to prevent multiple writes during navigation
+  const isNavigatingRef = useRef(false);
+  
   // Debounced localStorage write to prevent memory leaks
   const debouncedWrite = useCallback((value) => {
+    // Skip writes during navigation to prevent memory corruption
+    if (isNavigatingRef.current) return;
+    
     if (writeTimeoutRef.current) {
       clearTimeout(writeTimeoutRef.current);
     }
     
     writeTimeoutRef.current = setTimeout(() => {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || isNavigatingRef.current) return;
       
       try {
         window.localStorage.setItem(key, JSON.stringify(value));
       } catch (error) {
         console.error(`❌ Error setting localStorage key "${key}":`, error);
       }
-    }, 100);
+    }, 50); // Reduced debounce time for faster responsiveness
   }, [key]);
 
   // Update localStorage when state changes
@@ -49,10 +55,34 @@ function useLocalStorage(key, initialValue) {
     }
   }, [key, storedValue, debouncedWrite]);
 
+  // Navigation state monitoring
+  useEffect(() => {
+    const handleNavStart = () => {
+      isNavigatingRef.current = true;
+    };
+    
+    const handleNavEnd = () => {
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 100);
+    };
+    
+    window.addEventListener('beforeunload', handleNavStart);
+    window.addEventListener('popstate', handleNavStart);
+    window.addEventListener('load', handleNavEnd);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleNavStart);
+      window.removeEventListener('popstate', handleNavStart);
+      window.removeEventListener('load', handleNavEnd);
+    };
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      isNavigatingRef.current = true; // Prevent writes during unmount
       if (writeTimeoutRef.current) {
         clearTimeout(writeTimeoutRef.current);
       }
