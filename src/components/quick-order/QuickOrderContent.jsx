@@ -414,24 +414,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
-    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
-    const emptyFormData = {
-      name: '', 
+    // إعادة تعيين السلة والنموذج مع الاحتفاظ بالإعدادات الافتراضية
+    const resetData = {
+      name: defaultCustomerName || user?.default_customer_name || '',
       phone: '', 
       second_phone: '', 
       city_id: '', 
       region_id: '', 
-      city: '', 
+      city: 'بغداد', // المدينة الافتراضية
       region: '', 
       address: '', 
       notes: '', 
       details: '', 
       quantity: 1, 
       price: 0, 
-      size: activePartner === 'local' ? 'normal' : '', 
+      size: activePartner === 'local' ? 'normal' : '', // الحجم الافتراضي
       type: 'new', 
       promocode: '',
-      defaultCustomerName: ''
+      defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
     };
     
     console.log('🔄 مسح النموذج - بدء العملية');
@@ -446,10 +446,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setErrors({});
     
     // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
-    setFormData(emptyFormData);
+    setFormData(resetData);
     
     console.log('✅ مسح النموذج - تم بنجاح');
-  }, [clearCart, activePartner]);
+  }, [clearCart, activePartner, defaultCustomerName, user?.default_customer_name]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {

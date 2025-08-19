@@ -32,15 +32,27 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            value={formData.name} 
-            onChange={handleChange} 
-            placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
-            required 
-            disabled={isSubmittingState} 
-          />
+          <div className="relative">
+            <Input 
+              id="name" 
+              name="name" 
+              value={formData.name} 
+              onChange={handleChange} 
+              placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
+              required 
+              disabled={isSubmittingState} 
+            />
+            {formData.name && (
+              <button
+                type="button"
+                onClick={() => handleChange({ target: { name: 'name', value: '' } })}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                disabled={isSubmittingState}
+              >
+                ×
+              </button>
+            )}
+          </div>
           {formData.defaultCustomerName && !formData.name && (
             <p className="text-xs text-green-600">سيتم استخدام الاسم الافتراضي: {formData.defaultCustomerName}</p>
           )}

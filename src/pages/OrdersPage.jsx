@@ -20,7 +20,7 @@ import OrdersStats from '@/components/orders/OrdersStats';
 import OrdersToolbar from '@/components/orders/OrdersToolbar';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import EditOrderDialog from '@/components/orders/EditOrderDialog';
+import UnifiedEditOrderDialog from '@/components/orders/UnifiedEditOrderDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
 import StatCard from '@/components/dashboard/StatCard';
@@ -545,7 +545,7 @@ const OrdersPage = () => {
           sellerName={selectedOrder ? usersMap.get(selectedOrder.created_by) : null}
         />
 
-        <EditOrderDialog
+        <UnifiedEditOrderDialog
           order={selectedOrder}
           open={dialogs.edit}
           onOpenChange={(open) => setDialogs(d => ({ ...d, edit: open }))}
