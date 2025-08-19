@@ -297,81 +297,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
     fetchCustomerData();
   }, [formData.phone, orders, user?.id, cart]);
-                  name,
-                  discount_percentage
-                )
-              )
-            `)
-            .eq('phone', pattern)
-            .maybeSingle();
-            
-          if (data && !error) {
-            customer = data;
-            console.log(`✅ تم العثور على العميل برقم: ${pattern}`);
-            break;
-          }
-        } catch (err) {
-          console.error(`خطأ في البحث برقم ${pattern}:`, err);
-        }
-      }
-
-      if (!customer) {
-        console.log('❌ لم يتم العثور على العميل');
-        setCustomerData(null);
-        setLoyaltyDiscount(0);
-        setDiscount(0);
-        return;
-      }
-
-      console.log('✅ تم العثور على العميل:', customer);
-      setCustomerData(customer);
-      
-      // ملء البيانات تلقائياً مع حماية من null
-      setFormData(prev => ({
-        ...prev,
-        name: customer.name || prev.name,
-        city: customer.city || prev.city,
-        address: customer.address || prev.address
-      }));
-
-      // حساب وتطبيق خصم الولاء فوراً مع التقريب المطلوب
-      const loyaltyData = customer.customer_loyalty;
-      if (loyaltyData && loyaltyData.loyalty_tiers) {
-        const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
-        
-        // توليد بروموكود ثابت من الهاتف ومستوى الولاء
-        const cleanPhone = (customer.phone || '').replace(/\D/g, '');
-        const localPhone = cleanPhone.startsWith('964') ? `0${cleanPhone.slice(3)}` : cleanPhone.startsWith('0') ? cleanPhone : `0${cleanPhone}`;
-        const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
-        const tierAbbr = abbrMap[loyaltyData.loyalty_tiers.name] || 'BR';
-        const promo = localPhone ? `RY${localPhone.slice(-4)}${tierAbbr}` : '';
-        setFormData(prev => ({ ...prev, promocode: promo }));
-        
-        // إعادة حساب الخصم مع السلة الحالية
-        const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
-        const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
-        
-        // تقريب الخصم إلى أقرب 500 دينار
-        const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
-        
-        console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
-        console.log(`🎁 خصم الولاء الأساسي: ${discountPercentage}% = ${baseDiscountAmount} د.ع`);
-        console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
-        
-        setLoyaltyDiscount(roundedDiscountAmount);
-        setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
-        
-        // عدم إظهار رسالة الولاء للموظفين لتجنب الخلط
-        console.log(`✅ تم العثور على العميل: ${customer.name} - نقاط: ${loyaltyData.total_points}`);
-        if (roundedDiscountAmount > 0) {
-          console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
-        }
-      }
-
-    };
-
-    fetchCustomerData();
-  }, [formData.phone]);
 
   
   // تحديث الخصم عند تغيير السلة مع التقريب المطلوب

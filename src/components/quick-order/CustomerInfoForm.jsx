@@ -48,6 +48,27 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
         <div className="space-y-2">
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>
           <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={errors.phone ? 'border-red-500' : ''} disabled={isSubmittingState} />
+          
+          {/* عرض تنبيه العميل المعروف */}
+          {customerInsight && customerInsight.count > 0 && (
+            <div className={`p-2 rounded-md text-xs font-medium flex items-center gap-2 ${
+              customerInsight.alertType === 'vip' 
+                ? 'bg-amber-50 text-amber-800 border border-amber-200' 
+                : customerInsight.alertType === 'recent_duplicate'
+                ? 'bg-orange-50 text-orange-800 border border-orange-200'
+                : 'bg-blue-50 text-blue-800 border border-blue-200'
+            }`}>
+              <span className="text-sm">
+                {customerInsight.alertType === 'vip' ? '👑' : 
+                 customerInsight.alertType === 'recent_duplicate' ? '⚠️' : '👤'}
+              </span>
+              <span>
+                {customerInsight.alertType === 'vip' ? 'عميل VIP' : 
+                 customerInsight.alertType === 'recent_duplicate' ? 'احتمال تكرار' :
+                 'عميل معروف'} • {customerInsight.count} طلب • {customerInsight.points} نقطة
+              </span>
+            </div>
+          )}
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
           {/* تنبيه العميل المحسن - سيظهر تلقائياً من الخطاف */}
 
