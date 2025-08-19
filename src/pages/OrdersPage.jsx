@@ -32,7 +32,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 
 const OrdersPage = () => {
-  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refreshDataInstantly } = useInventory();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
@@ -64,108 +64,76 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
-  // ربط Real-time Events مع SuperProvider للتحديث الفوري
+  // إشعارات فقط للطلبات الجديدة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
-    console.log('🔗 تأسيس روابط Real-time في OrdersPage');
-    
-    // الاستماع لأحداث Real-time من setupRealtime()
-    const handleOrderCreated = (event) => {
-      const newOrder = event.detail;
-      console.log('📢 تم استلام حدث إنشاء طلب جديد:', newOrder.qr_id || newOrder.order_number);
-      
-      // تحديث فوري للبيانات
-      if (refreshDataInstantly) {
-        console.log('🚀 تطبيق تحديث فوري للبيانات');
-        refreshDataInstantly();
-      }
-      
-      // إشعار فوري
-      toast({
-        title: (
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            تم إنشاء طلب جديد بنجاح
-          </div>
-        ),
-        description: (
-          <div className="space-y-1">
-            <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
-            <p><strong>العميل:</strong> {newOrder.customer_name}</p>
-            <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
-          </div>
-        ),
-        variant: "success",
-        duration: 5000
-      });
-    };
+    const channel = supabase
+      .channel('orders-notifications-only')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          const newOrder = payload.new;
+          console.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
+          
+          // إشعار فوري عند إنشاء طلب جديد فقط
+          toast({
+            title: (
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                تم إنشاء طلب جديد بنجاح
+              </div>
+            ),
+            description: (
+              <div className="space-y-1">
+                <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
+                <p><strong>العميل:</strong> {newOrder.customer_name}</p>
+                <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
+              </div>
+            ),
+            variant: "success",
+            duration: 5000
+          });
 
-    const handleOrderUpdated = (event) => {
-      const updatedOrder = event.detail;
-      console.log('📝 تم استلام حدث تحديث طلب:', updatedOrder.qr_id || updatedOrder.order_number);
-      
-      if (refreshDataInstantly) {
-        console.log('🚀 تطبيق تحديث فوري للبيانات');
-        refreshDataInstantly();
-      }
-    };
-
-    const handleOrderDeleted = (event) => {
-      const deletedOrder = event.detail;
-      console.log('🗑️ تم استلام حدث حذف طلب:', deletedOrder.qr_id || deletedOrder.order_number);
-      
-      // تحديث فوري بدون تأخير
-      if (refreshDataInstantly) {
-        console.log('⚡ تطبيق تحديث فوري ومباشر للبيانات');
-        refreshDataInstantly();
-        
-        // إضافة تحديث احتياطي إضافي
-        setTimeout(() => {
-          console.log('🔄 تحديث احتياطي إضافي للتأكد');
-          refreshDataInstantly();
-        }, 50);
-      }
-      
-      // إشعار فوري بالحذف
-      toast({
-        title: '🗑️ تم حذف الطلب',
-        description: `رقم الطلب: ${deletedOrder.qr_id || deletedOrder.order_number}`,
-        variant: 'default',
-        duration: 3000
-      });
-    };
-
-    const handleForceDataRefresh = () => {
-      console.log('🔄 إجبار تحديث البيانات في OrdersPage');
-      // تحديث فوري للواجهة بدون خطأ
-      if (refreshDataInstantly) {
-        refreshDataInstantly();
-      }
-    };
-
-    // تسجيل المستمعين
-    window.addEventListener('orderCreated', handleOrderCreated);
-    window.addEventListener('orderUpdated', handleOrderUpdated);
-    window.addEventListener('orderDeleted', handleOrderDeleted);
-    window.addEventListener('forceDataRefresh', handleForceDataRefresh);
+          // إضافة إشعار في نافذة الإشعارات للمديرين فقط
+          if (hasPermission('view_all_data') || hasPermission('manage_orders')) {
+            const createNotification = async () => {
+              try {
+                await supabase.from('notifications').insert({
+                  title: 'طلب جديد',
+                  message: `تم إنشاء طلب جديد برقم ${newOrder.qr_id || newOrder.order_number} من العميل ${newOrder.customer_name}`,
+                  type: 'order_created',
+                  priority: 'high',
+                  data: {
+                    order_id: newOrder.id,
+                    order_qr: newOrder.qr_id,
+                    customer_name: newOrder.customer_name,
+                    amount: newOrder.final_amount
+                  },
+                  user_id: null // إشعار عام للمديرين
+                });
+              } catch (error) {
+                console.error('Error creating notification:', error);
+              }
+            };
+            createNotification();
+          }
+          // لا حاجة لـ refetchProducts - SuperProvider يتولى التحديث الفوري
+        }
+      )
+      .subscribe();
 
     return () => {
-      console.log('🔌 إزالة روابط Real-time من OrdersPage');
-      window.removeEventListener('orderCreated', handleOrderCreated);
-      window.removeEventListener('orderUpdated', handleOrderUpdated);
-      window.removeEventListener('orderDeleted', handleOrderDeleted);
-      window.removeEventListener('forceDataRefresh', handleForceDataRefresh);
+      supabase.removeChannel(channel);
     };
   }, [hasPermission]); // إزالة refetchProducts من dependencies
 
   // مستمعون عامّون لأحداث النظام المحلية لضمان التحديث حتى إن لم تصل Realtime
   useEffect(() => {
-    const handler = () => { 
-      try { 
-        refreshDataInstantly?.(); 
-      } catch (error) {
-        console.warn('⚠️ فشل في تحديث البيانات:', error);
-      }
-    };
+    const handler = () => { try { refetchProducts?.(); } catch {} };
     window.addEventListener('orderCreated', handler);
     window.addEventListener('orderUpdated', handler);
     window.addEventListener('orderDeleted', handler);
@@ -176,7 +144,7 @@ const OrdersPage = () => {
       window.removeEventListener('orderDeleted', handler);
       window.removeEventListener('aiOrderDeleted', handler);
     };
-  }, [refreshDataInstantly]);
+  }, [refetchProducts]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -248,7 +216,6 @@ const OrdersPage = () => {
     const opts = (allUsers || []).map(u => ({ value: u.user_id, label: u.full_name || u.name || u.email || 'مستخدم' }));
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
-
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -350,9 +317,7 @@ const OrdersPage = () => {
   const handleSync = async () => {
     setSyncing(true);
     await syncAlWaseetOrders();
-    if (refreshDataInstantly) {
-      await refreshDataInstantly();
-    }
+    await refetchProducts();
     setSyncing(false);
   }
 
@@ -565,7 +530,7 @@ const OrdersPage = () => {
           additionalButtons={(order) => (
             <ReceiveInvoiceButton 
               order={order} 
-              onSuccess={() => refreshDataInstantly?.()} 
+              onSuccess={() => refetchProducts()} 
             />
           )}
         />
@@ -584,16 +549,18 @@ const OrdersPage = () => {
           order={selectedOrder}
           open={dialogs.edit}
           onOpenChange={(open) => setDialogs(d => ({ ...d, edit: open }))}
-          onOrderUpdated={() => {
+          onOrderUpdated={async () => {
             setDialogs(d => ({ ...d, edit: false }));
+            await refetchProducts();
           }}
         />
         
         <QuickOrderDialog
           open={dialogs.quickOrder}
           onOpenChange={(open) => setDialogs(d => ({ ...d, quickOrder: open }))}
-          onOrderCreated={() => {
+          onOrderCreated={async () => {
               setDialogs(d => ({ ...d, quickOrder: false }));
+              await refetchProducts();
           }}
         />
         
@@ -639,9 +606,7 @@ const OrdersPage = () => {
           onClose={() => setDialogs(d => ({ ...d, returnReceipt: false }))}
           order={selectedOrder}
           onSuccess={async () => {
-            if (refreshDataInstantly) {
-              await refreshDataInstantly();
-            }
+            await refetchProducts();
             toast({
               title: "تم استلام الراجع",
               description: "تم إرجاع المنتجات إلى المخزون بنجاح",

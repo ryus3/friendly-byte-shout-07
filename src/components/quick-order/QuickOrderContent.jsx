@@ -22,7 +22,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
-  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders, refreshDataInstantly } = useInventory();
+  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -415,48 +415,43 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
-    console.log('🔄 resetForm called - الاسم الافتراضي:', defaultCustomerName, 'المستخدم:', user?.default_customer_name);
+    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
+    const emptyFormData = {
+      name: '', 
+      phone: '', 
+      second_phone: '', 
+      city_id: '', 
+      region_id: '', 
+      city: '', 
+      region: '', 
+      address: '', 
+      notes: '', 
+      details: '', 
+      quantity: 1, 
+      price: 0, 
+      size: activePartner === 'local' ? 'normal' : '', 
+      type: 'new', 
+      promocode: '',
+      defaultCustomerName: ''
+    };
     
-    const customerName = defaultCustomerName || user?.default_customer_name || '';
+    console.log('🔄 مسح النموذج - بدء العملية');
     
-    try {
-      // Clear cart first to prevent cascade updates
-      if (clearCart) clearCart();
-      
-      // Set form data with minimal dependencies
-      setFormData({
-        name: customerName, 
-        phone: '', 
-        second_phone: '', 
-        city_id: '', 
-        region_id: '', 
-        city: '', 
-        region: '', 
-        address: '', 
-        notes: '', 
-        details: '', 
-        quantity: 1, 
-        price: 0, 
-        size: activePartner === 'local' ? 'normal' : '', 
-        type: 'new', 
-        promocode: '',
-        defaultCustomerName: customerName
-      });
-      
-      // Reset other state instantly without startTransition
-      setDiscount(0);
-      setLoyaltyDiscount(0);
-      setApplyLoyaltyDiscount(false);
-      setApplyLoyaltyDelivery(false);
-      setCustomerData(null);
-      setErrors({});
-      setNameTouched(false);
-      
-      console.log('✅ مسح النموذج - تم بنجاح');
-    } catch (error) {
-      console.error('❌ خطأ في resetForm:', error);
-    }
-  }, [clearCart, activePartner, defaultCustomerName, user?.default_customer_name]);
+    // مسح البيانات بشكل فوري ومنظم
+    clearCart();
+    setDiscount(0);
+    setLoyaltyDiscount(0);
+    setApplyLoyaltyDiscount(false);
+    setApplyLoyaltyDelivery(false);
+    setCustomerData(null);
+    setErrors({});
+    
+    // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
+    setFormData(emptyFormData);
+    setNameTouched(false);
+    
+    console.log('✅ مسح النموذج - تم بنجاح');
+  }, [clearCart, activePartner]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
@@ -846,16 +841,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           duration: 5000
         });
         resetForm();
-        
-        // تحديث فوري للبيانات
-        if (refreshDataInstantly) {
-          refreshDataInstantly();
-        }
-        
-        // إشارة لإعادة تعيين navigation guard
-        window.dispatchEvent(new CustomEvent('resetNavigationGuard'));
-        window.dispatchEvent(new CustomEvent('orderCreationComplete'));
-        
         if(onOrderCreated) onOrderCreated();
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {

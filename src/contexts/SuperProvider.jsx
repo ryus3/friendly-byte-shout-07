@@ -392,67 +392,6 @@ export const SuperProvider = ({ children }) => {
     }
   }, [user]);
 
-  // دالة تحديث فورية سريعة للبيانات
-  const refreshAllData = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      console.log('🔄 SuperProvider: تحديث فوري للبيانات');
-      const data = await superAPI.getAllData();
-      
-      if (data) {
-        const filteredData = filterDataByEmployeeCode(data, user);
-        const processedData = {
-          ...filteredData,
-          products: (filteredData.products || []).map(product => ({
-            ...product,
-            variants: (product.product_variants || []).map(variant => {
-              const inventoryData = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
-              const colorName = variant.colors?.name || variant.color_name || variant.color || null;
-              const colorHex = variant.colors?.hex_code || variant.color_hex || null;
-              const sizeName = variant.sizes?.name || variant.size_name || variant.size || null;
-
-              return {
-                ...variant,
-                color: colorName || undefined,
-                color_name: colorName || undefined,
-                color_hex: colorHex || undefined,
-                size: sizeName || undefined,
-                size_name: sizeName || undefined,
-                quantity: inventoryData?.quantity ?? variant.quantity ?? 0,
-                reserved_quantity: inventoryData?.reserved_quantity ?? variant.reserved_quantity ?? 0,
-                min_stock: inventoryData?.min_stock ?? variant.min_stock ?? 5,
-                location: inventoryData?.location ?? variant.location ?? '',
-                inventory: inventoryData
-              }
-            })
-          })),
-          orders: (filteredData.orders || []).map(o => ({
-            ...o,
-            items: Array.isArray(o.order_items)
-              ? o.order_items.map(oi => ({
-                  quantity: oi.quantity || 1,
-                  price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-                  cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
-                  productname: oi.products?.name,
-                  product_name: oi.products?.name,
-                  sku: oi.product_variants?.id,
-                  product_variants: oi.product_variants
-                }))
-              : (o.items || [])
-          }))
-        };
-        
-        processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));
-        setAllData(processedData);
-        
-        console.log('✅ SuperProvider: تم التحديث الفوري للبيانات');
-      }
-    } catch (error) {
-      console.error('❌ SuperProvider: خطأ في التحديث الفوري:', error);
-    }
-  }, [user]);
-
   // تحميل البيانات عند بدء التشغيل فقط عندما تكون الصفحة مرئية
   useEffect(() => {
     if (document.visibilityState === 'visible') {
@@ -543,7 +482,7 @@ export const SuperProvider = ({ children }) => {
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
         fetchAllData();
-      }, 100);
+      }, 300);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
@@ -767,12 +706,9 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // إنجاح العملية وإبطال الكاش + تحديث فوري
+      // إنجاح العملية وإبطال الكاش
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
-      
-      // تحديث فوري للبيانات لضمان اللحظية
-      setTimeout(() => fetchAllData(), 0);
 
       return {
         success: true,
@@ -804,9 +740,6 @@ export const SuperProvider = ({ children }) => {
         ...prev,
         orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updatedOrder } : o),
       }));
-
-      // تحديث فوري للبيانات لضمان اللحظية
-      setTimeout(() => fetchAllData(), 0);
 
       return { success: true, data: updatedOrder };
     } catch (error) {
@@ -851,9 +784,8 @@ export const SuperProvider = ({ children }) => {
       const { error } = await supabase.from('orders').delete().in('id', orderIds);
       if (error) throw error;
       superAPI.invalidate('all_data');
-      
-      // تحديث فوري للبيانات لضمان اللحظية
-      setTimeout(() => fetchAllData(), 0);
+      // تحديث موحّد بعد التأكيد
+      await fetchAllData();
       return { success: true };
     } catch (error) {
       console.error('Error deleting orders:', error);
@@ -1283,98 +1215,15 @@ export const SuperProvider = ({ children }) => {
     updateCartItemQuantity: updateCartItemQuantity || (() => {}),
     clearCart: clearCart || (() => {}),
     
-  // الوظائف الأساسية
-  createOrder: createOrder || (async () => ({ success: false })),
-  updateOrder: updateOrder || (async () => ({ success: false })),
-  deleteOrders: useCallback(async (orderIds) => {
-    console.log('🗑️ SuperProvider: بدء حذف فوري للطلبات:', { orderIds });
-    
-    try {
-      // التأكد من أن orderIds مصفوفة
-      const idsArray = Array.isArray(orderIds) ? orderIds : [orderIds];
-      
-      // إزالة فورية من الحالة المحلية (Optimistic Update)
-      setAllData(prev => {
-        const newOrders = (prev.orders || []).filter(order => !idsArray.includes(order.id));
-        const newAiOrders = (prev.aiOrders || []).filter(order => !idsArray.includes(order.id));
-        
-        console.log(`🔄 تم حذف ${prev.orders?.length - newOrders.length} طلب عادي و ${prev.aiOrders?.length - newAiOrders.length} طلب ذكي محلياً`);
-        
-        return {
-          ...prev,
-          orders: newOrders,
-          aiOrders: newAiOrders
-        };
-      });
-
-      // الحذف من قاعدة البيانات باستخدام SuperAPI المطور
-      const result = await superAPI.deleteOrders(idsArray);
-      
-      if (result.success) {
-        console.log('✅ تم حذف الطلبات من قاعدة البيانات بنجاح');
-        
-        // إشعار فوري للمستخدم
-        toast({
-          title: '✅ تم حذف الطلبات بنجاح',
-          description: `تم حذف ${idsArray.length} طلب بنجاح`,
-          variant: 'success',
-          duration: 3000
-        });
-
-        // إجبار تحديث البيانات من الخادم (fallback)
-        setTimeout(() => {
-          console.log('🔄 تحديث احتياطي من الخادم');
-          fetchAllData();
-        }, 100);
-
-        return { success: true, deletedIds: idsArray };
-      }
-    } catch (error) {
-      console.error('❌ فشل في حذف الطلبات:', error);
-      
-      // في حالة الفشل، أعد تحميل البيانات لضمان التطابق
-      console.log('🔄 إعادة تحميل البيانات بسبب فشل الحذف');
-      await fetchAllData();
-      
-      toast({
-        title: '❌ فشل في حذف الطلبات',
-        description: error.message || 'حدث خطأ غير متوقع',
-        variant: 'destructive',
-        duration: 5000
-      });
-      
-      return { success: false, error: error.message };
-    }
-  }, [fetchAllData]),
+    // الوظائف الأساسية
+    createOrder: createOrder || (async () => ({ success: false })),
+    updateOrder: updateOrder || (async () => ({ success: false })),
+    deleteOrders: deleteOrders || (async () => ({ success: false })),
     addExpense: addExpense || (async () => ({ success: false })),
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
-    refreshAllData: refreshAllData || (async () => {}),
-    refreshDataInstantly: useCallback(async () => {
-      console.log('⚡ تحديث فوري ومباشر للبيانات - نسخة محسنة');
-      
-      // إبطال كاش SuperAPI فوراً
-      superAPI.invalidate('all_data');
-      superAPI.invalidate('orders_only');
-      
-      // جلب البيانات الجديدة فوراً بدون تأخير
-      try {
-        const freshData = await superAPI.getAllData();
-        const filteredData = filterDataByEmployeeCode(freshData, user);
-        setAllData(filteredData);
-        console.log('✅ تم التحديث الفوري والمباشر بنجاح');
-      } catch (error) {
-        console.error('❌ خطأ في التحديث الفوري:', error);
-        // fallback للطريقة القديمة
-        fetchAllData();
-      }
-      
-      // إجبار re-render للمكونات
-      window.dispatchEvent(new CustomEvent('forceDataRefresh'));
-      console.log('🔄 تم إرسال إشارة إعادة التصيير');
-    }, [fetchAllData, user]),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
