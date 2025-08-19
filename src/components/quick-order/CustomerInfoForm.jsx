@@ -49,24 +49,59 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>
           <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={errors.phone ? 'border-red-500' : ''} disabled={isSubmittingState} />
           
-          {/* عرض تنبيه العميل المعروف */}
-          {customerInsight && customerInsight.count > 0 && (
-            <div className={`p-2 rounded-md text-xs font-medium flex items-center gap-2 ${
+          {/* بطاقة تنبيه العميل المحسنة */}
+          {customerInsight && (customerInsight.count > 0 || customerInsight.recentOrderCount > 0) && (
+            <div className={`mt-2 p-3 rounded-lg border shadow-sm ${
               customerInsight.alertType === 'vip' 
-                ? 'bg-amber-50 text-amber-800 border border-amber-200' 
+                ? 'bg-gradient-to-r from-purple-50 to-amber-50 border-purple-200 dark:from-purple-900/20 dark:to-amber-900/20 dark:border-purple-600' 
                 : customerInsight.alertType === 'recent_duplicate'
-                ? 'bg-orange-50 text-orange-800 border border-orange-200'
-                : 'bg-blue-50 text-blue-800 border border-blue-200'
+                ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 dark:from-orange-900/20 dark:to-red-900/20 dark:border-orange-600'
+                : 'bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 dark:from-blue-900/20 dark:to-green-900/20 dark:border-blue-600'
             }`}>
-              <span className="text-sm">
-                {customerInsight.alertType === 'vip' ? '👑' : 
-                 customerInsight.alertType === 'recent_duplicate' ? '⚠️' : '👤'}
-              </span>
-              <span>
-                {customerInsight.alertType === 'vip' ? 'عميل VIP' : 
-                 customerInsight.alertType === 'recent_duplicate' ? 'احتمال تكرار' :
-                 'عميل معروف'} • {customerInsight.count} طلب • {customerInsight.points} نقطة
-              </span>
+              <div className="flex items-start gap-3">
+                <div className="text-lg mt-0.5">
+                  {customerInsight.alertType === 'vip' ? '👑' : 
+                   customerInsight.alertType === 'recent_duplicate' ? '⚠️' : '👤'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className={`font-semibold text-sm mb-1 ${
+                    customerInsight.alertType === 'vip' ? 'text-purple-800 dark:text-purple-200' :
+                    customerInsight.alertType === 'recent_duplicate' ? 'text-orange-800 dark:text-orange-200' :
+                    'text-blue-800 dark:text-blue-200'
+                  }`}>
+                    {customerInsight.alertType === 'vip' ? 'عميل VIP' : 
+                     customerInsight.alertType === 'recent_duplicate' ? 'تحذير: طلب مكرر محتمل' :
+                     'عميل معروف'}
+                  </div>
+                  <div className={`text-xs space-y-1 ${
+                    customerInsight.alertType === 'vip' ? 'text-purple-700 dark:text-purple-300' :
+                    customerInsight.alertType === 'recent_duplicate' ? 'text-orange-700 dark:text-orange-300' :
+                    'text-blue-700 dark:text-blue-300'
+                  }`}>
+                    {customerInsight.count > 0 && (
+                      <div>إجمالي الطلبات: {customerInsight.count}</div>
+                    )}
+                    {customerInsight.totalSpentNoDelivery > 0 && (
+                      <div>إجمالي الشراء: {customerInsight.totalSpentNoDelivery.toLocaleString('ar')} د.ع</div>
+                    )}
+                    {customerInsight.lastOrderDate && (
+                      <div>
+                        آخر طلب: {(() => {
+                          const date = new Date(customerInsight.lastOrderDate);
+                          const diffHours = customerInsight.timeSinceLastOrderHours;
+                          if (diffHours < 24) {
+                            return `${diffHours}س`;
+                          } else if (diffHours < 48) {
+                            return `${Math.floor(diffHours / 24)} يوم`;
+                          } else {
+                            return date.toLocaleDateString('ar-IQ', { month: 'short', day: 'numeric' });
+                          }
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
@@ -102,7 +137,7 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                   <div className="text-lg font-bold text-purple-300 mb-1">
                     {((customerData.total_points || 0) + 250).toLocaleString('ar')}
                   </div>
-                  <div className="text-xs text-purple-200/80">نقاط بعد الطلب</div>
+                  <div className="text-xs text-purple-200/80">نقاط بعد التسليم</div>
                 </div>
               </div>
               
@@ -110,25 +145,33 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
               <div className="relative z-10 grid grid-cols-2 gap-4 mb-4">
                 <div className="text-center p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-400/30">
                   <div className="text-lg font-bold text-emerald-300 mb-1">
-                    {customerData.total_spent?.toLocaleString('ar') || '0'}
+                    {customerData.total_spent_excl_delivery?.toLocaleString('ar') || '0'}
                   </div>
                   <div className="text-xs text-emerald-200/80">د.ع إجمالي الشراء</div>
+                  <div className="text-xs text-emerald-200/60">(بدون أجور التوصيل)</div>
                 </div>
                 <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border border-amber-400/30">
                   <div className="text-lg font-bold text-amber-300 mb-1">
                     {customerData.total_orders?.toLocaleString('ar') || '0'}
                   </div>
-                  <div className="text-xs text-amber-200/80">طلب سابق</div>
+                  <div className="text-xs text-amber-200/80">طلب مكتمل</div>
                 </div>
               </div>
               
               {/* المستوى */}
-              <div className="relative z-10 flex items-center justify-center mb-3">
+              <div className="relative z-10 flex items-center justify-center gap-2 mb-3">
                 <div className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30">
                   <span className="text-purple-200 text-sm font-medium">
-                    {customerData.currentTier?.name_ar || 'عادي'}
+                    المستوى الحالي: {customerData.currentTier?.name_ar || 'عادي'}
                   </span>
                 </div>
+                {customerData.nextTierAfterOrder && (
+                  <div className="px-3 py-1 rounded-full bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-400/30">
+                    <span className="text-green-200 text-xs font-medium">
+                      سيصبح: {customerData.nextTierAfterOrder.name_ar}
+                    </span>
+                  </div>
+                )}
               </div>
               
               {/* خصم الولاء */}

@@ -24,12 +24,20 @@ const OrderDetailsForm = ({
   discount,
   setDiscount,
   subtotal,
-  total
+  total,
+  customerData,
+  loyaltyDiscount,
+  applyLoyaltyDiscount = true,
+  onToggleLoyaltyDiscount,
+  applyLoyaltyDelivery = false,
+  onToggleLoyaltyDelivery
 }) => {
   const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
   
-  const deliveryFee = settings?.deliveryFee || 0;
+  // حساب رسوم التوصيل مع إعفاء الولاء
+  const baseDeliveryFee = settings?.deliveryFee || 0;
+  const deliveryFee = (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) ? 0 : baseDeliveryFee;
   
   // إضافة logging للتشخيص
   console.log('📊 OrderDetailsForm - معلومات التوصيل:', {
@@ -116,19 +124,68 @@ const OrderDetailsForm = ({
                 <span>{(subtotal + deliveryFee).toLocaleString()} د.ع</span>
               </div>
               
-              {/* خانة الخصم */}
+              {/* مزايا الولاء */}
+              {customerData?.currentTier?.discount_percentage > 0 && (
+                <div className="flex justify-between items-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">👑</span>
+                    <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                      خصم الولاء ({customerData.currentTier.discount_percentage}%)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-purple-700 dark:text-purple-300">
+                      {loyaltyDiscount.toLocaleString('ar')} د.ع
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={applyLoyaltyDiscount}
+                      onChange={onToggleLoyaltyDiscount}
+                      className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {customerData?.currentTier?.free_delivery && activePartner === 'local' && (
+                <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">🚚</span>
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      توصيل مجاني (مستوى ذهبي)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-green-700 dark:text-green-300">
+                      {baseDeliveryFee.toLocaleString('ar')} د.ع
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={applyLoyaltyDelivery}
+                      onChange={onToggleLoyaltyDelivery}
+                      className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* خانة الخصم العادي */}
               {hasPermission('apply_order_discounts') && (
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="discount" className="text-sm flex items-center gap-1">
-                    <Tag className="w-4 h-4" /> الخصم
+                  <Label htmlFor="manual_discount" className="text-sm flex items-center gap-1">
+                    <Tag className="w-4 h-4" /> خصم إضافي
                   </Label>
                   <Input
-                    id="discount"
+                    id="manual_discount"
                     type="number"
                     min="0"
                     max={subtotal}
-                    value={discount} 
-                    onChange={(e) => setDiscount(Math.max(0, Math.min(subtotal, Number(e.target.value))))} 
+                    value={applyLoyaltyDiscount ? Math.max(0, discount - loyaltyDiscount) : discount} 
+                    onChange={(e) => {
+                      const manualDiscount = Math.max(0, Math.min(subtotal, Number(e.target.value)));
+                      const totalDiscount = applyLoyaltyDiscount ? loyaltyDiscount + manualDiscount : manualDiscount;
+                      setDiscount(totalDiscount);
+                    }} 
                     className="w-24 text-right"
                     placeholder="0"
                   />

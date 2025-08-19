@@ -207,6 +207,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [discount, setDiscount] = useState(0);
   const [customerData, setCustomerData] = useState(null);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+  const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(true);
+  const [applyLoyaltyDelivery, setApplyLoyaltyDelivery] = useState(false);
   
   // جلب بيانات العميل عند إدخال رقم الهاتف - نظام موحد
   useEffect(() => {
@@ -244,24 +246,45 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         }) || [];
         
         const totalPoints = completedOrders.length * 250; // 250 نقطة لكل طلب مكتمل
+        
+        // حساب إجمالي الشراء بدون أجور التوصيل
+        const totalSpentExclDelivery = completedOrders.reduce((sum, order) => {
+          const totalAmount = order.total_amount || 0;
+          const deliveryFee = order.delivery_fee || 0;
+          return sum + (totalAmount - deliveryFee);
+        }, 0);
+        
         const totalSpent = completedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
         
-        // تحديد المستوى حسب النقاط
-        let currentTier = { name_ar: 'عادي', name_en: 'NORM', discount_percentage: 0 };
+        // تحديد المستوى حسب النقاط الحالية
+        let currentTier = { name_ar: 'عادي', name_en: 'NORM', discount_percentage: 0, free_delivery: false };
         if (totalPoints >= 1000) {
-          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 15 };
+          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 15, free_delivery: true };
         } else if (totalPoints >= 500) {
-          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 10 };
+          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 10, free_delivery: false };
         } else if (totalPoints >= 250) {
-          currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 5 };
+          currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 5, free_delivery: false };
+        }
+        
+        // تحديد المستوى التالي بعد إضافة 250 نقطة للطلب الجديد
+        const pointsAfterOrder = totalPoints + 250;
+        let nextTierAfterOrder = null;
+        if (totalPoints < 250 && pointsAfterOrder >= 250) {
+          nextTierAfterOrder = { name_ar: 'برونزي', name_en: 'BRNZ' };
+        } else if (totalPoints < 500 && pointsAfterOrder >= 500) {
+          nextTierAfterOrder = { name_ar: 'فضي', name_en: 'SILV' };
+        } else if (totalPoints < 1000 && pointsAfterOrder >= 1000) {
+          nextTierAfterOrder = { name_ar: 'ذهبي', name_en: 'GOLD' };
         }
         
         const customerInfo = {
           phone: normalizedPhone,
           total_points: totalPoints,
           total_spent: totalSpent,
+          total_spent_excl_delivery: totalSpentExclDelivery,
           total_orders: completedOrders.length,
           currentTier,
+          nextTierAfterOrder,
           first_order_date: completedOrders[0]?.created_at,
           last_order_date: completedOrders[completedOrders.length - 1]?.created_at
         };
@@ -272,20 +295,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // حساب خصم الولاء المقرب لأقرب 500
         const discountPercentage = currentTier.discount_percentage || 0;
         if (discountPercentage > 0) {
-          const subtotal = Object.values(cart).reduce(
-            (sum, item) => sum + item.quantity * item.price, 0
-          );
+          const subtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
           const rawDiscount = (subtotal * discountPercentage) / 100;
           const roundedDiscount = Math.round(rawDiscount / 500) * 500;
           setLoyaltyDiscount(roundedDiscount);
+          setApplyLoyaltyDiscount(true); // تفعيل تلقائياً
+          setDiscount(roundedDiscount); // تطبيق الخصم تلقائياً
           console.log(`💰 خصم الولاء: ${discountPercentage}% = ${rawDiscount} -> ${roundedDiscount}`);
         } else {
           setLoyaltyDiscount(0);
+          setApplyLoyaltyDiscount(false);
+          setDiscount(0);
+        }
+        
+        // تفعيل التوصيل المجاني تلقائياً للمستوى الذهبي
+        if (currentTier.free_delivery) {
+          setApplyLoyaltyDelivery(true);
+        } else {
+          setApplyLoyaltyDelivery(false);
         }
         
         // إنشاء كود الخصم
         const promoCode = `RY${normalizedPhone.slice(-4)}${currentTier.name_en.slice(0,2)}`;
-        setFormData(prev => ({ ...prev, promoCode }));
+        setFormData(prev => ({ ...prev, promocode: promoCode }));
         
       } catch (error) {
         console.error('خطأ في حساب بيانات العميل:', error);
@@ -301,8 +333,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // تحديث الخصم عند تغيير السلة مع التقريب المطلوب
   useEffect(() => {
-    if (customerData?.customer_loyalty?.loyalty_tiers?.discount_percentage && cart.length > 0) {
-      const discountPercentage = customerData.customer_loyalty.loyalty_tiers.discount_percentage;
+    if (customerData?.currentTier?.discount_percentage && cart.length > 0) {
+      const discountPercentage = customerData.currentTier.discount_percentage;
       const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
       const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
       
@@ -310,11 +342,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
       
       setLoyaltyDiscount(roundedDiscountAmount);
-      setDiscount(roundedDiscountAmount);
+      
+      // تحديث الخصم الإجمالي حسب حالة التطبيق
+      if (applyLoyaltyDiscount) {
+        const manualDiscount = Math.max(0, discount - loyaltyDiscount);
+        setDiscount(roundedDiscountAmount + manualDiscount);
+      }
       
       console.log(`🔄 تحديث الخصم: ${baseDiscountAmount} → ${roundedDiscountAmount} د.ع`);
+    } else if (cart.length === 0) {
+      setLoyaltyDiscount(0);
+      setDiscount(0);
+      setApplyLoyaltyDiscount(false);
+      setApplyLoyaltyDelivery(false);
     }
-  }, [cart, customerData]);
+  }, [cart, customerData, applyLoyaltyDiscount, loyaltyDiscount, discount]);
   
   // مراقبة تغييرات المدينة والمنطقة لمسح الأخطاء
   useEffect(() => {
@@ -892,6 +934,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             setDiscount={setDiscount}
             subtotal={subtotal}
             total={total}
+            customerData={customerData}
+            loyaltyDiscount={loyaltyDiscount}
+            applyLoyaltyDiscount={applyLoyaltyDiscount}
+            onToggleLoyaltyDiscount={() => {
+              const newApply = !applyLoyaltyDiscount;
+              setApplyLoyaltyDiscount(newApply);
+              if (newApply) {
+                setDiscount(prev => prev + loyaltyDiscount);
+              } else {
+                setDiscount(prev => Math.max(0, prev - loyaltyDiscount));
+              }
+            }}
+            applyLoyaltyDelivery={applyLoyaltyDelivery}
+            onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
           />
         </fieldset>
 
