@@ -151,6 +151,48 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ SuperProvider: لم يتم جلب أي بيانات من SuperAPI');
         return;
       }
+
+      // جلب الإعدادات من قاعدة البيانات وتحويلها إلى object
+      let settingsObject = {
+        deliveryFee: 5000,
+        lowStockThreshold: 5,
+        mediumStockThreshold: 10,
+        sku_prefix: "PROD",
+        lastPurchaseId: 0,
+        printer: { paperSize: 'a4', orientation: 'portrait' }
+      };
+
+      try {
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('settings')
+          .select('key, value');
+        
+        if (!settingsError && settingsData?.length) {
+          console.log('🔧 SuperProvider: تم جلب الإعدادات من قاعدة البيانات:', settingsData);
+          settingsData.forEach(setting => {
+            try {
+              // محاولة تحويل القيمة إلى رقم إذا كانت رقمية
+              const numValue = Number(setting.value);
+              if (!isNaN(numValue) && setting.value !== '') {
+                settingsObject[setting.key] = numValue;
+              } else {
+                // محاولة تحويل JSON إذا كان كذلك
+                try {
+                  settingsObject[setting.key] = JSON.parse(setting.value);
+                } catch {
+                  settingsObject[setting.key] = setting.value;
+                }
+              }
+            } catch (err) {
+              console.warn('تحذير: فشل في معالجة إعداد', setting.key, setting.value);
+              settingsObject[setting.key] = setting.value;
+            }
+          });
+          console.log('✅ SuperProvider: تم تحويل الإعدادات بنجاح:', settingsObject);
+        }
+      } catch (settingsErr) {
+        console.error('❌ SuperProvider: خطأ في جلب الإعدادات:', settingsErr);
+      }
       
       // تصفية البيانات حسب employee_code للموظفين
       const filteredData = filterDataByEmployeeCode(data, user);
@@ -178,6 +220,8 @@ export const SuperProvider = ({ children }) => {
       // معالجة بيانات المنتجات وضمان ربط المخزون + توحيد بنية الطلبات (items)
       const processedData = {
         ...filteredData,
+        // دمج الإعدادات المحملة من قاعدة البيانات
+        settings: settingsObject,
         products: (filteredData.products || []).map(product => ({
           ...product,
           variants: (product.product_variants || []).map(variant => {
@@ -1215,6 +1259,43 @@ export const SuperProvider = ({ children }) => {
     employeeProfitRules: allData.employeeProfitRules || [],
     getEmployeeProfitRules,
     setEmployeeProfitRule,
+
+    // دالة تحديث الإعدادات
+    updateSettings: async (newSettings) => {
+      try {
+        console.log('🔧 SuperProvider: تحديث الإعدادات:', newSettings);
+        
+        // تحديث كل إعداد في قاعدة البيانات
+        for (const [key, value] of Object.entries(newSettings)) {
+          const { error } = await supabase
+            .from('settings')
+            .upsert({ 
+              key, 
+              value: typeof value === 'object' ? JSON.stringify(value) : String(value) 
+            });
+          
+          if (error) {
+            console.error(`❌ خطأ في تحديث الإعداد ${key}:`, error);
+            throw error;
+          }
+        }
+
+        // تحديث الحالة المحلية
+        setAllData(prev => ({
+          ...prev,
+          settings: {
+            ...prev.settings,
+            ...newSettings
+          }
+        }));
+
+        console.log('✅ تم تحديث الإعدادات بنجاح');
+        return { success: true };
+      } catch (error) {
+        console.error('❌ فشل في تحديث الإعدادات:', error);
+        return { success: false, error: error.message };
+      }
+    },
   };
 
   // إضافة لوق للتتبع

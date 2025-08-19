@@ -375,6 +375,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
 
+  // جلب البيانات
+  const { 
+    settings = {}, 
+    createOrder, 
+    createAlWaseetOrder,
+    fetchCities,
+    fetchRegions
+  } = useInventory();
+
+  // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
+  useEffect(() => {
+    if (!formData.size) {
+      setFormData(prev => ({
+        ...prev,
+        size: activePartner === 'local' ? 'normal' : ''
+      }));
+    }
+  }, [activePartner, formData.size]);
+
+  // إضافة logging للتشخيص
+  console.log('🔍 QuickOrderContent - حالة النموذج:', {
+    formDataSize: formData.size,
+    activePartner: activePartner,
+    settings: settings,
+    deliveryFee: settings?.deliveryFee
+  });
+
   // حساب المجاميع
   const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
   const currentDeliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);

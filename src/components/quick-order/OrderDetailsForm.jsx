@@ -30,6 +30,14 @@ const OrderDetailsForm = ({
   const { hasPermission } = useAuth();
   
   const deliveryFee = settings?.deliveryFee || 0;
+  
+  // إضافة logging للتشخيص
+  console.log('📊 OrderDetailsForm - معلومات التوصيل:', {
+    settings: settings,
+    deliveryFee: deliveryFee,
+    activePartner: activePartner,
+    settingsDeliveryFee: settings?.deliveryFee
+  });
   const finalTotal = total + deliveryFee;
 
   return (
@@ -74,12 +82,10 @@ const OrderDetailsForm = ({
                 <span>{subtotal.toLocaleString()} د.ع</span>
               </div>
               
-              {deliveryFee > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>رسوم التوصيل:</span>
-                  <span>{deliveryFee.toLocaleString()} د.ع</span>
-                </div>
-              )}
+              <div className="flex justify-between text-sm">
+                <span>رسوم التوصيل:</span>
+                <span>{deliveryFee.toLocaleString()} د.ع</span>
+              </div>
               
               <div className="flex justify-between text-sm font-medium border-t pt-2">
                 <span>المجموع الكلي:</span>
@@ -133,7 +139,7 @@ const OrderDetailsForm = ({
         </div>
         <div className="space-y-2">
           <Label>حجم الطلب</Label>
-          <Select name="size" onValueChange={(v) => handleSelectChange('size', v)} value={formData.size} disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)} defaultValue="normal">
+          <Select name="size" onValueChange={(v) => handleSelectChange('size', v)} value={formData.size} disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)}>
             <SelectTrigger>
                 <SelectValue placeholder={loadingPackageSizes ? "تحميل..." : "اختر حجم الطلب"} />
             </SelectTrigger>
