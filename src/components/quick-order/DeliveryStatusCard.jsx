@@ -53,57 +53,41 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
               {isLoggedIn && waseetUser?.username && (
-                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs">
+                <Badge variant="secondary" className="bg-yellow-400 text-gray-900 border-yellow-300 text-xs font-semibold shadow-sm">
                   {waseetUser.username}
                 </Badge>
               )}
             </div>
             <p className="text-sm opacity-90">{description}</p>
           </div>
-        </div>
-
-        {/* Quick Switch Options */}
-        {hasMultiplePartners && (
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="flex-1">
-              <Select value={activePartner} onValueChange={onSwitchPartner}>
-                <SelectTrigger className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                  <SelectValue />
-                  <ChevronDown className="w-4 h-4 opacity-70" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(availablePartners).map(([key, partner]) => (
-                    <SelectItem key={key} value={key}>
-                      {partner.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button 
-              type="button" 
-              size="sm" 
-              variant="ghost" 
-              className="bg-white/5 text-white border border-white/20 hover:bg-white/15 hover:text-white backdrop-blur-sm h-8 px-2 text-xs" 
-              onClick={onManageClick}
-            >
-              <Settings className="w-3 h-3" />
-            </Button>
-          </div>
-        )}
-
-        {/* Original button for single partner or when user needs to login */}
-        {(!hasMultiplePartners || !isLoggedIn) && (
           <Button 
             type="button" 
             size="sm" 
-            variant="outline" 
-            className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm w-full" 
+            variant="ghost" 
+            className="bg-white/10 text-white border border-white/20 hover:bg-white/20 hover:text-white backdrop-blur-sm h-8 w-8 p-0" 
             onClick={onManageClick}
           >
-            <Truck className="w-4 h-4 ml-2" />
-            {buttonText}
+            <Settings className="w-4 h-4" />
           </Button>
+        </div>
+
+        {/* Partner Selection - Only when multiple partners available and logged in */}
+        {hasMultiplePartners && isLoggedIn && (
+          <div className="flex-1">
+            <Select value={activePartner} onValueChange={onSwitchPartner}>
+              <SelectTrigger className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                <SelectValue />
+                <ChevronDown className="w-4 h-4 opacity-70" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(availablePartners).map(([key, partner]) => (
+                  <SelectItem key={key} value={key}>
+                    {partner.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
     </motion.div>
