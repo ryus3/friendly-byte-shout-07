@@ -24,7 +24,7 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
 
   const Icon = isLocal ? Map : (isLoggedIn ? Wifi : ServerCrash);
   const title = isLocal ? "الوضع المحلي مفعل" : (isLoggedIn ? "متصل بشركة الوسيط" : "غير متصل");
-  const description = isLocal ? "سيتم إنشاء الطلبات داخل النظام فقط." : (isLoggedIn ? `الطلبات جاهزة للإرسال إلى شركة التوصيل ${waseetUser?.username ? `(${waseetUser.username.toUpperCase()})` : ''}.` : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.");
+  const description = isLocal ? "سيتم إنشاء الطلبات داخل النظام فقط." : (isLoggedIn ? `الطلبات جاهزة للإرسال إلى شركة التوصيل ${waseetUser?.username ? `( ${waseetUser.username.toUpperCase()} )` : ''}` : "يجب تسجيل الدخول لشركة التوصيل للمتابعة.");
   const buttonText = "تغيير الوضع";
 
   return (
@@ -39,7 +39,23 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
             </div>
-            <p className="text-sm opacity-90" style={{ fontFamily: "'Inter', 'Roboto', sans-serif" }}>{description}</p>
+            <p className="text-sm opacity-90">
+              {isLocal ? description : (
+                isLoggedIn ? (
+                  <>
+                    الطلبات جاهزة للإرسال إلى شركة التوصيل
+                    {waseetUser?.username && (
+                      <>
+                        {' '}
+                        <span className="text-sky-200 font-medium">
+                          ( {waseetUser.username.toUpperCase()} )
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : description
+              )}
+            </p>
           </div>
         </div>
         <Button 
