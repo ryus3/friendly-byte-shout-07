@@ -94,32 +94,55 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           
           {/* عرض معلومات العميل والنقاط */}
           {customerData && (
-            <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-green-600 dark:text-green-400 font-medium">✅ عميل مسجل</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">({customerData.customer_loyalty?.loyalty_tiers?.name || 'عادي'})</span>
+            <div className="mt-3 p-5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border border-slate-600/50 shadow-2xl shadow-slate-900/50 relative overflow-hidden">
+              {/* خلفية متحركة */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-emerald-500/5 to-blue-600/5 animate-pulse"></div>
+              
+              {/* رقم الهاتف في الأعلى */}
+              <div className="relative z-10 flex items-center justify-between mb-4">
+                <div className="text-lg font-bold text-white tracking-wide">
+                  {formData.phone}
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 shadow-lg">
+                  <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                  <span className="text-white text-xs font-bold">مؤكد</span>
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">النقاط:</span>
-                  <span className="font-bold text-blue-600 dark:text-blue-400 ml-1">
+              {/* شبكة البيانات */}
+              <div className="relative z-10 grid grid-cols-2 gap-4 mb-4">
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-blue-400/30">
+                  <div className="text-2xl font-bold text-blue-300 mb-1">
                     {customerData.customer_loyalty?.total_points?.toLocaleString('ar') || 0}
-                  </span>
+                  </div>
+                  <div className="text-xs text-blue-200/80">نقاط الولاء</div>
                 </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">إجمالي الشراء:</span>
-                  <span className="font-bold text-green-600 dark:text-green-400 ml-1">
-                    {customerData.customer_loyalty?.total_spent?.toLocaleString('ar') || 0} د.ع
+                <div className="text-center p-3 rounded-xl bg-gradient-to-br from-emerald-500/20 to-green-500/20 border border-emerald-400/30">
+                  <div className="text-lg font-bold text-emerald-300 mb-1">
+                    {customerData.customer_loyalty?.total_spent?.toLocaleString('ar') || 0}
+                  </div>
+                  <div className="text-xs text-emerald-200/80">د.ع إجمالي الشراء</div>
+                </div>
+              </div>
+              
+              {/* المستوى */}
+              <div className="relative z-10 flex items-center justify-center mb-3">
+                <div className="px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30">
+                  <span className="text-purple-200 text-sm font-medium">
+                    {customerData.customer_loyalty?.loyalty_tiers?.name || 'عادي'}
                   </span>
                 </div>
               </div>
               
+              {/* خصم الولاء */}
               {loyaltyDiscount > 0 && (
-                <div className="mt-2 p-2 bg-orange-100 dark:bg-orange-900/30 rounded border border-orange-200 dark:border-orange-800">
-                  <span className="text-orange-700 dark:text-orange-300 text-sm font-medium">
-                    🎁 خصم الولاء: {loyaltyDiscount.toLocaleString('ar')} د.ع
-                  </span>
+                <div className="relative z-10 p-3 bg-gradient-to-r from-orange-500/20 to-amber-500/20 rounded-xl border border-orange-400/30">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-2xl">🎁</span>
+                    <span className="text-orange-200 font-bold">
+                      خصم الولاء: {loyaltyDiscount.toLocaleString('ar')} د.ع
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
