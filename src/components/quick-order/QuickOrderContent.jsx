@@ -415,9 +415,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
-    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
-    const emptyFormData = {
-      name: '', 
+    // إنشاء نموذج جديد مع الاحتفاظ بالاسم الافتراضي
+    const resetFormData = {
+      name: defaultCustomerName || user?.default_customer_name || '', 
       phone: '', 
       second_phone: '', 
       city_id: '', 
@@ -432,10 +432,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       size: activePartner === 'local' ? 'normal' : '', 
       type: 'new', 
       promocode: '',
-      defaultCustomerName: ''
+      defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
     };
     
-    console.log('🔄 مسح النموذج - بدء العملية');
+    console.log('🔄 مسح النموذج - إعادة تعيين للاسم الافتراضي:', resetFormData.name);
     
     // مسح البيانات بشكل فوري ومنظم
     clearCart();
@@ -446,8 +446,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setCustomerData(null);
     setErrors({});
     
-    // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
-    setFormData(emptyFormData);
+    // إعادة تعيين النموذج مع الاسم الافتراضي
+    setFormData(resetFormData);
     setNameTouched(false);
     
     console.log('✅ مسح النموذج - تم بنجاح');
