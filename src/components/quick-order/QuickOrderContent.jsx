@@ -443,16 +443,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         defaultCustomerName: customerName
       });
       
-      // Reset other state instantly using React.startTransition
-      React.startTransition(() => {
-        setDiscount(0);
-        setLoyaltyDiscount(0);
-        setApplyLoyaltyDiscount(false);
-        setApplyLoyaltyDelivery(false);
-        setCustomerData(null);
-        setErrors({});
-        setNameTouched(false);
-      });
+      // Reset other state instantly without startTransition
+      setDiscount(0);
+      setLoyaltyDiscount(0);
+      setApplyLoyaltyDiscount(false);
+      setApplyLoyaltyDelivery(false);
+      setCustomerData(null);
+      setErrors({});
+      setNameTouched(false);
       
       console.log('✅ مسح النموذج - تم بنجاح');
     } catch (error) {

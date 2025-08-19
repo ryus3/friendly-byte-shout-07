@@ -14,6 +14,7 @@ import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
+import { setupRealtime } from '@/utils/realtime-setup';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import NavigationMemoryGuard from '@/components/shared/NavigationMemoryGuard';
@@ -107,6 +108,13 @@ function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
   const location = useLocation();
+
+  // Setup realtime subscriptions for instant updates
+  useEffect(() => {
+    console.log('🚀 Setting up realtime subscriptions...');
+    const cleanup = setupRealtime();
+    return cleanup;
+  }, []);
 
   // Navigation guard and performance monitoring
   useEffect(() => {

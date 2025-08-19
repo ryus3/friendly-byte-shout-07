@@ -217,42 +217,46 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
-  // Real-time notifications and instant updates for orders
+  // Real-time listeners for instant order updates
   useEffect(() => {
-    const handleNewOrderNotification = (event) => {
-      const orderData = event.detail;
-      if (orderData && orderData.id) {
-        toast({
-          title: 'طلب جديد!',
-          description: `طلب جديد من ${orderData.customer_name || 'زبون جديد'}`,
-          variant: 'success'
-        });
-      }
+    const handleOrderCreated = (event) => {
+      console.log('🆕 Real-time: Order created', event.detail);
+      toast({
+        title: "تم إنشاء طلب جديد",
+        description: `طلب رقم ${event.detail.order_number}`,
+        variant: "success"
+      });
+      // Instant refresh without loading state
+      refetchProducts();
     };
 
     const handleOrderUpdated = (event) => {
-      console.log('🔄 Order updated in real-time:', event.detail);
-      // Force immediate refresh of data
+      console.log('🔄 Real-time: Order updated', event.detail);
+      toast({
+        title: "تم تحديث الطلب",
+        description: `طلب رقم ${event.detail.order_number}`,
+        variant: "success"
+      });
       refetchProducts();
     };
 
     const handleOrderDeleted = (event) => {
-      console.log('🗑️ Order deleted in real-time:', event.detail);
+      console.log('🗑️ Real-time: Order deleted', event.detail);
       toast({
-        title: 'تم الحذف',
-        description: 'تم حذف الطلب بنجاح',
-        variant: 'success'
+        title: "تم حذف الطلب",
+        description: `طلب رقم ${event.detail.order_number}`,
+        variant: "success"
       });
-      // Force immediate refresh of data
       refetchProducts();
     };
 
-    window.addEventListener('orderCreated', handleNewOrderNotification);
+    // Add event listeners for real-time updates
+    window.addEventListener('orderCreated', handleOrderCreated);
     window.addEventListener('orderUpdated', handleOrderUpdated);
     window.addEventListener('orderDeleted', handleOrderDeleted);
-    
+
     return () => {
-      window.removeEventListener('orderCreated', handleNewOrderNotification);
+      window.removeEventListener('orderCreated', handleOrderCreated);
       window.removeEventListener('orderUpdated', handleOrderUpdated);
       window.removeEventListener('orderDeleted', handleOrderDeleted);
     };

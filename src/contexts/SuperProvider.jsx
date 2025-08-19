@@ -1285,6 +1285,8 @@ export const SuperProvider = ({ children }) => {
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
+    refreshAllData: refreshAllData || (async () => {}),
+    refreshDataInstantly: refreshDataInstantly || (async () => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
