@@ -79,11 +79,9 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                     'text-blue-700 dark:text-blue-300'
                   }`}>
                     {customerInsight.count > 0 && customerInsight.lastOrderDate && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs">📊</span>
-                        <span>{customerInsight.count} طلب</span>
-                        <span className="text-xs">⏰</span>
-                        <span>{(() => {
+                      <div className="flex items-center gap-3">
+                        <span>إجمالي الطلبات: {customerInsight.count}</span>
+                        <span>آخر طلب: {(() => {
                           const date = new Date(customerInsight.lastOrderDate);
                           const diffHours = customerInsight.timeSinceLastOrderHours;
                           if (diffHours < 24) {
