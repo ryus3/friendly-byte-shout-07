@@ -19,12 +19,11 @@ import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
-import { normalizePhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder } = useInventory();
   const { user } = useAuth();
-  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, switchPartner, getAvailablePartners } = useAlWaseet();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   
@@ -220,159 +219,129 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       console.log('🔍 البحث عن العميل برقم:', formData.phone);
       
-      // محاولة البحث بعدة أنماط لأرقام الهواتف للتأكد من العثور على العميل
-      const searchPhones = [
-        formData.phone,  // الرقم كما هو مدخل
-        normalizePhone(formData.phone), // الرقم بعد التطبيع
-        formData.phone.startsWith('0') ? formData.phone.slice(1) : formData.phone // بدون 0 في البداية
-      ].filter(Boolean).filter((phone, index, arr) => arr.indexOf(phone) === index); // إزالة التكرارات
+      // تنظيف وتطبيع رقم الهاتف
+      let cleanPhone = formData.phone.replace(/\D/g, ''); // إزالة جميع غير الأرقام
       
-      console.log('🔍 أنماط البحث للرقم:', searchPhones);
+      console.log('📱 الرقم بعد التنظيف:', cleanPhone);
       
-      let loyaltyData = null;
-      let loyaltyError = null;
+      // إنشاء جميع الأنماط المحتملة للبحث
+      const searchPatterns = new Set([
+        formData.phone.trim(),        // الرقم كما هو
+        cleanPhone               // الرقم منظف
+      ]);
       
-      try {
-        // البحث في جدول customer_phone_loyalty بجميع الأنماط
-        for (const searchPhone of searchPhones) {
+      // إضافة الأنماط العراقية المختلفة
+      if (cleanPhone.startsWith('964')) {
+        // إذا بدأ بـ 964، أزل الرمز واجعله بدون صفر
+        const withoutCountryCode = cleanPhone.substring(3);
+        searchPatterns.add(withoutCountryCode);
+        searchPatterns.add(`0${withoutCountryCode}`);
+      } else if (cleanPhone.startsWith('0')) {
+        // إذا بدأ بصفر، أضف بدون صفر ومع رمز البلد
+        const withoutZero = cleanPhone.substring(1);
+        searchPatterns.add(withoutZero);
+        searchPatterns.add(`964${withoutZero}`);
+        searchPatterns.add(`+964${withoutZero}`);
+        searchPatterns.add(`00964${withoutZero}`);
+      } else {
+        // إذا لم يبدأ بصفر أو 964، أضف جميع الصيغ
+        searchPatterns.add(
+          `0${cleanPhone}`,             // 07728020024
+          `964${cleanPhone}`,           // 9647728020024
+          `+964${cleanPhone}`,          // +9647728020024
+          `00964${cleanPhone}`          // 009647728020024
+        );
+      }
+      
+      console.log('🔍 جميع أنماط البحث:', Array.from(searchPatterns));
+      
+      let customer = null;
+      
+      // البحث بجميع الأنماط
+      for (const pattern of searchPatterns) {
+        console.log(`🔎 البحث برقم: ${pattern}`);
+        
+        try {
           const { data, error } = await supabase
-            .from('customer_phone_loyalty')
+            .from('customers')
             .select(`
               *,
-              loyalty_tiers (
-                name,
-                discount_percentage
+              customer_loyalty (
+                total_points,
+                total_spent,
+                current_tier_id,
+                loyalty_tiers (
+                  name,
+                  discount_percentage
+                )
               )
             `)
-            .eq('phone_number', searchPhone)
+            .eq('phone', pattern)
             .maybeSingle();
             
           if (data && !error) {
-            loyaltyData = data;
-            console.log('✅ تم العثور على بيانات الولاء بالرقم:', searchPhone, loyaltyData);
+            customer = data;
+            console.log(`✅ تم العثور على العميل برقم: ${pattern}`);
             break;
           }
+        } catch (err) {
+          console.error(`خطأ في البحث برقم ${pattern}:`, err);
         }
-          
-        if (loyaltyError) {
-          console.error('خطأ في البحث في جدول الولاء:', loyaltyError);
-        }
+      }
 
-        let customerInfo = null;
-        
-        if (loyaltyData) {
-          console.log('✅ تم العثور على بيانات الولاء:', loyaltyData);
-          
-          // تحويل بيانات customer_phone_loyalty إلى تنسيق متوافق مع الكود الحالي
-          customerInfo = {
-            id: loyaltyData.id,
-            name: loyaltyData.customer_name,
-            phone: loyaltyData.phone_number,
-            city: loyaltyData.customer_city,
-            province: loyaltyData.customer_province,
-            address: null, // لا يوجد عنوان مفصل في جدول الولاء
-            customer_loyalty: {
-              total_points: loyaltyData.total_points || 0,
-              total_spent: loyaltyData.total_spent || 0,
-              total_orders: loyaltyData.total_orders || 0,
-              current_tier_id: loyaltyData.current_tier_id,
-              loyalty_tiers: loyaltyData.loyalty_tiers
-            }
-          };
-        } else {
-          console.log('❌ لم يتم العثور على بيانات الولاء');
-          
-          // البحث في جدول العملاء العادي كبديل بنفس أنماط البحث
-          let customerData = null;
-          let customerError = null;
-          
-          for (const searchPhone of searchPhones) {
-            const { data, error } = await supabase
-              .from('customers')
-              .select(`
-                *,
-                customer_loyalty (
-                  total_points,
-                  total_spent,
-                  current_tier_id,
-                  loyalty_tiers (
-                    name,
-                    discount_percentage
-                  )
-                )
-              `)
-              .eq('phone', searchPhone)
-              .maybeSingle();
-              
-            if (data && !error) {
-              customerData = data;
-              console.log('✅ تم العثور على العميل في الجدول العادي بالرقم:', searchPhone, customerData);
-              break;
-            }
-          }
-            
-          if (customerData && !customerError) {
-            console.log('✅ تم العثور على العميل في الجدول العادي:', customerData);
-            customerInfo = customerData;
-          }
-        }
-
-        if (!customerInfo) {
-          console.log('❌ لم يتم العثور على العميل في أي من الجداول');
-          setCustomerData(null);
-          setLoyaltyDiscount(0);
-          setDiscount(0);
-          return;
-        }
-
-        console.log('✅ بيانات العميل النهائية:', customerInfo);
-        setCustomerData(customerInfo);
-        
-        // ملء البيانات تلقائياً مع حماية من null
-        setFormData(prev => ({
-          ...prev,
-          name: customerInfo.name || prev.name,
-          city: customerInfo.city || prev.city,
-          address: customerInfo.address || prev.address
-        }));
-
-        // حساب وتطبيق خصم الولاء فوراً مع التقريب المطلوب
-        const loyaltyInfo = customerInfo.customer_loyalty;
-        if (loyaltyInfo && loyaltyInfo.loyalty_tiers) {
-          const discountPercentage = loyaltyInfo.loyalty_tiers.discount_percentage || 0;
-          
-          // توليد بروموكود ثابت من الهاتف ومستوى الولاء
-          const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
-          const tierAbbr = abbrMap[loyaltyInfo.loyalty_tiers.name] || 'BR';
-          const promo = normalizedPhone ? `RY${normalizedPhone.slice(-4)}${tierAbbr}` : '';
-          setFormData(prev => ({ ...prev, promocode: promo }));
-          
-          // إعادة حساب الخصم مع السلة الحالية
-          const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
-          const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
-          
-          // تقريب الخصم إلى أقرب 500 دينار
-          const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
-          
-          console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
-          console.log(`🎁 خصم الولاء الأساسي: ${discountPercentage}% = ${baseDiscountAmount} د.ع`);
-          console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
-          
-          setLoyaltyDiscount(roundedDiscountAmount);
-          setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
-          
-          console.log(`✅ تم العثور على العميل: ${customerInfo.name} - نقاط: ${loyaltyInfo.total_points} - مجموع الإنفاق: ${loyaltyInfo.total_spent}`);
-          if (roundedDiscountAmount > 0) {
-            console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
-          }
-        }
-
-      } catch (error) {
-        console.error('خطأ في جلب بيانات العميل:', error);
+      if (!customer) {
+        console.log('❌ لم يتم العثور على العميل');
         setCustomerData(null);
         setLoyaltyDiscount(0);
         setDiscount(0);
+        return;
       }
+
+      console.log('✅ تم العثور على العميل:', customer);
+      setCustomerData(customer);
+      
+      // ملء البيانات تلقائياً مع حماية من null
+      setFormData(prev => ({
+        ...prev,
+        name: customer.name || prev.name,
+        city: customer.city || prev.city,
+        address: customer.address || prev.address
+      }));
+
+      // حساب وتطبيق خصم الولاء فوراً مع التقريب المطلوب
+      const loyaltyData = customer.customer_loyalty;
+      if (loyaltyData && loyaltyData.loyalty_tiers) {
+        const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
+        
+        // توليد بروموكود ثابت من الهاتف ومستوى الولاء
+        const cleanPhone = (customer.phone || '').replace(/\D/g, '');
+        const localPhone = cleanPhone.startsWith('964') ? `0${cleanPhone.slice(3)}` : cleanPhone.startsWith('0') ? cleanPhone : `0${cleanPhone}`;
+        const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
+        const tierAbbr = abbrMap[loyaltyData.loyalty_tiers.name] || 'BR';
+        const promo = localPhone ? `RY${localPhone.slice(-4)}${tierAbbr}` : '';
+        setFormData(prev => ({ ...prev, promocode: promo }));
+        
+        // إعادة حساب الخصم مع السلة الحالية
+        const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+        const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
+        
+        // تقريب الخصم إلى أقرب 500 دينار
+        const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
+        
+        console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
+        console.log(`🎁 خصم الولاء الأساسي: ${discountPercentage}% = ${baseDiscountAmount} د.ع`);
+        console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
+        
+        setLoyaltyDiscount(roundedDiscountAmount);
+        setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
+        
+        // عدم إظهار رسالة الولاء للموظفين لتجنب الخلط
+        console.log(`✅ تم العثور على العميل: ${customer.name} - نقاط: ${loyaltyData.total_points}`);
+        if (roundedDiscountAmount > 0) {
+          console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
+        }
+      }
+
     };
 
     fetchCustomerData();
@@ -889,7 +858,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           mode={orderCreationMode}
           activePartner={activePartner}
           isLoggedIn={isWaseetLoggedIn}
-          waseetUser={waseetUser}
           onManageClick={() => setDeliveryPartnerDialogOpen(true)}
         />
 

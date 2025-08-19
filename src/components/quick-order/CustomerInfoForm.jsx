@@ -115,16 +115,6 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                 </div>
               </div>
               
-              {/* عرض عدد الطلبات من نظام الولاء */}
-              {customerData.customer_loyalty?.total_orders && (
-                <div className="mt-2 text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">عدد الطلبات:</span>
-                  <span className="font-bold text-purple-600 dark:text-purple-400 ml-1">
-                    {customerData.customer_loyalty.total_orders.toLocaleString('ar')} طلب
-                  </span>
-                </div>
-              )}
-              
               {loyaltyDiscount > 0 && (
                 <div className="mt-2 p-2 bg-orange-100 dark:bg-orange-900/30 rounded border border-orange-200 dark:border-orange-800">
                   <span className="text-orange-700 dark:text-orange-300 text-sm font-medium">
