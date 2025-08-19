@@ -146,11 +146,12 @@ const OrdersPage = () => {
     };
   }, [refetchProducts]);
 
-  // مستمعات Real-time للحذف الفوري للطلبات
+  // مستمعات Real-time للحذف الفوري للطلبات - محسنة
   useEffect(() => {
     const handleOrderDeleted = (event) => {
       const deletedOrderId = event.detail?.id;
       if (deletedOrderId) {
+        console.log('🗑️ OrdersPage: تأكيد حذف طلب فوري:', deletedOrderId);
         // إزالة فورية من قائمة الطلبات المحددة
         setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
       }
@@ -159,16 +160,39 @@ const OrdersPage = () => {
     const handleAiOrderDeleted = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        console.log('🗑️ حذف طلب ذكي فوري:', deletedAiOrderId);
+        console.log('🗑️ OrdersPage: تأكيد حذف طلب ذكي فوري:', deletedAiOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
     };
 
+    // مستمعات Real-time للتأكيد النهائي
+    const handleOrderDeletedConfirmed = (event) => {
+      const deletedOrderId = event.detail?.id;
+      if (deletedOrderId) {
+        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
+      }
+    };
+
+    const handleAiOrderDeletedConfirmed = (event) => {
+      const deletedAiOrderId = event.detail?.id;
+      if (deletedAiOrderId) {
+        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
+      }
+    };
+
+    // تسجيل المستمعات
     window.addEventListener('orderDeleted', handleOrderDeleted);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    window.addEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+    window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
 
     return () => {
       window.removeEventListener('orderDeleted', handleOrderDeleted);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+      window.removeEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+      window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
     };
   }, []);
 

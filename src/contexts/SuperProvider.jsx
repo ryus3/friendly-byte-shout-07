@@ -424,23 +424,27 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('➕ إضافة طلب جديد فورياً');
+          console.log('➕ Real-time: إضافة طلب جديد فورياً');
           setAllData(prev => ({ 
             ...prev, 
             orders: [rowNew, ...(prev.orders || [])] 
           }));
         } else if (type === 'UPDATE') {
-          console.log('🔄 تحديث طلب فورياً');
+          console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
             ...prev,
             orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
           }));
         } else if (type === 'DELETE') {
-          console.log('🗑️ حذف طلب فورياً');
+          console.log('🗑️ Real-time: تأكيد حذف طلب فورياً - ID:', rowOld.id);
           setAllData(prev => ({ 
             ...prev, 
             orders: (prev.orders || []).filter(o => o.id !== rowOld.id) 
           }));
+          // بث حدث التأكيد للمكونات
+          try { 
+            window.dispatchEvent(new CustomEvent('orderDeletedConfirmed', { detail: { id: rowOld.id } })); 
+          } catch {}
         }
         return; // لا إعادة جلب للطلبات
       }
@@ -452,22 +456,26 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('➕ إضافة طلب ذكي جديد فورياً');
+          console.log('➕ Real-time: إضافة طلب ذكي جديد فورياً');
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
           setAllData(prev => ({ ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] }));
         } else if (type === 'UPDATE') {
-          console.log('🔄 تحديث طلب ذكي فورياً');
+          console.log('🔄 Real-time: تحديث طلب ذكي فورياً');
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
           }));
         } else if (type === 'DELETE') {
-          console.log('🗑️ حذف طلب ذكي فورياً');
+          console.log('🗑️ Real-time: تأكيد حذف طلب ذكي فورياً - ID:', rowOld.id);
           try { pendingAiDeletesRef.current.add(rowOld.id); } catch {}
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).filter(o => o.id !== rowOld.id)
           }));
+          // بث حدث التأكيد للمكونات
+          try { 
+            window.dispatchEvent(new CustomEvent('aiOrderDeletedConfirmed', { detail: { id: rowOld.id } })); 
+          } catch {}
         }
         return; // لا إعادة جلب للطلبات الذكية
       }
@@ -748,11 +756,14 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // حذف طلبات مع تحديث فوري
+  // حذف طلبات مع تحديث فوري حقيقي - محسن للسرعة القصوى
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
+      console.log('🗑️ SuperProvider: بدء حذف فوري - نوع:', isAiOrder ? 'AI' : 'عادي', 'العدد:', orderIds.length);
+      
       if (isAiOrder) {
-        // تحديث فوري محلياً أولاً
+        // تحديث فوري محلياً قبل الحذف
+        console.log('🤖 حذف طلبات ذكية - تحديث فوري محلي');
         setAllData(prev => ({
           ...prev,
           aiOrders: (prev.aiOrders || []).filter(o => !orderIds.includes(o.id))
@@ -760,51 +771,55 @@ export const SuperProvider = ({ children }) => {
         
         // بث أحداث الحذف فوراً
         orderIds.forEach(id => {
-          try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
+          try { 
+            window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); 
+          } catch {}
         });
         
-        // الحذف الفعلي في الخلفية
+        // الحذف الفعلي - Real-time سيؤكد
         const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
         if (error) {
-          // في حالة الفشل، أعد الطلبات للقائمة
-          console.error('Delete failed, will refresh data:', error);
-          superAPI.invalidate('all_data');
+          console.error('❌ فشل حذف طلبات ذكية:', error);
+          // استرداد فقط في حالة الفشل
           await fetchAllData();
           throw error;
         }
+        
+        console.log('✅ تم حذف الطلبات الذكية - Real-time سيؤكد');
         superAPI.invalidate('all_data');
         return { success: true };
       }
       
-      // حذف طلبات عادية - تحديث تفاؤلي فوري
+      // حذف طلبات عادية - تحديث فوري محلي قبل الحذف
+      console.log('📋 حذف طلبات عادية - تحديث فوري محلي');
       setAllData(prev => ({ 
         ...prev, 
         orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) 
       }));
       
-      // بث أحداث الحذف فوراً
+      // بث أحداث الحذف فوراً قبل الحذف الفعلي
       orderIds.forEach(id => {
         try { 
           window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); 
         } catch {}
       });
 
-      // الحذف الفعلي في الخلفية - بدون fetchAllData
+      // الحذف الفعلي - Real-time سيؤكد الحذف
       const { error } = await supabase.from('orders').delete().in('id', orderIds);
       if (error) {
-        // في حالة الفشل، أعد تحميل البيانات فقط
-        console.error('Delete failed, refreshing data:', error);
-        superAPI.invalidate('all_data');
+        console.error('❌ فشل حذف الطلبات:', error);
+        // استرداد فقط في حالة الفشل
         await fetchAllData();
         throw error;
       }
       
-      // تنظيف الكاش فقط - الـ Real-time سيتولى باقي التحديثات
+      console.log('✅ تم حذف الطلبات - Real-time سيؤكد النتيجة');
+      // تنظيف الكاش فقط - Real-time سيؤكد الحذف
       superAPI.invalidate('all_data');
       
       return { success: true };
     } catch (error) {
-      console.error('Error deleting orders:', error);
+      console.error('💥 خطأ في حذف الطلبات:', error);
       return { success: false, error: error.message };
     }
   }, [fetchAllData]);
@@ -916,6 +931,11 @@ export const SuperProvider = ({ children }) => {
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
+  const refreshDataInstantly = useCallback(async () => { 
+    console.log('⚡ تحديث فوري للبيانات الحيوية'); 
+    superAPI.invalidate('all_data'); 
+    await fetchAllData(); 
+  }, [fetchAllData]);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {
     try {
@@ -1240,6 +1260,7 @@ export const SuperProvider = ({ children }) => {
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
+    refreshDataInstantly: refreshDataInstantly || (async () => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
