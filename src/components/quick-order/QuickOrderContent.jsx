@@ -443,8 +443,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         defaultCustomerName: customerName
       });
       
-      // Reset other state asynchronously to prevent memory cascade
-      setTimeout(() => {
+      // Reset other state instantly using React.startTransition
+      React.startTransition(() => {
         setDiscount(0);
         setLoyaltyDiscount(0);
         setApplyLoyaltyDiscount(false);
@@ -452,7 +452,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setCustomerData(null);
         setErrors({});
         setNameTouched(false);
-      }, 0);
+      });
       
       console.log('✅ مسح النموذج - تم بنجاح');
     } catch (error) {

@@ -29,7 +29,7 @@ function useLocalStorage(key, initialValue) {
       } catch (error) {
         console.error(`❌ Error setting localStorage key "${key}":`, error);
       }
-    }, 100);
+    }, 50);
   }, [key]);
 
   // Update localStorage when state changes

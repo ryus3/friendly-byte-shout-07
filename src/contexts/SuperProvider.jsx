@@ -482,7 +482,7 @@ export const SuperProvider = ({ children }) => {
       if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
       reloadTimerRef.current = setTimeout(() => {
         fetchAllData();
-      }, 300);
+      }, 100);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);

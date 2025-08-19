@@ -217,6 +217,47 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
+  // Real-time notifications and instant updates for orders
+  useEffect(() => {
+    const handleNewOrderNotification = (event) => {
+      const orderData = event.detail;
+      if (orderData && orderData.id) {
+        toast({
+          title: 'طلب جديد!',
+          description: `طلب جديد من ${orderData.customer_name || 'زبون جديد'}`,
+          variant: 'success'
+        });
+      }
+    };
+
+    const handleOrderUpdated = (event) => {
+      console.log('🔄 Order updated in real-time:', event.detail);
+      // Force immediate refresh of data
+      refetchProducts();
+    };
+
+    const handleOrderDeleted = (event) => {
+      console.log('🗑️ Order deleted in real-time:', event.detail);
+      toast({
+        title: 'تم الحذف',
+        description: 'تم حذف الطلب بنجاح',
+        variant: 'success'
+      });
+      // Force immediate refresh of data
+      refetchProducts();
+    };
+
+    window.addEventListener('orderCreated', handleNewOrderNotification);
+    window.addEventListener('orderUpdated', handleOrderUpdated);
+    window.addEventListener('orderDeleted', handleOrderDeleted);
+    
+    return () => {
+      window.removeEventListener('orderCreated', handleNewOrderNotification);
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
+    };
+  }, [refetchProducts]);
+
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     if (hasPermission('view_all_orders')) {

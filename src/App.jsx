@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
-import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import ImprovedErrorBoundary from '@/components/shared/ImprovedErrorBoundary';
 import { navigationGuard, performanceMonitor } from '@/utils/navigationGuard';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
@@ -16,6 +16,7 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
+import NavigationMemoryGuard from '@/components/shared/NavigationMemoryGuard';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
@@ -94,11 +95,11 @@ function ScrollToTop() {
 // Memoized wrapper component for routes to prevent memory leaks
 const RouteWrapper = memo(({ children, permission }) => {
   return (
-    <ErrorBoundary>
+    <ImprovedErrorBoundary>
       <ProtectedRoute permission={permission}>
         {children}
       </ProtectedRoute>
-    </ErrorBoundary>
+    </ImprovedErrorBoundary>
   );
 });
 
@@ -139,7 +140,7 @@ function AppContent() {
   );
 
   return (
-    <ErrorBoundary>
+    <ImprovedErrorBoundary>
       <div className="h-dvh bg-background text-foreground">
          <Helmet>
           <title>RYUS</title>
@@ -147,7 +148,8 @@ function AppContent() {
           <meta name="theme-color" content="#ffffff" />
         </Helmet>
         <ScrollToTop />
-        <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
+        <NavigationMemoryGuard>
+          <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/update-password" element={<UpdatePasswordPage />} />
@@ -179,12 +181,13 @@ function AppContent() {
             <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
 
           </Routes>
-        </Suspense>
+          </Suspense>
+        </NavigationMemoryGuard>
         <Toaster />
         <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
         {user && <NotificationsHandler />}
       </div>
-    </ErrorBoundary>
+    </ImprovedErrorBoundary>
   )
 }
 
