@@ -163,8 +163,63 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
   }, [settings, addNotification, user]);
 
+  // تحديث المخزون عند تغيير المنتجات
+  const updateInventoryForOrderEdit = async (orderId, newProducts, originalItems) => {
+    try {
+      // إرجاع المخزون للمنتجات القديمة
+      if (originalItems) {
+        for (const item of originalItems) {
+          await supabase.rpc('release_stock_item', {
+            p_product_id: item.product_id,
+            p_variant_id: item.variant_id,
+            p_quantity: item.quantity
+          });
+        }
+      }
+
+      // حجز المخزون للمنتجات الجديدة
+      for (const product of newProducts) {
+        const { error: stockError } = await supabase.rpc('reserve_stock_for_order', {
+          p_product_id: product.productId,
+          p_variant_id: product.variantId,
+          p_quantity: product.quantity
+        });
+        
+        if (stockError) {
+          console.error('Error reserving stock:', stockError);
+          throw new Error(`فشل في حجز المخزون للمنتج ${product.productName}`);
+        }
+      }
+
+      // تحديث عناصر الطلب
+      await supabase.from('order_items').delete().eq('order_id', orderId);
+      
+      const orderItems = newProducts.map(product => ({
+        order_id: orderId,
+        product_id: product.productId,
+        variant_id: product.variantId,
+        quantity: product.quantity,
+        unit_price: product.price,
+        total_price: product.quantity * product.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) {
+        throw new Error('فشل في تحديث عناصر الطلب');
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating inventory for order edit:', error);
+      throw error;
+    }
+  };
+
   // تحديث حالة الطلب
-  const updateOrder = async (orderId, updates) => {
+  const updateOrder = async (orderId, updates, newProducts = null, originalItems = null) => {
     try {
       const originalOrder = orders.find(o => o.id === orderId);
       if (!originalOrder) {
@@ -172,16 +227,36 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // التحقق من الصلاحيات - يمكن التعديل فقط في الحالات المسموحة
-      const allowedEditStates = ['pending', 'shipped'];
+      const allowedEditStates = ['pending'];
       if (!allowedEditStates.includes(originalOrder.status)) {
         return { success: false, error: 'لا يمكن تعديل هذا الطلب في حالته الحالية' };
+      }
+
+      // إذا كان هناك تحديث للمنتجات، نقوم بإدارة المخزون
+      if (newProducts) {
+        await updateInventoryForOrderEdit(orderId, newProducts, originalItems);
       }
 
       const { data: updatedOrder, error } = await supabase
         .from('orders')
         .update(updates)
         .eq('id', orderId)
-        .select()
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            quantity,
+            unit_price,
+            total_price,
+            products (name),
+            product_variants (
+              colors (name),
+              sizes (name)
+            )
+          )
+        `)
         .single();
 
       if (error) {

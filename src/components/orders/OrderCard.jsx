@@ -262,7 +262,7 @@ const OrderCard = ({
                 />
                 <div>
                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                    {order.qr_id || order.order_number}
+                    {order.delivery_partner_data?.qr_id || order.qr_id || order.order_number}
                   </h3>
                 </div>
               </div>
