@@ -1286,7 +1286,20 @@ export const SuperProvider = ({ children }) => {
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
     refreshAllData: refreshAllData || (async () => {}),
-    refreshDataInstantly: refreshDataInstantly || (async () => {}),
+    refreshDataInstantly: useCallback(() => {
+      console.log('🔄 Instant data refresh triggered');
+      // إبطال جميع الكاش فوراً
+      if (typeof queryClient?.invalidateQueries === 'function') {
+        queryClient.invalidateQueries();
+      }
+      // تحديث البيانات المحلية
+      refetchInventory?.();
+      refetchProducts?.();
+      refetchOrders?.();
+      refetchCustomers?.();
+      // إجبار re-render للمكونات
+      window.dispatchEvent(new CustomEvent('forceDataRefresh'));
+    }, [queryClient, refetchInventory, refetchProducts, refetchOrders, refetchCustomers]),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {

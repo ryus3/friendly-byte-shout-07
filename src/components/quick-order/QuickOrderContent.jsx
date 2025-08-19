@@ -846,6 +846,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           duration: 5000
         });
         resetForm();
+        
+        // تحديث فوري للبيانات
+        if (refreshData) {
+          refreshData();
+        }
+        
+        // إشارة لإعادة تعيين navigation guard
+        window.dispatchEvent(new CustomEvent('resetNavigationGuard'));
+        window.dispatchEvent(new CustomEvent('orderCreationComplete'));
+        
         if(onOrderCreated) onOrderCreated();
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {
