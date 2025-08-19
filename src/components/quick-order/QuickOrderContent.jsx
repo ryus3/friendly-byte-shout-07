@@ -415,6 +415,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
+    console.log('🔄 resetForm called - الاسم الافتراضي:', defaultCustomerName, 'المستخدم:', user?.default_customer_name);
+    
     // إنشاء نموذج جديد مع الاحتفاظ بالاسم الافتراضي
     const resetFormData = {
       name: defaultCustomerName || user?.default_customer_name || '', 
@@ -437,21 +439,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     console.log('🔄 مسح النموذج - إعادة تعيين للاسم الافتراضي:', resetFormData.name);
     
-    // مسح البيانات بشكل فوري ومنظم
-    clearCart();
-    setDiscount(0);
-    setLoyaltyDiscount(0);
-    setApplyLoyaltyDiscount(false);
-    setApplyLoyaltyDelivery(false);
-    setCustomerData(null);
-    setErrors({});
-    
-    // إعادة تعيين النموذج مع الاسم الافتراضي
-    setFormData(resetFormData);
-    setNameTouched(false);
-    
-    console.log('✅ مسح النموذج - تم بنجاح');
-  }, [clearCart, activePartner]);
+    try {
+      // مسح البيانات بشكل فوري ومنظم
+      clearCart();
+      setDiscount(0);
+      setLoyaltyDiscount(0);
+      setApplyLoyaltyDiscount(false);
+      setApplyLoyaltyDelivery(false);
+      setCustomerData(null);
+      setErrors({});
+      
+      // إعادة تعيين النموذج مع الاسم الافتراضي
+      setFormData(resetFormData);
+      setNameTouched(false);
+      
+      console.log('✅ مسح النموذج - تم بنجاح');
+    } catch (error) {
+      console.error('❌ خطأ في resetForm:', error);
+    }
+  }, [clearCart, activePartner, defaultCustomerName, user?.default_customer_name]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
