@@ -60,5 +60,28 @@ export const createAlWaseetOrder = async (orderData, token) => {
 };
 
 export const editAlWaseetOrder = async (orderData, token) => {
-  return handleApiCall('edit-order', 'POST', token, orderData, { token });
+  // Format phones for Al-Waseet API requirements (same as createAlWaseetOrder)
+  const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
+  
+  const formattedData = { ...orderData };
+  
+  // Format primary phone (required)
+  if (formattedData.client_mobile) {
+    formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
+    if (!isValidAlWaseetPhone(orderData.client_mobile)) {
+      throw new Error('رقم الهاتف الأساسي غير صحيح. يجب أن يكون رقم عراقي صحيح.');
+    }
+  }
+  
+  // Format secondary phone (optional) - only include if valid
+  if (formattedData.client_mobile2) {
+    const formatted2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
+    if (isValidAlWaseetPhone(orderData.client_mobile2)) {
+      formattedData.client_mobile2 = formatted2;
+    } else {
+      delete formattedData.client_mobile2; // Remove invalid secondary phone
+    }
+  }
+  
+  return handleApiCall('edit-order', 'POST', token, formattedData, { token });
 };

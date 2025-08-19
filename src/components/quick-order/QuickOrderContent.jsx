@@ -428,13 +428,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       details: '', 
       quantity: 1, 
       price: 0, 
-      size: 'normal', 
+      size: activePartner === 'local' ? 'normal' : '', 
       type: 'new', 
       promocode: '',
       defaultCustomerName: ''
     };
     
-    // مسح البيانات تدريجياً لتجنب التجمد
+    console.log('🔄 مسح النموذج - بدء العملية');
+    
+    // مسح البيانات بشكل فوري ومنظم
     clearCart();
     setDiscount(0);
     setLoyaltyDiscount(0);
@@ -443,11 +445,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setCustomerData(null);
     setErrors({});
     
-    // تأخير مسح رقم الهاتف قليلاً لضمان إتمام العمليات السابقة
-    setTimeout(() => {
-      setFormData(emptyFormData);
-    }, 100);
-  }, [clearCart]);
+    // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
+    setFormData(emptyFormData);
+    
+    console.log('✅ مسح النموذج - تم بنجاح');
+  }, [clearCart, activePartner]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {

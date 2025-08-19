@@ -78,15 +78,15 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                     customerInsight.alertType === 'recent_duplicate' ? 'text-orange-700 dark:text-orange-300' :
                     'text-blue-700 dark:text-blue-300'
                   }`}>
-                    {customerInsight.count > 0 && customerInsight.lastOrderDate && (
-                      <div className="flex items-center gap-3">
-                     <div className="flex items-center gap-1">
-                           <span className="text-xs">📦</span>
-                           <span>{customerInsight.count}</span>
+                     {customerInsight.count > 0 && customerInsight.lastOrderDate && (
+                       <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-1">
+                           <span className="text-xs font-medium">إجمالي الطلبات:</span>
+                           <span className="font-bold">{customerInsight.count}</span>
                          </div>
                          <div className="flex items-center gap-1">
-                           <span className="text-xs">🕒</span>
-                           <span>{(() => {
+                           <span className="text-xs font-medium">آخر طلب:</span>
+                           <span className="font-bold">{(() => {
                              const date = new Date(customerInsight.lastOrderDate);
                              const diffHours = customerInsight.timeSinceLastOrderHours;
                              if (diffHours < 24) {
@@ -98,8 +98,8 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                              }
                            })()}</span>
                          </div>
-                      </div>
-                    )}
+                       </div>
+                     )}
                   </div>
                 </div>
               </div>
@@ -120,9 +120,10 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
                 <div className="text-sm font-bold text-white tracking-wide">
                   {formData.phone}
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-500 shadow-md">
-                  <span className="text-white text-xs">👑</span>
-                  <span className="text-white text-xs font-bold">نظام الولاء وإدارة العملاء</span>
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 shadow-lg border border-white/20">
+                  <span className="text-white text-sm">👑</span>
+                  <span className="text-white text-sm font-bold tracking-wide">نظام الولاء وإدارة العملاء</span>
+                  <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
                 </div>
               </div>
               
