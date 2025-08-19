@@ -232,8 +232,10 @@ const OrderDetailsForm = ({
                 </>
               ) : (
                 packageSizes.map(size => (
-                  <SelectItem key={size.id} value={String(size.id)}>{size.size}</SelectItem>
-                ))
+                   <SelectItem key={size.id} value={String(size.id)}>
+                     {typeof size.size === 'string' ? size.size : size.name || `حجم ${size.id}`}
+                   </SelectItem>
+                 ))
               )}
             </SelectContent>
           </Select>
