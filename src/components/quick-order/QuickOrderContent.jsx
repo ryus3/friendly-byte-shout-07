@@ -256,25 +256,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         const totalSpent = completedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
         
-        // تحديد المستوى حسب النقاط الحالية
-        let currentTier = { name_ar: 'عادي', name_en: 'NORM', discount_percentage: 0, free_delivery: false };
-        if (totalPoints >= 1000) {
-          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 15, free_delivery: true };
-        } else if (totalPoints >= 500) {
-          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 10, free_delivery: false };
-        } else if (totalPoints >= 250) {
-          currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 5, free_delivery: false };
+        // تحديد المستوى حسب النقاط الحالية - مطابق لقاعدة البيانات
+        let currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 0, free_delivery: false };
+        if (totalPoints >= 3000) {
+          currentTier = { name_ar: 'ماسي', name_en: 'DIAM', discount_percentage: 15, free_delivery: true };
+        } else if (totalPoints >= 1500) {
+          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 10, free_delivery: true };
+        } else if (totalPoints >= 750) {
+          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 5, free_delivery: false };
         }
         
         // تحديد المستوى التالي بعد إضافة 250 نقطة للطلب الجديد
         const pointsAfterOrder = totalPoints + 250;
         let nextTierAfterOrder = null;
-        if (totalPoints < 250 && pointsAfterOrder >= 250) {
-          nextTierAfterOrder = { name_ar: 'برونزي', name_en: 'BRNZ' };
-        } else if (totalPoints < 500 && pointsAfterOrder >= 500) {
+        if (totalPoints < 750 && pointsAfterOrder >= 750) {
           nextTierAfterOrder = { name_ar: 'فضي', name_en: 'SILV' };
-        } else if (totalPoints < 1000 && pointsAfterOrder >= 1000) {
+        } else if (totalPoints < 1500 && pointsAfterOrder >= 1500) {
           nextTierAfterOrder = { name_ar: 'ذهبي', name_en: 'GOLD' };
+        } else if (totalPoints < 3000 && pointsAfterOrder >= 3000) {
+          nextTierAfterOrder = { name_ar: 'ماسي', name_en: 'DIAM' };
         }
         
         const customerInfo = {

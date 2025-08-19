@@ -134,6 +134,11 @@ export const useDuplicateCustomerAlert = (phone, { trigger = true } = {}) => {
       }
     };
 
+    // إزالة Toast للعملاء VIP - يظهر فقط في الكارت أسفل رقم الهاتف
+    if (insight.alertType === 'vip') {
+      return; // لا نعرض toast للعملاء VIP
+    }
+
     const config = getAlertConfig();
     toast({
       title: config.title,

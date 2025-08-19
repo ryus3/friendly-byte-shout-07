@@ -224,7 +224,7 @@ const OrderDetailsForm = ({
             <SelectTrigger>
                 <SelectValue placeholder={loadingPackageSizes ? "تحميل..." : "اختر حجم الطلب"} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               {activePartner === 'local' ? (
                 <>
                   <SelectItem value="normal">عادي</SelectItem>
@@ -242,7 +242,7 @@ const OrderDetailsForm = ({
           <Label>نوع الطلب</Label>
           <Select name="type" onValueChange={(v) => handleSelectChange('type', v)} value={formData.type} disabled={isSubmittingState}>
             <SelectTrigger><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-50">
               <SelectItem value="new">طلب جديد</SelectItem>
               <SelectItem value="exchange">استبدال</SelectItem>
               <SelectItem value="return">ارجاع</SelectItem>
