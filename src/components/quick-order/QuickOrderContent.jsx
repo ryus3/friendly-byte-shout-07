@@ -44,7 +44,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     details: '', 
     quantity: 1, 
     price: 0, 
-    size: '', 
+    size: 'normal', 
     type: 'new', 
     promocode: '',
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
@@ -377,9 +377,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // حساب المجاميع
   const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
-  const deliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
+  const currentDeliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
-  const priceWithDelivery = useMemo(() => total + deliveryFee, [total, deliveryFee]);
+  const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
     setFormData(initialFormData);

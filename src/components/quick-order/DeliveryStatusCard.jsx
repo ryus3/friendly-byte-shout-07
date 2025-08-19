@@ -39,9 +39,9 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
             <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
               {!isLocal && isLoggedIn && waseetUser?.username && (
-                <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 text-white text-base font-bold shadow-lg backdrop-blur-sm border border-blue-300/60">
+                <span className="text-lg font-bold text-emerald-100 drop-shadow-sm">
                   {waseetUser.username}
-                </div>
+                </span>
               )}
             </div>
             <p className="text-sm opacity-90">{description}</p>

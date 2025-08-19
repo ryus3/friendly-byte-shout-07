@@ -29,7 +29,7 @@ const OrderDetailsForm = ({
   const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
   
-  const deliveryFee = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
+  const deliveryFee = settings?.deliveryFee || 0;
   const finalTotal = total + deliveryFee;
 
   return (
@@ -133,7 +133,7 @@ const OrderDetailsForm = ({
         </div>
         <div className="space-y-2">
           <Label>حجم الطلب</Label>
-          <Select name="size" onValueChange={(v) => handleSelectChange('size', v)} value={formData.size} disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)}>
+          <Select name="size" onValueChange={(v) => handleSelectChange('size', v)} value={formData.size} disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)} defaultValue="normal">
             <SelectTrigger>
                 <SelectValue placeholder={loadingPackageSizes ? "تحميل..." : "اختر حجم الطلب"} />
             </SelectTrigger>
