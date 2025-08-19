@@ -16,45 +16,77 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
   const [orderItems, setOrderItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
-  const { cities, regions, packageSizes, fetchRegions, editAlWaseetOrder } = useAlWaseet();
+  const { cities, regions, packageSizes, fetchRegions, editAlWaseetOrder, fetchCities, fetchPackageSizes, token } = useAlWaseet();
+
+  // Auto-fetch cities and package sizes when dialog opens
+  useEffect(() => {
+    if (open && token) {
+      if (!cities || cities.length === 0) {
+        fetchCities();
+      }
+      if (!packageSizes || packageSizes.length === 0) {
+        fetchPackageSizes();
+      }
+    }
+  }, [open, token, cities, packageSizes, fetchCities, fetchPackageSizes]);
 
   const initializeForm = useCallback(() => {
     if (order) {
-      // التحقق من إمكانية التعديل - فقط الطلبات قيد التجهيز
-      const deliveryData = order.delivery_partner_data || {};
-      const canEditOrder = !order.delivery_status || order.delivery_status === 'قيد التجهيز' || order.delivery_status === 'في الانتظار';
+      // تحسين منطق التحقق من إمكانية التعديل
+      const canEditOrder = order.status === 'pending' || 
+                          order.status === 'processing' || 
+                          !order.delivery_status || 
+                          order.delivery_status === 'قيد التجهيز' || 
+                          order.delivery_status === 'في الانتظار';
       setCanEdit(canEditOrder);
       
+      const deliveryData = order.delivery_partner_data || {};
       const customerInfo = order.customerinfo || {};
+      
+      // استخراج المدينة والمنطقة بطريقة محسنة
+      let cityId = deliveryData.city_id || '';
+      let regionId = deliveryData.region_id || '';
+      
+      // البحث عن المدينة بالاسم إذا لم توجد بالـ ID
+      if (!cityId && (order.customer_city || customerInfo.city)) {
+        const cityName = order.customer_city || customerInfo.city;
+        const foundCity = cities.find(c => c.name === cityName);
+        if (foundCity) {
+          cityId = foundCity.id;
+        }
+      }
+      
       const initialData = {
-        qr_id: order.trackingnumber || order.tracking_number,
-        client_name: deliveryData.client_name || customerInfo.name || order.customer_name,
-        client_mobile: deliveryData.client_mobile || customerInfo.phone || order.customer_phone,
+        qr_id: order.trackingnumber || order.tracking_number || order.order_number,
+        client_name: deliveryData.client_name || customerInfo.name || order.customer_name || '',
+        client_mobile: deliveryData.client_mobile || customerInfo.phone || order.customer_phone || '',
         client_mobile2: deliveryData.client_mobile2 || '',
-        city_id: deliveryData.city_id || '',
-        region_id: deliveryData.region_id || '',
-        location: deliveryData.location || customerInfo.address || order.customer_address,
-        type_name: deliveryData.type_name || (order.items || []).map(i => `${i.productName || i.product_name} (${i.quantity})`).join(' + '),
-        items_number: deliveryData.items_number || (order.items || []).reduce((acc, i) => acc + i.quantity, 0),
-        price: deliveryData.price || order.total || order.total_amount,
+        city_id: cityId,
+        region_id: regionId,
+        location: deliveryData.location || customerInfo.address || order.customer_address || '',
+        type_name: deliveryData.type_name || (order.items || []).map(i => `${i.productName || i.product_name || i.name} (${i.quantity})`).join(' + '),
+        items_number: deliveryData.items_number || (order.items || []).reduce((acc, i) => acc + (parseInt(i.quantity) || 0), 0),
+        price: deliveryData.price || order.total || order.total_amount || 0,
         package_size: deliveryData.package_size || '',
         merchant_notes: deliveryData.merchant_notes || order.notes || '',
         replacement: deliveryData.replacement || 0,
       };
+      
       setFormData(initialData);
       setOrderItems(order.items || []);
       
-      if (initialData.city_id && fetchRegions) {
-        fetchRegions(initialData.city_id);
+      // تحميل المناطق إذا كانت المدينة موجودة
+      if (cityId && fetchRegions) {
+        fetchRegions(cityId);
       }
     }
-  }, [order, fetchRegions]);
+  }, [order, fetchRegions, cities]);
 
   useEffect(() => {
-    if (open) {
+    if (open && order) {
       initializeForm();
     }
-  }, [open, initializeForm]);
+  }, [open, order, initializeForm]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -133,25 +165,31 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
         throw new Error(`فشل في تحديث قاعدة البيانات: ${updateError.message}`);
       }
 
-      // إرسال التحديث لشركة التوصيل
-      const result = await editAlWaseetOrder(formData);
-
-      if (result.success) {
-        toast({
-          title: "تم بنجاح",
-          description: "تم تعديل الطلب وإرساله لشركة التوصيل بنجاح.",
-          variant: "success",
-        });
-        onOrderUpdated(order.id, { 
-          delivery_partner_data: formData, 
-          items: orderItems,
-          total: formData.price,
-          ...formData 
-        });
-        onOpenChange(false);
-      } else {
-        throw new Error(result.message || "فشل في إرسال التحديث لشركة التوصيل.");
+      // إرسال التحديث لشركة التوصيل (فقط إذا كان الطلب مرسل للوسيط)
+      if (order.delivery_partner === 'الوسيط' || order.delivery_partner_data) {
+        const result = await editAlWaseetOrder(formData);
+        
+        if (!result.success) {
+          throw new Error(result.message || "فشل في إرسال التحديث لشركة التوصيل.");
+        }
       }
+
+      toast({
+        title: "تم بنجاح",
+        description: "تم تعديل الطلب بنجاح.",
+        variant: "default",
+      });
+      
+      onOrderUpdated(order.id, { 
+        delivery_partner_data: formData, 
+        items: orderItems,
+        total: formData.price,
+        customer_name: formData.client_name,
+        customer_phone: formData.client_mobile,
+        customer_address: formData.location,
+        notes: formData.merchant_notes
+      });
+      onOpenChange(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -171,16 +209,21 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle className="gradient-text">تعديل الطلب #{order.trackingnumber}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="gradient-text">
+            تعديل الطلب #{order?.order_number || order?.trackingnumber || 'غير محدد'}
+          </DialogTitle>
           {!canEdit && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-2">
-              <p className="text-yellow-800 text-sm">⚠️ يمكن تعديل الطلبات فقط في حالة "قيد التجهيز"</p>
+              <p className="text-yellow-800 text-sm">⚠️ يمكن تعديل الطلبات فقط في حالة "قيد التجهيز" أو "معلق"</p>
             </div>
           )}
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+        
+        <div className="flex-1 overflow-hidden">
+          <form onSubmit={handleSubmit} className="h-full flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="client_name">اسم العميل</Label>
@@ -323,14 +366,19 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-            <Button type="submit" disabled={isLoading || !canEdit}>
-              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              {canEdit ? 'حفظ التعديلات' : 'لا يمكن التعديل'}
-            </Button>
-          </DialogFooter>
-        </form>
+            </div>
+            
+            <DialogFooter className="shrink-0 mt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                إلغاء
+              </Button>
+              <Button type="submit" disabled={isLoading || !canEdit}>
+                {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                {canEdit ? 'حفظ التعديلات' : 'لا يمكن التعديل'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

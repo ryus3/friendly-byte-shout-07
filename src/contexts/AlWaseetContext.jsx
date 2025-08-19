@@ -281,6 +281,16 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [isLoggedIn, activePartner, fetchCities, fetchPackageSizes]);
 
+  // Auto-fetch cities when token is available (even if not fully logged in)
+  useEffect(() => {
+    if (token && cities.length === 0) {
+      fetchCities();
+    }
+    if (token && packageSizes.length === 0) {
+      fetchPackageSizes();
+    }
+  }, [token, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
+
   useEffect(() => {
     let intervalId;
     if (syncInterval > 0 && isLoggedIn && activePartner !== 'local') {
@@ -309,7 +319,9 @@ export const AlWaseetProvider = ({ children }) => {
     cities,
     regions,
     packageSizes,
+    fetchCities,
     fetchRegions,
+    fetchPackageSizes,
     createAlWaseetOrder: createOrder,
     editAlWaseetOrder: editOrder,
   };
