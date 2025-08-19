@@ -315,9 +315,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setApplyLoyaltyDelivery(false);
         }
         
-        // إنشاء كود الخصم
-        const promoCode = `RY${normalizedPhone.slice(-4)}${currentTier.name_en.slice(0,2)}`;
-        setFormData(prev => ({ ...prev, promocode: promoCode }));
+        // لا نقوم بإعداد البروموكود تلقائياً - يُترك للمستخدم
+        // const promoCode = `RY${normalizedPhone.slice(-4)}${currentTier.name_en.slice(0,2)}`;
+        // setFormData(prev => ({ ...prev, promocode: promoCode }));
         
       } catch (error) {
         console.error('خطأ في حساب بيانات العميل:', error);
