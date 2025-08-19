@@ -799,8 +799,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           trackingNumber = null;
       }
       
-      const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
-      const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
+      const city = activePartner === 'local' ? formData.city : (() => {
+        const foundCity = Array.isArray(cities) ? cities.find(c => c.id == formData.city_id) : null;
+        return foundCity ? (typeof foundCity.name === 'string' ? foundCity.name : foundCity.city || '') : '';
+      })();
+      
+      const region = activePartner === 'local' ? formData.region : (() => {
+        const foundRegion = Array.isArray(regions) ? regions.find(r => r.id == formData.region_id) : null;
+        return foundRegion ? (typeof foundRegion.name === 'string' ? foundRegion.name : foundRegion.region || '') : '';
+      })();
       // تطبيع رقم الهاتف للتأكد من التوافق مع API
       const normalizedPhone = normalizePhone(formData.phone);
       if (!normalizedPhone) {
@@ -916,7 +923,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <SearchableSelectFixed
                 value={formData.city_id}
                 onValueChange={(v) => handleSelectChange('city_id', v)}
-                options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
+                options={(Array.isArray(cities) ? cities : []).map(c => ({ 
+                  value: String(c.id), 
+                  label: typeof c.name === 'string' ? c.name : c.city || `مدينة ${c.id}`
+                }))}
                 placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
                 searchPlaceholder="بحث في المدن..."
                 emptyText="لا توجد مدينة بهذا الاسم"
@@ -930,7 +940,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <SearchableSelectFixed
                 value={formData.region_id}
                 onValueChange={(v) => handleSelectChange('region_id', v)}
-                options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
+                options={(Array.isArray(regions) ? regions : []).map(r => ({ 
+                  value: String(r.id), 
+                  label: typeof r.name === 'string' ? r.name : r.region || `منطقة ${r.id}`
+                }))}
                 placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
                 searchPlaceholder="بحث في المناطق..."
                 emptyText="لا توجد منطقة بهذا الاسم"

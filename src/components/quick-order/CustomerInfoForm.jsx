@@ -40,14 +40,24 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
               onChange={handleChange} 
               placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
               required 
-              disabled={isSubmittingState} 
+              disabled={isSubmittingState}
+              className="pr-8"
+              autoComplete="off"
             />
             {formData.name && (
               <button
                 type="button"
-                onClick={() => handleChange({ target: { name: 'name', value: '' } })}
-                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                onClick={() => {
+                  handleChange({ target: { name: 'name', value: '' } });
+                  // تركيز الحقل بعد المسح لتمكين التعديل المباشر
+                  setTimeout(() => {
+                    const nameField = document.getElementById('name');
+                    if (nameField) nameField.focus();
+                  }, 50);
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-lg font-bold"
                 disabled={isSubmittingState}
+                title="مسح الاسم"
               >
                 ×
               </button>

@@ -189,14 +189,17 @@ const UnifiedEditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) =
     }
 
     // Set package size if Al-Waseet order
-    if (orderData.delivery_partner === 'alwaseet' && packageSizes.length > 0) {
-      // Try to match existing package size or default to normal
-      const normalSize = packageSizes.find(size => 
-        size.size?.includes('عادي') || size.size?.includes('normal')
-      );
-      const defaultSizeId = normalSize?.id || packageSizes[0]?.id;
-      if (defaultSizeId) {
-        setFormData(prev => ({ ...prev, size: String(defaultSizeId) }));
+    if (orderData.delivery_partner === 'alwaseet') {
+      // Wait for package sizes to load if they're not available yet
+      if (packageSizes.length > 0) {
+        const normalSize = packageSizes.find(size => 
+          (typeof size.size === 'string' && (size.size.includes('عادي') || size.size.includes('normal'))) ||
+          (typeof size.name === 'string' && (size.name.includes('عادي') || size.name.includes('normal')))
+        );
+        const defaultSizeId = normalSize?.id || packageSizes[0]?.id;
+        if (defaultSizeId) {
+          setFormData(prev => ({ ...prev, size: String(defaultSizeId) }));
+        }
       }
     } else {
       setFormData(prev => ({ ...prev, size: 'normal' }));
