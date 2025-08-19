@@ -60,36 +60,37 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const editable = order.status === 'pending';
     setCanEdit(editable);
     
-    // استخراج البيانات من الطلب
+    // استخراج البيانات من الطلب - إصلاح customer_region إلى customer_province
     const customerCity = order.customer_city || '';
-    const customerRegion = order.customer_region || '';
+    const customerProvince = order.customer_province || order.customer_region || '';
     
     // البحث عن city_id إذا كان متوفراً
-    let cityId = '';
-    let regionId = '';
+    let cityId = order.delivery_partner_data?.city_id || '';
+    let regionId = order.delivery_partner_data?.region_id || '';
     
-    if (customerCity && cities.length > 0) {
+    if (customerCity && cities.length > 0 && !cityId) {
       const cityMatch = cities.find(c => 
         c.name?.toLowerCase() === customerCity.toLowerCase() ||
         c.name_ar?.toLowerCase() === customerCity.toLowerCase()
       );
       if (cityMatch) {
         cityId = cityMatch.id;
-        
-        // جلب المناطق لهذه المدينة
-        if (cityId && regions.length === 0) {
-          await fetchRegions(cityId);
-        }
       }
     }
     
-    if (customerRegion && regions.length > 0) {
-      const regionMatch = regions.find(r => 
-        r.name?.toLowerCase() === customerRegion.toLowerCase() ||
-        r.name_ar?.toLowerCase() === customerRegion.toLowerCase()
-      );
-      if (regionMatch) {
-        regionId = regionMatch.id;
+    // جلب المناطق لهذه المدينة إذا كان لدينا cityId
+    if (cityId && !regionId) {
+      await fetchRegions(cityId);
+      
+      // البحث عن regionId بعد جلب المناطق
+      if (customerProvince) {
+        const regionMatch = regions.find(r => 
+          r.name?.toLowerCase() === customerProvince.toLowerCase() ||
+          r.name_ar?.toLowerCase() === customerProvince.toLowerCase()
+        );
+        if (regionMatch) {
+          regionId = regionMatch.id;
+        }
       }
     }
     
@@ -107,14 +108,14 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setSelectedProducts(productsFromOrder);
     }
     
-    // ملء النموذج
+    // ملء النموذج - إصلاح عرض البيانات الأصلية
     setFormData({
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       city_id: cityId,
       region_id: regionId,
       city: customerCity,
-      region: customerRegion,
+      region: customerProvince, // إصلاح من customerRegion إلى customerProvince
       address: order.customer_address || '',
       notes: order.notes || '',
       size: order.delivery_partner_data?.package_size || 'normal',
@@ -152,14 +153,47 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // معالجة تغيير القوائم المنسدلة
-  const handleSelectChange = (value, name) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // معالجة تغيير القوائم المنسدلة - إصلاح مشكلة الإغلاق
+  const handleSelectChange = async (value, name) => {
+    console.log(`تغيير ${name} إلى:`, value);
+    
+    // تحديث القيمة أولاً
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // إذا تغيرت المدينة، نحتاج لتحديث اسم المدينة وإعادة تعيين المنطقة
+      if (name === 'city_id' && value) {
+        const selectedCity = cities.find(c => c.id === value);
+        if (selectedCity) {
+          newData.city = selectedCity.name;
+        }
+        newData.region_id = '';
+        newData.region = '';
+      }
+      
+      // إذا تغيرت المنطقة، نحتاج لتحديث اسم المنطقة
+      if (name === 'region_id' && value) {
+        const selectedRegion = regions.find(r => r.id === value);
+        if (selectedRegion) {
+          newData.region = selectedRegion.name;
+        }
+      }
+      
+      return newData;
+    });
     
     // جلب المناطق عند تغيير المدينة
     if (name === 'city_id' && value) {
-      fetchRegions(value);
-      setFormData(prev => ({ ...prev, region_id: '' }));
+      try {
+        await fetchRegions(value);
+      } catch (error) {
+        console.error('خطأ في جلب المناطق:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب المناطق للمدينة المحددة",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -242,7 +276,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         customer_phone: formData.phone,
         customer_city: formData.city || (formData.city_id ? 
           cities.find(c => c.id === formData.city_id)?.name : ''),
-        customer_region: formData.region || (formData.region_id ? 
+        customer_province: formData.region || (formData.region_id ? 
           regions.find(r => r.id === formData.region_id)?.name : ''),
         customer_address: formData.address,
         notes: formData.notes,
@@ -390,15 +424,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                     ) : (
                       <div>
                         <Label htmlFor="city_id">المدينة</Label>
-                        <SearchableSelectFixed
+                         <SearchableSelectFixed
                           value={formData.city_id}
                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
                           disabled={!canEdit}
                           options={cities.map(city => ({
                             value: city.id,
-                            label: city.name
+                            label: city.name || city.name_ar
                           }))}
-                          placeholder="اختر المدينة"
+                          placeholder={cities.length > 0 ? "اختر المدينة" : "جاري تحميل المدن..."}
+                          emptyText="لا توجد مدن متاحة"
+                          searchPlaceholder="البحث في المدن..."
                           name="city_id"
                         />
                       </div>
@@ -420,15 +456,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                     ) : (
                       <div>
                         <Label htmlFor="region_id">المنطقة</Label>
-                        <SearchableSelectFixed
+                         <SearchableSelectFixed
                           value={formData.region_id}
                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
                           disabled={!canEdit || !formData.city_id}
                           options={regions.map(region => ({
                             value: region.id,
-                            label: region.name
+                            label: region.name || region.name_ar
                           }))}
-                          placeholder="اختر المنطقة"
+                          placeholder={!formData.city_id ? "اختر المدينة أولاً" : 
+                                     regions.length > 0 ? "اختر المنطقة" : "جاري تحميل المناطق..."}
+                          emptyText="لا توجد مناطق متاحة"
+                          searchPlaceholder="البحث في المناطق..."
                           name="region_id"
                         />
                       </div>
