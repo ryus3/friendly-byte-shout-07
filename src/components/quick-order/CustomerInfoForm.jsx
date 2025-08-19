@@ -8,8 +8,11 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
+  const [wasCleared, setWasCleared] = useState(false);
   
   // اختيار بغداد تلقائياً إذا لم تكن المدينة محددة
   useEffect(() => {
@@ -22,6 +25,16 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
   // استخدام خطاف تنبيه العميل المحسن
   const { insight: customerInsight } = useDuplicateCustomerAlert(formData.phone);
 
+  // دالة مسح اسم العميل
+  const clearCustomerName = () => {
+    handleChange({ target: { name: 'name', value: '' } });
+    setWasCleared(true);
+  };
+
+  // تحديد القيمة المعروضة في حقل الاسم
+  const customerNameValue = formData.name || (!wasCleared && formData.defaultCustomerName ? formData.defaultCustomerName : '');
+  const isUsingDefault = !formData.name && !wasCleared && formData.defaultCustomerName;
+
 
   return (
     <Card>
@@ -32,17 +45,40 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            value={formData.name} 
-            onChange={handleChange} 
-            placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
-            required 
-            disabled={isSubmittingState} 
-          />
-          {formData.defaultCustomerName && !formData.name && (
-            <p className="text-xs text-green-600">سيتم استخدام الاسم الافتراضي: {formData.defaultCustomerName}</p>
+          <div className="relative">
+            <Input 
+              id="name" 
+              name="name" 
+              value={customerNameValue}
+              onChange={(e) => {
+                handleChange(e);
+                if (wasCleared) setWasCleared(false);
+              }}
+              placeholder="ادخل اسم الزبون"
+              required 
+              disabled={isSubmittingState}
+              className={isUsingDefault ? 'bg-muted/50 text-muted-foreground' : ''}
+            />
+            {customerNameValue && !isSubmittingState && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-destructive/10"
+                onClick={clearCustomerName}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+          {isUsingDefault && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+              يتم استخدام الاسم الافتراضي - يمكنك حذفه وكتابة اسم آخر
+            </p>
+          )}
+          {formData.name && formData.defaultCustomerName && formData.name !== formData.defaultCustomerName && (
+            <p className="text-xs text-blue-600">تم تخصيص اسم للطلب الحالي</p>
           )}
         </div>
         <div className="space-y-2">
