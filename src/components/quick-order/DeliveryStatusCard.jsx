@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { ServerCrash, Wifi, Map, Truck } from 'lucide-react';
+import { ServerCrash, Wifi, Map, Truck, ShieldCheck } from 'lucide-react';
 
 const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, waseetUser }) => {
   const isLocal = activePartner === 'local';
@@ -45,10 +45,13 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
               ) : (
                 isLoggedIn ? (
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5 text-emerald-300 animate-pulse" />
+                      <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
+                    </div>
                     {waseetUser?.username && (
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-400/20 to-blue-500/20 backdrop-blur-sm border border-sky-300/40 text-white font-semibold text-sm shadow-lg">
-                        <span className="bg-gradient-to-r from-sky-200 to-blue-200 bg-clip-text text-transparent">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-400/20 to-blue-500/20 backdrop-blur-sm border border-sky-300/40 shadow-lg">
+                        <span className="text-black font-bold text-sm drop-shadow-md">
                           {waseetUser.username.toUpperCase()}
                         </span>
                       </span>
