@@ -136,6 +136,10 @@ export const SuperProvider = ({ children }) => {
   });
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
+  // Set للطلبات المحذوفة نهائياً - لن تعود أبداً (مُحرك للأعلى لضمان التعريف قبل الاستخدام)
+  const [permanentlyDeletedOrders] = useState(new Set());
+  const [permanentlyDeletedAiOrders] = useState(new Set());
+  
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
     if (!user) return;
@@ -840,7 +844,7 @@ export const SuperProvider = ({ children }) => {
       console.error('❌ خطأ في الحذف:', deleteError);
       return { success: false, error: deleteError.message };
     }
-  }, [permanentlyDeletedOrders, permanentlyDeletedAiOrders]);
+  }, []);
 
   // إضافة مصروف - نفس الواجهة القديمة
   const addExpense = useCallback(async (expense) => {
@@ -945,9 +949,7 @@ export const SuperProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   }, [allData.orders, user, fetchAllData]);
-  // Set للطلبات المحذوفة نهائياً - لن تعود أبداً
-  const [permanentlyDeletedOrders] = useState(new Set());
-  const [permanentlyDeletedAiOrders] = useState(new Set());
+  // تم نقل تعريف Set للطلبات المحذوفة نهائياً إلى الأعلى لضمان التعريف قبل الاستخدام
 
   // دوال أخرى مطلوبة للتوافق
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
