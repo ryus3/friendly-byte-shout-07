@@ -137,10 +137,6 @@ export const SuperProvider = ({ children }) => {
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
   
-  // حماية من تكرار الطلبات المُنشأة حديثاً (فوري للظهور المباشر)
-  const recentlyCreatedOrdersRef = useRef(new Set());
-  const recentlyCreatedAiOrdersRef = useRef(new Set());
-  
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
     try {
@@ -478,11 +474,6 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          // فحص لمنع التكرار مع الطلبات المُنشأة محلياً
-          if (recentlyCreatedOrdersRef.current.has(rowNew.id)) {
-            console.log('⚠️ Real-time: تجاهل طلب مُنشأ محلياً - ID:', rowNew.id);
-            return;
-          }
           console.log('➕ Real-time: إضافة طلب جديد فورياً');
           setAllData(prev => ({ 
             ...prev, 
@@ -517,11 +508,6 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          // فحص لمنع التكرار مع الطلبات المُنشأة محلياً
-          if (recentlyCreatedAiOrdersRef.current.has(rowNew.id)) {
-            console.log('⚠️ Real-time: تجاهل طلب ذكي مُنشأ محلياً - ID:', rowNew.id);
-            return;
-          }
           console.log('➕ Real-time: إضافة طلب ذكي جديد فورياً');
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
           setAllData(prev => ({ ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] }));
@@ -797,27 +783,7 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // ✨ إضافة فورية محلية للطلب المُنشأ (تحديث فوري 100%)
-      console.log('⚡ تحديث فوري محلي للطلب المُنشأ:', createdOrder.id);
-      
-      // إضافة للحماية من التكرار
-      recentlyCreatedOrdersRef.current.add(createdOrder.id);
-      setTimeout(() => recentlyCreatedOrdersRef.current.delete(createdOrder.id), 5000);
-      
-      // تحديث allData فورياً للظهور المباشر
-      setAllData(prev => ({
-        ...prev,
-        orders: [createdOrder, ...(prev.orders || [])]
-      }));
-
-      // بث إشعار فوري للمكونات
-      try {
-        window.dispatchEvent(new CustomEvent('orderCreated', { 
-          detail: { order: createdOrder, trackingNumber, qr_id: trackingNumber } 
-        }));
-      } catch {}
-
-      // إبطال الكاش للتزامن مع الخادم (بدون تأثير على العرض الفوري)
+      // إنجاح العملية وإبطال الكاش
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
 
@@ -1241,32 +1207,17 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // ✨ إضافة فورية محلية للطلب المُحوّل من AI (تحديث فوري 100%)
-      console.log('⚡ تحديث فوري محلي للطلب المُحوّل من AI:', createdOrder.id);
-      
-      // إضافة للحماية من التكرار
-      recentlyCreatedOrdersRef.current.add(createdOrder.id);
-      setTimeout(() => recentlyCreatedOrdersRef.current.delete(createdOrder.id), 5000);
-      
-      // تحديث allData فورياً للظهور المباشر + حذف AI order
-      setAllData(prev => ({
-        ...prev,
-        orders: [createdOrder, ...(prev.orders || [])],
-        aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
-      }));
-
-      // بث حدث إنشاء الطلب محلياً لتحديث الواجهات فوراً
-      try { 
-        window.dispatchEvent(new CustomEvent('orderCreated', { 
-          detail: { order: createdOrder, trackingNumber, qr_id: trackingNumber, fromAI: true } 
-        })); 
-      } catch {}
-
       // 8) حذف الطلب الذكي نهائياً
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
       if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
 
-      // إبطال الكاش للتزامن مع الخادم (بدون تأثير على العرض الفوري)
+      // تحديث الذاكرة
+      setAllData(prev => ({
+        ...prev,
+        aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
+      }));
+
+      // إبطال الكاش
       superAPI.invalidate('all_data');
 
       return { success: true, orderId: createdOrder.id, trackingNumber };
