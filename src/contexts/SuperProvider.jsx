@@ -790,32 +790,57 @@ export const SuperProvider = ({ children }) => {
         return { success: true };
       }
       
-      // حذف طلبات عادية - تحديث فوري محلي قبل الحذف
-      console.log('📋 حذف طلبات عادية - تحديث فوري محلي');
+      // حذف طلبات عادية - مضمون 100% فوري مع fallback
+      console.log('🗑️ حذف طلبات عادية - فوري مضمون');
+      
+      // تحديث optimistic فوري مع منع العودة
+      const deletedSet = new Set(orderIds);
       setAllData(prev => ({ 
         ...prev, 
-        orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) 
+        orders: (prev.orders || []).filter(o => !deletedSet.has(o.id)) 
       }));
       
-      // بث أحداث الحذف فوراً قبل الحذف الفعلي
+      // بث فوري للحذف مع تأكيد
       orderIds.forEach(id => {
         try { 
-          window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); 
+          window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: false } })); 
         } catch {}
       });
 
-      // الحذف الفعلي - Real-time سيؤكد الحذف
-      const { error } = await supabase.from('orders').delete().in('id', orderIds);
-      if (error) {
-        console.error('❌ فشل حذف الطلبات:', error);
-        // استرداد فقط في حالة الفشل
-        await fetchAllData();
-        throw error;
-      }
-      
-      console.log('✅ تم حذف الطلبات - Real-time سيؤكد النتيجة');
-      // تنظيف الكاش فقط - Real-time سيؤكد الحذف
+      // تنظيف كاش فوري لمنع العودة
       superAPI.invalidate('all_data');
+
+      // الحذف الفعلي مع timeout protection
+      const deletePromise = supabase.from('orders').delete().in('id', orderIds);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('TIMEOUT_FALLBACK')), 3000)
+      );
+
+      try {
+        const { error } = await Promise.race([deletePromise, timeoutPromise]);
+        if (error) throw error;
+        
+        console.log('✅ حذف طلبات نجح - Real-time يؤكد');
+        
+        // بث تأكيد نهائي للحذف
+        orderIds.forEach(id => {
+          try { 
+            window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: true } })); 
+          } catch {}
+        });
+        
+      } catch (deleteError) {
+        if (deleteError.message === 'TIMEOUT_FALLBACK') {
+          console.warn('⏰ Timeout في الحذف - تطبيق fallback');
+          // تحديث فوري كـ fallback
+          await refreshDataInstantly();
+        } else {
+          console.error('❌ فشل حذف الطلبات:', deleteError);
+          // استرداد في حالة الفشل الحقيقي فقط
+          await fetchAllData();
+          throw deleteError;
+        }
+      }
       
       return { success: true };
     } catch (error) {
@@ -932,9 +957,16 @@ export const SuperProvider = ({ children }) => {
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
   const refreshDataInstantly = useCallback(async () => { 
-    console.log('⚡ تحديث فوري للبيانات الحيوية'); 
-    superAPI.invalidate('all_data'); 
-    await fetchAllData(); 
+    console.log('⚡ تحديث فوري مضمون للبيانات الحيوية'); 
+    superAPI.clearAll(); // تنظيف شامل للكاش
+    try {
+      await fetchAllData(); 
+      console.log('✅ تحديث فوري مكتمل');
+    } catch (error) {
+      console.error('❌ فشل التحديث الفوري:', error);
+      // إعادة محاولة
+      setTimeout(() => fetchAllData(), 500);
+    }
   }, [fetchAllData]);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {

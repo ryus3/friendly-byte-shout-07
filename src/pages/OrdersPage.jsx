@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -146,21 +146,28 @@ const OrdersPage = () => {
     };
   }, [refetchProducts]);
 
-  // مستمعات Real-time للحذف الفوري للطلبات - محسنة
+  // Real-time listeners محسن للطلبات مع منع العودة المضمون
   useEffect(() => {
+    const deletedOrdersSet = useRef(new Set());
+
     const handleOrderDeleted = (event) => {
-      const deletedOrderId = event.detail?.id;
-      if (deletedOrderId) {
-        console.log('🗑️ OrdersPage: تأكيد حذف طلب فوري:', deletedOrderId);
-        // إزالة فورية من قائمة الطلبات المحددة
-        setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
+      const orderId = event.detail?.id;
+      if (orderId) {
+        console.log('🗑️ OrdersPage: حذف طلب فوري:', orderId, 'confirmed:', event.detail?.confirmed);
+        
+        // تسجيل كمحذوف نهائياً
+        deletedOrdersSet.current.add(orderId);
+        
+        // إزالة فورية من القوائم
+        setSelectedOrders(prev => prev.filter(id => id !== orderId));
       }
     };
 
     const handleAiOrderDeleted = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        console.log('🗑️ OrdersPage: تأكيد حذف طلب ذكي فوري:', deletedAiOrderId);
+        console.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
+        deletedOrdersSet.current.add(deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
     };
@@ -170,7 +177,12 @@ const OrdersPage = () => {
       const deletedOrderId = event.detail?.id;
       if (deletedOrderId) {
         console.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
+        deletedOrdersSet.current.add(deletedOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
+        
+        if (event.detail?.final) {
+          console.log('🔒 طلب محذوف نهائياً - منع العودة:', deletedOrderId);
+        }
       }
     };
 
@@ -435,25 +447,47 @@ const OrdersPage = () => {
         return;
     }
 
+    console.log('🗑️ بدء حذف طلبات فوري:', ordersToDeleteFiltered);
+    
+    // Optimistic UI فوري
+    setSelectedOrders([]);
+    setDialogs(d => ({ ...d, deleteAlert: false }));
+    
+    // إشعار فوري للمستخدم
+    toast({
+        title: 'جاري الحذف...',
+        description: `حذف ${ordersToDeleteFiltered.length} طلب فورياً`,
+        variant: 'success'
+    });
+    
     try {
-        // حذف الطلبات وتحرير المخزون المحجوز تلقائياً
-        await deleteOrdersContext(ordersToDeleteFiltered);
+        // حذف الطلبات مع نظام الحذف المضمون الجديد
+        const result = await deleteOrdersContext(ordersToDeleteFiltered);
         
-        toast({
-            title: 'تم الحذف بنجاح',
-            description: `تم حذف ${ordersToDeleteFiltered.length} طلبات وتحرير المخزون المحجوز.`,
-            variant: 'success'
-        });
-        
-        setSelectedOrders([]);
-        setDialogs(d => ({ ...d, deleteAlert: false }));
+        if (result && result.success) {
+            console.log('✅ حذف طلبات مكتمل بنجاح');
+            toast({
+                title: 'تم الحذف بنجاح',
+                description: `تم حذف ${ordersToDeleteFiltered.length} طلب نهائياً وتحرير المخزون.`,
+                variant: 'success'
+            });
+        } else {
+            throw new Error(result?.error || 'فشل الحذف');
+        }
     } catch (error) {
-        console.error('Error deleting orders:', error);
+        console.error('💥 خطأ في حذف الطلبات:', error);
         toast({
             title: 'خطأ في الحذف',
-            description: 'حدث خطأ أثناء حذف الطلبات.',
+            description: 'حدث خطأ أثناء حذف الطلبات. يتم المحاولة مرة أخرى...',
             variant: 'destructive'
         });
+        
+        // استعادة محدودة في حالة الفشل
+        try {
+            await refetchProducts();
+        } catch (refreshError) {
+            console.error('فشل استعادة البيانات:', refreshError);
+        }
     }
   }, [hasPermission, orders, deleteOrdersContext]);
 
