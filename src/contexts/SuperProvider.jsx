@@ -136,9 +136,23 @@ export const SuperProvider = ({ children }) => {
   });
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
-  // Set للطلبات المحذوفة نهائياً - لن تعود أبداً (مُحرك للأعلى لضمان التعريف قبل الاستخدام)
-  const [permanentlyDeletedOrders] = useState(new Set());
-  const [permanentlyDeletedAiOrders] = useState(new Set());
+  // Set للطلبات المحذوفة نهائياً مع localStorage persistence
+  const [permanentlyDeletedOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem('permanentlyDeletedOrders');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const [permanentlyDeletedAiOrders] = useState(() => {
+    try {
+      const saved = localStorage.getItem('permanentlyDeletedAiOrders');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
@@ -198,8 +212,34 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ SuperProvider: خطأ في جلب الإعدادات:', settingsErr);
       }
       
-      // تصفية البيانات حسب employee_code للموظفين
+      // تصفية البيانات حسب employee_code والحذف النهائي مع تحديث localStorage
       const filteredData = filterDataByEmployeeCode(data, user);
+      
+      // تصفية أي طلبات تم حذفها نهائياً - حماية مضاعفة
+      if (filteredData.orders) {
+        filteredData.orders = filteredData.orders.filter(order => {
+          if (permanentlyDeletedOrders.has(order.id)) {
+            // إعادة تأكيد الحذف النهائي
+            try {
+              localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+            } catch {}
+            return false;
+          }
+          return true;
+        });
+      }
+      if (filteredData.aiOrders) {
+        filteredData.aiOrders = filteredData.aiOrders.filter(order => {
+          if (permanentlyDeletedAiOrders.has(order.id)) {
+            // إعادة تأكيد الحذف النهائي
+            try {
+              localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+            } catch {}
+            return false;
+          }
+          return true;
+        });
+      }
       
       console.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
         products: filteredData.products?.length || 0,
@@ -499,11 +539,26 @@ export const SuperProvider = ({ children }) => {
         return;
       }
 
-      // غير ذلك: إعادة جلب سريعة لضمان الاتساق
-      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
-      reloadTimerRef.current = setTimeout(() => {
-        fetchAllData();
-      }, 300);
+      // تحديث مباشر بدلاً من إعادة جلب كامل لمنع عودة الطلبات المحذوفة
+      if (table === 'orders' && payload.eventType === 'DELETE') {
+        // إضافة للقائمة المحذوفة نهائياً
+        const orderId = payload.old?.id;
+        if (orderId) {
+          permanentlyDeletedOrders.add(orderId);
+          try {
+            localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+          } catch {}
+        }
+        return; // لا إعادة جلب نهائياً للطلبات المحذوفة
+      }
+      
+      // تحديث محدود للجداول الأخرى فقط
+      if (['customers', 'expenses', 'purchases'].includes(table)) {
+        if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = setTimeout(() => {
+          fetchAllData();
+        }, 500);
+      }
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
@@ -775,9 +830,13 @@ export const SuperProvider = ({ children }) => {
       console.log('🗑️ SuperProvider: بدء حذف فوري مضمون - نوع:', isAiOrder ? 'AI' : 'عادي', 'العدد:', orderIds.length);
       
       if (isAiOrder) {
-        // تحديث فوري محلياً + حماية دائمة
+        // تحديث فوري محلياً + حماية دائمة + localStorage
         console.log('🤖 حذف طلبات AI - حماية دائمة');
         orderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
+        // حفظ في localStorage للحماية الدائمة
+        try {
+          localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+        } catch {}
         setAllData(prev => ({
           ...prev,
           aiOrders: (prev.aiOrders || []).filter(o => !orderIds.includes(o.id))
@@ -806,9 +865,13 @@ export const SuperProvider = ({ children }) => {
         });
         
       } else {
-        // تحديث فوري محلياً + حماية دائمة
+        // تحديث فوري محلياً + حماية دائمة + localStorage
         console.log('📦 حذف طلبات عادية - حماية دائمة');
         orderIds.forEach(id => permanentlyDeletedOrders.add(id));
+        // حفظ في localStorage للحماية الدائمة
+        try {
+          localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+        } catch {}
         setAllData(prev => ({
           ...prev,
           orders: (prev.orders || []).filter(o => !orderIds.includes(o.id))
