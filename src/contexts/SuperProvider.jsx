@@ -504,22 +504,9 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('✨ Real-time: إضافة طلب جديد فورياً بدون تأخير');
-          
-          setAllData(prev => {
-            // فحص عدم التكرار
-            const exists = (prev.orders || []).some(o => o.id === rowNew.id);
-            if (exists) return prev;
-            
-            // إضافة فورية مع البيانات الأساسية
-            const basicOrder = normalizeOrder(rowNew);
-            console.log('✅ تم إضافة الطلب فوراً:', basicOrder.order_number);
-            
-            return { 
-              ...prev, 
-              orders: [basicOrder, ...(prev.orders || [])] 
-            };
-          });
+          console.log('✨ Real-time: طلب جديد - جلب البيانات الكاملة فوراً (النسخة الأصلية)');
+          // استراتيجية النسخة الأصلية: تحديث كامل للبيانات فوراً لضمان الحصول على order_items
+          fetchAllData();
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
@@ -539,7 +526,7 @@ export const SuperProvider = ({ children }) => {
             window.dispatchEvent(new CustomEvent('orderDeletedConfirmed', { detail: { id: rowOld.id } })); 
           } catch {}
         }
-        return; // لا إعادة جلب للطلبات
+        // لا إعادة جلب إضافية - تم التحديث مسبقاً
       }
 
       // تحديث مباشر فوري لطلبات الذكاء الاصطناعي
