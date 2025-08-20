@@ -131,20 +131,7 @@ const OrdersPage = () => {
     };
   }, [hasPermission]); // إزالة refetchProducts من dependencies
 
-  // مستمعون عامّون لأحداث النظام المحلية لضمان التحديث حتى إن لم تصل Realtime
-  useEffect(() => {
-    const handler = () => { try { refetchProducts?.(); } catch {} };
-    window.addEventListener('orderCreated', handler);
-    window.addEventListener('orderUpdated', handler);
-    window.addEventListener('orderDeleted', handler);
-    window.addEventListener('aiOrderDeleted', handler);
-    return () => {
-      window.removeEventListener('orderCreated', handler);
-      window.removeEventListener('orderUpdated', handler);
-      window.removeEventListener('orderDeleted', handler);
-      window.removeEventListener('aiOrderDeleted', handler);
-    };
-  }, [refetchProducts]);
+  // إزالة المستمعين - SuperProvider يتولى كل شيء عبر real-time فقط
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
   const deletedOrdersSet = useRef(new Set());

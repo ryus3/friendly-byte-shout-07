@@ -139,6 +139,8 @@ export const SuperProvider = ({ children }) => {
 
   const normalizeOrder = useCallback((o) => {
     if (!o) return o;
+    
+    // دعم الطلبات الجديدة بدون order_items
     const items = Array.isArray(o.order_items)
       ? o.order_items.map(oi => ({
           quantity: oi.quantity || 1,
@@ -150,7 +152,19 @@ export const SuperProvider = ({ children }) => {
           product_variants: oi.product_variants
         }))
       : (o.items || []);
-    return { ...o, items };
+    
+    // ضمان البيانات الأساسية للطلبات الجديدة
+    return { 
+      ...o, 
+      items,
+      status: o.status || 'pending',
+      customer_name: o.customer_name || 'عميل جديد',
+      total_amount: o.total_amount || 0,
+      created_at: o.created_at || new Date().toISOString(),
+      employee_name: o.created_by_name || o.employee_name || 'غير محدد',
+      isArchived: o.isArchived || false,
+      isAiOrder: false,
+    };
   }, []);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
@@ -490,32 +504,22 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('✨ Real-time: إضافة طلب جديد فورياً');
-          // إضافة فورية بالبيانات الأساسية ثم تحسينها لاحقاً
+          console.log('✨ Real-time: إضافة طلب جديد فورياً بدون تأخير');
+          
           setAllData(prev => {
+            // فحص عدم التكرار
             const exists = (prev.orders || []).some(o => o.id === rowNew.id);
             if (exists) return prev;
+            
+            // إضافة فورية مع البيانات الأساسية
             const basicOrder = normalizeOrder(rowNew);
-            return { ...prev, orders: [basicOrder, ...(prev.orders || [])] };
+            console.log('✅ تم إضافة الطلب فوراً:', basicOrder.order_number);
+            
+            return { 
+              ...prev, 
+              orders: [basicOrder, ...(prev.orders || [])] 
+            };
           });
-          (async () => {
-            try {
-              const fullOrder = await superAPI.getOrderById(rowNew.id);
-              const normalizedOrder = normalizeOrder(fullOrder);
-              setAllData(prev => {
-                const idx = (prev.orders || []).findIndex(o => o.id === rowNew.id);
-                if (idx >= 0) {
-                  const updated = [...(prev.orders || [])];
-                  updated[idx] = { ...prev.orders[idx], ...normalizedOrder };
-                  return { ...prev, orders: updated };
-                }
-                return { ...prev, orders: [normalizedOrder, ...(prev.orders || [])] };
-              });
-              console.log('✅ تم تحسين بيانات الطلب الجديد بعد الجلب:', normalizedOrder.order_number);
-            } catch (error) {
-              console.error('❌ فشل تحسين بيانات الطلب بعد الجلب:', error);
-            }
-          })();
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
