@@ -552,10 +552,20 @@ export const SuperProvider = ({ children }) => {
             try {
               const full = await superAPI.getOrderById(orderId);
               const normalized = normalizeOrder(full);
-              setAllData(prev => ({
-                ...prev,
-                orders: (prev.orders || []).map(o => o.id === orderId ? normalized : o)
-              }));
+              setAllData(prev => {
+                const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
+                
+                if (existingOrderIndex >= 0) {
+                  // الطلب موجود، قم بتحديثه
+                  const updatedOrders = [...(prev.orders || [])];
+                  updatedOrders[existingOrderIndex] = normalized;
+                  return { ...prev, orders: updatedOrders };
+                } else {
+                  // الطلب غير موجود، أضفه (هذا يحل مشكلة الطلبات المفقودة)
+                  console.log('🔍 إضافة طلب مفقود من order_items real-time:', normalized.order_number);
+                  return { ...prev, orders: [normalized, ...(prev.orders || [])] };
+                }
+              });
             } catch (e) {
               console.warn('⚠️ فشل تحديث الطلب بعد تغيير عناصره', e);
             }
@@ -813,16 +823,58 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // جلب الطلب كاملاً بعد إدراج العناصر وتحديث الحالة محلياً لظهور فوري مكتمل
-      try {
-        const full = await superAPI.getOrderById(createdOrder.id);
-        const normalized = normalizeOrder(full || createdOrder);
+      // جلب الطلب كاملاً مع إعادة المحاولة والـ fallback الذكي
+      const startTime = performance.now();
+      let fullOrder = null;
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts && !fullOrder) {
+        attempts++;
+        try {
+          fullOrder = await superAPI.getOrderById(createdOrder.id);
+          if (fullOrder) break;
+          
+          if (attempts < maxAttempts) {
+            console.log(`🔄 إعادة محاولة جلب الطلب ${attempts}/${maxAttempts} بعد 150ms`);
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+        } catch (error) {
+          console.warn(`⚠️ فشل محاولة ${attempts} لجلب الطلب:`, error);
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 150));
+          }
+        }
+      }
+      
+      if (fullOrder) {
+        const normalized = normalizeOrder(fullOrder);
         setAllData(prev => ({
           ...prev,
           orders: [normalized, ...(prev.orders || [])]
         }));
-      } catch (e) {
-        console.warn('⚠️ لم نتمكن من جلب الطلب الكامل بعد الإنشاء، سيتم الاعتماد على Real-time', e);
+        const displayTime = performance.now() - startTime;
+        console.log(`✅ طلب كامل فوري في ${displayTime.toFixed(1)}ms:`, normalized.order_number);
+      } else {
+        // Fallback ذكي: إنشاء طلب محلياً من البيانات المتاحة
+        console.warn('⚠️ فشل جلب الطلب، استخدام fallback محلي');
+        const fallbackOrder = {
+          ...createdOrder,
+          order_items: itemsRows.map((item, index) => ({
+            ...item,
+            id: `temp_${Date.now()}_${index}`,
+            products: allData.products?.find(p => p.id === item.product_id),
+            product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
+          })),
+          _pendingSync: true
+        };
+        
+        setAllData(prev => ({
+          ...prev,
+          orders: [fallbackOrder, ...(prev.orders || [])]
+        }));
+        const displayTime = performance.now() - startTime;
+        console.log(`📋 طلب fallback محلي في ${displayTime.toFixed(1)}ms:`, fallbackOrder.order_number);
       }
 
       // إبطال الكاش للتزامن مع الخادم
