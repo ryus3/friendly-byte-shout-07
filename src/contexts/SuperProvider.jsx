@@ -489,25 +489,7 @@ export const SuperProvider = ({ children }) => {
         const rowNew = payload.new || {};
         const rowOld = payload.old || {};
         
-        if (type === 'INSERT') {
-          console.log('➕ Real-time: إضافة طلب جديد - جلب كامل العناصر');
-          (async () => {
-            try {
-              const full = await superAPI.getOrderById(rowNew.id);
-              const normalized = normalizeOrder(full || rowNew);
-              setAllData(prev => ({ 
-                ...prev, 
-                orders: [normalized, ...(prev.orders || [])] 
-              }));
-            } catch (e) {
-              console.warn('⚠️ فشل جلب الطلب الكامل، سيتم إدراج السجل كما هو', e);
-              setAllData(prev => ({ 
-                ...prev, 
-                orders: [rowNew, ...(prev.orders || [])] 
-              }));
-            }
-          })();
-        } else if (type === 'UPDATE') {
+        if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
             ...prev,
