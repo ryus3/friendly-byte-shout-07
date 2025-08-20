@@ -136,41 +136,6 @@ export const SuperProvider = ({ children }) => {
   });
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
-
-  const normalizeOrder = useCallback((o) => {
-    if (!o) return o;
-    const items = Array.isArray(o.order_items)
-      ? o.order_items.map(oi => ({
-          quantity: oi.quantity || 1,
-          price: oi.price ?? oi.unit_price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-          cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
-          productname: oi.products?.name,
-          product_name: oi.products?.name,
-          sku: oi.product_variants?.id || oi.variant_id,
-          product_variants: oi.product_variants
-        }))
-      : (o.items || []);
-    return { ...o, items };
-  }, []);
-  
-  // Set للطلبات المحذوفة نهائياً مع localStorage persistence
-  const [permanentlyDeletedOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('permanentlyDeletedOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-  const [permanentlyDeletedAiOrders] = useState(() => {
-    try {
-      const saved = localStorage.getItem('permanentlyDeletedAiOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-  
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
     if (!user) return;
@@ -229,34 +194,8 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ SuperProvider: خطأ في جلب الإعدادات:', settingsErr);
       }
       
-      // تصفية البيانات حسب employee_code والحذف النهائي مع تحديث localStorage
+      // تصفية البيانات حسب employee_code للموظفين
       const filteredData = filterDataByEmployeeCode(data, user);
-      
-      // تصفية أي طلبات تم حذفها نهائياً - حماية مضاعفة
-      if (filteredData.orders) {
-        filteredData.orders = filteredData.orders.filter(order => {
-          if (permanentlyDeletedOrders.has(order.id)) {
-            // إعادة تأكيد الحذف النهائي
-            try {
-              localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
-            } catch {}
-            return false;
-          }
-          return true;
-        });
-      }
-      if (filteredData.aiOrders) {
-        filteredData.aiOrders = filteredData.aiOrders.filter(order => {
-          if (permanentlyDeletedAiOrders.has(order.id)) {
-            // إعادة تأكيد الحذف النهائي
-            try {
-              localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
-            } catch {}
-            return false;
-          }
-          return true;
-        });
-      }
       
       console.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
         products: filteredData.products?.length || 0,
@@ -345,11 +284,6 @@ export const SuperProvider = ({ children }) => {
       
       // تصفية الطلبات الذكية قيد الحذف التفاؤلي لمنع الوميض
       processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));
-      
-      // تطبيق الحماية الدائمة ضد الطلبات المحذوفة
-      processedData.orders = (processedData.orders || []).filter(o => !permanentlyDeletedOrders.has(o.id));
-      processedData.aiOrders = (processedData.aiOrders || []).filter(o => !permanentlyDeletedAiOrders.has(o.id));
-      
       setAllData(processedData);
       
       // تحديث accounting بنفس الطريقة القديمة
@@ -489,24 +423,24 @@ export const SuperProvider = ({ children }) => {
         const rowNew = payload.new || {};
         const rowOld = payload.old || {};
         
-        if (type === 'UPDATE') {
-          console.log('🔄 Real-time: تحديث طلب فورياً');
+        if (type === 'INSERT') {
+          console.log('➕ إضافة طلب جديد فورياً');
+          setAllData(prev => ({ 
+            ...prev, 
+            orders: [rowNew, ...(prev.orders || [])] 
+          }));
+        } else if (type === 'UPDATE') {
+          console.log('🔄 تحديث طلب فورياً');
           setAllData(prev => ({
             ...prev,
             orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
           }));
         } else if (type === 'DELETE') {
-          console.log('🗑️ Real-time: تأكيد حذف طلب فورياً - ID:', rowOld.id);
-          // إضافة إلى الحماية الدائمة
-          permanentlyDeletedOrders.add(rowOld.id);
+          console.log('🗑️ حذف طلب فورياً');
           setAllData(prev => ({ 
             ...prev, 
             orders: (prev.orders || []).filter(o => o.id !== rowOld.id) 
           }));
-          // بث حدث التأكيد للمكونات
-          try { 
-            window.dispatchEvent(new CustomEvent('orderDeletedConfirmed', { detail: { id: rowOld.id } })); 
-          } catch {}
         }
         return; // لا إعادة جلب للطلبات
       }
@@ -518,60 +452,24 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('➕ Real-time: إضافة طلب ذكي جديد فورياً');
+          console.log('➕ إضافة طلب ذكي جديد فورياً');
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
           setAllData(prev => ({ ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] }));
         } else if (type === 'UPDATE') {
-          console.log('🔄 Real-time: تحديث طلب ذكي فورياً');
+          console.log('🔄 تحديث طلب ذكي فورياً');
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
           }));
         } else if (type === 'DELETE') {
-          console.log('🗑️ Real-time: تأكيد حذف طلب ذكي فورياً - ID:', rowOld.id);
-          // إضافة إلى الحماية الدائمة
-          permanentlyDeletedAiOrders.add(rowOld.id);
+          console.log('🗑️ حذف طلب ذكي فورياً');
           try { pendingAiDeletesRef.current.add(rowOld.id); } catch {}
           setAllData(prev => ({
             ...prev,
             aiOrders: (prev.aiOrders || []).filter(o => o.id !== rowOld.id)
           }));
-          // بث حدث التأكيد للمكونات
-          try { 
-            window.dispatchEvent(new CustomEvent('aiOrderDeletedConfirmed', { detail: { id: rowOld.id } })); 
-          } catch {}
         }
         return; // لا إعادة جلب للطلبات الذكية
-      }
-
-      // تحديث فوري لعناصر الطلبات: إعادة جلب الطلب المحدد ودمجه
-      if (table === 'order_items') {
-        const orderId = payload.new?.order_id || payload.old?.order_id;
-        if (orderId) {
-          (async () => {
-            try {
-              const full = await superAPI.getOrderById(orderId);
-              const normalized = normalizeOrder(full);
-              setAllData(prev => {
-                const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
-                
-                if (existingOrderIndex >= 0) {
-                  // الطلب موجود، قم بتحديثه
-                  const updatedOrders = [...(prev.orders || [])];
-                  updatedOrders[existingOrderIndex] = normalized;
-                  return { ...prev, orders: updatedOrders };
-                } else {
-                  // الطلب غير موجود، أضفه (هذا يحل مشكلة الطلبات المفقودة)
-                  console.log('🔍 إضافة طلب مفقود من order_items real-time:', normalized.order_number);
-                  return { ...prev, orders: [normalized, ...(prev.orders || [])] };
-                }
-              });
-            } catch (e) {
-              console.warn('⚠️ فشل تحديث الطلب بعد تغيير عناصره', e);
-            }
-          })();
-        }
-        return;
       }
 
       // تمرير إشعار للإستماع المنفصل
@@ -580,26 +478,11 @@ export const SuperProvider = ({ children }) => {
         return;
       }
 
-      // تحديث مباشر بدلاً من إعادة جلب كامل لمنع عودة الطلبات المحذوفة
-      if (table === 'orders' && payload.eventType === 'DELETE') {
-        // إضافة للقائمة المحذوفة نهائياً
-        const orderId = payload.old?.id;
-        if (orderId) {
-          permanentlyDeletedOrders.add(orderId);
-          try {
-            localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
-          } catch {}
-        }
-        return; // لا إعادة جلب نهائياً للطلبات المحذوفة
-      }
-      
-      // تحديث محدود للجداول الأخرى فقط
-      if (['customers', 'expenses', 'purchases'].includes(table)) {
-        if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
-        reloadTimerRef.current = setTimeout(() => {
-          fetchAllData();
-        }, 500);
-      }
+      // غير ذلك: إعادة جلب سريعة لضمان الاتساق
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = setTimeout(() => {
+        fetchAllData();
+      }, 100);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
@@ -823,61 +706,7 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // جلب الطلب كاملاً مع إعادة المحاولة والـ fallback الذكي
-      const startTime = performance.now();
-      let fullOrder = null;
-      let attempts = 0;
-      const maxAttempts = 3;
-      
-      while (attempts < maxAttempts && !fullOrder) {
-        attempts++;
-        try {
-          fullOrder = await superAPI.getOrderById(createdOrder.id);
-          if (fullOrder) break;
-          
-          if (attempts < maxAttempts) {
-            console.log(`🔄 إعادة محاولة جلب الطلب ${attempts}/${maxAttempts} بعد 150ms`);
-            await new Promise(resolve => setTimeout(resolve, 150));
-          }
-        } catch (error) {
-          console.warn(`⚠️ فشل محاولة ${attempts} لجلب الطلب:`, error);
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 150));
-          }
-        }
-      }
-      
-      if (fullOrder) {
-        const normalized = normalizeOrder(fullOrder);
-        setAllData(prev => ({
-          ...prev,
-          orders: [normalized, ...(prev.orders || [])]
-        }));
-        const displayTime = performance.now() - startTime;
-        console.log(`✅ طلب كامل فوري في ${displayTime.toFixed(1)}ms:`, normalized.order_number);
-      } else {
-        // Fallback ذكي: إنشاء طلب محلياً من البيانات المتاحة
-        console.warn('⚠️ فشل جلب الطلب، استخدام fallback محلي');
-        const fallbackOrder = {
-          ...createdOrder,
-          order_items: itemsRows.map((item, index) => ({
-            ...item,
-            id: `temp_${Date.now()}_${index}`,
-            products: allData.products?.find(p => p.id === item.product_id),
-            product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
-          })),
-          _pendingSync: true
-        };
-        
-        setAllData(prev => ({
-          ...prev,
-          orders: [fallbackOrder, ...(prev.orders || [])]
-        }));
-        const displayTime = performance.now() - startTime;
-        console.log(`📋 طلب fallback محلي في ${displayTime.toFixed(1)}ms:`, fallbackOrder.order_number);
-      }
-
-      // إبطال الكاش للتزامن مع الخادم
+      // إنجاح العملية وإبطال الكاش
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
 
@@ -909,7 +738,7 @@ export const SuperProvider = ({ children }) => {
       // توحيد الحالة النهائية بعد عودة الخادم
       setAllData(prev => ({
         ...prev,
-        orders: (prev.orders || []).map(o => o.id === orderId ? normalizeOrder(updatedOrder) : o),
+        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updatedOrder } : o),
       }));
 
       return { success: true, data: updatedOrder };
@@ -919,90 +748,50 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // حذف طلبات فوري مضمون 100% - بدون timeout ضار
+  // حذف طلبات مع تحديث فوري
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
-      console.log('🗑️ SuperProvider: بدء حذف فوري مضمون - نوع:', isAiOrder ? 'AI' : 'عادي', 'العدد:', orderIds.length);
-      
       if (isAiOrder) {
-        // تحديث فوري محلياً + حماية دائمة + localStorage
-        console.log('🤖 حذف طلبات AI - حماية دائمة');
-        orderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
-        // حفظ في localStorage للحماية الدائمة
-        try {
-          localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
-        } catch {}
+        // تحديث فوري محلياً أولاً
         setAllData(prev => ({
           ...prev,
           aiOrders: (prev.aiOrders || []).filter(o => !orderIds.includes(o.id))
         }));
         
-        // حذف من قاعدة البيانات
+        // بث أحداث الحذف فوراً
+        orderIds.forEach(id => {
+          try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
+        });
+        
+        // الحذف الفعلي في الخلفية
         const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
         if (error) {
-          console.error('❌ فشل حذف AI orders:', error);
-          // إعادة محاولة مرة واحدة
-          setTimeout(async () => {
-            try {
-              await supabase.from('ai_orders').delete().in('id', orderIds);
-              console.log('✅ إعادة محاولة حذف AI orders نجحت');
-            } catch (retryErr) {
-              console.error('❌ فشل إعادة المحاولة:', retryErr);
-            }
-          }, 1000);
+          // في حالة الفشل، أعد الطلبات للقائمة
+          console.error('Delete failed, will refresh data:', error);
+          superAPI.invalidate('all_data');
+          await fetchAllData();
+          throw error;
         }
-        
-        // إشعارات Real-time فورية
-        orderIds.forEach(id => {
-          try { 
-            window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id, confirmed: true } })); 
-          } catch {}
-        });
-        
-      } else {
-        // تحديث فوري محلياً + حماية دائمة + localStorage
-        console.log('📦 حذف طلبات عادية - حماية دائمة');
-        orderIds.forEach(id => permanentlyDeletedOrders.add(id));
-        // حفظ في localStorage للحماية الدائمة
-        try {
-          localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
-        } catch {}
-        setAllData(prev => ({
-          ...prev,
-          orders: (prev.orders || []).filter(o => !orderIds.includes(o.id))
-        }));
-        
-        // حذف من قاعدة البيانات
-        const { error } = await supabase.from('orders').delete().in('id', orderIds);
-        if (error) {
-          console.error('❌ فشل حذف orders:', error);
-          // إعادة محاولة مرة واحدة
-          setTimeout(async () => {
-            try {
-              await supabase.from('orders').delete().in('id', orderIds);
-              console.log('✅ إعادة محاولة حذف orders نجحت');
-            } catch (retryErr) {
-              console.error('❌ فشل إعادة المحاولة:', retryErr);
-            }
-          }, 1000);
-        }
-        
-        // إشعارات Real-time فورية
-        orderIds.forEach(id => {
-          try { 
-            window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: true } })); 
-          } catch {}
-        });
+        superAPI.invalidate('all_data');
+        toast({ title: 'تم الحذف', description: 'تم حذف الطلبات الذكية نهائياً', variant: 'success' });
+        orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {} });
+        return { success: true };
       }
-      
-      console.log('✅ حذف مكتمل فورياً مع حماية دائمة');
+      // حذف طلبات عادية (قيد التجهيز فقط) بتحديث تفاؤلي
+      setAllData(prev => ({ ...prev, orders: (prev.orders || []).filter(o => !orderIds.includes(o.id)) }));
+      orderIds.forEach(id => { try { window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id } })); } catch {} });
+
+      const { error } = await supabase.from('orders').delete().in('id', orderIds);
+      if (error) throw error;
+      superAPI.invalidate('all_data');
+      // تحديث موحّد بعد التأكيد
+      await fetchAllData();
       return { success: true };
-      
-    } catch (deleteError) {
-      console.error('❌ خطأ في الحذف:', deleteError);
-      return { success: false, error: deleteError.message };
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      return { success: false, error: error.message };
     }
-  }, []);
+  }, [fetchAllData]);
 
   // إضافة مصروف - نفس الواجهة القديمة
   const addExpense = useCallback(async (expense) => {
@@ -1107,19 +896,10 @@ export const SuperProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   }, [allData.orders, user, fetchAllData]);
-  // تم نقل تعريف Set للطلبات المحذوفة نهائياً إلى الأعلى لضمان التعريف قبل الاستخدام
-
   // دوال أخرى مطلوبة للتوافق
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
-  
-  // تحديث فوري بدون جلب - تنظيف كاش فقط والاعتماد على Real-time
-  const refreshDataInstantly = useCallback(async () => { 
-    console.log('⚡ تنظيف كاش فوري - بدون جلب بيانات'); 
-    superAPI.clearAll(); // تنظيف شامل للكاش فقط
-    console.log('✅ تنظيف كاش مكتمل - Real-time سيحدث البيانات');
-  }, []);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {
     try {
@@ -1301,6 +1081,9 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
+      // بث حدث إنشاء الطلب محلياً لتحديث الواجهات فوراً
+      try { window.dispatchEvent(new CustomEvent('orderCreated', { detail: createdOrder })); } catch {}
+
       // 8) حذف الطلب الذكي نهائياً
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
       if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
@@ -1310,8 +1093,6 @@ export const SuperProvider = ({ children }) => {
         ...prev,
         aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
       }));
-
-      // إبطال الكاش
       superAPI.invalidate('all_data');
 
       return { success: true, orderId: createdOrder.id, trackingNumber };
@@ -1443,7 +1224,6 @@ export const SuperProvider = ({ children }) => {
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),
     refreshAll: refreshAll || (async () => {}),
-    refreshDataInstantly: refreshDataInstantly || (async () => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {

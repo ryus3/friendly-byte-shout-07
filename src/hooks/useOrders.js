@@ -152,10 +152,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         icon: 'ShoppingCart'
       });
 
-      // إشعار النظام بالطلب الجديد - SuperProvider سيتولى الإضافة
-      window.dispatchEvent(new CustomEvent('orderCreated', { 
-        detail: { orderId: createdOrder.id, orderNumber: orderNumber } 
-      }));
+      // إضافة للقائمة
+      setOrders(prev => [createdOrder, ...prev]);
       
       return { success: true, trackingNumber: finalTrackingNumber, orderId: createdOrder.id };
 
@@ -271,10 +269,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         await handleStatusChange(originalOrder, updatedOrder);
       }
 
-      // إشعار النظام بتحديث الطلب - SuperProvider سيتولى التحديث
-      window.dispatchEvent(new CustomEvent('orderUpdated', { 
-        detail: { orderId, order: updatedOrder } 
-      }));
+      setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
       
       toast({ 
         title: "تم التحديث", 
