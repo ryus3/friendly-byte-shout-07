@@ -415,50 +415,43 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
   
   const resetForm = useCallback(() => {
-    console.log('🔄 resetForm called - الاسم الافتراضي:', defaultCustomerName, 'المستخدم:', user?.default_customer_name);
+    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
+    const emptyFormData = {
+      name: '', 
+      phone: '', 
+      second_phone: '', 
+      city_id: '', 
+      region_id: '', 
+      city: '', 
+      region: '', 
+      address: '', 
+      notes: '', 
+      details: '', 
+      quantity: 1, 
+      price: 0, 
+      size: activePartner === 'local' ? 'normal' : '', 
+      type: 'new', 
+      promocode: '',
+      defaultCustomerName: ''
+    };
     
-    const customerName = defaultCustomerName || user?.default_customer_name || '';
+    console.log('🔄 مسح النموذج - بدء العملية');
     
-    try {
-      // Clear cart first to prevent cascade updates
-      if (clearCart) clearCart();
-      
-      // Set form data with minimal dependencies
-      setFormData({
-        name: customerName, 
-        phone: '', 
-        second_phone: '', 
-        city_id: '', 
-        region_id: '', 
-        city: '', 
-        region: '', 
-        address: '', 
-        notes: '', 
-        details: '', 
-        quantity: 1, 
-        price: 0, 
-        size: activePartner === 'local' ? 'normal' : '', 
-        type: 'new', 
-        promocode: '',
-        defaultCustomerName: customerName
-      });
-      
-      // Reset other state instantly using React.startTransition
-      React.startTransition(() => {
-        setDiscount(0);
-        setLoyaltyDiscount(0);
-        setApplyLoyaltyDiscount(false);
-        setApplyLoyaltyDelivery(false);
-        setCustomerData(null);
-        setErrors({});
-        setNameTouched(false);
-      });
-      
-      console.log('✅ مسح النموذج - تم بنجاح');
-    } catch (error) {
-      console.error('❌ خطأ في resetForm:', error);
-    }
-  }, [clearCart, activePartner, defaultCustomerName, user?.default_customer_name]);
+    // مسح البيانات بشكل فوري ومنظم
+    clearCart();
+    setDiscount(0);
+    setLoyaltyDiscount(0);
+    setApplyLoyaltyDiscount(false);
+    setApplyLoyaltyDelivery(false);
+    setCustomerData(null);
+    setErrors({});
+    
+    // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
+    setFormData(emptyFormData);
+    setNameTouched(false);
+    
+    console.log('✅ مسح النموذج - تم بنجاح');
+  }, [clearCart, activePartner]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {

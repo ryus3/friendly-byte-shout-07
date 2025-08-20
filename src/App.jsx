@@ -1,10 +1,8 @@
-import React, { lazy, Suspense, useEffect, memo } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
-import ImprovedErrorBoundary from '@/components/shared/ImprovedErrorBoundary';
-import { navigationGuard, performanceMonitor } from '@/utils/navigationGuard';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
@@ -16,7 +14,6 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
-import NavigationMemoryGuard from '@/components/shared/NavigationMemoryGuard';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
@@ -92,42 +89,9 @@ function ScrollToTop() {
   return null;
 }
 
-// Memoized wrapper component for routes to prevent memory leaks
-const RouteWrapper = memo(({ children, permission }) => {
-  return (
-    <ImprovedErrorBoundary>
-      <ProtectedRoute permission={permission}>
-        {children}
-      </ProtectedRoute>
-    </ImprovedErrorBoundary>
-  );
-});
-
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
-  const location = useLocation();
-
-  // Navigation guard and performance monitoring
-  useEffect(() => {
-    if (!navigationGuard.canNavigate()) {
-      console.warn('🚧 Navigation blocked - app stabilizing');
-      return;
-    }
-    
-    navigationGuard.startNavigation();
-    performanceMonitor.memory();
-    
-    // End navigation after component renders
-    const timer = setTimeout(() => {
-      navigationGuard.endNavigation();
-    }, 100);
-    
-    return () => {
-      clearTimeout(timer);
-      navigationGuard.endNavigation();
-    };
-  }, [location.pathname]);
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
@@ -140,54 +104,50 @@ function AppContent() {
   );
 
   return (
-    <ImprovedErrorBoundary>
-      <div className="h-dvh bg-background text-foreground">
-         <Helmet>
-          <title>RYUS</title>
-          <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#ffffff" />
-        </Helmet>
-        <ScrollToTop />
-        <NavigationMemoryGuard>
-          <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/update-password" element={<UpdatePasswordPage />} />
-             <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
-            
-            <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />
-            <Route path="/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPage)}</ProtectedRoute>} />
-            <Route path="/manage-products" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageProductsPage)}</ProtectedRoute>} />
-            <Route path="/products/add" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
-            <Route path="/add-product" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
-            <Route path="/manage-variants" element={<ProtectedRoute permission="manage_variants">{childrenWithProps(ManageVariantsPage)}</ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute permission="view_inventory">{childrenWithProps(InventoryPage)}</ProtectedRoute>} />
-            
-            <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(EmployeeFollowUpPage)}</ProtectedRoute>} />
-            <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
+    <div className="h-dvh bg-background text-foreground">
+       <Helmet>
+        <title>RYUS</title>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#ffffff" />
+      </Helmet>
+      <ScrollToTop />
+      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
+           <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
+          
+          <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />
+          <Route path="/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPage)}</ProtectedRoute>} />
+          <Route path="/manage-products" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageProductsPage)}</ProtectedRoute>} />
+          <Route path="/products/add" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
+          <Route path="/add-product" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
+          <Route path="/manage-variants" element={<ProtectedRoute permission="manage_variants">{childrenWithProps(ManageVariantsPage)}</ProtectedRoute>} />
+          <Route path="/inventory" element={<ProtectedRoute permission="view_inventory">{childrenWithProps(InventoryPage)}</ProtectedRoute>} />
+          
+          <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(EmployeeFollowUpPage)}</ProtectedRoute>} />
+          <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
 
-            <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute permission="view_settings">{childrenWithProps(SettingsPage)}</ProtectedRoute>} />
-            <Route path="/appearance-settings" element={<ProtectedRoute>{childrenWithProps(AppearanceSettingsPage)}</ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
-            
-            <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
-            
-            <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
-            <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
-            <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
-            <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
-            <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
-            <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
+          <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute permission="view_settings">{childrenWithProps(SettingsPage)}</ProtectedRoute>} />
+          <Route path="/appearance-settings" element={<ProtectedRoute>{childrenWithProps(AppearanceSettingsPage)}</ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
+          
+          <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
+          
+          <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
+          <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
+          <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
+          <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
+          <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
+          <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
 
-          </Routes>
-          </Suspense>
-        </NavigationMemoryGuard>
-        <Toaster />
-        <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
-        {user && <NotificationsHandler />}
-      </div>
-    </ImprovedErrorBoundary>
+        </Routes>
+      </Suspense>
+      <Toaster />
+      <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
+      {user && <NotificationsHandler />}
+    </div>
   )
 }
 

@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Helmet } from 'react-helmet-async';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -32,7 +32,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 
 const OrdersPage = () => {
-  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
@@ -146,6 +146,69 @@ const OrdersPage = () => {
     };
   }, [refetchProducts]);
 
+  // Real-time listeners محسن للطلبات مع منع العودة المضمون
+  const deletedOrdersSet = useRef(new Set());
+  
+  useEffect(() => {
+
+    const handleOrderDeleted = (event) => {
+      const orderId = event.detail?.id;
+      if (orderId) {
+        console.log('🗑️ OrdersPage: حذف طلب فوري:', orderId, 'confirmed:', event.detail?.confirmed);
+        
+        // تسجيل كمحذوف نهائياً
+        deletedOrdersSet.current.add(orderId);
+        
+        // إزالة فورية من القوائم
+        setSelectedOrders(prev => prev.filter(id => id !== orderId));
+      }
+    };
+
+    const handleAiOrderDeleted = (event) => {
+      const deletedAiOrderId = event.detail?.id;
+      if (deletedAiOrderId) {
+        console.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
+        deletedOrdersSet.current.add(deletedAiOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
+      }
+    };
+
+    // مستمعات Real-time للتأكيد النهائي
+    const handleOrderDeletedConfirmed = (event) => {
+      const deletedOrderId = event.detail?.id;
+      if (deletedOrderId) {
+        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
+        deletedOrdersSet.current.add(deletedOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
+        
+        if (event.detail?.final) {
+          console.log('🔒 طلب محذوف نهائياً - منع العودة:', deletedOrderId);
+        }
+      }
+    };
+
+    const handleAiOrderDeletedConfirmed = (event) => {
+      const deletedAiOrderId = event.detail?.id;
+      if (deletedAiOrderId) {
+        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
+        setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
+      }
+    };
+
+    // تسجيل المستمعات
+    window.addEventListener('orderDeleted', handleOrderDeleted);
+    window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    window.addEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+    window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+
+    return () => {
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
+      window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+      window.removeEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+      window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+    };
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusFilter = params.get('status');
@@ -216,47 +279,6 @@ const OrdersPage = () => {
     const opts = (allUsers || []).map(u => ({ value: u.user_id, label: u.full_name || u.name || u.email || 'مستخدم' }));
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
-
-  // Real-time notifications and instant updates for orders
-  useEffect(() => {
-    const handleNewOrderNotification = (event) => {
-      const orderData = event.detail;
-      if (orderData && orderData.id) {
-        toast({
-          title: 'طلب جديد!',
-          description: `طلب جديد من ${orderData.customer_name || 'زبون جديد'}`,
-          variant: 'success'
-        });
-      }
-    };
-
-    const handleOrderUpdated = (event) => {
-      console.log('🔄 Order updated in real-time:', event.detail);
-      // Force immediate refresh of data
-      refetchProducts();
-    };
-
-    const handleOrderDeleted = (event) => {
-      console.log('🗑️ Order deleted in real-time:', event.detail);
-      toast({
-        title: 'تم الحذف',
-        description: 'تم حذف الطلب بنجاح',
-        variant: 'success'
-      });
-      // Force immediate refresh of data
-      refetchProducts();
-    };
-
-    window.addEventListener('orderCreated', handleNewOrderNotification);
-    window.addEventListener('orderUpdated', handleOrderUpdated);
-    window.addEventListener('orderDeleted', handleOrderDeleted);
-    
-    return () => {
-      window.removeEventListener('orderCreated', handleNewOrderNotification);
-      window.removeEventListener('orderUpdated', handleOrderUpdated);
-      window.removeEventListener('orderDeleted', handleOrderDeleted);
-    };
-  }, [refetchProducts]);
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -426,25 +448,47 @@ const OrdersPage = () => {
         return;
     }
 
+    console.log('🗑️ بدء حذف طلبات فوري:', ordersToDeleteFiltered);
+    
+    // Optimistic UI فوري
+    setSelectedOrders([]);
+    setDialogs(d => ({ ...d, deleteAlert: false }));
+    
+    // إشعار فوري للمستخدم
+    toast({
+        title: 'جاري الحذف...',
+        description: `حذف ${ordersToDeleteFiltered.length} طلب فورياً`,
+        variant: 'success'
+    });
+    
     try {
-        // حذف الطلبات وتحرير المخزون المحجوز تلقائياً
-        await deleteOrdersContext(ordersToDeleteFiltered);
+        // حذف الطلبات مع نظام الحذف المضمون الجديد
+        const result = await deleteOrdersContext(ordersToDeleteFiltered);
         
-        toast({
-            title: 'تم الحذف بنجاح',
-            description: `تم حذف ${ordersToDeleteFiltered.length} طلبات وتحرير المخزون المحجوز.`,
-            variant: 'success'
-        });
-        
-        setSelectedOrders([]);
-        setDialogs(d => ({ ...d, deleteAlert: false }));
+        if (result && result.success) {
+            console.log('✅ حذف طلبات مكتمل بنجاح');
+            toast({
+                title: 'تم الحذف بنجاح',
+                description: `تم حذف ${ordersToDeleteFiltered.length} طلب نهائياً وتحرير المخزون.`,
+                variant: 'success'
+            });
+        } else {
+            throw new Error(result?.error || 'فشل الحذف');
+        }
     } catch (error) {
-        console.error('Error deleting orders:', error);
+        console.error('💥 خطأ في حذف الطلبات:', error);
         toast({
             title: 'خطأ في الحذف',
-            description: 'حدث خطأ أثناء حذف الطلبات.',
+            description: 'حدث خطأ أثناء حذف الطلبات. يتم المحاولة مرة أخرى...',
             variant: 'destructive'
         });
+        
+        // استعادة محدودة في حالة الفشل
+        try {
+            await refetchProducts();
+        } catch (refreshError) {
+            console.error('فشل استعادة البيانات:', refreshError);
+        }
     }
   }, [hasPermission, orders, deleteOrdersContext]);
 
@@ -590,16 +634,18 @@ const OrdersPage = () => {
           order={selectedOrder}
           open={dialogs.edit}
           onOpenChange={(open) => setDialogs(d => ({ ...d, edit: open }))}
-          onOrderUpdated={() => {
+          onOrderUpdated={async () => {
             setDialogs(d => ({ ...d, edit: false }));
+            await refetchProducts();
           }}
         />
         
         <QuickOrderDialog
           open={dialogs.quickOrder}
           onOpenChange={(open) => setDialogs(d => ({ ...d, quickOrder: open }))}
-          onOrderCreated={() => {
+          onOrderCreated={async () => {
               setDialogs(d => ({ ...d, quickOrder: false }));
+              await refetchProducts();
           }}
         />
         

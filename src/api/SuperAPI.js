@@ -350,6 +350,27 @@ return this.fetch('all_data', async () => {
     });
   }
 
+  async getOrderById(orderId) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          *,
+          products (id, name, images),
+          product_variants (
+            id, price, cost_price, images,
+            colors (name, hex_code),
+            sizes (name)
+          )
+        )
+      `)
+      .eq('id', orderId)
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   // ==============
   // العمليات
   // ==============
@@ -418,7 +439,7 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    const tables = ['orders', 'products', 'inventory', 'expenses', 'ai_orders', 'notifications'];
+    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'ai_orders', 'notifications'];
     
     tables.forEach(table => {
       const channel = supabase
@@ -430,8 +451,8 @@ return this.fetch('all_data', async () => {
         }, (payload) => {
           console.log(`🔄 تحديث فوري في ${table}:`, payload);
           
-          // معالجة فورية للطلبات والحذف بدون تأخير
-          if (table === 'orders' || table === 'ai_orders') {
+          // معالجة فورية للطلبات وعناصرها بدون تأخير
+          if (table === 'orders' || table === 'ai_orders' || table === 'order_items') {
             // لا تبطل الكاش - دع SuperProvider يتعامل مع التحديث مباشرة
             console.log(`⚡ تحديث فوري لـ ${table} - تجاوز الكاش`);
           } else {
