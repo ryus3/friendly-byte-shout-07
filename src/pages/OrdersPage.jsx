@@ -147,8 +147,9 @@ const OrdersPage = () => {
   }, [refetchProducts]);
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
+  const deletedOrdersSet = useRef(new Set());
+  
   useEffect(() => {
-    const deletedOrdersSet = useRef(new Set());
 
     const handleOrderDeleted = (event) => {
       const orderId = event.detail?.id;
