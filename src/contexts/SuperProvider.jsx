@@ -491,24 +491,29 @@ export const SuperProvider = ({ children }) => {
         
         if (type === 'INSERT') {
           console.log('✨ Real-time: إضافة طلب جديد فورياً');
-          // جلب الطلب الكامل مع العناصر للعرض الفوري
+          // إضافة فورية بالبيانات الأساسية ثم تحسينها لاحقاً
+          setAllData(prev => {
+            const exists = (prev.orders || []).some(o => o.id === rowNew.id);
+            if (exists) return prev;
+            const basicOrder = normalizeOrder(rowNew);
+            return { ...prev, orders: [basicOrder, ...(prev.orders || [])] };
+          });
           (async () => {
             try {
               const fullOrder = await superAPI.getOrderById(rowNew.id);
               const normalizedOrder = normalizeOrder(fullOrder);
-              setAllData(prev => ({
-                ...prev,
-                orders: [normalizedOrder, ...(prev.orders || [])]
-              }));
-              console.log('✅ تم إضافة الطلب الجديد فوراً من real-time:', normalizedOrder.order_number);
+              setAllData(prev => {
+                const idx = (prev.orders || []).findIndex(o => o.id === rowNew.id);
+                if (idx >= 0) {
+                  const updated = [...(prev.orders || [])];
+                  updated[idx] = { ...prev.orders[idx], ...normalizedOrder };
+                  return { ...prev, orders: updated };
+                }
+                return { ...prev, orders: [normalizedOrder, ...(prev.orders || [])] };
+              });
+              console.log('✅ تم تحسين بيانات الطلب الجديد بعد الجلب:', normalizedOrder.order_number);
             } catch (error) {
-              console.error('❌ خطأ في جلب الطلب الجديد من real-time:', error);
-              // إضافة الطلب حتى لو فشل جلب التفاصيل
-              const basicOrder = normalizeOrder(rowNew);
-              setAllData(prev => ({
-                ...prev,
-                orders: [basicOrder, ...(prev.orders || [])]
-              }));
+              console.error('❌ فشل تحسين بيانات الطلب بعد الجلب:', error);
             }
           })();
         } else if (type === 'UPDATE') {
@@ -662,37 +667,17 @@ export const SuperProvider = ({ children }) => {
       }));
     };
 
-    const handleOrderCreated = async (event) => {
-      console.log('✨ SuperProvider: استقبال حدث إنشاء طلب جديد:', event.detail);
-      
-      if (event.detail?.orderId) {
-        try {
-          // جلب الطلب الجديد من قاعدة البيانات مع كافة البيانات
-          const fullOrder = await superAPI.getOrderById(event.detail.orderId);
-          const normalizedOrder = normalizeOrder(fullOrder);
-          
-          setAllData(prevData => ({
-            ...prevData,
-            orders: [normalizedOrder, ...(prevData.orders || [])]
-          }));
-          
-          console.log('✅ تم إضافة الطلب الجديد فوراً عبر orderCreated event:', normalizedOrder.order_number);
-        } catch (error) {
-          console.error('❌ خطأ في جلب الطلب الجديد عبر orderCreated event:', error);
-        }
-      }
-    };
+    // orderCreated event removed — relying solely on realtime INSERT
+
     
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
     window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
-    window.addEventListener('orderCreated', handleOrderCreated);
 
     return () => {
       window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
       window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
-      window.removeEventListener('orderCreated', handleOrderCreated);
     };
   }, [normalizeOrder]);
 

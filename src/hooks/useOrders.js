@@ -152,10 +152,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         icon: 'ShoppingCart'
       });
 
-      // إشعار النظام بالطلب الجديد - SuperProvider سيتولى الإضافة
-      window.dispatchEvent(new CustomEvent('orderCreated', { 
-        detail: { orderId: createdOrder.id, orderNumber: orderNumber } 
-      }));
+      // إشعار النظام بالطلب الجديد سيتم عبر Realtime تلقائياً
+
       
       return { success: true, trackingNumber: finalTrackingNumber, orderId: createdOrder.id };
 
