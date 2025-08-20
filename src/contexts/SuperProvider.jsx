@@ -136,6 +136,22 @@ export const SuperProvider = ({ children }) => {
   });
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
+
+  const normalizeOrder = useCallback((o) => {
+    if (!o) return o;
+    const items = Array.isArray(o.order_items)
+      ? o.order_items.map(oi => ({
+          quantity: oi.quantity || 1,
+          price: oi.price ?? oi.unit_price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+          cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+          productname: oi.products?.name,
+          product_name: oi.products?.name,
+          sku: oi.product_variants?.id || oi.variant_id,
+          product_variants: oi.product_variants
+        }))
+      : (o.items || []);
+    return { ...o, items };
+  }, []);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
@@ -474,11 +490,23 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('➕ Real-time: إضافة طلب جديد فورياً');
-          setAllData(prev => ({ 
-            ...prev, 
-            orders: [rowNew, ...(prev.orders || [])] 
-          }));
+          console.log('➕ Real-time: إضافة طلب جديد - جلب كامل العناصر');
+          (async () => {
+            try {
+              const full = await superAPI.getOrderById(rowNew.id);
+              const normalized = normalizeOrder(full || rowNew);
+              setAllData(prev => ({ 
+                ...prev, 
+                orders: [normalized, ...(prev.orders || [])] 
+              }));
+            } catch (e) {
+              console.warn('⚠️ فشل جلب الطلب الكامل، سيتم إدراج السجل كما هو', e);
+              setAllData(prev => ({ 
+                ...prev, 
+                orders: [rowNew, ...(prev.orders || [])] 
+              }));
+            }
+          })();
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
@@ -532,6 +560,26 @@ export const SuperProvider = ({ children }) => {
           } catch {}
         }
         return; // لا إعادة جلب للطلبات الذكية
+      }
+
+      // تحديث فوري لعناصر الطلبات: إعادة جلب الطلب المحدد ودمجه
+      if (table === 'order_items') {
+        const orderId = payload.new?.order_id || payload.old?.order_id;
+        if (orderId) {
+          (async () => {
+            try {
+              const full = await superAPI.getOrderById(orderId);
+              const normalized = normalizeOrder(full);
+              setAllData(prev => ({
+                ...prev,
+                orders: (prev.orders || []).map(o => o.id === orderId ? normalized : o)
+              }));
+            } catch (e) {
+              console.warn('⚠️ فشل تحديث الطلب بعد تغيير عناصره', e);
+            }
+          })();
+        }
+        return;
       }
 
       // تمرير إشعار للإستماع المنفصل
@@ -783,7 +831,19 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // إنجاح العملية وإبطال الكاش
+      // جلب الطلب كاملاً بعد إدراج العناصر وتحديث الحالة محلياً لظهور فوري مكتمل
+      try {
+        const full = await superAPI.getOrderById(createdOrder.id);
+        const normalized = normalizeOrder(full || createdOrder);
+        setAllData(prev => ({
+          ...prev,
+          orders: [normalized, ...(prev.orders || [])]
+        }));
+      } catch (e) {
+        console.warn('⚠️ لم نتمكن من جلب الطلب الكامل بعد الإنشاء، سيتم الاعتماد على Real-time', e);
+      }
+
+      // إبطال الكاش للتزامن مع الخادم
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
 
@@ -815,7 +875,7 @@ export const SuperProvider = ({ children }) => {
       // توحيد الحالة النهائية بعد عودة الخادم
       setAllData(prev => ({
         ...prev,
-        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updatedOrder } : o),
+        orders: (prev.orders || []).map(o => o.id === orderId ? normalizeOrder(updatedOrder) : o),
       }));
 
       return { success: true, data: updatedOrder };
