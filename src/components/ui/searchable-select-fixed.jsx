@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,68 +30,110 @@ const SearchableSelectFixed = ({
 
   const selectedOption = options.find(option => {
     const optionValue = option.value || option.id;
-    // Fix type comparison - convert both to strings for accurate matching
     return String(optionValue) === String(value);
   });
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
-  
-  // Add console logging for debugging
-  console.log('🔍 SearchableSelect Debug:', {
-    value,
-    valueType: typeof value,
-    options: options.slice(0, 3),
-    selectedOption,
-    displayText
-  });
+
+  // Dialog context detection
+  const getDialogContainer = useCallback(() => {
+    const dialogContent = document.querySelector('[data-radix-dialog-content]');
+    const dialogOverlay = document.querySelector('[data-radix-dialog-overlay]');
+    return dialogContent || dialogOverlay || document.body;
+  }, []);
+
+  // Enhanced portal container for dialog compatibility
+  const getPortalContainer = useCallback(() => {
+    const dialogContent = document.querySelector('[data-radix-dialog-content]');
+    if (dialogContent) {
+      // If inside dialog, create a dedicated container
+      let dropdownContainer = dialogContent.querySelector('[data-dropdown-portal]');
+      if (!dropdownContainer) {
+        dropdownContainer = document.createElement('div');
+        dropdownContainer.setAttribute('data-dropdown-portal', 'true');
+        dropdownContainer.style.cssText = `
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          pointer-events: none;
+          z-index: 99999999999;
+        `;
+        dialogContent.appendChild(dropdownContainer);
+      }
+      return dropdownContainer;
+    }
+    return document.body;
+  }, []);
 
   // Enhanced click outside handling for dialog compatibility
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!open) return;
       
-      // Check if clicked element is inside our dropdown or button
       const isInsideDropdown = dropdownRef.current?.contains(event.target);
       const isInsideButton = buttonRef.current?.contains(event.target);
       
       if (!isInsideDropdown && !isInsideButton) {
-        // Enhanced dialog detection
-        const isDialogOverlay = event.target.closest('[data-radix-dialog-overlay], [data-dialog-overlay]');
-        const isDialogContent = event.target.closest('[role="dialog"], [data-radix-dialog-content]');
+        // Advanced dialog detection
+        const dialogPortal = event.target.closest('[data-dropdown-portal]');
+        const dialogOverlay = event.target.closest('[data-radix-dialog-overlay]');
+        const dialogContent = event.target.closest('[data-radix-dialog-content]');
+        const anyDialog = event.target.closest('[role="dialog"]');
         
-        // Don't close if clicking on dialog overlay or content
-        if (!isDialogOverlay && !isDialogContent) {
+        // Only close if not clicking on any dialog-related element
+        if (!dialogPortal && !dialogOverlay && !dialogContent && !anyDialog) {
           setOpen(false);
         }
       }
     };
 
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && open) {
+        event.preventDefault();
+        event.stopPropagation();
+        setOpen(false);
+      }
+    };
+
     if (open) {
-      // Use capture phase to handle events before dialog's focus trap
       document.addEventListener('mousedown', handleClickOutside, true);
       document.addEventListener('touchstart', handleClickOutside, true);
+      document.addEventListener('keydown', handleEscapeKey, true);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside, true);
       document.removeEventListener('touchstart', handleClickOutside, true);
+      document.removeEventListener('keydown', handleEscapeKey, true);
     };
   }, [open]);
 
   // Enhanced focus management for dialog compatibility
   useEffect(() => {
     if (open && searchInputRef.current) {
-      // Multiple focus attempts with progressive delays
-      const focusAttempts = [50, 100, 200, 300];
+      const isInDialog = !!document.querySelector('[data-radix-dialog-content]');
+      const focusDelays = isInDialog ? [10, 50, 100, 200, 500, 1000] : [50, 100];
       
-      focusAttempts.forEach(delay => {
+      focusDelays.forEach(delay => {
         setTimeout(() => {
           if (searchInputRef.current && open) {
             try {
-              searchInputRef.current.focus();
+              // Override dialog focus trap temporarily
+              const originalTabIndex = searchInputRef.current.tabIndex;
+              searchInputRef.current.tabIndex = 0;
+              searchInputRef.current.focus({ preventScroll: true });
               searchInputRef.current.select();
+              
+              // Restore original tabIndex
+              setTimeout(() => {
+                if (searchInputRef.current) {
+                  searchInputRef.current.tabIndex = originalTabIndex;
+                }
+              }, 10);
             } catch (e) {
-              console.log('Focus attempt failed:', e);
+              // Silent fail for focus attempts
             }
           }
         }, delay);
@@ -106,16 +148,11 @@ const SearchableSelectFixed = ({
     }
   };
 
-  const handleOptionSelect = (optionValue) => {
-    console.log('🎯 تم اختيار القيمة:', optionValue);
-    // Immediate selection without delay
+  const handleOptionSelect = useCallback((optionValue) => {
     onValueChange(optionValue);
-    // Delay closing to ensure value is set
-    setTimeout(() => {
-      setOpen(false);
-      setSearch('');
-    }, 50);
-  };
+    setOpen(false);
+    setSearch('');
+  }, [onValueChange]);
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
@@ -142,7 +179,7 @@ const SearchableSelectFixed = ({
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[999999999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
@@ -152,11 +189,29 @@ const SearchableSelectFixed = ({
             maxWidth: '400px',
             pointerEvents: 'auto',
             isolation: 'isolate',
-            transform: 'translateZ(0)'
+            transform: 'translateZ(0)',
+            zIndex: '99999999999',
+            contain: 'layout style paint'
           }}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onTouchStart={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
+          onKeyDown={(e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
         >
           {/* Search Input */}
           <div className="p-1 border-b border-border">
@@ -167,12 +222,40 @@ const SearchableSelectFixed = ({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
-                onKeyDown={(e) => e.stopPropagation()}
-                onKeyUp={(e) => e.stopPropagation()}
-                onInput={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setOpen(false);
+                  }
+                }}
+                onKeyUp={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                onInput={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                onFocus={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
                 className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
+                autoFocus
                 tabIndex={0}
+                style={{ 
+                  pointerEvents: 'auto',
+                  userSelect: 'text',
+                  caretColor: 'auto'
+                }}
               />
             </div>
           </div>
@@ -233,7 +316,7 @@ const SearchableSelectFixed = ({
             )}
           </div>
         </div>,
-        document.body
+        getPortalContainer()
       )}
     </div>
   );
