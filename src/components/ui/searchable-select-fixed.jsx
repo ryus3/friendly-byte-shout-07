@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,65 +30,54 @@ const SearchableSelectFixed = ({
 
   const selectedOption = options.find(option => {
     const optionValue = option.value || option.id;
+    // Fix type comparison - convert both to strings for accurate matching
     return String(optionValue) === String(value);
   });
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
+  
+  // Add console logging for debugging
+  console.log('🔍 SearchableSelect Debug:', {
+    value,
+    valueType: typeof value,
+    options: options.slice(0, 3),
+    selectedOption,
+    displayText
+  });
 
-  // Smart dialog detection - Revolutionary approach
-  const isInsideDialog = useCallback(() => {
-    return !!document.querySelector('[data-radix-dialog-content]');
-  }, []);
-
-  // Click outside handling with dialog awareness
+  // Close dropdown when clicking outside - improved for dialogs
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!open) return;
-      
-      const isInsideDropdown = dropdownRef.current?.contains(event.target);
-      const isInsideButton = buttonRef.current?.contains(event.target);
-      
-      if (!isInsideDropdown && !isInsideButton) {
-        setOpen(false);
-      }
-    };
-
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape' && open) {
-        event.preventDefault();
-        event.stopPropagation();
-        setOpen(false);
-      }
+      // Add delay to allow onClick events to register first
+      setTimeout(() => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+            buttonRef.current && !buttonRef.current.contains(event.target)) {
+          // Check if click is not on a dialog backdrop or overlay
+          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
+          if (!isDialogClick) {
+            setOpen(false);
+          }
+        }
+      }, 100);
     };
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside, true);
-      document.addEventListener('touchstart', handleClickOutside, true);
-      document.addEventListener('keydown', handleEscapeKey, true);
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-      document.removeEventListener('touchstart', handleClickOutside, true);
-      document.removeEventListener('keydown', handleEscapeKey, true);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [open]);
 
-  // Revolutionary focus management - NO focus trap override needed!
+  // Focus search input when opening
   useEffect(() => {
     if (open && searchInputRef.current) {
-      // Simple, reliable focus - works perfectly in dialogs
-      const focusInput = () => {
-        if (searchInputRef.current && open) {
-          searchInputRef.current.focus();
-          searchInputRef.current.select();
-        }
-      };
-      
-      // Multiple attempts for reliability
-      focusInput();
-      setTimeout(focusInput, 10);
-      setTimeout(focusInput, 100);
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
     }
   }, [open]);
 
@@ -99,62 +88,19 @@ const SearchableSelectFixed = ({
     }
   };
 
-  const handleOptionSelect = useCallback((optionValue) => {
+  const handleOptionSelect = (optionValue) => {
+    console.log('🎯 تم اختيار القيمة:', optionValue);
+    // Immediate selection without delay
     onValueChange(optionValue);
-    setOpen(false);
-    setSearch('');
-  }, [onValueChange]);
+    // Delay closing to ensure value is set
+    setTimeout(() => {
+      setOpen(false);
+      setSearch('');
+    }, 50);
+  };
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-  };
-
-  // Revolutionary dropdown positioning strategy
-  const getDropdownStyle = () => {
-    if (!buttonRef.current) return {};
-    
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const isInDialog = isInsideDialog();
-    
-    if (isInDialog) {
-      // ABSOLUTE positioning within dialog - the breakthrough solution!
-      const dialogContent = document.querySelector('[data-radix-dialog-content]');
-      if (dialogContent) {
-        const dialogRect = dialogContent.getBoundingClientRect();
-        return {
-          position: 'absolute',
-          top: buttonRect.bottom - dialogRect.top + 4,
-          left: buttonRect.left - dialogRect.left,
-          width: buttonRect.width,
-          minWidth: '200px',
-          maxWidth: '400px',
-          zIndex: 1000,
-          direction: 'rtl'
-        };
-      }
-    }
-    
-    // Normal fixed positioning for non-dialog usage
-    return {
-      position: 'fixed',
-      top: buttonRect.bottom + 4,
-      left: buttonRect.left,
-      width: buttonRect.width,
-      minWidth: '200px',
-      maxWidth: '400px',
-      zIndex: 99999,
-      direction: 'rtl'
-    };
-  };
-
-  // Revolutionary portal strategy
-  const getPortalTarget = () => {
-    const isInDialog = isInsideDialog();
-    if (isInDialog) {
-      // Render inside dialog content - NO external portal needed!
-      return document.querySelector('[data-radix-dialog-content]') || document.body;
-    }
-    return document.body;
   };
 
   return (
@@ -174,12 +120,20 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Revolutionary Dropdown - Smart positioning for dialogs */}
+      {/* Dropdown */}
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
-          style={getDropdownStyle()}
+          className="fixed z-[99999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          style={{ 
+            direction: 'rtl',
+            left: buttonRef.current?.getBoundingClientRect().left || 0,
+            top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
+            width: buttonRef.current?.getBoundingClientRect().width || 'auto',
+            minWidth: '200px',
+            maxWidth: '400px',
+            pointerEvents: 'auto'
+          }}
         >
           {/* Search Input */}
           <div className="p-1 border-b border-border">
@@ -190,15 +144,8 @@ const SearchableSelectFixed = ({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    setOpen(false);
-                  }
-                }}
                 className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
-                autoFocus
               />
             </div>
           </div>
@@ -223,9 +170,28 @@ const SearchableSelectFixed = ({
                       "hover:bg-accent hover:text-accent-foreground",
                       "active:bg-accent active:text-accent-foreground",
                       "focus:bg-accent focus:text-accent-foreground",
+                      "touch-manipulation",
                       isSelected && "bg-accent text-accent-foreground"
                     )}
-                    onClick={() => handleOptionSelect(optionValue)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleOptionSelect(optionValue);
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleOptionSelect(optionValue);
+                    }}
+                    style={{ 
+                      WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+                      touchAction: 'manipulation',
+                      userSelect: 'none'
+                    }}
                   >
                     <Check
                       className={cn(
@@ -240,7 +206,7 @@ const SearchableSelectFixed = ({
             )}
           </div>
         </div>,
-        getPortalTarget()
+        document.body
       )}
     </div>
   );
