@@ -209,40 +209,66 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         setIsLoadingRegions(true);
         
         try {
-          // جلب المناطق مع انتظار مناسب
-          await fetchRegions(cityId);
-          console.log('✅ تم جلب المناطق للمدينة:', cityId);
+          // جلب المناطق واستخدام البيانات المُرجعة مباشرة
+          const fetchedRegions = await fetchRegions(cityId);
+          console.log('✅ تم جلب المناطق للمدينة:', { cityId, fetchedRegionsCount: fetchedRegions?.length || 0 });
           
-          // انتظار أطول لضمان تحديث regions في السياق
-          await new Promise(resolve => setTimeout(resolve, 500));
+          // استخدام البيانات المُرجعة من fetchRegions مباشرة
+          const regionsToSearch = fetchedRegions && fetchedRegions.length > 0 ? fetchedRegions : regions;
           
-          // البحث عن المنطقة بعد التأكد من جلب البيانات
-          if (customerProvince && regions.length > 0) {
-            console.log('🔍 البحث عن المنطقة في:', { customerProvince, regionsCount: regions.length });
+          // انتظار إضافي لضمان تحديث السياق
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // البحث عن المنطقة مع retry logic
+          if (customerProvince) {
+            console.log('🔍 البحث عن المنطقة في:', { 
+              customerProvince, 
+              regionsCount: regionsToSearch.length,
+              firstFewRegions: regionsToSearch.slice(0, 3).map(r => r.name || r.name_ar || r.region_name)
+            });
             
-            // البحث بالتطابق الدقيق أولاً
-            let regionMatch = regions.find(r => {
+            let regionMatch = null;
+            
+            // المحاولة الأولى: البحث بالتطابق الدقيق
+            regionMatch = regionsToSearch.find(r => {
               const regionName = r.name || r.name_ar || r.region_name || '';
               return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim();
             });
             
-            // إذا لم نجد تطابق دقيق، ابحث بالتضمين
+            // المحاولة الثانية: البحث بالتضمين
             if (!regionMatch) {
-              regionMatch = regions.find(r => {
+              regionMatch = regionsToSearch.find(r => {
                 const regionName = r.name || r.name_ar || r.region_name || '';
                 return customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
                        regionName.toLowerCase().includes(customerProvince.toLowerCase());
               });
             }
             
+            // المحاولة الثالثة: إعادة المحاولة مع البيانات المحدثة من السياق
+            if (!regionMatch && regions.length > 0) {
+              console.log('🔄 إعادة المحاولة مع بيانات السياق المحدثة');
+              regionMatch = regions.find(r => {
+                const regionName = r.name || r.name_ar || r.region_name || '';
+                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim();
+              });
+            }
+            
             if (regionMatch) {
-              regionId = String(regionMatch.id); // تحويل ID إلى string
-              console.log('✅ تم العثور على المنطقة:', { region: regionMatch, regionId });
+              regionId = String(regionMatch.id);
+              console.log('✅ تم العثور على المنطقة بنجاح:', { 
+                region: regionMatch, 
+                regionId,
+                regionName: regionMatch.name || regionMatch.name_ar || regionMatch.region_name 
+              });
             } else {
-              console.log('⚠️ لم يتم العثور على المنطقة:', { customerProvince, availableRegions: regions.slice(0, 3) });
+              console.log('⚠️ لم يتم العثور على المنطقة رغم المحاولات المتعددة:', { 
+                customerProvince, 
+                searchedInRegionsCount: regionsToSearch.length,
+                availableRegions: regionsToSearch.slice(0, 5).map(r => r.name || r.name_ar || r.region_name)
+              });
             }
           } else {
-            console.log('⚠️ لا توجد منطقة للبحث أو لم يتم جلب المناطق:', { customerProvince, regionsLength: regions.length });
+            console.log('⚠️ لا توجد منطقة للبحث عنها');
           }
         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
@@ -784,18 +810,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                      </div>
                    )}
                    
-                   <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
-                    <Label htmlFor="address">العنوان التفصيلي *</Label>
-                    <Textarea
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      placeholder="العنوان التفصيلي للعميل..."
-                      rows={3}
-                    />
-                  </div>
+                    <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
+                     <Label htmlFor="address">العنوان التفصيلي</Label>
+                     <Textarea
+                       id="address"
+                       name="address"
+                       value={formData.address}
+                       onChange={handleChange}
+                       disabled={!canEdit || isLoading}
+                       placeholder="العنوان التفصيلي للعميل..."
+                       rows={3}
+                     />
+                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="notes">ملاحظات إضافية</Label>
                     <Textarea
