@@ -161,7 +161,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     fetchCustomerData();
   }, [formData.phone, orders, user?.id, subtotal]);
 
-  // تحديث الخصم عند تغيير السلة
+  // تحديث الخصم عند تغيير السلة - Fixed dependency loop
   useEffect(() => {
     if (customerData?.currentTier?.discount_percentage && cart.length > 0) {
       const discountPercentage = customerData.currentTier.discount_percentage;
@@ -171,7 +171,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setLoyaltyDiscount(roundedDiscountAmount);
       
       if (applyLoyaltyDiscount) {
-        const manualDiscount = Math.max(0, discount - loyaltyDiscount);
+        const manualDiscount = Math.max(0, discount - roundedDiscountAmount);
         setDiscount(roundedDiscountAmount + manualDiscount);
       }
     } else if (cart.length === 0) {
@@ -180,7 +180,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setApplyLoyaltyDiscount(false);
       setApplyLoyaltyDelivery(false);
     }
-  }, [cart, customerData, applyLoyaltyDiscount, loyaltyDiscount, discount, subtotal]);
+  }, [cart.length, customerData?.currentTier?.discount_percentage, subtotal, applyLoyaltyDiscount]); // Removed circular dependencies
 
   // تهيئة النموذج عند فتح النافذة
   const initializeForm = useCallback(async () => {
@@ -506,6 +506,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 total={subtotal}
                 discount={discount}
                 setDiscount={setDiscount}
+                customerData={customerData}
                 loyaltyDiscount={loyaltyDiscount}
                 applyLoyaltyDiscount={applyLoyaltyDiscount}
                 applyLoyaltyDelivery={applyLoyaltyDelivery}
@@ -514,7 +515,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 isDeliveryPartnerSelected={true}
                 isSubmittingState={isLoading}
                 packageSizes={[]}
+                loadingPackageSizes={false}
                 activePartner={activePartner}
+                dataFetchError={null}
                 setProductSelectOpen={setProductSelectOpen}
                 settings={safeSettings}
               />
