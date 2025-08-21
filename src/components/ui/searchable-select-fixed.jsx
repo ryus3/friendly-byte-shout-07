@@ -45,56 +45,39 @@ const SearchableSelectFixed = ({
     displayText
   });
 
-  // Enhanced outside click handling for dialogs
+  // Close dropdown when clicking outside - improved for dialogs
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Don't close if clicking on our own elements
-      if (dropdownRef.current?.contains(event.target) || 
-          buttonRef.current?.contains(event.target)) {
-        return;
-      }
-      
-      // Don't interfere with dialog interactions unless explicitly outside
-      const isDialogOrModal = event.target.closest('[role="dialog"], [data-dialog], .dialog-overlay, [data-radix-dialog-overlay], [data-radix-dialog-content], .modal, .popover');
-      
-      // Only close if clearly outside both dropdown and dialog
-      if (!isDialogOrModal) {
-        setOpen(false);
-      }
+      // Add delay to allow onClick events to register first
+      setTimeout(() => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+            buttonRef.current && !buttonRef.current.contains(event.target)) {
+          // Check if click is not on a dialog backdrop or overlay
+          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
+          if (!isDialogClick) {
+            setOpen(false);
+          }
+        }
+      }, 100);
     };
 
     if (open) {
-      // Delay listener to avoid immediate triggering
-      setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside, { capture: true, passive: true });
-        document.addEventListener('touchstart', handleClickOutside, { capture: true, passive: true });
-      }, 100);
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside);
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-      document.removeEventListener('touchstart', handleClickOutside, true);
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [open]);
 
-  // Enhanced focus management for dialog context
+  // Focus search input when opening
   useEffect(() => {
     if (open && searchInputRef.current) {
-      // Multiple attempts with increasing delays for better reliability
-      const focusAttempts = [10, 50, 100, 200];
-      
-      focusAttempts.forEach((delay, index) => {
-        setTimeout(() => {
-          if (searchInputRef.current && open) {
-            try {
-              searchInputRef.current.focus({ preventScroll: true });
-              if (index === 0) searchInputRef.current.select();
-            } catch (e) {
-              console.warn('Focus attempt failed:', e);
-            }
-          }
-        }, delay);
-      });
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
     }
   }, [open]);
 
@@ -107,19 +90,13 @@ const SearchableSelectFixed = ({
 
   const handleOptionSelect = (optionValue) => {
     console.log('🎯 تم اختيار القيمة:', optionValue);
-    
-    // Prevent event bubbling and default behavior
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    
-    // Set value immediately
+    // Immediate selection without delay
     onValueChange(optionValue);
-    
-    // Close dropdown with slight delay to ensure value is processed
-    requestAnimationFrame(() => {
+    // Delay closing to ensure value is set
+    setTimeout(() => {
       setOpen(false);
       setSearch('');
-    });
+    }, 50);
   };
 
   const handleSearchChange = (e) => {
@@ -143,11 +120,11 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Enhanced Dropdown with maximum z-index and improved positioning */}
+      {/* Dropdown */}
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed bg-background border border-border rounded-md shadow-2xl max-h-60 overflow-hidden"
+          className="fixed z-[99999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
@@ -155,77 +132,20 @@ const SearchableSelectFixed = ({
             width: buttonRef.current?.getBoundingClientRect().width || 'auto',
             minWidth: '200px',
             maxWidth: '400px',
-            zIndex: 999999999, // Maximum possible z-index
-            position: 'fixed',
-            pointerEvents: 'auto',
-            isolation: 'isolate',
-            transform: 'translateZ(0)', // Force hardware acceleration
-            willChange: 'transform'
-          }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-          }}
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            e.stopImmediatePropagation();
+            pointerEvents: 'auto'
           }}
         >
-          {/* Enhanced Search Input with full event isolation */}
-          <div 
-            className="p-1 border-b border-border" 
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-            }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-            }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              e.stopImmediatePropagation();
-            }}
-          >
+          {/* Search Input */}
+          <div className="p-1 border-b border-border">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                }}
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                }}
-                onFocus={(e) => {
-                  e.stopPropagation();
-                  e.stopImmediatePropagation();
-                }}
-                onKeyDown={(e) => {
-                  e.stopPropagation();
-                  // Allow typing without closing dropdown
-                }}
                 className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
-                tabIndex={0}
-                style={{ 
-                  touchAction: 'manipulation',
-                  pointerEvents: 'auto',
-                  isolation: 'isolate'
-                }}
               />
             </div>
           </div>
@@ -250,49 +170,27 @@ const SearchableSelectFixed = ({
                       "hover:bg-accent hover:text-accent-foreground",
                       "active:bg-accent active:text-accent-foreground",
                       "focus:bg-accent focus:text-accent-foreground",
+                      "touch-manipulation",
                       isSelected && "bg-accent text-accent-foreground"
                     )}
-                    onMouseDown={(e) => {
+                    onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      e.stopImmediatePropagation();
-                      console.log('🖱️ Mouse selection:', optionValue);
                       handleOptionSelect(optionValue);
                     }}
                     onTouchStart={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      e.stopImmediatePropagation();
-                      console.log('👆 Touch start:', optionValue);
                     }}
                     onTouchEnd={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      e.stopImmediatePropagation();
-                      console.log('👆 Touch selection:', optionValue);
                       handleOptionSelect(optionValue);
                     }}
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.stopImmediatePropagation();
-                      console.log('👉 Pointer selection:', optionValue);
-                      handleOptionSelect(optionValue);
-                    }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.stopImmediatePropagation();
-                    }}
-                    tabIndex={0}
-                    role="option"
-                    aria-selected={isSelected}
                     style={{ 
                       WebkitTapHighlightColor: 'rgba(0,0,0,0)',
                       touchAction: 'manipulation',
-                      userSelect: 'none',
-                      pointerEvents: 'auto',
-                      isolation: 'isolate'
+                      userSelect: 'none'
                     }}
                   >
                     <Check
