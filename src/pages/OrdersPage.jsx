@@ -296,10 +296,10 @@ const OrdersPage = () => {
     let tempOrders;
     if (filters.status === 'archived') {
       // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
-      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
+      tempOrders = userOrders.filter(o => o && (o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock'));
     } else {
       // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
-      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
+      tempOrders = userOrders.filter(o => o && !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
     }
 
     // تطبيق فلتر الوقت أولاً
@@ -308,6 +308,12 @@ const OrdersPage = () => {
     }
     
     return tempOrders.filter(order => {
+      // Add comprehensive null checking with debugging
+      if (!order) {
+        console.warn('🚨 Null order found in filteredOrders filter');
+        return false;
+      }
+      
       const { searchTerm, status, archiveSubStatus } = filters;
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       const customerInfo = order.customerinfo || {
