@@ -445,29 +445,68 @@ export const AlWaseetProvider = ({ children }) => {
         if (!trackingNumber) continue;
         
         const waseetStatusId = waseetOrder.status_id || waseetOrder.status;
-        const localStatus = statusMap.get(String(waseetStatusId)) || 'pending';
+        const waseetStatusText = waseetOrder.status_text || waseetOrder.status_name || waseetOrder.status || '';
+        const localStatus =
+          statusMap.get(String(waseetStatusId)) ||
+          (() => {
+            const t = String(waseetStatusText).toLowerCase();
+            if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+            if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
+            if (t.includes('راجع')) return 'returned';
+            if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+            if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+            return 'pending';
+          })();
         
         try {
           // البحث عن الطلب في قاعدة البيانات باستخدام tracking_number
           const { data: existingOrder } = await supabase
             .from('orders')
-            .select('id, status, delivery_status')
+            .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
             .eq('tracking_number', trackingNumber)
             .single();
-          
-          if (existingOrder && existingOrder.status !== localStatus) {
-            // تحديث حالة الطلب
-            await supabase
-              .from('orders')
-              .update({
-                status: localStatus,
-                delivery_status: waseetOrder.status_text || waseetOrder.status_name,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingOrder.id);
+        
+          if (existingOrder) {
+            // تحضير التحديثات
+            const updates = {
+              status: localStatus,
+              delivery_status: waseetStatusText,
+              updated_at: new Date().toISOString(),
+            };
             
-            updatedCount++;
-            console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
+            // حفظ معرف طلب الوسيط إن كان مفقوداً
+            if (!existingOrder.delivery_partner_order_id && waseetOrder.id) {
+              updates.delivery_partner_order_id = String(waseetOrder.id);
+              updates.delivery_partner = 'alwaseet';
+            }
+            
+            // تحديث رسوم التوصيل إن وُجدت
+            const dp = parseInt(String(waseetOrder.delivery_price || 0)) || 0;
+            if (dp >= 0 && dp !== (existingOrder.delivery_fee || 0)) {
+              updates.delivery_fee = dp;
+            }
+            
+            // تأكيد الاستلام المالي
+            if (waseetOrder.deliver_confirmed_fin === 1 && existingOrder.receipt_received !== true) {
+              updates.receipt_received = true;
+            }
+            
+            const needUpdate = (
+              existingOrder.status !== updates.status ||
+              (existingOrder.delivery_status || '') !== updates.delivery_status ||
+              updates.delivery_fee !== undefined ||
+              updates.receipt_received === true ||
+              updates.delivery_partner_order_id !== undefined
+            );
+            
+            if (needUpdate) {
+              await supabase
+                .from('orders')
+                .update(updates)
+                .eq('id', existingOrder.id);
+              updatedCount++;
+              console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
+            }
           }
         } catch (error) {
           console.error(`❌ خطأ في تحديث الطلب ${trackingNumber}:`, error);
@@ -525,16 +564,60 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
       
+      const waseetStatusText = waseetOrder.status_text || waseetOrder.status_name || waseetOrder.status || '';
       const waseetStatusId = waseetOrder.status_id || waseetOrder.status;
-      const localStatus = statusMap.get(String(waseetStatusId)) || 'pending';
+      const localStatus =
+        statusMap.get(String(waseetStatusId)) ||
+        (() => {
+          const t = String(waseetStatusText).toLowerCase();
+          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+          if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
+          if (t.includes('راجع')) return 'returned';
+          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+          if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+          return 'pending';
+        })();
+
+      // جلب الطلب المحلي لفحص الحاجة للتحديث
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
+        .eq('tracking_number', trackingNumber)
+        .single();
+
+      const updates = {
+        status: localStatus,
+        delivery_status: waseetStatusText,
+        updated_at: new Date().toISOString(),
+      };
       
-      console.log(`📋 حالة الطلب في الوسيط: ${waseetOrder.status_text} (${waseetStatusId}) → ${localStatus}`);
+      if (waseetOrder.id && (!existingOrder?.delivery_partner_order_id)) {
+        updates.delivery_partner_order_id = String(waseetOrder.id);
+        updates.delivery_partner = 'alwaseet';
+      }
+      
+      const dp = parseInt(String(waseetOrder.delivery_price || 0)) || 0;
+      if (dp >= 0 && dp !== (existingOrder?.delivery_fee || 0)) {
+        updates.delivery_fee = dp;
+      }
+      if (waseetOrder.deliver_confirmed_fin === 1 && existingOrder?.receipt_received !== true) {
+        updates.receipt_received = true;
+      }
+
+      const needs_update = existingOrder ? (
+        existingOrder.status !== updates.status ||
+        (existingOrder.delivery_status || '') !== updates.delivery_status ||
+        updates.delivery_fee !== undefined ||
+        updates.receipt_received === true ||
+        updates.delivery_partner_order_id !== undefined
+      ) : true;
       
       return {
         tracking_number: trackingNumber,
-        waseet_status: waseetOrder.status_text || waseetOrder.status_name,
+        waseet_status: waseetStatusText,
         local_status: localStatus,
-        needs_update: true
+        updates,
+        needs_update,
       };
     } catch (error) {
       console.error(`❌ خطأ في مزامنة الطلب ${trackingNumber}:`, error);

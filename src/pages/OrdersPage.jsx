@@ -33,7 +33,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
-  const { syncAndApplyOrders, syncOrderByTracking } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData } = useUnifiedProfits();
@@ -371,6 +371,12 @@ const OrdersPage = () => {
     setSyncing(false);
   }
 
+  const handleFastSync = async () => {
+    setSyncing(true);
+    await fastSyncPendingOrders();
+    await refetchProducts();
+    setSyncing(false);
+  }
 
   const handleViewOrder = useCallback((order) => {
     setSelectedOrder(order);
@@ -518,6 +524,10 @@ const OrdersPage = () => {
               <Button variant="outline" onClick={handleSync} disabled={syncing}>
                   {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
                   مزامنة
+              </Button>
+              <Button variant="outline" onClick={handleFastSync} disabled={syncing}>
+                  {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
+                  مزامنة سريعة
               </Button>
             </div>
         </div>

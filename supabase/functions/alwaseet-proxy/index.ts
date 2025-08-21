@@ -110,6 +110,8 @@ serve(async (req) => {
         issue_notes: order.issue_notes,
         status_id: order.status_id,
         status: order.status,
+        status_text: order.status_text || order.status_name || order.status,
+        status_name: order.status_name || order.status_text || order.status,
         replacement: order.replacement,
         created_at: order.created_at,
         updated_at: order.updated_at,

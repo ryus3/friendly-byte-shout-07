@@ -96,11 +96,11 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
       
       if (syncResult && syncResult.needs_update) {
         // تحديث حالة الطلب في قاعدة البيانات
-        await onUpdate(order.id, syncResult.local_status);
+        await onUpdate(order.id, syncResult.updates);
         
         toast({
           title: "تمت المزامنة بنجاح",
-          description: `تم تحديث حالة الطلب إلى: ${syncResult.local_status}`,
+          description: `تم تحديث حالة الطلب إلى: ${syncResult.updates.status}`,
           variant: "success"
         });
       } else if (syncResult) {
