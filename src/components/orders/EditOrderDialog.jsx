@@ -14,11 +14,14 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { editAlWaseetOrder } from '@/lib/alwaseet-api';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import OrderDetailsForm from '@/components/quick-order/OrderDetailsForm';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
-  const { cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes, waseetToken } = useAlWaseet();
-  const { products, updateOrder, settings } = useInventory();
+  const { cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes, waseetToken, activePartner, setActivePartner } = useAlWaseet();
+  const { products, updateOrder, settings, cart, clearCart, addToCart, removeFromCart } = useInventory();
+  const { user, hasPermission } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -30,10 +33,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     region: '',
     address: '',
     notes: '',
-    size: '',
+    size: 'عادي',
     quantity: 1,
     price: 0,
     details: '',
+    type: 'new',
+    promocode: '',
     delivery_fee: 0
   });
   const [orderItems, setOrderItems] = useState([]);
@@ -41,8 +46,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const [isLoadingRegions, setIsLoadingRegions] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState([]);
   const [originalData, setOriginalData] = useState(null);
+  const [discount, setDiscount] = useState(0);
+  const [customerData, setCustomerData] = useState(null);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+  const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(true);
+  const [applyLoyaltyDelivery, setApplyLoyaltyDelivery] = useState(false);
 
   // تحميل البيانات الأساسية عند فتح النافذة
   useEffect(() => {
@@ -83,335 +92,82 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
     setCanEdit(editable);
     
-    console.log('✏️ حالة التحرير:', { status: order.status, canEdit: editable });
-    
-    // استخراج البيانات من الطلب - تحسين الاستخراج من customer_address
-    let customerCity = order.customer_city || '';
-    let customerProvince = order.customer_province || '';
-    
-    // تحسين استخراج المنطقة من customer_address إذا لم تكن في customer_province
-    if (!customerProvince && order.customer_address) {
-      console.log('🔍 البحث عن المنطقة في العنوان:', order.customer_address);
-      
-      // البحث الأولي في customer_address مباشرة 
-      const fullAddress = order.customer_address.toLowerCase();
-      
-      // البحث عن الكلمات المفتاحية للمناطق
-      const regionKeywords = ['صالحية', 'حي', 'منطقة', 'قضاء', 'محلة', 'شارع'];
-      for (const keyword of regionKeywords) {
-        const keywordIndex = fullAddress.indexOf(keyword);
-        if (keywordIndex !== -1) {
-          // استخراج النص بعد الكلمة المفتاحية
-          const afterKeyword = order.customer_address.substring(keywordIndex).split(/[،,]/)[0].trim();
-          if (afterKeyword.length > keyword.length + 1) {
-            customerProvince = afterKeyword;
-            console.log('✅ تم العثور على المنطقة من الكلمة المفتاحية:', customerProvince);
-            break;
-          }
-        }
-      }
-      
-      // إذا لم نجد شيء، جرب البحث في أجزاء العنوان
-      if (!customerProvince) {
-        const addressParts = order.customer_address.split(/[،,]/).map(part => part.trim()).filter(part => part.length > 2);
-        for (const part of addressParts) {
-          // تحقق من أجزاء العنوان التي قد تكون مناطق
-          if (part.length > 3 && !part.includes('بغداد') && !part.includes('شارع رقم')) {
-            customerProvince = part;
-            console.log('✅ تم العثور على المنطقة من أجزاء العنوان:', customerProvince);
-            break;
-          }
-        }
-      }
-    }
-    
-    // حفظ البيانات الأصلية للمقارنة
-    const originalDataObj = {
-      customerName: order.customer_name || '',
-      customerPhone: order.customer_phone || '',
-      customerPhone2: order.customer_phone2 || '',
-      customerCity: customerCity,
-      customerProvince: customerProvince,
-      customerAddress: order.customer_address || '',
-      totalAmount: order.total_amount || 0,
-      deliveryFee: order.delivery_fee || 0,
-      trackingNumber: order.tracking_number || '',
-      deliveryPartner: order.delivery_partner || ''
-    };
-    setOriginalData(originalDataObj);
-    
-    console.log('📍 البيانات المستخرجة:', {
-      customerCity,
-      customerProvince,
-      address: order.customer_address,
-      delivery_partner: order.delivery_partner,
-      tracking_number: order.tracking_number
-    });
-    
-    // جلب البيانات المطلوبة أولاً مع retry logic محسن
-    console.log('📡 بدء جلب البيانات الأساسية...');
-    
-    let currentCities = cities;
-    let currentPackageSizes = packageSizes;
-    
-    // جلب المدن مع retry
-    if (currentCities.length === 0) {
-      console.log('📡 جلب المدن...');
-      try {
-        await fetchCities();
-        // انتظار قصير للتحديث
-        await new Promise(resolve => setTimeout(resolve, 300));
-        currentCities = cities;
-        console.log('✅ تم جلب المدن:', currentCities.length);
-      } catch (error) {
-        console.error('❌ فشل جلب المدن:', error);
-        toast({
-          title: "خطأ",
-          description: "فشل في جلب قائمة المدن",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    // جلب أحجام الطلب مع retry
-    if (currentPackageSizes.length === 0) {
-      console.log('📡 جلب أحجام الطلب...');
-      try {
-        await fetchPackageSizes();
-        // انتظار قصير للتحديث
-        await new Promise(resolve => setTimeout(resolve, 300));
-        currentPackageSizes = packageSizes;
-        console.log('✅ تم جلب أحجام الطلب:', currentPackageSizes.length);
-      } catch (error) {
-        console.error('❌ فشل جلب أحجام الطلب:', error);
-        toast({
-          title: "خطأ",
-          description: "فشل في جلب أحجام الطلب",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    // البحث عن city_id و region_id من البيانات
-    let cityId = '';
-    let regionId = '';
-    let packageSize = 'عادي'; // القيمة الافتراضية
-    
-    // البحث الدقيق عن المدينة - استخدام نفس منطق QuickOrderContent
-    console.log('🔍 البحث عن المدينة:', { customerCity, citiesCount: currentCities.length });
-    
-    if (customerCity && currentCities.length > 0) {
-      // البحث بالتطابق الدقيق أولاً
-      let cityMatch = currentCities.find(c => {
-        const cityName = c.name || c.name_ar || c.city_name || '';
-        return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim();
-      });
-      
-      // إذا لم نجد تطابق دقيق، ابحث بالتضمين
-      if (!cityMatch) {
-        cityMatch = currentCities.find(c => {
-          const cityName = c.name || c.name_ar || c.city_name || '';
-          return customerCity.toLowerCase().includes(cityName.toLowerCase()) ||
-                 cityName.toLowerCase().includes(customerCity.toLowerCase());
-        });
-      }
-      
-      console.log('🔍 نتيجة البحث عن المدينة:', { cityMatch, customerCity });
-      
-      if (cityMatch) {
-        cityId = String(cityMatch.id); // تحويل ID إلى string لضمان التطابق
-        console.log('✅ تم العثور على المدينة:', { city: cityMatch, cityId });
-        
-        // جلب المناطق لهذه المدينة مع تحسين الأداء
-        console.log('📡 بدء جلب المناطق للمدينة:', cityId);
-        setIsLoadingRegions(true);
-        
-        try {
-          // جلب المناطق واستخدام البيانات المُرجعة مباشرة
-          const fetchedRegions = await fetchRegions(cityId);
-          console.log('✅ تم جلب المناطق للمدينة:', { cityId, fetchedRegionsCount: fetchedRegions?.length || 0 });
-          
-          // استخدام البيانات المُرجعة من fetchRegions مباشرة
-          const regionsToSearch = fetchedRegions && fetchedRegions.length > 0 ? fetchedRegions : regions;
-          
-          // انتظار إضافي لضمان تحديث السياق
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // البحث عن المنطقة مع retry logic
-          if (customerProvince) {
-            console.log('🔍 البحث عن المنطقة في:', { 
-              customerProvince, 
-              regionsCount: regionsToSearch.length,
-              firstFewRegions: regionsToSearch.slice(0, 3).map(r => r.name || r.name_ar || r.region_name)
-            });
-            
-            let regionMatch = null;
-            
-            // المحاولة الأولى: البحث بالتطابق الدقيق
-            regionMatch = regionsToSearch.find(r => {
-              const regionName = r.name || r.name_ar || r.region_name || '';
-              return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim();
-            });
-            
-            // المحاولة الثانية: البحث بالتضمين
-            if (!regionMatch) {
-              regionMatch = regionsToSearch.find(r => {
-                const regionName = r.name || r.name_ar || r.region_name || '';
-                return customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-                       regionName.toLowerCase().includes(customerProvince.toLowerCase());
-              });
-            }
-            
-            // المحاولة الثالثة: إعادة المحاولة مع البيانات المحدثة من السياق
-            if (!regionMatch && regions.length > 0) {
-              console.log('🔄 إعادة المحاولة مع بيانات السياق المحدثة');
-              regionMatch = regions.find(r => {
-                const regionName = r.name || r.name_ar || r.region_name || '';
-                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim();
-              });
-            }
-            
-            if (regionMatch) {
-              regionId = String(regionMatch.id);
-              console.log('✅ تم العثور على المنطقة بنجاح:', { 
-                region: regionMatch, 
-                regionId,
-                regionName: regionMatch.name || regionMatch.name_ar || regionMatch.region_name 
-              });
-            } else {
-              console.log('⚠️ لم يتم العثور على المنطقة رغم المحاولات المتعددة:', { 
-                customerProvince, 
-                searchedInRegionsCount: regionsToSearch.length,
-                availableRegions: regionsToSearch.slice(0, 5).map(r => r.name || r.name_ar || r.region_name)
-              });
-            }
-          } else {
-            console.log('⚠️ لا توجد منطقة للبحث عنها');
-          }
-        } catch (error) {
-          console.error('❌ خطأ في جلب المناطق:', error);
-          toast({
-            title: "خطأ",
-            description: "فشل في جلب المناطق للمدينة المحددة",
-            variant: "destructive"
-          });
-        } finally {
-          setIsLoadingRegions(false);
-        }
-      } else {
-        console.log('❌ لم يتم العثور على المدينة في القائمة:', { customerCity, availableCities: currentCities.slice(0, 3) });
-      }
-    }
-    
-    // تحديد حجم الطلب الصحيح مع تحسين التطابق
-    console.log('📦 تحديد حجم الطلب:', { 
-      deliveryPartner: order.delivery_partner, 
-      packageSize: order.package_size, 
-      availableSizes: currentPackageSizes.length 
-    });
-    
-    if (order.delivery_partner === 'الوسيط' && currentPackageSizes.length > 0) {
-      // البحث الدقيق بالـ ID أولاً
-      let sizeMatch = currentPackageSizes.find(size => 
-        String(size.id) === String(order.package_size)
-      );
-      
-      // إذا لم نجد بالـ ID، ابحث بالاسم
-      if (!sizeMatch && order.package_size) {
-        sizeMatch = currentPackageSizes.find(size => 
-          size.name === order.package_size ||
-          (size.name && size.name.includes(order.package_size)) ||
-          (order.package_size && order.package_size.includes(size.name))
-        );
-      }
-      
-      if (sizeMatch) {
-        packageSize = String(sizeMatch.id); // تحويل إلى string
-        console.log('✅ تم العثور على حجم الطلب:', { match: sizeMatch, packageSize });
-      } else {
-        // البحث عن حجم افتراضي مناسب
-        const defaultSize = currentPackageSizes.find(size => 
-          (size.name && (size.name.includes('صغير') || size.name.includes('عادي'))) ||
-          (size.name && (size.name.toLowerCase().includes('small') || size.name.toLowerCase().includes('normal')))
-        );
-        packageSize = defaultSize ? String(defaultSize.id) : String(currentPackageSizes[0]?.id || '1');
-        console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', { 
-          defaultSize, 
-          packageSize,
-          originalSize: order.package_size 
-        });
-      }
-    } else {
-        // للطلبات المحلية و Al-Waseet، استخدم القيم الصحيحة كما في QuickOrderContent
-      packageSize = 'عادي'; // Use Arabic text like QuickOrderContent
-      console.log('📦 طلب محلي أو Al-Waseet - استخدام الحجم الافتراضي:', packageSize);
-    }
-    
-    // تحضير المنتجات المحددة من عناصر الطلب
+    // تحضير المنتجات المحددة من عناصر الطلب وإضافتها للسلة
     if (order.items && Array.isArray(order.items)) {
-      const productsFromOrder = order.items.map(item => ({
-        productId: item.product_id,
-        variantId: item.variant_id,
-        quantity: item.quantity || 1,
-        price: item.unit_price || item.price || 0,
-        productName: item.product_name || item.productname || 'منتج',
-        color: item.color || '',
-        size: item.size || ''
-      }));
-      setSelectedProducts(productsFromOrder);
-      console.log('📦 المنتجات المحملة:', productsFromOrder);
+      clearCart(); // مسح السلة أولاً
+      
+      // إضافة المنتجات للسلة
+      order.items.forEach(item => {
+        const cartItem = {
+          id: `${item.product_id}-${item.variant_id}`,
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.product_name || item.productname || 'منتج',
+          size: item.size || '',
+          color: item.color || '',
+          price: item.unit_price || item.price || 0,
+          quantity: item.quantity || 1,
+          total: (item.unit_price || item.price || 0) * (item.quantity || 1),
+          image: item.image || '/placeholder.svg',
+          barcode: item.barcode || '',
+          sku: item.sku || ''
+        };
+        addToCart(null, cartItem, cartItem.quantity, false);
+      });
+      console.log('📦 المنتجات المحملة للسلة:', order.items);
     }
     
-    // ملء النموذج بالبيانات المطابقة مع تحسين شامل
+    // ملء النموذج بالبيانات
     const initialFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       phone2: order.customer_phone2 || '',
-      city_id: cityId, // سيكون string أو فارغ
-      region_id: regionId, // سيكون string أو فارغ
-      city: customerCity,
-      region: customerProvince,
+      city_id: '',
+      region_id: '',
+      city: order.customer_city || '',
+      region: order.customer_province || '',
       address: order.customer_address || '',
       notes: order.notes || '',
-      size: packageSize, // سيكون string
+      size: 'عادي',
       quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
       price: order.total_amount || 0,
       details: order.items?.map(item => 
-        `${item.productname || item.product_name || 'منتج'} × ${item.quantity || 1}`
+        `${item.productname || item.product_name || 'منتج'} - ${item.color || ''} - ${item.size || ''} × ${item.quantity || 1}`
       ).join(', ') || '',
+      type: 'new',
+      promocode: '',
       delivery_fee: order.delivery_fee || settings?.deliveryFee || 0
     };
     
     setFormData(initialFormData);
-    console.log('📝 تم تعبئة النموذج بالبيانات المحسنة:', {
-      formData: initialFormData,
-      cityMatch: cityId ? 'Found' : 'Not Found',
-      regionMatch: regionId ? 'Found' : 'Not Found',
-      sizeMatch: packageSize !== 'normal' ? 'Found' : 'Default'
-    });
+    console.log('📝 تم تعبئة النموذج بالبيانات:', initialFormData);
     
-    // ملء عناصر الطلب
-    if (order.items && Array.isArray(order.items)) {
-      const orderItemsData = order.items.map(item => ({
-        id: item.id || Math.random().toString(),
-        product_name: item.productname || item.product_name || 'منتج',
-        quantity: item.quantity || 1,
-        unit_price: item.price || item.unit_price || 0,
-        total_price: (item.quantity || 1) * (item.price || item.unit_price || 0),
-        product_id: item.product_id,
-        variant_id: item.variant_id
-      }));
-      setOrderItems(orderItemsData);
-    }
-    
-  }, [order, open, cities, fetchRegions, packageSizes, settings]);
+  }, [order, open, clearCart, addToCart, settings]);
 
   // تهيئة النموذج عند تغيير الطلب أو فتح النافذة
   useEffect(() => {
     initializeForm();
   }, [initializeForm]);
+
+  // إضافة useEffect لتحديث البيانات المحسوبة تلقائياً
+  useEffect(() => {
+    if (cart.length > 0) {
+      const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
+      const detailsText = cart.map(item => 
+        `${item.productName} - ${item.color} - ${item.size} × ${item.quantity}`
+      ).join(', ');
+      
+      setFormData(prev => ({
+        ...prev,
+        quantity: totalQuantity,
+        details: detailsText
+      }));
+    }
+  }, [cart]);
+
+  // حساب المجاميع
+  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+  const total = subtotal - discount;
 
   // معالجة تغيير القيم
   const handleChange = (e) => {
@@ -419,111 +175,28 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // معالجة تغيير القوائم المنسدلة مع إصلاح شامل وتطبيق منطق QuickOrderContent
+  // معالجة تغيير القوائم المنسدلة
   const handleSelectChange = async (value, name) => {
-    console.log(`🔄 تغيير ${name} إلى:`, { value, type: typeof value });
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    // تحديث الحالة فوراً مع تحسين المقارنات
-    setFormData(prev => {
-      const newData = { ...prev };
-      
-      // تحديث القيمة المحددة - تحويل إلى string للاتساق
-      newData[name] = String(value);
-      
-      // إذا تغيرت المدينة
-      if (name === 'city_id' && value) {
-        const selectedCity = cities.find(c => String(c.id) === String(value));
-        if (selectedCity) {
-          newData.city = selectedCity.name || selectedCity.name_ar || selectedCity.city_name || '';
-          console.log('🏙️ تم اختيار المدينة:', { selectedCity, newCityName: newData.city });
-        }
-        // إعادة تعيين المنطقة عند تغيير المدينة
-        newData.region_id = '';
-        newData.region = '';
-        console.log('🔄 تم إعادة تعيين المنطقة بسبب تغيير المدينة');
-      }
-      
-      // إذا تغيرت المنطقة
-      if (name === 'region_id' && value) {
-        const selectedRegion = regions.find(r => String(r.id) === String(value));
-        if (selectedRegion) {
-          newData.region = selectedRegion.name || selectedRegion.name_ar || selectedRegion.region_name || '';
-          console.log('📍 تم اختيار المنطقة:', { selectedRegion, newRegionName: newData.region });
-        }
-      }
-      
-      // إذا تغير حجم الطلب
-      if (name === 'size' && value) {
-        const selectedSize = packageSizes.find(s => String(s.id) === String(value));
-        if (selectedSize) {
-          console.log('📦 تم اختيار حجم الطلب:', { selectedSize, newSize: value });
-        }
-      }
-      
-      return newData;
-    });
-    
-    // جلب المناطق عند تغيير المدينة مع تحسين الأداء
+    // جلب المناطق عند تغيير المدينة
     if (name === 'city_id' && value) {
       setIsLoadingRegions(true);
       try {
-        console.log('📡 جاري جلب المناطق للمدينة:', value);
-        await fetchRegions(String(value)); // تأكد من تمرير string
-        console.log('✅ تم جلب المناطق بنجاح، عدد المناطق:', regions.length);
+        await fetchRegions(value);
+        // مسح المنطقة المحددة
+        setFormData(prev => ({ ...prev, region_id: '', region: '' }));
       } catch (error) {
-        console.error('❌ خطأ في جلب المناطق:', error);
+        console.error('خطأ في جلب المناطق:', error);
         toast({
           title: "خطأ",
-          description: "فشل في جلب المناطق للمدينة المحددة",
+          description: "فشل في جلب المناطق",
           variant: "destructive"
         });
       } finally {
         setIsLoadingRegions(false);
       }
     }
-  };
-
-  // حساب الإجمالي تلقائياً
-  const calculateTotal = useCallback(() => {
-    const subtotal = selectedProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-    const deliveryFee = formData.delivery_fee || 0;
-    return subtotal + deliveryFee;
-  }, [selectedProducts, formData.delivery_fee]);
-
-  // تحديث الإجمالي عند تغيير المنتجات
-  useEffect(() => {
-    const total = calculateTotal();
-    setFormData(prev => ({ ...prev, price: total }));
-  }, [calculateTotal]);
-
-  // إضافة منتج من النافذة
-  const handleProductSelect = (product, variant, quantity) => {
-    const newProduct = {
-      productId: product.id,
-      variantId: variant.id,
-      quantity: quantity,
-      price: variant.price,
-      productName: product.name,
-      color: variant.color || '',
-      size: variant.size || ''
-    };
-    
-    setSelectedProducts(prev => [...prev, newProduct]);
-  };
-
-  // حذف منتج
-  const removeProduct = (index) => {
-    setSelectedProducts(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // تحديث كمية منتج
-  const updateProductQuantity = (index, newQuantity) => {
-    if (newQuantity < 1) return;
-    setSelectedProducts(prev => 
-      prev.map((item, i) => 
-        i === index ? { ...item, quantity: newQuantity } : item
-      )
-    );
   };
 
   // معالجة الإرسال
@@ -539,7 +212,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       return;
     }
 
-    if (selectedProducts.length === 0) {
+    if (cart.length === 0) {
       toast({
         title: "تنبيه",
         description: "يجب اختيار منتج واحد على الأقل",
@@ -551,85 +224,54 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setIsLoading(true);
     
     try {
-      // حساب الإجمالي
-      const subtotal = selectedProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-      const deliveryFee = formData.delivery_fee || 0;
-      const total = subtotal + deliveryFee;
-      
+      // حساب المجموع الجديد من السلة
+      const newTotal = subtotal + (formData.delivery_fee || 0);
+      const updatedFormData = {
+        ...formData,
+        price: newTotal,
+        quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+        details: cart.map(item => `${item.productName} - ${item.color} - ${item.size} × ${item.quantity}`).join(', ')
+      };
+
+      // تحضير بيانات المنتجات للحفظ من السلة
+      const orderItems = cart.map(item => ({
+        product_id: item.productId,
+        variant_id: item.variantId,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.total
+      }));
+
       // إعداد البيانات للتحديث
       const updateData = {
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_phone2: formData.phone2,
-        customer_city: formData.city || (formData.city_id ? 
-          cities.find(c => c.id === formData.city_id)?.name : ''),
-        customer_province: formData.region || (formData.region_id ? 
-          regions.find(r => r.id === formData.region_id)?.name : ''),
-        customer_address: formData.address,
-        notes: formData.notes,
-        total_amount: total,
-        delivery_fee: deliveryFee,
-        final_amount: total
+        customer_name: updatedFormData.name,
+        customer_phone: updatedFormData.phone,
+        customer_phone2: updatedFormData.phone2,
+        customer_city: updatedFormData.city,
+        customer_province: updatedFormData.region,
+        customer_address: updatedFormData.address,
+        notes: updatedFormData.notes,
+        total_amount: newTotal,
+        delivery_fee: updatedFormData.delivery_fee,
+        final_amount: newTotal
       };
-      
-      // استخدام updateOrder من useOrders مع إدارة المخزون
-      const result = await updateOrder(order.id, updateData, selectedProducts, order.items);
-      
+
+      // استخدام updateOrder من useInventory
+      const result = await updateOrder(order.id, updateData, orderItems, order.items);
+
       if (!result.success) {
         throw new Error(result.error);
       }
-      
-      // إرسال للوسيط إذا كان الطلب مرسل إليه أصلاً
-      if (order.delivery_partner && order.delivery_partner !== 'محلي' && waseetToken && order.tracking_number) {
-        console.log('📤 إرسال التحديث للوسيط...');
-        
-        const alwaseetData = {
-          tracking_number: order.tracking_number, // Will be mapped to qr_id
-          name: formData.name, // Will be mapped to client_name
-          phone: formData.phone, // Will be mapped to client_mobile
-          phone2: formData.phone2 || '', // Will be mapped to client_mobile2
-          city_id: parseInt(formData.city_id) || 0,
-          region_id: parseInt(formData.region_id) || 0,
-          address: formData.address, // Will be mapped to location
-          notes: formData.notes || '', // Will be mapped to merchant_notes
-          details: selectedProducts.map(item => 
-            `${item.productName}${item.color ? ` (${item.color})` : ''}${item.size ? ` - ${item.size}` : ''} × ${item.quantity}`
-          ).join(', '), // Will be mapped to type_name
-          quantity: selectedProducts.reduce((sum, item) => sum + item.quantity, 0), // Will be mapped to items_number
-          price: Math.round(total),
-          size: parseInt(formData.size) || parseInt(packageSizes[0]?.id) || 1, // Will be mapped to package_size
-          replacement: 0
-        };
-        
-        console.log('📋 بيانات الوسيط:', alwaseetData);
-        
-        try {
-          const waseetResult = await editAlWaseetOrder(alwaseetData, waseetToken);
-          console.log('✅ تم تحديث الطلب في الوسيط بنجاح:', waseetResult);
-          
-          toast({
-            title: "تم التحديث",
-            description: "تم تحديث الطلب محلياً وفي شركة التوصيل بنجاح",
-            variant: "success"
-          });
-        } catch (alwaseetError) {
-          console.error('❌ خطأ في تحديث الوسيط:', alwaseetError);
-          // لا نريد أن يفشل التحديث بالكامل إذا فشل الوسيط
-          toast({
-            title: "تم التحديث جزئياً",
-            description: "تم تحديث الطلب محلياً لكن فشل في تحديث شركة التوصيل: " + (alwaseetError.message || 'غير معروف'),
-            variant: "warning"
-          });
-        }
-      }
-      
+
       toast({
         title: "تم التحديث",
         description: "تم تحديث الطلب بنجاح",
         variant: "success"
       });
-      
-      onOrderUpdated?.(result.data);
+
+      // إذا نجح التحديث، إعلام المكون الأب ومسح السلة
+      clearCart();
+      onOrderUpdated?.();
       onOpenChange(false);
       
     } catch (error) {
@@ -704,9 +346,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                       required
                     />
                   </div>
-                  {/* Always show secondary phone field for Al-Waseet orders */}
                   <div>
-                    <Label htmlFor="phone2">رقم الهاتف الثاني {order?.delivery_partner === 'الوسيط' && '(اختياري)'}</Label>
+                    <Label htmlFor="phone2">رقم الهاتف الثاني (اختياري)</Label>
                     <Input
                       id="phone2"
                       name="phone2"
@@ -726,92 +367,40 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin className="w-4 h-4" />
                   <h3 className="font-semibold">معلومات التوصيل</h3>
-                  {order?.delivery_partner && (
-                    <Badge variant="outline" className="mr-auto">
-                      {order.delivery_partner}
-                    </Badge>
-                  )}
-                  {order?.tracking_number && (
-                    <Badge variant="secondary">
-                      رقم التتبع: {order.tracking_number}
-                    </Badge>
-                  )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
-                    <>
-                        <div>
-                          <Label htmlFor="city_id">المدينة *</Label>
-                          <SearchableSelectFixed
-                            value={formData.city_id}
-                            onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                            options={cities.map(city => ({ 
-                              value: String(city.id), 
-                              label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}` 
-                            }))}
-                            placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"}
-                            searchPlaceholder="بحث في المدن..."
-                            emptyText="لا توجد مدينة بهذا الاسم"
-                            disabled={!canEdit || isLoading || cities.length === 0}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="region_id">المنطقة *</Label>
-                          <SearchableSelectFixed
-                            value={formData.region_id}
-                            onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                            options={regions.map(region => ({ 
-                              value: String(region.id), 
-                              label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}` 
-                            }))}
-                            placeholder={
-                              isLoadingRegions ? "جاري تحميل المناطق..." : 
-                              !formData.city_id ? "اختر المدينة أولاً..." :
-                              regions.length === 0 ? "لا توجد مناطق متاحة" :
-                              "اختر المنطقة..."
-                            }
-                            searchPlaceholder="بحث في المناطق..."
-                            emptyText="لا توجد منطقة بهذا الاسم"
-                            disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
-                          />
-                         </div>
-                      </>
-                    )}
-                    
-                    {/* Show unified package size selection for local orders and Al-Waseet */}
-                    {(!order?.delivery_partner || order.delivery_partner === 'محلي' || order.delivery_partner === 'Al-Waseet') && (
-                     <div>
-                       <Label htmlFor="size">حجم الطلب</Label>
-                       <Select
-                         value={formData.size}
-                         onValueChange={(value) => handleSelectChange(value, 'size')}
-                         disabled={!canEdit || isLoading}
-                       >
-                         <SelectTrigger className="text-right">
-                           <SelectValue placeholder="اختر حجم الطلب..." />
-                         </SelectTrigger>
-                         <SelectContent>
-                            <SelectItem value="عادي">عادي</SelectItem>
-                            <SelectItem value="متوسط">متوسط</SelectItem>
-                            <SelectItem value="كبير">كبير</SelectItem>
-                            <SelectItem value="كبير جدا">كبير جدا</SelectItem>
-                         </SelectContent>
-                       </Select>
-                     </div>
-                   )}
-                   
-                     <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
-                      <Label htmlFor="address">العنوان التفصيلي (اختياري)</Label>
-                     <Textarea
-                       id="address"
-                       name="address"
-                       value={formData.address}
-                       onChange={handleChange}
-                       disabled={!canEdit || isLoading}
-                       placeholder="العنوان التفصيلي للعميل..."
-                       rows={3}
-                     />
-                   </div>
+                  <div>
+                    <Label htmlFor="city">المدينة</Label>
+                    <Input
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="region">المنطقة</Label>
+                    <Input
+                      id="region"
+                      name="region"
+                      value={formData.region}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="address">العنوان التفصيلي</Label>
+                    <Textarea
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      placeholder="العنوان التفصيلي للعميل..."
+                      rows={3}
+                    />
+                  </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="notes">ملاحظات إضافية</Label>
                     <Textarea
@@ -828,117 +417,30 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
               </CardContent>
             </Card>
 
-            {/* المنتجات */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    <h3 className="font-semibold">المنتجات</h3>
-                    <Badge variant="secondary">
-                      {selectedProducts.length} منتج
-                    </Badge>
-                  </div>
-                  {canEdit && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowProductDialog(true)}
-                      disabled={isLoading}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      إضافة منتج
-                    </Button>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {selectedProducts.map((product, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
-                      <div className="flex-1">
-                        <p className="font-medium">{product.productName}</p>
-                        {(product.color || product.size) && (
-                          <p className="text-sm text-gray-600">
-                            {product.color && `اللون: ${product.color}`}
-                            {product.color && product.size && ' | '}
-                            {product.size && `المقاس: ${product.size}`}
-                          </p>
-                        )}
-                        <p className="text-sm text-gray-600">
-                          {product.price.toLocaleString()} د.ع × {product.quantity} = {(product.price * product.quantity).toLocaleString()} د.ع
-                        </p>
-                      </div>
-                      
-                      {canEdit && (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min="1"
-                            value={product.quantity}
-                            onChange={(e) => updateProductQuantity(index, parseInt(e.target.value))}
-                            className="w-16 text-center"
-                            disabled={isLoading}
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => removeProduct(index)}
-                            disabled={isLoading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {selectedProducts.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>لم يتم اختيار أي منتجات</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* الإجمالي */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <DollarSign className="w-4 h-4" />
-                  <h3 className="font-semibold">الإجمالي</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label htmlFor="delivery_fee">رسوم التوصيل</Label>
-                    <Input
-                      id="delivery_fee"
-                      name="delivery_fee"
-                      type="number"
-                      value={formData.delivery_fee}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      min="0"
-                    />
-                  </div>
-                  <div>
-                    <Label>المجموع الفرعي</Label>
-                    <div className="p-2 bg-gray-50 rounded border text-right">
-                      {selectedProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString()} د.ع
-                    </div>
-                  </div>
-                  <div>
-                    <Label>إجمالي الطلب</Label>
-                    <div className="p-2 bg-blue-50 border-2 border-blue-200 rounded font-bold text-blue-700 text-right">
-                      {calculateTotal().toLocaleString()} د.ع
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* استخدام OrderDetailsForm بدلاً من العرض المخصص */}
+            <OrderDetailsForm
+              formData={formData}
+              handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
+              setProductSelectOpen={setShowProductDialog}
+              isSubmittingState={isLoading}
+              isDeliveryPartnerSelected={true}
+              packageSizes={packageSizes}
+              loadingPackageSizes={false}
+              activePartner={activePartner || 'local'}
+              dataFetchError={null}
+              settings={settings}
+              discount={discount}
+              setDiscount={setDiscount}
+              subtotal={subtotal}
+              total={total}
+              customerData={customerData}
+              loyaltyDiscount={loyaltyDiscount}
+              applyLoyaltyDiscount={applyLoyaltyDiscount}
+              onToggleLoyaltyDiscount={() => setApplyLoyaltyDiscount(!applyLoyaltyDiscount)}
+              applyLoyaltyDelivery={applyLoyaltyDelivery}
+              onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
+            />
 
             {/* الأزرار */}
             <div className="flex gap-3 pt-4">
@@ -954,7 +456,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
               {canEdit && (
                 <Button
                   type="submit"
-                  disabled={isLoading || selectedProducts.length === 0}
+                  disabled={isLoading || cart.length === 0}
                   className="flex-1"
                 >
                   {isLoading ? (
@@ -975,12 +477,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         </DialogContent>
       </Dialog>
 
-      <ProductSelectionDialog
-        open={showProductDialog}
-        onOpenChange={setShowProductDialog}
-        onSelectProduct={handleProductSelect}
-        selectedProductIds={selectedProducts.map(p => ({ productId: p.productId, variantId: p.variantId }))}
-      />
+      {showProductDialog && (
+        <ProductSelectionDialog
+          open={showProductDialog}
+          onOpenChange={setShowProductDialog}
+          selectedItems={cart}
+        />
+      )}
     </>
   );
 };
