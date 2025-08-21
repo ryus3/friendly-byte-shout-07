@@ -1,32 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trash2, Plus, AlertTriangle, Package, User, MapPin, Calendar, DollarSign, Save, Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { AlertTriangle, Package, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { editAlWaseetOrder } from '@/lib/alwaseet-api';
+import { getCities, getRegionsByCity, getPackageSizes } from '@/lib/alwaseet-api';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import OrderDetailsForm from '@/components/quick-order/OrderDetailsForm';
+import CustomerInfoForm from '@/components/quick-order/CustomerInfoForm';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
+import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
-  const { cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes, waseetToken, activePartner, setActivePartner } = useAlWaseet();
-  const { products, updateOrder, settings, cart, clearCart, addToCart, removeFromCart } = useInventory();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
+  const { products, updateOrder, settings, cart, clearCart, addToCart, removeFromCart, orders } = useInventory();
   const { user, hasPermission } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    phone2: '',
+    second_phone: '',
     city_id: '',
     region_id: '',
     city: '',
@@ -41,46 +39,152 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     promocode: '',
     delivery_fee: 0
   });
-  const [orderItems, setOrderItems] = useState([]);
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingRegions, setIsLoadingRegions] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [originalData, setOriginalData] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [customerData, setCustomerData] = useState(null);
   const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(true);
   const [applyLoyaltyDelivery, setApplyLoyaltyDelivery] = useState(false);
+  const [errors, setErrors] = useState({});
+  
+  // States for cities and regions - نفس QuickOrderContent
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
+  const [dataFetchError, setDataFetchError] = useState(false);
 
-  // تحميل البيانات الأساسية عند فتح النافذة
+  // جلب البيانات عند تغيير شريك التوصيل - نفس QuickOrderContent
   useEffect(() => {
-    if (open) {
-      if (cities.length === 0) fetchCities();
-      if (packageSizes.length === 0) fetchPackageSizes();
-    }
-  }, [open, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
-
-  // معالجة العثور على المنطقة بعد جلب المناطق
-  useEffect(() => {
-    if (regions.length > 0 && originalData?.customerProvince && formData.city_id && !formData.region_id) {
-      const regionMatch = regions.find(r => {
-        const regionName = r.name || r.name_ar || r.region_name || '';
-        return regionName.toLowerCase().trim() === originalData.customerProvince.toLowerCase().trim() ||
-               originalData.customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-               regionName.toLowerCase().includes(originalData.customerProvince.toLowerCase());
-      });
-      
-      if (regionMatch) {
-        console.log('✅ تم العثور على المنطقة تلقائياً:', regionMatch);
-        setFormData(prev => ({ 
-          ...prev, 
-          region_id: regionMatch.id,
-          region: regionMatch.name || regionMatch.name_ar || regionMatch.region_name
-        }));
+    const loadInitialData = async () => {
+      if (activePartner === 'alwaseet' && waseetToken) {
+        // جلب المدن وأحجام الطلب
+        try {
+          setLoadingCities(true);
+          setLoadingPackageSizes(true);
+          
+          const citiesResponse = await getCities(waseetToken);
+          const packageSizesResponse = await getPackageSizes(waseetToken);
+          
+          if (citiesResponse.success) {
+            setCities(citiesResponse.data || []);
+          }
+          
+          if (packageSizesResponse.success) {
+            setPackageSizes(packageSizesResponse.data || []);
+          }
+          
+        } catch (error) {
+          console.error('خطأ في جلب البيانات الأولية:', error);
+          setDataFetchError(true);
+        } finally {
+          setLoadingCities(false);
+          setLoadingPackageSizes(false);
+        }
+      } else if (activePartner === 'local') {
+        // للشريك المحلي: استخدم محافظات العراق وأحجام افتراضية
+        setCities(iraqiProvinces.map(p => ({ id: p.id, name: p.name })));
+        setPackageSizes([
+          { id: 'small', name: 'صغير' },
+          { id: 'medium', name: 'عادي' },
+          { id: 'large', name: 'كبير' }
+        ]);
       }
+    };
+
+    if (open) {
+      loadInitialData();
     }
-  }, [regions, originalData, formData.city_id, formData.region_id]);
+  }, [activePartner, waseetToken, open]);
+
+  // جلب بيانات العميل عند إدخال رقم الهاتف - نظام موحد من QuickOrderContent
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      if (!formData.phone || formData.phone.length < 4) {
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+        return;
+      }
+      
+      const normalizedPhone = normalizePhone(formData.phone);
+      
+      if (!normalizedPhone) {
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+        return;
+      }
+      
+      try {
+        // حساب النقاط من الطلبات المكتملة
+        const completedOrders = orders?.filter(order => {
+          const orderPhone = normalizePhone(extractOrderPhone(order));
+          return orderPhone === normalizedPhone && 
+                 order.status === 'completed' && 
+                 order.receipt_received === true &&
+                 order.created_by === user?.id;
+        }) || [];
+        
+        const totalPoints = completedOrders.length * 250;
+        const totalSpent = completedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        
+        // تحديد المستوى
+        let currentTier = { name_ar: 'برونزي', name_en: 'BRNZ', discount_percentage: 0, free_delivery: false };
+        if (totalPoints >= 3000) {
+          currentTier = { name_ar: 'ماسي', name_en: 'DIAM', discount_percentage: 15, free_delivery: true };
+        } else if (totalPoints >= 1500) {
+          currentTier = { name_ar: 'ذهبي', name_en: 'GOLD', discount_percentage: 10, free_delivery: true };
+        } else if (totalPoints >= 750) {
+          currentTier = { name_ar: 'فضي', name_en: 'SILV', discount_percentage: 5, free_delivery: false };
+        }
+        
+        const customerInfo = {
+          phone: normalizedPhone,
+          total_points: totalPoints,
+          total_spent: totalSpent,
+          total_orders: completedOrders.length,
+          currentTier
+        };
+        
+        setCustomerData(customerInfo);
+        
+        // حساب خصم الولاء
+        const discountPercentage = currentTier.discount_percentage || 0;
+        if (discountPercentage > 0) {
+          const subtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+          const rawDiscount = (subtotal * discountPercentage) / 100;
+          const roundedDiscount = Math.round(rawDiscount / 500) * 500;
+          setLoyaltyDiscount(roundedDiscount);
+          setApplyLoyaltyDiscount(true);
+          setDiscount(roundedDiscount);
+        } else {
+          setLoyaltyDiscount(0);
+          setApplyLoyaltyDiscount(false);
+          setDiscount(0);
+        }
+        
+        if (currentTier.free_delivery) {
+          setApplyLoyaltyDelivery(true);
+        } else {
+          setApplyLoyaltyDelivery(false);
+        }
+        
+      } catch (error) {
+        console.error('خطأ في حساب بيانات العميل:', error);
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+      }
+    };
+
+    fetchCustomerData();
+  }, [formData.phone, orders, user?.id, cart]);
 
   // تهيئة النموذج عند فتح النافذة - إصلاح شامل مع تطبيق منطق QuickOrderContent
   const initializeForm = useCallback(async () => {
@@ -121,7 +225,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const initialFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
-      phone2: order.customer_phone2 || '',
+      second_phone: order.customer_phone2 || '',
       city_id: '',
       region_id: '',
       city: order.customer_city || '',
@@ -175,17 +279,20 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // معالجة تغيير القوائم المنسدلة
+  // معالجة تغيير القوائم المنسدلة - نفس QuickOrderContent
   const handleSelectChange = async (value, name) => {
     setFormData(prev => ({ ...prev, [name]: value }));
     
     // جلب المناطق عند تغيير المدينة
-    if (name === 'city_id' && value) {
-      setIsLoadingRegions(true);
+    if (name === 'city_id' && value && activePartner === 'alwaseet') {
+      setLoadingRegions(true);
       try {
-        await fetchRegions(value);
-        // مسح المنطقة المحددة
-        setFormData(prev => ({ ...prev, region_id: '', region: '' }));
+        const response = await getRegionsByCity(waseetToken, value);
+        if (response.success) {
+          setRegions(response.data || []);
+          // مسح المنطقة المحددة
+          setFormData(prev => ({ ...prev, region_id: '', region: '' }));
+        }
       } catch (error) {
         console.error('خطأ في جلب المناطق:', error);
         toast({
@@ -194,8 +301,84 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           variant: "destructive"
         });
       } finally {
-        setIsLoadingRegions(false);
+        setLoadingRegions(false);
       }
+    }
+  };
+
+  // دالة partnerSpecificFields من QuickOrderContent
+  const partnerSpecificFields = () => {
+    if (activePartner === 'alwaseet') {
+      return (
+        <>
+          <div>
+            <Label htmlFor="city_id">المدينة *</Label>
+            <SearchableSelectFixed
+              value={formData.city_id}
+              onValueChange={(value) => handleSelectChange(value, 'city_id')}
+              options={cities.map(city => ({ value: city.id, label: city.name }))}
+              placeholder={loadingCities ? "جاري التحميل..." : "اختر المدينة"}
+              searchPlaceholder="البحث في المدن..."
+              emptyText="لا توجد مدن"
+              disabled={!canEdit || isLoading || loadingCities}
+              className="w-full"
+            />
+            {errors.city_id && <p className="text-sm text-red-500 mt-1">{errors.city_id}</p>}
+          </div>
+          <div>
+            <Label htmlFor="region_id">المنطقة *</Label>
+            <SearchableSelectFixed
+              value={formData.region_id}
+              onValueChange={(value) => handleSelectChange(value, 'region_id')}
+              options={regions.map(region => ({ value: region.id, label: region.name }))}
+              placeholder={loadingRegions ? "جاري التحميل..." : formData.city_id ? "اختر المنطقة" : "اختر المدينة أولاً"}
+              searchPlaceholder="البحث في المناطق..."
+              emptyText="لا توجد مناطق"
+              disabled={!canEdit || isLoading || loadingRegions || !formData.city_id}
+              className="w-full"
+            />
+            {errors.region_id && <p className="text-sm text-red-500 mt-1">{errors.region_id}</p>}
+          </div>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <div>
+            <Label htmlFor="city">المحافظة *</Label>
+            <SearchableSelectFixed
+              value={formData.city}
+              onValueChange={(value) => handleSelectChange(value, 'city')}
+              options={iraqiProvinces.map(province => ({ value: province.name, label: province.name }))}
+              placeholder="اختر المحافظة"
+              searchPlaceholder="البحث في المحافظات..."
+              emptyText="لا توجد محافظات"
+              disabled={!canEdit || isLoading}
+              className="w-full"
+            />
+            {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
+          </div>
+          <div>
+            <Label htmlFor="region">المنطقة *</Label>
+            <SearchableSelectFixed
+              value={formData.region}
+              onValueChange={(value) => handleSelectChange(value, 'region')}
+              options={formData.city ? 
+                iraqiProvinces.find(p => p.name === formData.city)?.regions?.map(region => ({ 
+                  value: region, 
+                  label: region 
+                })) || [] : []
+              }
+              placeholder={formData.city ? "اختر المنطقة" : "اختر المحافظة أولاً"}
+              searchPlaceholder="البحث في المناطق..."
+              emptyText="لا توجد مناطق"
+              disabled={!canEdit || isLoading || !formData.city}
+              className="w-full"
+            />
+            {errors.region && <p className="text-sm text-red-500 mt-1">{errors.region}</p>}
+          </div>
+        </>
+      );
     }
   };
 
@@ -316,108 +499,20 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* معلومات العميل */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="w-4 h-4" />
-                  <h3 className="font-semibold">معلومات العميل</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="name">اسم العميل *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">رقم الهاتف *</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone2">رقم الهاتف الثاني (اختياري)</Label>
-                    <Input
-                      id="phone2"
-                      name="phone2"
-                      value={formData.phone2}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      placeholder="رقم الهاتف الثاني (اختياري)"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* استخدام CustomerInfoForm بدلاً من النموذج المخصص */}
+            <CustomerInfoForm
+              formData={formData}
+              handleChange={handleChange}
+              errors={errors}
+              isDeliveryPartnerSelected={true}
+              isSubmittingState={isLoading}
+              customerData={customerData}
+              loyaltyDiscount={loyaltyDiscount}
+              applyLoyaltyDiscount={applyLoyaltyDiscount}
+              partnerSpecificFields={partnerSpecificFields}
+            />
 
-            {/* معلومات التوصيل */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="w-4 h-4" />
-                  <h3 className="font-semibold">معلومات التوصيل</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="city">المدينة</Label>
-                    <Input
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="region">المنطقة</Label>
-                    <Input
-                      id="region"
-                      name="region"
-                      value={formData.region}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="address">العنوان التفصيلي</Label>
-                    <Textarea
-                      id="address"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      placeholder="العنوان التفصيلي للعميل..."
-                      rows={3}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="notes">ملاحظات إضافية</Label>
-                    <Textarea
-                      id="notes"
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleChange}
-                      disabled={!canEdit || isLoading}
-                      placeholder="ملاحظات أو تعليمات خاصة..."
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* استخدام OrderDetailsForm بدلاً من العرض المخصص */}
+            {/* استخدام OrderDetailsForm مع جميع المعاملات */}
             <OrderDetailsForm
               formData={formData}
               handleChange={handleChange}
@@ -426,9 +521,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
               isSubmittingState={isLoading}
               isDeliveryPartnerSelected={true}
               packageSizes={packageSizes}
-              loadingPackageSizes={false}
+              loadingPackageSizes={loadingPackageSizes}
               activePartner={activePartner || 'local'}
-              dataFetchError={null}
+              dataFetchError={dataFetchError}
               settings={settings}
               discount={discount}
               setDiscount={setDiscount}
@@ -477,13 +572,35 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         </DialogContent>
       </Dialog>
 
-      {showProductDialog && (
-        <ProductSelectionDialog
-          open={showProductDialog}
-          onOpenChange={setShowProductDialog}
-          selectedItems={cart}
-        />
-      )}
+      {/* ProductSelectionDialog مع الربط الصحيح */}
+      <ProductSelectionDialog
+        open={showProductDialog}
+        onOpenChange={setShowProductDialog}
+        products={products}
+        onSelectProduct={(selectedProducts) => {
+          selectedProducts.forEach(productItem => {
+            addToCart(
+              { 
+                id: productItem.productId, 
+                name: productItem.productName,
+                images: productItem.image ? [productItem.image] : []
+              },
+              { 
+                id: productItem.variantId,
+                sku: productItem.variantId, 
+                price: productItem.price, 
+                color: productItem.color, 
+                size: productItem.size,
+                barcode: productItem.barcode || '',
+                quantity: 100 // مخزون افتراضي
+              },
+              productItem.quantity,
+              false
+            );
+          });
+          setShowProductDialog(false);
+        }}
+      />
     </>
   );
 };
