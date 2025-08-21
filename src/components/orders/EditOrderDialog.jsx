@@ -564,6 +564,62 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 customerData={customerData}
                 loyaltyDiscount={loyaltyDiscount}
                 applyLoyaltyDiscount={applyLoyaltyDiscount}
+                partnerSpecificFields={() => {
+                  if (activePartner === 'alwaseet') {
+                    return (
+                      <>
+                        <div className="space-y-2">
+                          <label htmlFor="city">المحافظة</label>
+                          <select
+                            value={formData.city_id}
+                            onChange={(e) => handleSelectChange('city_id', e.target.value)}
+                            disabled={isSubmitting}
+                          >
+                            <option value="">اختر المحافظة</option>
+                            {cities.map((city) => (
+                              <option key={city.id} value={city.id.toString()}>
+                                {city.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="region">المنطقة</label>
+                          <select
+                            value={formData.region_id}
+                            onChange={(e) => handleSelectChange('region_id', e.target.value)}
+                            disabled={isSubmitting || !formData.city_id}
+                          >
+                            <option value="">اختر المنطقة</option>
+                            {regions.map((region) => (
+                              <option key={region.id} value={region.id.toString()}>
+                                {region.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <div className="space-y-2">
+                        <label htmlFor="city">المحافظة</label>
+                        <select
+                          value={formData.city}
+                          onChange={(e) => handleSelectChange('city', e.target.value)}
+                          disabled={isSubmitting}
+                        >
+                          <option value="">اختر المحافظة</option>
+                          {iraqiProvinces.map((province) => (
+                            <option key={province.id} value={province.name}>
+                              {province.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  }
+                }}
               />
 
               {/* Order Details */}
