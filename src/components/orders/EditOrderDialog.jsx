@@ -23,6 +23,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    phone2: '',
     city_id: '',
     region_id: '',
     city: '',
@@ -51,6 +52,27 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   }, [open, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
 
+  // معالجة العثور على المنطقة بعد جلب المناطق
+  useEffect(() => {
+    if (regions.length > 0 && originalData?.customerProvince && formData.city_id && !formData.region_id) {
+      const regionMatch = regions.find(r => {
+        const regionName = r.name || r.name_ar || r.region_name || '';
+        return regionName.toLowerCase().trim() === originalData.customerProvince.toLowerCase().trim() ||
+               originalData.customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
+               regionName.toLowerCase().includes(originalData.customerProvince.toLowerCase());
+      });
+      
+      if (regionMatch) {
+        console.log('✅ تم العثور على المنطقة تلقائياً:', regionMatch);
+        setFormData(prev => ({ 
+          ...prev, 
+          region_id: regionMatch.id,
+          region: regionMatch.name || regionMatch.name_ar || regionMatch.region_name
+        }));
+      }
+    }
+  }, [regions, originalData, formData.city_id, formData.region_id]);
+
   // تهيئة النموذج عند فتح النافذة
   const initializeForm = useCallback(async () => {
     if (!order || !open) return;
@@ -58,19 +80,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     console.log('🔄 تهيئة نموذج تعديل الطلب:', order);
     
     // تحديد ما إذا كان يمكن تعديل الطلب
-    const editable = order.status === 'pending';
+    const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
     setCanEdit(editable);
-    
-    // حفظ البيانات الأصلية للمقارنة
-    setOriginalData({
-      customer_name: order.customer_name || '',
-      customer_phone: order.customer_phone || '',
-      customer_city: order.customer_city || '',
-      customer_province: order.customer_province || '',
-      customer_address: order.customer_address || '',
-      total_amount: order.total_amount || 0,
-      delivery_fee: order.delivery_fee || 0
-    });
     
     // استخراج البيانات من الطلب - تحسين الاستخراج من customer_address
     let customerCity = order.customer_city || '';
@@ -92,11 +103,27 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     }
     
+    // حفظ البيانات الأصلية للمقارنة
+    const originalDataObj = {
+      customerName: order.customer_name || '',
+      customerPhone: order.customer_phone || '',
+      customerPhone2: order.customer_phone2 || '',
+      customerCity: customerCity,
+      customerProvince: customerProvince,
+      customerAddress: order.customer_address || '',
+      totalAmount: order.total_amount || 0,
+      deliveryFee: order.delivery_fee || 0,
+      trackingNumber: order.tracking_number || '',
+      deliveryPartner: order.delivery_partner || ''
+    };
+    setOriginalData(originalDataObj);
+    
     console.log('📍 البيانات المستخرجة:', {
       customerCity,
       customerProvince,
       address: order.customer_address,
-      delivery_partner: order.delivery_partner
+      delivery_partner: order.delivery_partner,
+      tracking_number: order.tracking_number
     });
     
     // البحث عن city_id و region_id من البيانات
@@ -123,25 +150,6 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         try {
           await fetchRegions(cityId);
           console.log('✅ تم جلب المناطق للمدينة:', cityId);
-          
-          // محاولة العثور على المنطقة المطابقة
-          setTimeout(() => {
-            if (customerProvince && regions.length > 0) {
-              const regionMatch = regions.find(r => {
-                const regionName = r.name || r.name_ar || r.region_name || '';
-                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
-                       customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-                       regionName.toLowerCase().includes(customerProvince.toLowerCase());
-              });
-              
-              if (regionMatch) {
-                regionId = regionMatch.id;
-                console.log('✅ تم العثور على المنطقة:', regionMatch);
-                setFormData(prev => ({ ...prev, region_id: regionId }));
-              }
-            }
-          }, 500);
-          
         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
         } finally {
@@ -184,6 +192,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const initialFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
+      phone2: order.customer_phone2 || '',
       city_id: cityId,
       region_id: regionId,
       city: customerCity,
@@ -196,7 +205,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       details: order.items?.map(item => 
         `${item.productname || item.product_name || 'منتج'} × ${item.quantity || 1}`
       ).join(', ') || '',
-      delivery_fee: order.delivery_fee || 0
+      delivery_fee: order.delivery_fee || settings?.deliveryFee || 0
     };
     
     setFormData(initialFormData);
@@ -216,7 +225,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setOrderItems(orderItemsData);
     }
     
-  }, [order, open, cities, regions, fetchRegions]);
+  }, [order, open, cities, fetchRegions, packageSizes, settings]);
 
   // تهيئة النموذج عند تغيير الطلب أو فتح النافذة
   useEffect(() => {
@@ -369,6 +378,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       const updateData = {
         customer_name: formData.name,
         customer_phone: formData.phone,
+        customer_phone2: formData.phone2,
         customer_city: formData.city || (formData.city_id ? 
           cities.find(c => c.id === formData.city_id)?.name : ''),
         customer_province: formData.region || (formData.region_id ? 
@@ -395,6 +405,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           tracking_number: order.tracking_number, // Will be mapped to qr_id
           name: formData.name, // Will be mapped to client_name
           phone: formData.phone, // Will be mapped to client_mobile
+          phone2: formData.phone2, // Will be mapped to client_mobile2
           city_id: parseInt(formData.city_id) || 0,
           region_id: parseInt(formData.region_id) || 0,
           address: formData.address, // Will be mapped to location
@@ -448,362 +459,320 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[95vh]">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              تعديل الطلب {order?.tracking_number || order?.order_number}
+              <Package className="w-5 h-5" />
+              تعديل الطلب {order?.order_number}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
-            {!canEdit && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <AlertTriangle className="h-5 w-5" />
-                  <span className="font-medium">لا يمكن تعديل هذا الطلب</span>
-                </div>
-                <p className="text-sm text-yellow-700 mt-1">
-                  يمكن تعديل الطلبات في مرحلة "قيد التجهيز" فقط
+          {!canEdit && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <p className="text-yellow-800 font-medium">
+                  هذا الطلب لا يمكن تعديله لأن حالته "{order?.status}"
                 </p>
               </div>
-            )}
+            </div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* معلومات العميل */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <User className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold">معلومات العميل</h3>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* معلومات العميل */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <User className="w-4 h-4" />
+                  <h3 className="font-semibold">معلومات العميل</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">اسم العميل *</Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      required
+                    />
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="phone">رقم الهاتف *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      required
+                    />
+                  </div>
+                  {formData.phone2 && (
                     <div>
-                      <Label htmlFor="name">اسم العميل</Label>
+                      <Label htmlFor="phone2">رقم الهاتف الثاني</Label>
                       <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
+                        id="phone2"
+                        name="phone2"
+                        value={formData.phone2}
                         onChange={handleChange}
-                        disabled={!canEdit}
-                        required
+                        disabled={!canEdit || isLoading}
                       />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="phone">رقم الهاتف</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        disabled={!canEdit}
-                        required
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* معلومات التوصيل */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold">معلومات التوصيل</h3>
-                  </div>
-                  
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
-                       <Label htmlFor="city">المدينة * (الأصلية: {originalData?.customer_city || 'غير محدد'})</Label>
-                       {order?.delivery_partner === 'محلي' ? (
-                         <Select value={formData.city} onValueChange={(value) => handleSelectChange(value, 'city')} disabled={!canEdit}>
-                           <SelectTrigger>
-                             <SelectValue placeholder="اختر المدينة" />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {iraqiProvinces.map((province) => (
-                               <SelectItem key={province.id} value={province.name}>
-                                 {province.name}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                       ) : (
-                         <>
-                           {cities.length > 0 ? (
-                             <SearchableSelectFixed
-                               value={formData.city_id}
-                               onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                               disabled={!canEdit}
-                               options={cities.map(city => ({
-                                 value: city.id,
-                                 label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
-                               }))}
-                               placeholder="اختر المدينة"
-                               emptyText="لا توجد مدن متاحة"
-                               searchPlaceholder="البحث في المدن..."
-                               className="w-full"
-                             />
-                           ) : (
-                             <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
-                               <Loader2 className="h-4 w-4 animate-spin" />
-                               <span className="text-sm">جاري تحميل المدن...</span>
-                             </div>
-                           )}
-                           {formData.city && (
-                             <div className="text-sm text-muted-foreground mt-1">
-                               المدينة المحددة: {formData.city}
-                             </div>
-                           )}
-                         </>
-                       )}
-                     </div>
-                    
-                     <div>
-                       <Label htmlFor="region">المنطقة * (الأصلية: {originalData?.customer_province || 'غير محدد'})</Label>
-                       {order?.delivery_partner === 'محلي' ? (
-                         <Input
-                           id="region"
-                           name="region"
-                           value={formData.region}
-                           onChange={handleChange}
-                           disabled={!canEdit}
-                           placeholder="أدخل المنطقة"
-                         />
-                       ) : (
-                         <>
-                           {isLoadingRegions ? (
-                             <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
-                               <Loader2 className="h-4 w-4 animate-spin" />
-                               <span className="text-sm">جاري تحميل المناطق...</span>
-                             </div>
-                           ) : regions.length > 0 ? (
-                             <SearchableSelectFixed
-                               value={formData.region_id}
-                               onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                               disabled={!canEdit || !formData.city_id}
-                               options={regions.map(region => ({
-                                 value: region.id,
-                                 label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
-                               }))}
-                               placeholder="اختر المنطقة"
-                               emptyText="لا توجد مناطق متاحة"
-                               searchPlaceholder="البحث في المناطق..."
-                               className="w-full"
-                             />
-                           ) : formData.city_id ? (
-                             <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
-                               <span className="text-sm">لا توجد مناطق متاحة لهذه المدينة</span>
-                             </div>
-                           ) : (
-                             <Input
-                               value=""
-                               placeholder="اختر المدينة أولاً"
-                               disabled={true}
-                               className="bg-muted"
-                             />
-                           )}
-                           {formData.region && (
-                             <div className="text-sm text-muted-foreground mt-1">
-                               المنطقة المحددة: {formData.region}
-                             </div>
-                           )}
-                         </>
-                       )}
-                     </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label htmlFor="address">العنوان التفصيلي</Label>
-                      <Textarea
-                        id="address"
-                        name="address"
-                        value={formData.address}
-                        onChange={handleChange}
-                        disabled={!canEdit}
-                        rows={3}
-                      />
-                    </div>
-                    
-                     <div>
-                       <Label htmlFor="size">حجم الطلب * (الأصلي: {order?.delivery_partner_data?.package_size || 'غير محدد'})</Label>
-                       {order?.delivery_partner === 'محلي' ? (
-                         <Input
-                           value="عادي (توصيل محلي)"
-                           disabled={true}
-                           className="bg-muted"
-                         />
-                       ) : packageSizes.length > 0 ? (
-                         <SearchableSelectFixed
-                           value={formData.size}
-                           onValueChange={(value) => handleSelectChange(value, 'size')}
-                           disabled={!canEdit}
-                           options={packageSizes.map(size => ({
-                             value: size.id,
-                             label: size.name || `حجم ${size.id}`
-                           }))}
-                           placeholder="اختر حجم الطلب"
-                           emptyText="لا توجد أحجام متاحة"
-                           searchPlaceholder="البحث في الأحجام..."
-                           className="w-full"
-                         />
-                       ) : (
-                         <div className="flex items-center gap-2 p-3 border rounded-md bg-muted">
-                           <Loader2 className="h-4 w-4 animate-spin" />
-                           <span className="text-sm">جاري تحميل أحجام الطلبات...</span>
-                         </div>
-                       )}
-                     </div>
-                    
-                    <div>
-                      <Label htmlFor="delivery_fee">أجور التوصيل</Label>
-                      <Input
-                        id="delivery_fee"
-                        name="delivery_fee"
-                        type="number"
-                        value={formData.delivery_fee}
-                        onChange={handleChange}
-                        disabled={!canEdit}
-                        min="0"
-                      />
-                    </div>
-                    
-                    <div className="md:col-span-2">
-                      <Label htmlFor="notes">ملاحظات</Label>
-                      <Textarea
-                        id="notes"
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleChange}
-                        disabled={!canEdit}
-                        rows={2}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* المنتجات */}
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">المنتجات</h3>
-                    </div>
-                    
-                    {canEdit && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowProductDialog(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        إضافة منتج
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {selectedProducts.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      لا توجد منتجات مضافة
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {selectedProducts.map((item, index) => (
-                        <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="font-medium">{item.productName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {item.color && `اللون: ${item.color}`} {item.size && `القياس: ${item.size}`}
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Label>الكمية:</Label>
-                            <Input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateProductQuantity(index, parseInt(e.target.value) || 1)}
-                              disabled={!canEdit}
-                              min="1"
-                              className="w-20"
-                            />
-                          </div>
-                          
-                          <div className="text-lg font-semibold">
-                            {(item.quantity * item.price).toLocaleString()} د.ع
-                          </div>
-                          
-                          {canEdit && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeProduct(index)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      
-                      {/* الإجمالي */}
-                      <div className="border-t pt-4">
-                        <div className="flex justify-between items-center text-lg font-semibold">
-                          <span>الإجمالي النهائي:</span>
-                          <span>{calculateTotal().toLocaleString()} د.ع</span>
-                        </div>
-                      </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              {/* أزرار التحكم */}
-              <div className="flex justify-end gap-2 pt-4 border-t">
+            {/* معلومات التوصيل */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-4 h-4" />
+                  <h3 className="font-semibold">معلومات التوصيل</h3>
+                  {order?.delivery_partner && (
+                    <Badge variant="outline" className="mr-auto">
+                      {order.delivery_partner}
+                    </Badge>
+                  )}
+                  {order?.tracking_number && (
+                    <Badge variant="secondary">
+                      رقم التتبع: {order.tracking_number}
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
+                    <>
+                      <div>
+                        <Label htmlFor="city_id">المدينة *</Label>
+                        <SearchableSelectFixed
+                          options={cities.map(city => ({
+                            value: city.id,
+                            label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
+                          }))}
+                          value={formData.city_id}
+                          onValueChange={(value) => handleSelectChange(value, 'city_id')}
+                          placeholder="اختر المدينة"
+                          disabled={!canEdit || isLoading}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="region_id">المنطقة *</Label>
+                        <SearchableSelectFixed
+                          options={regions.map(region => ({
+                            value: region.id,
+                            label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
+                          }))}
+                          value={formData.region_id}
+                          onValueChange={(value) => handleSelectChange(value, 'region_id')}
+                          placeholder={isLoadingRegions ? "جاري التحميل..." : "اختر المنطقة"}
+                          disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="size">حجم الطلب</Label>
+                        <Select
+                          value={formData.size?.toString()}
+                          onValueChange={(value) => handleSelectChange(value, 'size')}
+                          disabled={!canEdit || isLoading}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="اختر حجم الطلب" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {packageSizes.map(size => (
+                              <SelectItem key={size.id} value={size.id?.toString()}>
+                                {size.name || size.package_name || `حجم ${size.id}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                  <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
+                    <Label htmlFor="address">العنوان التفصيلي *</Label>
+                    <Textarea
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      placeholder="العنوان التفصيلي للعميل..."
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="notes">ملاحظات إضافية</Label>
+                    <Textarea
+                      id="notes"
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      placeholder="ملاحظات أو تعليمات خاصة..."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* المنتجات */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4" />
+                    <h3 className="font-semibold">المنتجات</h3>
+                    <Badge variant="secondary">
+                      {selectedProducts.length} منتج
+                    </Badge>
+                  </div>
+                  {canEdit && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowProductDialog(true)}
+                      disabled={isLoading}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      إضافة منتج
+                    </Button>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {selectedProducts.map((product, index) => (
+                    <div key={index} className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+                      <div className="flex-1">
+                        <p className="font-medium">{product.productName}</p>
+                        {(product.color || product.size) && (
+                          <p className="text-sm text-gray-600">
+                            {product.color && `اللون: ${product.color}`}
+                            {product.color && product.size && ' | '}
+                            {product.size && `المقاس: ${product.size}`}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600">
+                          {product.price.toLocaleString()} د.ع × {product.quantity} = {(product.price * product.quantity).toLocaleString()} د.ع
+                        </p>
+                      </div>
+                      
+                      {canEdit && (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={product.quantity}
+                            onChange={(e) => updateProductQuantity(index, parseInt(e.target.value))}
+                            className="w-16 text-center"
+                            disabled={isLoading}
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => removeProduct(index)}
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  {selectedProducts.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>لم يتم اختيار أي منتجات</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* الإجمالي */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="w-4 h-4" />
+                  <h3 className="font-semibold">الإجمالي</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="delivery_fee">رسوم التوصيل</Label>
+                    <Input
+                      id="delivery_fee"
+                      name="delivery_fee"
+                      type="number"
+                      value={formData.delivery_fee}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <Label>المجموع الفرعي</Label>
+                    <div className="p-2 bg-gray-50 rounded border text-right">
+                      {selectedProducts.reduce((sum, item) => sum + (item.quantity * item.price), 0).toLocaleString()} د.ع
+                    </div>
+                  </div>
+                  <div>
+                    <Label>إجمالي الطلب</Label>
+                    <div className="p-2 bg-blue-50 border-2 border-blue-200 rounded font-bold text-blue-700 text-right">
+                      {calculateTotal().toLocaleString()} د.ع
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* الأزرار */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading}
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+              {canEdit && (
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  type="submit"
+                  disabled={isLoading || selectedProducts.length === 0}
+                  className="flex-1"
                 >
-                  إلغاء
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      حفظ التغييرات
+                    </>
+                  )}
                 </Button>
-                
-                {canEdit && (
-                  <Button
-                    type="submit"
-                    disabled={isLoading || selectedProducts.length === 0}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        جاري الحفظ...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="mr-2 h-4 w-4" />
-                        حفظ التعديلات
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </form>
-          </div>
+              )}
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 
-      {/* نافذة اختيار المنتجات */}
       <ProductSelectionDialog
-        isOpen={showProductDialog}
-        onClose={() => setShowProductDialog(false)}
-        onProductSelect={handleProductSelect}
-        products={products}
+        open={showProductDialog}
+        onOpenChange={setShowProductDialog}
+        onSelectProduct={handleProductSelect}
+        selectedProductIds={selectedProducts.map(p => ({ productId: p.productId, variantId: p.variantId }))}
       />
     </>
   );

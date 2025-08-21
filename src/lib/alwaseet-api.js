@@ -146,3 +146,15 @@ export const editAlWaseetOrder = async (orderData, token) => {
   
   return handleApiCall('edit-order', 'POST', token, formattedData, { token });
 };
+
+export const getMerchantOrders = async (token) => {
+  return handleApiCall('merchant-orders', 'GET', token, null, { token });
+};
+
+export const getOrderById = async (token, orderId) => {
+  return handleApiCall('merchant-orders', 'GET', token, null, { token, order_id: orderId });
+};
+
+export const getOrderStatuses = async (token) => {
+  return handleApiCall('order-statuses', 'GET', token);
+};

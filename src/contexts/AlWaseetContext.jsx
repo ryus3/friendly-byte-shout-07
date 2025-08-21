@@ -188,13 +188,55 @@ export const AlWaseetProvider = ({ children }) => {
   }, [activePartner, deliveryPartners, user, setActivePartner]);
   
   const syncOrders = async () => {
-    if (activePartner === 'local' || !isLoggedIn) {
+    if (activePartner === 'local' || !isLoggedIn || !token) {
         toast({ title: "غير متاح", description: "مزامنة الطلبات متاحة فقط عند تسجيل الدخول لشركة توصيل." });
         return [];
     }
-    toast({ title: "🚧 قيد التطوير", description: "مزامنة الطلبات قيد التطوير." });
-    return [];
+    
+    try {
+      setLoading(true);
+      const orders = await AlWaseetAPI.getMerchantOrders(token);
+      toast({ 
+        title: "مزامنة الطلبات", 
+        description: `تم جلب ${orders.length} طلب من شركة التوصيل`,
+        variant: "success"
+      });
+      return orders;
+    } catch (error) {
+      toast({ 
+        title: "خطأ في المزامنة", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const getMerchantOrders = useCallback(async () => {
+    if (token) {
+      try {
+        const orders = await AlWaseetAPI.getMerchantOrders(token);
+        return { success: true, data: orders };
+      } catch (error) {
+        return { success: false, message: error.message };
+      }
+    }
+    return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
+  }, [token]);
+
+  const getOrderStatuses = useCallback(async () => {
+    if (token) {
+      try {
+        const statuses = await AlWaseetAPI.getOrderStatuses(token);
+        return { success: true, data: statuses };
+      } catch (error) {
+        return { success: false, message: error.message };
+      }
+    }
+    return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
+  }, [token]);
 
   const fetchCities = useCallback(async () => {
     if (token) {
@@ -305,6 +347,7 @@ export const AlWaseetProvider = ({ children }) => {
   const value = {
     isLoggedIn,
     token,
+    waseetToken: token, // Alias for compatibility
     waseetUser,
     loading,
     login,
@@ -324,6 +367,8 @@ export const AlWaseetProvider = ({ children }) => {
     fetchPackageSizes,
     createAlWaseetOrder: createOrder,
     editAlWaseetOrder: editOrder,
+    getMerchantOrders,
+    getOrderStatuses,
   };
 
   return (

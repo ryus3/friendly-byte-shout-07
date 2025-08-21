@@ -87,6 +87,38 @@ serve(async (req) => {
       }));
     }
 
+    // Handle merchant-orders endpoint
+    if (endpoint === 'merchant-orders' && responseData.data) {
+      // Normalize the orders data structure
+      responseData.data = responseData.data.map((order: any) => ({
+        id: order.id,
+        qr_id: order.qr_id || order.tracking_number,
+        client_name: order.client_name,
+        client_mobile: order.client_mobile,
+        client_mobile2: order.client_mobile2,
+        city_name: order.city_name,
+        region_name: order.region_name,
+        city_id: order.city_id,
+        region_id: order.region_id,
+        location: order.location,
+        type_name: order.type_name,
+        items_number: order.items_number,
+        price: order.price,
+        delivery_price: order.delivery_price,
+        package_size: order.package_size,
+        merchant_notes: order.merchant_notes,
+        issue_notes: order.issue_notes,
+        status_id: order.status_id,
+        status: order.status,
+        replacement: order.replacement,
+        created_at: order.created_at,
+        updated_at: order.updated_at,
+        has_merchant_fin_record: order.has_merchant_fin_record,
+        deliver_confirmed_fin: order.deliver_confirmed_fin,
+        merchant_invoice_id: order.merchant_invoice_id
+      }));
+    }
+
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
