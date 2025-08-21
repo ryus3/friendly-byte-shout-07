@@ -24,7 +24,7 @@ import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
   const { user } = useAuth();
-  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser } = useAlWaseet();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
@@ -822,6 +822,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
+        // مزامنة فورية بعد إنشاء الطلب في الوسيط لتحديث الحالة
+        if (activePartner === 'alwaseet' && trackingNumber && syncOrderByTracking) {
+          setTimeout(async () => {
+            try {
+              console.log(`🔄 مزامنة فورية للطلب الجديد: ${trackingNumber}`);
+              const syncResult = await syncOrderByTracking(trackingNumber);
+              if (syncResult) {
+                console.log(`✅ تم تحديث حالة الطلب: ${syncResult.local_status}`);
+              }
+            } catch (error) {
+              console.error('❌ خطأ في المزامنة الفورية:', error);
+            }
+          }, 3000); // انتظار 3 ثوانٍ للسماح لشركة التوصيل بمعالجة الطلب
+        }
+        
         // إشعار محسن مع QR ID
         toast({ 
           title: (
@@ -835,6 +850,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <p><strong>QR ID:</strong> {result.qr_id || result.trackingNumber}</p>
               <p><strong>العميل:</strong> {formData.name}</p>
               <p><strong>المبلغ:</strong> {Math.round(finalTotal).toLocaleString()} د.ع</p>
+              {activePartner === 'alwaseet' && <p className="text-xs text-muted-foreground">سيتم تحديث حالة الطلب تلقائياً خلال دقائق...</p>}
             </div>
           ),
           variant: 'success',

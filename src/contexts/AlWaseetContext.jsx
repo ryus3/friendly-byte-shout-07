@@ -17,7 +17,8 @@ export const AlWaseetProvider = ({ children }) => {
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'alwaseet');
-  const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 3600000); // Default to 1 hour
+  const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 15000); // Default to 15 seconds for fast testing
+  const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -187,22 +188,115 @@ export const AlWaseetProvider = ({ children }) => {
     toast({ title: "تم تسجيل الخروج", description: `تم تسجيل الخروج من ${partnerName}.` });
   }, [activePartner, deliveryPartners, user, setActivePartner]);
   
-  const syncOrders = async () => {
+  // تحميل حالات الطلبات وإنشاء خريطة التطابق
+  const loadOrderStatuses = useCallback(async () => {
+    if (!token) return;
+    
+    try {
+      console.log('🔄 تحميل حالات الطلبات من الوسيط...');
+      const statuses = await AlWaseetAPI.getOrderStatuses(token);
+      
+      // إنشاء خريطة مطابقة الحالات
+      const statusMap = new Map();
+      statuses.forEach(status => {
+        const statusText = status.status?.toLowerCase() || '';
+        
+        // مطابقة حالات الوسيط مع حالاتنا المحلية
+        if (statusText.includes('استلام') && statusText.includes('مندوب')) {
+          statusMap.set(status.id, 'shipped');
+        } else if (statusText.includes('تسليم') || statusText.includes('مسلم')) {
+          statusMap.set(status.id, 'delivered');
+        } else if (statusText.includes('ملغي') || statusText.includes('إلغاء')) {
+          statusMap.set(status.id, 'cancelled');
+        } else if (statusText.includes('راجع') || statusText.includes('مرجع')) {
+          statusMap.set(status.id, 'returned');
+        } else if (statusText.includes('جاري') || statusText.includes('توصيل')) {
+          statusMap.set(status.id, 'delivery');
+        } else {
+          statusMap.set(status.id, 'pending');
+        }
+      });
+      
+      setOrderStatusesMap(statusMap);
+      console.log('✅ تم تحميل حالات الطلبات:', statusMap);
+      return statusMap;
+    } catch (error) {
+      console.error('❌ خطأ في تحميل حالات الطلبات:', error);
+      return new Map();
+    }
+  }, [token]);
+
+  // مزامنة الطلبات مع تحديث الحالات في قاعدة البيانات
+  const syncAndApplyOrders = async () => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
-        toast({ title: "غير متاح", description: "مزامنة الطلبات متاحة فقط عند تسجيل الدخول لشركة توصيل." });
-        return [];
+      toast({ title: "غير متاح", description: "مزامنة الطلبات متاحة فقط عند تسجيل الدخول لشركة توصيل." });
+      return [];
     }
     
     try {
       setLoading(true);
-      const orders = await AlWaseetAPI.getMerchantOrders(token);
+      console.log('🔄 بدء المزامنة الشاملة للطلبات...');
+      
+      // تحميل حالات الطلبات إذا لم تكن محملة
+      let statusMap = orderStatusesMap;
+      if (statusMap.size === 0) {
+        statusMap = await loadOrderStatuses();
+      }
+      
+      // جلب طلبات الوسيط
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط`);
+      
+      let updatedCount = 0;
+      
+      // تحديث حالة كل طلب في قاعدة البيانات
+      for (const waseetOrder of waseetOrders) {
+        const trackingNumber = waseetOrder.qr_id || waseetOrder.tracking_number;
+        if (!trackingNumber) continue;
+        
+        const waseetStatusId = waseetOrder.status_id || waseetOrder.status;
+        const localStatus = statusMap.get(String(waseetStatusId)) || 'pending';
+        
+        try {
+          // البحث عن الطلب في قاعدة البيانات باستخدام tracking_number
+          const { data: existingOrder } = await supabase
+            .from('orders')
+            .select('id, status, delivery_status')
+            .eq('tracking_number', trackingNumber)
+            .single();
+          
+          if (existingOrder && existingOrder.status !== localStatus) {
+            // تحديث حالة الطلب
+            await supabase
+              .from('orders')
+              .update({
+                status: localStatus,
+                delivery_status: waseetOrder.status_text || waseetOrder.status_name,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingOrder.id);
+            
+            updatedCount++;
+            console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
+          }
+        } catch (error) {
+          console.error(`❌ خطأ في تحديث الطلب ${trackingNumber}:`, error);
+        }
+      }
+      
+      const message = updatedCount > 0 
+        ? `تم تحديث ${updatedCount} طلب من أصل ${waseetOrders.length}`
+        : `تم فحص ${waseetOrders.length} طلب - لا توجد تحديثات مطلوبة`;
+      
       toast({ 
-        title: "مزامنة الطلبات", 
-        description: `تم جلب ${orders.length} طلب من شركة التوصيل`,
+        title: "مزامنة مكتملة", 
+        description: message,
         variant: "success"
       });
-      return orders;
+      
+      return waseetOrders;
     } catch (error) {
+      console.error('❌ خطأ في المزامنة:', error);
       toast({ 
         title: "خطأ في المزامنة", 
         description: error.message, 
@@ -213,6 +307,53 @@ export const AlWaseetProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // مزامنة طلب واحد بـ tracking number
+  const syncOrderByTracking = async (trackingNumber) => {
+    if (activePartner === 'local' || !isLoggedIn || !token) {
+      console.log('❌ مزامنة غير متاحة - وضع محلي أو غير مسجل دخول');
+      return null;
+    }
+    
+    try {
+      console.log(`🔍 مزامنة الطلب: ${trackingNumber}`);
+      
+      // تحميل حالات الطلبات إذا لم تكن محملة
+      let statusMap = orderStatusesMap;
+      if (statusMap.size === 0) {
+        statusMap = await loadOrderStatuses();
+      }
+      
+      // جلب جميع طلبات الوسيط والبحث عن الطلب المطلوب
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      const waseetOrder = waseetOrders.find(order => 
+        order.qr_id === trackingNumber || order.tracking_number === trackingNumber
+      );
+      
+      if (!waseetOrder) {
+        console.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
+        return null;
+      }
+      
+      const waseetStatusId = waseetOrder.status_id || waseetOrder.status;
+      const localStatus = statusMap.get(String(waseetStatusId)) || 'pending';
+      
+      console.log(`📋 حالة الطلب في الوسيط: ${waseetOrder.status_text} (${waseetStatusId}) → ${localStatus}`);
+      
+      return {
+        tracking_number: trackingNumber,
+        waseet_status: waseetOrder.status_text || waseetOrder.status_name,
+        local_status: localStatus,
+        needs_update: true
+      };
+    } catch (error) {
+      console.error(`❌ خطأ في مزامنة الطلب ${trackingNumber}:`, error);
+      return null;
+    }
+  };
+
+  // للتوافق مع الإصدار السابق
+  const syncOrders = syncAndApplyOrders;
 
   const getMerchantOrders = useCallback(async () => {
     if (token) {
@@ -320,8 +461,9 @@ export const AlWaseetProvider = ({ children }) => {
     if (isLoggedIn && activePartner === 'alwaseet') {
       fetchCities();
       fetchPackageSizes();
+      loadOrderStatuses();
     }
-  }, [isLoggedIn, activePartner, fetchCities, fetchPackageSizes]);
+  }, [isLoggedIn, activePartner, fetchCities, fetchPackageSizes, loadOrderStatuses]);
 
   // Auto-fetch cities when token is available (even if not fully logged in)
   useEffect(() => {
@@ -337,12 +479,12 @@ export const AlWaseetProvider = ({ children }) => {
     let intervalId;
     if (syncInterval > 0 && isLoggedIn && activePartner !== 'local') {
       intervalId = setInterval(() => {
-        console.log('Automatic order sync triggered.');
-        syncOrders();
+        console.log('🔄 مزامنة تلقائية للطلبات...');
+        syncAndApplyOrders();
       }, syncInterval);
     }
     return () => clearInterval(intervalId);
-  }, [syncInterval, isLoggedIn, activePartner]);
+  }, [syncInterval, isLoggedIn, activePartner, syncAndApplyOrders]);
 
   const value = {
     isLoggedIn,
@@ -369,6 +511,10 @@ export const AlWaseetProvider = ({ children }) => {
     editAlWaseetOrder: editOrder,
     getMerchantOrders,
     getOrderStatuses,
+    loadOrderStatuses,
+    syncAndApplyOrders,
+    syncOrderByTracking,
+    orderStatusesMap,
   };
 
   return (

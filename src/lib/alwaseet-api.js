@@ -156,5 +156,5 @@ export const getOrderById = async (token, orderId) => {
 };
 
 export const getOrderStatuses = async (token) => {
-  return handleApiCall('order-statuses', 'GET', token);
+  return handleApiCall('statuses', 'GET', token, null, { token });
 };

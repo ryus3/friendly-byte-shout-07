@@ -33,7 +33,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
-  const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData } = useUnifiedProfits();
@@ -366,7 +366,7 @@ const OrdersPage = () => {
   
   const handleSync = async () => {
     setSyncing(true);
-    await syncAlWaseetOrders();
+    await syncAndApplyOrders();
     await refetchProducts();
     setSyncing(false);
   }

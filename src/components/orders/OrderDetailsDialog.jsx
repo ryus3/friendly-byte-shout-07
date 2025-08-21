@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X } from 'lucide-react';
+import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { toast } from '@/components/ui/use-toast';
 
 const getStatusInfo = (status) => {
   switch (status) {
@@ -36,6 +38,8 @@ const getStatusInfo = (status) => {
 
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
   const [newStatus, setNewStatus] = useState(order?.status);
+  const [syncing, setSyncing] = useState(false);
+  const { syncOrderByTracking, activePartner, isLoggedIn } = useAlWaseet();
 
   React.useEffect(() => {
     if (order) {
@@ -75,7 +79,57 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     }
   };
 
+  const handleSyncWithDelivery = async () => {
+    if (!order?.tracking_number || activePartner === 'local' || !isLoggedIn) {
+      toast({
+        title: "غير متاح",
+        description: "المزامنة متاحة فقط للطلبات المرسلة لشركة التوصيل المسجل دخولها",
+        variant: "default"
+      });
+      return;
+    }
+
+    setSyncing(true);
+    try {
+      console.log(`🔄 مزامنة الطلب ${order.tracking_number}...`);
+      const syncResult = await syncOrderByTracking(order.tracking_number);
+      
+      if (syncResult && syncResult.needs_update) {
+        // تحديث حالة الطلب في قاعدة البيانات
+        await onUpdate(order.id, syncResult.local_status);
+        
+        toast({
+          title: "تمت المزامنة بنجاح",
+          description: `تم تحديث حالة الطلب إلى: ${syncResult.local_status}`,
+          variant: "success"
+        });
+      } else if (syncResult) {
+        toast({
+          title: "الطلب محدث",
+          description: "الطلب محدث بالفعل ولا يحتاج لمزامنة",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "خطأ في المزامنة",
+          description: "لم يتم العثور على الطلب في شركة التوصيل",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('❌ خطأ في مزامنة الطلب:', error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: "حدث خطأ أثناء المزامنة مع شركة التوصيل",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const canEditOrder = order.status === 'pending';
+  const canSyncOrder = order?.tracking_number && order?.delivery_partner && order.delivery_partner !== 'محلي' && activePartner !== 'local' && isLoggedIn;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,6 +237,12 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           </div>
         </ScrollArea>
         <DialogFooter className="gap-2 pt-4 border-t">
+          {canSyncOrder && (
+            <Button variant="outline" onClick={handleSyncWithDelivery} disabled={syncing}>
+              {syncing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <RefreshCw className="w-4 h-4 ml-2" />}
+              مزامنة مع شركة التوصيل
+            </Button>
+          )}
           {canEditOrder && onEditOrder && (
             <Button variant="secondary" onClick={handleEditClick}>
               <Edit className="w-4 h-4 ml-2" />
