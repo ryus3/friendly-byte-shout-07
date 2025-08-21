@@ -62,25 +62,34 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   // جلب البيانات عند تغيير شريك التوصيل - نفس QuickOrderContent
   useEffect(() => {
     const loadInitialData = async () => {
+      console.log('📡 EditOrderDialog - بدء جلب البيانات الأساسية:', {
+        activePartner,
+        hasToken: !!waseetToken,
+        open
+      });
+      
       if (activePartner === 'alwaseet' && waseetToken) {
         // جلب المدن وأحجام الطلب
         try {
           setLoadingCities(true);
           setLoadingPackageSizes(true);
           
+          console.log('🌐 EditOrderDialog - جلب مدن ووأحجام Al-Waseet...');
           const citiesResponse = await getCities(waseetToken);
           const packageSizesResponse = await getPackageSizes(waseetToken);
           
           if (citiesResponse.success) {
             setCities(citiesResponse.data || []);
+            console.log('🏙️ EditOrderDialog - تم جلب المدن:', citiesResponse.data?.length || 0);
           }
           
           if (packageSizesResponse.success) {
             setPackageSizes(packageSizesResponse.data || []);
+            console.log('📦 EditOrderDialog - تم جلب الأحجام:', packageSizesResponse.data?.length || 0);
           }
           
         } catch (error) {
-          console.error('خطأ في جلب البيانات الأولية:', error);
+          console.error('❌ EditOrderDialog - خطأ في جلب البيانات الأولية:', error);
           setDataFetchError(true);
         } finally {
           setLoadingCities(false);
@@ -88,12 +97,14 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         }
       } else if (activePartner === 'local') {
         // للشريك المحلي: استخدم محافظات العراق وأحجام افتراضية
+        console.log('🇮🇶 EditOrderDialog - استخدام البيانات المحلية...');
         setCities(iraqiProvinces.map(p => ({ id: p.id, name: p.name })));
         setPackageSizes([
           { id: 'small', name: 'صغير' },
           { id: 'medium', name: 'عادي' },
           { id: 'large', name: 'كبير' }
         ]);
+        console.log('✅ EditOrderDialog - تم تحميل البيانات المحلية');
       }
     };
 
@@ -190,7 +201,14 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const initializeForm = useCallback(async () => {
     if (!order || !open) return;
     
-    console.log('🔄 بدء تهيئة نموذج تعديل الطلب:', order);
+    console.log('🔄 EditOrderDialog - بدء تهيئة نموذج تعديل الطلب:', {
+      orderId: order.id,
+      orderNumber: order.order_number,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      itemsCount: order.items?.length || 0,
+      totalAmount: order.total_amount
+    });
     
     // تحديد ما إذا كان يمكن تعديل الطلب
     const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
@@ -218,7 +236,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         };
         addToCart(null, cartItem, cartItem.quantity, false);
       });
-      console.log('📦 المنتجات المحملة للسلة:', order.items);
+      console.log('📦 EditOrderDialog - المنتجات المحملة للسلة:', {
+        originalItems: order.items,
+        cartAfterLoad: cart
+      });
+    } else {
+      console.log('❌ EditOrderDialog - لا توجد منتجات في الطلب');
     }
     
     // ملء النموذج بالبيانات
@@ -244,7 +267,11 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     };
     
     setFormData(initialFormData);
-    console.log('📝 تم تعبئة النموذج بالبيانات:', initialFormData);
+    console.log('📝 EditOrderDialog - تم تعبئة النموذج بالبيانات:', {
+      formData: initialFormData,
+      canEdit: editable,
+      cartLength: cart?.length || 0
+    });
     
   }, [order, open, clearCart, addToCart, settings]);
 
@@ -386,7 +413,16 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('📤 EditOrderDialog - بدء إرسال التحديث:', {
+      canEdit,
+      cartLength: cart.length,
+      formData,
+      subtotal,
+      discount
+    });
+    
     if (!canEdit) {
+      console.log('❌ EditOrderDialog - لا يمكن التعديل');
       toast({
         title: "تنبيه",
         description: "لا يمكن تعديل هذا الطلب",
@@ -396,6 +432,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
 
     if (cart.length === 0) {
+      console.log('❌ EditOrderDialog - السلة فارغة');
       toast({
         title: "تنبيه",
         description: "يجب اختيار منتج واحد على الأقل",
