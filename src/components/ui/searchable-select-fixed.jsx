@@ -28,44 +28,16 @@ const SearchableSelectFixed = ({
     );
   }, [options, search]);
 
-  // Enhanced option finding with better type handling
-  const selectedOption = useMemo(() => {
-    if (!value) return null;
-    
-    return options.find(option => {
-      const optionValue = option.value ?? option.id;
-      const stringValue = String(value).trim();
-      const stringOptionValue = String(optionValue).trim();
-      
-      console.log('🔍 مقارنة القيم:', {
-        value: stringValue,
-        optionValue: stringOptionValue,
-        match: stringValue === stringOptionValue
-      });
-      
-      return stringValue === stringOptionValue;
-    });
-  }, [value, options]);
+  const selectedOption = options.find(option => {
+    const optionValue = option.value || option.id;
+    // Convert both to strings and handle different data types
+    return String(optionValue) === String(value);
+  });
 
-  // Enhanced display text logic
-  const displayText = useMemo(() => {
-    if (selectedOption) {
-      const label = selectedOption.label || selectedOption.name || selectedOption.city_name || selectedOption.region_name;
-      console.log('✅ عرض النص المحدد:', label);
-      return label;
-    }
-    
-    if (value && options.length === 0) {
-      return "جاري التحميل...";
-    }
-    
-    if (value && options.length > 0) {
-      console.log('⚠️ لم يتم العثور على القيمة:', value, 'في الخيارات:', options);
-      return `القيمة: ${value}`;
-    }
-    
-    return placeholder;
-  }, [selectedOption, value, options.length, placeholder]);
+  // Display the actual selected option or placeholder
+  const displayText = selectedOption ? 
+    (selectedOption.label || selectedOption.name) : 
+    (value && options.length === 0 ? "جاري التحميل..." : placeholder);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -167,8 +139,7 @@ const SearchableSelectFixed = ({
               filteredOptions.map((option) => {
                 const optionValue = option.value || option.id;
                 const optionLabel = option.label || option.name;
-                // Enhanced selection comparison with better type handling
-                const isSelected = String(value).trim() === String(optionValue).trim();
+                const isSelected = value === optionValue;
                 
                 return (
                   <div
