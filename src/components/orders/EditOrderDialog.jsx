@@ -8,13 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { ProductSelectionDialog } from '@/components/products/ProductSelectionDialog';
-import { Loader } from '@/components/ui/loader';
-import { AlertTriangle, Package2, MapPin, Phone, User, DollarSign } from 'lucide-react';
+import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import Loader from '@/components/ui/loader';
+import { AlertTriangle, Package2, MapPin, Phone, User, DollarSign, Loader2 } from 'lucide-react';
+import { getCities, getRegionsByCity, getPackageSizes } from '@/lib/alwaseet-api';
 
 const EditOrderDialog = ({ open, onOpenChange, order }) => {
   const { updateOrder } = useInventory();
-  const { cities, regions, packageSizes, fetchRegions, fetchPackageSizes, editOrder: editAlWaseetOrder } = useAlWaseet();
+  const { token: waseetToken, editOrder: editAlWaseetOrder } = useAlWaseet();
   
   // Form states
   const [formData, setFormData] = useState({
@@ -39,6 +40,14 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [canEdit, setCanEdit] = useState(true);
+  
+  // Al-Waseet data states - exactly like QuickOrderContent
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
 
   // Initialize form when dialog opens or order changes
   useEffect(() => {
@@ -46,6 +55,46 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       initializeForm();
     }
   }, [open, order]);
+
+  // Load Al-Waseet data on dialog open - exactly like QuickOrderContent
+  const loadAlWaseetData = async () => {
+    if (!waseetToken || order?.delivery_partner !== 'الوسيط') return;
+    
+    try {
+      console.log('🔄 تحميل بيانات الوسيط...');
+      
+      // Load cities
+      setLoadingCities(true);
+      const citiesData = await getCities(waseetToken);
+      console.log('🏙️ تم تحميل المدن:', citiesData);
+      setCities(citiesData || []);
+      setLoadingCities(false);
+      
+      // Load package sizes
+      setLoadingPackageSizes(true);
+      const packageSizesData = await getPackageSizes(waseetToken);
+      console.log('📦 تم تحميل أحجام الطلب:', packageSizesData);
+      setPackageSizes(packageSizesData || []);
+      setLoadingPackageSizes(false);
+      
+      // If order has city_id, load regions for that city
+      if (order?.city_id) {
+        setLoadingRegions(true);
+        const regionsData = await getRegionsByCity(waseetToken, order.city_id);
+        console.log('🗺️ تم تحميل المناطق للمدينة:', regionsData);
+        setRegions(regionsData || []);
+        setLoadingRegions(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ خطأ في تحميل بيانات الوسيط:', error);
+      toast({
+        title: "خطأ في تحميل البيانات",
+        description: "فشل في تحميل بيانات شركة التوصيل",
+        variant: "destructive"
+      });
+    }
+  };
 
   const initializeForm = async () => {
     if (!order) return;
@@ -58,17 +107,10 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
       setCanEdit(editable);
       
-      // For Al-Waseet orders, fetch necessary data
-      if (order.delivery_partner === 'الوسيط') {
-        await fetchPackageSizes();
-        
-        // If city_id exists, fetch regions for that city
-        if (order.city_id) {
-          await fetchRegions(order.city_id);
-        }
-      }
+      // Load Al-Waseet data if needed
+      await loadAlWaseetData();
       
-      // Initialize form with order data - direct mapping without complex search
+      // Initialize form with order data - direct mapping
       const formDataObj = {
         customerName: order.customer_name || '',
         customerPhone: order.customer_phone || '',
@@ -82,9 +124,9 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
         deliveryPartner: order.delivery_partner || '',
         notes: order.notes || '',
         // Al-Waseet specific fields - use existing IDs directly
-        cityId: order.city_id || '',
-        regionId: order.region_id || '', 
-        packageSize: order.package_size || ''
+        cityId: order.city_id ? order.city_id.toString() : '',
+        regionId: order.region_id ? order.region_id.toString() : '', 
+        packageSize: order.package_size ? order.package_size.toString() : ''
       };
       
       setFormData(formDataObj);
@@ -119,11 +161,13 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       [field]: value
     }));
     
-    // When city changes, fetch regions for Al-Waseet orders
+    // When city changes, fetch regions for Al-Waseet orders - exactly like QuickOrderContent
     if (field === 'cityId' && value && order.delivery_partner === 'الوسيط') {
-      setLoadingData(true);
+      setLoadingRegions(true);
       try {
-        await fetchRegions(value);
+        const regionsData = await getRegionsByCity(waseetToken, value);
+        console.log('🗺️ تم تحميل المناطق للمدينة:', regionsData);
+        setRegions(regionsData || []);
         // Reset region when city changes
         setFormData(prev => ({
           ...prev,
@@ -137,7 +181,7 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
           variant: "destructive"
         });
       } finally {
-        setLoadingData(false);
+        setLoadingRegions(false);
       }
     }
   };
@@ -310,26 +354,26 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
     }
   };
 
-  // Get available cities for Al-Waseet orders
+  // Get available cities for Al-Waseet orders - exactly like QuickOrderContent
   const getAvailableCities = () => {
-    if (order?.delivery_partner === 'الوسيط' && cities && cities.length > 0) {
-      return cities;
+    if (order?.delivery_partner === 'الوسيط') {
+      return cities || [];
     }
     return [];
   };
 
-  // Get available regions for selected city
+  // Get available regions for selected city - exactly like QuickOrderContent
   const getAvailableRegions = () => {
-    if (order?.delivery_partner === 'الوسيط' && regions && regions.length > 0) {
-      return regions;
+    if (order?.delivery_partner === 'الوسيط') {
+      return regions || [];
     }
     return [];
   };
 
-  // Get available package sizes for Al-Waseet orders
+  // Get available package sizes for Al-Waseet orders - exactly like QuickOrderContent
   const getAvailablePackageSizes = () => {
-    if (order?.delivery_partner === 'الوسيط' && packageSizes && packageSizes.length > 0) {
-      return packageSizes;
+    if (order?.delivery_partner === 'الوسيط') {
+      return packageSizes || [];
     }
     // Default sizes for local orders
     return [
@@ -354,7 +398,7 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
 
           {loadingData ? (
             <div className="flex justify-center py-8">
-              <Loader className="w-8 h-8" />
+              <Loader />
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -450,10 +494,12 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                       <Select
                         value={formData.cityId}
                         onValueChange={(value) => handleSelectChange('cityId', value)}
-                        disabled={!canEdit}
+                        disabled={!canEdit || loadingCities}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر المدينة" />
+                          <SelectValue 
+                            placeholder={loadingCities ? "جاري التحميل..." : "اختر المدينة"} 
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {getAvailableCities().map((city) => (
@@ -463,6 +509,7 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {loadingCities && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
                     </div>
 
                     {/* Region selection for Al-Waseet */}
@@ -471,10 +518,12 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                       <Select
                         value={formData.regionId}
                         onValueChange={(value) => handleSelectChange('regionId', value)}
-                        disabled={!canEdit || !formData.cityId}
+                        disabled={!canEdit || !formData.cityId || loadingRegions}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر المنطقة" />
+                          <SelectValue 
+                            placeholder={loadingRegions ? "جاري التحميل..." : "اختر المنطقة"} 
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {getAvailableRegions().map((region) => (
@@ -484,6 +533,7 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {loadingRegions && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
                     </div>
 
                     {/* Package size for Al-Waseet */}
@@ -492,10 +542,12 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                       <Select
                         value={formData.packageSize}
                         onValueChange={(value) => handleSelectChange('packageSize', value)}
-                        disabled={!canEdit}
+                        disabled={!canEdit || loadingPackageSizes}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="اختر حجم الطلب" />
+                          <SelectValue 
+                            placeholder={loadingPackageSizes ? "جاري التحميل..." : "اختر حجم الطلب"} 
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {getAvailablePackageSizes().map((size) => (
@@ -505,6 +557,7 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                           ))}
                         </SelectContent>
                       </Select>
+                      {loadingPackageSizes && <Loader2 className="h-4 w-4 animate-spin mx-auto" />}
                     </div>
                   </div>
                 ) : (
@@ -639,7 +692,11 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       <ProductSelectionDialog
         open={showProductSelection}
         onOpenChange={setShowProductSelection}
-        onProductSelect={handleProductSelect}
+        onConfirm={(products) => {
+          setSelectedProducts(products);
+          setShowProductSelection(false);
+        }}
+        initialCart={selectedProducts}
       />
     </>
   );
