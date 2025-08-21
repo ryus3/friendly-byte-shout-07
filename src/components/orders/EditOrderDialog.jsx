@@ -77,7 +77,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const [dataFetchError, setDataFetchError] = useState(false);
 
   // Initialize form when order is loaded
-  const initializeForm = useCallback(async () => {
+  const initializeFormData = useCallback(async () => {
     if (!order || !open) return;
     
     console.log('🔄 Initializing edit form for order:', order);
@@ -154,10 +154,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       region: order.customer_province || '',
       address: order.customer_address || '',
       notes: order.notes || '',
-      details: order.items?.map(item => 
-        `${item.product_name || item.productname || 'منتج'} × ${item.quantity || 1}`
+      details: order.order_items?.map(item => 
+        `${item.products?.name || item.product_name || item.productname || 'منتج'} × ${item.quantity || 1}`
       ).join(', ') || '',
-      quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
+      quantity: order.order_items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
       price: order.total_amount || 0,
       size: packageSize,
       type: 'edit',
@@ -168,22 +168,22 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(orderFormData);
     
     // Add order items to cart
-    if (order.items && Array.isArray(order.items)) {
-      for (const item of order.items) {
+    if (order.order_items && Array.isArray(order.order_items)) {
+      for (const item of order.order_items) {
         const product = {
-          id: item.product_id || `edit-${Date.now()}-${Math.random()}`,
-          name: item.product_name || item.productname || 'منتج',
-          images: item.images || []
+          id: item.products?.id || item.product_id || `edit-${Date.now()}-${Math.random()}`,
+          name: item.products?.name || item.product_name || item.productname || 'منتج',
+          images: item.products?.images || item.images || []
         };
         
         const variant = {
-          id: item.variant_id || `variant-${Date.now()}`,
-          sku: item.variant_id || item.sku || `sku-${Date.now()}`,
-          price: item.unit_price || item.price || 0,
-          cost_price: item.cost_price || 0,
-          color: item.color || '',
-          size: item.size || '',
-          barcode: item.barcode || '',
+          id: item.product_variants?.id || item.variant_id || `variant-${Date.now()}`,
+          sku: item.product_variants?.sku || item.variant_id || item.sku || `sku-${Date.now()}`,
+          price: item.product_variants?.price || item.unit_price || item.price || 0,
+          cost_price: item.product_variants?.cost_price || item.cost_price || 0,
+          color: item.product_variants?.colors?.name || item.color || '',
+          size: item.product_variants?.sizes?.name || item.size || '',
+          barcode: item.product_variants?.barcode || item.barcode || '',
           quantity: 1000 // High stock for editing
         };
         
@@ -192,14 +192,14 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
     
     console.log('✅ Form initialized successfully');
-  }, [order, open, clearCart, addToCart, setActivePartner, cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes]);
+  }, [order, open, clearCart, addToCart, setActivePartner, fetchCities, fetchPackageSizes]);
 
   // Initialize when dialog opens
   useEffect(() => {
     if (open && order) {
-      initializeForm();
+      initializeFormData();
     }
-  }, [open, order, initializeForm]);
+  }, [open, order, initializeFormData]);
 
   // Fetch customer data when phone changes - identical to QuickOrderContent
   useEffect(() => {
@@ -358,13 +358,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       return 0;
     }
     
+    // Safe fallback for settings
+    const defaultSettings = { deliveryFee: 2000, alwaseetDeliveryFee: 4000 };
+    const safeSettings = settings || defaultSettings;
+    
     switch (activePartner) {
       case 'alwaseet':
-        return settings?.alwaseetDeliveryFee || 4000;
+        return safeSettings.alwaseetDeliveryFee || 4000;
       case 'local':
-        return settings?.deliveryFee || 2000;
+        return safeSettings.deliveryFee || 2000;
       default:
-        return settings?.deliveryFee || 2000;
+        return safeSettings.deliveryFee || 2000;
     }
   })();
 
