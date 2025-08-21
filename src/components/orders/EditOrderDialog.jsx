@@ -33,13 +33,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     isLoggedIn: isWaseetLoggedIn, 
     token: waseetToken, 
     activePartner, 
-    setActivePartner,
-    cities,
-    regions,
-    packageSizes,
-    fetchCities,
-    fetchRegions,
-    fetchPackageSizes 
+    setActivePartner
   } = useAlWaseet();
 
   const [productSelectOpen, setProductSelectOpen] = useState(false);
