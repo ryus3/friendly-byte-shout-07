@@ -269,13 +269,15 @@ const OrdersPage = () => {
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
+    // Filter out null/undefined orders first
+    const validOrders = orders.filter(order => order != null);
     if (hasPermission('view_all_orders')) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
-        return orders.filter(order => order.created_by === selectedEmployeeId);
+        return validOrders.filter(order => order.created_by === selectedEmployeeId);
       }
-      return orders;
+      return validOrders;
     }
-    return orders.filter(order => order.created_by === user?.user_id);
+    return validOrders.filter(order => order.created_by === user?.user_id);
   }, [orders, user?.user_id, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
@@ -415,7 +417,7 @@ const OrdersPage = () => {
     // فلترة الطلبات المحلية أو الطلبات قيد التجهيز (pending)
     const ordersToDeleteFiltered = ordersArray.filter(orderId => {
         const order = orders.find(o => o.id === orderId);
-        return order && (order.delivery_partner === 'محلي' || order.status === 'pending');
+        return order && (order?.delivery_partner === 'محلي' || order.status === 'pending');
     });
 
     if (ordersToDeleteFiltered.length < ordersArray.length) {

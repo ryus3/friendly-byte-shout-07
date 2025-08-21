@@ -87,7 +87,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
 
   const getDeliveryType = (order) => {
     // تحديد نوع التوصيل بناءً على بيانات الطلب الفعلية
-    const deliveryPartner = order.delivery_partner;
+    const deliveryPartner = order?.delivery_partner;
     
     // إذا كان delivery_partner موجود وليس "محلي"، فهو شركة توصيل
     if (deliveryPartner && deliveryPartner !== 'محلي') {
