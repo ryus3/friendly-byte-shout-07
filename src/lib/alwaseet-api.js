@@ -51,12 +51,14 @@ export const createAlWaseetOrder = async (orderData, token) => {
   // Format phones for Al-Waseet API requirements
   const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
   
-  const formattedData = { ...orderData };
+  // Map field names to Al-Waseet API format for consistency
+  const mappedData = mapToAlWaseetFields(orderData);
+  const formattedData = { ...mappedData };
   
   // Format primary phone (required)
   if (formattedData.client_mobile) {
     formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-    if (!isValidAlWaseetPhone(orderData.client_mobile)) {
+    if (!isValidAlWaseetPhone(mappedData.client_mobile)) {
       throw new Error('رقم الهاتف الأساسي غير صحيح. يجب أن يكون رقم عراقي صحيح.');
     }
   }
@@ -64,12 +66,20 @@ export const createAlWaseetOrder = async (orderData, token) => {
   // Format secondary phone (optional) - only include if valid
   if (formattedData.client_mobile2) {
     const formatted2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (isValidAlWaseetPhone(orderData.client_mobile2)) {
+    if (isValidAlWaseetPhone(mappedData.client_mobile2)) {
       formattedData.client_mobile2 = formatted2;
     } else {
       delete formattedData.client_mobile2; // Remove invalid secondary phone
     }
   }
+
+  // Ensure numeric fields are properly formatted (align with edit behavior)
+  formattedData.price = parseInt(formattedData.price) || 0;
+  formattedData.items_number = parseInt(formattedData.items_number) || 0;
+  formattedData.city_id = parseInt(formattedData.city_id) || 0;
+  formattedData.region_id = parseInt(formattedData.region_id) || 0;
+  formattedData.package_size = parseInt(formattedData.package_size) || 0;
+  formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
   return handleApiCall('create-order', 'POST', token, formattedData, { token });
 };
