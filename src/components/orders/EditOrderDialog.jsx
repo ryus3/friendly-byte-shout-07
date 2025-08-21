@@ -130,6 +130,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     if (cities.length === 0) await fetchCities();
     if (packageSizes.length === 0) await fetchPackageSizes();
     
+    // انتظار قليل لضمان جلب البيانات
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // البحث عن city_id و region_id من البيانات
     let cityId = '';
     let regionId = '';
@@ -148,26 +151,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         cityId = cityMatch.id;
         console.log('✅ تم العثور على المدينة:', cityMatch);
         
-        // جلب المناطق لهذه المدينة
+        // جلب المناطق لهذه المدينة واتتظار الاكتمال
         setIsLoadingRegions(true);
         try {
           await fetchRegions(cityId);
+          // انتظار إضافي لضمان تحديث الحالة
+          await new Promise(resolve => setTimeout(resolve, 300));
           console.log('✅ تم جلب المناطق للمدينة:', cityId);
-          
-          // البحث عن المنطقة بعد جلب المناطق
-          if (customerProvince && regions.length > 0) {
-            const regionMatch = regions.find(r => {
-              const regionName = r.name || r.name_ar || r.region_name || '';
-              return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
-                     customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-                     regionName.toLowerCase().includes(customerProvince.toLowerCase());
-            });
-            
-            if (regionMatch) {
-              regionId = regionMatch.id;
-              console.log('✅ تم العثور على المنطقة:', regionMatch);
-            }
-          }
         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
         } finally {
@@ -178,10 +168,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     }
     
-    // تحديد حجم الطلب الصحيح
-    if (order.package_size && packageSizes.length > 0) {
+    // فلترة أحجام الطلب للحصول على أحجام Al-Waseet فقط
+    let alwaseetPackageSizes = packageSizes;
+    if (order.delivery_partner && order.delivery_partner !== 'محلي') {
+      // عرض أحجام Al-Waseet المتوفرة فقط
+      alwaseetPackageSizes = packageSizes.filter(size => size.name && 
+        (size.name.includes('كيس') || size.name.includes('كرتون') || size.name.includes('عادي'))
+      );
+    }
+    
+    // تحديد حجم الطلب الصحيح بناءً على الأحجام المفلترة
+    if (order.package_size && alwaseetPackageSizes.length > 0) {
       // البحث عن حجم الطلب بطرق متعددة
-      const sizeMatch = packageSizes.find(size => 
+      const sizeMatch = alwaseetPackageSizes.find(size => 
         size.id === order.package_size ||
         size.name === order.package_size ||
         (size.name && size.name.includes(order.package_size)) ||
@@ -192,12 +191,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         packageSize = sizeMatch.id;
         console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
       } else {
-        // البحث عن "عادي" كقيمة افتراضية
-        const normalSize = packageSizes.find(size => 
+        // البحث عن "عادي" كقيمة افتراضية من الأحجام المفلترة
+        const normalSize = alwaseetPackageSizes.find(size => 
           (size.name && size.name.includes('عادي')) ||
           (size.name && size.name.toLowerCase().includes('normal'))
         );
-        packageSize = normalSize ? normalSize.id : packageSizes[0]?.id || 'normal';
+        packageSize = normalSize ? normalSize.id : alwaseetPackageSizes[0]?.id || 'normal';
         console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', packageSize);
       }
     }
@@ -538,15 +537,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                       required
                     />
                   </div>
-                  {formData.phone2 && (
+                  {/* الرقم الثانوي - يظهر دائماً للطلبات التي تستخدم وسيط التوصيل */}
+                  {order.delivery_partner && order.delivery_partner !== 'محلي' && (
                     <div>
-                      <Label htmlFor="phone2">رقم الهاتف الثاني</Label>
+                      <Label htmlFor="phone2">رقم الهاتف الثانوي (اختياري)</Label>
                       <Input
                         id="phone2"
                         name="phone2"
+                        type="tel"
                         value={formData.phone2}
                         onChange={handleChange}
                         disabled={!canEdit || isLoading}
+                        placeholder="07xxxxxxxx"
+                        dir="ltr"
                       />
                     </div>
                   )}
@@ -611,7 +614,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                             <SelectValue placeholder="اختر حجم الطلب" />
                           </SelectTrigger>
                           <SelectContent>
-                            {packageSizes.map(size => (
+                            {/* عرض أحجام Al-Waseet المناسبة فقط */}
+                            {(order.delivery_partner && order.delivery_partner !== 'محلي' 
+                              ? packageSizes.filter(size => size.name && 
+                                  (size.name.includes('كيس') || size.name.includes('كرتون') || size.name.includes('عادي'))
+                                )
+                              : packageSizes
+                            ).map(size => (
                               <SelectItem key={size.id} value={size.id?.toString()}>
                                 {size.name || size.package_name || `حجم ${size.id}`}
                               </SelectItem>
