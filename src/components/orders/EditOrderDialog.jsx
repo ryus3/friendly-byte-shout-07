@@ -14,9 +14,6 @@ import ProductSelectionDialog from '@/components/products/ProductSelectionDialog
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const { products, updateOrder, settings, cart, clearCart, addToCart, orders } = useInventory();
-  
-  // Default settings to prevent undefined errors
-  const safeSettings = settings || { deliveryFee: 5000, localDeliveryFee: 3000 };
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner } = useAlWaseet();
   
@@ -62,8 +59,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     if (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) {
       return 0;
     }
-    return safeSettings?.deliveryFee || 0;
-  }, [applyLoyaltyDelivery, customerData, safeSettings]);
+    return settings?.deliveryFee || 0;
+  }, [applyLoyaltyDelivery, customerData, settings]);
 
   const finalTotal = useMemo(() => {
     return Math.max(0, subtotal + deliveryFee - discount);
@@ -161,7 +158,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     fetchCustomerData();
   }, [formData.phone, orders, user?.id, subtotal]);
 
-  // تحديث الخصم عند تغيير السلة - Fixed dependency loop
+  // تحديث الخصم عند تغيير السلة
   useEffect(() => {
     if (customerData?.currentTier?.discount_percentage && cart.length > 0) {
       const discountPercentage = customerData.currentTier.discount_percentage;
@@ -171,7 +168,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setLoyaltyDiscount(roundedDiscountAmount);
       
       if (applyLoyaltyDiscount) {
-        const manualDiscount = Math.max(0, discount - roundedDiscountAmount);
+        const manualDiscount = Math.max(0, discount - loyaltyDiscount);
         setDiscount(roundedDiscountAmount + manualDiscount);
       }
     } else if (cart.length === 0) {
@@ -180,7 +177,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setApplyLoyaltyDiscount(false);
       setApplyLoyaltyDelivery(false);
     }
-  }, [cart.length, customerData?.currentTier?.discount_percentage, subtotal, applyLoyaltyDiscount]); // Removed circular dependencies
+  }, [cart, customerData, applyLoyaltyDiscount, loyaltyDiscount, discount, subtotal]);
 
   // تهيئة النموذج عند فتح النافذة
   const initializeForm = useCallback(async () => {
@@ -503,10 +500,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 handleSelectChange={handleSelectChange}
                 errors={errors}
                 subtotal={subtotal}
-                total={subtotal}
+                total={finalTotal}
                 discount={discount}
-                setDiscount={setDiscount}
-                customerData={customerData}
+                onDiscountChange={handleDiscountChange}
                 loyaltyDiscount={loyaltyDiscount}
                 applyLoyaltyDiscount={applyLoyaltyDiscount}
                 applyLoyaltyDelivery={applyLoyaltyDelivery}
@@ -515,11 +511,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 isDeliveryPartnerSelected={true}
                 isSubmittingState={isLoading}
                 packageSizes={[]}
-                loadingPackageSizes={false}
                 activePartner={activePartner}
-                dataFetchError={null}
-                setProductSelectOpen={setProductSelectOpen}
-                settings={safeSettings}
               />
             </div>
 
