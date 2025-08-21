@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useAlWaseetInvoices = () => {

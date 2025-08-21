@@ -93,7 +93,7 @@ const AlWaseetInvoiceDetailsDialog = ({
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   معلومات الفاتورة
-                  <Badge variant={isReceived ? 'success' : 'secondary'}>
+                  <Badge variant={isReceived ? 'default' : 'secondary'}>
                     {isReceived ? 'مُستلمة' : 'معلقة'}
                   </Badge>
                 </CardTitle>
