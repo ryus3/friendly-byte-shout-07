@@ -508,6 +508,15 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
   if (!open || !order) return null;
 
+  console.log('🚀 EditOrderDialog NEW VERSION - تم فتح نافذة التعديل المحدثة!', {
+    orderId: order.id,
+    canEdit,
+    hasCustomerInfoForm: !!CustomerInfoForm,
+    hasOrderDetailsForm: !!OrderDetailsForm,
+    cartLength: cart.length,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -515,7 +524,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
-              تعديل الطلب {order?.order_number}
+              <div className="bg-green-100 px-2 py-1 rounded text-green-800 text-sm">🔥 NEW</div>
+              تعديل الطلب المحدث - {order?.order_number}
               {order?.delivery_partner && (
                 <Badge variant="outline" className="mr-2">
                   {order.delivery_partner}
