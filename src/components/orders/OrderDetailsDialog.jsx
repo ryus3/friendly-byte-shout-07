@@ -109,7 +109,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                     )}
                       <div className="flex items-center gap-1.5">
                          <Building className="w-3 h-3"/>
-                         <span className="font-medium">{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
+                         <span className="font-medium">{order?.delivery_partner === 'محلي' || !order?.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
                      </div>
                 </div>
               </div>
