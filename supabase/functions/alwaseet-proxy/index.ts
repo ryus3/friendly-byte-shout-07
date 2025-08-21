@@ -121,6 +121,60 @@ serve(async (req) => {
       }));
     }
 
+    // Handle invoice endpoints
+    if (endpoint === 'get_merchant_invoices' && responseData.data) {
+      // Normalize invoice data structure
+      responseData.data = responseData.data.map((invoice: any) => ({
+        id: invoice.id,
+        merchant_price: invoice.merchant_price,
+        delivered_orders_count: invoice.delivered_orders_count,
+        replacement_delivered_orders_count: invoice.replacement_delivered_orders_count,
+        status: invoice.status,
+        merchant_id: invoice.merchant_id,
+        updated_at: invoice.updated_at
+      }));
+    }
+
+    if (endpoint === 'get_merchant_invoice_orders' && responseData.data) {
+      // Normalize invoice orders response
+      responseData.data = {
+        invoice: responseData.data.invoice ? responseData.data.invoice.map((invoice: any) => ({
+          id: invoice.id,
+          merchant_price: invoice.merchant_price,
+          delivered_orders_count: invoice.delivered_orders_count,
+          replacement_delivered_orders_count: invoice.replacement_delivered_orders_count,
+          status: invoice.status,
+          merchant_id: invoice.merchant_id,
+          updated_at: invoice.updated_at
+        })) : [],
+        orders: responseData.data.orders ? responseData.data.orders.map((order: any) => ({
+          id: order.id,
+          qr_id: order.qr_id || order.tracking_number,
+          client_name: order.client_name,
+          client_mobile: order.client_mobile,
+          client_mobile2: order.client_mobile2,
+          items_number: order.items_number,
+          created_at: order.created_at,
+          city_name: order.city_name,
+          region_name: order.region_name,
+          status_id: order.status_id,
+          status: order.status,
+          price: order.price,
+          location: order.location,
+          issue_notes: order.issue_notes,
+          merchant_notes: order.merchant_notes,
+          updated_at: order.updated_at,
+          city_id: order.city_id,
+          region_id: order.region_id,
+          replacement: order.replacement,
+          type_name: order.type_name,
+          delivery_price: order.delivery_price,
+          package_size: order.package_size,
+          merchant_invoice_id: order.merchant_invoice_id
+        })) : []
+      };
+    }
+
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

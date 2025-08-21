@@ -169,3 +169,20 @@ export const getOrdersByIdsBulk = async (token, ids) => {
   const payload = { ids: first25.join(',') };
   return handleApiCall('get-orders-by-ids-bulk', 'POST', token, payload, { token });
 };
+
+// ===== Invoice Management APIs =====
+
+// Get all merchant invoices
+export const getMerchantInvoices = async (token) => {
+  return handleApiCall('get_merchant_invoices', 'GET', token, null, { token });
+};
+
+// Get orders for a specific invoice
+export const getInvoiceOrders = async (token, invoiceId) => {
+  return handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { token, invoice_id: invoiceId });
+};
+
+// Receive (confirm) an invoice
+export const receiveInvoice = async (token, invoiceId) => {
+  return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
+};

@@ -9,11 +9,12 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
+import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -29,6 +30,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
+import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 
 const OrdersPage = () => {
@@ -58,6 +60,8 @@ const OrdersPage = () => {
   const [userEmployeeCode, setUserEmployeeCode] = useState(null);
   // فلتر اختيار موظف محدد للمدير
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
+  // Active tab state
+  const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
   // Scroll to top when page loads
   useEffect(() => {
