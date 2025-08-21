@@ -11,7 +11,9 @@ import {
   DollarSign, 
   FileText, 
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar,
+  TrendingUp
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -22,7 +24,10 @@ const AlWaseetInvoicesTab = () => {
   const { isLoggedIn, activePartner } = useAlWaseet();
   const { 
     invoices, 
+    allInvoices,
     loading, 
+    dateFilter,
+    setDateFilter,
     fetchInvoices, 
     receiveInvoice,
     getInvoiceStats 
@@ -147,8 +152,36 @@ const AlWaseetInvoicesTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Date and Status Filters Row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-56">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="فترة زمنية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="last_week">آخر أسبوع</SelectItem>
+                  <SelectItem value="last_month">آخر شهر</SelectItem>
+                  <SelectItem value="last_3_months">آخر 3 أشهر</SelectItem>
+                  <SelectItem value="all">جميع الفترات</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="حالة الفاتورة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفواتير</SelectItem>
+                  <SelectItem value="pending">معلقة</SelectItem>
+                  <SelectItem value="received">مُستلمة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Search Row */}
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="البحث برقم الفاتورة أو المبلغ..."
@@ -157,31 +190,36 @@ const AlWaseetInvoicesTab = () => {
                 className="pl-10"
               />
             </div>
-            
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="حالة الفاتورة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الفواتير</SelectItem>
-                <SelectItem value="pending">معلقة</SelectItem>
-                <SelectItem value="received">مُستلمة</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Results Summary */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                عرض {filteredInvoices.length} من {invoices.length} فاتورة
+                عرض {filteredInvoices.length} من {allInvoices.length} فاتورة
               </span>
+              {dateFilter !== 'all' && (
+                <Badge variant="outline">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {dateFilter === 'last_week' ? 'آخر أسبوع' : 
+                   dateFilter === 'last_month' ? 'آخر شهر' : 'آخر 3 أشهر'}
+                </Badge>
+              )}
               {statusFilter !== 'all' && (
                 <Badge variant="outline">
                   {statusFilter === 'pending' ? 'معلقة' : 'مُستلمة'}
                 </Badge>
               )}
             </div>
+            
+            {stats.pendingInvoices > 0 && (
+              <div className="flex items-center gap-1 text-amber-600">
+                <TrendingUp className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {stats.pendingInvoices} فاتورة معلقة
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Invoices List */}

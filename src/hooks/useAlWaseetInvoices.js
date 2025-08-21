@@ -10,6 +10,7 @@ export const useAlWaseetInvoices = () => {
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
+  const [dateFilter, setDateFilter] = useState('last_month'); // 'last_week', 'last_month', 'last_3_months', 'all'
 
   // Fetch all merchant invoices
   const fetchInvoices = useCallback(async () => {
@@ -20,8 +21,22 @@ export const useAlWaseetInvoices = () => {
     setLoading(true);
     try {
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
-      setInvoices(invoicesData || []);
-      return invoicesData;
+      
+      // Sort invoices: pending first, then by newest date
+      const sortedInvoices = (invoicesData || []).sort((a, b) => {
+        // First priority: pending invoices first
+        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+        
+        if (aIsPending && !bIsPending) return -1;
+        if (!aIsPending && bIsPending) return 1;
+        
+        // Second priority: newest first (by updated_at)
+        return new Date(b.updated_at) - new Date(a.updated_at);
+      });
+      
+      setInvoices(sortedInvoices);
+      return sortedInvoices;
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({
@@ -137,16 +152,43 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoiceOrders]);
 
+  // Filter invoices by date range
+  const getFilteredInvoices = useCallback(() => {
+    const now = new Date();
+    let cutoffDate = null;
+
+    switch (dateFilter) {
+      case 'last_week':
+        cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'last_month':
+        cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case 'last_3_months':
+        cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'all':
+      default:
+        return invoices;
+    }
+
+    return invoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.updated_at);
+      return invoiceDate >= cutoffDate;
+    });
+  }, [invoices, dateFilter]);
+
   // Get invoice statistics
   const getInvoiceStats = useCallback(() => {
-    const totalInvoices = invoices.length;
-    const pendingInvoices = invoices.filter(inv => 
+    const filteredInvoices = getFilteredInvoices();
+    const totalInvoices = filteredInvoices.length;
+    const pendingInvoices = filteredInvoices.filter(inv => 
       inv.status !== 'تم الاستلام من قبل التاجر'
     ).length;
-    const totalAmount = invoices.reduce((sum, inv) => 
+    const totalAmount = filteredInvoices.reduce((sum, inv) => 
       sum + (parseFloat(inv.merchant_price) || 0), 0
     );
-    const totalOrders = invoices.reduce((sum, inv) => 
+    const totalOrders = filteredInvoices.reduce((sum, inv) => 
       sum + (parseInt(inv.delivered_orders_count) || 0), 0
     );
 
@@ -156,7 +198,7 @@ export const useAlWaseetInvoices = () => {
       totalAmount,
       totalOrders
     };
-  }, [invoices]);
+  }, [getFilteredInvoices]);
 
   // Auto-fetch invoices when token is available
   useEffect(() => {
@@ -166,10 +208,13 @@ export const useAlWaseetInvoices = () => {
   }, [token, isLoggedIn, activePartner, fetchInvoices]);
 
   return {
-    invoices,
+    invoices: getFilteredInvoices(),
+    allInvoices: invoices,
     loading,
     selectedInvoice,
     invoiceOrders,
+    dateFilter,
+    setDateFilter,
     fetchInvoices,
     fetchInvoiceOrders,
     receiveInvoice,
