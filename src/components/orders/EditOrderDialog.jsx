@@ -5,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Plus, AlertTriangle, Package, User, MapPin, Calendar, DollarSign, Save, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { editAlWaseetOrder } from '@/lib/alwaseet-api';
-// Removed SearchableSelectFixed import - using standard Select instead
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -89,18 +89,38 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     let customerCity = order.customer_city || '';
     let customerProvince = order.customer_province || '';
     
-    // إذا لم تكن المنطقة موجودة، حاول استخراجها من العنوان
+    // تحسين استخراج المنطقة من customer_address إذا لم تكن في customer_province
     if (!customerProvince && order.customer_address) {
-      const addressParts = order.customer_address.split(',').map(part => part.trim());
-      // البحث عن المنطقة في أجزاء العنوان
-      for (const part of addressParts) {
-        // تحقق من المحافظات العراقية
-        const provinceMatch = iraqiProvinces.find(p => 
-          part.includes(p.name) || p.name.includes(part)
-        );
-        if (provinceMatch && !customerProvince) {
-          customerProvince = part;
-          break;
+      console.log('🔍 البحث عن المنطقة في العنوان:', order.customer_address);
+      
+      // البحث الأولي في customer_address مباشرة 
+      const fullAddress = order.customer_address.toLowerCase();
+      
+      // البحث عن الكلمات المفتاحية للمناطق
+      const regionKeywords = ['صالحية', 'حي', 'منطقة', 'قضاء', 'محلة', 'شارع'];
+      for (const keyword of regionKeywords) {
+        const keywordIndex = fullAddress.indexOf(keyword);
+        if (keywordIndex !== -1) {
+          // استخراج النص بعد الكلمة المفتاحية
+          const afterKeyword = order.customer_address.substring(keywordIndex).split(/[،,]/)[0].trim();
+          if (afterKeyword.length > keyword.length + 1) {
+            customerProvince = afterKeyword;
+            console.log('✅ تم العثور على المنطقة من الكلمة المفتاحية:', customerProvince);
+            break;
+          }
+        }
+      }
+      
+      // إذا لم نجد شيء، جرب البحث في أجزاء العنوان
+      if (!customerProvince) {
+        const addressParts = order.customer_address.split(/[،,]/).map(part => part.trim()).filter(part => part.length > 2);
+        for (const part of addressParts) {
+          // تحقق من أجزاء العنوان التي قد تكون مناطق
+          if (part.length > 3 && !part.includes('بغداد') && !part.includes('شارع رقم')) {
+            customerProvince = part;
+            console.log('✅ تم العثور على المنطقة من أجزاء العنوان:', customerProvince);
+            break;
+          }
         }
       }
     }
@@ -720,49 +740,41 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
                     <>
-                       <div>
-                         <Label htmlFor="city_id">المدينة *</Label>
-                         <Select
-                           value={formData.city_id}
-                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                           disabled={!canEdit || isLoading || cities.length === 0}
-                         >
-                           <SelectTrigger>
-                             <SelectValue placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"} />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {cities.map(city => (
-                               <SelectItem key={city.id} value={String(city.id)}>
-                                 {city.name || city.name_ar || city.city_name || `مدينة ${city.id}`}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                       </div>
-                       <div>
-                         <Label htmlFor="region_id">المنطقة *</Label>
-                         <Select
-                           value={formData.region_id}
-                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                           disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
-                         >
-                           <SelectTrigger>
-                             <SelectValue placeholder={
-                               isLoadingRegions ? "جاري تحميل المناطق..." : 
-                               !formData.city_id ? "اختر المدينة أولاً..." :
-                               regions.length === 0 ? "لا توجد مناطق متاحة" :
-                               "اختر المنطقة..."
-                             } />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {regions.map(region => (
-                               <SelectItem key={region.id} value={String(region.id)}>
-                          {region.name || region.name_ar || region.region_name || `منطقة ${region.id}`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                        <div>
+                          <Label htmlFor="city_id">المدينة *</Label>
+                          <SearchableSelectFixed
+                            value={formData.city_id}
+                            onValueChange={(value) => handleSelectChange(value, 'city_id')}
+                            options={cities.map(city => ({ 
+                              value: String(city.id), 
+                              label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}` 
+                            }))}
+                            placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"}
+                            searchPlaceholder="بحث في المدن..."
+                            emptyText="لا توجد مدينة بهذا الاسم"
+                            disabled={!canEdit || isLoading || cities.length === 0}
+                          />
                         </div>
+                        <div>
+                          <Label htmlFor="region_id">المنطقة *</Label>
+                          <SearchableSelectFixed
+                            value={formData.region_id}
+                            onValueChange={(value) => handleSelectChange(value, 'region_id')}
+                            options={regions.map(region => ({ 
+                              value: String(region.id), 
+                              label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}` 
+                            }))}
+                            placeholder={
+                              isLoadingRegions ? "جاري تحميل المناطق..." : 
+                              !formData.city_id ? "اختر المدينة أولاً..." :
+                              regions.length === 0 ? "لا توجد مناطق متاحة" :
+                              "اختر المنطقة..."
+                            }
+                            searchPlaceholder="بحث في المناطق..."
+                            emptyText="لا توجد منطقة بهذا الاسم"
+                            disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
+                          />
+                         </div>
                       </>
                     )}
                     
