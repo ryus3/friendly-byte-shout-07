@@ -45,32 +45,22 @@ const SearchableSelectFixed = ({
     displayText
   });
 
-  // Close dropdown when clicking outside - improved for dialogs
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Add delay to allow onClick events to register first
-      setTimeout(() => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-            buttonRef.current && !buttonRef.current.contains(event.target)) {
-          // Check if click is not on a dialog backdrop or overlay
-          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
-          if (!isDialogClick) {
-            setOpen(false);
-          }
-        }
-      }, 100);
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        setOpen(false);
+      }
     };
 
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
-    }
-    
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
     };
-  }, [open]);
+  }, []);
 
   // Focus search input when opening
   useEffect(() => {
@@ -90,13 +80,9 @@ const SearchableSelectFixed = ({
 
   const handleOptionSelect = (optionValue) => {
     console.log('🎯 تم اختيار القيمة:', optionValue);
-    // Immediate selection without delay
     onValueChange(optionValue);
-    // Delay closing to ensure value is set
-    setTimeout(() => {
-      setOpen(false);
-      setSearch('');
-    }, 50);
+    setOpen(false);
+    setSearch('');
   };
 
   const handleSearchChange = (e) => {
@@ -124,15 +110,14 @@ const SearchableSelectFixed = ({
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[99999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed z-[9999] bg-background border border-border rounded-md shadow-lg max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
             top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
             width: buttonRef.current?.getBoundingClientRect().width || 'auto',
             minWidth: '200px',
-            maxWidth: '400px',
-            pointerEvents: 'auto'
+            maxWidth: '400px'
           }}
         >
           {/* Search Input */}
@@ -177,10 +162,6 @@ const SearchableSelectFixed = ({
                       e.preventDefault();
                       e.stopPropagation();
                       handleOptionSelect(optionValue);
-                    }}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
                     }}
                     onTouchEnd={(e) => {
                       e.preventDefault();
