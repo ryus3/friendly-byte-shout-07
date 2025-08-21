@@ -39,8 +39,13 @@ serve(async (req) => {
       Object.keys(queryParams).forEach(key => url.searchParams.append(key, queryParams[key]));
     }
 
-    if (token && endpoint !== 'create-order') { // Token is in query for create-order
-      headers["auth-token"] = token;
+    // For edit-order, token goes in query params only. For other endpoints, use auth-token header
+    if (token) {
+      if (endpoint === 'create-order' || endpoint === 'edit-order') {
+        // Token already in query params, don't add to headers
+      } else {
+        headers["auth-token"] = token;
+      }
     }
     
     // Al-Waseet API uses multipart/form-data for POST requests

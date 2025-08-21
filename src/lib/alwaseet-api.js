@@ -74,16 +74,39 @@ export const createAlWaseetOrder = async (orderData, token) => {
   return handleApiCall('create-order', 'POST', token, formattedData, { token });
 };
 
+// Helper function to map local field names to Al-Waseet API field names
+const mapToAlWaseetFields = (orderData) => {
+  return {
+    qr_id: orderData.tracking_number || orderData.qr_id,
+    client_name: orderData.name || orderData.client_name,
+    client_mobile: orderData.phone || orderData.client_mobile,
+    client_mobile2: orderData.phone2 || orderData.client_mobile2,
+    city_id: orderData.city_id,
+    region_id: orderData.region_id,
+    location: orderData.address || orderData.client_address || orderData.location,
+    type_name: orderData.details || orderData.type_name,
+    items_number: orderData.quantity || orderData.items_number,
+    price: orderData.price,
+    package_size: orderData.size || orderData.package_size,
+    merchant_notes: orderData.notes || orderData.merchant_notes,
+    replacement: orderData.replacement || 0
+  };
+};
+
 export const editAlWaseetOrder = async (orderData, token) => {
   // Format phones for Al-Waseet API requirements (same as createAlWaseetOrder)
   const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
   
-  const formattedData = { ...orderData };
+  // Map field names to Al-Waseet API format
+  const mappedData = mapToAlWaseetFields(orderData);
+  const formattedData = { ...mappedData };
   
   // Validate required fields
   if (!formattedData.qr_id) {
     throw new Error('رقم الطلب مطلوب للتعديل.');
   }
+  
+  console.log('📋 Mapped data for Al-Waseet edit:', formattedData);
   
   // Format primary phone (required)
   if (formattedData.client_mobile) {

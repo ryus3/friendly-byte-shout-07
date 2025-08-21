@@ -392,19 +392,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         console.log('📤 إرسال التحديث للوسيط...');
         
         const alwaseetData = {
-          qr_id: order.tracking_number,
-          client_name: formData.name,
-          client_mobile: formData.phone,
+          tracking_number: order.tracking_number, // Will be mapped to qr_id
+          name: formData.name, // Will be mapped to client_name
+          phone: formData.phone, // Will be mapped to client_mobile
           city_id: parseInt(formData.city_id) || 0,
           region_id: parseInt(formData.region_id) || 0,
-          client_address: formData.address,
-          notes: formData.notes || '',
+          address: formData.address, // Will be mapped to location
+          notes: formData.notes || '', // Will be mapped to merchant_notes
           details: selectedProducts.map(item => 
             `${item.productName}${item.color ? ` (${item.color})` : ''}${item.size ? ` - ${item.size}` : ''} × ${item.quantity}`
-          ).join(', '),
-          items_number: selectedProducts.reduce((sum, item) => sum + item.quantity, 0),
+          ).join(', '), // Will be mapped to type_name
+          quantity: selectedProducts.reduce((sum, item) => sum + item.quantity, 0), // Will be mapped to items_number
           price: Math.round(total),
-          package_size: parseInt(formData.size) || parseInt(packageSizes[0]?.id) || 1,
+          size: parseInt(formData.size) || parseInt(packageSizes[0]?.id) || 1, // Will be mapped to package_size
           replacement: 0
         };
         
