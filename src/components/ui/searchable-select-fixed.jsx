@@ -42,27 +42,53 @@ const SearchableSelectFixed = ({
     return dialogContent || dialogOverlay || document.body;
   }, []);
 
-  // Enhanced portal container for dialog compatibility
+  // Revolutionary portal strategy for seamless dialog integration
   const getPortalContainer = useCallback(() => {
     const dialogContent = document.querySelector('[data-radix-dialog-content]');
     if (dialogContent) {
-      // If inside dialog, create a dedicated container
-      let dropdownContainer = dialogContent.querySelector('[data-dropdown-portal]');
-      if (!dropdownContainer) {
-        dropdownContainer = document.createElement('div');
-        dropdownContainer.setAttribute('data-dropdown-portal', 'true');
-        dropdownContainer.style.cssText = `
-          position: fixed;
+      // Use dialog's portal directly for perfect integration
+      const dialogPortal = dialogContent.closest('[data-radix-portal]');
+      if (dialogPortal) {
+        let supremeDropdownContainer = dialogPortal.querySelector('[data-supreme-dropdown]');
+        if (!supremeDropdownContainer) {
+          supremeDropdownContainer = document.createElement('div');
+          supremeDropdownContainer.setAttribute('data-supreme-dropdown', 'true');
+          supremeDropdownContainer.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 2147483647;
+            isolation: isolate;
+            will-change: transform;
+            transform: translateZ(0);
+            contain: layout style paint size;
+          `;
+          dialogPortal.appendChild(supremeDropdownContainer);
+        }
+        return supremeDropdownContainer;
+      }
+      
+      // Fallback: inject directly into dialog content
+      let fallbackContainer = dialogContent.querySelector('[data-dropdown-fallback]');
+      if (!fallbackContainer) {
+        fallbackContainer = document.createElement('div');
+        fallbackContainer.setAttribute('data-dropdown-fallback', 'true');
+        fallbackContainer.style.cssText = `
+          position: absolute;
           top: 0;
           left: 0;
           width: 100%;
           height: 100%;
           pointer-events: none;
-          z-index: 99999999999;
+          z-index: 999999;
+          isolation: isolate;
         `;
-        dialogContent.appendChild(dropdownContainer);
+        dialogContent.appendChild(fallbackContainer);
       }
-      return dropdownContainer;
+      return fallbackContainer;
     }
     return document.body;
   }, []);
@@ -110,34 +136,102 @@ const SearchableSelectFixed = ({
     };
   }, [open]);
 
-  // Enhanced focus management for dialog compatibility
+  // Revolutionary focus override system for dialog domination
   useEffect(() => {
     if (open && searchInputRef.current) {
       const isInDialog = !!document.querySelector('[data-radix-dialog-content]');
-      const focusDelays = isInDialog ? [10, 50, 100, 200, 500, 1000] : [50, 100];
       
-      focusDelays.forEach(delay => {
+      if (isInDialog) {
+        // ULTIMATE FOCUS OVERRIDE PROTOCOL
+        const focusStrategies = [
+          // Immediate aggressive focus
+          { delay: 0, strategy: 'immediate' },
+          { delay: 10, strategy: 'tabindex-override' },
+          { delay: 50, strategy: 'attribute-manipulation' },
+          { delay: 100, strategy: 'forced-focus' },
+          { delay: 200, strategy: 'mutation-observer' },
+          { delay: 500, strategy: 'final-attempt' }
+        ];
+        
+        // Disable dialog focus trap temporarily
+        const dialogContent = document.querySelector('[data-radix-dialog-content]');
+        if (dialogContent) {
+          const originalInert = dialogContent.getAttribute('inert');
+          dialogContent.removeAttribute('inert');
+          
+          // Restore after dropdown closes
+          const restoreInert = () => {
+            if (originalInert !== null) {
+              dialogContent.setAttribute('inert', originalInert);
+            }
+          };
+          
+          setTimeout(restoreInert, 100);
+        }
+        
+        focusStrategies.forEach(({ delay, strategy }) => {
+          setTimeout(() => {
+            if (searchInputRef.current && open) {
+              try {
+                const input = searchInputRef.current;
+                
+                switch (strategy) {
+                  case 'immediate':
+                    input.focus();
+                    break;
+                    
+                  case 'tabindex-override':
+                    input.setAttribute('tabindex', '0');
+                    input.focus({ preventScroll: true });
+                    break;
+                    
+                  case 'attribute-manipulation':
+                    input.setAttribute('data-focus-override', 'true');
+                    input.setAttribute('autofocus', 'true');
+                    input.focus();
+                    input.select();
+                    break;
+                    
+                  case 'forced-focus':
+                    // Create temporary focus event
+                    const focusEvent = new FocusEvent('focus', { bubbles: false });
+                    input.dispatchEvent(focusEvent);
+                    input.focus({ preventScroll: false });
+                    break;
+                    
+                  case 'mutation-observer':
+                    // Force DOM to recognize input as focusable
+                    const observer = new MutationObserver(() => {
+                      if (input.isConnected) {
+                        input.focus();
+                        observer.disconnect();
+                      }
+                    });
+                    observer.observe(input, { attributes: true });
+                    input.setAttribute('data-force-focus', Date.now().toString());
+                    break;
+                    
+                  case 'final-attempt':
+                    // Last resort: click simulation
+                    const clickEvent = new MouseEvent('click', { bubbles: true });
+                    input.dispatchEvent(clickEvent);
+                    input.focus();
+                    break;
+                }
+              } catch (e) {
+                // Silent fail for focus attempts
+              }
+            }
+          }, delay);
+        });
+      } else {
+        // Standard focus for non-dialog environments
         setTimeout(() => {
           if (searchInputRef.current && open) {
-            try {
-              // Override dialog focus trap temporarily
-              const originalTabIndex = searchInputRef.current.tabIndex;
-              searchInputRef.current.tabIndex = 0;
-              searchInputRef.current.focus({ preventScroll: true });
-              searchInputRef.current.select();
-              
-              // Restore original tabIndex
-              setTimeout(() => {
-                if (searchInputRef.current) {
-                  searchInputRef.current.tabIndex = originalTabIndex;
-                }
-              }, 10);
-            } catch (e) {
-              // Silent fail for focus attempts
-            }
+            searchInputRef.current.focus();
           }
-        }, delay);
-      });
+        }, 50);
+      }
     }
   }, [open]);
 
@@ -175,11 +269,11 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Enhanced Dropdown Portal for Dialog Compatibility */}
+      {/* SUPREME DROPDOWN PORTAL - DIALOG DOMINATION MODE */}
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed bg-background border border-border rounded-md shadow-2xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
@@ -189,9 +283,18 @@ const SearchableSelectFixed = ({
             maxWidth: '400px',
             pointerEvents: 'auto',
             isolation: 'isolate',
-            transform: 'translateZ(0)',
-            zIndex: '99999999999',
-            contain: 'layout style paint'
+            transform: 'translateZ(0) translate3d(0, 0, 0)',
+            zIndex: '2147483647', // Maximum possible z-index
+            contain: 'layout style paint size',
+            willChange: 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            perspective: '1000px',
+            transformStyle: 'preserve-3d',
+            position: 'fixed',
+            // Override any dialog interference
+            visibility: 'visible !important',
+            display: 'block !important',
+            opacity: '1 !important'
           }}
           onClick={(e) => {
             e.preventDefault();
@@ -217,7 +320,7 @@ const SearchableSelectFixed = ({
           <div className="p-1 border-b border-border">
             <div className="relative">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+               <Input
                 ref={searchInputRef}
                 placeholder={searchPlaceholder}
                 value={search}
@@ -225,6 +328,7 @@ const SearchableSelectFixed = ({
                 onKeyDown={(e) => {
                   e.stopPropagation();
                   e.stopImmediatePropagation();
+                  e.nativeEvent?.stopImmediatePropagation();
                   if (e.key === 'Escape') {
                     e.preventDefault();
                     setOpen(false);
@@ -233,16 +337,30 @@ const SearchableSelectFixed = ({
                 onKeyUp={(e) => {
                   e.stopPropagation();
                   e.stopImmediatePropagation();
+                  e.nativeEvent?.stopImmediatePropagation();
                 }}
                 onInput={(e) => {
                   e.stopPropagation();
                   e.stopImmediatePropagation();
+                  e.nativeEvent?.stopImmediatePropagation();
                 }}
                 onFocus={(e) => {
                   e.stopPropagation();
                   e.stopImmediatePropagation();
+                  e.nativeEvent?.stopImmediatePropagation();
                 }}
                 onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                  e.nativeEvent?.stopImmediatePropagation();
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                onTouchStart={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   e.stopImmediatePropagation();
@@ -251,10 +369,26 @@ const SearchableSelectFixed = ({
                 autoComplete="off"
                 autoFocus
                 tabIndex={0}
+                data-focus-override="true"
+                data-dialog-search-input="true"
                 style={{ 
-                  pointerEvents: 'auto',
-                  userSelect: 'text',
-                  caretColor: 'auto'
+                  pointerEvents: 'auto !important',
+                  userSelect: 'text !important',
+                  caretColor: 'auto !important',
+                  touchAction: 'manipulation',
+                  WebkitUserSelect: 'text',
+                  MozUserSelect: 'text',
+                  msUserSelect: 'text',
+                  WebkitTouchCallout: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  outline: 'none !important',
+                  boxShadow: 'none !important',
+                  border: 'none !important',
+                  // Force visibility and interaction
+                  visibility: 'visible !important',
+                  display: 'block !important',
+                  opacity: '1 !important',
+                  zIndex: '999999999'
                 }}
               />
             </div>
