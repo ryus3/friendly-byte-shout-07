@@ -126,14 +126,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       tracking_number: order.tracking_number
     });
     
+    // جلب البيانات المطلوبة أولاً
+    if (cities.length === 0) await fetchCities();
+    if (packageSizes.length === 0) await fetchPackageSizes();
+    
     // البحث عن city_id و region_id من البيانات
     let cityId = '';
     let regionId = '';
     let packageSize = 'normal'; // القيمة الافتراضية
     
-    // إذا كان الطلب مرسل للوسيط، حاول مطابقة البيانات
-    if (order.delivery_partner && order.delivery_partner !== 'محلي' && cities.length > 0) {
-      // البحث عن المدينة بطرق متعددة
+    // البحث عن المدينة في القائمة المحملة
+    if (customerCity && cities.length > 0) {
       const cityMatch = cities.find(c => {
         const cityName = c.name || c.name_ar || c.city_name || '';
         return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim() ||
@@ -150,6 +153,21 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         try {
           await fetchRegions(cityId);
           console.log('✅ تم جلب المناطق للمدينة:', cityId);
+          
+          // البحث عن المنطقة بعد جلب المناطق
+          if (customerProvince && regions.length > 0) {
+            const regionMatch = regions.find(r => {
+              const regionName = r.name || r.name_ar || r.region_name || '';
+              return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
+                     customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
+                     regionName.toLowerCase().includes(customerProvince.toLowerCase());
+            });
+            
+            if (regionMatch) {
+              regionId = regionMatch.id;
+              console.log('✅ تم العثور على المنطقة:', regionMatch);
+            }
+          }
         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
         } finally {
@@ -158,18 +176,29 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       } else {
         console.log('❌ لم يتم العثور على المدينة في القائمة:', customerCity);
       }
+    }
+    
+    // تحديد حجم الطلب الصحيح
+    if (order.package_size && packageSizes.length > 0) {
+      // البحث عن حجم الطلب بطرق متعددة
+      const sizeMatch = packageSizes.find(size => 
+        size.id === order.package_size ||
+        size.name === order.package_size ||
+        (size.name && size.name.includes(order.package_size)) ||
+        (order.package_size && order.package_size.includes(size.name))
+      );
       
-      // محاولة استخراج حجم الطلب من البيانات المحفوظة
-      if (order.delivery_partner_data?.package_size) {
-        packageSize = order.delivery_partner_data.package_size;
-      } else if (packageSizes.length > 0) {
-        // البحث عن "عادي" في قائمة الأحجام
+      if (sizeMatch) {
+        packageSize = sizeMatch.id;
+        console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
+      } else {
+        // البحث عن "عادي" كقيمة افتراضية
         const normalSize = packageSizes.find(size => 
           (size.name && size.name.includes('عادي')) ||
-          (size.name && size.name.toLowerCase().includes('normal')) ||
-          size.id === 1
+          (size.name && size.name.toLowerCase().includes('normal'))
         );
         packageSize = normalSize ? normalSize.id : packageSizes[0]?.id || 'normal';
+        console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', packageSize);
       }
     }
     
@@ -405,7 +434,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           tracking_number: order.tracking_number, // Will be mapped to qr_id
           name: formData.name, // Will be mapped to client_name
           phone: formData.phone, // Will be mapped to client_mobile
-          phone2: formData.phone2, // Will be mapped to client_mobile2
+          phone2: formData.phone2 || '', // Will be mapped to client_mobile2
           city_id: parseInt(formData.city_id) || 0,
           region_id: parseInt(formData.region_id) || 0,
           address: formData.address, // Will be mapped to location
@@ -429,7 +458,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           // لا نريد أن يفشل التحديث بالكامل إذا فشل الوسيط
           toast({
             title: "تحذير",
-            description: "تم تحديث الطلب محلياً لكن فشل في تحديث شركة التوصيل",
+            description: "تم تحديث الطلب محلياً لكن فشل في تحديث شركة التوصيل. خطأ: " + (alwaseetError.message || 'غير معروف'),
             variant: "warning"
           });
         }
