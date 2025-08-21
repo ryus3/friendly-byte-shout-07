@@ -45,39 +45,57 @@ const SearchableSelectFixed = ({
     displayText
   });
 
-  // Close dropdown when clicking outside - improved for dialogs
+  // Enhanced click outside handling for dialog compatibility
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Add delay to allow onClick events to register first
-      setTimeout(() => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-            buttonRef.current && !buttonRef.current.contains(event.target)) {
-          // Check if click is not on a dialog backdrop or overlay
-          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
-          if (!isDialogClick) {
-            setOpen(false);
-          }
+      if (!open) return;
+      
+      // Check if clicked element is inside our dropdown or button
+      const isInsideDropdown = dropdownRef.current?.contains(event.target);
+      const isInsideButton = buttonRef.current?.contains(event.target);
+      
+      if (!isInsideDropdown && !isInsideButton) {
+        // Enhanced dialog detection
+        const isDialogOverlay = event.target.closest('[data-radix-dialog-overlay], [data-dialog-overlay]');
+        const isDialogContent = event.target.closest('[role="dialog"], [data-radix-dialog-content]');
+        
+        // Don't close if clicking on dialog overlay or content
+        if (!isDialogOverlay && !isDialogContent) {
+          setOpen(false);
         }
-      }, 100);
+      }
     };
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
+      // Use capture phase to handle events before dialog's focus trap
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('touchstart', handleClickOutside, true);
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
     };
   }, [open]);
 
-  // Focus search input when opening
+  // Enhanced focus management for dialog compatibility
   useEffect(() => {
     if (open && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      // Multiple focus attempts with progressive delays
+      const focusAttempts = [50, 100, 200, 300];
+      
+      focusAttempts.forEach(delay => {
+        setTimeout(() => {
+          if (searchInputRef.current && open) {
+            try {
+              searchInputRef.current.focus();
+              searchInputRef.current.select();
+            } catch (e) {
+              console.log('Focus attempt failed:', e);
+            }
+          }
+        }, delay);
+      });
     }
   }, [open]);
 
@@ -120,11 +138,11 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Dropdown */}
+      {/* Enhanced Dropdown Portal for Dialog Compatibility */}
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed z-[99999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="fixed z-[999999999] bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
@@ -132,8 +150,13 @@ const SearchableSelectFixed = ({
             width: buttonRef.current?.getBoundingClientRect().width || 'auto',
             minWidth: '200px',
             maxWidth: '400px',
-            pointerEvents: 'auto'
+            pointerEvents: 'auto',
+            isolation: 'isolate',
+            transform: 'translateZ(0)'
           }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {/* Search Input */}
           <div className="p-1 border-b border-border">
@@ -144,8 +167,12 @@ const SearchableSelectFixed = ({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
+                onKeyDown={(e) => e.stopPropagation()}
+                onKeyUp={(e) => e.stopPropagation()}
+                onInput={(e) => e.stopPropagation()}
                 className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
+                tabIndex={0}
               />
             </div>
           </div>
