@@ -323,10 +323,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           originalSize: order.package_size 
         });
       }
-    } else if (order.delivery_partner !== 'الوسيط') {
-        // للطلبات المحلية، استخدم القيم الصحيحة كما في QuickOrderContent
+    } else {
+        // للطلبات المحلية و Al-Waseet، استخدم القيم الصحيحة كما في QuickOrderContent
       packageSize = 'عادي'; // Use Arabic text like QuickOrderContent
-      console.log('📦 طلب محلي - استخدام الحجم الافتراضي:', packageSize);
+      console.log('📦 طلب محلي أو Al-Waseet - استخدام الحجم الافتراضي:', packageSize);
     }
     
     // تحضير المنتجات المحددة من عناصر الطلب
@@ -757,39 +757,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                            <SelectContent>
                              {regions.map(region => (
                                <SelectItem key={region.id} value={String(region.id)}>
-                                 {region.name || region.name_ar || region.region_name || `منطقة ${region.id}`}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                       </div>
-                          <div>
-                           <Label htmlFor="size">حجم الطلب</Label>
-                           <Select
-                             value={formData.size}
-                             onValueChange={(value) => handleSelectChange(value, 'size')}
-                             disabled={!canEdit || isLoading || packageSizes.length === 0}
-                           >
-                             <SelectTrigger className="text-right">
-                               <SelectValue placeholder={
-                                 packageSizes.length === 0 ? "جاري تحميل الأحجام..." : 
-                                 "اختر حجم الطلب..."
-                               } />
-                             </SelectTrigger>
-                             <SelectContent>
-                               {packageSizes.map(size => (
-                                 <SelectItem key={size.id} value={String(size.id)}>
-                                   {size.name || size.package_name || `حجم ${size.id}`}
-                                 </SelectItem>
-                               ))}
-                             </SelectContent>
-                           </Select>
-                         </div>
-                     </>
-                   )}
-                   
-                   {/* Show local package size selection for local orders */}
-                   {(!order?.delivery_partner || order.delivery_partner === 'محلي') && (
+                          {region.name || region.name_ar || region.region_name || `منطقة ${region.id}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                    
+                    {/* Show unified package size selection for local orders and Al-Waseet */}
+                    {(!order?.delivery_partner || order.delivery_partner === 'محلي' || order.delivery_partner === 'Al-Waseet') && (
                      <div>
                        <Label htmlFor="size">حجم الطلب</Label>
                        <Select
@@ -810,8 +788,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                      </div>
                    )}
                    
-                    <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
-                     <Label htmlFor="address">العنوان التفصيلي</Label>
+                     <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
+                      <Label htmlFor="address">العنوان التفصيلي (اختياري)</Label>
                      <Textarea
                        id="address"
                        name="address"
