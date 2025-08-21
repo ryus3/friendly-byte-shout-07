@@ -24,51 +24,15 @@ const SearchableSelectFixed = ({
   const filteredOptions = useMemo(() => {
     if (!search) return options;
     return options.filter(option => 
-      (option.label || option.name || option.name_ar)?.toLowerCase().includes(search.toLowerCase())
+      (option.label || option.name)?.toLowerCase().includes(search.toLowerCase())
     );
   }, [options, search]);
 
-  // Enhanced type-safe option finding with multiple comparison methods
-  const selectedOption = useMemo(() => {
-    if (!value || !options || options.length === 0) return null;
-    
-    console.log('🔍 البحث عن الخيار المحدد:', { value, valueType: typeof value, optionsCount: options.length });
-    
-    // Try multiple comparison methods for robustness
-    const found = options.find(option => {
-      const optionValue = option.value || option.id;
-      
-      // Exact match first
-      if (optionValue === value) return true;
-      
-      // String comparison (handles number-string conversions)
-      if (String(optionValue) === String(value)) return true;
-      
-      // Numeric comparison for cases where one is string and other is number
-      if (!isNaN(optionValue) && !isNaN(value) && Number(optionValue) === Number(value)) return true;
-      
-      return false;
-    });
-    
-    console.log('🎯 الخيار الموجود:', found);
-    return found || null;
-  }, [value, options]);
+  const selectedOption = options.find(option => 
+    (option.value || option.id) === value
+  );
 
-  // Enhanced display text with fallback logic
-  const displayText = useMemo(() => {
-    if (!selectedOption) return placeholder;
-    
-    // Try multiple name properties in order of preference
-    const name = selectedOption.label || 
-                 selectedOption.name || 
-                 selectedOption.name_ar || 
-                 selectedOption.city_name || 
-                 selectedOption.region_name ||
-                 `Option ${selectedOption.id || selectedOption.value}`;
-    
-    console.log('📝 النص المعروض:', name);
-    return name;
-  }, [selectedOption, placeholder]);
+  const displayText = selectedOption?.label || selectedOption?.name || placeholder;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -169,12 +133,8 @@ const SearchableSelectFixed = ({
             ) : (
               filteredOptions.map((option) => {
                 const optionValue = option.value || option.id;
-                const optionLabel = option.label || option.name || option.name_ar || option.city_name || option.region_name;
-                
-                // Enhanced type-safe selection check
-                const isSelected = value === optionValue || 
-                                 String(value) === String(optionValue) || 
-                                 (!isNaN(value) && !isNaN(optionValue) && Number(value) === Number(optionValue));
+                const optionLabel = option.label || option.name;
+                const isSelected = value === optionValue;
                 
                 return (
                   <div

@@ -106,13 +106,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
-  // Initialize form with order data - enhanced with better matching
+  // Initialize form with order data - simplified approach
   const initializeFormWithOrderData = () => {
     if (!order) return;
-    
-    console.log('🔄 تهيئة النموذج بطلب:', order);
-    console.log('🏙️ المدن المتوفرة:', cities);
-    console.log('📦 أحجام الطلب المتوفرة:', packageSizes);
     
     // Find matching city and region IDs if this is an Al-Waseet order
     let cityId = '';
@@ -120,77 +116,29 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     let packageSizeId = '';
     
     if (order.delivery_partner === 'الوسيط' && cities.length > 0) {
-      // Enhanced city matching with multiple strategies
-      const customerCity = order.customer_city || order.city;
-      console.log('🔍 البحث عن المدينة:', customerCity);
+      const cityMatch = cities.find(c => 
+        (c.name && c.name.toLowerCase().includes(order.customer_city?.toLowerCase())) ||
+        (order.customer_city && order.customer_city.toLowerCase().includes(c.name?.toLowerCase()))
+      );
       
-      if (customerCity) {
-        // Try exact match first
-        let cityMatch = cities.find(c => 
-          c.name === customerCity || 
-          c.name_ar === customerCity ||
-          c.city_name === customerCity
-        );
-        
-        // If no exact match, try partial matching
-        if (!cityMatch) {
-          cityMatch = cities.find(c => {
-            const cityName = c.name || c.name_ar || c.city_name || '';
-            return cityName.toLowerCase().includes(customerCity.toLowerCase()) ||
-                   customerCity.toLowerCase().includes(cityName.toLowerCase());
-          });
-        }
-        
-        // If still no match, try the first city containing the text
-        if (!cityMatch) {
-          cityMatch = cities.find(c => {
-            const cityName = (c.name || c.name_ar || c.city_name || '').toLowerCase();
-            const searchCity = customerCity.toLowerCase();
-            return cityName.includes(searchCity) || searchCity.includes(cityName);
-          });
-        }
-        
-        if (cityMatch) {
-          cityId = cityMatch.id;
-          console.log('✅ تم العثور على المدينة:', cityMatch);
-          // Load regions for this city
-          loadRegionsForCity(cityId);
-        } else {
-          console.log('❌ لم يتم العثور على المدينة:', customerCity);
-        }
+      if (cityMatch) {
+        cityId = cityMatch.id;
+        // Load regions for this city
+        loadRegionsForCity(cityId);
       }
       
-      // Enhanced package size matching
+      // Find package size
       if (packageSizes.length > 0) {
-        const orderPackageSize = order.package_size;
-        console.log('🔍 البحث عن حجم الطلب:', orderPackageSize);
-        
-        if (orderPackageSize) {
-          // Try exact ID match first
-          let sizeMatch = packageSizes.find(s => s.id == orderPackageSize);
-          
-          // If no exact match, try name matching
-          if (!sizeMatch && typeof orderPackageSize === 'string') {
-            sizeMatch = packageSizes.find(s => 
-              (s.name && s.name.includes(orderPackageSize)) ||
-              (s.name_ar && s.name_ar.includes(orderPackageSize))
-            );
-          }
-          
-          // If still no match, use first available
-          if (!sizeMatch && packageSizes.length > 0) {
-            sizeMatch = packageSizes[0];
-            console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام الافتراضي:', sizeMatch);
-          }
-          
-          packageSizeId = sizeMatch ? sizeMatch.id : '';
-          console.log('✅ حجم الطلب المحدد:', sizeMatch);
-        }
+        const sizeMatch = packageSizes.find(s => 
+          s.id == order.package_size || 
+          s.name?.includes(order.package_size)
+        );
+        packageSizeId = sizeMatch ? sizeMatch.id : packageSizes[0]?.id || '';
       }
     }
     
-    // Set form data with detailed logging
-    const newFormData = {
+    // Set form data
+    setFormData({
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       phone2: order.customer_phone2 || '',
@@ -201,10 +149,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       size: packageSizeId,
       price: order.total_amount || 0,
       delivery_fee: order.delivery_fee || 0
-    };
-    
-    console.log('📝 تعيين بيانات النموذج:', newFormData);
-    setFormData(newFormData);
+    });
     
     // Set selected products
     if (order.items && Array.isArray(order.items)) {
@@ -221,56 +166,29 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
-  // Enhanced region loading with better matching logic
+  // Load regions for selected city - same as QuickOrderContent
   const loadRegionsForCity = async (cityId) => {
     if (!cityId || !waseetToken) return;
     
-    console.log('🔄 تحميل المناطق للمدينة:', cityId);
     setLoadingRegions(true);
-    
     try {
       const regionsData = await getRegionsByCity(waseetToken, cityId);
-      const regions = Array.isArray(regionsData) ? regionsData : [];
-      setRegions(regions);
+      setRegions(Array.isArray(regionsData) ? regionsData : []);
       
-      console.log('📍 المناطق المحملة:', regions);
-      
-      // Enhanced region matching for order editing
-      const customerProvince = order?.customer_province || order?.region;
-      if (customerProvince && regions.length > 0) {
-        console.log('🔍 البحث عن المنطقة:', customerProvince);
-        
-        // Try exact match first
-        let regionMatch = regions.find(r => 
-          r.name === customerProvince || 
-          r.name_ar === customerProvince ||
-          r.region_name === customerProvince
+      // Try to find matching region
+      if (order?.customer_province && regionsData.length > 0) {
+        const regionMatch = regionsData.find(r => 
+          (r.name && r.name.toLowerCase().includes(order.customer_province.toLowerCase())) ||
+          (order.customer_province.toLowerCase().includes(r.name?.toLowerCase()))
         );
         
-        // If no exact match, try partial matching
-        if (!regionMatch) {
-          regionMatch = regions.find(r => {
-            const regionName = r.name || r.name_ar || r.region_name || '';
-            return regionName.toLowerCase().includes(customerProvince.toLowerCase()) ||
-                   customerProvince.toLowerCase().includes(regionName.toLowerCase());
-          });
-        }
-        
         if (regionMatch) {
-          console.log('✅ تم العثور على المنطقة:', regionMatch);
           setFormData(prev => ({ ...prev, region_id: regionMatch.id }));
-        } else {
-          console.log('❌ لم يتم العثور على المنطقة:', customerProvince);
         }
       }
       
     } catch (error) {
-      console.error('❌ خطأ في تحميل المناطق:', error);
-      toast({
-        title: "خطأ في تحميل المناطق",
-        description: "فشل في تحميل مناطق المدينة المحددة",
-        variant: "destructive"
-      });
+      console.error('Error loading regions:', error);
     } finally {
       setLoadingRegions(false);
     }
@@ -282,69 +200,50 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Enhanced select change handler with proper value handling
+  // معالجة تغيير القوائم المنسدلة مع إصلاح شامل
   const handleSelectChange = async (value, name) => {
-    console.log(`🔄 تغيير ${name} إلى:`, { value, type: typeof value });
+    console.log(`🔄 تغيير ${name} إلى:`, value);
     
-    // Update state immediately to avoid delays
+    // تحديث الحالة فوراً لتجنب التأخير
     setFormData(prev => {
       const newData = { ...prev };
       
-      // Set the selected value with proper type conversion
+      // تحديث القيمة المحددة
       newData[name] = value;
       
-      // Handle city change
+      // إذا تغيرت المدينة
       if (name === 'city_id' && value) {
-        // Find city with enhanced matching
-        const selectedCity = cities.find(c => 
-          c.id === value || 
-          String(c.id) === String(value) || 
-          Number(c.id) === Number(value)
-        );
-        
+        const selectedCity = cities.find(c => c.id === value);
         if (selectedCity) {
           newData.city = selectedCity.name || selectedCity.name_ar || selectedCity.city_name || '';
           console.log('🏙️ تم اختيار المدينة:', selectedCity);
         }
-        
-        // Reset region when city changes
+        // إعادة تعيين المنطقة عند تغيير المدينة
         newData.region_id = '';
         newData.region = '';
-        setRegions([]); // Clear regions immediately
       }
       
-      // Handle region change
+      // إذا تغيرت المنطقة
       if (name === 'region_id' && value) {
-        const selectedRegion = regions.find(r => 
-          r.id === value || 
-          String(r.id) === String(value) || 
-          Number(r.id) === Number(value)
-        );
-        
+        const selectedRegion = regions.find(r => r.id === value);
         if (selectedRegion) {
           newData.region = selectedRegion.name || selectedRegion.name_ar || selectedRegion.region_name || '';
           console.log('📍 تم اختيار المنطقة:', selectedRegion);
         }
       }
       
-      // Handle package size change
+      // إذا تغير حجم الطلب
       if (name === 'size' && value) {
-        const selectedSize = packageSizes.find(s => 
-          s.id == value || 
-          String(s.id) === String(value) || 
-          Number(s.id) === Number(value)
-        );
-        
+        const selectedSize = packageSizes.find(s => s.id == value);
         if (selectedSize) {
           console.log('📦 تم اختيار حجم الطلب:', selectedSize);
         }
       }
       
-      console.log('📝 البيانات المحدثة:', newData);
       return newData;
     });
     
-    // Load regions when city changes (async operation)
+    // جلب المناطق عند تغيير المدينة (بدون تأثير على UI)
     if (name === 'city_id' && value) {
       await loadRegionsForCity(value);
     }
