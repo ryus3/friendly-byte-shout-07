@@ -116,40 +116,65 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     let packageSizeId = '';
     
     if (order.delivery_partner === 'الوسيط' && cities.length > 0) {
-      const cityMatch = cities.find(c => 
-        (c.name && c.name.toLowerCase().includes(order.customer_city?.toLowerCase())) ||
-        (order.customer_city && order.customer_city.toLowerCase().includes(c.name?.toLowerCase()))
-      );
+      console.log('🏙️ البحث عن المدينة:', {
+        orderCity: order.customer_city,
+        availableCities: cities.map(c => ({ id: c.id, name: c.name }))
+      });
+      
+      // Exact match first, then partial match
+      const cityMatch = cities.find(c => {
+        if (!c.name || !order.customer_city) return false;
+        const cityName = c.name.trim().toLowerCase();
+        const orderCity = order.customer_city.trim().toLowerCase();
+        return cityName === orderCity || 
+               cityName.includes(orderCity) || 
+               orderCity.includes(cityName);
+      });
       
       if (cityMatch) {
-        cityId = cityMatch.id;
+        cityId = String(cityMatch.id);
+        console.log('✅ تم العثور على المدينة:', cityMatch);
         // Load regions for this city
         loadRegionsForCity(cityId);
+      } else {
+        console.log('❌ لم يتم العثور على المدينة المطابقة');
       }
       
-      // Find package size
+      // Find package size - exact ID match first
       if (packageSizes.length > 0) {
+        console.log('📦 البحث عن حجم الطلب:', {
+          orderSize: order.package_size,
+          availableSizes: packageSizes.map(s => ({ id: s.id, name: s.name }))
+        });
+        
         const sizeMatch = packageSizes.find(s => 
-          s.id == order.package_size || 
-          s.name?.includes(order.package_size)
+          String(s.id) === String(order.package_size) || 
+          (s.name && order.package_size && s.name.includes(order.package_size))
         );
-        packageSizeId = sizeMatch ? sizeMatch.id : packageSizes[0]?.id || '';
+        packageSizeId = sizeMatch ? String(sizeMatch.id) : String(packageSizes[0]?.id) || '';
+        
+        if (sizeMatch) {
+          console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
+        }
       }
     }
     
-    // Set form data
-    setFormData({
+    // Set form data with proper type conversion
+    const newFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       phone2: order.customer_phone2 || '',
-      city_id: cityId,
-      region_id: regionId,
+      city_id: String(cityId),
+      region_id: String(regionId),
       address: order.customer_address || '',
       notes: order.notes || '',
-      size: packageSizeId,
+      size: String(packageSizeId),
       price: order.total_amount || 0,
       delivery_fee: order.delivery_fee || 0
-    });
+    };
+    
+    console.log('📋 تعيين بيانات النموذج:', newFormData);
+    setFormData(newFormData);
     
     // Set selected products
     if (order.items && Array.isArray(order.items)) {
@@ -175,15 +200,27 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       const regionsData = await getRegionsByCity(waseetToken, cityId);
       setRegions(Array.isArray(regionsData) ? regionsData : []);
       
-      // Try to find matching region
+      // Try to find matching region with better logic
       if (order?.customer_province && regionsData.length > 0) {
-        const regionMatch = regionsData.find(r => 
-          (r.name && r.name.toLowerCase().includes(order.customer_province.toLowerCase())) ||
-          (order.customer_province.toLowerCase().includes(r.name?.toLowerCase()))
-        );
+        console.log('📍 البحث عن المنطقة:', {
+          orderRegion: order.customer_province,
+          availableRegions: regionsData.map(r => ({ id: r.id, name: r.name }))
+        });
+        
+        const regionMatch = regionsData.find(r => {
+          if (!r.name || !order.customer_province) return false;
+          const regionName = r.name.trim().toLowerCase();
+          const orderRegion = order.customer_province.trim().toLowerCase();
+          return regionName === orderRegion || 
+                 regionName.includes(orderRegion) || 
+                 orderRegion.includes(regionName);
+        });
         
         if (regionMatch) {
-          setFormData(prev => ({ ...prev, region_id: regionMatch.id }));
+          console.log('✅ تم العثور على المنطقة:', regionMatch);
+          setFormData(prev => ({ ...prev, region_id: String(regionMatch.id) }));
+        } else {
+          console.log('❌ لم يتم العثور على المنطقة المطابقة');
         }
       }
       
