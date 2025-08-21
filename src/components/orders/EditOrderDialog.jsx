@@ -8,233 +8,150 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trash2, Plus, AlertTriangle, Package, User, MapPin, Calendar, DollarSign, Save, Loader2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { editAlWaseetOrder } from '@/lib/alwaseet-api';
+import { getCities, getRegionsByCity, getPackageSizes, editAlWaseetOrder } from '@/lib/alwaseet-api';
 import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
-import { iraqiProvinces } from '@/lib/iraq-provinces';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import { useInventory } from '@/contexts/InventoryContext';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
-  const { cities, regions, packageSizes, fetchCities, fetchRegions, fetchPackageSizes, waseetToken } = useAlWaseet();
-  const { products, updateOrder, settings } = useInventory();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken } = useAlWaseet();
+  const { updateOrder, settings } = useInventory();
   
+  // Simplified state management - unify with QuickOrderContent approach
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     phone2: '',
     city_id: '',
     region_id: '',
-    city: '',
-    region: '',
     address: '',
     notes: '',
     size: '',
-    quantity: 1,
     price: 0,
-    details: '',
     delivery_fee: 0
   });
-  const [orderItems, setOrderItems] = useState([]);
+  
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingRegions, setIsLoadingRegions] = useState(false);
   const [canEdit, setCanEdit] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [selectedProducts, setSelectedProducts] = useState([]);
-  const [originalData, setOriginalData] = useState(null);
+  
+  // Al-Waseet data - using same approach as QuickOrderContent
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
 
-  // تحميل البيانات الأساسية عند فتح النافذة
+  // Load initial data when dialog opens - unified approach
   useEffect(() => {
-    if (open) {
-      if (cities.length === 0) fetchCities();
-      if (packageSizes.length === 0) fetchPackageSizes();
-    }
-  }, [open, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
-
-  // معالجة العثور على المنطقة بعد جلب المناطق
-  useEffect(() => {
-    if (regions.length > 0 && originalData?.customerProvince && formData.city_id && !formData.region_id) {
-      const regionMatch = regions.find(r => {
-        const regionName = r.name || r.name_ar || r.region_name || '';
-        return regionName.toLowerCase().trim() === originalData.customerProvince.toLowerCase().trim() ||
-               originalData.customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-               regionName.toLowerCase().includes(originalData.customerProvince.toLowerCase());
-      });
+    const loadInitialData = async () => {
+      if (!open || !order) return;
       
-      if (regionMatch) {
-        console.log('✅ تم العثور على المنطقة تلقائياً:', regionMatch);
-        setFormData(prev => ({ 
-          ...prev, 
-          region_id: regionMatch.id,
-          region: regionMatch.name || regionMatch.name_ar || regionMatch.region_name
-        }));
+      console.log('🔄 Loading order for edit:', order);
+      
+      // Determine if order can be edited
+      const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
+      setCanEdit(editable);
+      
+      // Load Al-Waseet data if needed (for Al-Waseet orders only)
+      if (order.delivery_partner === 'الوسيط' && isWaseetLoggedIn && waseetToken) {
+        await loadAlWaseetData();
+        // Initialize form after data is loaded for Al-Waseet orders
+        setTimeout(initializeFormWithOrderData, 100);
+      } else {
+        // Initialize form immediately for local orders
+        initializeFormWithOrderData();
       }
-    }
-  }, [regions, originalData, formData.city_id, formData.region_id]);
-
-  // تهيئة النموذج عند فتح النافذة
-  const initializeForm = useCallback(async () => {
-    if (!order || !open) return;
-    
-    console.log('🔄 تهيئة نموذج تعديل الطلب:', order);
-    
-    // تحديد ما إذا كان يمكن تعديل الطلب
-    const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
-    setCanEdit(editable);
-    
-    // استخراج البيانات من الطلب - تحسين الاستخراج من customer_address
-    let customerCity = order.customer_city || '';
-    let customerProvince = order.customer_province || '';
-    
-    // إذا لم تكن المنطقة موجودة، حاول استخراجها من العنوان
-    if (!customerProvince && order.customer_address) {
-      const addressParts = order.customer_address.split(',').map(part => part.trim());
-      // البحث عن المنطقة في أجزاء العنوان
-      for (const part of addressParts) {
-        // تحقق من المحافظات العراقية
-        const provinceMatch = iraqiProvinces.find(p => 
-          part.includes(p.name) || p.name.includes(part)
-        );
-        if (provinceMatch && !customerProvince) {
-          customerProvince = part;
-          break;
-        }
-      }
-    }
-    
-    // حفظ البيانات الأصلية للمقارنة
-    const originalDataObj = {
-      customerName: order.customer_name || '',
-      customerPhone: order.customer_phone || '',
-      customerPhone2: order.customer_phone2 || '',
-      customerCity: customerCity,
-      customerProvince: customerProvince,
-      customerAddress: order.customer_address || '',
-      totalAmount: order.total_amount || 0,
-      deliveryFee: order.delivery_fee || 0,
-      trackingNumber: order.tracking_number || '',
-      deliveryPartner: order.delivery_partner || ''
     };
-    setOriginalData(originalDataObj);
     
-    console.log('📍 البيانات المستخرجة:', {
-      customerCity,
-      customerProvince,
-      address: order.customer_address,
-      delivery_partner: order.delivery_partner,
-      tracking_number: order.tracking_number
-    });
+    loadInitialData();
+  }, [open, order, isWaseetLoggedIn, waseetToken]);
+
+  // Reinitialize form when cities/package sizes change (for Al-Waseet orders)
+  useEffect(() => {
+    if (order && cities.length > 0 && packageSizes.length > 0 && order.delivery_partner === 'الوسيط') {
+      initializeFormWithOrderData();
+    }
+  }, [cities, packageSizes, order]);
+
+  // Load Al-Waseet data (cities, regions, package sizes) - same as QuickOrderContent
+  const loadAlWaseetData = async () => {
+    if (!waseetToken) return;
     
-    // جلب البيانات المطلوبة أولاً
-    if (cities.length === 0) await fetchCities();
-    if (packageSizes.length === 0) await fetchPackageSizes();
+    try {
+      // Load cities
+      setLoadingCities(true);
+      const citiesData = await getCities(waseetToken);
+      setCities(Array.isArray(citiesData) ? citiesData : []);
+      
+      // Load package sizes
+      setLoadingPackageSizes(true);
+      const packageSizesData = await getPackageSizes(waseetToken);
+      setPackageSizes(Array.isArray(packageSizesData) ? packageSizesData : []);
+      
+    } catch (error) {
+      console.error('Error loading Al-Waseet data:', error);
+      toast({
+        title: "خطأ في تحميل البيانات",
+        description: "فشل في تحميل بيانات الوسيط: " + error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCities(false);
+      setLoadingPackageSizes(false);
+    }
+  };
+
+  // Initialize form with order data - simplified approach
+  const initializeFormWithOrderData = () => {
+    if (!order) return;
     
-    // انتظار تحديث المتغيرات المحلية
-    const currentCities = cities.length > 0 ? cities : await new Promise(resolve => {
-      setTimeout(() => resolve(cities), 100);
-    });
-    const currentPackageSizes = packageSizes.length > 0 ? packageSizes : await new Promise(resolve => {
-      setTimeout(() => resolve(packageSizes), 100);
-    });
-    
-    // البحث عن city_id و region_id من البيانات
+    // Find matching city and region IDs if this is an Al-Waseet order
     let cityId = '';
     let regionId = '';
-    let packageSize = 'normal'; // القيمة الافتراضية
+    let packageSizeId = '';
     
-    // البحث عن المدينة في القائمة المحملة
-    if (customerCity && currentCities.length > 0) {
-      const cityMatch = currentCities.find(c => {
-        const cityName = c.name || c.name_ar || c.city_name || '';
-        return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim() ||
-               customerCity.toLowerCase().includes(cityName.toLowerCase()) ||
-               cityName.toLowerCase().includes(customerCity.toLowerCase());
-      });
+    if (order.delivery_partner === 'الوسيط' && cities.length > 0) {
+      const cityMatch = cities.find(c => 
+        (c.name && c.name.toLowerCase().includes(order.customer_city?.toLowerCase())) ||
+        (order.customer_city && order.customer_city.toLowerCase().includes(c.name?.toLowerCase()))
+      );
       
       if (cityMatch) {
         cityId = cityMatch.id;
-        console.log('✅ تم العثور على المدينة:', cityMatch);
-        
-        // جلب المناطق لهذه المدينة
-        setIsLoadingRegions(true);
-        try {
-          await fetchRegions(cityId);
-          console.log('✅ تم جلب المناطق للمدينة:', cityId);
-          
-          // انتظار قصير لضمان تحديث الـ regions
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          // الحصول على المناطق المحدثة
-          const { data: updatedRegions } = await new Promise(resolve => {
-            // محاولة الحصول على المناطق مباشرة من السياق
-            setTimeout(() => {
-              resolve({ data: regions });
-            }, 100);
-          });
-          
-          // البحث عن المنطقة بعد جلب المناطق
-          if (customerProvince) {
-            // جلب المناطق مباشرة من API للتأكد
-            const regionsData = await fetchRegions(cityId);
-            const allRegions = regions.length > 0 ? regions : regionsData;
-            
-            if (Array.isArray(allRegions) && allRegions.length > 0) {
-              const regionMatch = allRegions.find(r => {
-                const regionName = r.name || r.name_ar || r.region_name || '';
-                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
-                       customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-                       regionName.toLowerCase().includes(customerProvince.toLowerCase());
-              });
-              
-              if (regionMatch) {
-                regionId = regionMatch.id;
-                console.log('✅ تم العثور على المنطقة:', regionMatch);
-              } else {
-                console.log('⚠️ لم يتم العثور على المنطقة، سيتم البحث لاحقاً:', customerProvince);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('❌ خطأ في جلب المناطق:', error);
-        } finally {
-          setIsLoadingRegions(false);
-        }
-      } else {
-        console.log('❌ لم يتم العثور على المدينة في القائمة:', customerCity);
+        // Load regions for this city
+        loadRegionsForCity(cityId);
       }
-    }
-    
-    // تحديد حجم الطلب الصحيح - فقط لطلبات الوسيط
-    if (order.delivery_partner === 'الوسيط' && currentPackageSizes.length > 0) {
-      // البحث عن حجم الطلب بطرق متعددة
-      const sizeMatch = currentPackageSizes.find(size => 
-        size.id == order.package_size ||
-        size.name === order.package_size ||
-        (size.name && size.name.includes(order.package_size)) ||
-        (order.package_size && order.package_size.includes(size.name))
-      );
       
-      if (sizeMatch) {
-        packageSize = sizeMatch.id;
-        console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
-      } else {
-        // البحث عن "صغير" أو "عادي" كقيمة افتراضية
-        const defaultSize = currentPackageSizes.find(size => 
-          (size.name && size.name.includes('صغير')) ||
-          (size.name && size.name.includes('عادي')) ||
-          (size.name && size.name.toLowerCase().includes('small')) ||
-          (size.name && size.name.toLowerCase().includes('normal'))
+      // Find package size
+      if (packageSizes.length > 0) {
+        const sizeMatch = packageSizes.find(s => 
+          s.id == order.package_size || 
+          s.name?.includes(order.package_size)
         );
-        packageSize = defaultSize ? defaultSize.id : currentPackageSizes[0]?.id || '1';
-        console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', packageSize);
+        packageSizeId = sizeMatch ? sizeMatch.id : packageSizes[0]?.id || '';
       }
-    } else if (order.delivery_partner !== 'الوسيط') {
-      // للطلبات المحلية، استخدم القيم الافتراضية
-      packageSize = 'normal';
     }
     
-    // تحضير المنتجات المحددة من عناصر الطلب
+    // Set form data
+    setFormData({
+      name: order.customer_name || '',
+      phone: order.customer_phone || '',
+      phone2: order.customer_phone2 || '',
+      city_id: cityId,
+      region_id: regionId,
+      address: order.customer_address || '',
+      notes: order.notes || '',
+      size: packageSizeId,
+      price: order.total_amount || 0,
+      delivery_fee: order.delivery_fee || 0
+    });
+    
+    // Set selected products
     if (order.items && Array.isArray(order.items)) {
       const productsFromOrder = order.items.map(item => ({
         productId: item.product_id,
@@ -246,52 +163,36 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         size: item.size || ''
       }));
       setSelectedProducts(productsFromOrder);
-      console.log('📦 المنتجات المحملة:', productsFromOrder);
     }
-    
-    // ملء النموذج بالبيانات المطابقة
-    const initialFormData = {
-      name: order.customer_name || '',
-      phone: order.customer_phone || '',
-      phone2: order.customer_phone2 || '',
-      city_id: cityId,
-      region_id: regionId,
-      city: customerCity,
-      region: customerProvince,
-      address: order.customer_address || '',
-      notes: order.notes || '',
-      size: packageSize,
-      quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
-      price: order.total_amount || 0,
-      details: order.items?.map(item => 
-        `${item.productname || item.product_name || 'منتج'} × ${item.quantity || 1}`
-      ).join(', ') || '',
-      delivery_fee: order.delivery_fee || settings?.deliveryFee || 0
-    };
-    
-    setFormData(initialFormData);
-    console.log('📝 تم تعبئة النموذج:', initialFormData);
-    
-    // ملء عناصر الطلب
-    if (order.items && Array.isArray(order.items)) {
-      const orderItemsData = order.items.map(item => ({
-        id: item.id || Math.random().toString(),
-        product_name: item.productname || item.product_name || 'منتج',
-        quantity: item.quantity || 1,
-        unit_price: item.price || item.unit_price || 0,
-        total_price: (item.quantity || 1) * (item.price || item.unit_price || 0),
-        product_id: item.product_id,
-        variant_id: item.variant_id
-      }));
-      setOrderItems(orderItemsData);
-    }
-    
-  }, [order, open, cities, fetchRegions, packageSizes, settings]);
+  };
 
-  // تهيئة النموذج عند تغيير الطلب أو فتح النافذة
-  useEffect(() => {
-    initializeForm();
-  }, [initializeForm]);
+  // Load regions for selected city - same as QuickOrderContent
+  const loadRegionsForCity = async (cityId) => {
+    if (!cityId || !waseetToken) return;
+    
+    setLoadingRegions(true);
+    try {
+      const regionsData = await getRegionsByCity(waseetToken, cityId);
+      setRegions(Array.isArray(regionsData) ? regionsData : []);
+      
+      // Try to find matching region
+      if (order?.customer_province && regionsData.length > 0) {
+        const regionMatch = regionsData.find(r => 
+          (r.name && r.name.toLowerCase().includes(order.customer_province.toLowerCase())) ||
+          (order.customer_province.toLowerCase().includes(r.name?.toLowerCase()))
+        );
+        
+        if (regionMatch) {
+          setFormData(prev => ({ ...prev, region_id: regionMatch.id }));
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error loading regions:', error);
+    } finally {
+      setLoadingRegions(false);
+    }
+  };
 
   // معالجة تغيير القيم
   const handleChange = (e) => {
@@ -344,21 +245,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     
     // جلب المناطق عند تغيير المدينة (بدون تأثير على UI)
     if (name === 'city_id' && value) {
-      setIsLoadingRegions(true);
-      try {
-        console.log('📡 جاري جلب المناطق للمدينة:', value);
-        await fetchRegions(value);
-        console.log('✅ تم جلب المناطق بنجاح');
-      } catch (error) {
-        console.error('❌ خطأ في جلب المناطق:', error);
-        toast({
-          title: "خطأ",
-          description: "فشل في جلب المناطق للمدينة المحددة",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoadingRegions(false);
-      }
+      await loadRegionsForCity(value);
     }
   };
 
@@ -619,53 +506,59 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
                     <>
-                      <div>
-                        <Label htmlFor="city_id">المدينة *</Label>
-                        <SearchableSelectFixed
-                          options={cities.map(city => ({
-                            value: city.id,
-                            label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
-                          }))}
-                          value={formData.city_id}
-                          onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                          placeholder="اختر المدينة"
-                          disabled={!canEdit || isLoading}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="region_id">المنطقة *</Label>
-                        <SearchableSelectFixed
-                          options={regions.map(region => ({
-                            value: region.id,
-                            label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
-                          }))}
-                          value={formData.region_id}
-                          onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                          placeholder={isLoadingRegions ? "جاري التحميل..." : "اختر المنطقة"}
-                          disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
-                        />
-                      </div>
                        <div>
-                         <Label htmlFor="size">حجم الطلب</Label>
-                         <Select
-                           value={formData.size?.toString()}
-                           onValueChange={(value) => handleSelectChange(value, 'size')}
-                           disabled={!canEdit || isLoading}
-                         >
-                           <SelectTrigger>
-                             <SelectValue placeholder="اختر حجم الطلب" />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {packageSizes.length > 0 ? packageSizes.map(size => (
-                               <SelectItem key={size.id} value={size.id?.toString()}>
-                                 {size.name || size.package_name || `حجم ${size.id}`}
-                               </SelectItem>
-                             )) : (
-                               <SelectItem value="1">صغير</SelectItem>
-                             )}
-                           </SelectContent>
-                         </Select>
+                         <Label htmlFor="city_id">المدينة *</Label>
+                         <SearchableSelectFixed
+                           options={cities.map(city => ({
+                             value: city.id,
+                             label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
+                           }))}
+                           value={formData.city_id}
+                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
+                           placeholder={formData.city_id && cities.length > 0 ? 
+                             cities.find(c => c.id === formData.city_id)?.name || 
+                             cities.find(c => c.id === formData.city_id)?.name_ar || 
+                             "اختر المدينة" : "اختر المدينة"}
+                           disabled={!canEdit || isLoading || loadingCities}
+                         />
                        </div>
+                       <div>
+                         <Label htmlFor="region_id">المنطقة *</Label>
+                         <SearchableSelectFixed
+                           options={regions.map(region => ({
+                             value: region.id,
+                             label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
+                           }))}
+                           value={formData.region_id}
+                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
+                            placeholder={formData.region_id && regions.length > 0 ? 
+                              regions.find(r => r.id === formData.region_id)?.name || 
+                              regions.find(r => r.id === formData.region_id)?.name_ar || 
+                              (loadingRegions ? "جاري التحميل..." : "اختر المنطقة") : 
+                              (loadingRegions ? "جاري التحميل..." : "اختر المنطقة")}
+                           disabled={!canEdit || isLoading || !formData.city_id || loadingRegions}
+                         />
+                       </div>
+                        <div>
+                          <Label htmlFor="size">حجم الطلب</Label>
+                          <SearchableSelectFixed
+                            options={packageSizes.length > 0 ? packageSizes.map(size => ({
+                              value: size.id?.toString(),
+                              label: size.name || size.package_name || `حجم ${size.id}`
+                            })) : [
+                              { value: "1", label: "صغير" },
+                              { value: "2", label: "متوسط" },
+                              { value: "3", label: "كبير" }
+                            ]}
+                            value={formData.size?.toString()}
+                            onValueChange={(value) => handleSelectChange(value, 'size')}
+                            placeholder={formData.size && packageSizes.length > 0 ? 
+                              packageSizes.find(s => s.id?.toString() === formData.size?.toString())?.name || 
+                              packageSizes.find(s => s.id?.toString() === formData.size?.toString())?.package_name || 
+                              "اختر حجم الطلب" : "اختر حجم الطلب"}
+                            disabled={!canEdit || isLoading || loadingPackageSizes}
+                          />
+                        </div>
                     </>
                   )}
                   <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
