@@ -488,41 +488,79 @@ export const SuperProvider = ({ children }) => {
     }
   }, [fetchAllData]);
 
-  // دالة سريعة لجلب الطلبات فقط وتحديثها فوراً
-  const refreshOrdersOnly = useCallback(async () => {
+  // دالة فورية لعرض الطلب الجديد من Real-time payload مباشرة (0ms)
+  const addOrderInstantly = useCallback((newOrderPayload) => {
     try {
-      console.log('⚡ refreshOrdersOnly: جلب الطلبات فقط');
-      const ordersData = await superAPI.getOrders();
-      const filtered = filterDataByEmployeeCode({ orders: ordersData || [] }, user);
-      const processedOrders = (filtered.orders || []).map(o => ({
-        ...o,
-        items: Array.isArray(o.order_items)
-          ? o.order_items.map(oi => ({
-              quantity: oi.quantity || 1,
-              price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-              cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
-              productname: oi.products?.name,
-              product_name: oi.products?.name,
-              sku: oi.product_variants?.id || oi.variant_id,
-              product_variants: oi.product_variants
-            }))
-          : (o.items || [])
-      })).filter(o => !permanentlyDeletedOrders.has(o.id));
-      setAllData(prev => ({ ...prev, orders: processedOrders }));
-    } catch (err) {
-      console.error('❌ refreshOrdersOnly: خطأ في جلب الطلبات:', err);
-      try {
-        const { data: basicOrders, error } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!error) {
-          const filtered = filterDataByEmployeeCode({ orders: basicOrders || [] }, user);
-          setAllData(prev => ({ ...prev, orders: (filtered.orders || []).filter(o => !permanentlyDeletedOrders.has(o.id)) }));
-        }
-      } catch (e) {
-        console.error('❌ refreshOrdersOnly fallback failed:', e);
+      console.log('⚡ addOrderInstantly: إضافة طلب فورية من Real-time payload');
+      
+      // تنظيف كاش الطلبات فوراً لضمان عدم التضارب
+      superAPI.invalidate('orders');
+      
+      // إضافة الطلب فوراً من payload
+      const newOrder = {
+        ...newOrderPayload,
+        items: [], // سيتم جلبها في الخلفية
+        order_items: [], // فارغة مؤقتاً
+        isInstantOrder: true // علامة للتمييز
+      };
+      
+      // فلترة الطلب حسب صلاحيات الموظف
+      const filtered = filterDataByEmployeeCode({ orders: [newOrder] }, user);
+      
+      if (filtered.orders && filtered.orders.length > 0 && !permanentlyDeletedOrders.has(newOrder.id)) {
+        setAllData(prev => ({
+          ...prev,
+          orders: [filtered.orders[0], ...(prev.orders || [])]
+        }));
+        
+        // جلب order_items في الخلفية
+        setTimeout(() => fetchOrderItemsBackground(newOrder.id), 100);
       }
+    } catch (err) {
+      console.error('❌ addOrderInstantly: خطأ في الإضافة الفورية:', err);
+    }
+  }, [user]);
+
+  // دالة لجلب order_items في الخلفية وتحديث الطلب
+  const fetchOrderItemsBackground = useCallback(async (orderId) => {
+    try {
+      console.log('🔄 fetchOrderItemsBackground: جلب تفاصيل الطلب', orderId);
+      
+      const { data: orderItems, error } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(name),
+          product_variants(id, price, cost_price)
+        `)
+        .eq('order_id', orderId);
+        
+      if (!error && orderItems) {
+        setAllData(prev => ({
+          ...prev,
+          orders: (prev.orders || []).map(order => 
+            order.id === orderId 
+              ? {
+                  ...order,
+                  order_items: orderItems,
+                  items: orderItems.map(oi => ({
+                    quantity: oi.quantity || 1,
+                    price: oi.unit_price ?? oi.product_variants?.price ?? 0,
+                    cost_price: oi.product_variants?.cost_price ?? 0,
+                    productname: oi.products?.name,
+                    product_name: oi.products?.name,
+                    sku: oi.product_variants?.id || oi.variant_id,
+                    product_variants: oi.product_variants
+                  })),
+                  isInstantOrder: false // إزالة العلامة بعد جلب التفاصيل
+                }
+              : order
+          )
+        }));
+        console.log('✅ تم تحديث الطلب بالتفاصيل الكاملة');
+      }
+    } catch (err) {
+      console.error('❌ fetchOrderItemsBackground: خطأ في جلب التفاصيل:', err);
     }
   }, [user]);
 
@@ -542,9 +580,9 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('✨ Real-time: طلب جديد - تحديث الطلبات فقط فوراً');
-          // تحديث سريع للطلبات فقط لضمان ظهور فوري
-          refreshOrdersOnly();
+          console.log('✨ Real-time: طلب جديد - عرض فوري من payload');
+          // عرض فوري (0ms) من Real-time payload
+          addOrderInstantly(payload.new);
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({

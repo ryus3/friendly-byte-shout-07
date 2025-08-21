@@ -6,38 +6,24 @@ const { execSync } = require('child_process');
 const path = require('path');
 
 try {
-  console.log('🔧 Applying package override...');
+  console.log('🚀 تطبيق الحل الشامل للطلبات الفورية...');
   
   // Read package-override.json and copy it to package.json  
   if (fs.existsSync('./package-override.json')) {
     const override = fs.readFileSync('./package-override.json', 'utf8');
     fs.writeFileSync('./package.json', override);
-    console.log('✅ Applied package override');
+    console.log('✅ تم تطبيق إعدادات Real-time');
   }
   
-  // Now directly run vite with proper path
-  console.log('🚀 Starting development server...');
-  
-  const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
-  if (fs.existsSync(vitePath)) {
-    console.log('✅ Found vite, starting...');
-    execSync(`node "${vitePath}" --host :: --port 8080`, { 
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        PATH: `${path.join(__dirname, 'node_modules', '.bin')}:${process.env.PATH}`
-      }
-    });
-  } else {
-    console.log('💡 Using npx fallback...');
-    execSync('npx vite --host :: --port 8080', { 
-      stdio: 'inherit',
-      env: {
-        ...process.env,
-        PATH: `${path.join(__dirname, 'node_modules', '.bin')}:${process.env.PATH}`
-      }
-    });
-  }
+  // استخدام start-fixed.js الموثوق
+  console.log('🔧 تشغيل start-fixed.js...');
+  execSync('node start-fixed.js', { 
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      PATH: `${path.join(__dirname, 'node_modules', '.bin')}:${process.env.PATH}`
+    }
+  });
   
 } catch (error) {
   console.error('❌ Error:', error.message);
