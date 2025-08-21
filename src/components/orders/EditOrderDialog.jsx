@@ -9,12 +9,13 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { ProductSelectionDialog } from '@/components/products/ProductSelectionDialog';
-import { Loader } from '@/components/ui/loader';
-import { AlertTriangle, Package2, MapPin, Phone, User, DollarSign } from 'lucide-react';
+import Loader from '@/components/ui/loader';
+import { AlertTriangle, Package2, MapPin, Phone, User, DollarSign, Loader2 } from 'lucide-react';
+import { getCities, getRegionsByCity, getPackageSizes } from '@/lib/alwaseet-api';
 
 const EditOrderDialog = ({ open, onOpenChange, order }) => {
   const { updateOrder } = useInventory();
-  const { cities, regions, packageSizes, fetchRegions, fetchPackageSizes, editOrder: editAlWaseetOrder } = useAlWaseet();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, editOrder: editAlWaseetOrder } = useAlWaseet();
   
   // Form states
   const [formData, setFormData] = useState({
@@ -39,6 +40,14 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [canEdit, setCanEdit] = useState(true);
+  
+  // Al-Waseet data states - exactly like QuickOrderContent
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
 
   // Initialize form when dialog opens or order changes
   useEffect(() => {
@@ -46,6 +55,58 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       initializeForm();
     }
   }, [open, order]);
+
+  // Fetch Al-Waseet data - exactly like QuickOrderContent
+  const fetchAlWaseetData = async () => {
+    if (!waseetToken || !isWaseetLoggedIn) return;
+    
+    try {
+      setLoadingCities(true);
+      setLoadingPackageSizes(true);
+      
+      const [citiesResponse, sizesResponse] = await Promise.all([
+        getCities(waseetToken),
+        getPackageSizes(waseetToken)
+      ]);
+      
+      console.log('🏙️ تم جلب المدن:', citiesResponse);
+      console.log('📦 تم جلب أحجام الطلب:', sizesResponse);
+      
+      setCities(citiesResponse || []);
+      setPackageSizes(sizesResponse || []);
+      
+    } catch (error) {
+      console.error('❌ خطأ في جلب بيانات الوسيط:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب بيانات المدن وأحجام الطلب",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingCities(false);
+      setLoadingPackageSizes(false);
+    }
+  };
+
+  const fetchRegionsForCity = async (cityId) => {
+    if (!waseetToken || !cityId) return;
+    
+    try {
+      setLoadingRegions(true);
+      const regionsResponse = await getRegionsByCity(waseetToken, cityId);
+      console.log('🗺️ تم جلب المناطق للمدينة:', cityId, regionsResponse);
+      setRegions(regionsResponse || []);
+    } catch (error) {
+      console.error('❌ خطأ في جلب المناطق:', error);
+      toast({
+        title: "خطأ", 
+        description: "فشل في جلب المناطق",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingRegions(false);
+    }
+  };
 
   const initializeForm = async () => {
     if (!order) return;
@@ -58,17 +119,17 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
       const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
       setCanEdit(editable);
       
-      // For Al-Waseet orders, fetch necessary data
+      // For Al-Waseet orders, fetch necessary data first
       if (order.delivery_partner === 'الوسيط') {
-        await fetchPackageSizes();
+        await fetchAlWaseetData();
         
         // If city_id exists, fetch regions for that city
         if (order.city_id) {
-          await fetchRegions(order.city_id);
+          await fetchRegionsForCity(order.city_id);
         }
       }
       
-      // Initialize form with order data - direct mapping without complex search
+      // Initialize form with order data - show original data exactly as stored
       const formDataObj = {
         customerName: order.customer_name || '',
         customerPhone: order.customer_phone || '',
@@ -81,12 +142,13 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
         trackingNumber: order.tracking_number || '',
         deliveryPartner: order.delivery_partner || '',
         notes: order.notes || '',
-        // Al-Waseet specific fields - use existing IDs directly
-        cityId: order.city_id || '',
-        regionId: order.region_id || '', 
-        packageSize: order.package_size || ''
+        // Al-Waseet specific fields - use existing IDs directly and let them populate
+        cityId: order.city_id?.toString() || '',
+        regionId: order.region_id?.toString() || '', 
+        packageSize: order.package_size?.toString() || ''
       };
       
+      console.log('📝 بيانات النموذج المهيأة:', formDataObj);
       setFormData(formDataObj);
       
       // Set selected products
@@ -121,24 +183,14 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
     
     // When city changes, fetch regions for Al-Waseet orders
     if (field === 'cityId' && value && order.delivery_partner === 'الوسيط') {
-      setLoadingData(true);
-      try {
-        await fetchRegions(value);
-        // Reset region when city changes
-        setFormData(prev => ({
-          ...prev,
-          regionId: ''
-        }));
-      } catch (error) {
-        console.error('❌ خطأ في جلب المناطق:', error);
-        toast({
-          title: "خطأ",
-          description: "فشل في جلب المناطق",
-          variant: "destructive"
-        });
-      } finally {
-        setLoadingData(false);
-      }
+      // Reset region when city changes
+      setFormData(prev => ({
+        ...prev,
+        regionId: ''
+      }));
+      
+      // Fetch regions for the new city
+      await fetchRegionsForCity(value);
     }
   };
 
@@ -310,32 +362,35 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
     }
   };
 
-  // Get available cities for Al-Waseet orders
+  // Get available cities for Al-Waseet orders - exactly like QuickOrderContent
   const getAvailableCities = () => {
-    if (order?.delivery_partner === 'الوسيط' && cities && cities.length > 0) {
-      return cities;
+    if (order?.delivery_partner === 'الوسيط') {
+      console.log('🏙️ المدن المتاحة:', cities);
+      return cities || [];
     }
     return [];
   };
 
-  // Get available regions for selected city
+  // Get available regions for selected city - exactly like QuickOrderContent
   const getAvailableRegions = () => {
-    if (order?.delivery_partner === 'الوسيط' && regions && regions.length > 0) {
-      return regions;
+    if (order?.delivery_partner === 'الوسيط') {
+      console.log('🗺️ المناطق المتاحة:', regions);
+      return regions || [];
     }
     return [];
   };
 
-  // Get available package sizes for Al-Waseet orders
+  // Get available package sizes for Al-Waseet orders - exactly like QuickOrderContent
   const getAvailablePackageSizes = () => {
-    if (order?.delivery_partner === 'الوسيط' && packageSizes && packageSizes.length > 0) {
-      return packageSizes;
+    if (order?.delivery_partner === 'الوسيط') {
+      console.log('📦 أحجام الطلب المتاحة:', packageSizes);
+      return packageSizes || [];
     }
-    // Default sizes for local orders
+    // Default sizes for local orders - exactly like QuickOrderContent
     return [
-      { id: 1, name: 'صغير' },
-      { id: 2, name: 'متوسط' }, 
-      { id: 3, name: 'كبير' }
+      { id: 'small', name: 'صغير' },
+      { id: 'normal', name: 'عادي' }, 
+      { id: 'large', name: 'كبير' }
     ];
   };
 
@@ -447,64 +502,97 @@ const EditOrderDialog = ({ open, onOpenChange, order }) => {
                     {/* City selection for Al-Waseet */}
                     <div className="space-y-2">
                       <Label>المدينة *</Label>
-                      <Select
-                        value={formData.cityId}
-                        onValueChange={(value) => handleSelectChange('cityId', value)}
-                        disabled={!canEdit}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر المدينة" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableCities().map((city) => (
-                            <SelectItem key={city.id} value={city.id.toString()}>
-                              {city.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {loadingCities ? (
+                        <div className="flex items-center gap-2 p-2 border rounded">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>جاري تحميل المدن...</span>
+                        </div>
+                      ) : (
+                        <Select
+                          value={formData.cityId}
+                          onValueChange={(value) => handleSelectChange('cityId', value)}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              formData.cityId ? 
+                              `المدينة الحالية: ${getAvailableCities().find(c => c.id.toString() === formData.cityId)?.name || 'غير محدد'}` : 
+                              "اختر المدينة"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailableCities().map((city) => (
+                              <SelectItem key={city.id} value={city.id.toString()}>
+                                {city.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     {/* Region selection for Al-Waseet */}
                     <div className="space-y-2">
                       <Label>المنطقة *</Label>
-                      <Select
-                        value={formData.regionId}
-                        onValueChange={(value) => handleSelectChange('regionId', value)}
-                        disabled={!canEdit || !formData.cityId}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر المنطقة" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailableRegions().map((region) => (
-                            <SelectItem key={region.id} value={region.id.toString()}>
-                              {region.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {loadingRegions ? (
+                        <div className="flex items-center gap-2 p-2 border rounded">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>جاري تحميل المناطق...</span>
+                        </div>
+                      ) : (
+                        <Select
+                          value={formData.regionId}
+                          onValueChange={(value) => handleSelectChange('regionId', value)}
+                          disabled={!canEdit || !formData.cityId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              formData.regionId ? 
+                              `المنطقة الحالية: ${getAvailableRegions().find(r => r.id.toString() === formData.regionId)?.name || 'غير محدد'}` : 
+                              "اختر المنطقة"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailableRegions().map((region) => (
+                              <SelectItem key={region.id} value={region.id.toString()}>
+                                {region.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
 
                     {/* Package size for Al-Waseet */}
                     <div className="space-y-2">
                       <Label>حجم الطلب *</Label>
-                      <Select
-                        value={formData.packageSize}
-                        onValueChange={(value) => handleSelectChange('packageSize', value)}
-                        disabled={!canEdit}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="اختر حجم الطلب" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getAvailablePackageSizes().map((size) => (
-                            <SelectItem key={size.id} value={size.id.toString()}>
-                              {size.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {loadingPackageSizes ? (
+                        <div className="flex items-center gap-2 p-2 border rounded">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>جاري تحميل أحجام الطلب...</span>
+                        </div>
+                      ) : (
+                        <Select
+                          value={formData.packageSize}
+                          onValueChange={(value) => handleSelectChange('packageSize', value)}
+                          disabled={!canEdit}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={
+                              formData.packageSize ? 
+                              `الحجم الحالي: ${getAvailablePackageSizes().find(s => s.id.toString() === formData.packageSize)?.name || 'غير محدد'}` : 
+                              "اختر حجم الطلب"
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAvailablePackageSizes().map((size) => (
+                              <SelectItem key={size.id} value={size.id.toString()}>
+                                {size.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
                 ) : (
