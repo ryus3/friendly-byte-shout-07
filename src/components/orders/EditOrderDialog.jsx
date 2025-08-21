@@ -130,14 +130,22 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     if (cities.length === 0) await fetchCities();
     if (packageSizes.length === 0) await fetchPackageSizes();
     
+    // انتظار تحديث المتغيرات المحلية
+    const currentCities = cities.length > 0 ? cities : await new Promise(resolve => {
+      setTimeout(() => resolve(cities), 100);
+    });
+    const currentPackageSizes = packageSizes.length > 0 ? packageSizes : await new Promise(resolve => {
+      setTimeout(() => resolve(packageSizes), 100);
+    });
+    
     // البحث عن city_id و region_id من البيانات
     let cityId = '';
     let regionId = '';
     let packageSize = 'normal'; // القيمة الافتراضية
     
     // البحث عن المدينة في القائمة المحملة
-    if (customerCity && cities.length > 0) {
-      const cityMatch = cities.find(c => {
+    if (customerCity && currentCities.length > 0) {
+      const cityMatch = currentCities.find(c => {
         const cityName = c.name || c.name_ar || c.city_name || '';
         return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim() ||
                customerCity.toLowerCase().includes(cityName.toLowerCase()) ||
@@ -154,18 +162,37 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           await fetchRegions(cityId);
           console.log('✅ تم جلب المناطق للمدينة:', cityId);
           
+          // انتظار قصير لضمان تحديث الـ regions
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // الحصول على المناطق المحدثة
+          const { data: updatedRegions } = await new Promise(resolve => {
+            // محاولة الحصول على المناطق مباشرة من السياق
+            setTimeout(() => {
+              resolve({ data: regions });
+            }, 100);
+          });
+          
           // البحث عن المنطقة بعد جلب المناطق
-          if (customerProvince && regions.length > 0) {
-            const regionMatch = regions.find(r => {
-              const regionName = r.name || r.name_ar || r.region_name || '';
-              return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
-                     customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
-                     regionName.toLowerCase().includes(customerProvince.toLowerCase());
-            });
+          if (customerProvince) {
+            // جلب المناطق مباشرة من API للتأكد
+            const regionsData = await fetchRegions(cityId);
+            const allRegions = regions.length > 0 ? regions : regionsData;
             
-            if (regionMatch) {
-              regionId = regionMatch.id;
-              console.log('✅ تم العثور على المنطقة:', regionMatch);
+            if (Array.isArray(allRegions) && allRegions.length > 0) {
+              const regionMatch = allRegions.find(r => {
+                const regionName = r.name || r.name_ar || r.region_name || '';
+                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
+                       customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
+                       regionName.toLowerCase().includes(customerProvince.toLowerCase());
+              });
+              
+              if (regionMatch) {
+                regionId = regionMatch.id;
+                console.log('✅ تم العثور على المنطقة:', regionMatch);
+              } else {
+                console.log('⚠️ لم يتم العثور على المنطقة، سيتم البحث لاحقاً:', customerProvince);
+              }
             }
           }
         } catch (error) {
@@ -178,11 +205,11 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     }
     
-    // تحديد حجم الطلب الصحيح
-    if (order.package_size && packageSizes.length > 0) {
+    // تحديد حجم الطلب الصحيح - فقط لطلبات الوسيط
+    if (order.delivery_partner === 'الوسيط' && currentPackageSizes.length > 0) {
       // البحث عن حجم الطلب بطرق متعددة
-      const sizeMatch = packageSizes.find(size => 
-        size.id === order.package_size ||
+      const sizeMatch = currentPackageSizes.find(size => 
+        size.id == order.package_size ||
         size.name === order.package_size ||
         (size.name && size.name.includes(order.package_size)) ||
         (order.package_size && order.package_size.includes(size.name))
@@ -192,14 +219,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         packageSize = sizeMatch.id;
         console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
       } else {
-        // البحث عن "عادي" كقيمة افتراضية
-        const normalSize = packageSizes.find(size => 
+        // البحث عن "صغير" أو "عادي" كقيمة افتراضية
+        const defaultSize = currentPackageSizes.find(size => 
+          (size.name && size.name.includes('صغير')) ||
           (size.name && size.name.includes('عادي')) ||
+          (size.name && size.name.toLowerCase().includes('small')) ||
           (size.name && size.name.toLowerCase().includes('normal'))
         );
-        packageSize = normalSize ? normalSize.id : packageSizes[0]?.id || 'normal';
+        packageSize = defaultSize ? defaultSize.id : currentPackageSizes[0]?.id || '1';
         console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', packageSize);
       }
+    } else if (order.delivery_partner !== 'الوسيط') {
+      // للطلبات المحلية، استخدم القيم الافتراضية
+      packageSize = 'normal';
     }
     
     // تحضير المنتجات المحددة من عناصر الطلب
@@ -451,14 +483,20 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         console.log('📋 بيانات الوسيط:', alwaseetData);
         
         try {
-          await editAlWaseetOrder(alwaseetData, waseetToken);
-          console.log('✅ تم تحديث الطلب في الوسيط بنجاح');
+          const waseetResult = await editAlWaseetOrder(alwaseetData, waseetToken);
+          console.log('✅ تم تحديث الطلب في الوسيط بنجاح:', waseetResult);
+          
+          toast({
+            title: "تم التحديث",
+            description: "تم تحديث الطلب محلياً وفي شركة التوصيل بنجاح",
+            variant: "success"
+          });
         } catch (alwaseetError) {
           console.error('❌ خطأ في تحديث الوسيط:', alwaseetError);
           // لا نريد أن يفشل التحديث بالكامل إذا فشل الوسيط
           toast({
-            title: "تحذير",
-            description: "تم تحديث الطلب محلياً لكن فشل في تحديث شركة التوصيل. خطأ: " + (alwaseetError.message || 'غير معروف'),
+            title: "تم التحديث جزئياً",
+            description: "تم تحديث الطلب محلياً لكن فشل في تحديث شركة التوصيل: " + (alwaseetError.message || 'غير معروف'),
             variant: "warning"
           });
         }
@@ -485,6 +523,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
+  if (!open || !order) return null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -493,6 +533,11 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
             <DialogTitle className="flex items-center gap-2">
               <Package className="w-5 h-5" />
               تعديل الطلب {order?.order_number}
+              {order?.delivery_partner && (
+                <Badge variant="outline" className="mr-2">
+                  {order.delivery_partner}
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
@@ -538,18 +583,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                       required
                     />
                   </div>
-                  {formData.phone2 && (
-                    <div>
-                      <Label htmlFor="phone2">رقم الهاتف الثاني</Label>
-                      <Input
-                        id="phone2"
-                        name="phone2"
-                        value={formData.phone2}
-                        onChange={handleChange}
-                        disabled={!canEdit || isLoading}
-                      />
-                    </div>
-                  )}
+                  {/* Always show secondary phone field for Al-Waseet orders */}
+                  <div>
+                    <Label htmlFor="phone2">رقم الهاتف الثاني {order?.delivery_partner === 'الوسيط' && '(اختياري)'}</Label>
+                    <Input
+                      id="phone2"
+                      name="phone2"
+                      value={formData.phone2}
+                      onChange={handleChange}
+                      disabled={!canEdit || isLoading}
+                      placeholder="رقم الهاتف الثاني (اختياري)"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -600,25 +645,27 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                           disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
                         />
                       </div>
-                      <div>
-                        <Label htmlFor="size">حجم الطلب</Label>
-                        <Select
-                          value={formData.size?.toString()}
-                          onValueChange={(value) => handleSelectChange(value, 'size')}
-                          disabled={!canEdit || isLoading}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر حجم الطلب" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {packageSizes.map(size => (
-                              <SelectItem key={size.id} value={size.id?.toString()}>
-                                {size.name || size.package_name || `حجم ${size.id}`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                       <div>
+                         <Label htmlFor="size">حجم الطلب</Label>
+                         <Select
+                           value={formData.size?.toString()}
+                           onValueChange={(value) => handleSelectChange(value, 'size')}
+                           disabled={!canEdit || isLoading}
+                         >
+                           <SelectTrigger>
+                             <SelectValue placeholder="اختر حجم الطلب" />
+                           </SelectTrigger>
+                           <SelectContent>
+                             {packageSizes.length > 0 ? packageSizes.map(size => (
+                               <SelectItem key={size.id} value={size.id?.toString()}>
+                                 {size.name || size.package_name || `حجم ${size.id}`}
+                               </SelectItem>
+                             )) : (
+                               <SelectItem value="1">صغير</SelectItem>
+                             )}
+                           </SelectContent>
+                         </Select>
+                       </div>
                     </>
                   )}
                   <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
