@@ -488,6 +488,44 @@ export const SuperProvider = ({ children }) => {
     }
   }, [fetchAllData]);
 
+  // دالة سريعة لجلب الطلبات فقط وتحديثها فوراً
+  const refreshOrdersOnly = useCallback(async () => {
+    try {
+      console.log('⚡ refreshOrdersOnly: جلب الطلبات فقط');
+      const ordersData = await superAPI.getOrders();
+      const filtered = filterDataByEmployeeCode({ orders: ordersData || [] }, user);
+      const processedOrders = (filtered.orders || []).map(o => ({
+        ...o,
+        items: Array.isArray(o.order_items)
+          ? o.order_items.map(oi => ({
+              quantity: oi.quantity || 1,
+              price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+              cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+              productname: oi.products?.name,
+              product_name: oi.products?.name,
+              sku: oi.product_variants?.id || oi.variant_id,
+              product_variants: oi.product_variants
+            }))
+          : (o.items || [])
+      })).filter(o => !permanentlyDeletedOrders.has(o.id));
+      setAllData(prev => ({ ...prev, orders: processedOrders }));
+    } catch (err) {
+      console.error('❌ refreshOrdersOnly: خطأ في جلب الطلبات:', err);
+      try {
+        const { data: basicOrders, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (!error) {
+          const filtered = filterDataByEmployeeCode({ orders: basicOrders || [] }, user);
+          setAllData(prev => ({ ...prev, orders: (filtered.orders || []).filter(o => !permanentlyDeletedOrders.has(o.id)) }));
+        }
+      } catch (e) {
+        console.error('❌ refreshOrdersOnly fallback failed:', e);
+      }
+    }
+  }, [user]);
+
   // إعداد Realtime للتحديثات الفورية
   useEffect(() => {
     if (!user) return;
@@ -504,9 +542,9 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('✨ Real-time: طلب جديد - جلب البيانات الكاملة فوراً (النسخة الأصلية)');
-          // استراتيجية النسخة الأصلية: تحديث كامل للبيانات فوراً لضمان الحصول على order_items
-          fetchAllData();
+          console.log('✨ Real-time: طلب جديد - تحديث الطلبات فقط فوراً');
+          // تحديث سريع للطلبات فقط لضمان ظهور فوري
+          refreshOrdersOnly();
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
           setAllData(prev => ({
@@ -1131,7 +1169,7 @@ export const SuperProvider = ({ children }) => {
   // تم نقل تعريف Set للطلبات المحذوفة نهائياً إلى الأعلى لضمان التعريف قبل الاستخدام
 
   // دوال أخرى مطلوبة للتوافق
-  const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
+  const refreshOrders = useCallback(() => refreshOrdersOnly(), [refreshOrdersOnly]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
   
