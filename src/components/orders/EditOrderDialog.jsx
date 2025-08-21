@@ -532,22 +532,22 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Package className="h-5 w-5" />
-            تعديل الطلب #{order?.tracking_number}
+      <DialogContent className="w-full max-w-sm sm:max-w-4xl lg:max-w-6xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-4 sm:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="truncate">تعديل الطلب #{order?.tracking_number}</span>
             {!canEdit && (
-              <span className="text-sm bg-muted px-2 py-1 rounded text-muted-foreground">
+              <span className="text-xs sm:text-sm bg-muted px-2 py-1 rounded text-muted-foreground whitespace-nowrap">
                 للمشاهدة فقط
               </span>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Customer Information */}
               <CustomerInfoForm
                 formData={formData}
@@ -648,39 +648,44 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
               />
             </div>
 
-            {/* Submit Buttons */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                <X className="h-4 w-4 mr-2" />
-                إلغاء
-              </Button>
-              
-              {canEdit && (
-                <Button
-                  type="submit"
-                  disabled={isSubmitting || cart.length === 0}
-                  className="min-w-[120px]"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      جاري الحفظ...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      حفظ التغييرات
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
           </form>
+        </div>
+
+        {/* Submit Buttons - Fixed at bottom for mobile */}
+        <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 sm:p-6 shrink-0">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 max-w-sm sm:max-w-none mx-auto sm:mx-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
+              <X className="h-4 w-4 mr-2" />
+              إلغاء
+            </Button>
+            
+            {canEdit && (
+              <Button
+                type="submit"
+                onClick={handleSubmit}
+                disabled={isSubmitting || cart.length === 0}
+                className="w-full sm:w-auto sm:min-w-[120px]"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    حفظ التغييرات
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Product Selection Dialog */}
