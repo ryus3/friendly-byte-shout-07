@@ -14,6 +14,9 @@ import ProductSelectionDialog from '@/components/products/ProductSelectionDialog
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const { products, updateOrder, settings, cart, clearCart, addToCart, orders } = useInventory();
+  
+  // Default settings to prevent undefined errors
+  const safeSettings = settings || { deliveryFee: 5000, localDeliveryFee: 3000 };
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner } = useAlWaseet();
   
@@ -59,8 +62,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     if (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) {
       return 0;
     }
-    return settings?.deliveryFee || 0;
-  }, [applyLoyaltyDelivery, customerData, settings]);
+    return safeSettings?.deliveryFee || 0;
+  }, [applyLoyaltyDelivery, customerData, safeSettings]);
 
   const finalTotal = useMemo(() => {
     return Math.max(0, subtotal + deliveryFee - discount);
@@ -513,7 +516,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 packageSizes={[]}
                 activePartner={activePartner}
                 setProductSelectOpen={setProductSelectOpen}
-                settings={settings}
+                settings={safeSettings}
               />
             </div>
 
