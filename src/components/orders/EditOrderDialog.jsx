@@ -177,7 +177,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     // البحث عن city_id و region_id من البيانات
     let cityId = '';
     let regionId = '';
-    let packageSize = 'normal'; // القيمة الافتراضية
+    let packageSize = 'عادي'; // القيمة الافتراضية
     
     // البحث الدقيق عن المدينة - استخدام نفس منطق QuickOrderContent
     console.log('🔍 البحث عن المدينة:', { customerCity, citiesCount: currentCities.length });
@@ -775,8 +775,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                            <SelectValue placeholder="اختر حجم الطلب..." />
                          </SelectTrigger>
                          <SelectContent>
-                           <SelectItem value="عادي">عادي</SelectItem>
-                           <SelectItem value="كبير">كبير</SelectItem>
+                            <SelectItem value="عادي">عادي</SelectItem>
+                            <SelectItem value="متوسط">متوسط</SelectItem>
+                            <SelectItem value="كبير">كبير</SelectItem>
+                            <SelectItem value="كبير جدا">كبير جدا</SelectItem>
                          </SelectContent>
                        </Select>
                      </div>
@@ -792,7 +794,6 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                       disabled={!canEdit || isLoading}
                       placeholder="العنوان التفصيلي للعميل..."
                       rows={3}
-                      required
                     />
                   </div>
                   <div className="md:col-span-2">

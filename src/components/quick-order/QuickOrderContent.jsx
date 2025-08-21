@@ -46,7 +46,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     details: '', 
     quantity: 1, 
     price: 0, 
-    size: 'normal', 
+    size: 'عادي', 
     type: 'new', 
     promocode: '',
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
@@ -395,7 +395,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     if (!formData.size) {
       setFormData(prev => ({
         ...prev,
-        size: activePartner === 'local' ? 'normal' : ''
+        size: 'عادي'
       }));
     }
   }, [activePartner, formData.size]);
@@ -429,7 +429,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       details: '', 
       quantity: 1, 
       price: 0, 
-      size: activePartner === 'local' ? 'normal' : '', 
+      size: 'عادي', 
       type: 'new', 
       promocode: '',
       defaultCustomerName: ''
@@ -535,7 +535,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setInitialDataLoaded(true);
         }
       } else if (activePartner === 'local') {
-        setFormData(prev => ({...prev, size: 'normal' }));
+        setFormData(prev => ({...prev, size: 'عادي' }));
         setInitialDataLoaded(true);
         setDataFetchError(false);
       }

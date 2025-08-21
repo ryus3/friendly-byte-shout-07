@@ -51,17 +51,8 @@ const OrderDetailsForm = ({
 
   // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
-    if (activePartner === 'local' && !formData.size) {
-      handleSelectChange('size', 'normal');
-    } else if (activePartner === 'alwaseet' && packageSizes.length > 0 && !formData.size) {
-      // البحث عن الحجم "عادي" أو أول خيار متاح
-      const normalSize = packageSizes.find(size => 
-        size.size?.includes('عادي') || size.size?.includes('normal')
-      );
-      const defaultSizeId = normalSize?.id || packageSizes[0]?.id;
-      if (defaultSizeId) {
-        handleSelectChange('size', String(defaultSizeId));
-      }
+    if (!formData.size) {
+      handleSelectChange('size', 'عادي');
     }
   }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 
@@ -227,8 +218,10 @@ const OrderDetailsForm = ({
             <SelectContent className="z-[100]" modal={true}>
               {activePartner === 'local' ? (
                 <>
-                  <SelectItem value="normal">عادي</SelectItem>
-                  <SelectItem value="big">كبير</SelectItem>
+                  <SelectItem value="عادي">عادي</SelectItem>
+                  <SelectItem value="متوسط">متوسط</SelectItem>
+                  <SelectItem value="كبير">كبير</SelectItem>
+                  <SelectItem value="كبير جدا">كبير جدا</SelectItem>
                 </>
               ) : (
                 packageSizes.map(size => (

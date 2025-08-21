@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "node start-fixed.js",
+    "dev": "node start-dev-simple.js",
     "build": "vite build", 
     "preview": "vite preview",
-    "start": "node start-fixed.js"
+    "start": "node start-dev-simple.js"
   }
 }
