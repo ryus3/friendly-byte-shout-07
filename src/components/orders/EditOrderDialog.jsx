@@ -73,15 +73,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   }, [regions, originalData, formData.city_id, formData.region_id]);
 
-  // تهيئة النموذج عند فتح النافذة
+  // تهيئة النموذج عند فتح النافذة - إصلاح شامل مع تطبيق منطق QuickOrderContent
   const initializeForm = useCallback(async () => {
     if (!order || !open) return;
     
-    console.log('🔄 تهيئة نموذج تعديل الطلب:', order);
+    console.log('🔄 بدء تهيئة نموذج تعديل الطلب:', order);
     
     // تحديد ما إذا كان يمكن تعديل الطلب
     const editable = order.status === 'pending' || order.status === 'في انتظار التأكيد';
     setCanEdit(editable);
+    
+    console.log('✏️ حالة التحرير:', { status: order.status, canEdit: editable });
     
     // استخراج البيانات من الطلب - تحسين الاستخراج من customer_address
     let customerCity = order.customer_city || '';
@@ -126,112 +128,179 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       tracking_number: order.tracking_number
     });
     
-    // جلب البيانات المطلوبة أولاً
-    if (cities.length === 0) await fetchCities();
-    if (packageSizes.length === 0) await fetchPackageSizes();
+    // جلب البيانات المطلوبة أولاً مع retry logic محسن
+    console.log('📡 بدء جلب البيانات الأساسية...');
     
-    // انتظار تحديث المتغيرات المحلية
-    const currentCities = cities.length > 0 ? cities : await new Promise(resolve => {
-      setTimeout(() => resolve(cities), 100);
-    });
-    const currentPackageSizes = packageSizes.length > 0 ? packageSizes : await new Promise(resolve => {
-      setTimeout(() => resolve(packageSizes), 100);
-    });
+    let currentCities = cities;
+    let currentPackageSizes = packageSizes;
+    
+    // جلب المدن مع retry
+    if (currentCities.length === 0) {
+      console.log('📡 جلب المدن...');
+      try {
+        await fetchCities();
+        // انتظار قصير للتحديث
+        await new Promise(resolve => setTimeout(resolve, 300));
+        currentCities = cities;
+        console.log('✅ تم جلب المدن:', currentCities.length);
+      } catch (error) {
+        console.error('❌ فشل جلب المدن:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب قائمة المدن",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
+    // جلب أحجام الطلب مع retry
+    if (currentPackageSizes.length === 0) {
+      console.log('📡 جلب أحجام الطلب...');
+      try {
+        await fetchPackageSizes();
+        // انتظار قصير للتحديث
+        await new Promise(resolve => setTimeout(resolve, 300));
+        currentPackageSizes = packageSizes;
+        console.log('✅ تم جلب أحجام الطلب:', currentPackageSizes.length);
+      } catch (error) {
+        console.error('❌ فشل جلب أحجام الطلب:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في جلب أحجام الطلب",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
     
     // البحث عن city_id و region_id من البيانات
     let cityId = '';
     let regionId = '';
     let packageSize = 'normal'; // القيمة الافتراضية
     
-    // البحث عن المدينة في القائمة المحملة
+    // البحث الدقيق عن المدينة - استخدام نفس منطق QuickOrderContent
+    console.log('🔍 البحث عن المدينة:', { customerCity, citiesCount: currentCities.length });
+    
     if (customerCity && currentCities.length > 0) {
-      const cityMatch = currentCities.find(c => {
+      // البحث بالتطابق الدقيق أولاً
+      let cityMatch = currentCities.find(c => {
         const cityName = c.name || c.name_ar || c.city_name || '';
-        return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim() ||
-               customerCity.toLowerCase().includes(cityName.toLowerCase()) ||
-               cityName.toLowerCase().includes(customerCity.toLowerCase());
+        return cityName.toLowerCase().trim() === customerCity.toLowerCase().trim();
       });
       
+      // إذا لم نجد تطابق دقيق، ابحث بالتضمين
+      if (!cityMatch) {
+        cityMatch = currentCities.find(c => {
+          const cityName = c.name || c.name_ar || c.city_name || '';
+          return customerCity.toLowerCase().includes(cityName.toLowerCase()) ||
+                 cityName.toLowerCase().includes(customerCity.toLowerCase());
+        });
+      }
+      
+      console.log('🔍 نتيجة البحث عن المدينة:', { cityMatch, customerCity });
+      
       if (cityMatch) {
-        cityId = cityMatch.id;
-        console.log('✅ تم العثور على المدينة:', cityMatch);
+        cityId = String(cityMatch.id); // تحويل ID إلى string لضمان التطابق
+        console.log('✅ تم العثور على المدينة:', { city: cityMatch, cityId });
         
-        // جلب المناطق لهذه المدينة
+        // جلب المناطق لهذه المدينة مع تحسين الأداء
+        console.log('📡 بدء جلب المناطق للمدينة:', cityId);
         setIsLoadingRegions(true);
+        
         try {
+          // جلب المناطق مع انتظار مناسب
           await fetchRegions(cityId);
           console.log('✅ تم جلب المناطق للمدينة:', cityId);
           
-          // انتظار قصير لضمان تحديث الـ regions
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // انتظار أطول لضمان تحديث regions في السياق
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          // الحصول على المناطق المحدثة
-          const { data: updatedRegions } = await new Promise(resolve => {
-            // محاولة الحصول على المناطق مباشرة من السياق
-            setTimeout(() => {
-              resolve({ data: regions });
-            }, 100);
-          });
-          
-          // البحث عن المنطقة بعد جلب المناطق
-          if (customerProvince) {
-            // جلب المناطق مباشرة من API للتأكد
-            const regionsData = await fetchRegions(cityId);
-            const allRegions = regions.length > 0 ? regions : regionsData;
+          // البحث عن المنطقة بعد التأكد من جلب البيانات
+          if (customerProvince && regions.length > 0) {
+            console.log('🔍 البحث عن المنطقة في:', { customerProvince, regionsCount: regions.length });
             
-            if (Array.isArray(allRegions) && allRegions.length > 0) {
-              const regionMatch = allRegions.find(r => {
+            // البحث بالتطابق الدقيق أولاً
+            let regionMatch = regions.find(r => {
+              const regionName = r.name || r.name_ar || r.region_name || '';
+              return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim();
+            });
+            
+            // إذا لم نجد تطابق دقيق، ابحث بالتضمين
+            if (!regionMatch) {
+              regionMatch = regions.find(r => {
                 const regionName = r.name || r.name_ar || r.region_name || '';
-                return regionName.toLowerCase().trim() === customerProvince.toLowerCase().trim() ||
-                       customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
+                return customerProvince.toLowerCase().includes(regionName.toLowerCase()) ||
                        regionName.toLowerCase().includes(customerProvince.toLowerCase());
               });
-              
-              if (regionMatch) {
-                regionId = regionMatch.id;
-                console.log('✅ تم العثور على المنطقة:', regionMatch);
-              } else {
-                console.log('⚠️ لم يتم العثور على المنطقة، سيتم البحث لاحقاً:', customerProvince);
-              }
             }
+            
+            if (regionMatch) {
+              regionId = String(regionMatch.id); // تحويل ID إلى string
+              console.log('✅ تم العثور على المنطقة:', { region: regionMatch, regionId });
+            } else {
+              console.log('⚠️ لم يتم العثور على المنطقة:', { customerProvince, availableRegions: regions.slice(0, 3) });
+            }
+          } else {
+            console.log('⚠️ لا توجد منطقة للبحث أو لم يتم جلب المناطق:', { customerProvince, regionsLength: regions.length });
           }
         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
+          toast({
+            title: "خطأ",
+            description: "فشل في جلب المناطق للمدينة المحددة",
+            variant: "destructive"
+          });
         } finally {
           setIsLoadingRegions(false);
         }
       } else {
-        console.log('❌ لم يتم العثور على المدينة في القائمة:', customerCity);
+        console.log('❌ لم يتم العثور على المدينة في القائمة:', { customerCity, availableCities: currentCities.slice(0, 3) });
       }
     }
     
-    // تحديد حجم الطلب الصحيح - فقط لطلبات الوسيط
+    // تحديد حجم الطلب الصحيح مع تحسين التطابق
+    console.log('📦 تحديد حجم الطلب:', { 
+      deliveryPartner: order.delivery_partner, 
+      packageSize: order.package_size, 
+      availableSizes: currentPackageSizes.length 
+    });
+    
     if (order.delivery_partner === 'الوسيط' && currentPackageSizes.length > 0) {
-      // البحث عن حجم الطلب بطرق متعددة
-      const sizeMatch = currentPackageSizes.find(size => 
-        size.id == order.package_size ||
-        size.name === order.package_size ||
-        (size.name && size.name.includes(order.package_size)) ||
-        (order.package_size && order.package_size.includes(size.name))
+      // البحث الدقيق بالـ ID أولاً
+      let sizeMatch = currentPackageSizes.find(size => 
+        String(size.id) === String(order.package_size)
       );
       
-      if (sizeMatch) {
-        packageSize = sizeMatch.id;
-        console.log('✅ تم العثور على حجم الطلب:', sizeMatch);
-      } else {
-        // البحث عن "صغير" أو "عادي" كقيمة افتراضية
-        const defaultSize = currentPackageSizes.find(size => 
-          (size.name && size.name.includes('صغير')) ||
-          (size.name && size.name.includes('عادي')) ||
-          (size.name && size.name.toLowerCase().includes('small')) ||
-          (size.name && size.name.toLowerCase().includes('normal'))
+      // إذا لم نجد بالـ ID، ابحث بالاسم
+      if (!sizeMatch && order.package_size) {
+        sizeMatch = currentPackageSizes.find(size => 
+          size.name === order.package_size ||
+          (size.name && size.name.includes(order.package_size)) ||
+          (order.package_size && order.package_size.includes(size.name))
         );
-        packageSize = defaultSize ? defaultSize.id : currentPackageSizes[0]?.id || '1';
-        console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', packageSize);
+      }
+      
+      if (sizeMatch) {
+        packageSize = String(sizeMatch.id); // تحويل إلى string
+        console.log('✅ تم العثور على حجم الطلب:', { match: sizeMatch, packageSize });
+      } else {
+        // البحث عن حجم افتراضي مناسب
+        const defaultSize = currentPackageSizes.find(size => 
+          (size.name && (size.name.includes('صغير') || size.name.includes('عادي'))) ||
+          (size.name && (size.name.toLowerCase().includes('small') || size.name.toLowerCase().includes('normal')))
+        );
+        packageSize = defaultSize ? String(defaultSize.id) : String(currentPackageSizes[0]?.id || '1');
+        console.log('⚠️ لم يتم العثور على حجم الطلب، استخدام القيمة الافتراضية:', { 
+          defaultSize, 
+          packageSize,
+          originalSize: order.package_size 
+        });
       }
     } else if (order.delivery_partner !== 'الوسيط') {
       // للطلبات المحلية، استخدم القيم الافتراضية
       packageSize = 'normal';
+      console.log('📦 طلب محلي - استخدام الحجم الافتراضي:', packageSize);
     }
     
     // تحضير المنتجات المحددة من عناصر الطلب
@@ -249,18 +318,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       console.log('📦 المنتجات المحملة:', productsFromOrder);
     }
     
-    // ملء النموذج بالبيانات المطابقة
+    // ملء النموذج بالبيانات المطابقة مع تحسين شامل
     const initialFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       phone2: order.customer_phone2 || '',
-      city_id: cityId,
-      region_id: regionId,
+      city_id: cityId, // سيكون string أو فارغ
+      region_id: regionId, // سيكون string أو فارغ
       city: customerCity,
       region: customerProvince,
       address: order.customer_address || '',
       notes: order.notes || '',
-      size: packageSize,
+      size: packageSize, // سيكون string
       quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 1), 0) || 1,
       price: order.total_amount || 0,
       details: order.items?.map(item => 
@@ -270,7 +339,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     };
     
     setFormData(initialFormData);
-    console.log('📝 تم تعبئة النموذج:', initialFormData);
+    console.log('📝 تم تعبئة النموذج بالبيانات المحسنة:', {
+      formData: initialFormData,
+      cityMatch: cityId ? 'Found' : 'Not Found',
+      regionMatch: regionId ? 'Found' : 'Not Found',
+      sizeMatch: packageSize !== 'normal' ? 'Found' : 'Default'
+    });
     
     // ملء عناصر الطلب
     if (order.items && Array.isArray(order.items)) {
@@ -299,56 +373,57 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // معالجة تغيير القوائم المنسدلة مع إصلاح شامل
+  // معالجة تغيير القوائم المنسدلة مع إصلاح شامل وتطبيق منطق QuickOrderContent
   const handleSelectChange = async (value, name) => {
-    console.log(`🔄 تغيير ${name} إلى:`, value);
+    console.log(`🔄 تغيير ${name} إلى:`, { value, type: typeof value });
     
-    // تحديث الحالة فوراً لتجنب التأخير
+    // تحديث الحالة فوراً مع تحسين المقارنات
     setFormData(prev => {
       const newData = { ...prev };
       
-      // تحديث القيمة المحددة
-      newData[name] = value;
+      // تحديث القيمة المحددة - تحويل إلى string للاتساق
+      newData[name] = String(value);
       
       // إذا تغيرت المدينة
       if (name === 'city_id' && value) {
-        const selectedCity = cities.find(c => c.id === value);
+        const selectedCity = cities.find(c => String(c.id) === String(value));
         if (selectedCity) {
           newData.city = selectedCity.name || selectedCity.name_ar || selectedCity.city_name || '';
-          console.log('🏙️ تم اختيار المدينة:', selectedCity);
+          console.log('🏙️ تم اختيار المدينة:', { selectedCity, newCityName: newData.city });
         }
         // إعادة تعيين المنطقة عند تغيير المدينة
         newData.region_id = '';
         newData.region = '';
+        console.log('🔄 تم إعادة تعيين المنطقة بسبب تغيير المدينة');
       }
       
       // إذا تغيرت المنطقة
       if (name === 'region_id' && value) {
-        const selectedRegion = regions.find(r => r.id === value);
+        const selectedRegion = regions.find(r => String(r.id) === String(value));
         if (selectedRegion) {
           newData.region = selectedRegion.name || selectedRegion.name_ar || selectedRegion.region_name || '';
-          console.log('📍 تم اختيار المنطقة:', selectedRegion);
+          console.log('📍 تم اختيار المنطقة:', { selectedRegion, newRegionName: newData.region });
         }
       }
       
       // إذا تغير حجم الطلب
       if (name === 'size' && value) {
-        const selectedSize = packageSizes.find(s => s.id == value);
+        const selectedSize = packageSizes.find(s => String(s.id) === String(value));
         if (selectedSize) {
-          console.log('📦 تم اختيار حجم الطلب:', selectedSize);
+          console.log('📦 تم اختيار حجم الطلب:', { selectedSize, newSize: value });
         }
       }
       
       return newData;
     });
     
-    // جلب المناطق عند تغيير المدينة (بدون تأثير على UI)
+    // جلب المناطق عند تغيير المدينة مع تحسين الأداء
     if (name === 'city_id' && value) {
       setIsLoadingRegions(true);
       try {
         console.log('📡 جاري جلب المناطق للمدينة:', value);
-        await fetchRegions(value);
-        console.log('✅ تم جلب المناطق بنجاح');
+        await fetchRegions(String(value)); // تأكد من تمرير string
+        console.log('✅ تم جلب المناطق بنجاح، عدد المناطق:', regions.length);
       } catch (error) {
         console.error('❌ خطأ في جلب المناطق:', error);
         toast({
@@ -623,49 +698,50 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                         <Label htmlFor="city_id">المدينة *</Label>
                         <SearchableSelectFixed
                           options={cities.map(city => ({
-                            value: city.id,
+                            value: String(city.id), // تحويل إلى string للاتساق
                             label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
                           }))}
                           value={formData.city_id}
                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                          placeholder="اختر المدينة"
-                          disabled={!canEdit || isLoading}
+                          placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"}
+                          disabled={!canEdit || isLoading || cities.length === 0}
                         />
                       </div>
                       <div>
                         <Label htmlFor="region_id">المنطقة *</Label>
                         <SearchableSelectFixed
                           options={regions.map(region => ({
-                            value: region.id,
+                            value: String(region.id), // تحويل إلى string للاتساق
                             label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
                           }))}
                           value={formData.region_id}
                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                          placeholder={isLoadingRegions ? "جاري التحميل..." : "اختر المنطقة"}
+                          placeholder={
+                            isLoadingRegions ? "جاري تحميل المناطق..." : 
+                            !formData.city_id ? "اختر المدينة أولاً..." :
+                            regions.length === 0 ? "لا توجد مناطق متاحة" :
+                            "اختر المنطقة..."
+                          }
                           disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
                         />
                       </div>
-                       <div>
-                         <Label htmlFor="size">حجم الطلب</Label>
-                         <Select
-                           value={formData.size?.toString()}
-                           onValueChange={(value) => handleSelectChange(value, 'size')}
-                           disabled={!canEdit || isLoading}
-                         >
-                           <SelectTrigger>
-                             <SelectValue placeholder="اختر حجم الطلب" />
-                           </SelectTrigger>
-                           <SelectContent>
-                             {packageSizes.length > 0 ? packageSizes.map(size => (
-                               <SelectItem key={size.id} value={size.id?.toString()}>
-                                 {size.name || size.package_name || `حجم ${size.id}`}
-                               </SelectItem>
-                             )) : (
-                               <SelectItem value="1">صغير</SelectItem>
-                             )}
-                           </SelectContent>
-                         </Select>
-                       </div>
+                         <div>
+                          <Label htmlFor="size">حجم الطلب</Label>
+                          <SearchableSelectFixed
+                            value={formData.size}
+                            onValueChange={(value) => handleSelectChange(value, 'size')}
+                            options={packageSizes.map(size => ({
+                              value: String(size.id), // تحويل إلى string للاتساق
+                              label: size.name || size.package_name || `حجم ${size.id}`
+                            }))}
+                            placeholder={
+                              packageSizes.length === 0 ? "جاري تحميل الأحجام..." : 
+                              "اختر حجم الطلب..."
+                            }
+                            disabled={!canEdit || isLoading || packageSizes.length === 0}
+                            className="text-right"
+                          />
+                        </div>
                     </>
                   )}
                   <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>

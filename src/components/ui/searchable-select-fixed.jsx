@@ -28,11 +28,22 @@ const SearchableSelectFixed = ({
     );
   }, [options, search]);
 
-  const selectedOption = options.find(option => 
-    (option.value || option.id) === value
-  );
+  const selectedOption = options.find(option => {
+    const optionValue = option.value || option.id;
+    // Fix type comparison - convert both to strings for accurate matching
+    return String(optionValue) === String(value);
+  });
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
+  
+  // Add console logging for debugging
+  console.log('🔍 SearchableSelect Debug:', {
+    value,
+    valueType: typeof value,
+    options: options.slice(0, 3),
+    selectedOption,
+    displayText
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -134,7 +145,7 @@ const SearchableSelectFixed = ({
               filteredOptions.map((option) => {
                 const optionValue = option.value || option.id;
                 const optionLabel = option.label || option.name;
-                const isSelected = value === optionValue;
+                const isSelected = String(value) === String(optionValue);
                 
                 return (
                   <div
