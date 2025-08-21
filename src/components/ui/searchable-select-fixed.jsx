@@ -48,36 +48,40 @@ const SearchableSelectFixed = ({
   // Close dropdown when clicking outside - improved for dialogs
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Add delay to allow onClick events to register first
-      setTimeout(() => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-            buttonRef.current && !buttonRef.current.contains(event.target)) {
-          // Check if click is not on a dialog backdrop or overlay
-          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
-          if (!isDialogClick) {
-            setOpen(false);
-          }
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        // Check if click is not on dialog elements
+        const isDialogElement = event.target.closest('[role="dialog"], [data-dialog], .dialog-overlay, [data-radix-dialog-overlay], [data-radix-dialog-content]');
+        if (!isDialogElement) {
+          setOpen(false);
         }
-      }, 100);
+      }
     };
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
+      // Use capture phase to handle before other events
+      document.addEventListener('mousedown', handleClickOutside, true);
+      document.addEventListener('touchstart', handleClickOutside, true);
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
     };
   }, [open]);
 
-  // Focus search input when opening
+  // Focus search input when opening with improved timing
   useEffect(() => {
     if (open && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 100);
+      // Use requestAnimationFrame for better timing
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+            searchInputRef.current.select(); // Select all text if any
+          }
+        }, 50);
+      });
     }
   }, [open]);
 
@@ -90,13 +94,19 @@ const SearchableSelectFixed = ({
 
   const handleOptionSelect = (optionValue) => {
     console.log('🎯 تم اختيار القيمة:', optionValue);
-    // Immediate selection without delay
+    
+    // Prevent event bubbling and default behavior
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    
+    // Set value immediately
     onValueChange(optionValue);
-    // Delay closing to ensure value is set
-    setTimeout(() => {
+    
+    // Close dropdown with slight delay to ensure value is processed
+    requestAnimationFrame(() => {
       setOpen(false);
       setSearch('');
-    }, 50);
+    });
   };
 
   const handleSearchChange = (e) => {
@@ -134,9 +144,13 @@ const SearchableSelectFixed = ({
             maxWidth: '400px',
             pointerEvents: 'auto'
           }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           {/* Search Input */}
-          <div className="p-1 border-b border-border">
+          <div className="p-1 border-b border-border" 
+               onMouseDown={(e) => e.stopPropagation()}
+               onTouchStart={(e) => e.stopPropagation()}>
             <div className="relative">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -144,8 +158,12 @@ const SearchableSelectFixed = ({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onFocus={(e) => e.stopPropagation()}
                 className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
+                style={{ touchAction: 'manipulation' }}
               />
             </div>
           </div>
@@ -173,7 +191,7 @@ const SearchableSelectFixed = ({
                       "touch-manipulation",
                       isSelected && "bg-accent text-accent-foreground"
                     )}
-                    onClick={(e) => {
+                    onMouseDown={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       handleOptionSelect(optionValue);
@@ -186,6 +204,10 @@ const SearchableSelectFixed = ({
                       e.preventDefault();
                       e.stopPropagation();
                       handleOptionSelect(optionValue);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                     }}
                     style={{ 
                       WebkitTapHighlightColor: 'rgba(0,0,0,0)',
