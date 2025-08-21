@@ -500,9 +500,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 handleSelectChange={handleSelectChange}
                 errors={errors}
                 subtotal={subtotal}
-                total={finalTotal}
+                total={subtotal}
                 discount={discount}
-                onDiscountChange={handleDiscountChange}
+                setDiscount={setDiscount}
                 loyaltyDiscount={loyaltyDiscount}
                 applyLoyaltyDiscount={applyLoyaltyDiscount}
                 applyLoyaltyDelivery={applyLoyaltyDelivery}
@@ -512,6 +512,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 isSubmittingState={isLoading}
                 packageSizes={[]}
                 activePartner={activePartner}
+                setProductSelectOpen={setProductSelectOpen}
+                settings={settings}
               />
             </div>
 
