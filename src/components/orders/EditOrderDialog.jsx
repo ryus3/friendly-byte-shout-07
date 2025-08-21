@@ -11,7 +11,7 @@ import { Trash2, Plus, AlertTriangle, Package, User, MapPin, Calendar, DollarSig
 import { toast } from '@/hooks/use-toast';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { editAlWaseetOrder } from '@/lib/alwaseet-api';
-import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
+// Removed SearchableSelectFixed import - using standard Select instead
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -298,8 +298,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         });
       }
     } else if (order.delivery_partner !== 'الوسيط') {
-      // للطلبات المحلية، استخدم القيم الافتراضية
-      packageSize = 'normal';
+        // للطلبات المحلية، استخدم القيم الصحيحة كما في QuickOrderContent
+      packageSize = 'عادي'; // Use Arabic text like QuickOrderContent
       console.log('📦 طلب محلي - استخدام الحجم الافتراضي:', packageSize);
     }
     
@@ -694,57 +694,95 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
                     <>
-                      <div>
-                        <Label htmlFor="city_id">المدينة *</Label>
-                        <SearchableSelectFixed
-                          options={cities.map(city => ({
-                            value: String(city.id), // تحويل إلى string للاتساق
-                            label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
-                          }))}
-                          value={formData.city_id}
-                          onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                          placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"}
-                          disabled={!canEdit || isLoading || cities.length === 0}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="region_id">المنطقة *</Label>
-                        <SearchableSelectFixed
-                          options={regions.map(region => ({
-                            value: String(region.id), // تحويل إلى string للاتساق
-                            label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
-                          }))}
-                          value={formData.region_id}
-                          onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                          placeholder={
-                            isLoadingRegions ? "جاري تحميل المناطق..." : 
-                            !formData.city_id ? "اختر المدينة أولاً..." :
-                            regions.length === 0 ? "لا توجد مناطق متاحة" :
-                            "اختر المنطقة..."
-                          }
-                          disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
-                        />
-                      </div>
-                         <div>
-                          <Label htmlFor="size">حجم الطلب</Label>
-                          <SearchableSelectFixed
-                            value={formData.size}
-                            onValueChange={(value) => handleSelectChange(value, 'size')}
-                            options={packageSizes.map(size => ({
-                              value: String(size.id), // تحويل إلى string للاتساق
-                              label: size.name || size.package_name || `حجم ${size.id}`
-                            }))}
-                            placeholder={
-                              packageSizes.length === 0 ? "جاري تحميل الأحجام..." : 
-                              "اختر حجم الطلب..."
-                            }
-                            disabled={!canEdit || isLoading || packageSizes.length === 0}
-                            className="text-right"
-                          />
-                        </div>
-                    </>
-                  )}
-                  <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
+                       <div>
+                         <Label htmlFor="city_id">المدينة *</Label>
+                         <Select
+                           value={formData.city_id}
+                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
+                           disabled={!canEdit || isLoading || cities.length === 0}
+                         >
+                           <SelectTrigger>
+                             <SelectValue placeholder={cities.length === 0 ? "جاري تحميل المدن..." : "اختر المدينة"} />
+                           </SelectTrigger>
+                           <SelectContent>
+                             {cities.map(city => (
+                               <SelectItem key={city.id} value={String(city.id)}>
+                                 {city.name || city.name_ar || city.city_name || `مدينة ${city.id}`}
+                               </SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                       </div>
+                       <div>
+                         <Label htmlFor="region_id">المنطقة *</Label>
+                         <Select
+                           value={formData.region_id}
+                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
+                           disabled={!canEdit || isLoading || !formData.city_id || isLoadingRegions}
+                         >
+                           <SelectTrigger>
+                             <SelectValue placeholder={
+                               isLoadingRegions ? "جاري تحميل المناطق..." : 
+                               !formData.city_id ? "اختر المدينة أولاً..." :
+                               regions.length === 0 ? "لا توجد مناطق متاحة" :
+                               "اختر المنطقة..."
+                             } />
+                           </SelectTrigger>
+                           <SelectContent>
+                             {regions.map(region => (
+                               <SelectItem key={region.id} value={String(region.id)}>
+                                 {region.name || region.name_ar || region.region_name || `منطقة ${region.id}`}
+                               </SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                       </div>
+                          <div>
+                           <Label htmlFor="size">حجم الطلب</Label>
+                           <Select
+                             value={formData.size}
+                             onValueChange={(value) => handleSelectChange(value, 'size')}
+                             disabled={!canEdit || isLoading || packageSizes.length === 0}
+                           >
+                             <SelectTrigger className="text-right">
+                               <SelectValue placeholder={
+                                 packageSizes.length === 0 ? "جاري تحميل الأحجام..." : 
+                                 "اختر حجم الطلب..."
+                               } />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {packageSizes.map(size => (
+                                 <SelectItem key={size.id} value={String(size.id)}>
+                                   {size.name || size.package_name || `حجم ${size.id}`}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         </div>
+                     </>
+                   )}
+                   
+                   {/* Show local package size selection for local orders */}
+                   {(!order?.delivery_partner || order.delivery_partner === 'محلي') && (
+                     <div>
+                       <Label htmlFor="size">حجم الطلب</Label>
+                       <Select
+                         value={formData.size}
+                         onValueChange={(value) => handleSelectChange(value, 'size')}
+                         disabled={!canEdit || isLoading}
+                       >
+                         <SelectTrigger className="text-right">
+                           <SelectValue placeholder="اختر حجم الطلب..." />
+                         </SelectTrigger>
+                         <SelectContent>
+                           <SelectItem value="عادي">عادي</SelectItem>
+                           <SelectItem value="كبير">كبير</SelectItem>
+                         </SelectContent>
+                       </Select>
+                     </div>
+                   )}
+                   
+                   <div className={order?.delivery_partner && order.delivery_partner !== 'محلي' ? "md:col-span-1" : "md:col-span-2"}>
                     <Label htmlFor="address">العنوان التفصيلي *</Label>
                     <Textarea
                       id="address"
