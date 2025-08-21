@@ -35,111 +35,244 @@ const SearchableSelectFixed = ({
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
 
-  // Dialog context detection
-  const getDialogContainer = useCallback(() => {
-    const dialogContent = document.querySelector('[data-radix-dialog-content]');
-    const dialogOverlay = document.querySelector('[data-radix-dialog-overlay]');
-    return dialogContent || dialogOverlay || document.body;
+  // Advanced Dialog Context Detection with Multiple Fallbacks
+  const getDialogContext = useCallback(() => {
+    // Check for multiple dialog content selectors
+    const dialogContent = document.querySelector('[data-radix-dialog-content]') ||
+                         document.querySelector('[role="dialog"]') ||
+                         document.querySelector('.dialog-content') ||
+                         document.querySelector('[data-dialog-content]');
+    
+    const dialogOverlay = document.querySelector('[data-radix-dialog-overlay]') ||
+                         document.querySelector('.dialog-overlay') ||
+                         document.querySelector('[data-dialog-overlay]');
+    
+    return {
+      content: dialogContent,
+      overlay: dialogOverlay,
+      isInDialog: !!(dialogContent || dialogOverlay)
+    };
   }, []);
 
-  // Enhanced portal container for dialog compatibility
-  const getPortalContainer = useCallback(() => {
-    const dialogContent = document.querySelector('[data-radix-dialog-content]');
-    if (dialogContent) {
-      // If inside dialog, create a dedicated container
-      let dropdownContainer = dialogContent.querySelector('[data-dropdown-portal]');
-      if (!dropdownContainer) {
-        dropdownContainer = document.createElement('div');
-        dropdownContainer.setAttribute('data-dropdown-portal', 'true');
-        dropdownContainer.style.cssText = `
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-          z-index: 99999999999;
+  // Revolutionary Portal Container for Ultimate Dialog Compatibility
+  const getAdvancedPortalContainer = useCallback(() => {
+    const { content: dialogContent, isInDialog } = getDialogContext();
+    
+    if (isInDialog && dialogContent) {
+      // Create a supreme dropdown container within the dialog
+      let supremeContainer = dialogContent.querySelector('[data-supreme-dropdown-portal]');
+      if (!supremeContainer) {
+        supremeContainer = document.createElement('div');
+        supremeContainer.setAttribute('data-supreme-dropdown-portal', 'true');
+        supremeContainer.setAttribute('data-dropdown-portal', 'true');
+        supremeContainer.style.cssText = `
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          pointer-events: none !important;
+          z-index: 999999999999999 !important;
+          isolation: isolate !important;
+          contain: layout style paint !important;
+          transform: translateZ(0) !important;
+          will-change: transform !important;
         `;
-        dialogContent.appendChild(dropdownContainer);
+        
+        // Append to dialog content or document body as fallback
+        try {
+          dialogContent.appendChild(supremeContainer);
+        } catch (e) {
+          document.body.appendChild(supremeContainer);
+        }
       }
-      return dropdownContainer;
+      return supremeContainer;
     }
+    
+    // Fallback to document body for non-dialog usage
     return document.body;
-  }, []);
+  }, [getDialogContext]);
 
-  // Enhanced click outside handling for dialog compatibility
+  // Ultimate Click Outside Handler with Dialog Supremacy
   useEffect(() => {
-    const handleClickOutside = (event) => {
+    const handleSupremeClickOutside = (event) => {
       if (!open) return;
       
       const isInsideDropdown = dropdownRef.current?.contains(event.target);
       const isInsideButton = buttonRef.current?.contains(event.target);
       
       if (!isInsideDropdown && !isInsideButton) {
-        // Advanced dialog detection
-        const dialogPortal = event.target.closest('[data-dropdown-portal]');
-        const dialogOverlay = event.target.closest('[data-radix-dialog-overlay]');
-        const dialogContent = event.target.closest('[data-radix-dialog-content]');
-        const anyDialog = event.target.closest('[role="dialog"]');
+        const { isInDialog } = getDialogContext();
         
-        // Only close if not clicking on any dialog-related element
-        if (!dialogPortal && !dialogOverlay && !dialogContent && !anyDialog) {
+        // Supreme dialog detection with multiple selectors
+        const dialogPortal = event.target.closest('[data-dropdown-portal]') ||
+                           event.target.closest('[data-supreme-dropdown-portal]');
+        const dialogOverlay = event.target.closest('[data-radix-dialog-overlay]') ||
+                             event.target.closest('.dialog-overlay') ||
+                             event.target.closest('[data-dialog-overlay]');
+        const dialogContent = event.target.closest('[data-radix-dialog-content]') ||
+                             event.target.closest('[role="dialog"]') ||
+                             event.target.closest('.dialog-content');
+        const anyDialogElement = event.target.closest('[data-dialog]') ||
+                               event.target.closest('.dialog');
+        
+        // Enhanced condition: only close if truly outside all dialog-related elements
+        const isInDialogContext = dialogPortal || dialogOverlay || dialogContent || anyDialogElement;
+        
+        if (isInDialog) {
+          // Inside dialog: only close if clicking outside all dialog elements
+          if (!isInDialogContext) {
+            setOpen(false);
+          }
+        } else {
+          // Outside dialog: normal behavior
           setOpen(false);
         }
       }
     };
 
-    const handleEscapeKey = (event) => {
+    const handleSupremeEscapeKey = (event) => {
       if (event.key === 'Escape' && open) {
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
         setOpen(false);
       }
     };
 
+    const handleDialogFocusTrap = (event) => {
+      // Override dialog focus trap when interacting with dropdown
+      if (open && dropdownRef.current?.contains(event.target)) {
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      }
+    };
+
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside, true);
-      document.addEventListener('touchstart', handleClickOutside, true);
-      document.addEventListener('keydown', handleEscapeKey, true);
+      // Use capture phase for supreme event handling
+      document.addEventListener('mousedown', handleSupremeClickOutside, { capture: true, passive: false });
+      document.addEventListener('touchstart', handleSupremeClickOutside, { capture: true, passive: false });
+      document.addEventListener('keydown', handleSupremeEscapeKey, { capture: true, passive: false });
+      document.addEventListener('focusin', handleDialogFocusTrap, { capture: true, passive: false });
+      document.addEventListener('focusout', handleDialogFocusTrap, { capture: true, passive: false });
     }
     
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
-      document.removeEventListener('touchstart', handleClickOutside, true);
-      document.removeEventListener('keydown', handleEscapeKey, true);
+      document.removeEventListener('mousedown', handleSupremeClickOutside, { capture: true });
+      document.removeEventListener('touchstart', handleSupremeClickOutside, { capture: true });
+      document.removeEventListener('keydown', handleSupremeEscapeKey, { capture: true });
+      document.removeEventListener('focusin', handleDialogFocusTrap, { capture: true });
+      document.removeEventListener('focusout', handleDialogFocusTrap, { capture: true });
     };
-  }, [open]);
+  }, [open, getDialogContext]);
 
-  // Enhanced focus management for dialog compatibility
+  // Revolutionary Focus Management System for Ultimate Dialog Compatibility
   useEffect(() => {
     if (open && searchInputRef.current) {
-      const isInDialog = !!document.querySelector('[data-radix-dialog-content]');
-      const focusDelays = isInDialog ? [10, 50, 100, 200, 500, 1000] : [50, 100];
+      const { isInDialog } = getDialogContext();
       
-      focusDelays.forEach(delay => {
+      // Supreme focus strategy with escalating delays and multiple techniques
+      const supremeFocusDelays = isInDialog 
+        ? [5, 10, 25, 50, 100, 200, 350, 500, 750, 1000, 1500] 
+        : [10, 50, 100];
+      
+      // Override dialog focus trap and input attributes
+      const overrideDialogFocusTrap = () => {
+        if (searchInputRef.current) {
+          // Store original attributes
+          const originalAttrs = {
+            tabIndex: searchInputRef.current.tabIndex,
+            disabled: searchInputRef.current.disabled,
+            readOnly: searchInputRef.current.readOnly
+          };
+          
+          // Supreme override
+          searchInputRef.current.tabIndex = 0;
+          searchInputRef.current.disabled = false;
+          searchInputRef.current.readOnly = false;
+          searchInputRef.current.style.pointerEvents = 'auto';
+          searchInputRef.current.style.userSelect = 'text';
+          searchInputRef.current.removeAttribute('aria-hidden');
+          searchInputRef.current.removeAttribute('inert');
+          
+          return originalAttrs;
+        }
+        return null;
+      };
+      
+      // Execute supreme focus strategy
+      supremeFocusDelays.forEach((delay, index) => {
         setTimeout(() => {
           if (searchInputRef.current && open) {
             try {
-              // Override dialog focus trap temporarily
-              const originalTabIndex = searchInputRef.current.tabIndex;
-              searchInputRef.current.tabIndex = 0;
-              searchInputRef.current.focus({ preventScroll: true });
-              searchInputRef.current.select();
+              const originalAttrs = overrideDialogFocusTrap();
               
-              // Restore original tabIndex
-              setTimeout(() => {
-                if (searchInputRef.current) {
-                  searchInputRef.current.tabIndex = originalTabIndex;
+              // Multiple focus techniques
+              searchInputRef.current.focus({ 
+                preventScroll: false,
+                focusVisible: true 
+              });
+              
+              // Additional focus techniques for dialog context
+              if (isInDialog) {
+                // Force focus with click simulation
+                searchInputRef.current.click();
+                searchInputRef.current.select();
+                
+                // Blur and refocus technique
+                if (index > 2) {
+                  searchInputRef.current.blur();
+                  setTimeout(() => {
+                    if (searchInputRef.current && open) {
+                      searchInputRef.current.focus();
+                      searchInputRef.current.select();
+                    }
+                  }, 10);
                 }
-              }, 10);
+              }
+              
+              // Restore attributes after a delay
+              setTimeout(() => {
+                if (searchInputRef.current && originalAttrs) {
+                  Object.assign(searchInputRef.current, originalAttrs);
+                }
+              }, 50);
+              
             } catch (e) {
-              // Silent fail for focus attempts
+              // Silent fail but try alternative approaches
+              if (isInDialog && searchInputRef.current) {
+                searchInputRef.current.style.display = 'none';
+                setTimeout(() => {
+                  if (searchInputRef.current) {
+                    searchInputRef.current.style.display = '';
+                    searchInputRef.current.focus();
+                  }
+                }, 1);
+              }
             }
           }
         }, delay);
       });
+      
+      // Continuous focus monitoring for dialog context
+      if (isInDialog) {
+        const focusMonitor = setInterval(() => {
+          if (open && searchInputRef.current && document.activeElement !== searchInputRef.current) {
+            try {
+              searchInputRef.current.focus({ preventScroll: true });
+            } catch (e) {
+              // Silent fail
+            }
+          } else if (!open) {
+            clearInterval(focusMonitor);
+          }
+        }, 200);
+        
+        // Cleanup monitor
+        setTimeout(() => clearInterval(focusMonitor), 5000);
+      }
     }
-  }, [open]);
+  }, [open, getDialogContext]);
 
   const handleToggle = () => {
     if (!disabled) {
@@ -175,23 +308,29 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Enhanced Dropdown Portal for Dialog Compatibility */}
+      {/* Supreme Dropdown Portal with Ultimate Dialog Compatibility */}
       {open && createPortal(
         <div 
           ref={dropdownRef}
-          className="fixed bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          data-dropdown-content="true"
+          data-supreme-dropdown="true"
+          className="fixed bg-popover border border-border rounded-md shadow-2xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ 
             direction: 'rtl',
             left: buttonRef.current?.getBoundingClientRect().left || 0,
             top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
             width: buttonRef.current?.getBoundingClientRect().width || 'auto',
             minWidth: '200px',
-            maxWidth: '400px',
-            pointerEvents: 'auto',
+            maxWidth: '500px',
+            pointerEvents: 'auto !important',
             isolation: 'isolate',
             transform: 'translateZ(0)',
-            zIndex: '99999999999',
-            contain: 'layout style paint'
+            zIndex: '999999999999999',
+            contain: 'layout style paint',
+            willChange: 'transform, opacity',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            position: 'fixed !important'
           }}
           onClick={(e) => {
             e.preventDefault();
@@ -212,13 +351,22 @@ const SearchableSelectFixed = ({
             e.stopPropagation();
             e.stopImmediatePropagation();
           }}
+          onFocus={(e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
+          onBlur={(e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+          }}
         >
-          {/* Search Input */}
-          <div className="p-1 border-b border-border">
+          {/* Supreme Search Input with Ultimate Focus Management */}
+          <div className="p-1 border-b border-border bg-popover">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 ref={searchInputRef}
+                data-supreme-search="true"
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
@@ -242,19 +390,40 @@ const SearchableSelectFixed = ({
                   e.stopPropagation();
                   e.stopImmediatePropagation();
                 }}
+                onBlur={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   e.stopImmediatePropagation();
                 }}
-                className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  e.stopImmediatePropagation();
+                }}
+                className="pr-10 text-right border-0 focus-visible:ring-1 focus-visible:ring-primary focus-visible:ring-offset-0 bg-background/50 backdrop-blur-sm"
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
                 autoFocus
                 tabIndex={0}
+                disabled={false}
+                readOnly={false}
                 style={{ 
-                  pointerEvents: 'auto',
-                  userSelect: 'text',
-                  caretColor: 'auto'
+                  pointerEvents: 'auto !important',
+                  userSelect: 'text !important',
+                  caretColor: 'auto !important',
+                  outline: 'none !important',
+                  WebkitUserSelect: 'text !important',
+                  MozUserSelect: 'text !important',
+                  msUserSelect: 'text !important'
                 }}
               />
             </div>
@@ -316,7 +485,7 @@ const SearchableSelectFixed = ({
             )}
           </div>
         </div>,
-        getPortalContainer()
+        getAdvancedPortalContainer()
       )}
     </div>
   );
