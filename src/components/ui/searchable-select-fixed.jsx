@@ -28,23 +28,9 @@ const SearchableSelectFixed = ({
     );
   }, [options, search]);
 
-  const selectedOption = options.find(option => {
-    const optionValue = option.value || option.id;
-    // Fix type comparison issue - convert both to strings for accurate matching
-    return String(optionValue) === String(value);
-  });
-
-  console.log('🔍 SearchableSelectFixed - Value matching:', {
-    value,
-    valueType: typeof value,
-    options: options.map(opt => ({ 
-      id: opt.value || opt.id, 
-      label: opt.label || opt.name,
-      type: typeof (opt.value || opt.id)
-    })),
-    selectedOption,
-    foundMatch: !!selectedOption
-  });
+  const selectedOption = options.find(option => 
+    (option.value || option.id) === value
+  );
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
 
@@ -148,8 +134,7 @@ const SearchableSelectFixed = ({
               filteredOptions.map((option) => {
                 const optionValue = option.value || option.id;
                 const optionLabel = option.label || option.name;
-                // Fix type comparison for accurate selection highlighting
-                const isSelected = String(value) === String(optionValue);
+                const isSelected = value === optionValue;
                 
                 return (
                   <div
