@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
@@ -226,6 +225,197 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token]);
 
+  // Helper: chunking
+  const chunkArray = useCallback((arr, size) => {
+    const chunks = [];
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    return chunks;
+  }, []);
+
+  // ربط معرفات الوسيط للطلبات الموجودة لدينا عبر الـ tracking_number
+  const linkRemoteIdsForExistingOrders = useCallback(async () => {
+    if (!token) return { linked: 0 };
+    try {
+      console.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
+      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id
+      const { data: localOrders, error: localErr } = await supabase
+        .from('orders')
+        .select('id, tracking_number')
+        .eq('delivery_partner', 'alwaseet')
+        .is('delivery_partner_order_id', null)
+        .limit(500);
+      if (localErr) {
+        console.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
+        return { linked: 0 };
+      }
+      if (!localOrders || localOrders.length === 0) {
+        console.log('✅ لا توجد طلبات بحاجة للربط حالياً');
+        return { linked: 0 };
+      }
+
+      // 2) اجلب جميع طلبات الوسيط ثم ابنِ خريطة: qr_id -> waseet_id
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط لعملية الربط`);
+      const byQr = new Map();
+      for (const o of waseetOrders) {
+        const qr = o.qr_id || o.tracking_number;
+        if (qr) byQr.set(String(qr), String(o.id));
+      }
+
+      // 3) حدّث الطلبات المحلية التي يمكن ربطها
+      let linked = 0;
+      for (const lo of localOrders) {
+        const remoteId = byQr.get(String(lo.tracking_number));
+        if (remoteId) {
+          const { error: upErr } = await supabase
+            .from('orders')
+            .update({
+              delivery_partner_order_id: remoteId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lo.id);
+          if (!upErr) {
+            linked++;
+            console.log(`🔗 تم ربط الطلب ${lo.id} بمعرف الوسيط ${remoteId}`);
+          } else {
+            console.warn('⚠️ فشل تحديث ربط معرف الوسيط للطلب:', lo.id, upErr);
+          }
+        }
+      }
+
+      if (linked > 0) {
+        toast({ title: 'تم الربط', description: `تم ربط ${linked} طلب بمعرف الوسيط.` });
+      }
+      return { linked };
+    } catch (e) {
+      console.error('❌ خطأ أثناء ربط المعرفات:', e);
+      return { linked: 0 };
+    }
+  }, [token]);
+
+  // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25)
+  const fastSyncPendingOrders = useCallback(async () => {
+    if (activePartner === 'local' || !isLoggedIn || !token) {
+      toast({ title: "غير متاح", description: "المزامنة متاحة فقط عند تسجيل الدخول لشركة التوصيل." });
+      return { updated: 0, checked: 0 };
+    }
+
+    setLoading(true);
+    try {
+      // تأكد من تحميل خريطة الحالات
+      let statusMap = orderStatusesMap;
+      if (statusMap.size === 0) {
+        statusMap = await loadOrderStatuses();
+      }
+
+      // 1) اجلب الطلبات المعلقة لدينا مع معرف الوسيط
+      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
+      const { data: pendingOrders, error: pendingErr } = await supabase
+        .from('orders')
+        .select('id, status, delivery_status, delivery_partner_order_id')
+        .eq('delivery_partner', 'alwaseet')
+        .in('status', targetStatuses)
+        .limit(200);
+
+      if (pendingErr) {
+        console.error('❌ خطأ في جلب الطلبات المعلقة:', pendingErr);
+        toast({ title: 'خطأ', description: 'فشل جلب الطلبات للمزامنة السريعة', variant: 'destructive' });
+        return { updated: 0, checked: 0 };
+      }
+
+      // إذا وجدت طلبات بدون معرف وسيط، حاول ربطها أولاً
+      const missingIdCount = (pendingOrders || []).filter(o => !o.delivery_partner_order_id).length;
+      if (missingIdCount > 0) {
+        await linkRemoteIdsForExistingOrders();
+      }
+
+      // أعد الجلب بعد الربط
+      const { data: pendingOrders2 } = await supabase
+        .from('orders')
+        .select('id, status, delivery_status, delivery_partner_order_id')
+        .eq('delivery_partner', 'alwaseet')
+        .in('status', targetStatuses)
+        .not('delivery_partner_order_id', 'is', null)
+        .limit(500);
+
+      const ordersToSync = pendingOrders2 || [];
+      const ids = ordersToSync.map(o => String(o.delivery_partner_order_id)).filter(Boolean);
+      if (ids.length === 0) {
+        toast({ title: 'لا توجد تحديثات', description: 'لا توجد طلبات بحاجة لمزامنة سريعة.' });
+        return { updated: 0, checked: 0 };
+      }
+
+      let updated = 0;
+      let checked = 0;
+
+      // 2) نفّذ استدعاءات الدفعات (25 كحد أقصى لكل مرة)
+      const batches = chunkArray(ids, 25);
+      for (const batch of batches) {
+        const waseetData = await AlWaseetAPI.getOrdersByIdsBulk(token, batch);
+        checked += Array.isArray(waseetData) ? waseetData.length : 0;
+
+        for (const o of (waseetData || [])) {
+          const waseetStatusId = o.status_id || o.statusId || o.status?.id;
+          const waseetStatusText = o.status || o.status_text || o.status_name || '';
+          const localStatus =
+            statusMap.get(String(waseetStatusId)) ||
+            (() => {
+              const t = String(waseetStatusText || '').toLowerCase();
+              if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+              if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
+              if (t.includes('راجع')) return 'returned';
+              if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+              if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+              return 'pending';
+            })();
+
+          // تحديث الطلب عند اختلاف الحالة أو النص أو رسوم التوصيل
+          const updates = {
+            status: localStatus,
+            delivery_status: waseetStatusText,
+            updated_at: new Date().toISOString(),
+          };
+
+          // تحديث رسوم التوصيل إن وُجدت
+          if (o.delivery_price) {
+            const dp = parseInt(String(o.delivery_price)) || 0;
+            if (dp >= 0) updates.delivery_fee = dp;
+          }
+
+          // إذا تم تأكيد الاستلام المالي
+          if (o.deliver_confirmed_fin === 1) {
+            updates.receipt_received = true;
+          }
+
+          const { error: upErr } = await supabase
+            .from('orders')
+            .update(updates)
+            .eq('delivery_partner_order_id', String(o.id));
+
+          if (!upErr) {
+            updated++;
+            console.log(`✅ تحديث سريع: ${o.id} → ${localStatus} | ${waseetStatusText}`);
+          } else {
+            console.warn('⚠️ فشل تحديث الطلب (fast sync):', o.id, upErr);
+          }
+        }
+      }
+
+      const msg = updated > 0
+        ? `تم تحديث ${updated} من ${checked} طلب (مزامنة سريعة)`
+        : `تم فحص ${checked} طلب - لا تحديثات مطلوبة (مزامنة سريعة)`;
+
+      toast({ title: 'مزامنة سريعة مكتملة', description: msg });
+      return { updated, checked };
+    } catch (e) {
+      console.error('❌ خطأ في المزامنة السريعة:', e);
+      toast({ title: 'خطأ في المزامنة', description: e.message, variant: 'destructive' });
+      return { updated: 0, checked: 0 };
+    } finally {
+      setLoading(false);
+    }
+  }, [activePartner, isLoggedIn, token, orderStatusesMap, loadOrderStatuses, linkRemoteIdsForExistingOrders, chunkArray]);
+
   // مزامنة الطلبات مع تحديث الحالات في قاعدة البيانات
   const syncAndApplyOrders = async () => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
@@ -437,6 +627,24 @@ export const AlWaseetProvider = ({ children }) => {
     if (token) {
       try {
         const result = await AlWaseetAPI.createAlWaseetOrder(orderData, token);
+
+        // New: إذا أعاد الوسيط معرف الطلب، خزنه في طلبنا المحلي المطابق لـ tracking_number
+        if (result && result.id && orderData?.tracking_number) {
+          const { error: upErr } = await supabase
+            .from('orders')
+            .update({
+              delivery_partner_order_id: String(result.id),
+              delivery_partner: 'alwaseet',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('tracking_number', String(orderData.tracking_number));
+          if (upErr) {
+            console.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
+          } else {
+            console.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي:', result.id);
+          }
+        }
+
         return { success: true, data: result };
       } catch (error) {
         return { success: false, message: error.message };
@@ -515,6 +723,10 @@ export const AlWaseetProvider = ({ children }) => {
     syncAndApplyOrders,
     syncOrderByTracking,
     orderStatusesMap,
+
+    // New exports:
+    fastSyncPendingOrders,
+    linkRemoteIdsForExistingOrders,
   };
 
   return (

@@ -1561,6 +1561,7 @@ export type Database = {
           customer_province: string | null
           delivery_fee: number
           delivery_partner: string | null
+          delivery_partner_order_id: string | null
           delivery_status: string
           discount: number
           discount_reason: string | null
@@ -1595,6 +1596,7 @@ export type Database = {
           customer_province?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
+          delivery_partner_order_id?: string | null
           delivery_status?: string
           discount?: number
           discount_reason?: string | null
@@ -1629,6 +1631,7 @@ export type Database = {
           customer_province?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
+          delivery_partner_order_id?: string | null
           delivery_status?: string
           discount?: number
           discount_reason?: string | null

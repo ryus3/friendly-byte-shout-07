@@ -1,3 +1,4 @@
+
 // This file contains functions to interact with the Al-Waseet delivery company API.
 
 import { supabase } from './customSupabaseClient';
@@ -40,7 +41,7 @@ export const getCities = async (token) => {
 };
 
 export const getRegionsByCity = async (token, cityId) => {
-  return handleApiCall('regions', 'GET', token, null, { city_id: cityId });
+  return handleApiCall('regions', 'GET', token, null, { city_id: parseInt(cityId) });
 };
 
 export const getPackageSizes = async (token) => {
@@ -157,4 +158,14 @@ export const getOrderById = async (token, orderId) => {
 
 export const getOrderStatuses = async (token) => {
   return handleApiCall('statuses', 'GET', token, null, { token });
+};
+
+// New: Retrieve orders by IDs in bulk (max 25 per request)
+export const getOrdersByIdsBulk = async (token, ids) => {
+  const arr = Array.isArray(ids) ? ids : String(ids || '').split(',').map(s => s.trim()).filter(Boolean);
+  const unique = Array.from(new Set(arr.map(String)));
+  const first25 = unique.slice(0, 25);
+  if (first25.length === 0) return [];
+  const payload = { ids: first25.join(',') };
+  return handleApiCall('get-orders-by-ids-bulk', 'POST', token, payload, { token });
 };
