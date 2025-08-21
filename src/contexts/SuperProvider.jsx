@@ -1207,7 +1207,7 @@ export const SuperProvider = ({ children }) => {
   // تم نقل تعريف Set للطلبات المحذوفة نهائياً إلى الأعلى لضمان التعريف قبل الاستخدام
 
   // دوال أخرى مطلوبة للتوافق
-  const refreshOrders = useCallback(() => refreshOrdersOnly(), [refreshOrdersOnly]);
+  const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshAll = useCallback(async () => { superAPI.invalidate('all_data'); await fetchAllData(); }, [fetchAllData]);
   
