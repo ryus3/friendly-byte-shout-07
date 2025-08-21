@@ -28,16 +28,11 @@ const SearchableSelectFixed = ({
     );
   }, [options, search]);
 
-  const selectedOption = options.find(option => {
-    const optionValue = option.value || option.id;
-    // Convert both to strings and handle different data types
-    return String(optionValue) === String(value);
-  });
+  const selectedOption = options.find(option => 
+    (option.value || option.id) === value
+  );
 
-  // Display the actual selected option or placeholder
-  const displayText = selectedOption ? 
-    (selectedOption.label || selectedOption.name) : 
-    (value && options.length === 0 ? "جاري التحميل..." : placeholder);
+  const displayText = selectedOption?.label || selectedOption?.name || placeholder;
 
   // Close dropdown when clicking outside
   useEffect(() => {
