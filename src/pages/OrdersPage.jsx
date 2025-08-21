@@ -298,16 +298,13 @@ const OrdersPage = () => {
 
         {/* Orders Stats */}
         <OrdersStats 
-          totalOrders={filteredOrders.length}
-          totalAiOrders={userAiOrders.length}
-          totalRevenue={userOrders.reduce((sum, order) => sum + (order.final_amount || 0), 0)}
-          totalProfit={userActualProfits}
-          pendingCount={filteredOrders.filter(o => o.status === 'pending').length}
-          shippedCount={filteredOrders.filter(o => ['shipped', 'delivery'].includes(o.status)).length}
-          deliveredCount={filteredOrders.filter(o => o.status === 'delivered').length}
-          employeeOptions={employeeOptions}
-          selectedEmployeeId={selectedEmployeeId}
-          onEmployeeChange={setSelectedEmployeeId}
+          orders={filteredOrders}
+          aiOrders={userAiOrders}
+          onAiOrdersClick={() => setDialogs(d => ({ ...d, aiManager: true }))}
+          onStatCardClick={(status, period) => {
+            setFilters(prev => ({ ...prev, status, period }));
+          }}
+          globalPeriod={filters.period}
         />
 
         {/* Main Content with Tabs */}
