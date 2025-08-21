@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Package, Save, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, Package, Save, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -9,7 +12,8 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import CustomerInfoForm from '@/components/quick-order/CustomerInfoForm';
 import OrderDetailsForm from '@/components/quick-order/OrderDetailsForm';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
-import { editAlWaseetOrder } from '@/lib/alwaseet-api';
+import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
+import { getCities, getRegionsByCity, getPackageSizes, editAlWaseetOrder } from '@/lib/alwaseet-api';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 
@@ -70,11 +74,15 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(true);
   const [applyLoyaltyDelivery, setApplyLoyaltyDelivery] = useState(false);
 
-  // Loading states for external data
+  // Al-Waseet data states
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingRegions, setLoadingRegions] = useState(false);
   const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
 
   // Initialize form when order is loaded
   const initializeFormData = useCallback(async () => {
@@ -93,8 +101,29 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     if (order.delivery_partner === 'الوسيط') {
       setActivePartner('alwaseet');
       // Fetch Al-Waseet data if needed
-      if (cities.length === 0) await fetchCities();
-      if (packageSizes.length === 0) await fetchPackageSizes();
+      if (cities.length === 0) {
+        setLoadingCities(true);
+        try {
+          const citiesData = await getCities(waseetToken);
+          setCities(citiesData || []);
+        } catch (error) {
+          console.error('Error fetching cities:', error);
+          setDataFetchError(true);
+        } finally {
+          setLoadingCities(false);
+        }
+      }
+      if (packageSizes.length === 0) {
+        setLoadingPackageSizes(true);
+        try {
+          const sizesData = await getPackageSizes(waseetToken);
+          setPackageSizes(sizesData || []);
+        } catch (error) {
+          console.error('Error fetching package sizes:', error);
+        } finally {
+          setLoadingPackageSizes(false);
+        }
+      }
     } else {
       setActivePartner('local');
     }
@@ -113,12 +142,14 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         cityId = String(cityMatch.id);
         
         // Fetch regions for this city
+        setLoadingRegions(true);
         try {
-          await fetchRegions(cityId);
+          const regionsData = await getRegionsByCity(cityId, waseetToken);
+          setRegions(regionsData || []);
           
           // Find region match
-          if (order.customer_province && regions.length > 0) {
-            const regionMatch = regions.find(r => {
+          if (order.customer_province && regionsData?.length > 0) {
+            const regionMatch = regionsData.find(r => {
               const regionName = r.name || r.name_ar || r.region_name || '';
               return regionName.toLowerCase().trim() === order.customer_province.toLowerCase().trim();
             });
@@ -129,6 +160,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           }
         } catch (error) {
           console.error('Error fetching regions:', error);
+          setDataFetchError(true);
+        } finally {
+          setLoadingRegions(false);
         }
       }
     }
@@ -331,10 +365,12 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       setFormData(prev => ({ ...prev, region_id: '' }));
       
       try {
-        await fetchRegions(value);
+        const regionsData = await getRegionsByCity(value, waseetToken);
+        setRegions(regionsData || []);
         console.log('✅ تم جلب المناطق للمدينة:', value);
       } catch (error) {
         console.error('❌ خطأ في جلب المناطق:', error);
+        setDataFetchError(true);
         toast({
           title: "خطأ",
           description: "فشل في جلب المناطق",
@@ -530,6 +566,85 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setApplyLoyaltyDelivery(enabled);
   };
 
+  // Product selection handler - exactly like QuickOrderContent
+  const handleConfirmProductSelection = (selectedItems) => {
+    clearCart();
+    selectedItems.forEach(item => {
+      const product = { id: item.productId, name: item.productName, images: [item.image] };
+      const variant = { id: item.variantId, sku: item.sku, color: item.color, size: item.size, price: item.price, cost_price: item.costPrice, quantity: item.stock, reserved: item.reserved, image: item.image };
+      addToCart(product, variant, item.quantity, false);
+    });
+    setProductSelectOpen(false);
+    toast({ title: "تم تحديث السلة", description: `تم إضافة ${selectedItems.length} منتج.`, variant: "success" });
+  };
+
+  // Partner specific fields function - exactly like QuickOrderContent
+  const partnerSpecificFields = () => {
+    if (activePartner === 'local') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="city">المحافظة</Label>
+            <SearchableSelectFixed
+              value={formData.city}
+              onValueChange={(v) => handleSelectChange('city', v)}
+              options={iraqiProvinces.map(p => ({ value: p.name, label: p.name }))}
+              placeholder="اختر محافظة"
+              searchPlaceholder="بحث في المحافظات..."
+              emptyText="لا توجد محافظة بهذا الاسم"
+              className={errors.city ? "border-red-500" : ""}
+            />
+            {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="region">المنطقة او القضاء</Label>
+            <Input 
+              id="region" 
+              name="region" 
+              value={formData.region} 
+              onChange={(e) => handleChange('region', e.target.value)} 
+              required 
+              className={errors.region ? "border-red-500" : ""}
+            />
+            {errors.region && <p className="text-sm text-red-500">{errors.region}</p>}
+          </div>
+        </>
+      );
+    }
+    return (
+      <>
+        <div className="space-y-2">
+          <Label>المدينة</Label>
+          <SearchableSelectFixed
+            value={formData.city_id}
+            onValueChange={(v) => handleSelectChange('city_id', v)}
+            options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
+            placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
+            searchPlaceholder="بحث في المدن..."
+            emptyText="لا توجد مدينة بهذا الاسم"
+            className={errors.city_id ? "border-red-500" : ""}
+            disabled={loadingCities || dataFetchError}
+          />
+          {errors.city_id && <p className="text-sm text-red-500">{errors.city_id}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label>المنطقة او القضاء</Label>
+          <SearchableSelectFixed
+            value={formData.region_id}
+            onValueChange={(v) => handleSelectChange('region_id', v)}
+            options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
+            placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
+            searchPlaceholder="بحث في المناطق..."
+            emptyText="لا توجد منطقة بهذا الاسم"
+            className={errors.region_id ? "border-red-500" : ""}
+            disabled={!formData.city_id || loadingRegions || dataFetchError}
+          />
+          {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
+        </div>
+      </>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="w-full max-w-sm sm:max-w-4xl lg:max-w-6xl h-[90vh] flex flex-col p-0">
@@ -544,6 +659,40 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
             )}
           </DialogTitle>
         </DialogHeader>
+        
+        {/* Original Order Info */}
+        {order && (
+          <div className="mx-4 sm:mx-6 mt-4">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-muted-foreground">رقم الطلب:</span>
+                    <p className="font-mono">{order.tracking_number}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-muted-foreground">التاريخ:</span>
+                    <p>{new Date(order.created_at).toLocaleDateString('ar')}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-muted-foreground">الحالة:</span>
+                    <p className="inline-flex items-center gap-1">
+                      {order.status === 'pending' ? (
+                        <><AlertCircle className="h-3 w-3 text-yellow-500" /> قيد الانتظار</>
+                      ) : (
+                        <><CheckCircle className="h-3 w-3 text-green-500" /> {order.status}</>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium text-muted-foreground">شريك التوصيل:</span>
+                    <p>{order.delivery_partner || 'محلي'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -551,95 +700,34 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
               {/* Customer Information */}
               <CustomerInfoForm
                 formData={formData}
-                handleChange={handleChange}
-                errors={errors}
-                isDeliveryPartnerSelected={!!activePartner}
-                isSubmittingState={isSubmitting}
-                activePartner={activePartner}
-                cities={cities}
-                regions={regions}
-                iraqiProvinces={iraqiProvinces}
+                handleChange={(e) => handleChange(e.target.name, e.target.value)}
                 handleSelectChange={handleSelectChange}
-                loadingRegions={loadingRegions}
+                errors={errors}
+                partnerSpecificFields={partnerSpecificFields}
+                isSubmittingState={isSubmitting}
+                isDeliveryPartnerSelected={!!activePartner}
                 customerData={customerData}
                 loyaltyDiscount={loyaltyDiscount}
-                applyLoyaltyDiscount={applyLoyaltyDiscount}
-                partnerSpecificFields={() => {
-                  if (activePartner === 'alwaseet') {
-                    return (
-                      <>
-                        <div className="space-y-2">
-                          <label htmlFor="city">المحافظة</label>
-                          <select
-                            value={formData.city_id}
-                            onChange={(e) => handleSelectChange('city_id', e.target.value)}
-                            disabled={isSubmitting}
-                          >
-                            <option value="">اختر المحافظة</option>
-                            {cities.map((city) => (
-                              <option key={city.id} value={city.id.toString()}>
-                                {city.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-2">
-                          <label htmlFor="region">المنطقة</label>
-                          <select
-                            value={formData.region_id}
-                            onChange={(e) => handleSelectChange('region_id', e.target.value)}
-                            disabled={isSubmitting || !formData.city_id}
-                          >
-                            <option value="">اختر المنطقة</option>
-                            {regions.map((region) => (
-                              <option key={region.id} value={region.id.toString()}>
-                                {region.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    );
-                  } else {
-                    return (
-                      <div className="space-y-2">
-                        <label htmlFor="city">المحافظة</label>
-                        <select
-                          value={formData.city}
-                          onChange={(e) => handleSelectChange('city', e.target.value)}
-                          disabled={isSubmitting}
-                        >
-                          <option value="">اختر المحافظة</option>
-                          {iraqiProvinces.map((province) => (
-                            <option key={province.id} value={province.name}>
-                              {province.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  }
-                }}
               />
 
               {/* Order Details */}
               <OrderDetailsForm
                 formData={formData}
-                handleChange={handleChange}
+                handleChange={(e) => handleChange(e.target.name, e.target.value)}
                 handleSelectChange={handleSelectChange}
-                errors={errors}
+                setProductSelectOpen={setProductSelectOpen}
                 isSubmittingState={isSubmitting}
                 isDeliveryPartnerSelected={!!activePartner}
-                activePartner={activePartner}
                 packageSizes={packageSizes}
                 loadingPackageSizes={loadingPackageSizes}
+                activePartner={activePartner}
                 dataFetchError={dataFetchError}
-                setProductSelectOpen={setProductSelectOpen}
-                customerData={customerData}
-                subtotal={subtotal}
-                total={finalTotal}
+                settings={settings}
                 discount={discount}
                 setDiscount={setDiscount}
+                subtotal={subtotal}
+                total={finalTotal}
+                customerData={customerData}
                 loyaltyDiscount={loyaltyDiscount}
                 applyLoyaltyDiscount={applyLoyaltyDiscount}
                 applyLoyaltyDelivery={applyLoyaltyDelivery}
@@ -692,7 +780,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         <ProductSelectionDialog
           open={productSelectOpen}
           onOpenChange={setProductSelectOpen}
-          onConfirm={() => setProductSelectOpen(false)}
+          onConfirm={handleConfirmProductSelection}
+          initialCart={cart}
         />
       </DialogContent>
     </Dialog>
