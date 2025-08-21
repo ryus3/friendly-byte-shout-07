@@ -46,7 +46,7 @@ const OrderList = ({
     return (
       <div className="space-y-2">
         <AnimatePresence>
-          {orders.filter(order => order != null).map(order => (
+          {orders.map(order => (
             <MemoizedOrderListItem
               key={order.id}
               order={order}
@@ -70,7 +70,7 @@ const OrderList = ({
   return (
     <div className="grid grid-cols-1 gap-4">
       <AnimatePresence>
-        {orders.filter(order => order != null).map(order => (
+        {orders.map(order => (
           <motion.div
             key={order.id}
             layout

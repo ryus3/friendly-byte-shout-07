@@ -101,7 +101,7 @@ const OrderListItem = ({
   const StatusIcon = statusConfig.icon;
   
   // تحديد نوع التوصيل - ألوان متناسقة
-  const isLocalOrder = order?.delivery_partner === 'محلي';
+  const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
@@ -253,7 +253,7 @@ const OrderListItem = ({
           <MobileTableCell label="التوصيل">
             <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
               <Building className="h-3 w-3 ml-1" />
-               {order?.delivery_partner || 'محلي'}
+              {order.delivery_partner}
             </Badge>
           </MobileTableCell>
 
@@ -386,7 +386,7 @@ const OrderListItem = ({
           </div>
           <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full mt-1 w-fit shadow-sm`}>
             <Building className="h-3 w-3 ml-1" />
-            {order?.delivery_partner || 'محلي'}
+            {order.delivery_partner}
           </Badge>
         </div>
 

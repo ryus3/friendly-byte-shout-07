@@ -269,15 +269,13 @@ const OrdersPage = () => {
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
-    // Filter out null/undefined orders first
-    const validOrders = orders.filter(order => order != null);
     if (hasPermission('view_all_orders')) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
-        return validOrders.filter(order => order.created_by === selectedEmployeeId);
+        return orders.filter(order => order.created_by === selectedEmployeeId);
       }
-      return validOrders;
+      return orders;
     }
-    return validOrders.filter(order => order.created_by === user?.user_id);
+    return orders.filter(order => order.created_by === user?.user_id);
   }, [orders, user?.user_id, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
@@ -296,10 +294,10 @@ const OrdersPage = () => {
     let tempOrders;
     if (filters.status === 'archived') {
       // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
-      tempOrders = userOrders.filter(o => o && (o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock'));
+      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
     } else {
       // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
-      tempOrders = userOrders.filter(o => o && !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
+      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
     }
 
     // تطبيق فلتر الوقت أولاً
@@ -308,12 +306,6 @@ const OrdersPage = () => {
     }
     
     return tempOrders.filter(order => {
-      // Add comprehensive null checking with debugging
-      if (!order) {
-        console.warn('🚨 Null order found in filteredOrders filter');
-        return false;
-      }
-      
       const { searchTerm, status, archiveSubStatus } = filters;
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       const customerInfo = order.customerinfo || {
@@ -423,7 +415,7 @@ const OrdersPage = () => {
     // فلترة الطلبات المحلية أو الطلبات قيد التجهيز (pending)
     const ordersToDeleteFiltered = ordersArray.filter(orderId => {
         const order = orders.find(o => o.id === orderId);
-        return order && (order?.delivery_partner === 'محلي' || order.status === 'pending');
+        return order && (order.delivery_partner === 'محلي' || order.status === 'pending');
     });
 
     if (ordersToDeleteFiltered.length < ordersArray.length) {
