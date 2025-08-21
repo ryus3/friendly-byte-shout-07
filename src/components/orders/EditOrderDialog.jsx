@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { ProductSelectionDialog } from '@/components/products/ProductSelectionDialog';
+import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import Loader from '@/components/ui/loader';
 import { AlertTriangle, Package2, MapPin, Phone, User, DollarSign, Loader2 } from 'lucide-react';
 import { getCities, getRegionsByCity, getPackageSizes } from '@/lib/alwaseet-api';
