@@ -106,9 +106,11 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
-  // Initialize form with order data - simplified approach
+  // Initialize form with order data - simplified and fixed approach
   const initializeFormWithOrderData = () => {
     if (!order) return;
+    
+    console.log('🔄 تهيئة النموذج مع بيانات الطلب:', order);
     
     // Find matching city and region IDs if this is an Al-Waseet order
     let cityId = '';
@@ -116,29 +118,41 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     let packageSizeId = '';
     
     if (order.delivery_partner === 'الوسيط' && cities.length > 0) {
-      const cityMatch = cities.find(c => 
-        (c.name && c.name.toLowerCase().includes(order.customer_city?.toLowerCase())) ||
-        (order.customer_city && order.customer_city.toLowerCase().includes(c.name?.toLowerCase()))
-      );
+      console.log('🔍 البحث عن المدينة في:', cities);
+      
+      // More flexible city matching
+      const cityMatch = cities.find(c => {
+        if (!order.customer_city) return false;
+        const cityName = (c.name || c.name_ar || c.city_name || '').toLowerCase();
+        const orderCity = order.customer_city.toLowerCase();
+        return cityName.includes(orderCity) || orderCity.includes(cityName);
+      });
       
       if (cityMatch) {
-        cityId = cityMatch.id;
-        // Load regions for this city
-        loadRegionsForCity(cityId);
+        cityId = String(cityMatch.id);
+        console.log('✅ تم العثور على المدينة:', cityMatch);
+        // Load regions for this city asynchronously
+        loadRegionsForCity(cityMatch.id);
+      } else {
+        console.log('❌ لم يتم العثور على المدينة:', order.customer_city);
       }
       
-      // Find package size
+      // Find package size with better matching
       if (packageSizes.length > 0) {
-        const sizeMatch = packageSizes.find(s => 
-          s.id == order.package_size || 
-          s.name?.includes(order.package_size)
-        );
-        packageSizeId = sizeMatch ? sizeMatch.id : packageSizes[0]?.id || '';
+        console.log('🔍 البحث عن حجم الطلب في:', packageSizes);
+        
+        const sizeMatch = packageSizes.find(s => {
+          return String(s.id) === String(order.package_size) || 
+                 (s.name && order.package_size && s.name.includes(String(order.package_size)));
+        });
+        
+        packageSizeId = sizeMatch ? String(sizeMatch.id) : (packageSizes[0] ? String(packageSizes[0].id) : '');
+        console.log('📦 حجم الطلب المحدد:', sizeMatch || packageSizes[0]);
       }
     }
     
-    // Set form data
-    setFormData({
+    // Set form data with proper type conversion
+    const newFormData = {
       name: order.customer_name || '',
       phone: order.customer_phone || '',
       phone2: order.customer_phone2 || '',
@@ -149,7 +163,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       size: packageSizeId,
       price: order.total_amount || 0,
       delivery_fee: order.delivery_fee || 0
-    });
+    };
+    
+    console.log('📝 تعيين بيانات النموذج:', newFormData);
+    setFormData(newFormData);
     
     // Set selected products
     if (order.items && Array.isArray(order.items)) {
@@ -166,29 +183,46 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
-  // Load regions for selected city - same as QuickOrderContent
+  // Load regions for selected city - enhanced with better matching
   const loadRegionsForCity = async (cityId) => {
     if (!cityId || !waseetToken) return;
     
+    console.log('🔄 تحميل المناطق للمدينة:', cityId);
     setLoadingRegions(true);
+    
     try {
       const regionsData = await getRegionsByCity(waseetToken, cityId);
-      setRegions(Array.isArray(regionsData) ? regionsData : []);
+      const normalizedRegions = Array.isArray(regionsData) ? regionsData : [];
+      setRegions(normalizedRegions);
       
-      // Try to find matching region
-      if (order?.customer_province && regionsData.length > 0) {
-        const regionMatch = regionsData.find(r => 
-          (r.name && r.name.toLowerCase().includes(order.customer_province.toLowerCase())) ||
-          (order.customer_province.toLowerCase().includes(r.name?.toLowerCase()))
-        );
+      console.log('✅ تم تحميل المناطق:', normalizedRegions);
+      
+      // Try to find matching region with better logic
+      if (order?.customer_province && normalizedRegions.length > 0) {
+        console.log('🔍 البحث عن المنطقة:', order.customer_province);
+        
+        const regionMatch = normalizedRegions.find(r => {
+          if (!order.customer_province) return false;
+          const regionName = (r.name || r.name_ar || r.region_name || '').toLowerCase();
+          const orderRegion = order.customer_province.toLowerCase();
+          return regionName.includes(orderRegion) || orderRegion.includes(regionName);
+        });
         
         if (regionMatch) {
-          setFormData(prev => ({ ...prev, region_id: regionMatch.id }));
+          console.log('✅ تم العثور على المنطقة:', regionMatch);
+          setFormData(prev => ({ ...prev, region_id: String(regionMatch.id) }));
+        } else {
+          console.log('❌ لم يتم العثور على المنطقة:', order.customer_province);
         }
       }
       
     } catch (error) {
       console.error('Error loading regions:', error);
+      toast({
+        title: "خطأ في تحميل المناطق",
+        description: error.message,
+        variant: "destructive"
+      });
     } finally {
       setLoadingRegions(false);
     }
@@ -200,20 +234,20 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // معالجة تغيير القوائم المنسدلة مع إصلاح شامل
+  // Enhanced select change handler with proper type handling
   const handleSelectChange = async (value, name) => {
-    console.log(`🔄 تغيير ${name} إلى:`, value);
+    console.log(`🔄 تغيير ${name} إلى:`, value, typeof value);
     
     // تحديث الحالة فوراً لتجنب التأخير
     setFormData(prev => {
       const newData = { ...prev };
       
-      // تحديث القيمة المحددة
-      newData[name] = value;
+      // تحديث القيمة المحددة مع التحويل للنص
+      newData[name] = String(value);
       
       // إذا تغيرت المدينة
       if (name === 'city_id' && value) {
-        const selectedCity = cities.find(c => c.id === value);
+        const selectedCity = cities.find(c => String(c.id) === String(value));
         if (selectedCity) {
           newData.city = selectedCity.name || selectedCity.name_ar || selectedCity.city_name || '';
           console.log('🏙️ تم اختيار المدينة:', selectedCity);
@@ -221,11 +255,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         // إعادة تعيين المنطقة عند تغيير المدينة
         newData.region_id = '';
         newData.region = '';
+        // مسح المناطق القديمة
+        setRegions([]);
       }
       
       // إذا تغيرت المنطقة
       if (name === 'region_id' && value) {
-        const selectedRegion = regions.find(r => r.id === value);
+        const selectedRegion = regions.find(r => String(r.id) === String(value));
         if (selectedRegion) {
           newData.region = selectedRegion.name || selectedRegion.name_ar || selectedRegion.region_name || '';
           console.log('📍 تم اختيار المنطقة:', selectedRegion);
@@ -234,7 +270,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       
       // إذا تغير حجم الطلب
       if (name === 'size' && value) {
-        const selectedSize = packageSizes.find(s => s.id == value);
+        const selectedSize = packageSizes.find(s => String(s.id) === String(value));
         if (selectedSize) {
           console.log('📦 تم اختيار حجم الطلب:', selectedSize);
         }
@@ -506,57 +542,53 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {order?.delivery_partner && order.delivery_partner !== 'محلي' && (
                     <>
-                       <div>
-                         <Label htmlFor="city_id">المدينة *</Label>
-                         <SearchableSelectFixed
-                           options={cities.map(city => ({
-                             value: city.id,
-                             label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
-                           }))}
-                           value={formData.city_id}
-                           onValueChange={(value) => handleSelectChange(value, 'city_id')}
-                           placeholder={formData.city_id && cities.length > 0 ? 
-                             cities.find(c => c.id === formData.city_id)?.name || 
-                             cities.find(c => c.id === formData.city_id)?.name_ar || 
-                             "اختر المدينة" : "اختر المدينة"}
-                           disabled={!canEdit || isLoading || loadingCities}
-                         />
-                       </div>
-                       <div>
-                         <Label htmlFor="region_id">المنطقة *</Label>
-                         <SearchableSelectFixed
-                           options={regions.map(region => ({
-                             value: region.id,
-                             label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
-                           }))}
-                           value={formData.region_id}
-                           onValueChange={(value) => handleSelectChange(value, 'region_id')}
-                            placeholder={formData.region_id && regions.length > 0 ? 
-                              regions.find(r => r.id === formData.region_id)?.name || 
-                              regions.find(r => r.id === formData.region_id)?.name_ar || 
-                              (loadingRegions ? "جاري التحميل..." : "اختر المنطقة") : 
-                              (loadingRegions ? "جاري التحميل..." : "اختر المنطقة")}
-                           disabled={!canEdit || isLoading || !formData.city_id || loadingRegions}
-                         />
-                       </div>
                         <div>
-                          <Label htmlFor="size">حجم الطلب</Label>
+                          <Label htmlFor="city_id">المدينة *</Label>
                           <SearchableSelectFixed
-                            options={packageSizes.length > 0 ? packageSizes.map(size => ({
-                              value: size.id?.toString(),
-                              label: size.name || size.package_name || `حجم ${size.id}`
-                            })) : [
-                              { value: "1", label: "صغير" },
-                              { value: "2", label: "متوسط" },
-                              { value: "3", label: "كبير" }
-                            ]}
-                            value={formData.size?.toString()}
+                            value={String(formData.city_id || '')}
+                            onValueChange={(value) => handleSelectChange(value, 'city_id')}
+                            options={cities.map(city => ({
+                              value: String(city.id),
+                              label: city.name || city.name_ar || city.city_name || `مدينة ${city.id}`
+                            }))}
+                            placeholder={loadingCities ? "جاري تحميل المدن..." : "اختر المدينة"}
+                            searchPlaceholder="البحث في المدن..."
+                            emptyText="لا توجد مدن"
+                            disabled={!canEdit || isLoading || loadingCities}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="region_id">المنطقة *</Label>
+                          <SearchableSelectFixed
+                            value={String(formData.region_id || '')}
+                            onValueChange={(value) => handleSelectChange(value, 'region_id')}
+                            options={regions.map(region => ({
+                              value: String(region.id),
+                              label: region.name || region.name_ar || region.region_name || `منطقة ${region.id}`
+                            }))}
+                            placeholder={loadingRegions ? "جاري تحميل المناطق..." : 
+                                       !formData.city_id ? "اختر المدينة أولاً" : "اختر المنطقة"}
+                            searchPlaceholder="البحث في المناطق..."
+                            emptyText="لا توجد مناطق"
+                            disabled={!canEdit || isLoading || loadingRegions || !formData.city_id}
+                            className="w-full"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="size">حجم الطلب *</Label>
+                          <SearchableSelectFixed
+                            value={String(formData.size || '')}
                             onValueChange={(value) => handleSelectChange(value, 'size')}
-                            placeholder={formData.size && packageSizes.length > 0 ? 
-                              packageSizes.find(s => s.id?.toString() === formData.size?.toString())?.name || 
-                              packageSizes.find(s => s.id?.toString() === formData.size?.toString())?.package_name || 
-                              "اختر حجم الطلب" : "اختر حجم الطلب"}
+                            options={packageSizes.map(size => ({
+                              value: String(size.id),
+                              label: size.name || size.name_ar || size.package_name || `حجم ${size.id}`
+                            }))}
+                            placeholder={loadingPackageSizes ? "جاري تحميل الأحجام..." : "اختر حجم الطلب"}
+                            searchPlaceholder="البحث في الأحجام..."
+                            emptyText="لا توجد أحجام"
                             disabled={!canEdit || isLoading || loadingPackageSizes}
+                            className="w-full"
                           />
                         </div>
                     </>
