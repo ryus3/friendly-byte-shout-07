@@ -68,15 +68,26 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const [applyLoyaltyDiscount, setApplyLoyaltyDiscount] = useState(true);
   const [applyLoyaltyDelivery, setApplyLoyaltyDelivery] = useState(false);
 
-  // Al-Waseet data states
+  // Computed values - copied from QuickOrderContent
+  const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
+  const currentDeliveryFee = useMemo(() => {
+    if (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) return 0;
+    return settings?.deliveryFee || 0;
+  }, [settings, customerData, applyLoyaltyDelivery]);
+  const total = useMemo(() => subtotal - discount, [subtotal, discount]);
+  const finalTotal = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
+
+  const isDeliveryPartnerSelected = useMemo(() => activePartner !== null, [activePartner]);
+
+  // Al-Waseet data states - copied from QuickOrderContent
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
   const [packageSizes, setPackageSizes] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingRegions, setLoadingRegions] = useState(false);
   const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
-  const [dataFetchError, setDataFetchError] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [dataFetchError, setDataFetchError] = useState(false);
 
   // Initialize form when order is loaded
   const initializeFormData = useCallback(async () => {
@@ -220,7 +231,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
     
     console.log('✅ Form initialized successfully');
-  }, [order, open, clearCart, addToCart, setActivePartner, fetchCities, fetchPackageSizes]);
+  }, [order, open, clearCart, addToCart, setActivePartner]);
 
   // Initialize when dialog opens
   useEffect(() => {
@@ -380,8 +391,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     }
   };
 
-  // Calculate totals - identical to QuickOrderContent
-  const subtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+  // Additional calculate totals - moved to avoid conflicts
   
   const deliveryFee = (() => {
     if (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) {
@@ -582,7 +592,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
             <SearchableSelectFixed
               value={formData.city}
               onValueChange={(v) => handleSelectChange('city', v)}
-              options={iraqiProvinces.map(p => ({ value: p.name, label: p.name }))}
+              options={iraqiProvinces.map(p => ({ value: p, label: p }))}
               placeholder="اختر محافظة"
               searchPlaceholder="بحث في المحافظات..."
               emptyText="لا توجد محافظة بهذا الاسم"
