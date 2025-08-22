@@ -472,7 +472,7 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token]);
 
-  // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25) - صامتة مع إشعارات ذكية
+  // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25) - صامتة مع إشعارات ذكية + fallback search
   const fastSyncPendingOrders = useCallback(async (showNotifications = false) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
       if (showNotifications) {
@@ -489,11 +489,11 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // 1) اجلب الطلبات المعلقة لدينا مع معرف الوسيط
+      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا)
       const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
-        .select('id, status, delivery_status, delivery_partner_order_id, order_number, qr_id')
+        .select('id, status, delivery_status, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .in('status', targetStatuses)
         .limit(200);
@@ -506,121 +506,161 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0 };
       }
 
-      // إذا وجدت طلبات بدون معرف وسيط، حاول ربطها أولاً
-      const missingIdCount = (pendingOrders || []).filter(o => !o.delivery_partner_order_id).length;
-      if (missingIdCount > 0) {
-        await linkRemoteIdsForExistingOrders();
-      }
-
-      // أعد الجلب بعد الربط
-      const { data: pendingOrders2 } = await supabase
-        .from('orders')
-        .select('id, status, delivery_status, delivery_partner_order_id, order_number, qr_id')
-        .eq('delivery_partner', 'alwaseet')
-        .in('status', targetStatuses)
-        .not('delivery_partner_order_id', 'is', null)
-        .limit(500);
-
-      const ordersToSync = pendingOrders2 || [];
-      const ids = ordersToSync.map(o => String(o.delivery_partner_order_id)).filter(Boolean);
-      if (ids.length === 0) {
+      if (!pendingOrders || pendingOrders.length === 0) {
         if (showNotifications) {
           toast({ title: 'لا توجد تحديثات', description: 'لا توجد طلبات بحاجة لمزامنة سريعة.' });
         }
         return { updated: 0, checked: 0 };
       }
 
+      // 2) اجلب جميع طلبات الوسيط لعمل fallback search
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+
+      // 3) بناء خرائط للبحث السريع
+      const byWaseetId = new Map();
+      const byQrId = new Map();
+      const byTracking = new Map();
+      
+      for (const wo of waseetOrders) {
+        if (wo.id) byWaseetId.set(String(wo.id), wo);
+        if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), wo);
+        if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), wo);
+      }
+
+      // 4) معالجة كل طلب محلي
       let updated = 0;
       let checked = 0;
+      let repaired = 0;
       const statusChanges = [];
 
-      // 2) نفّذ استدعاءات الدفعات (25 كحد أقصى لكل مرة)
-      const batches = chunkArray(ids, 25);
-      for (const batch of batches) {
-        const waseetData = await AlWaseetAPI.getOrdersByIdsBulk(token, batch);
-        checked += Array.isArray(waseetData) ? waseetData.length : 0;
+      for (const localOrder of pendingOrders) {
+        let waseetOrder = null;
+        let needsIdRepair = false;
 
-        for (const o of (waseetData || [])) {
-          const waseetStatusId = o.status_id || o.statusId || o.status?.id;
-          const waseetStatusText = o.status || o.status_text || o.status_name || '';
-          const localStatus =
-            statusMap.get(String(waseetStatusId)) ||
-            (() => {
-              const t = String(waseetStatusText || '').toLowerCase();
-              if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
-              if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
-              if (t.includes('راجع')) return 'returned';
-              if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
-              if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
-              return 'pending';
-            })();
+        // أولاً: البحث بمعرف الوسيط إذا كان موجوداً
+        if (localOrder.delivery_partner_order_id) {
+          waseetOrder = byWaseetId.get(String(localOrder.delivery_partner_order_id));
+        }
 
-          // العثور على الطلب المحلي للمقارنة
-          const localOrder = ordersToSync.find(lo => String(lo.delivery_partner_order_id) === String(o.id));
-          if (!localOrder) continue;
-
-          // فحص ما إذا كانت هناك حاجة لتحديث
-          const needsStatusUpdate = localOrder.status !== localStatus;
-          const needsDeliveryStatusUpdate = localOrder.delivery_status !== waseetStatusText;
-
-          if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !o.delivery_price && o.deliver_confirmed_fin !== 1) {
-            continue; // لا حاجة للتحديث
-          }
-
-          const updates = {
-            updated_at: new Date().toISOString(),
-          };
-
-          if (needsStatusUpdate) {
-            updates.status = localStatus;
-            
-            // إشعار ذكي فقط عند تغيير الحالة الفعلي
-            const orderKey = localOrder.qr_id || localOrder.order_number || localOrder.id;
-            const lastStatus = lastNotificationStatus[orderKey];
-            
-            if (showNotifications && lastStatus !== localStatus) {
-              statusChanges.push({
-                orderNumber: localOrder.qr_id || localOrder.order_number,
-                oldStatus: localOrder.status,
-                newStatus: localStatus,
-                deliveryStatus: waseetStatusText
-              });
-              
-              // تحديث آخر حالة تم إشعار المستخدم بها
-              setLastNotificationStatus(prev => ({
-                ...prev,
-                [orderKey]: localStatus
-              }));
+        // ثانياً: fallback search بـ tracking_number أو qr_id
+        if (!waseetOrder) {
+          const tn = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
+          if (tn) {
+            waseetOrder = byQrId.get(tn) || byTracking.get(tn);
+            if (waseetOrder && !localOrder.delivery_partner_order_id) {
+              needsIdRepair = true; // نحتاج لإصلاح المعرف
             }
           }
+        }
 
-          if (needsDeliveryStatusUpdate) {
-            updates.delivery_status = waseetStatusText;
-          }
+        if (!waseetOrder) {
+          continue; // لم نجد الطلب في الوسيط
+        }
 
-          // تحديث رسوم التوصيل إن وُجدت
-          if (o.delivery_price) {
-            const dp = parseInt(String(o.delivery_price)) || 0;
-            if (dp >= 0) updates.delivery_fee = dp;
-          }
+        checked++;
 
-          // إذا تم تأكيد الاستلام المالي
-          if (o.deliver_confirmed_fin === 1) {
-            updates.receipt_received = true;
-          }
-
-          const { error: upErr } = await supabase
+        // إصلاح معرف الوسيط إذا لزم الأمر
+        if (needsIdRepair) {
+          await supabase
             .from('orders')
-            .update(updates)
-            .eq('delivery_partner_order_id', String(o.id));
+            .update({ 
+              delivery_partner_order_id: String(waseetOrder.id),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', localOrder.id);
+          repaired++;
+          console.log(`🔧 تم إصلاح معرف الوسيط للطلب ${localOrder.tracking_number}: ${waseetOrder.id}`);
+        }
 
-          if (!upErr) {
-            updated++;
-            console.log(`✅ تحديث سريع: ${o.id} → ${localStatus} | ${waseetStatusText}`);
-          } else {
-            console.warn('⚠️ فشل تحديث الطلب (fast sync):', o.id, upErr);
+        // 5) معالجة التحديثات
+        const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.status?.id;
+        const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+        
+        // تحسين التحويل للحالات الشائعة مثل "حالة ثابتة"
+        const localStatus = statusMap.get(String(waseetStatusId)) || (() => {
+          const t = String(waseetStatusText || '').toLowerCase();
+          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+          if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
+          if (t.includes('راجع')) return 'returned';
+          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+          if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+          if (t.includes('حالة ثابتة') || t.includes('ثابت')) return 'delivered'; // إضافة مُحسَّنة
+          return 'pending';
+        })();
+
+        // فحص ما إذا كانت هناك حاجة لتحديث
+        const needsStatusUpdate = localOrder.status !== localStatus;
+        const needsDeliveryStatusUpdate = localOrder.delivery_status !== waseetStatusText;
+        const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
+        const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
+
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate) {
+          continue; // لا حاجة للتحديث
+        }
+
+        const updates = {
+          updated_at: new Date().toISOString(),
+        };
+
+        if (needsStatusUpdate) {
+          updates.status = localStatus;
+          
+          // إشعار ذكي فقط عند تغيير الحالة الفعلي
+          const orderKey = localOrder.qr_id || localOrder.order_number || localOrder.id;
+          const lastStatus = lastNotificationStatus[orderKey];
+          
+          if (showNotifications && lastStatus !== localStatus) {
+            statusChanges.push({
+              orderNumber: localOrder.qr_id || localOrder.order_number,
+              oldStatus: localOrder.status,
+              newStatus: localStatus,
+              deliveryStatus: waseetStatusText
+            });
+            
+            // تحديث آخر حالة تم إشعار المستخدم بها
+            setLastNotificationStatus(prev => ({
+              ...prev,
+              [orderKey]: localStatus
+            }));
           }
         }
+
+        if (needsDeliveryStatusUpdate) {
+          updates.delivery_status = waseetStatusText;
+        }
+
+        // تحديث رسوم التوصيل إن وُجدت
+        if (waseetOrder.delivery_price) {
+          const dp = parseInt(String(waseetOrder.delivery_price)) || 0;
+          if (dp >= 0) updates.delivery_fee = dp;
+        }
+
+        // تحديث استلام الإيصال والترقية للحالة المكتملة
+        if (finConfirmed) {
+          updates.receipt_received = true;
+          // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم أو قيد التسليم
+          if (localStatus === 'delivered' || localOrder.status === 'delivered') {
+            updates.status = 'completed';
+          }
+        }
+
+        const { error: upErr } = await supabase
+          .from('orders')
+          .update(updates)
+          .eq('id', localOrder.id);
+
+        if (!upErr) {
+          updated++;
+          console.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
+        } else {
+          console.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
+        }
+      }
+
+      // إشعار عن الإصلاحات إذا حدثت
+      if (repaired > 0) {
+        console.log(`🔧 تم إصلاح ${repaired} معرف وسيط في المزامنة السريعة`);
       }
 
       // إشعارات ذكية مجمعة
@@ -707,6 +747,7 @@ export const AlWaseetProvider = ({ children }) => {
             if (t.includes('راجع')) return 'returned';
             if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
             if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+            if (t.includes('حالة ثابتة') || t.includes('ثابت')) return 'delivered'; // إضافة مُحسَّنة
             return 'pending';
           })();
         
@@ -738,9 +779,14 @@ export const AlWaseetProvider = ({ children }) => {
               updates.delivery_fee = dp;
             }
             
-            // تأكيد الاستلام المالي
-            if (waseetOrder.deliver_confirmed_fin === 1 && existingOrder.receipt_received !== true) {
+            // تأكيد الاستلام المالي مع تطبيع المقارنة
+            const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
+            if (finConfirmed && existingOrder.receipt_received !== true) {
               updates.receipt_received = true;
+              // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم
+              if (localStatus === 'delivered' || existingOrder.status === 'delivered') {
+                updates.status = 'completed';
+              }
             }
             
             const needUpdate = (
@@ -861,12 +907,14 @@ export const AlWaseetProvider = ({ children }) => {
       if (dp >= 0 && dp !== (existingOrder?.delivery_fee || 0)) {
         updates.delivery_fee = dp;
       }
-      if (waseetOrder.deliver_confirmed_fin === 1 && existingOrder?.receipt_received !== true) {
+      // تأكيد الاستلام المالي مع تطبيع المقارنة وترقية الحالة
+      const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
+      if (finConfirmed && existingOrder?.receipt_received !== true) {
         updates.receipt_received = true;
-      }
-      // ترقية الحالة إلى completed عند تأكيد الاستلام المالي
-      if (waseetOrder.deliver_confirmed_fin === 1 && (localStatus === 'delivered' || updates.status === 'delivered')) {
-        updates.status = 'completed';
+        // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم
+        if (localStatus === 'delivered' || existingOrder?.status === 'delivered') {
+          updates.status = 'completed';
+        }
       }
 
       const needs_update = existingOrder ? (
@@ -1093,31 +1141,122 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
 
-  // Disabled auto-sync to reduce excessive notifications
-  // Auto-sync will only run when manually triggered or on initial load
+  // Silent repair function for problematic orders
+  const silentOrderRepair = useCallback(async () => {
+    if (!token || correctionComplete) return;
+    
+    try {
+      console.log('🔧 بدء الإصلاح الصامت للطلبات المشكوك فيها...');
+      
+      // اجلب الطلبات المشكوك فيها (pending/delivered/returned من آخر 30 يوم)
+      const { data: problematicOrders, error } = await supabase
+        .from('orders')
+        .select('id, status, tracking_number, delivery_partner_order_id, qr_id, receipt_received')
+        .eq('delivery_partner', 'alwaseet')
+        .in('status', ['pending', 'delivered', 'returned'])
+        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(100);
+      
+      if (error || !problematicOrders?.length) return;
+      
+      // اجلب جميع طلبات الوسيط لعمل المطابقة
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      
+      // بناء خرائط للبحث السريع
+      const byWaseetId = new Map();
+      const byQrId = new Map();
+      const byTracking = new Map();
+      
+      for (const wo of waseetOrders) {
+        if (wo.id) byWaseetId.set(String(wo.id), wo);
+        if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), wo);
+        if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), wo);
+      }
+      
+      let repaired = 0;
+      
+      for (const localOrder of problematicOrders) {
+        let waseetOrder = null;
+        let needsRepair = false;
+        
+        // البحث عن الطلب في الوسيط
+        if (localOrder.delivery_partner_order_id) {
+          waseetOrder = byWaseetId.get(String(localOrder.delivery_partner_order_id));
+        }
+        
+        if (!waseetOrder) {
+          const tn = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
+          if (tn) {
+            waseetOrder = byQrId.get(tn) || byTracking.get(tn);
+            needsRepair = true; // نحتاج لإصلاح المعرف
+          }
+        }
+        
+        if (!waseetOrder) continue;
+        
+        const updates = { updated_at: new Date().toISOString() };
+        
+        // إصلاح معرف الوسيط
+        if (needsRepair && waseetOrder.id) {
+          updates.delivery_partner_order_id = String(waseetOrder.id);
+        }
+        
+        // إصلاح الحالة بناءً على deliver_confirmed_fin
+        const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
+        if (finConfirmed) {
+          updates.receipt_received = true;
+          if (localOrder.status === 'delivered') {
+            updates.status = 'completed';
+          }
+        }
+        
+        // تطبيق الإصلاحات إذا لزم الأمر
+        if (Object.keys(updates).length > 1) {
+          await supabase
+            .from('orders')
+            .update(updates)
+            .eq('id', localOrder.id);
+          repaired++;
+        }
+      }
+      
+      if (repaired > 0) {
+        console.log(`🔧 تم إصلاح ${repaired} طلب صامتاً`);
+      }
+      
+    } catch (error) {
+      console.error('❌ خطأ في الإصلاح الصامت:', error);
+    }
+  }, [token, correctionComplete]);
+
+  // Auto-sync and repair on login
   useEffect(() => {
     if (!isLoggedIn || !token || activePartner === 'local') return;
 
-    // Only run initial correction once when logging in
-    const runInitialCorrection = async () => {
-      if (!correctionComplete) {
-        console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
-        try {
+    // تشغيل الإصلاح الصامت والتصحيح الشامل
+    const runInitialTasks = async () => {
+      try {
+        // الإصلاح الصامت أولاً
+        await silentOrderRepair();
+        
+        // ثم التصحيح الشامل إذا لم يكن مكتملاً
+        if (!correctionComplete) {
+          console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
           const correctionResult = await comprehensiveOrderCorrection();
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
-        } catch (correctionError) {
-          console.error('❌ خطأ في التصحيح الأولي:', correctionError);
         }
+      } catch (error) {
+        console.error('❌ خطأ في المهام الأولية:', error);
       }
     };
 
-    // Run initial correction after 2 seconds
-    const initialTimeout = setTimeout(runInitialCorrection, 2000);
+    // Run initial tasks after 3 seconds
+    const initialTimeout = setTimeout(runInitialTasks, 3000);
 
     return () => {
       if (initialTimeout) clearTimeout(initialTimeout);
     };
-  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection]);
+  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair]);
 
   const value = {
     isLoggedIn,
