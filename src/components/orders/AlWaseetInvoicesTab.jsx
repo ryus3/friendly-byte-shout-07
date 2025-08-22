@@ -178,7 +178,7 @@ const AlWaseetInvoicesTab = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">
-            {/* Time Filter */}
+            {/* Time Filter and Status Filter - Side by Side */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
                 <SelectTrigger className="w-full sm:w-48">
@@ -196,27 +196,6 @@ const AlWaseetInvoicesTab = () => {
                 </SelectContent>
               </Select>
               
-              {timeFilter === 'custom' && (
-                <DateRangePicker
-                  date={customDateRange}
-                  onDateChange={handleCustomDateRangeChange}
-                  className="w-full sm:w-auto"
-                />
-              )}
-            </div>
-            
-            {/* Search and Status Filter */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="البحث برقم الفاتورة أو المبلغ..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="حالة الفاتورة" />
@@ -227,6 +206,25 @@ const AlWaseetInvoicesTab = () => {
                   <SelectItem value="received">مُستلمة</SelectItem>
                 </SelectContent>
               </Select>
+              
+              {timeFilter === 'custom' && (
+                <DateRangePicker
+                  date={customDateRange}
+                  onDateChange={handleCustomDateRangeChange}
+                  className="w-full sm:w-auto"
+                />
+              )}
+            </div>
+            
+            {/* Search Filter */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="البحث برقم الفاتورة أو المبلغ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
 
