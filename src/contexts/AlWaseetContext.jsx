@@ -16,8 +16,14 @@ export const AlWaseetProvider = ({ children }) => {
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'alwaseet');
-  const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 15000); // Default to 15 seconds for fast testing
+  const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
   const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
+
+  // Sync state management
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncCountdown, setSyncCountdown] = useState(0);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'standby'
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -758,16 +764,67 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
 
+  // Perform sync with countdown
+  const performSyncWithCountdown = useCallback(async () => {
+    if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
+
+    setIsSyncing(true);
+    setSyncMode('countdown');
+    setSyncCountdown(15);
+
+    // Countdown timer
+    const countdownInterval = setInterval(() => {
+      setSyncCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Wait for countdown then sync
+    setTimeout(async () => {
+      try {
+        console.log('🔄 تنفيذ المزامنة...');
+        await fastSyncPendingOrders();
+        setLastSyncAt(new Date());
+        console.log('✅ تمت المزامنة بنجاح');
+      } catch (error) {
+        console.error('❌ خطأ في المزامنة:', error);
+      } finally {
+        setIsSyncing(false);
+        setSyncMode('standby');
+        setSyncCountdown(0);
+      }
+    }, 15000);
+
+  }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
+
+  // Initial sync on login
+  useEffect(() => {
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
+      console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
+      setSyncMode('initial');
+      performSyncWithCountdown();
+    }
+  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
+
+  // Periodic sync every 10 minutes
   useEffect(() => {
     let intervalId;
-    if (syncInterval > 0 && isLoggedIn && activePartner !== 'local') {
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby') {
       intervalId = setInterval(() => {
-        console.log('🔄 مزامنة تلقائية للطلبات...');
-        syncAndApplyOrders();
+        if (!isSyncing) {
+          console.log('⏰ مزامنة دورية (كل 10 دقائق)...');
+          performSyncWithCountdown();
+        }
       }, syncInterval);
     }
-    return () => clearInterval(intervalId);
-  }, [syncInterval, isLoggedIn, activePartner, syncAndApplyOrders]);
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
 
   const value = {
     isLoggedIn,
@@ -802,6 +859,13 @@ export const AlWaseetProvider = ({ children }) => {
     // New exports:
     fastSyncPendingOrders,
     linkRemoteIdsForExistingOrders,
+    
+    // Sync status exports
+    isSyncing,
+    syncCountdown,
+    syncMode,
+    lastSyncAt,
+    performSyncWithCountdown,
   };
 
   return (
