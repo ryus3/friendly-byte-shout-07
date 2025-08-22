@@ -100,15 +100,15 @@ const AutoSyncButton = ({ className }) => {
       setCountdown(prev => {
         if (prev <= 1) {
           setIsActive(false);
-          performAutoSync(); // Use stable ref-based function
-          return 15;
+          performAutoSync();
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, activePartner, isLoggedIn]); // Removed unstable dependencies
+  }, [isActive, activePartner, isLoggedIn, performAutoSync]);
 
   // Don't show for local delivery
   if (activePartner === 'local' || !isLoggedIn) {
