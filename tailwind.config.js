@@ -163,6 +163,80 @@ module.exports = {
         },
         "pulse-slow": {
           '50%': { opacity: .5 },
+        },
+        // Advanced Sync Button Animations
+        'breathing': {
+          '0%, 100%': { 
+            transform: 'scale(1)',
+            boxShadow: '0 0 20px rgba(59, 130, 246, 0.3)'
+          },
+          '50%': { 
+            transform: 'scale(1.05)',
+            boxShadow: '0 0 40px rgba(59, 130, 246, 0.5)'
+          }
+        },
+        'particle': {
+          '0%': {
+            opacity: '0',
+            transform: 'rotate(var(--rotate)) translateY(-15px) scale(0)'
+          },
+          '50%': {
+            opacity: '1',
+            transform: 'rotate(var(--rotate)) translateY(-25px) scale(1)'
+          },
+          '100%': {
+            opacity: '0',
+            transform: 'rotate(var(--rotate)) translateY(-35px) scale(0)'
+          }
+        },
+        'ripple': {
+          '0%': {
+            transform: 'scale(0)',
+            opacity: '1'
+          },
+          '100%': {
+            transform: 'scale(2)',
+            opacity: '0'
+          }
+        },
+        'countdownPulse': {
+          '0%, 100%': {
+            transform: 'scale(1)',
+            textShadow: '0 0 10px rgba(255, 255, 255, 0.8)'
+          },
+          '50%': {
+            transform: 'scale(1.1)',
+            textShadow: '0 0 20px rgba(255, 255, 255, 1)'
+          }
+        },
+        'syncSpin': {
+          '0%': { 
+            transform: 'rotate(0deg) scale(1)',
+            filter: 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.5))'
+          },
+          '50%': {
+            transform: 'rotate(180deg) scale(1.1)',
+            filter: 'drop-shadow(0 0 10px rgba(59, 130, 246, 0.8))'
+          },
+          '100%': { 
+            transform: 'rotate(360deg) scale(1)',
+            filter: 'drop-shadow(0 0 5px rgba(255, 255, 255, 0.5))'
+          }
+        },
+        'wiggle': {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(3deg)' },
+          '75%': { transform: 'rotate(-3deg)' }
+        },
+        'magneticField': {
+          '0%, 100%': {
+            transform: 'scale(1) rotate(0deg)',
+            opacity: '0.3'
+          },
+          '50%': {
+            transform: 'scale(1.2) rotate(180deg)',
+            opacity: '0.6'
+          }
         }
       },
       animation: {
@@ -177,6 +251,14 @@ module.exports = {
         "enter": "fade-in 0.3s ease-out, scale-in 0.2s ease-out",
         "exit": "fade-out 0.3s ease-out, scale-out 0.2s ease-out",
         "pulse-slow": "pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        // Advanced Sync Button Animations
+        "breathing": "breathing 2s ease-in-out infinite",
+        "particle": "particle 2s linear infinite",
+        "ripple": "ripple 0.6s ease-out",
+        "countdownPulse": "countdownPulse 1s ease-in-out infinite",
+        "syncSpin": "syncSpin 1s linear infinite",
+        "wiggle": "wiggle 0.5s ease-in-out",
+        "magneticField": "magneticField 3s ease-in-out infinite",
       },
     },
   },
@@ -212,6 +294,9 @@ module.exports = {
         },
         '.pulse': {
           animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        },
+        '.bg-gradient-radial': {
+          'background-image': 'radial-gradient(circle, var(--tw-gradient-stops))',
         },
       }
       addUtilities(newUtilities)
