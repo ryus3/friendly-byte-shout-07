@@ -28,7 +28,12 @@ const DeliveryIntegrationStatus = () => {
     syncAndApplyOrders,
     fastSyncPendingOrders,
     getMerchantOrders,
-    linkRemoteIdsForExistingOrders
+    linkRemoteIdsForExistingOrders,
+    autoSyncEnabled,
+    setAutoSyncEnabled,
+    correctionComplete,
+    lastSyncAt,
+    isSyncing
   } = useAlWaseet();
   
   const [syncStats, setSyncStats] = useState({
@@ -63,11 +68,11 @@ const DeliveryIntegrationStatus = () => {
     }
   };
 
-  // مزامنة سريعة
+  // مزامنة سريعة يدوية مع إشعارات
   const handleFastSync = async () => {
     setSyncing(true);
     try {
-      const result = await fastSyncPendingOrders();
+      const result = await fastSyncPendingOrders(true); // إشعارات مفعلة للمزامنة اليدوية
       toast({
         title: 'مزامنة سريعة مكتملة',
         description: `تم فحص ${result.checked} طلب وتحديث ${result.updated} طلب`,
@@ -166,26 +171,32 @@ const DeliveryIntegrationStatus = () => {
   }
 
   return (
-    <Card>
+    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Truck className="h-5 w-5 text-primary" />
             حالة ربط شركة التوصيل
+            {isSyncing && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
           </div>
-          <Badge variant={syncStats.isOnline ? "success" : "destructive"}>
-            {syncStats.isOnline ? (
-              <>
-                <Wifi className="h-3 w-3 mr-1" />
-                متصل
-              </>
-            ) : (
-              <>
-                <WifiOff className="h-3 w-3 mr-1" />
-                غير متصل
-              </>
-            )}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={autoSyncEnabled ? "success" : "secondary"}>
+              {autoSyncEnabled ? "مزامنة تلقائية" : "مزامنة يدوية"}
+            </Badge>
+            <Badge variant={syncStats.isOnline ? "success" : "destructive"}>
+              {syncStats.isOnline ? (
+                <>
+                  <Wifi className="h-3 w-3 mr-1" />
+                  متصل
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3 w-3 mr-1" />
+                  غير متصل
+                </>
+              )}
+            </Badge>
+          </div>
         </CardTitle>
       </CardHeader>
       
@@ -207,23 +218,64 @@ const DeliveryIntegrationStatus = () => {
           </div>
         )}
 
+        {/* حالة التصحيح التلقائي */}
+        {correctionComplete && (
+          <div className="bg-green-50/50 border border-green-200 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="font-medium text-green-900">تم إكمال التصحيح التلقائي</p>
+                <p className="text-sm text-green-600">جميع الطلبات الحالية مربوطة ومحدثة</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* إحصائيات المزامنة */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="text-center p-3 bg-primary/10 rounded-lg">
             <div className="text-2xl font-bold text-primary">{syncStats.totalOrders}</div>
             <div className="text-sm text-muted-foreground">إجمالي الطلبات</div>
+          </div>
+          <div className="text-center p-3 bg-blue-100 rounded-lg">
+            <div className="text-2xl font-bold text-blue-600">
+              {autoSyncEnabled ? <RefreshCw className="h-6 w-6 mx-auto" /> : <Clock className="h-6 w-6 mx-auto" />}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {autoSyncEnabled ? 'مزامنة تلقائية' : 'مزامنة يدوية'}
+            </div>
           </div>
           <div className="text-center p-3 bg-green-100 rounded-lg">
             <div className="text-2xl font-bold text-green-600">
               <CheckCircle className="h-6 w-6 mx-auto" />
             </div>
             <div className="text-sm text-muted-foreground">
-              {syncStats.lastSync ? 'آخر مزامنة' : 'لم تتم المزامنة'}
+              {lastSyncAt ? 'آخر مزامنة' : 'لم تتم المزامنة'}
             </div>
           </div>
         </div>
 
-        {/* أزرار المزامنة */}
+        {/* إعدادات المزامنة */}
+        <div className="bg-muted/30 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-medium">المزامنة التلقائية</span>
+            <Button
+              size="sm"
+              variant={autoSyncEnabled ? "default" : "outline"}
+              onClick={() => setAutoSyncEnabled(!autoSyncEnabled)}
+            >
+              {autoSyncEnabled ? "مفعلة" : "معطلة"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {autoSyncEnabled 
+              ? "المزامنة تتم تلقائياً كل 10 دقائق مع إشعارات ذكية"
+              : "المزامنة متاحة يدوياً فقط"
+            }
+          </p>
+        </div>
+
+        {/* أزرار المزامنة اليدوية */}
         <div className="space-y-2">
           <Button 
             onClick={handleFastSync}
@@ -239,7 +291,7 @@ const DeliveryIntegrationStatus = () => {
             ) : (
               <>
                 <Clock className="h-4 w-4 mr-2" />
-                مزامنة سريعة (الطلبات المعلقة فقط)
+                مزامنة سريعة يدوية
               </>
             )}
           </Button>
@@ -261,33 +313,15 @@ const DeliveryIntegrationStatus = () => {
               </>
             )}
           </Button>
-
-          <Button 
-            onClick={handleLinkExisting}
-            disabled={syncing || loading || !syncStats.isOnline}
-            className="w-full"
-            variant="secondary"
-          >
-            {syncing ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                جاري ربط الطلبات الحالية...
-              </>
-            ) : (
-              <>
-                <Link2 className="h-4 w-4 mr-2" />
-                ربط الطلبات الحالية (tracking → ID)
-              </>
-            )}
-          </Button>
         </div>
 
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>• المزامنة السريعة: تفحص الطلبات المعلقة فقط</p>
-          <p>• المزامنة الشاملة: تفحص جميع الطلبات وتحدث الحالات</p>
-          {syncStats.lastSync && (
-            <p>• آخر مزامنة: {syncStats.lastSync.toLocaleTimeString('ar-EG')}</p>
+          <p>• <strong>التصحيح التلقائي:</strong> ربط جميع الطلبات الحالية وتوحيد الحالات</p>
+          <p>• <strong>المزامنة التلقائية:</strong> كل 10 دقائق مع إشعارات ذكية</p>
+          <p>• <strong>المزامنة اليدوية:</strong> فورية مع إشعارات كاملة</p>
+          {lastSyncAt && (
+            <p>• آخر مزامنة: {lastSyncAt.toLocaleTimeString('ar-EG')}</p>
           )}
         </div>
       </CardContent>

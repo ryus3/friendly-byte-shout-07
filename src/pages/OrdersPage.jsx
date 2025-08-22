@@ -35,7 +35,7 @@ import DeliveryIntegrationStatus from '@/components/orders/DeliveryIntegrationSt
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
-  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData } = useUnifiedProfits();
@@ -581,6 +581,9 @@ const OrdersPage = () => {
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
+            {/* حالة الربط مع شركة التوصيل */}
+            <DeliveryIntegrationStatus />
+            
             <OrdersToolbar 
               filters={filters} 
               onFiltersChange={handleToolbarFilterChange}
