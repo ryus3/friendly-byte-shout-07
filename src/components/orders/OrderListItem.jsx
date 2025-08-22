@@ -45,8 +45,11 @@ const OrderListItem = ({
     (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0) : 0;
   const isSettled = profitRecord?.settled_at ? true : false;
   
-  // تحديد لون وأيقونة الحالة - نفس الشبكة
-  const getStatusConfig = (status) => {
+  // تحديد لون وأيقونة الحالة مع دعم شامل لحالات شركة التوصيل
+  const getStatusConfig = (status, deliveryStatus = null, isLocalOrder = true) => {
+    // استخدام delivery_status الحقيقي للطلبات الخارجية
+    const displayStatus = deliveryStatus || status;
+    
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
@@ -94,14 +97,92 @@ const OrderListItem = ({
         color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       }
     };
-    return configs[status] || configs['pending'];
+    
+    // إذا كان في المعرفات المحلية، استخدمها
+    if (configs[displayStatus]) {
+      return configs[displayStatus];
+    }
+    
+    // للحالات الخارجية من شركة التوصيل
+    if (displayStatus && typeof displayStatus === 'string') {
+      const statusLower = displayStatus.toLowerCase();
+      
+      // حالات الفعالية والنشاط
+      if (statusLower.includes('فعال') || statusLower.includes('active')) {
+        return { 
+          label: displayStatus, 
+          icon: Truck, 
+          color: 'bg-gradient-to-r from-emerald-500 to-blue-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات التسليم
+      else if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
+        return { 
+          label: displayStatus, 
+          icon: CheckCircle, 
+          color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات الرفض والإلغاء
+      else if (statusLower.includes('رفض') || statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('reject') || statusLower.includes('cancel')) {
+        return { 
+          label: displayStatus, 
+          icon: XCircle, 
+          color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات قيد التوصيل
+      else if (statusLower.includes('في الطريق') || statusLower.includes('طريق') || statusLower.includes('مندوب') || statusLower.includes('شحن') || statusLower.includes('shipping')) {
+        return { 
+          label: displayStatus, 
+          icon: MapPin, 
+          color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات التأجيل
+      else if (statusLower.includes('تأجيل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
+        return { 
+          label: displayStatus, 
+          icon: Clock, 
+          color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات عدم وجود العميل
+      else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يوجد') || statusLower.includes('غائب') || statusLower.includes('absent') || statusLower.includes('not available')) {
+        return { 
+          label: displayStatus, 
+          icon: AlertTriangle, 
+          color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالات الإرجاع
+      else if (statusLower.includes('راجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
+        return { 
+          label: displayStatus, 
+          icon: RotateCcw, 
+          color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } 
+      // حالة افتراضية للحالات الخارجية غير المعروفة
+      else {
+        return { 
+          label: displayStatus, 
+          icon: Package, 
+          color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      }
+    }
+    
+    return configs['pending'];
   };
 
-  const statusConfig = getStatusConfig(order.status);
-  const StatusIcon = statusConfig.icon;
+  // تحديد نوع الطلب بناءً على tracking_number
+  const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
   
-  // تحديد نوع التوصيل - ألوان متناسقة
-  const isLocalOrder = order.delivery_partner === 'محلي';
+  // استخدام delivery_status للطلبات الخارجية أو status للمحلية  
+  const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
+  const statusConfig = getStatusConfig(order.status, order.delivery_status, isLocalOrder);
+  const StatusIcon = statusConfig.icon;
   const deliveryBadgeColor = isLocalOrder ? 
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
@@ -159,7 +240,7 @@ const OrderListItem = ({
                   {order.tracking_number || order.order_number}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
-                  {order.delivery_partner ? (
+                  {!isLocalOrder ? (
                     <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                       خارجي
                     </span>
