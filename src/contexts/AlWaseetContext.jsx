@@ -94,15 +94,23 @@ export const AlWaseetProvider = ({ children }) => {
         // تنفيذ التصحيح الجذري مرة واحدة فقط
         if (!correctionComplete) {
           console.log('🛠️ تنفيذ التصحيح الجذري للطلبات الحالية...');
-          const correctionResult = await AlWaseetAPI.comprehensiveOrderCorrection(token, orderStatusesMap, loadOrderStatuses, correctionComplete, setCorrectionComplete);
-          console.log('✅ نتيجة التصحيح:', correctionResult);
+          // استدعاء الدالة المحلية مباشرة
+          try {
+            const correctionResult = await comprehensiveOrderCorrection();
+            console.log('✅ نتيجة التصحيح:', correctionResult);
+          } catch (correctionError) {
+            console.error('❌ خطأ في التصحيح الجذري:', correctionError);
+          }
         }
         
         // مزامنة سريعة صامتة
-        const syncResult = await AlWaseetAPI.fastSyncPendingOrders(token, false);
-        setLastSyncAt(new Date());
-        
-        console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
+        try {
+          const syncResult = await fastSyncPendingOrders(false);
+          setLastSyncAt(new Date());
+          console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
+        } catch (syncError) {
+          console.error('❌ خطأ في المزامنة السريعة:', syncError);
+        }
       } catch (error) {
         console.error('❌ خطأ في المزامنة التلقائية:', error);
       } finally {
