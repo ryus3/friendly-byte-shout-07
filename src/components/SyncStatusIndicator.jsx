@@ -75,17 +75,17 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
   // Get number color based on theme
   const getNumberColor = () => {
     if (theme === 'dark') return 'text-white';
-    if (theme === 'light') return 'text-sky-500';
+    if (theme === 'light') return 'bg-gradient-to-br from-sky-500 via-blue-500 to-purple-500 bg-clip-text text-transparent';
     // System theme - check actual applied theme
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return isDark ? 'text-white' : 'text-sky-500';
+    return isDark ? 'text-white' : 'bg-gradient-to-br from-sky-500 via-blue-500 to-purple-500 bg-clip-text text-transparent';
   };
 
   return (
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "bg-background border border-border",
+        "bg-background border-2 border-muted-foreground/30 shadow-md",
         currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
@@ -102,16 +102,29 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
                 : "اضغط للمزامنة السريعة"
       }
     >
-      {/* Progress circle - only shown during countdown */}
-      {currentCountdown > 0 && (
-        <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
-          <defs>
-            <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
-              <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-              <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
-            </linearGradient>
-          </defs>
+      {/* Background and Progress circles */}
+      <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
+        <defs>
+          <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
+            <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+            <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
+          </linearGradient>
+        </defs>
+        
+        {/* Background track - always visible */}
+        <circle
+          cx="20"
+          cy="20"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="text-muted-foreground/20"
+        />
+        
+        {/* Progress circle - only shown during countdown */}
+        {currentCountdown > 0 && (
           <circle
             cx="20"
             cy="20"
@@ -124,8 +137,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             strokeDashoffset={strokeDashoffset}
             className="transition-all duration-1000 ease-linear"
           />
-        </svg>
-      )}
+        )}
+      </svg>
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
@@ -138,7 +151,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
         ) : (
           <RefreshCw className={cn(
             "w-4 h-4 transition-all duration-500 text-muted-foreground",
-            isSpinning && "animate-[spin_0.8s_ease-in-out]"
+            isSpinning && "animate-[spin_1.5s_ease-in-out]"
           )} />
         )}
       </div>
