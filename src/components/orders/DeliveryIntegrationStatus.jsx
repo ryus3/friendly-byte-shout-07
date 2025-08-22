@@ -12,7 +12,8 @@ import {
   Clock,
   Truck,
   Package,
-  MapPin
+  MapPin,
+  Link2
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
@@ -26,7 +27,8 @@ const DeliveryIntegrationStatus = () => {
     loading,
     syncAndApplyOrders,
     fastSyncPendingOrders,
-    getMerchantOrders
+    getMerchantOrders,
+    linkRemoteIdsForExistingOrders
   } = useAlWaseet();
   
   const [syncStats, setSyncStats] = useState({
@@ -92,6 +94,28 @@ const DeliveryIntegrationStatus = () => {
     } catch (error) {
       toast({
         title: 'خطأ في المزامنة الشاملة',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // ربط الطلبات الحالية التي تملك tracking_number بدون delivery_partner_order_id
+  const handleLinkExisting = async () => {
+    setSyncing(true);
+    try {
+      const { linked } = await linkRemoteIdsForExistingOrders();
+      toast({
+        title: linked > 0 ? 'تم الربط' : 'لا يوجد ما يُربط',
+        description: linked > 0 ? `تم ربط ${linked} طلب موجود بالوسيط.` : 'لا توجد طلبات بدون معرف وسيط.',
+        variant: linked > 0 ? 'success' : 'default'
+      });
+      await checkConnectionStatus();
+    } catch (error) {
+      toast({
+        title: 'خطأ في الربط',
         description: error.message,
         variant: 'destructive'
       });
@@ -234,6 +258,25 @@ const DeliveryIntegrationStatus = () => {
               <>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 مزامنة شاملة (جميع الطلبات)
+              </>
+            )}
+          </Button>
+
+          <Button 
+            onClick={handleLinkExisting}
+            disabled={syncing || loading || !syncStats.isOnline}
+            className="w-full"
+            variant="secondary"
+          >
+            {syncing ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                جاري ربط الطلبات الحالية...
+              </>
+            ) : (
+              <>
+                <Link2 className="h-4 w-4 mr-2" />
+                ربط الطلبات الحالية (tracking → ID)
               </>
             )}
           </Button>
