@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { 
   RefreshCw, 
   Search, 
@@ -11,10 +12,12 @@ import {
   DollarSign, 
   FileText, 
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Calendar
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
@@ -25,27 +28,42 @@ const AlWaseetInvoicesTab = () => {
     loading, 
     fetchInvoices, 
     receiveInvoice,
-    getInvoiceStats 
+    getInvoiceStats,
+    applyCustomDateRangeFilter
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  
+  // Time filter state with localStorage
+  const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
+  const [customDateRange, setCustomDateRange] = useState(null);
 
-  // Filter invoices based on search and status
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
-      invoice.id.toString().includes(searchTerm) ||
-      invoice.merchant_price.toString().includes(searchTerm);
+  // Filter invoices based on search, status, and time
+  const filteredInvoices = useMemo(() => {
+    let filtered = invoices;
     
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      (statusFilter === 'received' && invoice.status === 'تم الاستلام من قبل التاجر') ||
-      (statusFilter === 'pending' && invoice.status !== 'تم الاستلام من قبل التاجر');
+    // Apply custom date range if selected
+    if (timeFilter === 'custom' && customDateRange) {
+      filtered = applyCustomDateRangeFilter(filtered, customDateRange);
+    }
     
-    return matchesSearch && matchesStatus;
-  });
+    // Apply search and status filters
+    return filtered.filter(invoice => {
+      const matchesSearch = 
+        invoice.id.toString().includes(searchTerm) ||
+        invoice.merchant_price.toString().includes(searchTerm);
+      
+      const matchesStatus = 
+        statusFilter === 'all' || 
+        (statusFilter === 'received' && invoice.status === 'تم الاستلام من قبل التاجر') ||
+        (statusFilter === 'pending' && invoice.status !== 'تم الاستلام من قبل التاجر');
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
   const stats = getInvoiceStats();
 
@@ -59,7 +77,19 @@ const AlWaseetInvoicesTab = () => {
   };
 
   const handleRefresh = async () => {
-    await fetchInvoices();
+    await fetchInvoices(timeFilter);
+  };
+  
+  const handleTimeFilterChange = async (newFilter) => {
+    setTimeFilter(newFilter);
+    if (newFilter !== 'custom') {
+      setCustomDateRange(null);
+      await fetchInvoices(newFilter);
+    }
+  };
+  
+  const handleCustomDateRangeChange = (dateRange) => {
+    setCustomDateRange(dateRange);
   };
 
   // Show message if not logged in to Al-Waseet
@@ -147,27 +177,57 @@ const AlWaseetInvoicesTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="البحث برقم الفاتورة أو المبلغ..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+          <div className="space-y-4 mb-6">
+            {/* Time Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="الفترة الزمنية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">أسبوع</SelectItem>
+                  <SelectItem value="month">شهر</SelectItem>
+                  <SelectItem value="3months">3 أشهر</SelectItem>
+                  <SelectItem value="6months">6 أشهر</SelectItem>
+                  <SelectItem value="year">سنة</SelectItem>
+                  <SelectItem value="all">كل الوقت</SelectItem>
+                  <SelectItem value="custom">تاريخ مخصص</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {timeFilter === 'custom' && (
+                <DateRangePicker
+                  date={customDateRange}
+                  onDateChange={handleCustomDateRangeChange}
+                  className="w-full sm:w-auto"
+                />
+              )}
             </div>
             
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="حالة الفاتورة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الفواتير</SelectItem>
-                <SelectItem value="pending">معلقة</SelectItem>
-                <SelectItem value="received">مُستلمة</SelectItem>
-              </SelectContent>
-            </Select>
+            {/* Search and Status Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="البحث برقم الفاتورة أو المبلغ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="حالة الفاتورة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفواتير</SelectItem>
+                  <SelectItem value="pending">معلقة</SelectItem>
+                  <SelectItem value="received">مُستلمة</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Results Summary */}

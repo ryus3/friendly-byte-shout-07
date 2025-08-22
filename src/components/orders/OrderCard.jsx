@@ -312,11 +312,11 @@ const OrderCard = ({
                 
                 {/* Date & Delivery Info - يمين */}
                 <div className="space-y-1 text-right">
-                  <div className="flex items-center gap-2 justify-end flex-row-reverse">
+                  <div className="flex items-center gap-2 justify-start">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-end flex-row-reverse">
+                  <div className="flex items-center gap-2 justify-start">
                     <Clock className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
@@ -329,14 +329,14 @@ const OrderCard = ({
                        </span>
                      </div>
                    )}
-                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm flex items-center gap-1 flex-row-reverse`}>
+                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm flex items-center gap-1`}>
                     <Building className="h-3 w-3" />
                     {order.delivery_partner}
                   </Badge>
                 </div>
                 
                 {/* Action Icons - منتصف */}
-                <div className="flex items-center justify-center gap-1 flex-row-reverse">
+                <div className="flex items-center justify-center gap-1">
                   
                   {/* View */}
                   <Button

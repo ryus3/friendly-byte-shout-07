@@ -12,7 +12,7 @@ export const useAlWaseetInvoices = () => {
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
   // Fetch all merchant invoices
-  const fetchInvoices = useCallback(async () => {
+  const fetchInvoices = useCallback(async (timeFilter = 'week') => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
       return;
     }
@@ -21,13 +21,40 @@ export const useAlWaseetInvoices = () => {
     try {
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // Filter for last 7 days and sort
+      // Apply time filtering
       const filteredAndSortedInvoices = (invoicesData || [])
         .filter(invoice => {
+          if (timeFilter === 'all') return true;
+          
           const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-          const weekAgo = new Date();
-          weekAgo.setDate(weekAgo.getDate() - 7);
-          return invoiceDate >= weekAgo;
+          const now = new Date();
+          
+          switch (timeFilter) {
+            case 'week':
+              const weekAgo = new Date();
+              weekAgo.setDate(weekAgo.getDate() - 7);
+              return invoiceDate >= weekAgo;
+            case 'month':
+              const monthAgo = new Date();
+              monthAgo.setMonth(monthAgo.getMonth() - 1);
+              return invoiceDate >= monthAgo;
+            case '3months':
+              const threeMonthsAgo = new Date();
+              threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+              return invoiceDate >= threeMonthsAgo;
+            case '6months':
+              const sixMonthsAgo = new Date();
+              sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+              return invoiceDate >= sixMonthsAgo;
+            case 'year':
+              const yearAgo = new Date();
+              yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+              return invoiceDate >= yearAgo;
+            case 'custom':
+              return invoice; // Handle custom range in the component
+            default:
+              return true;
+          }
         })
         .sort((a, b) => {
           // First sort by status - pending invoices first
@@ -181,6 +208,19 @@ export const useAlWaseetInvoices = () => {
     };
   }, [invoices]);
 
+  // Apply custom date range filtering
+  const applyCustomDateRangeFilter = useCallback((invoices, dateRange) => {
+    if (!dateRange?.from) return invoices;
+    
+    return invoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
+      const fromDate = new Date(dateRange.from);
+      const toDate = dateRange.to ? new Date(dateRange.to) : new Date();
+      
+      return invoiceDate >= fromDate && invoiceDate <= toDate;
+    });
+  }, []);
+
   // Auto-fetch invoices when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
@@ -198,6 +238,7 @@ export const useAlWaseetInvoices = () => {
     receiveInvoice,
     linkInvoiceWithLocalOrders,
     getInvoiceStats,
+    applyCustomDateRangeFilter,
     setSelectedInvoice,
     setInvoiceOrders
   };
