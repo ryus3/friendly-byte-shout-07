@@ -257,10 +257,25 @@ const OrderListItem = ({
             </Badge>
           </MobileTableCell>
 
-          {/* Actions - ترتيب من اليسار لليمين: معاينة، تعديل، تتبع، حذف */}
+          {/* Actions - ترتيب من اليمين لليسار: حذف، تتبع، تعديل، معاينة */}
           <MobileTableCell actions>
             <div className="flex gap-2">
-              {/* View */}
+              {/* Delete - أقصى اليمين */}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* Track - ثاني من اليمين */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -268,12 +283,12 @@ const OrderListItem = ({
                   e.stopPropagation();
                   onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
+                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
               >
-                <Eye className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
               </Button>
 
-              {/* Edit */}
+              {/* Edit - ثالث من اليمين */}
               {canEdit && hasPermission('edit_orders') && (
                 <Button
                   variant="ghost"
@@ -288,7 +303,7 @@ const OrderListItem = ({
                 </Button>
               )}
 
-              {/* Track */}
+              {/* View - أقصى اليسار */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -296,25 +311,10 @@ const OrderListItem = ({
                   e.stopPropagation();
                   onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
+                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
               >
-                <ExternalLink className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
-
-              {/* Delete */}
-              {canDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteDialog(true);
-                  }}
-                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
             </div>
           </MobileTableCell>
         </MobileTableRow>

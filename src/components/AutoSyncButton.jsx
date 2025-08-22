@@ -85,25 +85,49 @@ const AutoSyncButton = ({ className }) => {
         onClick={handleManualSync}
         disabled={isSyncing}
         className={cn(
-          "relative h-10 w-10 rounded-full bg-blue-100 hover:bg-blue-200 border-2 border-blue-300",
-          "transition-all duration-300 hover:scale-105",
+          "relative h-10 w-10 rounded-full bg-gradient-to-r from-primary to-blue-500",
+          "hover:shadow-lg hover:shadow-primary/50 text-primary-foreground shadow-md",
+          "transition-all duration-300 hover:scale-105 hover:-translate-y-0.5",
+          "border border-primary/20 backdrop-blur-sm",
           isSyncing && "animate-pulse"
         )}
         title={isActive ? `مزامنة تلقائية خلال ${countdown} ثانية` : "اضغط للمزامنة الفورية"}
       >
+        {/* دائرة التقدم للعداد التنازلي */}
+        {isActive && !isSyncing && (
+          <div className="absolute inset-0 rounded-full">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+              <path
+                d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                fill="none"
+                stroke="rgba(255,255,255,0.3)"
+                strokeWidth="2"
+              />
+              <path
+                d="m18,2.0845 a 15.9155,15.9155 0 0,1 0,31.831 a 15.9155,15.9155 0 0,1 0,-31.831"
+                fill="none"
+                stroke="rgba(255,255,255,0.8)"
+                strokeWidth="2"
+                strokeDasharray={`${(15 - countdown) * (100 / 15)}, 100`}
+                className="transition-all duration-1000 ease-linear"
+              />
+            </svg>
+          </div>
+        )}
+        
         {isActive && !isSyncing ? (
           // Countdown mode
-          <div className="relative flex items-center justify-center">
-            <span className="text-sm font-bold text-blue-700">
+          <div className="relative flex items-center justify-center z-10">
+            <span className="text-sm font-bold text-white drop-shadow-sm">
               {countdown}
             </span>
           </div>
         ) : (
           // Manual sync mode
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center z-10">
             <RefreshCcw 
               className={cn(
-                "h-4 w-4 text-blue-700",
+                "h-4 w-4 text-white drop-shadow-sm",
                 isSyncing && "animate-spin"
               )}
             />

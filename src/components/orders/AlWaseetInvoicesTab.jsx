@@ -178,12 +178,12 @@ const AlWaseetInvoicesTab = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">
-            {/* Time Filter and Status Filter - Side by Side */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            {/* Time Filter and Status Filter - Always Side by Side */}
+            <div className="flex flex-row gap-2 flex-wrap">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
-                <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger className="w-36 sm:w-40">
                   <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="الفترة الزمنية" />
+                  <SelectValue placeholder="الفترة" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="week">أسبوع</SelectItem>
@@ -192,16 +192,16 @@ const AlWaseetInvoicesTab = () => {
                   <SelectItem value="6months">6 أشهر</SelectItem>
                   <SelectItem value="year">سنة</SelectItem>
                   <SelectItem value="all">كل الوقت</SelectItem>
-                  <SelectItem value="custom">تاريخ مخصص</SelectItem>
+                  <SelectItem value="custom">مخصص</SelectItem>
                 </SelectContent>
               </Select>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="حالة الفاتورة" />
+                <SelectTrigger className="w-36 sm:w-40">
+                  <SelectValue placeholder="الحالة" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">جميع الفواتير</SelectItem>
+                  <SelectItem value="all">جميع</SelectItem>
                   <SelectItem value="pending">معلقة</SelectItem>
                   <SelectItem value="received">مُستلمة</SelectItem>
                 </SelectContent>
@@ -211,7 +211,7 @@ const AlWaseetInvoicesTab = () => {
                 <DateRangePicker
                   date={customDateRange}
                   onDateChange={handleCustomDateRangeChange}
-                  className="w-full sm:w-auto"
+                  className="w-40 sm:w-auto"
                 />
               )}
             </div>
