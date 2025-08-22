@@ -602,8 +602,24 @@ const OrdersPage = () => {
           </TabsContent>
 
           <TabsContent value="integration">
-            <div className="space-y-6">
-              <DeliveryIntegrationStatus />
+            <div className="p-8 text-center">
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="text-6xl mb-4">🚀</div>
+                <h3 className="text-xl font-semibold text-foreground">مزامنة محسّنة</h3>
+                <p className="text-muted-foreground">
+                  تم نقل المزامنة إلى الشريط العلوي لتجربة أفضل. 
+                  ستجد زر المزامنة الشامل الجديد في أعلى الصفحة.
+                </p>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm">
+                  <p className="font-medium text-primary mb-2">المزايا الجديدة:</p>
+                  <ul className="text-right text-muted-foreground space-y-1">
+                    <li>• مزامنة شاملة لجميع حالات الطلبات</li>
+                    <li>• مزامنة تلقائية كل 15 ثانية</li>
+                    <li>• تصميم احترافي متقدم</li>
+                    <li>• بدون إشعارات مزعجة</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
