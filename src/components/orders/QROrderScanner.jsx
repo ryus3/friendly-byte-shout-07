@@ -49,18 +49,8 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
 
       const order = orders?.[0];
       if (!order) {
-            order_items (
-              *,
-              products (name),
-              product_variants (
-                *,
-                colors (name),
-                sizes (name)
-              )
-            )
-          `)
-          .eq('qr_id', searchValue)
-          .single());
+        setError('الطلب غير موجود في النظام أو الرقم غير صحيح');
+        return null;
       }
 
       // إذا لم يوجد، البحث بـ order_number
