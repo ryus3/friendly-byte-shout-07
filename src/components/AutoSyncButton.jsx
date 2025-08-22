@@ -105,8 +105,10 @@ const AutoSyncButton = ({ className }) => {
               cy="16"
               r="14"
               fill="none"
-              stroke="hsl(var(--border))"
-              strokeWidth="1.5"
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeOpacity="0.3"
             />
             {/* حلقة التقدم */}
             <circle
@@ -115,10 +117,15 @@ const AutoSyncButton = ({ className }) => {
               r="14"
               fill="none"
               stroke="hsl(var(--primary))"
-              strokeWidth="1.5"
+              strokeWidth="2"
               strokeLinecap="round"
-              strokeDasharray={`${(15 - countdown) * (87.96 / 15)}, 87.96`}
-              className="transition-all duration-1000 ease-out"
+              strokeOpacity="0.9"
+              strokeDasharray="87.96"
+              strokeDashoffset="87.96"
+              style={{
+                animation: `progress-countdown 15s linear infinite`,
+                animationPlayState: isActive ? 'running' : 'paused'
+              }}
             />
           </svg>
         </div>

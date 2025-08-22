@@ -337,4 +337,14 @@
     padding: 0.75rem;
     margin-bottom: 0.5rem;
   }
+  
+  /* تحريك دائرة التقدم للمزامنة */
+  @keyframes progress-countdown {
+    from {
+      stroke-dashoffset: 87.96;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
 }
