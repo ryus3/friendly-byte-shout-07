@@ -19,8 +19,7 @@ import {
   Phone,
   User,
   Clock,
-  ExternalLink,
-  UserX
+  ExternalLink
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -91,32 +90,6 @@ const OrderCard = ({
         label: 'راجع للمخزن', 
         icon: PackageCheck,
         color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      // حالات شركة التوصيل الجديدة
-      'en_route': { 
-        label: 'في الطريق إلى العميل', 
-        icon: Truck,
-        color: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border border-orange-400 shadow-lg shadow-orange-500/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'arrived_city': { 
-        label: 'وصل إلى المدينة', 
-        icon: MapPin,
-        color: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-400 shadow-lg shadow-blue-500/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'out_for_delivery': { 
-        label: 'خرج للتوصيل', 
-        icon: Truck,
-        color: 'bg-gradient-to-r from-green-400 to-green-500 text-white border border-green-300 shadow-lg shadow-green-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'customer_unavailable': { 
-        label: 'العميل غير متواجد', 
-        icon: UserX,
-        color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border border-yellow-400 shadow-lg shadow-yellow-500/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'delivery_delayed': { 
-        label: 'تأخير في التوصيل', 
-        icon: Clock,
-        color: 'bg-gradient-to-r from-red-400 to-red-500 text-white border border-red-300 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       }
     };
     
@@ -128,74 +101,42 @@ const OrderCard = ({
     // Handle delivery company statuses dynamically
     if (status && typeof status === 'string') {
       const statusLower = status.toLowerCase();
-      
-      // أولوية للحالات الخاصة من شركة التوصيل
-      if (statusLower.includes('في الطريق') || statusLower.includes('en route')) {
-        return { 
-          label: status, 
-          icon: Truck, 
-          color: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border border-orange-400 shadow-lg shadow-orange-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } else if (statusLower.includes('وصل') || statusLower.includes('arrived')) {
-        return { 
-          label: status, 
-          icon: MapPin, 
-          color: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-400 shadow-lg shadow-blue-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } else if (statusLower.includes('خرج للتوصيل') || statusLower.includes('out for delivery')) {
-        return { 
-          label: status, 
-          icon: Truck, 
-          color: 'bg-gradient-to-r from-green-400 to-green-500 text-white border border-green-300 shadow-lg shadow-green-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } else if (statusLower.includes('غير متواجد') || statusLower.includes('unavailable')) {
-        return { 
-          label: status, 
-          icon: UserX, 
-          color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border border-yellow-400 shadow-lg shadow-yellow-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } else if (statusLower.includes('تأخير') || statusLower.includes('delay')) {
-        return { 
-          label: status, 
-          icon: Clock, 
-          color: 'bg-gradient-to-r from-red-400 to-red-500 text-white border border-red-300 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } else if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('delivered')) {
+      if (statusLower.includes('تسليم') || statusLower.includes('مسلم')) {
         return { 
           label: status, 
           icon: CheckCircle, 
           color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
-      } else if (statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('cancel')) {
+      } else if (statusLower.includes('ملغي') || statusLower.includes('إلغاء')) {
         return { 
           label: status, 
           icon: XCircle, 
           color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
-      } else if (statusLower.includes('راجع') || statusLower.includes('return')) {
+      } else if (statusLower.includes('راجع')) {
         return { 
           label: status, 
           icon: RotateCcw, 
           color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
-      } else if (statusLower.includes('مندوب') || statusLower.includes('شحن') || statusLower.includes('ship')) {
+      } else if (statusLower.includes('مندوب') || statusLower.includes('شحن')) {
         return { 
           label: status, 
           icon: Truck, 
           color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
-      } else if (statusLower.includes('انتظار') || statusLower.includes('محضر') || statusLower.includes('pending')) {
+      } else if (statusLower.includes('انتظار') || statusLower.includes('محضر')) {
         return { 
           label: status, 
           icon: Package, 
           color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
       } else {
-        // عرض الحالة الحقيقية بدلاً من unknown مع تصميم جميل
+        // Custom delivery company status - use neutral gray styling
         return { 
           label: status, 
           icon: Package, 
-          color: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border border-purple-400 shadow-lg shadow-purple-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+          color: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white border border-gray-400 shadow-lg shadow-gray-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
         };
       }
     }

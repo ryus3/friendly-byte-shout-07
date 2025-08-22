@@ -11,54 +11,18 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 
 const getStatusInfo = (status) => {
-  // التحقق من الحالات المحلية أولاً
-  const localStatuses = {
-    'pending': { badge: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' },
-    'shipped': { badge: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' },
-    'delivery': { badge: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' },
-    'delivered': { badge: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' },
-    'completed': { badge: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' },
-    'cancelled': { badge: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-4 py-2', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' },
-    'returned': { badge: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' },
-    'returned_in_stock': { badge: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' },
-    'return_received': { badge: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' }
-  };
-  
-  if (localStatuses[status]) {
-    return localStatuses[status];
+  switch (status) {
+    case 'pending': return { badge: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'shipped': return { badge: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
+    case 'delivery': return { badge: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
+    case 'delivered': return { badge: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
+    case 'cancelled': return { badge: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-4 py-2', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
+    case 'returned': return { badge: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
+    case 'returned_in_stock': return { badge: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    case 'return_received': return { badge: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    default: return { badge: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-lg px-4 py-2', icon: <AlertTriangle className="w-4 h-4" />, text: status };
   }
-  
-  // تطبيق نفس منطق OrderCard للحالات الخارجية
-  if (status && typeof status === 'string') {
-    const statusLower = status.toLowerCase();
-    
-    if (statusLower.includes('في الطريق') || statusLower.includes('en route')) {
-      return { badge: 'bg-gradient-to-r from-orange-500 to-orange-600 text-white border border-orange-400 shadow-lg shadow-orange-500/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('وصل') || statusLower.includes('arrived')) {
-      return { badge: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-400 shadow-lg shadow-blue-500/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('خرج للتوصيل') || statusLower.includes('out for delivery')) {
-      return { badge: 'bg-gradient-to-r from-green-400 to-green-500 text-white border border-green-300 shadow-lg shadow-green-400/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('غير متواجد') || statusLower.includes('unavailable')) {
-      return { badge: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border border-yellow-400 shadow-lg shadow-yellow-500/40 font-bold rounded-lg px-4 py-2', icon: <AlertTriangle className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('تأخير') || statusLower.includes('delay')) {
-      return { badge: 'bg-gradient-to-r from-red-400 to-red-500 text-white border border-red-300 shadow-lg shadow-red-400/40 font-bold rounded-lg px-4 py-2', icon: <Clock className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('delivered')) {
-      return { badge: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('cancel')) {
-      return { badge: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-4 py-2', icon: <XCircle className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('راجع') || statusLower.includes('return')) {
-      return { badge: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-4 py-2', icon: <CornerDownLeft className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('مندوب') || statusLower.includes('شحن') || statusLower.includes('ship')) {
-      return { badge: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Truck className="w-4 h-4" />, text: status };
-    } else if (statusLower.includes('انتظار') || statusLower.includes('محضر') || statusLower.includes('pending')) {
-      return { badge: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-4 py-2', icon: <Clock className="w-4 h-4" />, text: status };
-    } else {
-      // عرض الحالة الحقيقية مع تصميم جميل
-      return { badge: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border border-purple-400 shadow-lg shadow-purple-500/40 font-bold rounded-lg px-4 py-2', icon: <AlertTriangle className="w-4 h-4" />, text: status };
-    }
-  }
-  
-  return { badge: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-lg px-4 py-2', icon: <AlertTriangle className="w-4 h-4" />, text: status || 'غير محدد' };
 };
 
   const statusOptions = [
