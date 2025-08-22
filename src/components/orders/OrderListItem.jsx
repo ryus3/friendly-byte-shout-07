@@ -147,6 +147,18 @@ const OrderListItem = ({
           onClick={() => onViewOrder?.(order)}
         >
           <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
+                {order.qr_id || order.order_number}
+              </div>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect?.(order.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+            </div>
+            
             {/* Status Badge */}
             {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
               <Button
@@ -175,18 +187,6 @@ const OrderListItem = ({
                 <span className="text-xs">{statusConfig.label}</span>
               </div>
             )}
-            
-            <div className="flex items-center gap-3">
-              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
-                {order.qr_id || order.order_number}
-              </div>
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onSelect?.(order.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="shrink-0"
-              />
-            </div>
           </div>
 
           {/* Customer Info */}
