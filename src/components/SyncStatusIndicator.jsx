@@ -111,11 +111,23 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       {/* Background and Progress circles */}
       <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
         <defs>
+          {/* Enhanced gradient with more colors and better distribution */}
           <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
+            <stop offset="25%" stopColor="hsl(210, 85%, 56%)" />
             <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+            <stop offset="75%" stopColor="hsl(250, 80%, 56%)" />
             <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
           </linearGradient>
+          
+          {/* Glow filter for enhanced visibility */}
+          <filter id="glowEffect" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
         </defs>
         
         {/* Background track - always visible */}
@@ -130,7 +142,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           className="text-muted-foreground/50"
         />
         
-        {/* Progress circle - only shown during countdown */}
+        {/* Progress circle - only shown during countdown with glow effect */}
         {currentCountdown > 0 && (
           <circle
             cx="20"
@@ -138,11 +150,16 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             r={radius}
             fill="none"
             stroke="url(#syncGradient)"
-            strokeWidth="2"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear"
+            filter="url(#glowEffect)"
+            className="transition-all duration-1000 ease-linear animate-pulse"
+            style={{
+              animationDuration: '2s',
+              animationIterationCount: 'infinite'
+            }}
           />
         )}
       </svg>
