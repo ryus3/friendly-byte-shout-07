@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { RefreshCcw, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -7,13 +7,22 @@ import { cn } from '@/lib/utils';
 const AutoSyncButton = ({ className }) => {
   const { syncAndApplyOrders, isLoggedIn, activePartner } = useAlWaseet();
   const [countdown, setCountdown] = useState(15);
-  const [isActive, setIsActive] = useState(true);
+  const [isActive, setIsActive] = useState(false); // Start in standby
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isInStandbyMode, setIsInStandbyMode] = useState(true);
+  const periodicIntervalRef = useRef(null);
 
-  // Reset timer
-  const resetTimer = useCallback(() => {
-    setCountdown(15);
+  // Start sync countdown
+  const startSyncCountdown = useCallback(() => {
+    setIsInStandbyMode(false);
     setIsActive(true);
+    setCountdown(15);
+  }, []);
+
+  // Enter standby mode
+  const enterStandbyMode = useCallback(() => {
+    setIsActive(false);
+    setIsInStandbyMode(true);
   }, []);
 
   // Handle manual sync
@@ -25,21 +34,23 @@ const AutoSyncButton = ({ className }) => {
     
     setIsSyncing(true);
     setIsActive(false);
+    setIsInStandbyMode(false);
     
     try {
       await syncAndApplyOrders();
-      resetTimer();
+      enterStandbyMode();
     } catch (error) {
       console.error('خطأ في المزامنة اليدوية:', error);
+      enterStandbyMode();
     } finally {
       setIsSyncing(false);
     }
-  }, [syncAndApplyOrders, isLoggedIn, activePartner, isSyncing, resetTimer]);
+  }, [syncAndApplyOrders, isLoggedIn, activePartner, isSyncing, enterStandbyMode]);
 
   // Auto sync when countdown reaches 0
   const handleAutoSync = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn) {
-      resetTimer();
+      enterStandbyMode();
       return;
     }
     
@@ -50,9 +61,27 @@ const AutoSyncButton = ({ className }) => {
       console.error('خطأ في المزامنة التلقائية:', error);
     } finally {
       setIsSyncing(false);
-      resetTimer();
+      enterStandbyMode();
     }
-  }, [syncAndApplyOrders, isLoggedIn, activePartner, resetTimer]);
+  }, [syncAndApplyOrders, isLoggedIn, activePartner, enterStandbyMode]);
+
+  // Periodic sync effect (every 10 minutes)
+  useEffect(() => {
+    if (activePartner === 'local' || !isLoggedIn) return;
+
+    // Start first sync countdown after 10 minutes
+    periodicIntervalRef.current = setInterval(() => {
+      if (!isSyncing) {
+        startSyncCountdown();
+      }
+    }, 10 * 60 * 1000); // 10 minutes
+
+    return () => {
+      if (periodicIntervalRef.current) {
+        clearInterval(periodicIntervalRef.current);
+      }
+    };
+  }, [activePartner, isLoggedIn, isSyncing, startSyncCountdown]);
 
   // Countdown effect
   useEffect(() => {
@@ -86,10 +115,10 @@ const AutoSyncButton = ({ className }) => {
       className={cn(
         "relative h-8 w-8 rounded-full",
         "bg-card/80 backdrop-blur-sm",
-        "border border-border",
-        "shadow-sm",
+        "border-2 border-border",
+        "shadow-md",
         "transition-all duration-200 ease-out",
-        "hover:bg-accent hover:border-border",
+        "hover:bg-accent hover:border-accent",
         "text-muted-foreground",
         className
       )}
@@ -136,13 +165,18 @@ const AutoSyncButton = ({ className }) => {
         <div className="relative flex items-center justify-center text-sm font-semibold">
           {countdown}
         </div>
-      ) : (
-        // أيقونة المزامنة
+      ) : isSyncing ? (
+        // أيقونة المزامنة النشطة
         <RefreshCcw 
           className={cn(
             "h-4 w-4",
-            isSyncing && "animate-spin"
+            "animate-spin"
           )}
+        />
+      ) : (
+        // سهمين في حالة الاستعداد
+        <ArrowRightLeft 
+          className="h-4 w-4"
         />
       )}
     </Button>
