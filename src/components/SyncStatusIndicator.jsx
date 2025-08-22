@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const SyncStatusIndicator = ({ className, debugMode = false }) => {
   const { 
@@ -85,7 +85,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "bg-background border border-border hover:bg-accent",
+        "bg-background border border-border",
         currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
@@ -102,27 +102,16 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
                 : "اضغط للمزامنة السريعة"
       }
     >
-      {/* Background circle */}
-      <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
-        <defs>
-          <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
-            <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-            <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
-          </linearGradient>
-        </defs>
-        {/* Background track */}
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="text-muted-foreground/20"
-        />
-        {/* Progress circle */}
-        {currentCountdown > 0 && (
+      {/* Progress circle - only shown during countdown */}
+      {currentCountdown > 0 && (
+        <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
+          <defs>
+            <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
+              <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+              <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
+            </linearGradient>
+          </defs>
           <circle
             cx="20"
             cy="20"
@@ -135,8 +124,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             strokeDashoffset={strokeDashoffset}
             className="transition-all duration-1000 ease-linear"
           />
-        )}
-      </svg>
+        </svg>
+      )}
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
@@ -147,10 +136,9 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             {currentCountdown}
           </span>
         ) : (
-          <RotateCcw className={cn(
+          <RefreshCw className={cn(
             "w-4 h-4 transition-all duration-500 text-muted-foreground",
-            isSpinning && "animate-[spin_0.8s_ease-in-out]",
-            !currentIsSyncing && "hover:text-primary"
+            isSpinning && "animate-[spin_0.8s_ease-in-out]"
           )} />
         )}
       </div>
