@@ -11,6 +11,7 @@ const AutoSyncButton = ({ className }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInStandbyMode, setIsInStandbyMode] = useState(true);
   const periodicIntervalRef = useRef(null);
+  const countdownIntervalRef = useRef(null);
   const syncFunctionRef = useRef(null);
   const hasInitialSyncRef = useRef(false);
 
@@ -94,13 +95,25 @@ const AutoSyncButton = ({ className }) => {
 
   // Countdown effect
   useEffect(() => {
-    if (!isActive || activePartner === 'local' || !isLoggedIn) return;
+    if (!isActive || activePartner === 'local' || !isLoggedIn) {
+      // Clear any existing countdown interval
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      return;
+    }
 
-    const interval = setInterval(() => {
+    countdownIntervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          setIsActive(false);
-          // Use the ref to avoid dependency issues
+          // Stop the countdown interval first
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null;
+          }
+          
+          // Then perform sync
           if (syncFunctionRef.current) {
             syncFunctionRef.current().then(() => {
               setIsActive(false);
@@ -117,7 +130,12 @@ const AutoSyncButton = ({ className }) => {
       });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+    };
   }, [isActive, activePartner, isLoggedIn]);
 
   // Don't show for local delivery
