@@ -254,20 +254,7 @@ const OrderCard = ({
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-left" dir="ltr">
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                </div>
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
-                />
-              </div>
-              
-              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية */}
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يسار */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
@@ -296,6 +283,19 @@ const OrderCard = ({
                   <span className="font-bold">{statusConfig.label}</span>
                 </div>
               )}
+              
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onSelect?.(order.id)}
+                  className="shrink-0 scale-125 border-2"
+                />
+                <div className="text-left" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
+              </div>
               
               {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
@@ -397,10 +397,12 @@ const OrderCard = ({
                     <Phone className="h-3 w-3" />
                     <span>{order.customer_phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 text-primary" />
-                    <span className="truncate">{order.customer_address}</span>
-                  </div>
+                  {order.customer_city && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Building className="h-3 w-3" />
+                      <span>{order.customer_city}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

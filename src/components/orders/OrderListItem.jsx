@@ -147,19 +147,7 @@ const OrderListItem = ({
           onClick={() => onViewOrder?.(order)}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
-                {order.qr_id || order.order_number}
-              </div>
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onSelect?.(order.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="shrink-0"
-              />
-            </div>
-            
-            {/* Status Badge */}
+            {/* Status Badge - يسار */}
             {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
               <Button
                 variant="ghost"
@@ -187,6 +175,18 @@ const OrderListItem = ({
                 <span className="text-xs">{statusConfig.label}</span>
               </div>
             )}
+            
+            <div className="flex items-center gap-3">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect?.(order.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
+                {order.qr_id || order.order_number}
+              </div>
+            </div>
           </div>
 
           {/* Customer Info */}
@@ -257,59 +257,65 @@ const OrderListItem = ({
             </Badge>
           </MobileTableCell>
 
-          {/* Actions */}
+          {/* Actions - ترتيب من اليمين لليسار: حذف، تتبع، تعديل، معاينة */}
           <MobileTableCell actions>
-            {canDelete && (
+            <div className="flex gap-2 flex-row-reverse">
+              {/* Delete */}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* Track */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowDeleteDialog(true);
+                  onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
               >
-                <Trash2 className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
               </Button>
-            )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewOrder?.(order);
-              }}
-              className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
+              {/* Edit */}
+              {canEdit && hasPermission('edit_orders') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditOrder?.(order);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              )}
 
-            {canEdit && hasPermission('edit_orders') && (
+              {/* View */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEditOrder?.(order);
+                  onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
               >
-                <Edit2 className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewOrder?.(order);
-              }}
-              className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
+            </div>
           </MobileTableCell>
         </MobileTableRow>
       </motion.div>
