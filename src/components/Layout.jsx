@@ -20,6 +20,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
+import AutoSyncButton from '@/components/AutoSyncButton.jsx';
 import { Helmet } from 'react-helmet-async';
 
 const SidebarContent = ({ onClose, isMobile }) => {
@@ -304,61 +305,7 @@ const Layout = ({ children }) => {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  const refreshBtn = e.currentTarget.querySelector('.refresh-icon');
-                  if (refreshBtn) {
-                    refreshBtn.classList.add('animate-spin');
-                   }
-                   
-                   try {
-                     // إظهار إشعار فوري بدء التحديث
-                     toast({ 
-                       title: "🔄 جاري التحديث...", 
-                       description: "يتم تحديث الطلبات والبيانات الجديدة (المخزون محفوظ)",
-                       className: "z-[9999] text-right",
-                     });
-
-                     // استدعاء تحديث واحد فقط بدلاً من multiple events
-                     if (window.refreshInventory) {
-                       await window.refreshInventory();
-                     }
-
-                     // تحديث الإشعارات أيضاً
-                     window.dispatchEvent(new CustomEvent('refresh-notifications'));
-                     
-                     await new Promise(resolve => setTimeout(resolve, 800));
-                     
-                     toast({ 
-                       title: "✅ تم التحديث بنجاح!", 
-                       description: "تم تحديث جميع البيانات والطلبات والإشعارات بنجاح",
-                       className: "z-[9999] text-right bg-green-500 text-white border-green-600",
-                       duration: 3000
-                     });
-                  } catch (error) {
-                    console.error('خطأ في تحديث البيانات:', error);
-                    toast({ 
-                      title: "❌ خطأ في التحديث", 
-                      description: "فشل في تحديث بعض البيانات",
-                      variant: "destructive",
-                      className: "z-[9999] text-right",
-                    });
-                  } finally {
-                    if (refreshBtn) {
-                      refreshBtn.classList.remove('animate-spin');
-                    }
-                  }
-                }} 
-                className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                title="مزامنة البيانات"
-              >
-                <RefreshCw className="w-5 h-5 refresh-icon" />
-              </Button>
+              <AutoSyncButton className="transition-colors" />
               <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />
               </Button>

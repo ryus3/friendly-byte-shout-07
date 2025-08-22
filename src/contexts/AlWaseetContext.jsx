@@ -401,11 +401,15 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      const msg = updated > 0
-        ? `تم تحديث ${updated} من ${checked} طلب (مزامنة سريعة)`
-        : `تم فحص ${checked} طلب - لا تحديثات مطلوبة (مزامنة سريعة)`;
-
-      toast({ title: 'مزامنة سريعة مكتملة', description: msg });
+      // فقط اظهار إشعار عند وجود تحديثات فعلية
+      if (updated > 0) {
+        toast({ 
+          title: '✅ تم التحديث', 
+          description: `تم تحديث ${updated} طلب`,
+          className: "z-[9999] text-right",
+          duration: 2000
+        });
+      }
       return { updated, checked };
     } catch (e) {
       console.error('❌ خطأ في المزامنة السريعة:', e);
