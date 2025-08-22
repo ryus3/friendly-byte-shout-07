@@ -562,64 +562,82 @@ const OrdersPage = () => {
              )}
         </div>
 
-        <OrdersToolbar 
-          filters={filters} 
-          onFiltersChange={handleToolbarFilterChange}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          onOrderFound={(foundOrder) => {
-            setSelectedOrder(foundOrder);
-            setDialogs(prev => ({ ...prev, details: true }));
-          }}
-          onUpdateOrderStatus={handleUpdateOrderStatus}
-          employeeOptions={employeeOptions}
-          selectedEmployeeId={selectedEmployeeId}
-          onEmployeeChange={setSelectedEmployeeId}
-        />
-        
-        {selectedOrders.length > 0 && hasPermission('manage_orders') && (
-          <Card className="p-3 sm:p-4 bg-card rounded-lg border">
-            <CardContent className="p-0 flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
-              <p className="font-medium text-sm">
-                {selectedOrders.length} طلبات محددة
-              </p>
-              <div className="flex gap-2 w-full sm:w-auto">
-                {filters.status !== 'archived' && (
-                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
-                    <Archive className="w-4 h-4 ml-2" />
-                    أرشفة
-                  </Button>
-                )}
-                {hasPermission('delete_local_orders') && (
-                    <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
-                      <Trash2 className="w-4 h-4 ml-2" />
-                      حذف
-                    </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="orders" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              الطلبات
+            </TabsTrigger>
+            <TabsTrigger value="invoices" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              فواتير الوسيط
+            </TabsTrigger>
+          </TabsList>
 
-
-        <OrderList
-          orders={filteredOrders}
-          isLoading={inventoryLoading}
-          onViewOrder={handleViewOrder}
-          onEditOrder={handleEditOrder}
-          onUpdateStatus={handleUpdateOrderStatus}
-          onReceiveReturn={handleReceiveReturn}
-          selectedOrders={selectedOrders}
-          setSelectedOrders={setSelectedOrders}
-          onDeleteOrder={handleDeleteSelected}
-          viewMode={viewMode}
-          additionalButtons={(order) => (
-            <ReceiveInvoiceButton 
-              order={order} 
-              onSuccess={() => refetchProducts()} 
+          <TabsContent value="orders" className="space-y-6">
+            <OrdersToolbar 
+              filters={filters} 
+              onFiltersChange={handleToolbarFilterChange}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onOrderFound={(foundOrder) => {
+                setSelectedOrder(foundOrder);
+                setDialogs(prev => ({ ...prev, details: true }));
+              }}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+              employeeOptions={employeeOptions}
+              selectedEmployeeId={selectedEmployeeId}
+              onEmployeeChange={setSelectedEmployeeId}
             />
-          )}
-        />
+            
+            {selectedOrders.length > 0 && hasPermission('manage_orders') && (
+              <Card className="p-3 sm:p-4 bg-card rounded-lg border">
+                <CardContent className="p-0 flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
+                  <p className="font-medium text-sm">
+                    {selectedOrders.length} طلبات محددة
+                  </p>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {filters.status !== 'archived' && (
+                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
+                        <Archive className="w-4 h-4 ml-2" />
+                        أرشفة
+                      </Button>
+                    )}
+                    {hasPermission('delete_local_orders') && (
+                        <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
+                          <Trash2 className="w-4 h-4 ml-2" />
+                          حذف
+                        </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <OrderList
+              orders={filteredOrders}
+              isLoading={inventoryLoading}
+              onViewOrder={handleViewOrder}
+              onEditOrder={handleEditOrder}
+              onUpdateStatus={handleUpdateOrderStatus}
+              onReceiveReturn={handleReceiveReturn}
+              selectedOrders={selectedOrders}
+              setSelectedOrders={setSelectedOrders}
+              onDeleteOrder={handleDeleteSelected}
+              viewMode={viewMode}
+              additionalButtons={(order) => (
+                <ReceiveInvoiceButton 
+                  order={order} 
+                  onSuccess={() => refetchProducts()} 
+                />
+              )}
+            />
+          </TabsContent>
+
+          <TabsContent value="invoices" className="space-y-6">
+            <AlWaseetInvoicesTab />
+          </TabsContent>
+        </Tabs>
 
         <OrderDetailsDialog
           order={selectedOrder}
