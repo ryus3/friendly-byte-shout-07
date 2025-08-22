@@ -16,8 +16,9 @@ import {
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
-   BarChart, TrendingUp, Activity
+   BarChart, TrendingUp, Activity, Settings
 } from 'lucide-react';
+import RestrictedDeliverySettings from '@/components/settings/RestrictedDeliverySettings';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
@@ -317,6 +318,18 @@ const SettingsPage = () => {
                     </span>
                   </div>
                 </div>
+              </ModernCard>
+            )}
+
+            {/* إدارة التوصيل - للمديرين ومن لديهم الصلاحية */}
+            {canAccessDeliveryPartners && (
+              <ModernCard
+                icon={Settings}
+                title="إدارة التوصيل"
+                description="مزامنة الطلبات مع شركات التوصيل وإدارة الإعدادات"
+                iconColor="from-indigo-500 to-indigo-600"
+              >
+                <RestrictedDeliverySettings />
               </ModernCard>
             )}
 

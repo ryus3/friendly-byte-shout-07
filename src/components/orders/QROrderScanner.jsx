@@ -19,13 +19,13 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   // تنبيه عميل مكرر عند العثور على طلب يحتوي رقم هاتف
   useDuplicateCustomerAlert(foundOrder?.customer_phone, { trigger: !!foundOrder });
 
-  // البحث عن طلب بـ QR ID
-  const searchOrderByQR = async (qrId) => {
+  // البحث عن طلب بـ tracking_number أو QR ID أو order_number
+  const searchOrderByQR = async (searchValue) => {
     try {
       setError('');
       
-      // البحث في الطلبات العادية
-      const { data: order, error: orderError } = await supabase
+      // البحث أولاً بـ tracking_number
+      let { data: order, error: orderError } = await supabase
         .from('orders')
         .select(`
           *,
@@ -39,8 +39,48 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
             )
           )
         `)
-        .eq('qr_id', qrId)
+        .eq('tracking_number', searchValue)
         .single();
+
+      // إذا لم يوجد، البحث بـ qr_id
+      if (!order && orderError?.code === 'PGRST116') {
+        ({ data: order, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (name),
+              product_variants (
+                *,
+                colors (name),
+                sizes (name)
+              )
+            )
+          `)
+          .eq('qr_id', searchValue)
+          .single());
+      }
+
+      // إذا لم يوجد، البحث بـ order_number
+      if (!order && orderError?.code === 'PGRST116') {
+        ({ data: order, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (name),
+              product_variants (
+                *,
+                colors (name),
+                sizes (name)
+              )
+            )
+          `)
+          .eq('order_number', searchValue)
+          .single());
+      }
 
       if (orderError && orderError.code !== 'PGRST116') {
         throw orderError;
@@ -97,7 +137,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
       html5QrCodeRef.current?.clear();
       setIsScanning(false);
       
-      // البحث عن الطلب
+              // البحث عن الطلب
       await searchOrderByQR(decodedText);
     };
 
@@ -121,7 +161,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   // البحث اليدوي
   const handleManualSearch = async () => {
     if (!manualInput.trim()) {
-      setError('يرجى إدخال QR ID');
+      setError('يرجى إدخال رقم التتبع أو QR ID');
       return;
     }
     await searchOrderByQR(manualInput.trim());
@@ -242,10 +282,10 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
 
               {/* البحث اليدوي */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">أو أدخل QR ID يدوياً:</label>
+                <label className="text-sm font-medium">أو أدخل رقم التتبع يدوياً:</label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="QR-ORD-123456"
+                    placeholder="رقم التتبع (مثل: 98783797)"
                     value={manualInput}
                     onChange={(e) => setManualInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
@@ -269,7 +309,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
               <Alert>
                 <Package className="h-4 w-4" />
                 <AlertDescription>
-                  تم العثور على الطلب: <strong>#{foundOrder.order_number}</strong>
+                  تم العثور على الطلب: <strong>#{foundOrder.tracking_number || foundOrder.order_number}</strong>
                 </AlertDescription>
               </Alert>
 
@@ -278,7 +318,10 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
                 <div><strong>الهاتف:</strong> {foundOrder.customer_phone}</div>
                 <div><strong>الحالة:</strong> {getStatusLabel(foundOrder.status)}</div>
                 <div><strong>المبلغ:</strong> {foundOrder.final_amount?.toLocaleString()} د.ع</div>
-                <div><strong>QR ID:</strong> {foundOrder.qr_id}</div>
+                <div><strong>رقم التتبع:</strong> {foundOrder.tracking_number || foundOrder.order_number}</div>
+                {foundOrder.tracking_number && foundOrder.order_number !== foundOrder.tracking_number && (
+                  <div><strong>رقم النظام:</strong> {foundOrder.order_number}</div>
+                )}
               </div>
 
               {/* أزرار خاصة للطلبات الراجعة */}

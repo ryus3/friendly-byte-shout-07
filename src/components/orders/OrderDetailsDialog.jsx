@@ -144,7 +144,14 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           <div className="space-y-6 p-6">
             <div className="flex items-center justify-between p-4 bg-secondary rounded-lg border border-border">
               <div>
-                <h3 className="text-lg font-bold text-foreground break-all">#{order.order_number}</h3>
+                <h3 className="text-lg font-bold text-foreground break-all">
+                  #{order.tracking_number || order.order_number}
+                </h3>
+                {order.tracking_number && order.order_number !== order.tracking_number && (
+                  <p className="text-xs text-muted-foreground font-mono">
+                    رقم النظام: {order.order_number}
+                  </p>
+                )}
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
               <div className={`inline-flex items-center gap-2 text-sm font-medium ${statusInfo.badge}`}>

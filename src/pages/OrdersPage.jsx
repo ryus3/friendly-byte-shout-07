@@ -378,7 +378,8 @@ const OrdersPage = () => {
       };
       const matchesSearch = (
         (customerInfo.name || order.customer_name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-        (order.trackingnumber || order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.trackingnumber || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (order.qr_id || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (order.order_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (customerInfo.phone || order.customer_phone || '').includes(searchTerm)

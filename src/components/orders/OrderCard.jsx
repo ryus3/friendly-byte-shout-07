@@ -289,6 +289,11 @@ const OrderCard = ({
                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
                      {order.tracking_number || order.order_number}
                    </h3>
+                   {order.tracking_number && order.order_number !== order.tracking_number && (
+                     <p className="text-xs text-muted-foreground font-mono">
+                       {order.order_number}
+                     </p>
+                   )}
                 </div>
                 <Checkbox
                   checked={isSelected}

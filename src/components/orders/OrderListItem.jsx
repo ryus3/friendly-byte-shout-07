@@ -155,7 +155,12 @@ const OrderListItem = ({
                 className="shrink-0"
               />
               <div className="font-bold text-base text-foreground text-right tabular-nums" dir="ltr">
-                {order.qr_id || order.order_number}
+                {order.tracking_number || order.order_number}
+                {order.tracking_number && order.order_number !== order.tracking_number && (
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {order.order_number}
+                  </div>
+                )}
               </div>
             </div>
             
