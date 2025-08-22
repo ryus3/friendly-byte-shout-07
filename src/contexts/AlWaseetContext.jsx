@@ -94,14 +94,15 @@ export const AlWaseetProvider = ({ children }) => {
         // تنفيذ التصحيح الجذري مرة واحدة فقط
         if (!correctionComplete) {
           console.log('🛠️ تنفيذ التصحيح الجذري للطلبات الحالية...');
-          await comprehensiveOrderCorrection();
+          const correctionResult = await AlWaseetAPI.comprehensiveOrderCorrection(token, orderStatusesMap, loadOrderStatuses, correctionComplete, setCorrectionComplete);
+          console.log('✅ نتيجة التصحيح:', correctionResult);
         }
         
         // مزامنة سريعة صامتة
-        const result = await fastSyncPendingOrders(false);
+        const syncResult = await AlWaseetAPI.fastSyncPendingOrders(token, false);
         setLastSyncAt(new Date());
         
-        console.log(`🔄 مزامنة تلقائية مكتملة: ${result.updated} تحديث، ${result.checked} فحص`);
+        console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
       } catch (error) {
         console.error('❌ خطأ في المزامنة التلقائية:', error);
       } finally {
@@ -121,7 +122,7 @@ export const AlWaseetProvider = ({ children }) => {
       if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, token, activePartner, autoSyncEnabled, syncInterval, correctionComplete, comprehensiveOrderCorrection, fastSyncPendingOrders]);
+  }, [isLoggedIn, token, activePartner, autoSyncEnabled, syncInterval, correctionComplete, orderStatusesMap, loadOrderStatuses, setCorrectionComplete]);
 
   const login = useCallback(async (username, password, partner = 'alwaseet') => {
     if (partner === 'local') {
