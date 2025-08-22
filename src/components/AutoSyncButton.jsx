@@ -7,10 +7,15 @@ import { cn } from '@/lib/utils';
 const AutoSyncButton = ({ className }) => {
   const { syncAndApplyOrders, isLoggedIn, activePartner } = useAlWaseet();
   const [countdown, setCountdown] = useState(15);
-  const [isActive, setIsActive] = useState(false); // Start in standby
+  const [isActive, setIsActive] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isInStandbyMode, setIsInStandbyMode] = useState(true);
   const periodicIntervalRef = useRef(null);
+  const syncFunctionRef = useRef(null);
+  const hasInitialSyncRef = useRef(false);
+
+  // Update sync function ref
+  syncFunctionRef.current = syncAndApplyOrders;
 
   // Start sync countdown
   const startSyncCountdown = useCallback(() => {
@@ -47,8 +52,8 @@ const AutoSyncButton = ({ className }) => {
     }
   }, [syncAndApplyOrders, isLoggedIn, activePartner, isSyncing, enterStandbyMode]);
 
-  // Auto sync when countdown reaches 0
-  const handleAutoSync = useCallback(async () => {
+  // Auto sync function using ref
+  const performAutoSync = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn) {
       enterStandbyMode();
       return;
@@ -56,24 +61,28 @@ const AutoSyncButton = ({ className }) => {
     
     setIsSyncing(true);
     try {
-      await syncAndApplyOrders();
+      await syncFunctionRef.current();
     } catch (error) {
       console.error('خطأ في المزامنة التلقائية:', error);
     } finally {
       setIsSyncing(false);
       enterStandbyMode();
     }
-  }, [syncAndApplyOrders, isLoggedIn, activePartner, enterStandbyMode]);
+  }, [activePartner, isLoggedIn, enterStandbyMode]);
 
-  // Periodic sync effect (every 10 minutes)
+  // Initial sync and periodic setup
   useEffect(() => {
     if (activePartner === 'local' || !isLoggedIn) return;
 
-    // Start first sync countdown after 10 minutes
+    // Initial sync on mount
+    if (!hasInitialSyncRef.current) {
+      hasInitialSyncRef.current = true;
+      performAutoSync();
+    }
+
+    // Set up periodic sync (every 10 minutes)
     periodicIntervalRef.current = setInterval(() => {
-      if (!isSyncing) {
-        startSyncCountdown();
-      }
+      startSyncCountdown();
     }, 10 * 60 * 1000); // 10 minutes
 
     return () => {
@@ -81,7 +90,7 @@ const AutoSyncButton = ({ className }) => {
         clearInterval(periodicIntervalRef.current);
       }
     };
-  }, [activePartner, isLoggedIn, isSyncing, startSyncCountdown]);
+  }, [activePartner, isLoggedIn]); // Only depend on essential values
 
   // Countdown effect
   useEffect(() => {
@@ -91,7 +100,7 @@ const AutoSyncButton = ({ className }) => {
       setCountdown(prev => {
         if (prev <= 1) {
           setIsActive(false);
-          handleAutoSync();
+          performAutoSync(); // Use stable ref-based function
           return 15;
         }
         return prev - 1;
@@ -99,7 +108,7 @@ const AutoSyncButton = ({ className }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, activePartner, isLoggedIn, handleAutoSync]);
+  }, [isActive, activePartner, isLoggedIn]); // Removed unstable dependencies
 
   // Don't show for local delivery
   if (activePartner === 'local' || !isLoggedIn) {
