@@ -213,31 +213,38 @@ export const AlWaseetProvider = ({ children }) => {
         const key = String(status.id);
         
         // مطابقة حالات الوسيط مع حالاتنا المحلية - تحسين شامل
-        if (statusText.includes('استلام') && statusText.includes('مندوب')) {
+        if (statusText.includes('فعال') || statusText.includes('active')) {
+          statusMap.set(key, 'pending');
+        } else if (statusText.includes('في انتظار استلام المندوب')) {
+          statusMap.set(key, 'pending');
+        } else if (statusText.includes('استلام') && statusText.includes('مندوب')) {
           statusMap.set(key, 'shipped');
         } else if (statusText.includes('تسليم') || statusText.includes('مسلم') || statusText.includes('delivered')) {
           statusMap.set(key, 'delivered');
         } else if (statusText.includes('ملغي') || statusText.includes('إلغاء') || statusText.includes('cancel')) {
           statusMap.set(key, 'cancelled');
+        } else if (statusText.includes('رفض') || statusText.includes('reject')) {
+          statusMap.set(key, 'cancelled');
         } else if (statusText.includes('راجع') || statusText.includes('مرجع') || statusText.includes('return')) {
           statusMap.set(key, 'returned');
-        } else if (statusText.includes('جاري') || statusText.includes('توصيل') || statusText.includes('shipping')) {
+        } else if (statusText.includes('جاري') || statusText.includes('توصيل') || statusText.includes('في الطريق')) {
           statusMap.set(key, 'delivery');
-        } else if (statusText.includes('مرفوض') || statusText.includes('reject')) {
-          statusMap.set(key, 'cancelled');
         } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('complete')) {
           statusMap.set(key, 'delivered');
         } else if (statusText.includes('محضر') || statusText.includes('processing')) {
           statusMap.set(key, 'pending');
-        } else if (statusText.includes('مؤجل') || statusText.includes('postponed')) {
-          statusMap.set(key, 'pending');
+        } else if (statusText.includes('مؤجل') || statusText.includes('تأجيل') || statusText.includes('postponed')) {
+          // احتفاظ بالحالة للتأجيل - تعيين كـ delivery بدلاً من pending
+          statusMap.set(key, 'delivery');
+        } else if (statusText.includes('لا يمكن الوصول') || statusText.includes('عدم وجود')) {
+          // احتفاظ بالحالة لعدم الوصول - تعيين كـ delivery بدلاً من pending
+          statusMap.set(key, 'delivery');
         } else if (statusText.includes('waiting') || statusText.includes('انتظار')) {
           statusMap.set(key, 'pending');
         } else {
-          // معالجة الحالات المجهولة باستخدام الحالة الصحيحة لشركة التوصيل
-          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key}) - استخدام الحالة الأصلية`);
-          // احتفظ بالحالة الأصلية من شركة التوصيل بدلاً من unknown
-          statusMap.set(key, statusText.toLowerCase().replace(/\s+/g, '_'));
+          // معالجة الحالات المجهولة - تعيين كحالة delivery للحالات غير المعروفة
+          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key}) - تعيين كـ delivery`);
+          statusMap.set(key, 'delivery');
         }
       });
       

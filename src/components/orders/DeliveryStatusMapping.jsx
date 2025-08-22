@@ -17,15 +17,20 @@ import {
 const STATUS_MAPPING = {
   // حالات شركة الوسيط والحالة المقابلة في نظامنا
   deliveryStatuses: {
-    'في انتظار استلام المندوب': { local: 'pending', icon: Clock, color: 'yellow' },
-    'تم الاستلام من قبل المندوب': { local: 'shipped', icon: Package, color: 'blue' },
-    'جاري التوصيل': { local: 'delivery', icon: Truck, color: 'orange' },
-    'تم التسليم': { local: 'delivered', icon: CheckCircle, color: 'green' },
-    'تم التسليم والمصادقة المالية': { local: 'completed', icon: CheckCircle, color: 'green' },
-    'مرجع من العميل': { local: 'returned', icon: RotateCcw, color: 'purple' },
-    'ملغي': { local: 'cancelled', icon: XCircle, color: 'red' },
-    'لا يمكن الوصول للعميل': { local: 'pending', icon: Clock, color: 'yellow' },
-    'مؤجل': { local: 'pending', icon: Clock, color: 'yellow' }
+    'فعال': { local: 'pending', icon: Clock, color: 'yellow', display: 'قيد التجهيز' },
+    'في انتظار استلام المندوب': { local: 'pending', icon: Clock, color: 'yellow', display: 'قيد التجهيز' },
+    'تم الاستلام من قبل المندوب': { local: 'shipped', icon: Package, color: 'blue', display: 'تم الشحن' },
+    'جاري التوصيل': { local: 'delivery', icon: Truck, color: 'orange', display: 'جاري التوصيل' },
+    'في الطريق إلى العميل': { local: 'delivery', icon: Truck, color: 'orange', display: 'في الطريق إلى العميل' },
+    'تم التسليم': { local: 'delivered', icon: CheckCircle, color: 'green', display: 'تم التسليم' },
+    'تم التسليم والمصادقة المالية': { local: 'completed', icon: CheckCircle, color: 'green', display: 'تم التسليم والمصادقة المالية' },
+    'مرجع من العميل': { local: 'returned', icon: RotateCcw, color: 'purple', display: 'مرجع من العميل' },
+    'ملغي': { local: 'cancelled', icon: XCircle, color: 'red', display: 'ملغي' },
+    'رفض الطلب': { local: 'cancelled', icon: XCircle, color: 'red', display: 'رفض الطلب' },
+    'لا يمكن الوصول للعميل': { local: 'pending', icon: Clock, color: 'gray', display: 'لا يمكن الوصول للعميل' },
+    'عدم وجود العميل': { local: 'pending', icon: Clock, color: 'gray', display: 'عدم وجود العميل' },
+    'مؤجل': { local: 'pending', icon: Clock, color: 'gray', display: 'مؤجل' },
+    'تأجيل التوصيل': { local: 'pending', icon: Clock, color: 'gray', display: 'تأجيل التوصيل' }
   },
   
   // الحالات المحلية في نظامنا
@@ -51,7 +56,8 @@ const DeliveryStatusMapping = () => {
       orange: 'bg-orange-100 text-orange-800 border-orange-200',
       green: 'bg-green-100 text-green-800 border-green-200',
       purple: 'bg-purple-100 text-purple-800 border-purple-200',
-      red: 'bg-red-100 text-red-800 border-red-200'
+      red: 'bg-red-100 text-red-800 border-red-200',
+      gray: 'bg-gray-100 text-gray-800 border-gray-200'
     };
     return colors[color] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -92,9 +98,14 @@ const DeliveryStatusMapping = () => {
                 
                 <div className="flex items-center gap-2">
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  <Badge className={getStatusColor(mapping.color)}>
-                    {STATUS_MAPPING.localStatuses[mapping.local]?.name || mapping.local}
-                  </Badge>
+                  <div className="flex flex-col gap-1">
+                    <Badge className={getStatusColor(mapping.color)}>
+                      {STATUS_MAPPING.localStatuses[mapping.local]?.name || mapping.local}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      يظهر: "{mapping.display || waseetStatus}"
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

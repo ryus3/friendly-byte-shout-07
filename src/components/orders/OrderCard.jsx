@@ -44,10 +44,52 @@ const OrderCard = ({
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
+  // دالة تحديد ما إذا كان الطلب قابل للتعديل/الحذف (قبل الاستلام من المندوب)
+  const isBeforePickup = (order) => {
+    // طلبات محلية: فقط pending
+    if (isLocalOrder) {
+      return order.status === 'pending';
+    }
+    
+    // طلبات خارجية: فعال أو في انتظار استلام المندوب
+    const deliveryStatus = order.delivery_status?.toLowerCase() || '';
+    return deliveryStatus.includes('فعال') || 
+           deliveryStatus.includes('في انتظار استلام المندوب') ||
+           deliveryStatus.includes('active');
+  };
+
   // تحديد لون وأيقونة الحالة مع دعم شامل لحالات شركة التوصيل
   const getStatusConfig = (status, deliveryStatus = null, isLocalOrder = true) => {
-    // استخدام delivery_status الحقيقي للطلبات الخارجية
-    const displayStatus = deliveryStatus || status;
+    // للطلبات المحلية - استخدم status المحلي
+    if (isLocalOrder) {
+      const displayStatus = status;
+    } else {
+      // للطلبات الخارجية - استخدم delivery_status مع مطابقة محددة
+      const deliveryStatusLower = deliveryStatus?.toLowerCase() || '';
+      
+      // عرض "قيد التجهيز" فقط لحالة "فعال"
+      if (deliveryStatusLower.includes('فعال')) {
+        return { 
+          label: 'قيد التجهيز', 
+          icon: Package,
+          color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+        };
+      }
+      
+      // عرض "تم الشحن" لحالة "تم الاستلام من قبل المندوب"
+      if (deliveryStatusLower.includes('تم الاستلام من قبل المندوب')) {
+        return { 
+          label: 'تم الشحن', 
+          icon: Truck,
+          color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+        };
+      }
+      
+      // لباقي الحالات الخارجية - اعرضها كما هي من شركة التوصيل
+      return getDeliveryStatusConfig(deliveryStatus);
+    }
+    
+    const displayStatus = isLocalOrder ? status : deliveryStatus;
     
     const configs = {
       'pending': { 
@@ -102,77 +144,77 @@ const OrderCard = ({
       return configs[displayStatus];
     }
     
-    // للحالات الخارجية من شركة التوصيل
-    if (displayStatus && typeof displayStatus === 'string') {
-      const statusLower = displayStatus.toLowerCase();
-      
-      // حالات الفعالية والنشاط
-      if (statusLower.includes('فعال') || statusLower.includes('active')) {
-        return { 
-          label: displayStatus, 
-          icon: Truck, 
-          color: 'bg-gradient-to-r from-emerald-500 to-blue-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات التسليم
-      else if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
-        return { 
-          label: displayStatus, 
-          icon: CheckCircle, 
-          color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات الرفض والإلغاء
-      else if (statusLower.includes('رفض') || statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('reject') || statusLower.includes('cancel')) {
-        return { 
-          label: displayStatus, 
-          icon: XCircle, 
-          color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات قيد التوصيل
-      else if (statusLower.includes('في الطريق') || statusLower.includes('طريق') || statusLower.includes('مندوب') || statusLower.includes('شحن') || statusLower.includes('shipping')) {
-        return { 
-          label: displayStatus, 
-          icon: MapPin, 
-          color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات التأجيل
-      else if (statusLower.includes('تأجيل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
-        return { 
-          label: displayStatus, 
-          icon: Clock, 
-          color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات عدم وجود العميل
-      else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يوجد') || statusLower.includes('غائب') || statusLower.includes('absent') || statusLower.includes('not available')) {
-        return { 
-          label: displayStatus, 
-          icon: AlertTriangle, 
-          color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالات الإرجاع
-      else if (statusLower.includes('راجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
-        return { 
-          label: displayStatus, 
-          icon: RotateCcw, 
-          color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      } 
-      // حالة افتراضية للحالات الخارجية غير المعروفة
-      else {
-        return { 
-          label: displayStatus, 
-          icon: Package, 
-          color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-        };
-      }
+    return configs[displayStatus] || configs['pending'];
+  };
+
+  // دالة منفصلة للحالات الخارجية من شركة التوصيل
+  const getDeliveryStatusConfig = (deliveryStatus) => {
+    if (!deliveryStatus || typeof deliveryStatus !== 'string') {
+      return { 
+        label: 'غير محدد', 
+        icon: Package, 
+        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
     }
+
+    const statusLower = deliveryStatus.toLowerCase();
     
-    return configs['pending'];
+    // حالات التسليم
+    if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
+      return { 
+        label: deliveryStatus, 
+        icon: CheckCircle, 
+        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالات الرفض والإلغاء
+    else if (statusLower.includes('رفض') || statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('reject') || statusLower.includes('cancel')) {
+      return { 
+        label: deliveryStatus, 
+        icon: XCircle, 
+        color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالات قيد التوصيل أو في الطريق
+    else if (statusLower.includes('في الطريق') || statusLower.includes('طريق') || statusLower.includes('جاري التوصيل') || statusLower.includes('shipping')) {
+      return { 
+        label: deliveryStatus, 
+        icon: MapPin, 
+        color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالات التأجيل - عرضها كما هي
+    else if (statusLower.includes('تأجيل') || statusLower.includes('مؤجل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
+      return { 
+        label: deliveryStatus, 
+        icon: Clock, 
+        color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالات عدم وجود العميل - عرضها كما هي
+    else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يمكن الوصول') || statusLower.includes('غائب') || statusLower.includes('absent')) {
+      return { 
+        label: deliveryStatus, 
+        icon: AlertTriangle, 
+        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالات الإرجاع
+    else if (statusLower.includes('راجع') || statusLower.includes('مرجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
+      return { 
+        label: deliveryStatus, 
+        icon: RotateCcw, 
+        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    } 
+    // حالة افتراضية - عرض النص كما هو
+    else {
+      return { 
+        label: deliveryStatus, 
+        icon: Package, 
+        color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+      };
+    }
   };
 
   // تحديد نوع الطلب بناءً على tracking_number
@@ -186,9 +228,9 @@ const OrderCard = ({
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
-  // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قيد التجهيز لجميع الموظفين
-  const canEdit = order.status === 'pending';
-  const canDelete = order.status === 'pending'; // بساطة - أي طلب قيد التجهيز قابل للحذف
+  // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قبل استلام المندوب فقط
+  const canEdit = isBeforePickup(order);
+  const canDelete = isBeforePickup(order);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
