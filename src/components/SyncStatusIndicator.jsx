@@ -126,8 +126,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          strokeLinecap="round"
-          className="text-muted-foreground/50"
+          className="text-muted-foreground/20"
         />
         
         {/* Progress circle - only shown during countdown */}
