@@ -31,7 +31,6 @@ import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 import DeliveryIntegrationStatus from '@/components/orders/DeliveryIntegrationStatus';
-import DeliveryStatusMapping from '@/components/orders/DeliveryStatusMapping';
 
 
 const OrdersPage = () => {
@@ -609,7 +608,9 @@ const OrdersPage = () => {
           </TabsContent>
 
           <TabsContent value="status-mapping">
-            <DeliveryStatusMapping />
+            <div className="p-4 text-center text-muted-foreground">
+              قريباً - خريطة حالات التوصيل
+            </div>
           </TabsContent>
         </Tabs>
 
