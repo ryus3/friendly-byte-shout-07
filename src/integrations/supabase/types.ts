@@ -1961,6 +1961,7 @@ export type Database = {
           profit_amount: number | null
           size_id: string | null
           sku: string | null
+          sold_quantity: number
           updated_at: string
         }
         Insert: {
@@ -1977,6 +1978,7 @@ export type Database = {
           profit_amount?: number | null
           size_id?: string | null
           sku?: string | null
+          sold_quantity?: number
           updated_at?: string
         }
         Update: {
@@ -1993,6 +1995,7 @@ export type Database = {
           profit_amount?: number | null
           size_id?: string | null
           sku?: string | null
+          sold_quantity?: number
           updated_at?: string
         }
         Relationships: [
