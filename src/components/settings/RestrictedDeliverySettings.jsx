@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Shield } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
-import DeliverySettingsDialog from './DeliverySettingsDialog';
+import DeliveryManagementDialog from './DeliveryManagementDialog';
 
 const RestrictedDeliverySettings = () => {
   const { canAccessDeliveryPartners, isAdmin, user } = usePermissions();
@@ -57,7 +57,7 @@ const RestrictedDeliverySettings = () => {
         </CardContent>
       </Card>
 
-      <DeliverySettingsDialog 
+      <DeliveryManagementDialog 
         open={isOpen} 
         onOpenChange={setIsOpen} 
       />

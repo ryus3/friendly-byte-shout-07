@@ -30,7 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
-import DeliveryIntegrationStatus from '@/components/orders/DeliveryIntegrationStatus';
+
 
 
 const OrdersPage = () => {
@@ -581,10 +581,7 @@ const OrdersPage = () => {
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
-            {/* حالة الربط مع شركة التوصيل */}
-            <DeliveryIntegrationStatus />
-            
-            <OrdersToolbar 
+            <OrdersToolbar
               filters={filters} 
               onFiltersChange={handleToolbarFilterChange}
               viewMode={viewMode}

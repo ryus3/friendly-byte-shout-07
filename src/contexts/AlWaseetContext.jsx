@@ -223,8 +223,14 @@ export const AlWaseetProvider = ({ children }) => {
           statusMap.set(key, 'returned');
         } else if (statusText.includes('جاري') || statusText.includes('توصيل')) {
           statusMap.set(key, 'delivery');
+        } else if (statusText.includes('مرفوض') || statusText.includes('Rejected') || statusText.includes('rejected')) {
+          statusMap.set(key, 'cancelled');
+        } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('Complete')) {
+          statusMap.set(key, 'delivered');
         } else {
-          statusMap.set(key, 'pending');
+          // Log unknown status for debugging
+          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key})`);
+          statusMap.set(key, 'unknown');
         }
       });
       
@@ -1056,58 +1062,31 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
 
-  // Auto-sync with comprehensive correction after functions are defined
+  // Disabled auto-sync to reduce excessive notifications
+  // Auto-sync will only run when manually triggered or on initial load
   useEffect(() => {
     if (!isLoggedIn || !token || activePartner === 'local') return;
 
-    let intervalId;
-    let initialSyncTimeout;
-
-    const performAutoSync = async () => {
-      if (!autoSyncEnabled) return;
-      
-      try {
-        setIsSyncing(true);
-        
-        // تنفيذ التصحيح الجذري مرة واحدة فقط
-        if (!correctionComplete) {
-          console.log('🛠️ تنفيذ التصحيح الجذري للطلبات الحالية...');
-          try {
-            const correctionResult = await comprehensiveOrderCorrection();
-            console.log('✅ نتيجة التصحيح:', correctionResult);
-          } catch (correctionError) {
-            console.error('❌ خطأ في التصحيح الجذري:', correctionError);
-          }
-        }
-        
-        // مزامنة سريعة صامتة
+    // Only run initial correction once when logging in
+    const runInitialCorrection = async () => {
+      if (!correctionComplete) {
+        console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
         try {
-          const syncResult = await fastSyncPendingOrders(false);
-          setLastSyncAt(new Date());
-          console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
-        } catch (syncError) {
-          console.error('❌ خطأ في المزامنة السريعة:', syncError);
+          const correctionResult = await comprehensiveOrderCorrection();
+          console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
+        } catch (correctionError) {
+          console.error('❌ خطأ في التصحيح الأولي:', correctionError);
         }
-      } catch (error) {
-        console.error('❌ خطأ في المزامنة التلقائية:', error);
-      } finally {
-        setIsSyncing(false);
       }
     };
 
-    // مزامنة أولية بعد 3 ثوان من تسجيل الدخول
-    initialSyncTimeout = setTimeout(performAutoSync, 3000);
-
-    // مزامنة دورية كل 10 دقائق
-    if (autoSyncEnabled) {
-      intervalId = setInterval(performAutoSync, syncInterval);
-    }
+    // Run initial correction after 2 seconds
+    const initialTimeout = setTimeout(runInitialCorrection, 2000);
 
     return () => {
-      if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
-      if (intervalId) clearInterval(intervalId);
+      if (initialTimeout) clearTimeout(initialTimeout);
     };
-  }, [isLoggedIn, token, activePartner, autoSyncEnabled, syncInterval, correctionComplete, comprehensiveOrderCorrection, fastSyncPendingOrders]);
+  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection]);
 
   const value = {
     isLoggedIn,
