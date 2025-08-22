@@ -147,18 +147,6 @@ const OrderListItem = ({
           onClick={() => onViewOrder?.(order)}
         >
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onSelect?.(order.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="shrink-0"
-              />
-              <div className="font-bold text-base text-foreground">
-                {order.qr_id || order.order_number}
-              </div>
-            </div>
-            
             {/* Status Badge */}
             {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
               <Button
@@ -187,6 +175,18 @@ const OrderListItem = ({
                 <span className="text-xs">{statusConfig.label}</span>
               </div>
             )}
+            
+            <div className="flex items-center gap-3">
+              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
+                {order.qr_id || order.order_number}
+              </div>
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect?.(order.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+            </div>
           </div>
 
           {/* Customer Info */}
@@ -334,11 +334,36 @@ const OrderListItem = ({
           className="shrink-0"
         />
 
-        {/* QR ID */}
-        <div className="min-w-[80px] flex-shrink-0">
-          <div className="font-bold text-sm text-foreground">
-            {order.qr_id || order.order_number}
-          </div>
+        {/* Status */}
+        <div className="min-w-[120px] flex-shrink-0">
+          {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                // تحديد الحالة التالية
+                const nextStatus = {
+                  'pending': 'shipped',
+                  'shipped': 'delivery', 
+                  'delivery': 'delivered',
+                  'delivered': 'completed',
+                  'returned': 'returned_in_stock'
+                }[order.status];
+                if (nextStatus) handleStatusChange(nextStatus);
+              }}
+              className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
+              title="انقر لتحديث الحالة"
+            >
+              <StatusIcon className="h-3 w-3" />
+              <span className="ml-1">{statusConfig.label}</span>
+            </Button>
+          ) : (
+            <div className={`flex items-center gap-1 ${statusConfig.color}`}>
+              <StatusIcon className="h-3 w-3" />
+              <span>{statusConfig.label}</span>
+            </div>
+          )}
         </div>
 
         {/* Customer Info & Products */}
@@ -406,36 +431,11 @@ const OrderListItem = ({
           )}
         </div>
 
-        {/* Status - قابل للنقر للطلبات المحلية */}
-        <div className="min-w-[120px] flex-shrink-0">
-          {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                // تحديد الحالة التالية
-                const nextStatus = {
-                  'pending': 'shipped',
-                  'shipped': 'delivery', 
-                  'delivery': 'delivered',
-                  'delivered': 'completed',
-                  'returned': 'returned_in_stock'
-                }[order.status];
-                if (nextStatus) handleStatusChange(nextStatus);
-              }}
-              className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
-              title="انقر لتحديث الحالة"
-            >
-              <StatusIcon className="h-3 w-3" />
-              <span className="ml-1">{statusConfig.label}</span>
-            </Button>
-          ) : (
-            <div className={`flex items-center gap-1 ${statusConfig.color}`}>
-              <StatusIcon className="h-3 w-3" />
-              <span>{statusConfig.label}</span>
-            </div>
-          )}
+        {/* QR ID */}
+        <div className="min-w-[80px] flex-shrink-0 text-left" dir="ltr">
+          <div className="font-bold text-sm text-foreground tabular-nums">
+            {order.qr_id || order.order_number}
+          </div>
         </div>
 
         {/* Actions - مضغوطة كما في الكارت */}

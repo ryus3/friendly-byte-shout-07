@@ -254,19 +254,6 @@ const OrderCard = ({
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
-                />
-                <div>
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                </div>
-              </div>
-              
               {/* Status Badge عالمي - قابل للنقر للطلبات المحلية */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
@@ -296,6 +283,19 @@ const OrderCard = ({
                   <span className="font-bold">{statusConfig.label}</span>
                 </div>
               )}
+              
+              <div className="flex items-center gap-3">
+                <div className="text-left" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onSelect?.(order.id)}
+                  className="shrink-0 scale-125 border-2"
+                />
+              </div>
               
               {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
