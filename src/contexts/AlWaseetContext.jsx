@@ -78,59 +78,7 @@ export const AlWaseetProvider = ({ children }) => {
     fetchToken();
   }, [fetchToken]);
 
-  // مزامنة تلقائية ذكية مع تصحيح الطلبات الحالية
-  useEffect(() => {
-    if (!isLoggedIn || !token || activePartner === 'local') return;
-
-    let intervalId;
-    let initialSyncTimeout;
-
-    const performAutoSync = async () => {
-      if (!autoSyncEnabled) return;
-      
-      try {
-        setIsSyncing(true);
-        
-        // تنفيذ التصحيح الجذري مرة واحدة فقط
-        if (!correctionComplete) {
-          console.log('🛠️ تنفيذ التصحيح الجذري للطلبات الحالية...');
-          // استدعاء الدالة المحلية مباشرة
-          try {
-            const correctionResult = await comprehensiveOrderCorrection();
-            console.log('✅ نتيجة التصحيح:', correctionResult);
-          } catch (correctionError) {
-            console.error('❌ خطأ في التصحيح الجذري:', correctionError);
-          }
-        }
-        
-        // مزامنة سريعة صامتة
-        try {
-          const syncResult = await fastSyncPendingOrders(false);
-          setLastSyncAt(new Date());
-          console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
-        } catch (syncError) {
-          console.error('❌ خطأ في المزامنة السريعة:', syncError);
-        }
-      } catch (error) {
-        console.error('❌ خطأ في المزامنة التلقائية:', error);
-      } finally {
-        setIsSyncing(false);
-      }
-    };
-
-    // مزامنة أولية بعد 3 ثوان من تسجيل الدخول
-    initialSyncTimeout = setTimeout(performAutoSync, 3000);
-
-    // مزامنة دورية كل 10 دقائق
-    if (autoSyncEnabled) {
-      intervalId = setInterval(performAutoSync, syncInterval);
-    }
-
-    return () => {
-      if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isLoggedIn, token, activePartner, autoSyncEnabled, syncInterval, correctionComplete, orderStatusesMap, loadOrderStatuses, setCorrectionComplete]);
+  // Auto-sync will be set up after functions are defined
 
   const login = useCallback(async (username, password, partner = 'alwaseet') => {
     if (partner === 'local') {
@@ -1107,6 +1055,59 @@ export const AlWaseetProvider = ({ children }) => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
+
+  // Auto-sync with comprehensive correction after functions are defined
+  useEffect(() => {
+    if (!isLoggedIn || !token || activePartner === 'local') return;
+
+    let intervalId;
+    let initialSyncTimeout;
+
+    const performAutoSync = async () => {
+      if (!autoSyncEnabled) return;
+      
+      try {
+        setIsSyncing(true);
+        
+        // تنفيذ التصحيح الجذري مرة واحدة فقط
+        if (!correctionComplete) {
+          console.log('🛠️ تنفيذ التصحيح الجذري للطلبات الحالية...');
+          try {
+            const correctionResult = await comprehensiveOrderCorrection();
+            console.log('✅ نتيجة التصحيح:', correctionResult);
+          } catch (correctionError) {
+            console.error('❌ خطأ في التصحيح الجذري:', correctionError);
+          }
+        }
+        
+        // مزامنة سريعة صامتة
+        try {
+          const syncResult = await fastSyncPendingOrders(false);
+          setLastSyncAt(new Date());
+          console.log(`🔄 مزامنة تلقائية مكتملة: ${syncResult.updated} تحديث، ${syncResult.checked} فحص`);
+        } catch (syncError) {
+          console.error('❌ خطأ في المزامنة السريعة:', syncError);
+        }
+      } catch (error) {
+        console.error('❌ خطأ في المزامنة التلقائية:', error);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    // مزامنة أولية بعد 3 ثوان من تسجيل الدخول
+    initialSyncTimeout = setTimeout(performAutoSync, 3000);
+
+    // مزامنة دورية كل 10 دقائق
+    if (autoSyncEnabled) {
+      intervalId = setInterval(performAutoSync, syncInterval);
+    }
+
+    return () => {
+      if (initialSyncTimeout) clearTimeout(initialSyncTimeout);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isLoggedIn, token, activePartner, autoSyncEnabled, syncInterval, correctionComplete, comprehensiveOrderCorrection, fastSyncPendingOrders]);
 
   const value = {
     isLoggedIn,
