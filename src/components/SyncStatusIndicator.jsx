@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RotateCcw } from 'lucide-react';
 
 const SyncStatusIndicator = ({ className, debugMode = false }) => {
   const { 
@@ -13,6 +14,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
     isLoggedIn,
     activePartner 
   } = useAlWaseet();
+  
+  const { theme } = useTheme();
 
   // Debug mode for testing - shows component always
   const shouldShow = debugMode || (isLoggedIn && activePartner === 'alwaseet');
@@ -63,19 +66,27 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
     return 'منذ أكثر من يوم';
   };
 
-  // SVG Circle properties
-  const radius = 18;
+  // SVG Circle properties  
+  const radius = 14;
   const circumference = 2 * Math.PI * radius;
   const progress = currentCountdown > 0 ? (15 - currentCountdown) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
+  // Get number color based on theme
+  const getNumberColor = () => {
+    if (theme === 'dark') return 'text-white';
+    if (theme === 'light') return 'text-sky-500';
+    // System theme - check actual applied theme
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return isDark ? 'text-white' : 'text-sky-500';
+  };
+
   return (
     <div 
       className={cn(
-        "relative flex items-center justify-center w-14 h-14 rounded-full transition-all duration-500",
-        "shadow-xl border-3 border-primary/40 backdrop-blur-md bg-gradient-to-br from-sky-400/20 to-purple-600/20",
-        currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-110 hover:shadow-2xl hover:border-primary/60",
-        !currentIsSyncing && currentCountdown === 0 && "animate-pulse",
+        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
+        "bg-background border border-border hover:bg-accent",
+        currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
       onClick={handleClick}
@@ -92,45 +103,37 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       }
     >
       {/* Background circle */}
-      <svg className="absolute w-14 h-14 transform -rotate-90" viewBox="0 0 56 56">
+      <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
         <defs>
           <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
             <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
             <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
           </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-            <feMerge> 
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
         </defs>
         {/* Background track */}
         <circle
-          cx="28"
-          cy="28"
+          cx="20"
+          cy="20"
           r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="3"
-          className="text-muted-foreground/15"
+          strokeWidth="2"
+          className="text-muted-foreground/20"
         />
         {/* Progress circle */}
         {currentCountdown > 0 && (
           <circle
-            cx="28"
-            cy="28"
+            cx="20"
+            cy="20"
             r={radius}
             fill="none"
             stroke="url(#syncGradient)"
-            strokeWidth="4"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
             className="transition-all duration-1000 ease-linear"
-            filter="url(#glow)"
           />
         )}
       </svg>
@@ -138,19 +141,16 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
         {currentIsSyncing ? (
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-sky-400 to-purple-600 opacity-20 animate-ping"></div>
-            <Loader2 className="w-6 h-6 animate-spin text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text" />
-          </div>
+          <Loader2 className="w-4 h-4 animate-spin text-primary" />
         ) : currentCountdown > 0 ? (
-          <span className="text-2xl font-bold text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text drop-shadow-2xl animate-pulse">
+          <span className={cn("text-sm font-medium", getNumberColor())}>
             {currentCountdown}
           </span>
         ) : (
-          <RefreshCw className={cn(
-            "w-6 h-6 transition-all duration-500 text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text",
+          <RotateCcw className={cn(
+            "w-4 h-4 transition-all duration-500 text-muted-foreground",
             isSpinning && "animate-[spin_0.8s_ease-in-out]",
-            !currentIsSyncing && "hover:scale-110 hover:rotate-180"
+            !currentIsSyncing && "hover:text-primary"
           )} />
         )}
       </div>
