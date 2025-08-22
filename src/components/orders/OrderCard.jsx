@@ -312,31 +312,31 @@ const OrderCard = ({
                 
                 {/* Date & Delivery Info - يمين */}
                 <div className="space-y-1 text-right">
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
+                  <div className="flex items-center gap-2 justify-end flex-row-reverse">
                     <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
+                  <div className="flex items-center gap-2 justify-end flex-row-reverse">
                     <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
                    {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (
                      <div className="flex items-center gap-2 justify-end">
                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                         <User className="h-3 w-3 inline-block ml-1" />
+                         <User className="h-3 w-3 inline-block mr-1" />
                          {order.created_by_name}
                        </span>
                      </div>
                    )}
-                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm`}>
-                    <Building className="h-3 w-3 ml-1" />
+                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm flex items-center gap-1 flex-row-reverse`}>
+                    <Building className="h-3 w-3" />
                     {order.delivery_partner}
                   </Badge>
                 </div>
                 
                 {/* Action Icons - منتصف */}
-                <div className="flex items-center justify-center gap-1">
+                <div className="flex items-center justify-center gap-1 flex-row-reverse">
                   
                   {/* View */}
                   <Button
