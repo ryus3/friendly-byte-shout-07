@@ -599,6 +599,16 @@ const OrdersPage = () => {
           <TabsContent value="invoices">
             <AlWaseetInvoicesTab />
           </TabsContent>
+
+          <TabsContent value="integration">
+            <div className="space-y-6">
+              <DeliveryIntegrationStatus />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="status-mapping">
+            <DeliveryStatusMapping />
+          </TabsContent>
         </Tabs>
 
         <OrderDetailsDialog
