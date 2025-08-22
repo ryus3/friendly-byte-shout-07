@@ -3525,6 +3525,10 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
       }
+      repair_alwaseet_order_mapping: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       reserve_stock_for_order: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json

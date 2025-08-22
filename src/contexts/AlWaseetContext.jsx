@@ -573,6 +573,22 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🔧 تم إصلاح معرف الوسيط للطلب ${localOrder.tracking_number}: ${waseetOrder.id}`);
         }
 
+        // إصلاح رقم التتبع إذا كان مساوياً لمعرف الوسيط (نمط الخطأ)
+        const waseetQr = String(waseetOrder.qr_id || waseetOrder.tracking_number || '').trim();
+        const localTn = String(localOrder.tracking_number || '').trim();
+        const localDid = String(localOrder.delivery_partner_order_id || '').trim();
+        if (localTn && localDid && localTn === localDid && waseetQr && waseetQr !== localTn) {
+          await supabase
+            .from('orders')
+            .update({ 
+              tracking_number: waseetQr,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', localOrder.id);
+          repaired++;
+          console.log(`🔧 تم إصلاح رقم التتبع للطلب ${localOrder.id}: ${localTn} → ${waseetQr}`);
+        }
+        
         // 5) معالجة التحديثات
         const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.status?.id;
         const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
