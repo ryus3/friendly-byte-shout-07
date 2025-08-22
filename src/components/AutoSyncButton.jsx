@@ -103,10 +103,12 @@ const AutoSyncButton = ({ className }) => {
           // Use the ref to avoid dependency issues
           if (syncFunctionRef.current) {
             syncFunctionRef.current().then(() => {
-              enterStandbyMode();
+              setIsActive(false);
+              setIsInStandbyMode(true);
             }).catch((error) => {
               console.error('خطأ في المزامنة التلقائية:', error);
-              enterStandbyMode();
+              setIsActive(false);
+              setIsInStandbyMode(true);
             });
           }
           return 0;
@@ -116,7 +118,7 @@ const AutoSyncButton = ({ className }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, activePartner, isLoggedIn, enterStandbyMode]);
+  }, [isActive, activePartner, isLoggedIn]);
 
   // Don't show for local delivery
   if (activePartner === 'local' || !isLoggedIn) {
