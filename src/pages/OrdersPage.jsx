@@ -377,8 +377,9 @@ const OrdersPage = () => {
         phone: order.customer_phone
       };
       const matchesSearch = (
-        (order.tracking_number || order.trackingnumber || order.qr_id || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (customerInfo.name || order.customer_name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.trackingnumber || order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.qr_id || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (order.order_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
       );

@@ -33,7 +33,6 @@ import AppearanceDialog from '@/components/settings/AppearanceDialog';
 
 import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
-import RestrictedDeliverySettings from '@/components/settings/RestrictedDeliverySettings';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -320,9 +319,6 @@ const SettingsPage = () => {
                 </div>
               </ModernCard>
             )}
-
-            {/* إدارة شركات التوصيل المتقدمة */}
-            <RestrictedDeliverySettings />
 
             {/* بوت التليغرام الذكي - للجميع مع رمز شخصي */}
             <ModernCard

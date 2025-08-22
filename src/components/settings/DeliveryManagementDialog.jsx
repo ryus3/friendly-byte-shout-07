@@ -15,7 +15,8 @@ import {
   Settings, 
   Bell,
   BellOff,
-  RefreshCcw
+  Sync,
+  SyncOff
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
@@ -172,9 +173,9 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                 </div>
                 <div className="flex items-center gap-2">
                   {autoSyncEnabled ? (
-                    <RefreshCw className="w-4 h-4 text-green-600" />
+                    <Sync className="w-4 h-4 text-green-600" />
                   ) : (
-                    <RefreshCcw className="w-4 h-4 text-muted-foreground" />
+                    <SyncOff className="w-4 h-4 text-muted-foreground" />
                   )}
                   <Switch
                     checked={autoSyncEnabled}

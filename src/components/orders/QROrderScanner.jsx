@@ -24,7 +24,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
     try {
       setError('');
       
-      // البحث في الطلبات العادية - البحث بـ tracking_number أولاً
+      // البحث في الطلبات العادية
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .select(`
@@ -39,7 +39,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
             )
           )
         `)
-        .or(`tracking_number.eq.${qrId},qr_id.eq.${qrId},order_number.eq.${qrId}`)
+        .eq('qr_id', qrId)
         .single();
 
       if (orderError && orderError.code !== 'PGRST116') {
