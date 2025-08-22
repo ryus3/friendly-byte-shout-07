@@ -155,7 +155,7 @@ const OrderListItem = ({
                 className="shrink-0"
               />
               <div className="font-bold text-base text-foreground text-right tabular-nums" dir="ltr">
-                {order.qr_id || order.order_number}
+                {order.tracking_number || order.qr_id || order.order_number}
               </div>
             </div>
             

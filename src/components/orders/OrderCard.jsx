@@ -287,7 +287,7 @@ const OrderCard = ({
               <div className="flex items-center gap-3">
                 <div className="text-right" dir="ltr">
                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
+                     {order.tracking_number || order.qr_id || order.order_number}
                    </h3>
                 </div>
                 <Checkbox
