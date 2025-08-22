@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { 
   Truck, 
@@ -15,8 +16,7 @@ import {
   Settings, 
   Bell,
   BellOff,
-  Sync,
-  SyncOff
+  RefreshCcw
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
@@ -29,15 +29,18 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     autoSyncEnabled,
     setAutoSyncEnabled,
     syncInterval,
+    setSyncInterval,
     fastSyncPendingOrders,
     syncAndApplyOrders,
     comprehensiveOrderCorrection,
+    syncOrderByTracking,
     lastSyncAt,
     isSyncing
   } = useAlWaseet();
   
   const { toast } = useToast();
   const [isManualSyncing, setIsManualSyncing] = React.useState(false);
+  const [singleOrderTracking, setSingleOrderTracking] = React.useState('');
 
   const handleManualSync = async (type = 'fast') => {
     if (isManualSyncing || isSyncing) return;
@@ -81,9 +84,55 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     toast({
       title: enabled ? "تم تفعيل المزامنة التلقائية" : "تم إيقاف المزامنة التلقائية",
       description: enabled 
-        ? "ستتم مزامنة الطلبات تلقائياً كل 10 دقائق" 
+        ? `ستتم مزامنة الطلبات تلقائياً كل ${getSyncIntervalText()}` 
         : "ستحتاج لتشغيل المزامنة يدوياً",
     });
+  };
+
+  const getSyncIntervalText = () => {
+    const minutes = syncInterval / 60000;
+    if (minutes < 60) return `${minutes} دقيقة`;
+    const hours = minutes / 60;
+    return `${hours} ساعة`;
+  };
+
+  const handleSyncIntervalChange = (newInterval) => {
+    setSyncInterval(newInterval);
+    toast({
+      title: "تم تحديث فترة المزامنة",
+      description: `سيتم المزامنة كل ${getSyncIntervalText()}`,
+    });
+  };
+
+  const handleSingleOrderSync = async () => {
+    if (!singleOrderTracking.trim() || isManualSyncing || isSyncing) return;
+    
+    setIsManualSyncing(true);
+    try {
+      const result = await syncOrderByTracking(singleOrderTracking.trim());
+      if (result && result.success) {
+        toast({
+          title: "تم تحديث الطلب بنجاح",
+          description: `الطلب ${singleOrderTracking}: ${result.deliveryStatus || 'تم التحديث'}`,
+          variant: "success"
+        });
+        setSingleOrderTracking('');
+      } else {
+        toast({
+          title: "خطأ في تحديث الطلب",
+          description: result?.error || "الطلب غير موجود أو حدث خطأ",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطأ في المزامنة",
+        description: "حدث خطأ أثناء تحديث الطلب",
+        variant: "destructive"
+      });
+    } finally {
+      setIsManualSyncing(false);
+    }
   };
 
   if (activePartner === 'local' || !isLoggedIn) {
@@ -168,19 +217,48 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">المزامنة التلقائية</Label>
                   <p className="text-xs text-muted-foreground">
-                    تشغيل المزامنة التلقائية كل 10 دقائق
+                    تشغيل المزامنة التلقائية كل {getSyncIntervalText()}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {autoSyncEnabled ? (
-                    <Sync className="w-4 h-4 text-green-600" />
+                    <RefreshCw className="w-4 h-4 text-green-600" />
                   ) : (
-                    <SyncOff className="w-4 h-4 text-muted-foreground" />
+                    <RefreshCcw className="w-4 h-4 text-muted-foreground" />
                   )}
                   <Switch
                     checked={autoSyncEnabled}
                     onCheckedChange={handleAutoSyncToggle}
                   />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* إعدادات فترة المزامنة */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">فترة المزامنة التلقائية</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { value: 600000, label: '10 د' },
+                    { value: 900000, label: '15 د' },
+                    { value: 1800000, label: '30 د' },
+                    { value: 2700000, label: '45 د' },
+                    { value: 3600000, label: '1 س' },
+                    { value: 7200000, label: '2 س' },
+                    { value: 10800000, label: '3 س' },
+                    { value: 0, label: 'يدوي' }
+                  ].map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={syncInterval === option.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleSyncIntervalChange(option.value)}
+                      className="text-xs h-8"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
                 </div>
               </div>
 
@@ -238,12 +316,35 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                   {(isManualSyncing || isSyncing) && <RefreshCw className="w-4 h-4 ml-2 animate-spin" />}
                   تصحيح وربط
                   <span className="text-xs text-muted-foreground mr-auto">
-                    (ربط الطلبات الحالية)
-                  </span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                     (ربط الطلبات الحالية)
+                   </span>
+                 </Button>
+               </div>
+               
+               <Separator />
+               
+               {/* مزامنة طلب واحد */}
+               <div className="space-y-2">
+                 <Label className="text-sm font-medium">مزامنة طلب محدد</Label>
+                 <div className="flex gap-2">
+                   <Input
+                     placeholder="رقم التتبع (مثال: 98716812)"
+                     value={singleOrderTracking}
+                     onChange={(e) => setSingleOrderTracking(e.target.value)}
+                     className="flex-1"
+                   />
+                   <Button
+                     onClick={handleSingleOrderSync}
+                     disabled={!singleOrderTracking.trim() || isManualSyncing || isSyncing}
+                     size="sm"
+                   >
+                     {(isManualSyncing || isSyncing) && <RefreshCw className="w-4 h-4 ml-1 animate-spin" />}
+                     تحديث
+                   </Button>
+                 </div>
+               </div>
+             </CardContent>
+           </Card>
 
           {/* معلومات إضافية */}
           <Card className="bg-blue-50 border-blue-200">

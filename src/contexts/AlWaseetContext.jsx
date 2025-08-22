@@ -212,25 +212,32 @@ export const AlWaseetProvider = ({ children }) => {
         const statusText = status.status?.toLowerCase() || '';
         const key = String(status.id);
         
-        // مطابقة حالات الوسيط مع حالاتنا المحلية
+        // مطابقة حالات الوسيط مع حالاتنا المحلية - تحسين شامل
         if (statusText.includes('استلام') && statusText.includes('مندوب')) {
           statusMap.set(key, 'shipped');
-        } else if (statusText.includes('تسليم') || statusText.includes('مسلم')) {
+        } else if (statusText.includes('تسليم') || statusText.includes('مسلم') || statusText.includes('delivered')) {
           statusMap.set(key, 'delivered');
-        } else if (statusText.includes('ملغي') || statusText.includes('إلغاء')) {
+        } else if (statusText.includes('ملغي') || statusText.includes('إلغاء') || statusText.includes('cancel')) {
           statusMap.set(key, 'cancelled');
-        } else if (statusText.includes('راجع') || statusText.includes('مرجع')) {
+        } else if (statusText.includes('راجع') || statusText.includes('مرجع') || statusText.includes('return')) {
           statusMap.set(key, 'returned');
-        } else if (statusText.includes('جاري') || statusText.includes('توصيل')) {
+        } else if (statusText.includes('جاري') || statusText.includes('توصيل') || statusText.includes('shipping')) {
           statusMap.set(key, 'delivery');
-        } else if (statusText.includes('مرفوض') || statusText.includes('Rejected') || statusText.includes('rejected')) {
+        } else if (statusText.includes('مرفوض') || statusText.includes('reject')) {
           statusMap.set(key, 'cancelled');
-        } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('Complete')) {
+        } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('complete')) {
           statusMap.set(key, 'delivered');
+        } else if (statusText.includes('محضر') || statusText.includes('processing')) {
+          statusMap.set(key, 'pending');
+        } else if (statusText.includes('مؤجل') || statusText.includes('postponed')) {
+          statusMap.set(key, 'pending');
+        } else if (statusText.includes('waiting') || statusText.includes('انتظار')) {
+          statusMap.set(key, 'pending');
         } else {
-          // Log unknown status for debugging
-          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key})`);
-          statusMap.set(key, 'unknown');
+          // معالجة الحالات المجهولة باستخدام الحالة الصحيحة لشركة التوصيل
+          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key}) - استخدام الحالة الأصلية`);
+          // احتفظ بالحالة الأصلية من شركة التوصيل بدلاً من unknown
+          statusMap.set(key, statusText.toLowerCase().replace(/\s+/g, '_'));
         }
       });
       

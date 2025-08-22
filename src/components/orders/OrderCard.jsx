@@ -92,7 +92,56 @@ const OrderCard = ({
         color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       }
     };
-    return configs[status] || configs['pending'];
+    
+    // If status is in our predefined configs, use it
+    if (configs[status]) {
+      return configs[status];
+    }
+    
+    // Handle delivery company statuses dynamically
+    if (status && typeof status === 'string') {
+      const statusLower = status.toLowerCase();
+      if (statusLower.includes('تسليم') || statusLower.includes('مسلم')) {
+        return { 
+          label: status, 
+          icon: CheckCircle, 
+          color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } else if (statusLower.includes('ملغي') || statusLower.includes('إلغاء')) {
+        return { 
+          label: status, 
+          icon: XCircle, 
+          color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } else if (statusLower.includes('راجع')) {
+        return { 
+          label: status, 
+          icon: RotateCcw, 
+          color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } else if (statusLower.includes('مندوب') || statusLower.includes('شحن')) {
+        return { 
+          label: status, 
+          icon: Truck, 
+          color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } else if (statusLower.includes('انتظار') || statusLower.includes('محضر')) {
+        return { 
+          label: status, 
+          icon: Package, 
+          color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      } else {
+        // Custom delivery company status - use neutral gray styling
+        return { 
+          label: status, 
+          icon: Package, 
+          color: 'bg-gradient-to-r from-gray-500 to-gray-600 text-white border border-gray-400 shadow-lg shadow-gray-500/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        };
+      }
+    }
+    
+    return configs['pending'];
   };
 
   const statusConfig = getStatusConfig(order.status);
