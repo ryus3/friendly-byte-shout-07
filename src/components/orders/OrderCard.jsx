@@ -254,7 +254,20 @@ const OrderCard = ({
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
-              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يمين */}
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onSelect?.(order.id)}
+                  className="shrink-0 scale-125 border-2"
+                />
+                <div>
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
+              </div>
+              
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
@@ -284,19 +297,6 @@ const OrderCard = ({
                 </div>
               )}
               
-              <div className="flex items-center gap-3">
-                <div className="text-right" dir="ltr">
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                </div>
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
-                />
-              </div>
-              
               {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
                 <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
@@ -310,29 +310,20 @@ const OrderCard = ({
             <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
               <div className="grid grid-cols-3 gap-3 items-center">
                 
-                {/* Date & Delivery Info - يمين */}
-                <div className="space-y-1 text-right">
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
-                    <Calendar className="h-4 w-4 text-primary" />
+                {/* Customer Info - يسار */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-end">
-                    <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
-                    <Clock className="h-3 w-3 text-muted-foreground" />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{order.customer_phone}</span>
                   </div>
-                   {/* اسم الموظف صاحب الطلب */}
-                   {order.created_by_name && (
-                     <div className="flex items-center gap-2 justify-end">
-                       <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                         <User className="h-3 w-3 inline-block ml-1" />
-                         {order.created_by_name}
-                       </span>
-                     </div>
-                   )}
-                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm`}>
-                    <Building className="h-3 w-3 ml-1" />
-                    {order.delivery_partner}
-                  </Badge>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="truncate">{order.customer_address}</span>
+                  </div>
                 </div>
                 
                 {/* Action Icons - منتصف */}
@@ -387,22 +378,29 @@ const OrderCard = ({
                   )}
                 </div>
                 
-                {/* Customer Info - يسار */}
+                {/* Date & Delivery Info - يمين */}
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
+                    <Calendar className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{order.customer_phone}</span>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
+                    <Clock className="h-3 w-3 text-muted-foreground" />
                   </div>
-                  {order.customer_city && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Building className="h-3 w-3" />
-                      <span>{order.customer_city}</span>
-                    </div>
-                  )}
+                   {/* اسم الموظف صاحب الطلب */}
+                   {order.created_by_name && (
+                     <div className="flex items-center gap-2 justify-end">
+                       <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                         <User className="h-3 w-3 inline-block ml-1" />
+                         {order.created_by_name}
+                       </span>
+                     </div>
+                   )}
+                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit ml-auto shadow-sm`}>
+                    <Building className="h-3 w-3 ml-1" />
+                    {order.delivery_partner}
+                  </Badge>
                 </div>
               </div>
             </div>

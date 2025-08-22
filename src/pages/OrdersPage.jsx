@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Helmet } from 'react-helmet-async';
@@ -42,7 +43,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all', archiveSubStatus: 'all' });
-  const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid');
+  const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid'); // حفظ وضع العرض
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
     details: false,
@@ -55,8 +56,11 @@ const OrdersPage = () => {
   });
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
+  // رمز الموظف لاستخدامه في فلترة طلبات الذكاء الاصطناعي
   const [userEmployeeCode, setUserEmployeeCode] = useState(null);
+  // فلتر اختيار موظف محدد للمدير
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
+  // Active tab state
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
   // Scroll to top when page loads
@@ -121,6 +125,7 @@ const OrdersPage = () => {
             };
             createNotification();
           }
+          // لا حاجة لـ refetchProducts - SuperProvider يتولى التحديث الفوري
         }
       )
       .subscribe();
@@ -128,7 +133,9 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasPermission]);
+  }, [hasPermission]); // إزالة refetchProducts من dependencies
+
+  // إزالة المستمعين - SuperProvider يتولى كل شيء عبر real-time فقط
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
   const deletedOrdersSet = useRef(new Set());
@@ -400,20 +407,45 @@ const OrdersPage = () => {
 
   const handleDeleteSelected = useCallback(async (ordersToDelete) => {
     if(!hasPermission('delete_local_orders')) {
-      toast({ title: 'خطأ في الصلاحيات', description: 'لا تمتلك صلاحية حذف الطلبات.', variant: 'destructive' });
-      return;
+        return; // Simply return without showing toast
     }
     
-    const ordersToDeleteFiltered = ordersToDelete.filter(id => 
-      !deletedOrdersSet.current.has(id) && 
-      orders.some(o => o.id === id)
-    );
+    // إذا تم تمرير طلب واحد (object)، تحويله لـ array
+    let ordersArray;
+    if (Array.isArray(ordersToDelete)) {
+      ordersArray = ordersToDelete;
+    } else if (ordersToDelete && typeof ordersToDelete === 'object' && ordersToDelete.id) {
+      // تم تمرير طلب واحد
+      ordersArray = [ordersToDelete.id];
+    } else {
+      // تم تمرير ID مباشرة
+      ordersArray = [ordersToDelete];
+    }
     
+    // فلترة الطلبات المحلية أو الطلبات قيد التجهيز (pending)
+    const ordersToDeleteFiltered = ordersArray.filter(orderId => {
+        const order = orders.find(o => o.id === orderId);
+        return order && (order.delivery_partner === 'محلي' || order.status === 'pending');
+    });
+
+    if (ordersToDeleteFiltered.length < ordersArray.length) {
+        toast({
+            title: 'تنبيه',
+            description: 'يمكن حذف الطلبات المحلية أو قيد التجهيز فقط. تم تجاهل باقي الطلبات.',
+            variant: 'default'
+        });
+    }
+
     if (ordersToDeleteFiltered.length === 0) {
-      console.log('⚠️ لا توجد طلبات صالحة للحذف');
-      toast({ title: 'لا توجد طلبات صالحة للحذف', variant: 'destructive' });
-      return;
+        toast({
+            title: 'خطأ',
+            description: 'لا توجد طلبات قابلة للحذف.',
+            variant: 'destructive'
+        });
+        return;
     }
+
+    console.log('🗑️ بدء حذف طلبات فوري:', ordersToDeleteFiltered);
     
     // Optimistic UI فوري
     setSelectedOrders([]);
@@ -530,76 +562,64 @@ const OrdersPage = () => {
              )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="orders">الطلبات</TabsTrigger>
-            <TabsTrigger value="invoices">فواتير الوسيط</TabsTrigger>
-          </TabsList>
+        <OrdersToolbar 
+          filters={filters} 
+          onFiltersChange={handleToolbarFilterChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onOrderFound={(foundOrder) => {
+            setSelectedOrder(foundOrder);
+            setDialogs(prev => ({ ...prev, details: true }));
+          }}
+          onUpdateOrderStatus={handleUpdateOrderStatus}
+          employeeOptions={employeeOptions}
+          selectedEmployeeId={selectedEmployeeId}
+          onEmployeeChange={setSelectedEmployeeId}
+        />
+        
+        {selectedOrders.length > 0 && hasPermission('manage_orders') && (
+          <Card className="p-3 sm:p-4 bg-card rounded-lg border">
+            <CardContent className="p-0 flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
+              <p className="font-medium text-sm">
+                {selectedOrders.length} طلبات محددة
+              </p>
+              <div className="flex gap-2 w-full sm:w-auto">
+                {filters.status !== 'archived' && (
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
+                    <Archive className="w-4 h-4 ml-2" />
+                    أرشفة
+                  </Button>
+                )}
+                {hasPermission('delete_local_orders') && (
+                    <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
+                      <Trash2 className="w-4 h-4 ml-2" />
+                      حذف
+                    </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="orders" className="space-y-6">
-            <OrdersToolbar 
-              filters={filters} 
-              onFiltersChange={handleToolbarFilterChange}
-              viewMode={viewMode}
-              onViewModeChange={handleViewModeChange}
-              onOrderFound={(foundOrder) => {
-                setSelectedOrder(foundOrder);
-                setDialogs(prev => ({ ...prev, details: true }));
-              }}
-              onUpdateOrderStatus={handleUpdateOrderStatus}
-              employeeOptions={employeeOptions}
-              selectedEmployeeId={selectedEmployeeId}
-              onEmployeeChange={setSelectedEmployeeId}
+
+        <OrderList
+          orders={filteredOrders}
+          isLoading={inventoryLoading}
+          onViewOrder={handleViewOrder}
+          onEditOrder={handleEditOrder}
+          onUpdateStatus={handleUpdateOrderStatus}
+          onReceiveReturn={handleReceiveReturn}
+          selectedOrders={selectedOrders}
+          setSelectedOrders={setSelectedOrders}
+          onDeleteOrder={handleDeleteSelected}
+          viewMode={viewMode}
+          additionalButtons={(order) => (
+            <ReceiveInvoiceButton 
+              order={order} 
+              onSuccess={() => refetchProducts()} 
             />
-            
-            {selectedOrders.length > 0 && hasPermission('manage_orders') && (
-              <Card className="p-3 sm:p-4 bg-card rounded-lg border">
-                <CardContent className="p-0 flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
-                  <p className="font-medium text-sm">
-                    {selectedOrders.length} طلبات محددة
-                  </p>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {filters.status !== 'archived' && (
-                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
-                        <Archive className="w-4 h-4 ml-2" />
-                        أرشفة
-                      </Button>
-                    )}
-                    {hasPermission('delete_local_orders') && (
-                        <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
-                          <Trash2 className="w-4 h-4 ml-2" />
-                          حذف
-                        </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <OrderList
-              orders={filteredOrders}
-              isLoading={inventoryLoading}
-              onViewOrder={handleViewOrder}
-              onEditOrder={handleEditOrder}
-              onUpdateStatus={handleUpdateOrderStatus}
-              onReceiveReturn={handleReceiveReturn}
-              selectedOrders={selectedOrders}
-              setSelectedOrders={setSelectedOrders}
-              onDeleteOrder={handleDeleteSelected}
-              viewMode={viewMode}
-              additionalButtons={(order) => (
-                <ReceiveInvoiceButton 
-                  order={order} 
-                  onSuccess={() => refetchProducts()} 
-                />
-              )}
-            />
-          </TabsContent>
-
-          <TabsContent value="invoices">
-            <AlWaseetInvoicesTab />
-          </TabsContent>
-        </Tabs>
+          )}
+        />
 
         <OrderDetailsDialog
           order={selectedOrder}
