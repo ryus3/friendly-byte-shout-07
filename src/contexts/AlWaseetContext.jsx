@@ -239,7 +239,7 @@ export const AlWaseetProvider = ({ children }) => {
     return chunks;
   }, []);
 
-  // ربط معرفات الوسيط للطلبات الموجودة لدينا عبر الـ tracking_number أو رقم الطلب
+  // ربط معرفات الوسيط للطلبات الموجودة لدينا عبر الـ tracking_number
   const linkRemoteIdsForExistingOrders = useCallback(async () => {
     if (!token) return { linked: 0 };
     try {
@@ -247,10 +247,10 @@ export const AlWaseetProvider = ({ children }) => {
       // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
-        .select('id, tracking_number, order_number, delivery_partner')
+        .select('id, tracking_number')
+        .eq('delivery_partner', 'alwaseet')
         .is('delivery_partner_order_id', null)
-        .or('delivery_partner.is.null,delivery_partner.eq.alwaseet')
-        .limit(1000);
+        .limit(500);
       if (localErr) {
         console.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
         return { linked: 0 };
@@ -260,48 +260,30 @@ export const AlWaseetProvider = ({ children }) => {
         return { linked: 0 };
       }
 
-      // 2) اجلب جميع طلبات الوسيط ثم ابنِ خرائط سريعة
+      // 2) اجلب جميع طلبات الوسيط ثم ابنِ خريطة: qr_id -> waseet_id
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط لعملية الربط`);
-      const byQr = new Map(); // qr_id -> waseet order
-      const byId = new Map(); // id -> waseet order
-      for (const o of (waseetOrders || [])) {
+      const byQr = new Map();
+      for (const o of waseetOrders) {
         const qr = o.qr_id || o.tracking_number;
-        if (qr !== undefined && qr !== null) byQr.set(String(qr).trim(), o);
-        if (o.id !== undefined && o.id !== null) byId.set(String(o.id).trim(), o);
+        if (qr) byQr.set(String(qr), String(o.id));
       }
 
-      // 3) حدّث الطلبات المحلية التي يمكن ربطها بالتجربة على مفاتيح متعددة
+      // 3) حدّث الطلبات المحلية التي يمكن ربطها
       let linked = 0;
       for (const lo of localOrders) {
-        const keysToTry = [lo?.tracking_number, lo?.order_number]
-          .filter(Boolean)
-          .map(k => String(k).trim());
-
-        let matched = null;
-        for (const key of keysToTry) {
-          matched = byQr.get(key) || byId.get(key);
-          if (matched) break;
-        }
-
-        if (matched) {
-          const updates = {
-            delivery_partner_order_id: String(matched.id),
-            delivery_partner: 'alwaseet',
-            updated_at: new Date().toISOString(),
-          };
-          // إن لم يكن لدينا tracking_number خزّنه بالقيمة الصحيحة (qr_id)
-          if (!lo.tracking_number && matched.qr_id) {
-            updates.tracking_number = String(matched.qr_id);
-          }
-
+        const remoteId = byQr.get(String(lo.tracking_number));
+        if (remoteId) {
           const { error: upErr } = await supabase
             .from('orders')
-            .update(updates)
+            .update({
+              delivery_partner_order_id: remoteId,
+              updated_at: new Date().toISOString(),
+            })
             .eq('id', lo.id);
           if (!upErr) {
             linked++;
-            console.log(`🔗 تم ربط الطلب ${lo.id} بمعرف الوسيط ${matched.id} (keys: ${keysToTry.join(' | ')})`);
+            console.log(`🔗 تم ربط الطلب ${lo.id} بمعرف الوسيط ${remoteId}`);
           } else {
             console.warn('⚠️ فشل تحديث ربط معرف الوسيط للطلب:', lo.id, upErr);
           }
@@ -332,8 +314,6 @@ export const AlWaseetProvider = ({ children }) => {
       if (statusMap.size === 0) {
         statusMap = await loadOrderStatuses();
       }
-      // اربط الطلبات الحالية أولاً لضمان وجود معرف الوسيط
-      await linkRemoteIdsForExistingOrders();
 
       // 1) اجلب الطلبات المعلقة لدينا مع معرف الوسيط
       const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
@@ -482,27 +462,12 @@ export const AlWaseetProvider = ({ children }) => {
           })();
         
         try {
-          // البحث عن الطلب في قاعدة البيانات باستخدام tracking_number أو رقم الطلب كبديل
-          let existingOrder = null;
-          try {
-            const { data: o1 } = await supabase
-              .from('orders')
-              .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
-              .eq('tracking_number', trackingNumber)
-              .single();
-            existingOrder = o1 || null;
-          } catch (_) {}
-
-          if (!existingOrder) {
-            try {
-              const { data: o2 } = await supabase
-                .from('orders')
-                .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
-                .eq('order_number', trackingNumber)
-                .single();
-              existingOrder = o2 || null;
-            } catch (_) {}
-          }
+          // البحث عن الطلب في قاعدة البيانات باستخدام tracking_number
+          const { data: existingOrder } = await supabase
+            .from('orders')
+            .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
+            .eq('tracking_number', trackingNumber)
+            .single();
         
           if (existingOrder) {
             // تحضير التحديثات
