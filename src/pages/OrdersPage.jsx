@@ -30,6 +30,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
+import DeliveryIntegrationStatus from '@/components/orders/DeliveryIntegrationStatus';
+import DeliveryStatusMapping from '@/components/orders/DeliveryStatusMapping';
 
 
 const OrdersPage = () => {
