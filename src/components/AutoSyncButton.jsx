@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCcw, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { cn } from '@/lib/utils';
@@ -74,102 +74,106 @@ const AutoSyncButton = ({ className }) => {
 
   // Don't show for local delivery
   if (activePartner === 'local' || !isLoggedIn) {
-    return (
-      <Button 
-        variant="ghost" 
-        size="icon" 
-        className={cn("text-muted-foreground/50 cursor-not-allowed", className)}
-        disabled
-        title="غير متاح للتوصيل المحلي"
-      >
-        <RefreshCw className="w-5 h-5" />
-      </Button>
-    );
+    return null;
   }
 
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
-      onClick={handleManualSync}
-      disabled={isSyncing}
-      className={cn(
-        "relative text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25",
-        className
-      )}
-      title={isActive ? `مزامنة شاملة تلقائية خلال ${countdown} ثانية - جميع حالات الطلبات` : "اضغط للمزامنة الشاملة الفورية - جميع حالات الطلبات"}
-    >
-      {isActive && !isSyncing ? (
-        // Premium countdown circle with gradient
-        <div className="relative w-9 h-9 flex items-center justify-center">
-          {/* Outer glow */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/30 to-primary-variant/30 blur-sm"></div>
-          
-          {/* Background circle */}
-          <svg className="absolute w-8 h-8 -rotate-90" viewBox="0 0 100 100">
-            <circle
-              cx="50"
-              cy="50"
-              r="42"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              opacity="0.15"
-            />
-          </svg>
-          
-          {/* Progress circle with gradient */}
-          <svg className="absolute w-8 h-8 -rotate-90" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" />
-                <stop offset="100%" stopColor="hsl(var(--primary-variant))" />
-              </linearGradient>
-            </defs>
-            <circle
-              cx="50"
-              cy="50"
-              r="42"
-              fill="none"
-              stroke="url(#progressGradient)"
-              strokeWidth="3"
-              strokeDasharray="264"
-              strokeDashoffset={264 - ((15 - countdown) / 15) * 264}
-              className="transition-all duration-1000 ease-out drop-shadow-lg"
-              strokeLinecap="round"
-              style={{
-                filter: 'drop-shadow(0 0 4px hsl(var(--primary) / 0.5))'
-              }}
-            />
-          </svg>
-          
-          {/* Inner background */}
-          <div className="absolute inset-2 rounded-full bg-background/90 backdrop-blur-sm border border-primary/20"></div>
-          
-          {/* Countdown number with premium styling */}
-          <span className="relative text-xs font-bold bg-gradient-to-br from-primary to-primary-variant bg-clip-text text-transparent z-10">
-            {countdown}
-          </span>
+    <div className={cn("relative", className)}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        onClick={handleManualSync}
+        disabled={isSyncing}
+        className={cn(
+          "relative p-0 h-12 w-12 rounded-full border-0 bg-transparent overflow-hidden group transition-all duration-500",
+          "hover:scale-110 hover:shadow-2xl",
+          !isSyncing && "hover:shadow-blue-500/40"
+        )}
+        title={isActive ? `مزامنة شاملة تلقائية خلال ${countdown} ثانية - جميع حالات الطلبات` : "اضغط للمزامنة الشاملة الفورية - جميع حالات الطلبات"}
+      >
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500 via-purple-600 to-emerald-500 opacity-90 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        {/* Animated border gradient */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400 via-purple-500 to-emerald-400 blur-sm opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+        
+        {/* Inner content container */}
+        <div className="relative w-full h-full rounded-full bg-background/20 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+          {isActive && !isSyncing ? (
+            // Countdown mode with circular progress
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Background circle */}
+              <svg className="absolute w-10 h-10 -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeWidth="4"
+                />
+              </svg>
+              
+              {/* Progress circle */}
+              <svg className="absolute w-10 h-10 -rotate-90" viewBox="0 0 100 100">
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="42"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.9)"
+                  strokeWidth="4"
+                  strokeDasharray="264"
+                  strokeDashoffset={264 - ((15 - countdown) / 15) * 264}
+                  className="transition-all duration-1000 ease-out"
+                  strokeLinecap="round"
+                  style={{
+                    filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.6))'
+                  }}
+                />
+              </svg>
+              
+              {/* Countdown number */}
+              <span className="relative text-sm font-bold text-white z-10 drop-shadow-lg">
+                {countdown}
+              </span>
+            </div>
+          ) : (
+            // Manual sync mode with double arrow icon
+            <div className="relative">
+              {isSyncing ? (
+                // Syncing animation
+                <div className="relative">
+                  <RefreshCcw 
+                    className="w-6 h-6 text-white animate-spin drop-shadow-lg" 
+                    style={{
+                      filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.8))'
+                    }}
+                  />
+                  {/* Rotating particles */}
+                  <div className="absolute inset-0 animate-pulse">
+                    <div className="absolute top-0 left-1/2 w-1 h-1 bg-white rounded-full transform -translate-x-1/2 animate-ping"></div>
+                    <div className="absolute bottom-0 left-1/2 w-1 h-1 bg-white rounded-full transform -translate-x-1/2 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                    <div className="absolute left-0 top-1/2 w-1 h-1 bg-white rounded-full transform -translate-y-1/2 animate-ping" style={{ animationDelay: '0.25s' }}></div>
+                    <div className="absolute right-0 top-1/2 w-1 h-1 bg-white rounded-full transform -translate-y-1/2 animate-ping" style={{ animationDelay: '0.75s' }}></div>
+                  </div>
+                </div>
+              ) : (
+                // Manual sync icon with glow effect
+                <ArrowRightLeft 
+                  className="w-6 h-6 text-white drop-shadow-lg group-hover:scale-110 transition-transform duration-300" 
+                  style={{
+                    filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.7))'
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
-      ) : (
-        // Premium sync icon with effects
-        <div className="relative">
-          <div className={cn(
-            "absolute inset-0 rounded-full transition-all duration-300",
-            isSyncing && "bg-gradient-to-r from-primary/20 to-primary-variant/20 animate-pulse"
-          )}></div>
-          <RefreshCw 
-            className={cn(
-              "w-5 h-5 relative z-10 transition-all duration-300",
-              isSyncing && "animate-spin text-primary drop-shadow-lg"
-            )} 
-            style={{
-              filter: isSyncing ? 'drop-shadow(0 0 6px hsl(var(--primary) / 0.6))' : 'none'
-            }}
-          />
-        </div>
-      )}
-    </Button>
+        
+        {/* Hover glow effect */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/50 via-purple-500/50 to-emerald-400/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md"></div>
+      </Button>
+    </div>
   );
 };
 

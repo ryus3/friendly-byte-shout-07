@@ -401,15 +401,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // فقط اظهار إشعار عند وجود تحديثات فعلية
-      if (updated > 0) {
-        toast({ 
-          title: '✅ تم التحديث', 
-          description: `تم تحديث ${updated} طلب`,
-          className: "z-[9999] text-right",
-          duration: 2000
-        });
-      }
+      // Silent fast sync - no toast notification
       return { updated, checked };
     } catch (e) {
       console.error('❌ خطأ في المزامنة السريعة:', e);
@@ -521,11 +513,7 @@ export const AlWaseetProvider = ({ children }) => {
         ? `تم تحديث ${updatedCount} طلب من أصل ${waseetOrders.length}`
         : `تم فحص ${waseetOrders.length} طلب - لا توجد تحديثات مطلوبة`;
       
-      toast({ 
-        title: "مزامنة مكتملة", 
-        description: message,
-        variant: "success"
-      });
+      // Silent sync - no toast notification
       
       return waseetOrders;
     } catch (error) {

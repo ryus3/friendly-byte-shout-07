@@ -362,19 +362,6 @@ const OrdersPage = () => {
     }
   }, [profitData, hasPermission]);
   
-  const handleSync = async () => {
-    setSyncing(true);
-    await syncAndApplyOrders();
-    await refetchProducts();
-    setSyncing(false);
-  }
-
-  const handleFastSync = async () => {
-    setSyncing(true);
-    await fastSyncPendingOrders();
-    await refetchProducts();
-    setSyncing(false);
-  }
 
   const handleViewOrder = useCallback((order) => {
     setSelectedOrder(order);
@@ -492,16 +479,6 @@ const OrdersPage = () => {
                     رجوع
                 </Button>
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              <Button variant="outline" onClick={handleSync} disabled={syncing}>
-                  {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
-                  مزامنة
-              </Button>
-              <Button variant="outline" onClick={handleFastSync} disabled={syncing}>
-                  {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
-                  مزامنة سريعة
-              </Button>
             </div>
         </div>
         
