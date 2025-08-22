@@ -126,8 +126,8 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                 transition={{ delay: 0.1 }}
               >
                 <div className="flex-1">
-                  <div className="flex items-baseline gap-2 text-2xl sm:text-3xl font-bold text-foreground break-words" dir="ltr">
-                    <span className="text-foreground tabular-nums">{formattedValue}</span>
+                  <div className="flex items-baseline gap-2 text-2xl sm:text-3xl font-bold text-foreground break-words">
+                    <span>{formattedValue}</span>
                     {currencyUnit && (
                       <span className="text-sm text-muted-foreground font-normal">{currencyUnit}</span>
                     )}

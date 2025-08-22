@@ -253,7 +253,7 @@ const OrderCard = ({
           <div className="space-y-3">
             
             {/* Header العالمي */}
-            <div className="flex items-start justify-between" dir="rtl">
+            <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <Checkbox
                   checked={isSelected}
@@ -307,7 +307,7 @@ const OrderCard = ({
             </div>
 
             {/* Customer Info مع الأيقونات في المنتصف */}
-            <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative" dir="rtl">
+            <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
               <div className="grid grid-cols-3 gap-3 items-center">
                 
                 {/* Customer Info - يسار */}
@@ -379,14 +379,14 @@ const OrderCard = ({
                 </div>
                 
                 {/* Date & Delivery Info - يمين */}
-                <div className="space-y-1 text-right">
-                  <div className="flex items-center gap-2 justify-start">
-                    <Calendar className="h-4 w-4 text-primary" />
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2 justify-end">
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
+                    <Calendar className="h-4 w-4 text-primary" />
                   </div>
-                  <div className="flex items-center gap-2 justify-start">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
+                  <div className="flex items-center gap-2 justify-end">
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
+                    <Clock className="h-3 w-3 text-muted-foreground" />
                   </div>
                    {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (

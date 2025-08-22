@@ -146,7 +146,7 @@ const OrderListItem = ({
           className={isSelected ? 'border-primary shadow-md shadow-primary/20 bg-primary/5' : ''}
           onClick={() => onViewOrder?.(order)}
         >
-          <div className="flex items-center justify-between mb-3" dir="rtl">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <Checkbox
                 checked={isSelected}
@@ -391,8 +391,8 @@ const OrderListItem = ({
         </div>
 
         {/* Amount */}
-        <div className="min-w-[120px] flex-shrink-0 text-right" dir="ltr">
-          <div className="font-bold text-sm text-primary tabular-nums">
+        <div className="min-w-[120px] flex-shrink-0 text-left">
+          <div className="font-bold text-sm text-primary">
             {order.final_amount?.toLocaleString()} د.ع
           </div>
           {/* عرض ربح الموظف وحالة التسوية */}
