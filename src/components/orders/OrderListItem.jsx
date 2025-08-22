@@ -147,7 +147,19 @@ const OrderListItem = ({
           onClick={() => onViewOrder?.(order)}
         >
           <div className="flex items-center justify-between mb-3">
-            {/* Status Badge - يسار */}
+            <div className="flex items-center gap-3">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect?.(order.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+              <div className="font-bold text-base text-foreground text-right tabular-nums" dir="ltr">
+                {order.qr_id || order.order_number}
+              </div>
+            </div>
+            
+            {/* Status Badge - يمين */}
             {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
               <Button
                 variant="ghost"
@@ -175,18 +187,6 @@ const OrderListItem = ({
                 <span className="text-xs">{statusConfig.label}</span>
               </div>
             )}
-            
-            <div className="flex items-center gap-3">
-              <Checkbox
-                checked={isSelected}
-                onCheckedChange={() => onSelect?.(order.id)}
-                onClick={(e) => e.stopPropagation()}
-                className="shrink-0"
-              />
-              <div className="font-bold text-base text-foreground text-left tabular-nums" dir="ltr">
-                {order.qr_id || order.order_number}
-              </div>
-            </div>
           </div>
 
           {/* Customer Info */}
@@ -257,25 +257,10 @@ const OrderListItem = ({
             </Badge>
           </MobileTableCell>
 
-          {/* Actions - ترتيب من اليمين لليسار: حذف، تتبع، تعديل، معاينة */}
+          {/* Actions - ترتيب من اليسار لليمين: معاينة، تعديل، تتبع، حذف */}
           <MobileTableCell actions>
-            <div className="flex gap-2 flex-row-reverse">
-              {/* Delete */}
-              {canDelete && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteDialog(true);
-                  }}
-                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-
-              {/* Track */}
+            <div className="flex gap-2">
+              {/* View */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -283,9 +268,9 @@ const OrderListItem = ({
                   e.stopPropagation();
                   onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
+                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
               >
-                <ExternalLink className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
 
               {/* Edit */}
@@ -303,7 +288,7 @@ const OrderListItem = ({
                 </Button>
               )}
 
-              {/* View */}
+              {/* Track */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -311,10 +296,25 @@ const OrderListItem = ({
                   e.stopPropagation();
                   onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
+                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
               >
-                <Eye className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
               </Button>
+
+              {/* Delete */}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </MobileTableCell>
         </MobileTableRow>

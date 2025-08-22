@@ -254,7 +254,7 @@ const OrderCard = ({
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
-              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يسار */}
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يمين */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
@@ -285,16 +285,16 @@ const OrderCard = ({
               )}
               
               <div className="flex items-center gap-3">
+                <div className="text-right" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
                   className="shrink-0 scale-125 border-2"
                 />
-                <div className="text-left" dir="ltr">
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                </div>
               </div>
               
               {/* مؤشر دفع المستحقات */}
@@ -336,30 +336,17 @@ const OrderCard = ({
                 </div>
                 
                 {/* Action Icons - منتصف */}
-                <div className="flex items-center justify-center gap-1 flex-row-reverse">
+                <div className="flex items-center justify-center gap-1">
                   
-                  {/* Delete - للطلبات قيد التجهيز فقط */}
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
-                      title="حذف"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-
-                  {/* Track */}
+                  {/* View */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
-                    title="تتبع"
+                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
+                    title="معاينة"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
 
                    {/* Edit */}
@@ -375,16 +362,29 @@ const OrderCard = ({
                     </Button>
                   )}
 
-                  {/* View */}
+                  {/* Track */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
-                    title="معاينة"
+                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
+                    title="تتبع"
                   >
-                    <Eye className="h-3.5 w-3.5" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
+
+                  {/* Delete - للطلبات قيد التجهيز فقط */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="حذف"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Customer Info - يسار */}
