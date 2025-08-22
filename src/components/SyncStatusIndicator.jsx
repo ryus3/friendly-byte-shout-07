@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCw } from 'lucide-react';
 
-const SyncStatusIndicator = ({ className }) => {
+const SyncStatusIndicator = ({ className, debugMode = false }) => {
   const { 
     isSyncing, 
     syncCountdown, 
@@ -14,15 +14,36 @@ const SyncStatusIndicator = ({ className }) => {
     activePartner 
   } = useAlWaseet();
 
-  // Only show for Al-Waseet when logged in
-  if (!isLoggedIn || activePartner !== 'alwaseet') {
+  // Debug mode for testing - shows component always
+  const shouldShow = debugMode || (isLoggedIn && activePartner === 'alwaseet');
+  
+  if (!shouldShow) {
     return null;
   }
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [debugCountdown, setDebugCountdown] = useState(debugMode ? 15 : 0);
+
+  // Debug mode countdown for testing
+  useEffect(() => {
+    if (debugMode && debugCountdown > 0) {
+      const timer = setTimeout(() => {
+        setDebugCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [debugMode, debugCountdown]);
+
+  // Use debug countdown if in debug mode, otherwise use real countdown
+  const currentCountdown = debugMode ? debugCountdown : syncCountdown;
+  const currentIsSyncing = debugMode ? false : isSyncing;
 
   const handleClick = () => {
-    if (!isSyncing && syncMode === 'standby') {
+    if (debugMode) {
+      setIsSpinning(true);
+      setDebugCountdown(15); // Reset countdown in debug mode
+      setTimeout(() => setIsSpinning(false), 1000);
+    } else if (!currentIsSyncing && syncMode === 'standby') {
       setIsSpinning(true);
       fastSyncPendingOrders();
       setTimeout(() => setIsSpinning(false), 1000);
@@ -43,78 +64,93 @@ const SyncStatusIndicator = ({ className }) => {
   };
 
   // SVG Circle properties
-  const radius = 14;
+  const radius = 18;
   const circumference = 2 * Math.PI * radius;
-  const progress = syncCountdown > 0 ? (15 - syncCountdown) / 15 : 0;
+  const progress = currentCountdown > 0 ? (15 - currentCountdown) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   return (
     <div 
       className={cn(
-        "relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300",
-        "shadow-lg border-2 border-primary/30 backdrop-blur-sm bg-white/10",
-        isSyncing ? "cursor-not-allowed" : "cursor-pointer hover:scale-105 hover:shadow-xl",
-        syncMode === 'standby' && !isSyncing && "animate-pulse",
+        "relative flex items-center justify-center w-14 h-14 rounded-full transition-all duration-500",
+        "shadow-xl border-3 border-primary/40 backdrop-blur-md bg-gradient-to-br from-sky-400/20 to-purple-600/20",
+        currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-110 hover:shadow-2xl hover:border-primary/60",
+        !currentIsSyncing && currentCountdown === 0 && "animate-pulse",
         className
       )}
       onClick={handleClick}
       title={
-        isSyncing 
-          ? "جاري المزامنة..." 
-          : syncCountdown > 0 
-            ? `المزامنة التالية خلال ${syncCountdown} ثانية`
-            : lastSyncAt 
-              ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
-              : "اضغط للمزامنة السريعة"
+        debugMode 
+          ? `وضع الاختبار - العد: ${currentCountdown}`
+          : currentIsSyncing 
+            ? "جاري المزامنة..." 
+            : currentCountdown > 0 
+              ? `المزامنة التالية خلال ${currentCountdown} ثانية`
+              : lastSyncAt 
+                ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
+                : "اضغط للمزامنة السريعة"
       }
     >
       {/* Background circle */}
-      <svg className="absolute w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+      <svg className="absolute w-14 h-14 transform -rotate-90" viewBox="0 0 56 56">
         <defs>
           <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="hsl(199, 89%, 48%)" />
-            <stop offset="100%" stopColor="hsl(280, 87%, 47%)" />
+            <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
+            <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+            <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
           </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
         </defs>
+        {/* Background track */}
         <circle
-          cx="24"
-          cy="24"
+          cx="28"
+          cy="28"
           r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
-          className="text-muted-foreground/20"
+          strokeWidth="3"
+          className="text-muted-foreground/15"
         />
         {/* Progress circle */}
-        {syncCountdown > 0 && (
+        {currentCountdown > 0 && (
           <circle
-            cx="24"
-            cy="24"
+            cx="28"
+            cy="28"
             r={radius}
             fill="none"
             stroke="url(#syncGradient)"
-            strokeWidth="3"
+            strokeWidth="4"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear drop-shadow-lg"
+            className="transition-all duration-1000 ease-linear"
+            filter="url(#glow)"
           />
         )}
       </svg>
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
-        {isSyncing ? (
-          <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-        ) : syncCountdown > 0 ? (
-          <span className="text-lg font-bold text-white drop-shadow-lg animate-pulse">
-            {syncCountdown}
+        {currentIsSyncing ? (
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-sky-400 to-purple-600 opacity-20 animate-ping"></div>
+            <Loader2 className="w-6 h-6 animate-spin text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text" />
+          </div>
+        ) : currentCountdown > 0 ? (
+          <span className="text-2xl font-bold text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text drop-shadow-2xl animate-pulse">
+            {currentCountdown}
           </span>
         ) : (
           <RefreshCw className={cn(
-            "w-5 h-5 transition-all duration-300",
-            isSpinning && "animate-spin",
-            syncMode === 'standby' ? "text-muted-foreground hover:text-primary" : "text-primary"
+            "w-6 h-6 transition-all duration-500 text-transparent bg-gradient-to-r from-sky-400 to-purple-600 bg-clip-text",
+            isSpinning && "animate-[spin_0.8s_ease-in-out]",
+            !currentIsSyncing && "hover:scale-110 hover:rotate-180"
           )} />
         )}
       </div>
