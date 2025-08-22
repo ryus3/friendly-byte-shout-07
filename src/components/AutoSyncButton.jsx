@@ -85,12 +85,12 @@ const AutoSyncButton = ({ className }) => {
       disabled={isSyncing}
       className={cn(
         "relative h-8 w-8 rounded-full",
-        "bg-white/80 backdrop-blur-sm",
-        "border border-slate-200",
+        "bg-card/80 backdrop-blur-sm",
+        "border border-border",
         "shadow-sm",
         "transition-all duration-200 ease-out",
-        "hover:bg-slate-50 hover:border-slate-300",
-        "text-slate-600",
+        "hover:bg-accent hover:border-border",
+        "text-muted-foreground",
         className
       )}
       title={isActive ? `مزامنة تلقائية خلال ${countdown} ثانية` : "اضغط للمزامنة الفورية"}
@@ -105,7 +105,7 @@ const AutoSyncButton = ({ className }) => {
               cy="16"
               r="14"
               fill="none"
-              stroke="rgb(203 213 225)"
+              stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
             {/* حلقة التقدم */}
@@ -114,7 +114,7 @@ const AutoSyncButton = ({ className }) => {
               cy="16"
               r="14"
               fill="none"
-              stroke="rgb(59 130 246)"
+              stroke="hsl(var(--primary))"
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeDasharray={`${(15 - countdown) * (87.96 / 15)}, 87.96`}
@@ -126,7 +126,7 @@ const AutoSyncButton = ({ className }) => {
       
       {isActive && !isSyncing ? (
         // العداد التنازلي
-        <div className="relative flex items-center justify-center text-xs font-medium">
+        <div className="relative flex items-center justify-center text-sm font-semibold">
           {countdown}
         </div>
       ) : (
