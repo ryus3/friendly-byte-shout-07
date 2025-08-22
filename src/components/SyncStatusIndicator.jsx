@@ -125,8 +125,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
-          className="text-muted-foreground/20"
+          strokeWidth="1.5"
+          className="text-muted-foreground/15"
         />
         
         {/* Progress circle - only shown during countdown */}
@@ -137,11 +137,11 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             r={radius}
             fill="none"
             stroke="url(#syncGradient)"
-            strokeWidth="2"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear"
+            className="transition-all duration-1000 ease-linear drop-shadow-sm"
           />
         )}
       </svg>
