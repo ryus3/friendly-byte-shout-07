@@ -154,12 +154,12 @@ const OrderListItem = ({
                 onClick={(e) => e.stopPropagation()}
                 className="shrink-0"
               />
-              <div className="font-bold text-base text-foreground">
+              <div className="font-bold text-base text-foreground text-right tabular-nums" dir="ltr">
                 {order.qr_id || order.order_number}
               </div>
             </div>
             
-            {/* Status Badge */}
+            {/* Status Badge - يمين */}
             {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
               <Button
                 variant="ghost"
@@ -257,59 +257,65 @@ const OrderListItem = ({
             </Badge>
           </MobileTableCell>
 
-          {/* Actions */}
+          {/* Actions - ترتيب من اليسار لليمين: معاينة، تعديل، تتبع، حذف */}
           <MobileTableCell actions>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewOrder?.(order);
-              }}
-              className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-
-            {canEdit && hasPermission('edit_orders') && (
+            <div className="flex gap-2">
+              {/* View */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEditOrder?.(order);
+                  onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+                className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
               >
-                <Edit2 className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
-            )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewOrder?.(order);
-              }}
-              className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
+              {/* Edit */}
+              {canEdit && hasPermission('edit_orders') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditOrder?.(order);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              )}
 
-            {canDelete && (
+              {/* Track */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowDeleteDialog(true);
+                  onViewOrder?.(order);
                 }}
-                className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
               >
-                <Trash2 className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4" />
               </Button>
-            )}
+
+              {/* Delete */}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </MobileTableCell>
         </MobileTableRow>
       </motion.div>
@@ -334,11 +340,36 @@ const OrderListItem = ({
           className="shrink-0"
         />
 
-        {/* QR ID */}
-        <div className="min-w-[80px] flex-shrink-0">
-          <div className="font-bold text-sm text-foreground">
-            {order.qr_id || order.order_number}
-          </div>
+        {/* Status */}
+        <div className="min-w-[120px] flex-shrink-0">
+          {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                // تحديد الحالة التالية
+                const nextStatus = {
+                  'pending': 'shipped',
+                  'shipped': 'delivery', 
+                  'delivery': 'delivered',
+                  'delivered': 'completed',
+                  'returned': 'returned_in_stock'
+                }[order.status];
+                if (nextStatus) handleStatusChange(nextStatus);
+              }}
+              className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
+              title="انقر لتحديث الحالة"
+            >
+              <StatusIcon className="h-3 w-3" />
+              <span className="ml-1">{statusConfig.label}</span>
+            </Button>
+          ) : (
+            <div className={`flex items-center gap-1 ${statusConfig.color}`}>
+              <StatusIcon className="h-3 w-3" />
+              <span>{statusConfig.label}</span>
+            </div>
+          )}
         </div>
 
         {/* Customer Info & Products */}
@@ -406,36 +437,11 @@ const OrderListItem = ({
           )}
         </div>
 
-        {/* Status - قابل للنقر للطلبات المحلية */}
-        <div className="min-w-[120px] flex-shrink-0">
-          {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                // تحديد الحالة التالية
-                const nextStatus = {
-                  'pending': 'shipped',
-                  'shipped': 'delivery', 
-                  'delivery': 'delivered',
-                  'delivered': 'completed',
-                  'returned': 'returned_in_stock'
-                }[order.status];
-                if (nextStatus) handleStatusChange(nextStatus);
-              }}
-              className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
-              title="انقر لتحديث الحالة"
-            >
-              <StatusIcon className="h-3 w-3" />
-              <span className="ml-1">{statusConfig.label}</span>
-            </Button>
-          ) : (
-            <div className={`flex items-center gap-1 ${statusConfig.color}`}>
-              <StatusIcon className="h-3 w-3" />
-              <span>{statusConfig.label}</span>
-            </div>
-          )}
+        {/* QR ID */}
+        <div className="min-w-[80px] flex-shrink-0 text-left" dir="ltr">
+          <div className="font-bold text-sm text-foreground tabular-nums">
+            {order.qr_id || order.order_number}
+          </div>
         </div>
 
         {/* Actions - مضغوطة كما في الكارت */}
