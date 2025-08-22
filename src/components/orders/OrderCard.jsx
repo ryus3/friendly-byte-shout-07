@@ -19,7 +19,8 @@ import {
   Phone,
   User,
   Clock,
-  ExternalLink
+  ExternalLink,
+  AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -366,22 +367,11 @@ const OrderCard = ({
               )}
               
                <div className="flex items-center gap-3">
-                 <div className="text-right" dir="ltr">
-                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                      {order.tracking_number || order.order_number}
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {!isLocalOrder ? (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                          خارجي
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                          محلي
-                        </span>
-                      )}
-                    </div>
-                 </div>
+                <div className="text-right" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}

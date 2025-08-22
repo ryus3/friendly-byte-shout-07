@@ -15,7 +15,10 @@ import {
   Building,
   ExternalLink,
   Phone,
-  User
+  User,
+  MapPin,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -238,17 +241,6 @@ const OrderListItem = ({
               <div className="text-right">
                 <div className="font-bold text-base text-foreground tabular-nums" dir="ltr">
                   {order.tracking_number || order.order_number}
-                </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  {!isLocalOrder ? (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                      خارجي
-                    </span>
-                  ) : (
-                    <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                      محلي
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
