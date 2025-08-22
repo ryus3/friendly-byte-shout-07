@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { cn } from '@/lib/utils';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const SyncStatusIndicator = ({ className }) => {
   const { 
@@ -41,7 +41,7 @@ const SyncStatusIndicator = ({ className }) => {
   // SVG Circle properties
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const progress = syncCountdown > 0 ? (15 - syncCountdown) / 15 : 0;
+  const progress = syncCountdown > 0 ? syncCountdown / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   return (
@@ -102,22 +102,12 @@ const SyncStatusIndicator = ({ className }) => {
             {syncCountdown}
           </span>
         ) : (
-          <RotateCcw className={cn(
+          <RefreshCw className={cn(
             "w-4 h-4 transition-colors",
             syncMode === 'standby' ? "text-muted-foreground hover:text-primary" : "text-primary"
           )} />
         )}
       </div>
-
-      {/* Status indicator dot */}
-      <div className={cn(
-        "absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-background transition-colors",
-        isSyncing 
-          ? "bg-orange-500 animate-pulse" 
-          : syncMode === 'standby' 
-            ? "bg-green-500" 
-            : "bg-blue-500"
-      )} />
     </div>
   );
 };
