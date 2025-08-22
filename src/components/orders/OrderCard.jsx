@@ -333,17 +333,23 @@ const OrderCard = ({
                 </div>
               )}
               
-              <div className="flex items-center gap-3">
-                <div className="text-right" dir="ltr">
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                   {order.tracking_number && order.order_number !== order.tracking_number && (
-                     <p className="text-xs text-muted-foreground font-mono">
-                       {order.order_number}
-                     </p>
-                   )}
-                </div>
+               <div className="flex items-center gap-3">
+                 <div className="text-right" dir="ltr">
+                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                      {order.tracking_number || order.order_number}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {order.delivery_partner ? (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
+                          خارجي
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                          محلي
+                        </span>
+                      )}
+                    </div>
+                 </div>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}

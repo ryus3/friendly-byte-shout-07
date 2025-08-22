@@ -144,10 +144,23 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           <div className="space-y-6 p-6">
             <div className="flex items-center justify-between p-4 bg-secondary rounded-lg border border-border">
               <div>
-                <h3 className="text-lg font-bold text-foreground break-all">
-                  #{order.tracking_number || order.order_number}
-                </h3>
-                {order.tracking_number && order.order_number !== order.tracking_number && (
+                <div>
+                  <h3 className="text-lg font-bold text-foreground break-all">
+                    #{order.tracking_number || order.order_number}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {order.delivery_partner ? (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        طلب خارجي - {order.delivery_partner}
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                        طلب محلي
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {false && (
                   <p className="text-xs text-muted-foreground font-mono">
                     رقم النظام: {order.order_number}
                   </p>

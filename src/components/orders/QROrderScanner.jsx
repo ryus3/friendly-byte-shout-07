@@ -19,13 +19,13 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
   // تنبيه عميل مكرر عند العثور على طلب يحتوي رقم هاتف
   useDuplicateCustomerAlert(foundOrder?.customer_phone, { trigger: !!foundOrder });
 
-  // البحث عن طلب بـ tracking_number أو QR ID أو order_number
+  // البحث عن طلب بالرقم الموحد (tracking_number أولاً، ثم order_number، ثم qr_id)
   const searchOrderByQR = async (searchValue) => {
     try {
       setError('');
       
-      // البحث أولاً بـ tracking_number
-      let { data: order, error: orderError } = await supabase
+      // البحث الموحد - يبحث في جميع الحقول بنفس الوقت
+      let { data: orders, error: orderError } = await supabase
         .from('orders')
         .select(`
           *,
@@ -39,15 +39,16 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
             )
           )
         `)
-        .eq('tracking_number', searchValue)
-        .single();
+        .or(`tracking_number.eq.${searchValue},order_number.eq.${searchValue},qr_id.eq.${searchValue}`)
+        .limit(1);
 
-      // إذا لم يوجد، البحث بـ qr_id
-      if (!order && orderError?.code === 'PGRST116') {
-        ({ data: order, error: orderError } = await supabase
-          .from('orders')
-          .select(`
-            *,
+      if (orderError) {
+        console.error('خطأ في البحث:', orderError);
+        throw orderError;
+      }
+
+      const order = orders?.[0];
+      if (!order) {
             order_items (
               *,
               products (name),

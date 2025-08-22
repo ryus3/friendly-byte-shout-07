@@ -110,7 +110,7 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         <div className="relative flex-1 min-w-0">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
-            placeholder="البحث في الطلبات..." 
+            placeholder="البحث برقم الطلب الموحد..." 
             value={filters.searchTerm} 
             onChange={handleSearchChange} 
             className="pr-9 h-9 text-sm" 

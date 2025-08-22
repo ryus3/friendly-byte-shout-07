@@ -19,7 +19,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner } = useAlWaseet();
   const { createOrder, updateOrder, settings } = useInventory();
 
-  // دالة موحدة لإنشاء الطلبات مع ضمان الربط الصحيح
+  // دالة موحدة لإنشاء الطلبات مع ضمان الربط الصحيح والتوحيد الكامل للأرقام
   const createUnifiedOrder = useCallback(async (customerInfo, cart, discount = 0, aiOrderData = null) => {
     console.log('🚀 بدء إنشاء طلب موحد:', { customerInfo, cart, discount, activePartner });
     
@@ -28,19 +28,9 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
       const subtotal = cart.reduce((sum, item) => sum + (item.total || 0), 0);
       const finalAmount = Math.max(0, subtotal - discount);
 
-      // إنشاء الطلب المحلي أولاً
-      console.log('🏠 إنشاء طلب محلي أولاً...');
-      const localResult = await createOrder(customerInfo, cart, null, discount, null, finalAmount);
-
-      if (!localResult.success) {
-        throw new Error(localResult.error || 'فشل في إنشاء الطلب المحلي');
-      }
-
-      console.log('✅ تم إنشاء الطلب المحلي:', localResult);
-
-      // إذا كان الوسيط نشطاً ومتصل، ربط الطلب
+      // إذا كان الوسيط نشطاً ومتصل، إنشاء طلب خارجي مع التوحيد الكامل
       if (activePartner === 'alwaseet' && isWaseetLoggedIn && waseetToken) {
-        console.log('🔗 ربط الطلب مع الوسيط...');
+        console.log('🔗 إنشاء طلب خارجي مع التوحيد الكامل...');
         
         try {
           const alWaseetPayload = {
@@ -63,14 +53,24 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           if (alWaseetResult?.id) {
             console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResult);
             
-            // تحديث الطلب المحلي بمعرف الوسيط
-            const updateResult = await updateOrder(localResult.orderId, {
-              delivery_partner_order_id: String(alWaseetResult.id),
-              tracking_number: alWaseetResult.qr_id || alWaseetResult.tracking_id,
+            // استخدام رقم التتبع من شركة التوصيل لجميع الحقول (التوحيد الكامل)
+            const unifiedTrackingNumber = String(alWaseetResult.id);
+            
+            // إنشاء الطلب المحلي مع الأرقام الموحدة
+            const localResult = await createOrder(customerInfo, cart, unifiedTrackingNumber, discount, null, finalAmount, {
+              delivery_partner_order_id: unifiedTrackingNumber,
+              tracking_number: unifiedTrackingNumber,
+              order_number: unifiedTrackingNumber,
+              qr_id: unifiedTrackingNumber,
               delivery_partner: 'alwaseet'
             });
+
+            if (!localResult.success) {
+              console.error('❌ فشل في إنشاء الطلب المحلي بعد إنشاء طلب الوسيط');
+              throw new Error(localResult.error || 'فشل في إنشاء الطلب المحلي');
+            }
             
-            console.log('🔄 تحديث الطلب المحلي:', updateResult);
+            console.log('🔄 تم إنشاء الطلب المحلي مع الأرقام الموحدة:', localResult);
             
             toast({
               title: (
@@ -81,10 +81,10 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               ),
               description: (
                 <div className="space-y-1">
-                  <p><strong>رقم الطلب:</strong> {localResult.trackingNumber}</p>
-                  <p><strong>رقم الوسيط:</strong> {alWaseetResult.qr_id || alWaseetResult.id}</p>
+                  <p><strong>رقم الطلب الموحد:</strong> {unifiedTrackingNumber}</p>
                   <p><strong>العميل:</strong> {customerInfo.name}</p>
                   <p><strong>المبلغ:</strong> {finalAmount.toLocaleString()} د.ع</p>
+                  <p><strong>نوع الطلب:</strong> خارجي (مربوط مع الوسيط)</p>
                 </div>
               ),
               variant: "success",
@@ -94,37 +94,59 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             return {
               success: true,
               orderId: localResult.orderId,
-              trackingNumber: localResult.trackingNumber,
+              trackingNumber: unifiedTrackingNumber,
               alWaseetId: alWaseetResult.id,
-              alWaseetQrId: alWaseetResult.qr_id,
               finalAmount,
-              linked: true
+              linked: true,
+              unified: true
             };
           } else {
             throw new Error('لم يتم إرجاع معرف من الوسيط');
           }
         } catch (alWaseetError) {
-          console.error('⚠️ فشل ربط الوسيط (الطلب المحلي موجود):', alWaseetError);
+          console.error('⚠️ فشل إنشاء طلب الوسيط:', alWaseetError);
           
+          // في حالة فشل الوسيط، إنشاء طلب محلي عادي
+          console.log('🏠 التراجع لإنشاء طلب محلي...');
+          const localFallbackResult = await createOrder(customerInfo, cart, null, discount, null, finalAmount);
+          
+          if (!localFallbackResult.success) {
+            throw new Error(localFallbackResult.error || 'فشل في إنشاء الطلب المحلي');
+          }
+
           toast({
             title: 'تم إنشاء الطلب محلياً فقط',
-            description: `رقم الطلب: ${localResult.trackingNumber}. فشل الربط مع الوسيط: ${alWaseetError.message}`,
+            description: `رقم الطلب: ${localFallbackResult.trackingNumber}. فشل الربط مع الوسيط: ${alWaseetError.message}`,
             variant: 'warning',
             duration: 6000
           });
 
           return {
             success: true,
-            orderId: localResult.orderId,
-            trackingNumber: localResult.trackingNumber,
+            orderId: localFallbackResult.orderId,
+            trackingNumber: localFallbackResult.trackingNumber,
             finalAmount,
             linked: false,
             linkError: alWaseetError.message
           };
         }
       } else {
-        // طلب محلي فقط
-        console.log('✅ تم إنشاء الطلب المحلي بنجاح (بدون ربط)');
+        // طلب محلي فقط مع رقم موحد محلي
+        console.log('🏠 إنشاء طلب محلي بدون ربط...');
+        
+        // إنشاء رقم محلي موحد
+        const localUnifiedNumber = `RYUS-${Date.now().toString().slice(-6)}`;
+        
+        const localResult = await createOrder(customerInfo, cart, localUnifiedNumber, discount, null, finalAmount, {
+          tracking_number: localUnifiedNumber,
+          order_number: localUnifiedNumber,
+          qr_id: localUnifiedNumber,
+          delivery_partner: null
+        });
+
+        if (!localResult.success) {
+          throw new Error(localResult.error || 'فشل في إنشاء الطلب المحلي');
+        }
         
         toast({
           title: (
@@ -135,9 +157,10 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           ),
           description: (
             <div className="space-y-1">
-              <p><strong>رقم الطلب:</strong> {localResult.trackingNumber}</p>
+              <p><strong>رقم الطلب الموحد:</strong> {localUnifiedNumber}</p>
               <p><strong>العميل:</strong> {customerInfo.name}</p>
               <p><strong>المبلغ:</strong> {finalAmount.toLocaleString()} د.ع</p>
+              <p><strong>نوع الطلب:</strong> محلي</p>
             </div>
           ),
           variant: "success",
@@ -147,9 +170,10 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         return {
           success: true,
           orderId: localResult.orderId,
-          trackingNumber: localResult.trackingNumber,
+          trackingNumber: localUnifiedNumber,
           finalAmount,
-          linked: false
+          linked: false,
+          unified: true
         };
       }
     } catch (error) {
