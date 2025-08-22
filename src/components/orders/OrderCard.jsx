@@ -310,76 +310,8 @@ const OrderCard = ({
             <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
               <div className="grid grid-cols-3 gap-3 items-center">
                 
-                {/* Customer Info - يسار */}
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{order.customer_phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 text-primary" />
-                    <span className="truncate">{order.customer_address}</span>
-                  </div>
-                </div>
-                
-                {/* Action Icons - منتصف */}
-                <div className="flex items-center justify-center gap-1">
-                  
-                  {/* View */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
-                    title="معاينة"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </Button>
-
-                   {/* Edit */}
-                   {canEdit && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditOrder?.(order)}
-                      className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-md"
-                      title="تعديل"
-                    >
-                      <Edit2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-
-                  {/* Track */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
-                    title="تتبع"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </Button>
-
-                  {/* Delete - للطلبات قيد التجهيز فقط */}
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
-                      title="حذف"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                </div>
-                
                 {/* Date & Delivery Info - يمين */}
-                <div className="space-y-1 text-left">
+                <div className="space-y-1 text-right">
                   <div className="flex items-center gap-2 justify-end">
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                     <Calendar className="h-4 w-4 text-primary" />
@@ -397,10 +329,78 @@ const OrderCard = ({
                        </span>
                      </div>
                    )}
-                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit ml-auto shadow-sm`}>
+                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm`}>
                     <Building className="h-3 w-3 ml-1" />
                     {order.delivery_partner}
                   </Badge>
+                </div>
+                
+                {/* Action Icons - منتصف */}
+                <div className="flex items-center justify-center gap-1 flex-row-reverse">
+                  
+                  {/* Delete - للطلبات قيد التجهيز فقط */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="حذف"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
+                  {/* Track */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewOrder?.(order)}
+                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
+                    title="تتبع"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </Button>
+
+                   {/* Edit */}
+                   {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEditOrder?.(order)}
+                      className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="تعديل"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
+                  {/* View */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewOrder?.(order)}
+                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
+                    title="معاينة"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                
+                {/* Customer Info - يسار */}
+                <div className="space-y-1 text-left">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{order.customer_phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="truncate">{order.customer_address}</span>
+                  </div>
                 </div>
               </div>
             </div>
