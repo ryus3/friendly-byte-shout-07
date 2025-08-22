@@ -20,8 +20,31 @@ export const useAlWaseetInvoices = () => {
     setLoading(true);
     try {
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
-      setInvoices(invoicesData || []);
-      return invoicesData;
+      
+      // Filter for last 7 days and sort
+      const filteredAndSortedInvoices = (invoicesData || [])
+        .filter(invoice => {
+          const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return invoiceDate >= weekAgo;
+        })
+        .sort((a, b) => {
+          // First sort by status - pending invoices first
+          const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+          const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+          
+          if (aIsPending && !bIsPending) return -1;
+          if (!aIsPending && bIsPending) return 1;
+          
+          // Then sort by date - newest first
+          const aDate = new Date(a.updated_at || a.created_at);
+          const bDate = new Date(b.updated_at || b.created_at);
+          return bDate - aDate;
+        });
+      
+      setInvoices(filteredAndSortedInvoices);
+      return filteredAndSortedInvoices;
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast({
