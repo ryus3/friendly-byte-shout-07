@@ -338,18 +338,31 @@ const OrderCard = ({
                 {/* Action Icons - منتصف */}
                 <div className="flex items-center justify-center gap-1">
                   
-                  {/* View */}
+                  {/* Delete - أقصى اليمين */}
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="حذف"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
+                  {/* Track - بجوار الحذف */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
-                    title="معاينة"
+                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
+                    title="تتبع"
                   >
-                    <Eye className="h-3.5 w-3.5" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
 
-                   {/* Edit */}
+                   {/* Edit - بجوار التتبع */}
                    {canEdit && (
                     <Button
                       variant="ghost"
@@ -362,29 +375,16 @@ const OrderCard = ({
                     </Button>
                   )}
 
-                  {/* Track */}
+                  {/* View - أقصى اليسار */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
-                    title="تتبع"
+                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
+                    title="معاينة"
                   >
-                    <ExternalLink className="h-3.5 w-3.5" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
-
-                  {/* Delete - للطلبات قيد التجهيز فقط */}
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
-                      title="حذف"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
                 </div>
                 
                 {/* Customer Info - يسار */}
