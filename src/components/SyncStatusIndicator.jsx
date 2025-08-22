@@ -44,12 +44,18 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
   const handleClick = () => {
     if (debugMode) {
       setIsSpinning(true);
-      setDebugCountdown(15); // Reset countdown in debug mode
-      setTimeout(() => setIsSpinning(false), 1000);
+      // Start countdown after animation completes
+      setTimeout(() => {
+        setDebugCountdown(15);
+        setIsSpinning(false);
+      }, 1500);
     } else if (!currentIsSyncing && syncMode === 'standby') {
       setIsSpinning(true);
-      fastSyncPendingOrders();
-      setTimeout(() => setIsSpinning(false), 1000);
+      // Start sync after animation completes
+      setTimeout(() => {
+        fastSyncPendingOrders();
+        setIsSpinning(false);
+      }, 1500);
     }
   };
 
@@ -85,7 +91,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "bg-background border-2 border-muted-foreground/30 shadow-md",
+        "bg-background shadow-md",
         currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
