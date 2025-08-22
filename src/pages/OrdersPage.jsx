@@ -65,6 +65,43 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
+  // One-time direct Al-Waseet status check for tracking 98713588 (no local changes)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.__waseetCheckRan) return;
+      window.__waseetCheckRan = true;
+    }
+    const tn = '98713588';
+    (async () => {
+      try {
+        const res = await syncOrderByTracking?.(tn);
+        console.log('ALWASEET_CHECK_RESULT', tn, res);
+        if (res && res.waseet_status) {
+          toast({
+            title: 'حالة شركة التوصيل',
+            description: `رقم ${tn}: ${res.waseet_status} (محلي: ${res.local_status})`,
+            variant: 'info',
+            duration: 5000,
+          });
+        } else {
+          toast({
+            title: 'تعذر التحقق من الحالة',
+            description: `لم يتم العثور على حالة للطلب ${tn} أو لم يتم تسجيل الدخول لشركة التوصيل`,
+            variant: 'destructive',
+            duration: 5000,
+          });
+        }
+      } catch (e) {
+        console.error('ALWASEET_CHECK_ERROR', e);
+        toast({
+          title: 'خطأ في التحقق من الحالة',
+          description: e?.message || 'حدث خطأ غير متوقع',
+          variant: 'destructive',
+        });
+      }
+    })();
+  }, [syncOrderByTracking]);
+
   // إشعارات للطلبات الجديدة والمحدثة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
     const channel = supabase
