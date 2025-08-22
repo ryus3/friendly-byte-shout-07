@@ -91,7 +91,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "bg-background shadow-md",
+        "bg-background",
         currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
@@ -125,8 +125,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
-          className="text-muted-foreground/15"
+          strokeWidth="2.5"
+          className="text-muted-foreground/30"
         />
         
         {/* Progress circle - only shown during countdown */}
@@ -137,11 +137,11 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
             r={radius}
             fill="none"
             stroke="url(#syncGradient)"
-            strokeWidth="3"
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear drop-shadow-sm"
+            className="transition-all duration-1000 ease-linear"
           />
         )}
       </svg>
