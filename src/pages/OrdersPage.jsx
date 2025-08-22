@@ -65,10 +65,10 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
-  // إشعارات فقط للطلبات الجديدة - SuperProvider يتولى التحديثات الفورية
+  // إشعارات للطلبات الجديدة والمحدثة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
     const channel = supabase
-      .channel('orders-notifications-only')
+      .channel('orders-realtime-updates')
       .on(
         'postgres_changes',
         {
@@ -124,12 +124,78 @@ const OrdersPage = () => {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          const updatedOrder = payload.new;
+          const oldOrder = payload.old;
+          
+          console.log('🔄 تحديث طلب فوري:', {
+            id: updatedOrder.id,
+            old_status: oldOrder?.status,
+            new_status: updatedOrder.status,
+            old_delivery_id: oldOrder?.delivery_partner_order_id,
+            new_delivery_id: updatedOrder.delivery_partner_order_id,
+            tracking_number: updatedOrder.tracking_number
+          });
+          
+          // إشعار فقط للتحديثات المهمة (تغيير الحالة أو ربط معرف التوصيل)
+          if (oldOrder?.status !== updatedOrder.status) {
+            toast({
+              title: (
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4 text-blue-500" />
+                  تم تحديث حالة الطلب
+                </div>
+              ),
+              description: (
+                <div className="space-y-1">
+                  <p><strong>رقم الطلب:</strong> {updatedOrder.qr_id || updatedOrder.order_number}</p>
+                  <p><strong>الحالة الجديدة:</strong> {getStatusLabel(updatedOrder.status)}</p>
+                </div>
+              ),
+              variant: "info",
+              duration: 4000
+            });
+          }
+          
+          if (!oldOrder?.delivery_partner_order_id && updatedOrder.delivery_partner_order_id) {
+            console.log('✅ تم ربط معرف شركة التوصيل:', updatedOrder.delivery_partner_order_id);
+            toast({
+              title: "تم ربط الطلب مع شركة التوصيل",
+              description: `الطلب ${updatedOrder.qr_id || updatedOrder.order_number} مرتبط الآن مع معرف التوصيل: ${updatedOrder.delivery_partner_order_id}`,
+              variant: "success",
+              duration: 4000
+            });
+          }
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [hasPermission]);
+
+  // دالة مساعدة لترجمة حالات الطلبات
+  const getStatusLabel = (status) => {
+    const statusLabels = {
+      'pending': 'قيد الانتظار',
+      'shipped': 'تم الشحن',
+      'delivery': 'قيد التوصيل',
+      'delivered': 'تم التسليم',
+      'cancelled': 'ملغي',
+      'returned': 'مرجع',
+      'completed': 'مكتمل',
+      'returned_in_stock': 'راجع للمخزن'
+    };
+    return statusLabels[status] || status;
+  };
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
   const deletedOrdersSet = useRef(new Set());

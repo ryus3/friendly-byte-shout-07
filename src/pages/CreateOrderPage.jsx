@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import { getCities, getRegionsByCity, createAlWaseetOrder } from '@/lib/alwaseet-api';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -101,25 +102,91 @@ const CreateOrderPage = () => {
     }
     setLoading(true);
     try {
-      const alWaseetPayload = { ...formData };
-      const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
-      
+      // أولاً: إنشاء الطلب المحلي
       const customerInfo = {
-        name: formData.name, phone: formData.phone,
+        name: formData.name, 
+        phone: formData.phone,
+        second_phone: formData.second_phone || '',
         address: `${formData.address}, ${regions.find(r => r.id == formData.region_id)?.name || ''}, ${cities.find(c => c.id == formData.city_id)?.name || ''}`,
-        city: cities.find(c => c.id == formData.city_id)?.name || '', notes: formData.notes,
+        city: cities.find(c => c.id == formData.city_id)?.name || '', 
+        region: regions.find(r => r.id == formData.region_id)?.name || '',
+        notes: formData.notes,
+        promo_code: formData.promocode || ''
       };
 
-      const { success, trackingNumber } = await createOrder(customerInfo, cart, alWaseetResponse.tracking_id, discount);
+      console.log('🏠 إنشاء طلب محلي أولاً:', customerInfo);
+      const localResult = await createOrder(customerInfo, cart, null, discount);
 
-      if (success) {
-        toast({ title: "نجاح", description: `تم إنشاء الطلب بنجاح. رقم الفاتورة: ${trackingNumber}` });
+      if (localResult.success) {
+        console.log('✅ تم إنشاء الطلب المحلي:', localResult);
+        
+        // ثانياً: ربط الطلب مع الوسيط
+        try {
+          const alWaseetPayload = { 
+            ...formData,
+            details: cart.map(item => `${item.productName} (${item.color}, ${item.size}) ×${item.quantity}`).join(' | '),
+            quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+            price: total + (50000), // إضافة رسوم التوصيل المقدرة
+          };
+          
+          console.log('📦 إرسال للوسيط:', alWaseetPayload);
+          const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+          
+          if (alWaseetResponse?.id) {
+            console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResponse);
+            
+            // تحديث الطلب المحلي بمعرف الوسيط - استخدام qr_id بدلاً من tracking_id
+            const updateData = {
+              delivery_partner_order_id: String(alWaseetResponse.id),
+              tracking_number: alWaseetResponse.qr_id || alWaseetResponse.tracking_id,
+              delivery_partner: 'alwaseet'
+            };
+            
+            console.log('🔄 تحديث الطلب المحلي بمعرف الوسيط:', updateData);
+            // استخدام Supabase مباشرة للتحديث السريع
+            const { error: updateError } = await supabase
+              .from('orders')
+              .update(updateData)
+              .eq('id', localResult.orderId);
+              
+            if (updateError) {
+              console.error('⚠️ فشل تحديث معرف الوسيط:', updateError);
+            } else {
+              console.log('✅ تم ربط الطلب مع الوسيط بنجاح');
+            }
+
+            toast({ 
+              title: "نجاح", 
+              description: `تم إنشاء الطلب وربطه مع الوسيط بنجاح. رقم الطلب: ${localResult.trackingNumber}، رقم الوسيط: ${alWaseetResponse.qr_id || alWaseetResponse.id}`,
+              variant: "success",
+              duration: 6000
+            });
+          } else {
+            throw new Error('لم يتم إرجاع معرف من الوسيط');
+          }
+        } catch (alWaseetError) {
+          console.error('⚠️ فشل ربط الوسيط (الطلب المحلي موجود):', alWaseetError);
+          toast({ 
+            title: "تم إنشاء الطلب محلياً فقط", 
+            description: `رقم الطلب: ${localResult.trackingNumber}. فشل الربط مع الوسيط: ${alWaseetError.message}`,
+            variant: "warning",
+            duration: 6000
+          });
+        }
+        
+        // تنظيف النموذج
         setFormData({ name: '', phone: '', second_phone: '', city_id: '', region_id: '', address: '', notes: '', details: '', quantity: 1, price: 0, size: 'normal', type: 'new', promocode: '' });
-        setCart([]); setDiscount(0);
-      } else { throw new Error("فشل إنشاء الطلب في النظام المحلي."); }
+        setCart([]); 
+        setDiscount(0);
+      } else { 
+        throw new Error(localResult.error || "فشل إنشاء الطلب في النظام المحلي."); 
+      }
     } catch (error) {
+      console.error('❌ خطأ في إنشاء الطلب:', error);
       toast({ title: "خطأ", description: error.message || "فشل إنشاء الطلب.", variant: "destructive" });
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleAddToCart = (product, variant, quantity) => {
