@@ -77,7 +77,7 @@ const AutoSyncButton = ({ className }) => {
     // Initial sync on mount
     if (!hasInitialSyncRef.current) {
       hasInitialSyncRef.current = true;
-      performAutoSync();
+      startSyncCountdown();
     }
 
     // Set up periodic sync (every 10 minutes)
