@@ -20,7 +20,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
-import AutoSyncButton from '@/components/AutoSyncButton.jsx';
+
 import { Helmet } from 'react-helmet-async';
 
 const SidebarContent = ({ onClose, isMobile }) => {
@@ -305,7 +305,7 @@ const Layout = ({ children }) => {
             </div>
             
             <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-              <AutoSyncButton className="transition-colors" />
+              
               <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />
               </Button>
