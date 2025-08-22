@@ -243,21 +243,21 @@ export const AlWaseetProvider = ({ children }) => {
   const linkRemoteIdsForExistingOrders = useCallback(async () => {
     if (!token) return { linked: 0 };
     try {
-      console.log('🔗 بدء ربط شامل للطلبات الحالية...');
-      // 1) اجلب جميع الطلبات المحلية التي تحتاج ربط (أو فحص)
+      console.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
+      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
-        .select('id, tracking_number, order_number, delivery_partner, delivery_partner_order_id')
-        .or('delivery_partner.is.null,delivery_partner.eq.alwaseet,delivery_partner.eq.Al-Waseet')
-        .or('delivery_partner_order_id.is.null,tracking_number.is.null')
-        .limit(2000);
+        .select('id, tracking_number, order_number, delivery_partner')
+        .is('delivery_partner_order_id', null)
+        .or('delivery_partner.is.null,delivery_partner.eq.alwaseet')
+        .limit(1000);
       if (localErr) {
-        console.error('❌ خطأ في جلب الطلبات المحلية:', localErr);
+        console.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
         return { linked: 0 };
       }
       if (!localOrders || localOrders.length === 0) {
-        console.log('✅ لا توجد طلبات للفحص');
-        return { linked: 0, total: 0 };
+        console.log('✅ لا توجد طلبات بحاجة للربط حالياً');
+        return { linked: 0 };
       }
 
       // 2) اجلب جميع طلبات الوسيط ثم ابنِ خرائط سريعة
@@ -308,37 +308,10 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      const updatedOrders = [];
-      // تجميع تفاصيل الطلبات المربوطة للعرض
-      for (const lo of localOrders) {
-        const keysToTry = [lo?.tracking_number, lo?.order_number]
-          .filter(Boolean)
-          .map(k => String(k).trim());
-
-        let matched = null;
-        for (const key of keysToTry) {
-          matched = byQr.get(key) || byId.get(key);
-          if (matched) break;
-        }
-
-        if (matched) {
-          updatedOrders.push({
-            local: lo.order_number || lo.id,
-            remote: matched.qr_id || matched.id,
-            delivery_id: matched.id
-          });
-        }
-      }
-
       if (linked > 0) {
-        console.log(`🎉 تم ربط ${linked} طلب بنجاح`);
+        toast({ title: 'تم الربط', description: `تم ربط ${linked} طلب بمعرف الوسيط.` });
       }
-      return { 
-        linked, 
-        total: localOrders.length,
-        updatedOrders,
-        message: `تم فحص ${localOrders.length} طلب وربط ${linked} منها`
-      };
+      return { linked };
     } catch (e) {
       console.error('❌ خطأ أثناء ربط المعرفات:', e);
       return { linked: 0 };
@@ -864,58 +837,30 @@ export const AlWaseetProvider = ({ children }) => {
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
-  // Enhanced initial sync with comprehensive linking on login
+  // Initial sync on login
   useEffect(() => {
     if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
-      console.log('🚀 مزامنة شاملة أولية عند تسجيل الدخول...');
+      console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
       setSyncMode('initial');
-      
-      // Run comprehensive linking and sync
-      (async () => {
-        try {
-          setIsSyncing(true);
-          const linkResult = await linkRemoteIdsForExistingOrders();
-          console.log(`🔗 ربط أولي: ${linkResult.linked} طلب مربوط`);
-          
-          const syncResult = await fastSyncPendingOrders();
-          console.log(`🔄 مزامنة أولية: ${syncResult.updated} طلب محدث`);
-          
-          setLastSyncAt(new Date());
-          setSyncMode('standby');
-        } catch (error) {
-          console.error('❌ فشل المزامنة الأولية:', error);
-          setSyncMode('standby');
-        } finally {
-          setIsSyncing(false);
-        }
-      })();
+      performSyncWithCountdown();
     }
-  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, linkRemoteIdsForExistingOrders, fastSyncPendingOrders]);
+  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
 
-  // Enhanced periodic sync with linking
+  // Periodic sync every 10 minutes
   useEffect(() => {
     let intervalId;
     if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby') {
-      intervalId = setInterval(async () => {
+      intervalId = setInterval(() => {
         if (!isSyncing) {
-          console.log('⏰ مزامنة دورية مع ربط...');
-          try {
-            setIsSyncing(true);
-            await linkRemoteIdsForExistingOrders();
-            await fastSyncPendingOrders();
-            setLastSyncAt(new Date());
-          } catch (error) {
-            console.error('❌ فشل المزامنة الدورية:', error);
-          } finally {
-            setIsSyncing(false);
-          }
+          console.log('⏰ مزامنة دورية (كل 10 دقائق)...');
+          performSyncWithCountdown();
         }
       }, syncInterval);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, linkRemoteIdsForExistingOrders, fastSyncPendingOrders]);
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
 
   const value = {
     isLoggedIn,

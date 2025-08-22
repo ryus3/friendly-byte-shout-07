@@ -102,45 +102,20 @@ const DeliveryIntegrationStatus = () => {
     }
   };
 
-  // ربط شامل للطلبات الحالية مع تفاصيل محسنة
+  // ربط الطلبات الحالية التي تملك tracking_number بدون delivery_partner_order_id
   const handleLinkExisting = async () => {
     setSyncing(true);
     try {
-      const result = await linkRemoteIdsForExistingOrders();
-      const { linked, total, updatedOrders } = result;
-      
-      if (linked > 0) {
-        toast({
-          title: `تم الربط بنجاح ✅`,
-          description: (
-            <div className="space-y-2">
-              <p>تم ربط {linked} طلب من أصل {total} طلب</p>
-              {updatedOrders && updatedOrders.length > 0 && (
-                <div className="text-xs bg-green-50 p-2 rounded">
-                  <p className="font-medium">آخر الطلبات المربوطة:</p>
-                  {updatedOrders.slice(0, 3).map((order, idx) => (
-                    <p key={idx}>• {order.local} ← {order.remote}</p>
-                  ))}
-                  {updatedOrders.length > 3 && <p>... و {updatedOrders.length - 3} طلبات أخرى</p>}
-                </div>
-              )}
-            </div>
-          ),
-          variant: 'success',
-          duration: 8000
-        });
-      } else {
-        toast({
-          title: 'اكتمل الفحص ℹ️',
-          description: `تم فحص ${total} طلب - جميع الطلبات مربوطة مسبقاً`,
-          variant: 'default'
-        });
-      }
-      
+      const { linked } = await linkRemoteIdsForExistingOrders();
+      toast({
+        title: linked > 0 ? 'تم الربط' : 'لا يوجد ما يُربط',
+        description: linked > 0 ? `تم ربط ${linked} طلب موجود بالوسيط.` : 'لا توجد طلبات بدون معرف وسيط.',
+        variant: linked > 0 ? 'success' : 'default'
+      });
       await checkConnectionStatus();
     } catch (error) {
       toast({
-        title: 'خطأ في الربط الشامل',
+        title: 'خطأ في الربط',
         description: error.message,
         variant: 'destructive'
       });
@@ -296,27 +271,24 @@ const DeliveryIntegrationStatus = () => {
             {syncing ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                جاري الربط الشامل...
+                جاري ربط الطلبات الحالية...
               </>
             ) : (
               <>
                 <Link2 className="h-4 w-4 mr-2" />
-                ربط شامل (حل جذري للطلبات الحالية)
+                ربط الطلبات الحالية (tracking → ID)
               </>
             )}
           </Button>
         </div>
 
         {/* معلومات إضافية */}
-        <div className="text-xs text-muted-foreground space-y-1 bg-blue-50/50 p-3 rounded-lg border">
-          <p className="font-medium text-blue-900">📋 دليل العمليات:</p>
-          <p>• <strong>الربط الشامل:</strong> يصحح جميع الطلبات الحالية ويربطها بمعرفات الوسيط</p>
-          <p>• <strong>المزامنة السريعة:</strong> تحديث حالات الطلبات المعلقة فقط</p>
-          <p>• <strong>المزامنة الشاملة:</strong> تحديث جميع الطلبات وحالاتها</p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p>• المزامنة السريعة: تفحص الطلبات المعلقة فقط</p>
+          <p>• المزامنة الشاملة: تفحص جميع الطلبات وتحدث الحالات</p>
           {syncStats.lastSync && (
-            <p>• <strong>آخر مزامنة:</strong> {syncStats.lastSync.toLocaleTimeString('ar-EG')}</p>
+            <p>• آخر مزامنة: {syncStats.lastSync.toLocaleTimeString('ar-EG')}</p>
           )}
-          <p className="text-green-600 font-medium">✨ العمليات تتم تلقائياً عند تحميل الصفحة</p>
         </div>
       </CardContent>
     </Card>

@@ -548,9 +548,6 @@ const OrdersPage = () => {
             </div>
         </div>
         
-        {/* مكون حالة التكامل مع شركة التوصيل */}
-        <DeliveryIntegrationStatus />
-        
          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
            <div className="col-span-1 lg:col-span-3">
              <OrdersStats 
