@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCw } from 'lucide-react';
@@ -19,9 +19,13 @@ const SyncStatusIndicator = ({ className }) => {
     return null;
   }
 
+  const [isSpinning, setIsSpinning] = useState(false);
+
   const handleClick = () => {
     if (!isSyncing && syncMode === 'standby') {
+      setIsSpinning(true);
       fastSyncPendingOrders();
+      setTimeout(() => setIsSpinning(false), 1000);
     }
   };
 
@@ -41,14 +45,16 @@ const SyncStatusIndicator = ({ className }) => {
   // SVG Circle properties
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const progress = syncCountdown > 0 ? syncCountdown / 15 : 0;
+  const progress = syncCountdown > 0 ? (15 - syncCountdown) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   return (
     <div 
       className={cn(
-        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        isSyncing ? "cursor-not-allowed" : "cursor-pointer hover:scale-105",
+        "relative flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300",
+        "shadow-lg border-2 border-primary/30 backdrop-blur-sm bg-white/10",
+        isSyncing ? "cursor-not-allowed" : "cursor-pointer hover:scale-105 hover:shadow-xl",
+        syncMode === 'standby' && !isSyncing && "animate-pulse",
         className
       )}
       onClick={handleClick}
@@ -63,10 +69,16 @@ const SyncStatusIndicator = ({ className }) => {
       }
     >
       {/* Background circle */}
-      <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 32 32">
+      <svg className="absolute w-12 h-12 transform -rotate-90" viewBox="0 0 48 48">
+        <defs>
+          <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(199, 89%, 48%)" />
+            <stop offset="100%" stopColor="hsl(280, 87%, 47%)" />
+          </linearGradient>
+        </defs>
         <circle
-          cx="16"
-          cy="16"
+          cx="24"
+          cy="24"
           r={radius}
           fill="none"
           stroke="currentColor"
@@ -76,19 +88,16 @@ const SyncStatusIndicator = ({ className }) => {
         {/* Progress circle */}
         {syncCountdown > 0 && (
           <circle
-            cx="16"
-            cy="16"
+            cx="24"
+            cy="24"
             r={radius}
             fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+            stroke="url(#syncGradient)"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className={cn(
-              "transition-all duration-1000 ease-linear",
-              isSyncing ? "text-orange-500" : "text-primary"
-            )}
+            className="transition-all duration-1000 ease-linear drop-shadow-lg"
           />
         )}
       </svg>
@@ -96,14 +105,15 @@ const SyncStatusIndicator = ({ className }) => {
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
         {isSyncing ? (
-          <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
+          <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
         ) : syncCountdown > 0 ? (
-          <span className="text-xs font-medium text-primary">
+          <span className="text-lg font-bold text-white drop-shadow-lg animate-pulse">
             {syncCountdown}
           </span>
         ) : (
           <RefreshCw className={cn(
-            "w-4 h-4 transition-colors",
+            "w-5 h-5 transition-all duration-300",
+            isSpinning && "animate-spin",
             syncMode === 'standby' ? "text-muted-foreground hover:text-primary" : "text-primary"
           )} />
         )}
