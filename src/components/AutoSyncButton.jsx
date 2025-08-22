@@ -71,7 +71,7 @@ const AutoSyncButton = ({ className }) => {
     }
   }, [activePartner, isLoggedIn, enterStandbyMode]);
 
-  // Initial sync and periodic setup
+  // Initial sync on mount - runs only once
   useEffect(() => {
     if (activePartner === 'local' || !isLoggedIn) return;
 
@@ -79,6 +79,18 @@ const AutoSyncButton = ({ className }) => {
     if (!hasInitialSyncRef.current) {
       hasInitialSyncRef.current = true;
       startSyncCountdown();
+    }
+  }, []); // Empty dependencies - runs only once
+
+  // Periodic sync setup - separate from initial sync
+  useEffect(() => {
+    if (activePartner === 'local' || !isLoggedIn) {
+      // Clear periodic interval if partner changes to local
+      if (periodicIntervalRef.current) {
+        clearInterval(periodicIntervalRef.current);
+        periodicIntervalRef.current = null;
+      }
+      return;
     }
 
     // Set up periodic sync (every 10 minutes)
@@ -89,9 +101,10 @@ const AutoSyncButton = ({ className }) => {
     return () => {
       if (periodicIntervalRef.current) {
         clearInterval(periodicIntervalRef.current);
+        periodicIntervalRef.current = null;
       }
     };
-  }, [activePartner, isLoggedIn]); // Only depend on essential values
+  }, [activePartner, isLoggedIn, startSyncCountdown]); // Include startSyncCountdown in dependencies
 
   // Countdown effect
   useEffect(() => {
