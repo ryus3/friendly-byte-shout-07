@@ -39,10 +39,14 @@ serve(async (req) => {
       Object.keys(queryParams).forEach(key => url.searchParams.append(key, queryParams[key]));
     }
 
-    // For edit-order, token goes in query params only. For other endpoints, use auth-token header
+    // For specific endpoints, token must be in query params only. For others, use auth-token header
     if (token) {
-      if (endpoint === 'create-order' || endpoint === 'edit-order') {
-        // Token already in query params, don't add to headers
+      if (endpoint === 'create-order' || endpoint === 'edit-order' || endpoint === 'statuses') {
+        // Ensure token exists in query params
+        if (!url.searchParams.has('token')) {
+          url.searchParams.append('token', token);
+        }
+        // Do not add to headers for these endpoints
       } else {
         headers["auth-token"] = token;
       }
@@ -84,6 +88,14 @@ serve(async (req) => {
       responseData.data = responseData.data.map((region: any) => ({
         id: region.id,
         name: region.region_name
+      }));
+    }
+
+    // Normalize statuses endpoint to ensure consistent shape and string ids
+    if (endpoint === 'statuses' && responseData.data) {
+      responseData.data = responseData.data.map((s: any) => ({
+        id: String(s.id ?? s.status_id ?? s.value),
+        status: s.status || s.status_text || s.name
       }));
     }
 

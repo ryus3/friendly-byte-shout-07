@@ -205,20 +205,21 @@ export const AlWaseetProvider = ({ children }) => {
       const statusMap = new Map();
       statuses.forEach(status => {
         const statusText = status.status?.toLowerCase() || '';
+        const key = String(status.id);
         
         // مطابقة حالات الوسيط مع حالاتنا المحلية
         if (statusText.includes('استلام') && statusText.includes('مندوب')) {
-          statusMap.set(status.id, 'shipped');
+          statusMap.set(key, 'shipped');
         } else if (statusText.includes('تسليم') || statusText.includes('مسلم')) {
-          statusMap.set(status.id, 'delivered');
+          statusMap.set(key, 'delivered');
         } else if (statusText.includes('ملغي') || statusText.includes('إلغاء')) {
-          statusMap.set(status.id, 'cancelled');
+          statusMap.set(key, 'cancelled');
         } else if (statusText.includes('راجع') || statusText.includes('مرجع')) {
-          statusMap.set(status.id, 'returned');
+          statusMap.set(key, 'returned');
         } else if (statusText.includes('جاري') || statusText.includes('توصيل')) {
-          statusMap.set(status.id, 'delivery');
+          statusMap.set(key, 'delivery');
         } else {
-          statusMap.set(status.id, 'pending');
+          statusMap.set(key, 'pending');
         }
       });
       
