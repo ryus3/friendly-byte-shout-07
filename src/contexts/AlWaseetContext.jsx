@@ -801,11 +801,24 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
-      // جلب جميع طلبات الوسيط والبحث عن الطلب المطلوب
+      // جلب جميع طلبات الوسيط والبحث عن الطلب المطلوب (تطبيع المقارنة لتجنب اختلاف النوع/المسافات)
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      const waseetOrder = waseetOrders.find(order => 
-        order.qr_id === trackingNumber || order.tracking_number === trackingNumber
-      );
+      const norm = (v) => String(v ?? '').trim();
+      const tn = norm(trackingNumber);
+      let waseetOrder = waseetOrders.find(order => (
+        norm(order.qr_id) === tn || norm(order.tracking_number) === tn
+      ));
+      
+      // Fallback سريع باستخدام خرائط مطبّعة
+      if (!waseetOrder) {
+        const byQrId = new Map();
+        const byTracking = new Map();
+        for (const o of waseetOrders) {
+          if (o?.qr_id) byQrId.set(norm(o.qr_id), o);
+          if (o?.tracking_number) byTracking.set(norm(o.tracking_number), o);
+        }
+        waseetOrder = byQrId.get(tn) || byTracking.get(tn) || null;
+      }
       
       if (!waseetOrder) {
         console.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
@@ -850,6 +863,10 @@ export const AlWaseetProvider = ({ children }) => {
       }
       if (waseetOrder.deliver_confirmed_fin === 1 && existingOrder?.receipt_received !== true) {
         updates.receipt_received = true;
+      }
+      // ترقية الحالة إلى completed عند تأكيد الاستلام المالي
+      if (waseetOrder.deliver_confirmed_fin === 1 && (localStatus === 'delivered' || updates.status === 'delivered')) {
+        updates.status = 'completed';
       }
 
       const needs_update = existingOrder ? (
