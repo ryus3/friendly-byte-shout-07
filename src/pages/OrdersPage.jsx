@@ -663,6 +663,7 @@ const OrdersPage = () => {
               selectedOrders={selectedOrders}
               setSelectedOrders={setSelectedOrders}
               onDeleteOrder={handleDeleteSelected}
+              profits={profitData}
               viewMode={viewMode}
             />
           </TabsContent>

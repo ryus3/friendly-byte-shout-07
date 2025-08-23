@@ -326,53 +326,64 @@ const OrderCard = ({
     }, 0);
   }, [calculateProfit, order, profits]);
 
-  // تحديد حالة الدفع الحقيقية والدقيقة من بيانات قاعدة البيانات
+  // تحديد حالة الأرباح والدفع بدقة
   const paymentStatus = useMemo(() => {
-    // البحث عن سجل الربح بدقة أكبر وإضافة تسجيل تشخيصي
-    const profitRecord = profits?.find(p => {
-      const match = String(p.order_id) === String(order.id);
-      if (order.order_number === 'RYUS-415487') {
-        console.log('🔍 تشخيص الطلب RYUS-415487:', {
-          orderId: order.id,
-          profitOrderId: p.order_id,
-          profitStatus: p.status,
-          settledAt: p.settled_at,
-          match: match
-        });
-      }
-      return match;
-    });
+    // البحث عن سجل الربح
+    const profitRecord = profits?.find(p => String(p.order_id) === String(order.id));
     
-    // استبعاد طلبات المدير من وسم التحاسب
+    // تحديد نوع الطلب
+    const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
+    const isExternalOrder = !isLocalOrder;
+    
+    // استبعاد طلبات المدير الرئيسي من وسوم التحاسب
     if (order.created_by === '91484496-b887-44f7-9e5d-be9db5567604') {
       return null;
     }
     
-    // فقط للطلبات المكتملة مع استلام فاتورة
-    if (order.status === 'completed' && order.receipt_received === true) {
-      
-      if (order.order_number === 'RYUS-415487') {
-        console.log('🔍 تشخيص RYUS-415487 - بيانات الربح:', {
-          profitRecord: profitRecord,
-          profitStatus: profitRecord?.status,
-          settledAt: profitRecord?.settled_at,
-          orderCompleted: order.status === 'completed',
-          receiptReceived: order.receipt_received
-        });
+    // إخفاء وسم التحاسب إذا لم يوجد سجل ربح أو إذا كان ربح الموظف صفر
+    if (!profitRecord || !profitRecord.employee_profit || profitRecord.employee_profit <= 0) {
+      return null;
+    }
+    
+    // للطلبات المحلية: عرض حالة التحاسب فقط للطلبات المُسلّمة مع فاتورة
+    if (isLocalOrder) {
+      if (order.status === 'delivered' && order.receipt_received === true) {
+        if (profitRecord.status === 'settled') {
+          return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+        } else {
+          return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
+        }
       }
-      
-      // 1. إذا تمت التسوية فعلياً (حسب جدول profits) = مدفوع
-      if (profitRecord && profitRecord.status === 'settled') {
-        return { status: 'paid', label: 'مُسوّى', color: 'bg-emerald-500' };
-      }
-      
-      // 2. إذا لم تتم التسوية بعد = قابل للتحاسب
-      else {
-        return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
+      // للطلبات المكتملة المؤرشفة: إظهار "مدفوع" فقط
+      else if (order.status === 'completed') {
+        if (profitRecord.status === 'settled') {
+          return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+        }
       }
     }
     
-    // 3. لا تظهر حالة دفع للطلبات غير المكتملة أو التي لم يتم استلام فاتورتها
+    // للطلبات الخارجية: عرض حالة التحاسب فقط عند التسليم مع فاتورة
+    else if (isExternalOrder) {
+      const isDelivered = order.delivery_status?.toLowerCase().includes('تسليم') || 
+                         order.delivery_status?.toLowerCase().includes('مسلم') ||
+                         order.delivery_status?.toLowerCase().includes('deliver');
+      
+      if (isDelivered && order.receipt_received === true) {
+        if (profitRecord.status === 'settled') {
+          return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+        } else {
+          return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
+        }
+      }
+      // للطلبات المكتملة المؤرشفة: إظهار "مدفوع" فقط
+      else if (order.status === 'completed') {
+        if (profitRecord.status === 'settled') {
+          return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+        }
+      }
+    }
+    
+    // لا تظهر حالة دفع في باقي الحالات
     return null;
   }, [order, profits]);
 

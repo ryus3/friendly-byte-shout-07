@@ -14,17 +14,12 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
     setIsReceiving(true);
     try {
-      // تحديث متقدم: استلام الفاتورة + إكمال الطلب تلقائياً
+      // استلام الفاتورة فقط - التحديث لـ completed سيتم عبر trigger عند تسوية الأرباح
       const updateData = {
         receipt_received: true,
         receipt_received_at: new Date().toISOString(),
         receipt_received_by: user.id
       };
-
-      // إذا كان الطلب مُسلّم، اجعله مكتمل تلقائياً
-      if (order.status === 'delivered') {
-        updateData.status = 'completed';
-      }
 
       const { error } = await supabase
         .from('orders')
@@ -35,7 +30,7 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
       toast({
         title: "✅ تم استلام الفاتورة بنجاح",
-        description: `تم تأكيد استلام فاتورة الطلب ${order.order_number}${order.status === 'delivered' ? ' وإكمال الطلب تلقائياً' : ''}`,
+        description: `تم تأكيد استلام فاتورة الطلب ${order.order_number}`,
         variant: "success",
       });
 
