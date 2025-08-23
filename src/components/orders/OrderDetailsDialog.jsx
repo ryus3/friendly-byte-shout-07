@@ -163,7 +163,7 @@ const getStatusInfo = (status, deliveryStatus = null, isLocalOrder = true) => {
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
   const [newStatus, setNewStatus] = useState(order?.status);
   const [syncing, setSyncing] = useState(false);
-  const { syncOrderByTracking, activePartner, isLoggedIn } = useAlWaseet();
+  const { syncOrderByTracking, syncOrderByQR, activePartner, isLoggedIn } = useAlWaseet();
 
   React.useEffect(() => {
     if (order) {
@@ -221,11 +221,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     setSyncing(true);
     try {
       console.log(`🔄 مزامنة الطلب ${order.tracking_number}...`);
-      const syncResult = await syncOrderByTracking(order.tracking_number);
+      
+      // استخدام الدالة الجديدة للمزامنة المباشرة
+      const syncResult = await syncOrderByQR(order.tracking_number);
       
       if (syncResult && syncResult.needs_update) {
-        // تحديث حالة الطلب في قاعدة البيانات
-        await onUpdate(order.id, syncResult.updates);
+        // إعادة تحميل الصفحة لإظهار التحديثات
+        window.location.reload();
         
         toast({
           title: "تمت المزامنة بنجاح",
@@ -296,8 +298,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 )}
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
-              <div className={`inline-flex items-center gap-2 text-sm font-medium ${statusInfo.badge}`}>
-                {statusInfo.icon} {statusInfo.text}
+              <div className="flex flex-col gap-2 items-end">
+                <div className={`inline-flex items-center gap-2 text-sm font-medium ${statusInfo.badge}`}>
+                  {statusInfo.icon} {statusInfo.text}
+                </div>
+                {!isLocalOrder && order.delivery_status && order.delivery_status !== statusInfo.text && (
+                  <div className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded border">
+                    <span>الوسيط:</span> {order.delivery_status}
+                  </div>
+                )}
+                {order.updated_at && (
+                  <div className="text-xs text-muted-foreground">
+                    آخر تحديث: {format(parseISO(order.updated_at), 'd/M/yyyy h:mm a', { locale: ar })}
+                  </div>
+                )}
               </div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border">
@@ -387,9 +401,14 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
         </ScrollArea>
         <DialogFooter className="gap-2 pt-4 border-t">
           {canSyncOrder && (
-            <Button variant="outline" onClick={handleSyncWithDelivery} disabled={syncing}>
+            <Button 
+              variant="outline" 
+              onClick={handleSyncWithDelivery} 
+              disabled={syncing}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-blue-400 shadow-lg hover:shadow-xl transition-all duration-300"
+            >
               {syncing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <RefreshCw className="w-4 h-4 ml-2" />}
-              مزامنة مع شركة التوصيل
+              {syncing ? 'جاري التحقق...' : 'تحقق الآن'}
             </Button>
           )}
           {canEditOrder && onEditOrder && (

@@ -848,6 +848,110 @@ export const AlWaseetProvider = ({ children }) => {
     }
   };
 
+  // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
+  const syncOrderByQR = useCallback(async (qrId) => {
+    if (!token) {
+      console.warn('❌ لا يوجد توكن للمزامنة');
+      return null;
+    }
+
+    try {
+      console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
+      
+      // جلب الطلب من الوسيط
+      const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
+      if (!waseetOrder) {
+        console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
+        return null;
+      }
+
+      console.log('📋 بيانات الطلب من الوسيط:', waseetOrder);
+
+      // تحميل حالات الطلبات إذا لم تكن محملة
+      let statusMap = orderStatusesMap;
+      if (statusMap.size === 0) {
+        statusMap = await loadOrderStatuses();
+      }
+
+      // تحديد الحالة المحلية الصحيحة
+      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId;
+      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+      
+      const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
+        (() => {
+          const t = String(waseetStatusText || '').toLowerCase();
+          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
+          if (t.includes('راجع')) return 'returned';
+          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+          if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
+          return 'pending';
+        })();
+
+      // جلب الطلب المحلي
+      const { data: localOrder, error: localErr } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('tracking_number', qrId)
+        .maybeSingle();
+
+      if (localErr) {
+        console.error('❌ خطأ في جلب الطلب المحلي:', localErr);
+        return null;
+      }
+
+      if (!localOrder) {
+        console.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);
+        return null;
+      }
+
+      // تحضير التحديثات
+      const updates = {
+        status: correctLocalStatus,
+        delivery_status: waseetStatusText,
+        delivery_partner_order_id: String(waseetOrder.id),
+        updated_at: new Date().toISOString()
+      };
+
+      // تحديث رسوم التوصيل
+      if (waseetOrder.delivery_price) {
+        const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
+        if (deliveryPrice >= 0) {
+          updates.delivery_fee = deliveryPrice;
+        }
+      }
+
+      // تحديث حالة استلام الإيصال
+      if (waseetOrder.deliver_confirmed_fin === 1 || correctLocalStatus === 'delivered') {
+        updates.receipt_received = true;
+      }
+
+      // تطبيق التحديثات
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', localOrder.id);
+
+      if (updateErr) {
+        console.error('❌ خطأ في تحديث الطلب:', updateErr);
+        return null;
+      }
+
+      console.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
+      
+      return {
+        needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
+        updates,
+        waseet_order: waseetOrder,
+        local_order: { ...localOrder, ...updates }
+      };
+
+    } catch (error) {
+      console.error(`❌ خطأ في مزامنة الطلب ${qrId}:`, error);
+      throw error;
+    }
+  }, [token, orderStatusesMap, loadOrderStatuses]);
+
   // مزامنة طلب واحد بـ tracking number
   const syncOrderByTracking = async (trackingNumber) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
@@ -1306,6 +1410,7 @@ export const AlWaseetProvider = ({ children }) => {
     loadOrderStatuses,
     syncAndApplyOrders,
     syncOrderByTracking,
+    syncOrderByQR,
     orderStatusesMap,
 
     // New exports:

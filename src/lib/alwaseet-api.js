@@ -186,3 +186,9 @@ export const getInvoiceOrders = async (token, invoiceId) => {
 export const receiveInvoice = async (token, invoiceId) => {
   return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
 };
+
+// Get specific order by QR/tracking number
+export const getOrderByQR = async (token, qrId) => {
+  const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+  return orders.find(order => order.qr_id === String(qrId) || order.id === String(qrId));
+};
