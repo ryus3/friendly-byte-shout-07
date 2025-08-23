@@ -425,17 +425,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       console.log('❌ EditOrderDialog - لا يمكن التعديل');
       toast({
         title: "تنبيه",
-        description: "لا يمكن تعديل هذا الطلب - يجب أن يكون الطلب في حالة 'قيد الانتظار' للتعديل",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // منع تغيير الحالة إلى "مكتمل" بدون استلام الفاتورة
-    if (formData.status === 'completed' && !order.receipt_received) {
-      toast({
-        title: "تنبيه",
-        description: "لا يمكن تحديد الطلب كمكتمل قبل استلام الفاتورة",
+        description: "لا يمكن تعديل هذا الطلب",
         variant: "destructive"
       });
       return;

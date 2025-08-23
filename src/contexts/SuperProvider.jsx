@@ -153,7 +153,7 @@ export const SuperProvider = ({ children }) => {
         }))
       : (o.items || []);
     
-    // ضمان البيانات الأساسية للطلبات الجديدة مع تطبيع isArchived
+    // ضمان البيانات الأساسية للطلبات الجديدة
     return { 
       ...o, 
       items,
@@ -162,8 +162,7 @@ export const SuperProvider = ({ children }) => {
       total_amount: o.total_amount || 0,
       created_at: o.created_at || new Date().toISOString(),
       employee_name: o.created_by_name || o.employee_name || 'غير محدد',
-      // توحيد حقل الأرشفة من جميع الاحتمالات
-      isArchived: o.isArchived === true || o.is_archived === true || o.isarchived === true || false,
+      isArchived: o.isArchived || false,
       isAiOrder: false,
     };
   }, []);

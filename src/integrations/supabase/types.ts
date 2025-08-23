@@ -3549,10 +3549,6 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
       }
-      review_archive_status: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       run_maintenance: {
         Args: Record<PropertyKey, never>
         Returns: Json

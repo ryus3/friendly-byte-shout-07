@@ -14,21 +14,14 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
     setIsReceiving(true);
     try {
-      // تحديث الطلب لتفعيل استلام الفاتورة وتحديد الحالة إلى مكتمل إذا كان مسلم
-      const updateData = {
-        receipt_received: true,
-        receipt_received_at: new Date().toISOString(),
-        receipt_received_by: user.id
-      };
-
-      // إذا كان الطلب مسلم، تحديثه إلى مكتمل تلقائياً
-      if (order.status === 'delivered') {
-        updateData.status = 'completed';
-      }
-
+      // تحديث الطلب لتفعيل استلام الفاتورة
       const { error } = await supabase
         .from('orders')
-        .update(updateData)
+        .update({
+          receipt_received: true,
+          receipt_received_at: new Date().toISOString(),
+          receipt_received_by: user.id
+        })
         .eq('id', order.id);
 
       if (error) throw error;
