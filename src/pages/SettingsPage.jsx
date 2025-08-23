@@ -34,6 +34,7 @@ import AppearanceDialog from '@/components/settings/AppearanceDialog';
 
 import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
+import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -146,6 +147,7 @@ const SettingsPage = () => {
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
+  const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
   // جلب عدد رموز الموظفين من النظام الموحد
@@ -217,6 +219,16 @@ const SettingsPage = () => {
               iconColor="from-orange-500 to-orange-600"
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
+
+            {canAccessDeliveryPartners && (
+              <ModernCard
+                icon={RefreshCw}
+                title="إعدادات المزامنة والإشعارات"
+                description="التحكم في مزامنة الطلبات مع شركة التوصيل وإشعارات تحديث الحالات"
+                iconColor="from-blue-500 to-cyan-500"
+                onClick={() => setIsSyncNotificationOpen(true)}
+              />
+            )}
 
             <ModernCard
               icon={PackageX}
@@ -499,6 +511,11 @@ const SettingsPage = () => {
       <BackupSystemDialog 
         open={isBackupSystemOpen} 
         onOpenChange={setIsBackupSystemOpen} 
+      />
+
+      <SyncNotificationSettings 
+        open={isSyncNotificationOpen} 
+        onOpenChange={setIsSyncNotificationOpen} 
       />
 
     </>

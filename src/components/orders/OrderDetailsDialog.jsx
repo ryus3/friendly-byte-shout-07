@@ -59,6 +59,11 @@ const getStatusInfo = (status, deliveryStatus = null, isLocalOrder = true) => {
       badge: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-4 py-2', 
       icon: <Package className="w-4 h-4" />, 
       text: 'راجع للمخزن' 
+    },
+    'unknown': { 
+      badge: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-4 py-2', 
+      icon: <AlertTriangle className="w-4 h-4" />, 
+      text: 'غير معروف' 
     }
   };
   
@@ -151,7 +156,8 @@ const getStatusInfo = (status, deliveryStatus = null, isLocalOrder = true) => {
     { value: 'completed', label: 'مكتمل' },
     { value: 'cancelled', label: 'ملغي' },
     { value: 'returned', label: 'راجعة' },
-    { value: 'returned_in_stock', label: 'راجع للمخزن' }
+    { value: 'returned_in_stock', label: 'راجع للمخزن' },
+    { value: 'unknown', label: 'غير معروف' }
   ];
 
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {

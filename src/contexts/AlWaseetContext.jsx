@@ -683,13 +683,14 @@ export const AlWaseetProvider = ({ children }) => {
       if (showNotifications && statusChanges.length > 0) {
         const getStatusLabel = (status) => {
           const labels = {
-            'pending': 'قيد الانتظار',
+            'pending': 'قيد التجهيز',
             'shipped': 'تم الشحن',
             'delivery': 'قيد التوصيل',
             'delivered': 'تم التسليم',
             'cancelled': 'ملغي',
             'returned': 'مرجع',
-            'completed': 'مكتمل'
+            'completed': 'مكتمل',
+            'unknown': 'غير معروف'
           };
           return labels[status] || status;
         };

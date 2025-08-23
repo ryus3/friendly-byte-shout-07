@@ -136,6 +136,11 @@ const OrderCard = ({
         label: 'راجع للمخزن', 
         icon: PackageCheck,
         color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+      },
+      'unknown': { 
+        label: 'غير معروف', 
+        icon: AlertTriangle,
+        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       }
     };
     
