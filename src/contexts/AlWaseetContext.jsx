@@ -219,7 +219,11 @@ export const AlWaseetProvider = ({ children }) => {
           statusMap.set(key, 'pending');
         } else if (statusText.includes('استلام') && statusText.includes('مندوب')) {
           statusMap.set(key, 'shipped');
+        } else if (statusText.includes('تسليم') && statusText.includes('مصادقة')) {
+          // "تم التسليم والمصادقة المالية" -> completed 
+          statusMap.set(key, 'completed');
         } else if (statusText.includes('تسليم') || statusText.includes('مسلم') || statusText.includes('delivered')) {
+          // "تم التسليم للزبون" (بدون مصادقة) -> delivered
           statusMap.set(key, 'delivered');
         } else if (statusText.includes('ملغي') || statusText.includes('إلغاء') || statusText.includes('cancel')) {
           statusMap.set(key, 'cancelled');
@@ -336,6 +340,7 @@ export const AlWaseetProvider = ({ children }) => {
           const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
             (() => {
               const t = String(waseetStatusText || '').toLowerCase();
+              if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
               if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
               if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
               if (t.includes('راجع')) return 'returned';
@@ -800,8 +805,9 @@ export const AlWaseetProvider = ({ children }) => {
             const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
             if (finConfirmed && existingOrder.receipt_received !== true) {
               updates.receipt_received = true;
-              // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم
-              if (localStatus === 'delivered' || existingOrder.status === 'delivered') {
+              // ملاحظة: لا نُحدث status إلى completed تلقائياً - فقط عند استلام الفاتورة يدوياً
+              // فقط delivery_confirmed_fin = 1 يعني "تم التسليم والمصادقة المالية" من الوسيط
+              if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
                 updates.status = 'completed';
               }
             }
@@ -880,6 +886,7 @@ export const AlWaseetProvider = ({ children }) => {
       const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
         (() => {
           const t = String(waseetStatusText || '').toLowerCase();
+          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
           if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
           if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
           if (t.includes('راجع')) return 'returned';
@@ -921,9 +928,13 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // تحديث حالة استلام الإيصال
-      if (waseetOrder.deliver_confirmed_fin === 1 || correctLocalStatus === 'delivered') {
+      // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
+      if (waseetOrder.deliver_confirmed_fin === 1) {
         updates.receipt_received = true;
+        // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
+        if (correctLocalStatus === 'delivered') {
+          updates.status = 'completed';
+        }
       }
 
       // تطبيق التحديثات
@@ -999,6 +1010,7 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap.get(String(waseetStatusId)) ||
         (() => {
           const t = String(waseetStatusText).toLowerCase();
+          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
           if (t.includes('تسليم') || t.includes('مسلم') || t.includes('سُلم') || t.includes('مستلم')) return 'delivered';
           if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('مرفوض') || t.includes('فاشل')) return 'cancelled';
           if (t.includes('راجع') || t.includes('مرتجع')) return 'returned';
@@ -1035,7 +1047,7 @@ export const AlWaseetProvider = ({ children }) => {
       const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
       if (finConfirmed && existingOrder?.receipt_received !== true) {
         updates.receipt_received = true;
-        // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم
+        // ترقية للحالة المكتملة فقط عند التأكيد المالي من الوسيط
         if (localStatus === 'delivered' || existingOrder?.status === 'delivered') {
           updates.status = 'completed';
         }
