@@ -25,13 +25,12 @@ const STATUS_MAPPING = {
     'تم التسليم': { local: 'delivered', icon: CheckCircle, color: 'green', display: 'تم التسليم' },
     'تم التسليم والمصادقة المالية': { local: 'completed', icon: CheckCircle, color: 'green', display: 'تم التسليم والمصادقة المالية' },
     'مرجع من العميل': { local: 'returned', icon: RotateCcw, color: 'purple', display: 'مرجع من العميل' },
-    'تم الارجاع للتاجر': { local: 'returned_in_stock', icon: Package, color: 'purple', display: 'راجع للمخزن' },
     'ملغي': { local: 'cancelled', icon: XCircle, color: 'red', display: 'ملغي' },
     'رفض الطلب': { local: 'cancelled', icon: XCircle, color: 'red', display: 'رفض الطلب' },
-    'لا يمكن الوصول للعميل': { local: 'delivery', icon: Clock, color: 'gray', display: 'لا يمكن الوصول للعميل' },
-    'عدم وجود العميل': { local: 'delivery', icon: Clock, color: 'gray', display: 'عدم وجود العميل' },
-    'مؤجل': { local: 'delivery', icon: Clock, color: 'gray', display: 'مؤجل' },
-    'تأجيل التوصيل': { local: 'delivery', icon: Clock, color: 'gray', display: 'تأجيل التوصيل' }
+    'لا يمكن الوصول للعميل': { local: 'pending', icon: Clock, color: 'gray', display: 'لا يمكن الوصول للعميل' },
+    'عدم وجود العميل': { local: 'pending', icon: Clock, color: 'gray', display: 'عدم وجود العميل' },
+    'مؤجل': { local: 'pending', icon: Clock, color: 'gray', display: 'مؤجل' },
+    'تأجيل التوصيل': { local: 'pending', icon: Clock, color: 'gray', display: 'تأجيل التوصيل' }
   },
   
   // الحالات المحلية في نظامنا

@@ -26,7 +26,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { MobileTableRow, MobileTableCell, MobileTableGrid } from '@/components/ui/mobile-table';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
-import IntermediaryStatusBadge from './IntermediaryStatusBadge';
 
 const OrderListItem = ({ 
   order, 
@@ -193,38 +192,30 @@ const OrderListItem = ({
         color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
       };
     } 
-    // حالات التأجيل - عرضها كما هي مع لون التوصيل
+    // حالات التأجيل - عرضها كما هي
     else if (statusLower.includes('تأجيل') || statusLower.includes('مؤجل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
       return { 
         label: deliveryStatus, 
         icon: Clock, 
-        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
       };
     } 
-    // حالات عدم وجود العميل - عرضها كما هي مع لون التوصيل
+    // حالات عدم وجود العميل - عرضها كما هي
     else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يمكن الوصول') || statusLower.includes('غائب') || statusLower.includes('absent')) {
       return { 
         label: deliveryStatus, 
         icon: AlertTriangle, 
-        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
       };
     } 
-    // حالات الإرجاع للمخزن (راجع للتاجر)
-    else if (statusLower.includes('تم الارجاع') && statusLower.includes('التاجر')) {
-      return { 
-        label: 'راجع للمخزن', 
-        icon: RotateCcw, 
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    }
-    // حالات الإرجاع العادية
+    // حالات الإرجاع
     else if (statusLower.includes('راجع') || statusLower.includes('مرجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
       return { 
         label: deliveryStatus, 
         icon: RotateCcw, 
         color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
       };
-    }
+    } 
     // حالة افتراضية - عرض النص كما هو
     else {
       return { 
@@ -393,13 +384,10 @@ const OrderListItem = ({
           </MobileTableGrid>
 
           <MobileTableCell label="التوصيل">
-            <div className="flex items-center gap-2">
-              <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
-                <Building className="h-3 w-3 ml-1" />
-                {order.delivery_partner}
-              </Badge>
-              <IntermediaryStatusBadge order={order} />
-            </div>
+            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
+              <Building className="h-3 w-3 ml-1" />
+              {order.delivery_partner}
+            </Badge>
           </MobileTableCell>
 
           {/* Actions - ترتيب من اليمين لليسار: حذف، تتبع، تعديل، معاينة */}
