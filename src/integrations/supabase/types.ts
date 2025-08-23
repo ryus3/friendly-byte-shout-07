@@ -1561,12 +1561,16 @@ export type Database = {
           customer_province: string | null
           delivery_fee: number
           delivery_partner: string | null
+          delivery_partner_invoice_date: string | null
+          delivery_partner_invoice_id: string | null
           delivery_partner_order_id: string | null
           delivery_status: string
           discount: number
           discount_reason: string | null
           final_amount: number
           id: string
+          invoice_received_at: string | null
+          invoice_received_by: string | null
           isarchived: boolean | null
           notes: string | null
           order_number: string
@@ -1596,12 +1600,16 @@ export type Database = {
           customer_province?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
+          delivery_partner_invoice_date?: string | null
+          delivery_partner_invoice_id?: string | null
           delivery_partner_order_id?: string | null
           delivery_status?: string
           discount?: number
           discount_reason?: string | null
           final_amount?: number
           id?: string
+          invoice_received_at?: string | null
+          invoice_received_by?: string | null
           isarchived?: boolean | null
           notes?: string | null
           order_number: string
@@ -1631,12 +1639,16 @@ export type Database = {
           customer_province?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
+          delivery_partner_invoice_date?: string | null
+          delivery_partner_invoice_id?: string | null
           delivery_partner_order_id?: string | null
           delivery_status?: string
           discount?: number
           discount_reason?: string | null
           final_amount?: number
           id?: string
+          invoice_received_at?: string | null
+          invoice_received_by?: string | null
           isarchived?: boolean | null
           notes?: string | null
           order_number?: string

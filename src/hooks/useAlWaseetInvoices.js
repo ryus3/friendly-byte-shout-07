@@ -1,11 +1,14 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 export const useAlWaseetInvoices = () => {
   const { token, isLoggedIn, activePartner } = useAlWaseet();
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -114,22 +117,91 @@ export const useAlWaseetInvoices = () => {
 
     setLoading(true);
     try {
+      // 1) Confirm invoice on Al-Waseet
       await AlWaseetAPI.receiveInvoice(token, invoiceId);
-      
-      // Update invoice status locally
-      setInvoices(prev => prev.map(invoice => 
-        invoice.id === invoiceId 
-          ? { ...invoice, status: 'تم الاستلام من قبل التاجر' }
-          : invoice
+
+      // 2) Fetch invoice details (orders + invoice meta)
+      const invoiceData = await fetchInvoiceOrders(invoiceId);
+      const waseetOrders = invoiceData?.orders || [];
+      const invoiceMeta = invoiceData?.invoice?.[0] || null;
+      const invoiceDate = invoiceMeta?.updated_at || invoiceMeta?.created_at || new Date().toISOString();
+
+      // 3) Map Waseet order IDs to strings for local matching
+      const waseetOrderIds = waseetOrders.map(o => String(o.id));
+
+      // 4) Fetch matching local orders
+      let updatedOrdersCount = 0;
+      let profitsUpdatedCount = 0;
+      let missingMappingsCount = 0;
+
+      if (waseetOrderIds.length > 0) {
+        const { data: localOrders, error: localOrdersError } = await supabase
+          .from('orders')
+          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
+          .eq('delivery_partner', 'alwaseet')
+          .in('delivery_partner_order_id', waseetOrderIds);
+
+        if (localOrdersError) {
+          console.error('Error fetching local orders for invoice linking:', localOrdersError);
+        }
+
+        // Orders that couldn't be matched locally
+        const matchedIds = new Set((localOrders || []).map(o => String(o.delivery_partner_order_id)));
+        missingMappingsCount = waseetOrderIds.filter(id => !matchedIds.has(id)).length;
+
+        // 5) Update matched local orders to mark receipt received and attach invoice meta
+        if (localOrders && localOrders.length > 0) {
+          const { data: updated, error: updateError } = await supabase
+            .from('orders')
+            .update({
+              receipt_received: true,
+              delivery_partner_invoice_id: String(invoiceId),
+              delivery_partner_invoice_date: invoiceDate,
+              invoice_received_at: new Date().toISOString(),
+              invoice_received_by: user?.id || user?.user_id || null
+            })
+            .eq('delivery_partner', 'alwaseet')
+            .in('id', localOrders.map(o => o.id))
+            .select('id');
+
+          if (updateError) {
+            console.error('Error updating local orders with invoice receipt:', updateError);
+          } else {
+            updatedOrdersCount = updated?.length || 0;
+          }
+
+          // 6) Try updating related profits status to 'invoice_received' if not settled
+          const localOrderIds = (localOrders || []).map(o => o.id);
+          if (localOrderIds.length > 0) {
+            const { data: updatedProfits, error: profitsError } = await supabase
+              .from('profits')
+              .update({ status: 'invoice_received', updated_at: new Date().toISOString() })
+              .in('order_id', localOrderIds)
+              .neq('status', 'settled')
+              .select('id');
+
+            if (profitsError) {
+              console.warn('Skipping profits update due to RLS/permissions or other error:', profitsError.message);
+            } else {
+              profitsUpdatedCount = updatedProfits?.length || 0;
+            }
+          }
+        }
+      }
+
+      // 7) Update invoice status locally for UI
+      setInvoices(prev => prev.map(inv =>
+        inv.id === invoiceId ? { ...inv, status: 'تم الاستلام من قبل التاجر' } : inv
       ));
 
+      // 8) User feedback
       toast({
-        title: 'تم تأكيد الاستلام',
-        description: `تم تأكيد استلام الفاتورة رقم ${invoiceId}`,
+        title: 'تم تأكيد استلام الفاتورة',
+        description: `تم تعليم ${updatedOrdersCount} طلب كمستلم للفاتورة${missingMappingsCount ? `، وتعذر ربط ${missingMappingsCount} طلب` : ''}${profitsUpdatedCount ? `، وتحديث ${profitsUpdatedCount} سجل أرباح` : ''}.`,
         variant: 'success'
       });
 
-      // Refresh invoices to get updated data
+      // 9) Refresh invoices to get latest
       await fetchInvoices();
       return true;
     } catch (error) {
@@ -143,7 +215,7 @@ export const useAlWaseetInvoices = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, fetchInvoices]);
+  }, [token, fetchInvoices, fetchInvoiceOrders, user?.id, user?.user_id]);
 
   // Link invoice with local orders based on merchant_invoice_id
   const linkInvoiceWithLocalOrders = useCallback(async (invoiceId) => {
