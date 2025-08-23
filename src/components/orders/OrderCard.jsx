@@ -328,8 +328,20 @@ const OrderCard = ({
 
   // تحديد حالة الدفع الحقيقية والدقيقة من بيانات قاعدة البيانات
   const paymentStatus = useMemo(() => {
-    const profitRecord = profits?.find(p => p.order_id === order.id);
-    const isArchived = order.is_archived === true || order.isArchived === true || order.isarchived === true;
+    // البحث عن سجل الربح بدقة أكبر وإضافة تسجيل تشخيصي
+    const profitRecord = profits?.find(p => {
+      const match = String(p.order_id) === String(order.id);
+      if (order.order_number === 'RYUS-415487') {
+        console.log('🔍 تشخيص الطلب RYUS-415487:', {
+          orderId: order.id,
+          profitOrderId: p.order_id,
+          profitStatus: p.status,
+          settledAt: p.settled_at,
+          match: match
+        });
+      }
+      return match;
+    });
     
     // استبعاد طلبات المدير من وسم التحاسب
     if (order.created_by === '91484496-b887-44f7-9e5d-be9db5567604') {
@@ -339,8 +351,18 @@ const OrderCard = ({
     // فقط للطلبات المكتملة مع استلام فاتورة
     if (order.status === 'completed' && order.receipt_received === true) {
       
+      if (order.order_number === 'RYUS-415487') {
+        console.log('🔍 تشخيص RYUS-415487 - بيانات الربح:', {
+          profitRecord: profitRecord,
+          profitStatus: profitRecord?.status,
+          settledAt: profitRecord?.settled_at,
+          orderCompleted: order.status === 'completed',
+          receiptReceived: order.receipt_received
+        });
+      }
+      
       // 1. إذا تمت التسوية فعلياً (حسب جدول profits) = مدفوع
-      if (profitRecord?.status === 'settled' || profitRecord?.settled_at) {
+      if (profitRecord && (profitRecord.status === 'settled' || profitRecord.settled_at)) {
         return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
       }
       

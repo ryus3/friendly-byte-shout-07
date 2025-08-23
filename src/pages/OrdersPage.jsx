@@ -356,21 +356,48 @@ const OrdersPage = () => {
   const filteredOrders = useMemo(() => {
     let tempOrders;
     if (filters.status === 'archived') {
-      // في الأرشيف، إظهار فقط الطلبات المؤرشفة حقاً أو المكتملة تماماً مع استلام فاتورة أو الراجعة للمخزن
-      tempOrders = userOrders.filter(o => 
-        o.isArchived === true || 
-        o.is_archived === true || 
-        o.isarchived === true ||
-        (o.status === 'completed' && o.receipt_received === true) ||
-        o.status === 'returned_in_stock'
-      );
+      // في الأرشيف، إظهار فقط:
+      // 1. الطلبات المؤرشفة حقاً 
+      // 2. الطلبات المكتملة مع استلام فاتورة (محلية أو خارجية)
+      // 3. الطلبات الراجعة للمخزن
+      tempOrders = userOrders.filter(o => {
+        const isLocalOrder = !o.tracking_number || o.tracking_number.startsWith('RYUS-') || o.delivery_partner === 'محلي';
+        const isExplicitlyArchived = o.isArchived === true || o.is_archived === true || o.isarchived === true;
+        const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
+        const isReturnedToStock = o.status === 'returned_in_stock';
+        
+        // طلبات شركة التوصيل: يجب أن تكون delivered مع استلام فاتورة أو completed مع استلام فاتورة
+        const isExternalCompleted = !isLocalOrder && (
+          ((o.delivery_status?.includes('تم التسليم') || o.delivery_status?.includes('مسلم')) && o.receipt_received === true) ||
+          (o.status === 'completed' && o.receipt_received === true)
+        );
+        
+        return isExplicitlyArchived || isCompletedWithReceipt || isReturnedToStock || isExternalCompleted;
+      });
+      
+      console.log('🗂️ تشخيص الأرشيف - العدد:', tempOrders.length, 'الطلبات:', tempOrders.map(o => ({
+        orderNumber: o.order_number,
+        status: o.status,
+        deliveryStatus: o.delivery_status,
+        receiptReceived: o.receipt_received,
+        isLocalOrder: !o.tracking_number || o.tracking_number.startsWith('RYUS-') || o.delivery_partner === 'محلي'
+      })));
     } else {
       // إخفاء الطلبات المؤرشفة والمكتملة مع فاتورة والراجعة للمخزن من القائمة العادية
-      tempOrders = userOrders.filter(o => 
-        !(o.isArchived === true || o.is_archived === true || o.isarchived === true) &&
-        !(o.status === 'completed' && o.receipt_received === true) &&
-        o.status !== 'returned_in_stock'
-      );
+      tempOrders = userOrders.filter(o => {
+        const isLocalOrder = !o.tracking_number || o.tracking_number.startsWith('RYUS-') || o.delivery_partner === 'محلي';
+        const isExplicitlyArchived = o.isArchived === true || o.is_archived === true || o.isarchived === true;
+        const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
+        const isReturnedToStock = o.status === 'returned_in_stock';
+        
+        // طلبات شركة التوصيل: إخفاء المُسلّمة مع استلام فاتورة
+        const isExternalCompleted = !isLocalOrder && (
+          ((o.delivery_status?.includes('تم التسليم') || o.delivery_status?.includes('مسلم')) && o.receipt_received === true) ||
+          (o.status === 'completed' && o.receipt_received === true)
+        );
+        
+        return !isExplicitlyArchived && !isCompletedWithReceipt && !isReturnedToStock && !isExternalCompleted;
+      });
     }
 
     // تطبيق فلتر الوقت أولاً
