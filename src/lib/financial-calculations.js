@@ -72,13 +72,16 @@ export const calculateTotalRevenue = (orders, dateRange) => {
 };
 
 /**
- * حساب رسوم التوصيل
+ * حساب رسوم التوصيل - استبعاد طلبات الوسيط من الحسابات
  */
 export const calculateDeliveryFees = (orders, dateRange) => {
   if (!orders || !Array.isArray(orders)) return 0;
   
   const deliveredOrders = orders.filter(order => 
-    VALID_ORDER_STATUSES.includes(order.status) && order.receipt_received === true
+    VALID_ORDER_STATUSES.includes(order.status) && 
+    order.receipt_received === true &&
+    // استبعاد طلبات الوسيط من حساب رسوم التوصيل (لأنها تُحسب في الفاتورة)
+    order.delivery_partner !== 'alwaseet'
   );
   
   const filteredOrders = filterByDateRange(deliveredOrders, dateRange, 'updated_at');

@@ -279,7 +279,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                   <h3 className="text-lg font-bold text-foreground break-all">
                     #{order.tracking_number || order.order_number}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {!isLocalOrder ? (
                       <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                         طلب خارجي - {order.delivery_partner}
@@ -287,6 +287,27 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                     ) : (
                       <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
                         طلب محلي
+                      </span>
+                    )}
+
+                    {/* شارة استلام الفاتورة للطلبات الخارجية */}
+                    {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
+                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
+                        مستلم الفاتورة ✓
+                      </span>
+                    )}
+
+                    {/* شارة رقم فاتورة الوسيط */}
+                    {order.delivery_partner_invoice_id && (
+                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200">
+                        فاتورة الوسيط: {order.delivery_partner_invoice_id}
+                      </span>
+                    )}
+
+                    {/* معلومات وقت استلام الفاتورة */}
+                    {order.invoice_received_at && (
+                      <span className="text-xs text-muted-foreground">
+                        استلمت: {format(parseISO(order.invoice_received_at), 'd/M/yyyy h:mm a', { locale: ar })}
                       </span>
                     )}
                   </div>

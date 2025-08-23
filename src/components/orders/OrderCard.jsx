@@ -458,10 +458,26 @@ const OrderCard = ({
                        </span>
                      </div>
                    )}
-                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit mr-auto shadow-sm flex items-center gap-1`}>
-                    <Building className="h-3 w-3" />
-                    {order.delivery_partner}
-                  </Badge>
+                   <div className="flex flex-col gap-1 items-end">
+                     <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
+                       <Building className="h-3 w-3" />
+                       {order.delivery_partner}
+                     </Badge>
+
+                     {/* شارة استلام الفاتورة للطلبات الخارجية */}
+                     {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
+                       <Badge variant="default" className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                         مستلم الفاتورة ✓
+                       </Badge>
+                     )}
+
+                     {/* شارة رقم فاتورة الوسيط */}
+                     {order.delivery_partner_invoice_id && (
+                       <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 rounded-full">
+                         فاتورة: {order.delivery_partner_invoice_id}
+                       </Badge>
+                     )}
+                   </div>
                 </div>
                 
                 {/* Action Icons - منتصف */}
