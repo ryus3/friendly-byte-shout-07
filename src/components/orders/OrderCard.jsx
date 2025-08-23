@@ -331,9 +331,19 @@ const OrderCard = ({
 
   // تحديد حالة الأرباح والدفع بدقة
   const paymentStatus = useMemo(() => {
+    console.log(`🔄 [${order.order_number}] Payment Status Calculation:`, {
+      orderId: order.id,
+      orderNumber: order.order_number,
+      status: order.status,
+      deliveryStatus: order.delivery_status,
+      receiptReceived: order.receipt_received,
+      profitsLength: profits?.length || 0,
+      allProfitsProvided: !!profits
+    });
+    
     // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
     if (!Array.isArray(profits)) {
-      console.log(`🔍 [${order.order_number}] Profits not array:`, profits);
+      console.log(`❌ [${order.order_number}] Profits not array:`, profits);
       return null;
     }
     
@@ -366,8 +376,12 @@ const OrderCard = ({
       }
       // للطلبات المكتملة المؤرشفة: إظهار "مدفوع" فقط
       else if (order.status === 'completed') {
+        console.log(`✅ [${order.order_number}] Completed local order - profit status:`, profitRecord.status);
         if (profitRecord.status === 'settled') {
+          console.log(`💚 [${order.order_number}] Should show PAID status`);
           return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+        } else {
+          console.log(`⚠️ [${order.order_number}] Profit not settled:`, profitRecord.status);
         }
       }
     }
