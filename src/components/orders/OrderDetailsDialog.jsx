@@ -12,8 +12,8 @@ import { toast } from '@/components/ui/use-toast';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 const getStatusInfo = (status, deliveryStatus = null, isLocalOrder = true) => {
-  // استخدام delivery_status الحقيقي للطلبات الخارجية
-  const displayStatus = deliveryStatus || status;
+  // للطلبات المحلية استخدم status فقط، للخارجية استخدم delivery_status إذا توفر
+  const displayStatus = isLocalOrder ? status : (deliveryStatus || status);
   
   const configs = {
     'pending': { 
@@ -177,8 +177,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
   // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
   
-  // استخدام delivery_status للطلبات الخارجية أو status للمحلية
-  const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
+  // للطلبات المحلية استخدم status فقط، للخارجية استخدم delivery_status إذا توفر
+  const displayStatus = isLocalOrder ? order.status : (order.delivery_status || order.status);
   const statusInfo = getStatusInfo(order.status, order.delivery_status, isLocalOrder);
   const customerInfo = order.customerinfo || {
     name: order.customer_name,
