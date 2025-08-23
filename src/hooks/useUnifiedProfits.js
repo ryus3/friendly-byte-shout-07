@@ -258,7 +258,8 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
     profitData,
     loading,
     error,
-    refreshData
+    refreshData,
+    allProfits
   };
 };
 
