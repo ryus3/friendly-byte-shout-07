@@ -332,10 +332,14 @@ const OrderCard = ({
   // تحديد حالة الأرباح والدفع بدقة
   const paymentStatus = useMemo(() => {
     // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
-    if (!Array.isArray(profits)) return null;
+    if (!Array.isArray(profits)) {
+      console.log(`🔍 [${order.order_number}] Profits not array:`, profits);
+      return null;
+    }
     
     // البحث عن سجل الربح
     const profitRecord = profits.find(p => String(p.order_id) === String(order.id));
+    console.log(`🔍 [${order.order_number}] Profit record found:`, profitRecord);
     
     // تحديد نوع الطلب
     const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
