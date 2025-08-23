@@ -28,7 +28,6 @@ import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
-import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 
@@ -357,11 +356,21 @@ const OrdersPage = () => {
   const filteredOrders = useMemo(() => {
     let tempOrders;
     if (filters.status === 'archived') {
-      // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
-      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
+      // في الأرشيف، إظهار فقط الطلبات المؤرشفة حقاً أو المكتملة تماماً مع استلام فاتورة أو الراجعة للمخزن
+      tempOrders = userOrders.filter(o => 
+        o.isArchived === true || 
+        o.is_archived === true || 
+        o.isarchived === true ||
+        (o.status === 'completed' && o.receipt_received === true) ||
+        o.status === 'returned_in_stock'
+      );
     } else {
-      // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
-      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
+      // إخفاء الطلبات المؤرشفة والمكتملة مع فاتورة والراجعة للمخزن من القائمة العادية
+      tempOrders = userOrders.filter(o => 
+        !(o.isArchived === true || o.is_archived === true || o.isarchived === true) &&
+        !(o.status === 'completed' && o.receipt_received === true) &&
+        o.status !== 'returned_in_stock'
+      );
     }
 
     // تطبيق فلتر الوقت أولاً
@@ -632,12 +641,6 @@ const OrdersPage = () => {
               setSelectedOrders={setSelectedOrders}
               onDeleteOrder={handleDeleteSelected}
               viewMode={viewMode}
-              additionalButtons={(order) => (
-                <ReceiveInvoiceButton 
-                  order={order} 
-                  onSuccess={() => refetchProducts()} 
-                />
-              )}
             />
           </TabsContent>
 

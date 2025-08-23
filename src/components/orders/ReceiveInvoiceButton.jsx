@@ -14,21 +14,28 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
     setIsReceiving(true);
     try {
-      // تحديث الطلب لتفعيل استلام الفاتورة
+      // تحديث متقدم: استلام الفاتورة + إكمال الطلب تلقائياً
+      const updateData = {
+        receipt_received: true,
+        receipt_received_at: new Date().toISOString(),
+        receipt_received_by: user.id
+      };
+
+      // إذا كان الطلب مُسلّم، اجعله مكتمل تلقائياً
+      if (order.status === 'delivered') {
+        updateData.status = 'completed';
+      }
+
       const { error } = await supabase
         .from('orders')
-        .update({
-          receipt_received: true,
-          receipt_received_at: new Date().toISOString(),
-          receipt_received_by: user.id
-        })
+        .update(updateData)
         .eq('id', order.id);
 
       if (error) throw error;
 
       toast({
         title: "✅ تم استلام الفاتورة بنجاح",
-        description: `تم تأكيد استلام فاتورة الطلب ${order.order_number}`,
+        description: `تم تأكيد استلام فاتورة الطلب ${order.order_number}${order.status === 'delivered' ? ' وإكمال الطلب تلقائياً' : ''}`,
         variant: "success",
       });
 
@@ -50,8 +57,8 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
     return null;
   }
 
-  // إظهار الزر فقط للطلبات المكتملة/المسلمة
-  if (order?.status !== 'completed' && order?.status !== 'delivered') {
+  // إظهار الزر فقط للطلبات المُسلّمة (delivered) وليس المكتملة
+  if (order?.status !== 'delivered') {
     return null;
   }
 

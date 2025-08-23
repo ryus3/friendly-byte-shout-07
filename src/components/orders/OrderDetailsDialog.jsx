@@ -9,6 +9,7 @@ import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
+import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 const getStatusInfo = (status, deliveryStatus = null, isLocalOrder = true) => {
   // استخدام delivery_status الحقيقي للطلبات الخارجية
@@ -367,10 +368,59 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 <div className="flex items-center gap-2 text-muted-foreground"><Phone className="w-4 h-4" /><span>{customerInfo.phone || 'لا يوجد رقم هاتف'}</span></div>
                 <div className="flex items-center gap-2 text-muted-foreground sm:col-span-2"><MapPin className="w-4 h-4" /><span>{customerInfo.address || 'لا يوجد عنوان'}, {customerInfo.city || ''}</span></div>
                 {customerInfo.notes && (<div className="sm:col-span-2 text-muted-foreground"><strong>ملاحظات:</strong> {customerInfo.notes}</div>)}
-              </div>
-            </div>
-            <div className="p-4 bg-secondary rounded-lg border border-border">
-              <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
+               </div>
+             </div>
+
+             {/* زر استلام الفاتورة في المعاينة */}
+             {order.status === 'delivered' && !order.receipt_received && (
+               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h4 className="font-semibold text-amber-800">استلام الفاتورة</h4>
+                     <p className="text-sm text-amber-700">يجب استلام الفاتورة لإكمال الطلب وتسوية الأرباح</p>
+                   </div>
+                   <ReceiveInvoiceButton 
+                     order={order} 
+                     onSuccess={() => {
+                       onOpenChange(false);
+                       window.location.reload(); // إعادة تحميل لإظهار التحديثات
+                     }} 
+                   />
+                 </div>
+               </div>
+             )}
+
+             {/* معلومات استلام الفاتورة إذا تم الاستلام */}
+             {order.receipt_received && (
+               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                 <h4 className="font-semibold text-emerald-800 mb-2">تفاصيل استلام الفاتورة</h4>
+                 <div className="space-y-2 text-sm">
+                   <div className="flex justify-between">
+                     <span className="text-emerald-700">تاريخ الاستلام:</span>
+                     <span className="font-medium">
+                       {order.receipt_received_at && format(parseISO(order.receipt_received_at), 'd/M/yyyy h:mm a', { locale: ar })}
+                     </span>
+                   </div>
+                   {order.delivery_partner_invoice_id && (
+                     <div className="flex justify-between">
+                       <span className="text-emerald-700">رقم فاتورة الشريك:</span>
+                       <span className="font-medium">{order.delivery_partner_invoice_id}</span>
+                     </div>
+                   )}
+                   {order.delivery_partner_invoice_date && (
+                     <div className="flex justify-between">
+                       <span className="text-emerald-700">تاريخ فاتورة الشريك:</span>
+                       <span className="font-medium">
+                         {format(parseISO(order.delivery_partner_invoice_date), 'd/M/yyyy', { locale: ar })}
+                       </span>
+                     </div>
+                   )}
+                 </div>
+               </div>
+             )}
+
+             <div className="p-4 bg-secondary rounded-lg border border-border">
+               <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
                <div className="space-y-3">
                  {(order.order_items || order.items || []).map((item, index) => {
                    const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';

@@ -326,37 +326,32 @@ const OrderCard = ({
     }, 0);
   }, [calculateProfit, order, profits]);
 
-  // تحديد حالة الدفع الحقيقية من بيانات قاعدة البيانات
+  // تحديد حالة الدفع الحقيقية والدقيقة من بيانات قاعدة البيانات
   const paymentStatus = useMemo(() => {
     const profitRecord = profits?.find(p => p.order_id === order.id);
     const isArchived = order.is_archived === true || order.isArchived === true || order.isarchived === true;
+    
     // استبعاد طلبات المدير من وسم التحاسب
     if (order.created_by === '91484496-b887-44f7-9e5d-be9db5567604') {
       return null;
     }
-    // 1. إذا كان الطلب مكتمل وتمت التسوية (حسب profits) أو مؤرشف = مدفوع
-    if (
-      order.status === 'completed' &&
-      (isArchived || (
-        order.receipt_received === true &&
-        (profitRecord?.status === 'settled' || profitRecord?.settled_at)
-      ))
-    ) {
-      return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+    
+    // فقط للطلبات المكتملة مع استلام فاتورة
+    if (order.status === 'completed' && order.receipt_received === true) {
+      
+      // 1. إذا تمت التسوية فعلياً (حسب جدول profits) = مدفوع
+      if (profitRecord?.status === 'settled' || profitRecord?.settled_at) {
+        return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+      }
+      
+      // 2. إذا لم تتم التسوية بعد = قابل للتحاسب
+      else {
+        return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
+      }
     }
-    // 2. إذا كان الطلب مكتمل وتم استلام الفاتورة ولم تتم التسوية ولا يوجد أرشيف = قابل للتحاسب
-    else if (
-      order.status === 'completed' &&
-      order.receipt_received === true &&
-      !isArchived &&
-      (!profitRecord || (profitRecord.status !== 'settled' && !profitRecord.settled_at))
-    ) {
-      return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
-    }
+    
     // 3. لا تظهر حالة دفع للطلبات غير المكتملة أو التي لم يتم استلام فاتورتها
-    else {
-      return null;
-    }
+    return null;
   }, [order, profits]);
 
 
