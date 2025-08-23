@@ -329,15 +329,20 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         });
       }
       
-      // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون
+      // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون للطلبات المحلية فقط
       if (updatedOrder.status === 'cancelled' && originalOrder.status !== 'cancelled') {
         console.log('Processing cancelled status...');
         
-        try {
-          await releaseStock(updatedOrder.id);
-          console.log('Stock released successfully');
-        } catch (stockError) {
-          console.error('Error releasing stock:', stockError);
+        const isExternalOrder = updatedOrder.delivery_partner && updatedOrder.delivery_partner !== 'محلي';
+        if (!isExternalOrder) {
+          try {
+            await releaseStock(updatedOrder.id);
+            console.log('Stock released successfully (local order)');
+          } catch (stockError) {
+            console.error('Error releasing stock:', stockError);
+          }
+        } else {
+          console.log('External order cancelled - keeping stock reserved per partner rules');
         }
         
         // حذف سجل الأرباح إذا كان موجوداً
@@ -351,9 +356,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
       }
 
-      // 5. عند وصول الطلب لحالة "راجع للمخزن" - إرسال للأرشيف تلقائياً
       if (updatedOrder.status === 'returned_in_stock' && originalOrder.status !== 'returned_in_stock') {
-        console.log('Processing returned_in_stock status - archiving order...');
+        console.log('Processing returned_in_stock status - releasing stock and archiving order...');
+        
+        // تحرير المخزون المحجوز وإعادته للمخزن
+        try {
+          await releaseStock(updatedOrder.id);
+          console.log('Stock released on returned_in_stock');
+        } catch (e) {
+          console.error('Error releasing stock for returned_in_stock:', e);
+        }
         
         // أرشفة الطلب تلقائياً
         await supabase
