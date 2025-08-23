@@ -16,7 +16,12 @@ import {
   Settings, 
   Bell,
   BellOff,
-  RefreshCcw
+  RefreshCcw,
+  Search,
+  Copy,
+  Download,
+  Eye,
+  Package
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
@@ -35,12 +40,16 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     comprehensiveOrderCorrection,
     syncOrderByTracking,
     lastSyncAt,
-    isSyncing
+    isSyncing,
+    getOrderStatuses
   } = useAlWaseet();
   
   const { toast } = useToast();
   const [isManualSyncing, setIsManualSyncing] = React.useState(false);
   const [singleOrderTracking, setSingleOrderTracking] = React.useState('');
+  const [isLoadingStatuses, setIsLoadingStatuses] = React.useState(false);
+  const [statusesData, setStatusesData] = React.useState([]);
+  const [showStatusesTable, setShowStatusesTable] = React.useState(false);
 
   const handleManualSync = async (type = 'fast') => {
     if (isManualSyncing || isSyncing) return;
@@ -133,6 +142,80 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     } finally {
       setIsManualSyncing(false);
     }
+  };
+
+  const handleFetchStatuses = async () => {
+    if (isLoadingStatuses) return;
+    
+    setIsLoadingStatuses(true);
+    try {
+      const result = await getOrderStatuses();
+      if (result.success && result.data) {
+        setStatusesData(result.data);
+        setShowStatusesTable(true);
+        toast({
+          title: "تم جلب حالات الوسيط بنجاح",
+          description: `تم جلب ${result.data.length} حالة من الوسيط`,
+        });
+      } else {
+        toast({
+          title: "خطأ في جلب الحالات",
+          description: result.message || "حدث خطأ أثناء جلب حالات الوسيط",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('خطأ في جلب حالات الوسيط:', error);
+      toast({
+        title: "خطأ في جلب الحالات",
+        description: "حدث خطأ أثناء جلب حالات الوسيط",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingStatuses(false);
+    }
+  };
+
+  const handleCopyStatuses = () => {
+    const jsonData = JSON.stringify(statusesData, null, 2);
+    navigator.clipboard.writeText(jsonData).then(() => {
+      toast({
+        title: "تم نسخ البيانات",
+        description: "تم نسخ جميع حالات الوسيط بتنسيق JSON",
+      });
+    }).catch(() => {
+      toast({
+        title: "خطأ في النسخ",
+        description: "حدث خطأ أثناء نسخ البيانات",
+        variant: "destructive"
+      });
+    });
+  };
+
+  const handleExportCSV = () => {
+    const headers = ['state_id', 'status'];
+    const csvContent = [
+      headers.join(','),
+      ...statusesData.map(status => [
+        status.id || status.state_id || '',
+        `"${(status.status || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `alwaseet_statuses_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "تم تصدير البيانات",
+      description: "تم تحميل ملف CSV بحالات الوسيط",
+    });
   };
 
   if (activePartner === 'local' || !isLoggedIn) {
@@ -268,6 +351,115 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                 <Bell className="w-4 h-4 inline ml-1" />
                 ملاحظة: إيقاف المزامنة التلقائية يقلل من الإشعارات المتكررة ويحسن الأداء
               </div>
+            </CardContent>
+          </Card>
+
+          {/* فحص حالات الوسيط */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Search className="w-4 h-4" />
+                فحص حالات الوسيط
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">عرض جميع حالات الوسيط</Label>
+                  <p className="text-xs text-muted-foreground">
+                    جلب وعرض جميع الحالات المتاحة من API الوسيط مع state_id
+                  </p>
+                </div>
+                <Button
+                  onClick={handleFetchStatuses}
+                  disabled={isLoadingStatuses}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isLoadingStatuses && <RefreshCw className="w-4 h-4 ml-1 animate-spin" />}
+                  <Eye className="w-4 h-4 ml-1" />
+                  عرض الحالات
+                </Button>
+              </div>
+
+              {/* جدول الحالات */}
+              {showStatusesTable && statusesData.length > 0 && (
+                <div className="space-y-3">
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">الحالات المتاحة ({statusesData.length})</span>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleCopyStatuses}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Copy className="w-4 h-4 ml-1" />
+                        نسخ JSON
+                      </Button>
+                      <Button
+                        onClick={handleExportCSV}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Download className="w-4 h-4 ml-1" />
+                        تصدير CSV
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto border rounded">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted sticky top-0">
+                        <tr>
+                          <th className="text-right p-2 border-b">state_id</th>
+                          <th className="text-right p-2 border-b">الحالة</th>
+                          <th className="text-center p-2 border-b">تحرير المخزون</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statusesData.map((status, index) => {
+                          const stateId = status.id || status.state_id;
+                          const isStockReleasing = stateId === 17 || stateId === '17';
+                          return (
+                            <tr 
+                              key={index} 
+                              className={`border-b hover:bg-muted/50 ${
+                                isStockReleasing ? 'bg-green-50 border-green-200' : ''
+                              }`}
+                            >
+                              <td className="p-2 font-mono text-center">
+                                <Badge variant={isStockReleasing ? "success" : "secondary"}>
+                                  {stateId}
+                                </Badge>
+                              </td>
+                              <td className="p-2">{status.status || 'غير محدد'}</td>
+                              <td className="p-2 text-center">
+                                {isStockReleasing ? (
+                                  <Badge variant="success" className="text-xs">
+                                    <Package className="w-3 h-3 ml-1" />
+                                    نعم
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="text-xs">
+                                    لا
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground bg-green-50 border border-green-200 p-3 rounded">
+                    <Package className="w-4 h-4 inline ml-1 text-green-600" />
+                    قاعدة تحرير المخزون: فقط الحالة state_id: 17 ("تم الارجاع الى التاجر") تحرر المخزون المحجوز من الطلبات
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
