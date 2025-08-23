@@ -31,11 +31,31 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     return allowedTypes.includes(notification.type);
   });
 
-  // أيقونات الإشعارات
-  const getNotificationIcon = (type, priority) => {
+  // أيقونات الإشعارات مع ألوان حسب الحالة
+  const getNotificationIcon = (notification) => {
     const iconProps = { className: "w-4 h-4" };
     
-    switch (type) {
+    // إشعارات تغيير حالة الطلب
+    if (notification.type === 'order_status_changed') {
+      const status = notification.data?.new_status || '';
+      const message = notification.message || '';
+      
+      if (status === 'delivered' || message.includes('تم التسليم')) {
+        return <CheckCircle {...iconProps} className="w-4 h-4 text-green-600" />;
+      }
+      if (status === 'out for delivery' || message.includes('في الطريق') || message.includes('خرج للتوصيل')) {
+        return <Info {...iconProps} className="w-4 h-4 text-blue-600" />;
+      }
+      if (status === 'rejected' || status === 'canceled' || message.includes('رفض') || message.includes('ملغي')) {
+        return <X {...iconProps} className="w-4 h-4 text-red-600" />;
+      }
+      if (message.includes('تأخير') || message.includes('إرجاع') || status === 'delayed' || status === 'returned') {
+        return <AlertCircle {...iconProps} className="w-4 h-4 text-orange-600" />;
+      }
+    }
+    
+    // أيقونات افتراضية
+    switch (notification.type) {
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
       case 'warning':
@@ -47,9 +67,33 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان الأولوية
-  const getPriorityColor = (priority) => {
-    switch (priority) {
+  // ألوان حسب نوع ووصف الإشعار
+  const getNotificationStatusColor = (notification) => {
+    // إشعارات تغيير حالة الطلب
+    if (notification.type === 'order_status_changed') {
+      const status = notification.data?.new_status || '';
+      const message = notification.message || '';
+      
+      // تم التسليم - أخضر
+      if (status === 'delivered' || message.includes('تم التسليم')) {
+        return 'border-green-500 bg-green-50 dark:bg-green-950/30';
+      }
+      // في الطريق/خرج للتوصيل - أزرق
+      if (status === 'out for delivery' || message.includes('في الطريق') || message.includes('خرج للتوصيل')) {
+        return 'border-blue-500 bg-blue-50 dark:bg-blue-950/30';
+      }
+      // رفض/إلغاء - أحمر
+      if (status === 'rejected' || status === 'canceled' || message.includes('رفض') || message.includes('ملغي')) {
+        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
+      }
+      // تأخير/إرجاع - برتقالي
+      if (message.includes('تأخير') || message.includes('إرجاع') || status === 'delayed' || status === 'returned') {
+        return 'border-orange-500 bg-orange-50 dark:bg-orange-950/30';
+      }
+    }
+    
+    // ألوان الأولوية الافتراضية للإشعارات الأخرى
+    switch (notification.priority) {
       case 'high':
         return 'border-red-500 bg-red-50 dark:bg-red-950/30';
       case 'medium':
@@ -151,12 +195,12 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                       key={notification.id}
                       className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                         !notification.read ? 'bg-primary/5' : ''
-                      } ${getPriorityColor(notification.priority)}`}
+                      } ${getNotificationStatusColor(notification)}`}
                       onClick={() => handleMarkAsRead(notification.id)}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 mt-1">
-                          {getNotificationIcon(notification.type, notification.priority)}
+                          {getNotificationIcon(notification)}
                         </div>
                         
                         <div className="flex-1 min-w-0">
