@@ -16,10 +16,13 @@ import {
   Settings, 
   Bell,
   BellOff,
-  RefreshCcw
+  RefreshCcw,
+  List,
+  ArrowRight
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
+import { getOrderStatuses } from '@/lib/alwaseet-api';
 
 const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const { 
@@ -41,6 +44,9 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const { toast } = useToast();
   const [isManualSyncing, setIsManualSyncing] = React.useState(false);
   const [singleOrderTracking, setSingleOrderTracking] = React.useState('');
+  const [showStatusList, setShowStatusList] = React.useState(false);
+  const [statusList, setStatusList] = React.useState([]);
+  const [loadingStatuses, setLoadingStatuses] = React.useState(false);
 
   const handleManualSync = async (type = 'fast') => {
     if (isManualSyncing || isSyncing) return;
@@ -133,6 +139,70 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     } finally {
       setIsManualSyncing(false);
     }
+  };
+
+  const handleShowStatuses = async () => {
+    if (!token) return;
+    
+    setLoadingStatuses(true);
+    try {
+      const statuses = await getOrderStatuses(token);
+      setStatusList(statuses || []);
+      setShowStatusList(true);
+      toast({
+        title: "تم جلب الحالات",
+        description: `تم جلب ${statuses?.length || 0} حالة من الوسيط`,
+      });
+    } catch (error) {
+      console.error('خطأ في جلب الحالات:', error);
+      toast({
+        title: "خطأ في جلب الحالات",
+        description: "حدث خطأ أثناء جلب حالات الطلبات من الوسيط",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingStatuses(false);
+    }
+  };
+
+  const getInternalMapping = (statusText) => {
+    const statusLower = statusText?.toLowerCase() || '';
+    
+    // حالات الإرجاع للمخزن
+    if (statusLower.includes('تم الارجاع') && statusLower.includes('التاجر')) {
+      return { internal: 'returned_in_stock', label: 'راجع للمخزن', color: 'purple' };
+    }
+    // حالات الإرجاع العادية
+    else if (statusLower.includes('مرجع') || (statusLower.includes('راجع') && !statusLower.includes('التاجر'))) {
+      return { internal: 'returned', label: 'مُرجع', color: 'purple' };
+    }
+    // حالات التأجيل والغياب - في الطريق وليس قيد التجهيز
+    else if (statusLower.includes('مؤجل') || statusLower.includes('تأجيل') || 
+             statusLower.includes('لا يمكن الوصول') || statusLower.includes('عدم وجود')) {
+      return { internal: 'delivery', label: 'قيد التوصيل', color: 'orange' };
+    }
+    // حالات التسليم
+    else if (statusLower.includes('تسليم') || statusLower.includes('مسلم')) {
+      return { internal: 'delivered', label: 'تم التسليم', color: 'green' };
+    }
+    // حالات الإلغاء
+    else if (statusLower.includes('ملغي') || statusLower.includes('رفض')) {
+      return { internal: 'cancelled', label: 'ملغي', color: 'red' };
+    }
+    // حالات الشحن
+    else if (statusLower.includes('استلام') && statusLower.includes('مندوب')) {
+      return { internal: 'shipped', label: 'تم الشحن', color: 'blue' };
+    }
+    // حالات قيد التوصيل
+    else if (statusLower.includes('جاري') || statusLower.includes('في الطريق')) {
+      return { internal: 'delivery', label: 'قيد التوصيل', color: 'orange' };
+    }
+    // حالة افتراضية
+    else if (statusLower.includes('فعال')) {
+      return { internal: 'pending', label: 'قيد التجهيز', color: 'yellow' };
+    }
+    
+    return { internal: 'unknown', label: 'غير محدد', color: 'gray' };
   };
 
   if (activePartner === 'local' || !isLoggedIn) {
@@ -342,9 +412,86 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                      تحديث
                    </Button>
                  </div>
-               </div>
-             </CardContent>
-           </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* عرض حالات الوسيط */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <List className="w-4 h-4" />
+                حالات الوسيط
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                onClick={handleShowStatuses}
+                disabled={loadingStatuses || !token}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                {loadingStatuses && <RefreshCw className="w-4 h-4 ml-2 animate-spin" />}
+                <List className="w-4 h-4 ml-2" />
+                عرض جميع حالات الوسيط
+                <span className="text-xs text-muted-foreground mr-auto">
+                  (State ID + النص العربي)
+                </span>
+              </Button>
+
+              {showStatusList && (
+                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto border rounded p-3">
+                  <div className="text-sm font-medium mb-2">
+                    جميع الحالات المتاحة ({statusList.length})
+                  </div>
+                  {statusList.map((status, index) => {
+                    const mapping = getInternalMapping(status.text);
+                    const isReturnToStock = status.text?.includes('تم الارجاع') && status.text?.includes('التاجر');
+                    
+                    return (
+                      <div 
+                        key={status.id || index}
+                        className={`flex items-center justify-between p-2 border rounded-lg ${
+                          isReturnToStock ? 'bg-purple-50 border-purple-200' : 'hover:bg-muted/50'
+                        } transition-colors`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="text-xs">
+                            ID: {status.id}
+                          </Badge>
+                          <span className="font-medium text-sm">
+                            {status.text}
+                            {isReturnToStock && (
+                              <Badge className="ml-2 bg-purple-100 text-purple-800 text-xs">
+                                راجع للمخزن
+                              </Badge>
+                            )}
+                          </span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <Badge 
+                            className={`text-xs ${
+                              mapping.color === 'purple' ? 'bg-purple-100 text-purple-800' :
+                              mapping.color === 'green' ? 'bg-green-100 text-green-800' :
+                              mapping.color === 'red' ? 'bg-red-100 text-red-800' :
+                              mapping.color === 'blue' ? 'bg-blue-100 text-blue-800' :
+                              mapping.color === 'orange' ? 'bg-orange-100 text-orange-800' :
+                              mapping.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {mapping.label}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* معلومات إضافية */}
           <Card className="bg-blue-50 border-blue-200">
