@@ -158,44 +158,12 @@ export const NotificationsSystemProvider = ({ children }) => {
     }
   }, [createNotification, hasPermission]);
 
-  const notifyOrderStatusChanged = useCallback(async (order, oldStatus, newStatus, changedBy) => {
-    const statusLabels = {
-      pending: 'قيد التجهيز',
-      shipped: 'تم الشحن',
-      delivery: 'قيد التوصيل',
-      delivered: 'تم التسليم',
-      completed: 'مكتمل',
-      returned: 'راجعة',
-      returned_in_stock: 'راجع للمخزن',
-      cancelled: 'ملغي'
-    };
-
-    // إشعار للمدير
-    if (hasPermission('manage_orders')) {
-      await createNotification({
-        title: 'تغيير حالة طلب',
-        message: `الطلب #${order.trackingnumber} تغير من ${statusLabels[oldStatus]} إلى ${statusLabels[newStatus]}`,
-        type: newStatus === 'delivered' ? 'success' : 'info',
-        target_role: 'manager',
-        related_entity_type: 'order',
-        related_entity_id: order.id,
-        priority: newStatus === 'delivered' ? 'high' : 'normal'
-      });
-    }
-
-    // إشعار للموظف صاحب الطلب
-    if (order.created_by && order.created_by !== user?.id) {
-      await createNotification({
-        title: 'تحديث طلبك',
-        message: `طلبك #${order.trackingnumber} تغير إلى ${statusLabels[newStatus]}`,
-        type: newStatus === 'delivered' ? 'success' : 'info',
-        target_user_id: order.created_by,
-        related_entity_type: 'order',
-        related_entity_id: order.id,
-        priority: 'normal'
-      });
-    }
-  }, [createNotification, hasPermission, user?.id]);
+  // تم إلغاء دالة notifyOrderStatusChanged - الإشعارات تأتي الآن من database trigger فقط
+  const notifyOrderStatusChanged = useCallback(() => {
+    // تم إلغاء هذه الدالة لمنع الإشعارات المكررة
+    // الإشعارات تأتي الآن من database trigger عند تغيير delivery_status
+    console.log('تم إلغاء إرسال الإشعارات من هنا - التريغر يتولى الأمر');
+  }, []);
 
   // إشعارات التحاسب
   const notifySettlementRequested = useCallback(async (request, employee) => {

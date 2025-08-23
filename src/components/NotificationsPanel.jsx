@@ -92,6 +92,7 @@ const iconMap = {
   stock_warning: StockWarningIcon,
   order_completed: OrderSuccessIcon,
   order_shipped: OrderIcon,
+  order_status_changed: OrderIcon,
   new_order: OrderIcon,
   new_order_employee: SystemIcon,
   new_registration: UserRegistrationIcon,
@@ -142,6 +143,13 @@ const typeColorMap = {
     dot: 'bg-green-500'
   },
   order_shipped: { 
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-blue-500 dark:border-blue-400',
+    text: 'text-foreground', 
+    icon: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500'
+  },
+  order_status_changed: { 
     bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
     border: 'border-r-4 border-blue-500 dark:border-blue-400',
     text: 'text-foreground', 
@@ -251,7 +259,7 @@ const NotificationsPanel = () => {
       } else {
         navigate('/inventory?filter=low_stock');
       }
-    } else if (notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
+    } else if (notification.type === 'order_status_changed' || notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
       // استخراج بيانات الطلب: نحاول من data أولاً ثم من النص
       const data = notification.data || {};
       const orderId = data.order_id || data.id || null;
