@@ -152,8 +152,24 @@ const OrderCard = ({
     return configs[displayStatus] || configs['pending'];
   };
 
-  // دالة منفصلة للحالات الخارجية من شركة التوصيل
-  const getDeliveryStatusConfig = (deliveryStatus) => {
+  // دالة منفصلة للحالات الخارجية من شركة التوصيل - نظام جديد
+  const getDeliveryStatusConfig = (deliveryStatus, stateId = null) => {
+    // إذا كان لدينا state_id، استخدم النظام الجديد
+    if (stateId) {
+      try {
+        const { getStatusConfig } = require('@/lib/alwaseet-statuses');
+        const statusConfig = getStatusConfig(stateId);
+        return {
+          label: statusConfig.text,
+          icon: statusConfig.icon,
+          color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+        };
+      } catch (error) {
+        console.error('Error loading Al-Waseet status config:', error);
+      }
+    }
+
+    // النظام القديم كـ fallback
     if (!deliveryStatus || typeof deliveryStatus !== 'string') {
       return { 
         label: 'غير محدد', 
@@ -225,17 +241,48 @@ const OrderCard = ({
   // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
   
-  // استخدام delivery_status للطلبات الخارجية أو status للمحلية  
+  // استخدام النظام الجديد للطلبات الخارجية
   const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
-  const statusConfig = getStatusConfig(order.status, order.delivery_status, isLocalOrder);
+  
+  // للطلبات الخارجية، استخدم state_id إذا كان متوفراً
+  const externalStateId = order.delivery_partner_order_id || order.external_status_id;
+  const statusConfig = !isLocalOrder && externalStateId 
+    ? getDeliveryStatusConfig(order.delivery_status, externalStateId)
+    : getStatusConfig(order.status, order.delivery_status, isLocalOrder);
+  
   const StatusIcon = statusConfig.icon;
   const deliveryBadgeColor = isLocalOrder ? 
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
-  // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قبل استلام المندوب فقط
-  const canEdit = isBeforePickup(order);
-  const canDelete = isBeforePickup(order);
+  // التحقق من الصلاحيات مع النظام الجديد
+  const canEdit = React.useMemo(() => {
+    if (isLocalOrder) {
+      return order.status === 'pending';
+    } else {
+      // للطلبات الخارجية، استخدم النظام الجديد
+      try {
+        const { canEditOrder } = require('@/lib/alwaseet-statuses');
+        return canEditOrder(externalStateId);
+      } catch {
+        return isBeforePickup(order);
+      }
+    }
+  }, [isLocalOrder, order.status, externalStateId]);
+
+  const canDelete = React.useMemo(() => {
+    if (isLocalOrder) {
+      return order.status === 'pending';
+    } else {
+      // للطلبات الخارجية، استخدم النظام الجديد
+      try {
+        const { canDeleteOrder } = require('@/lib/alwaseet-statuses');
+        return canDeleteOrder(externalStateId);
+      } catch {
+        return isBeforePickup(order);
+      }
+    }
+  }, [isLocalOrder, order.status, externalStateId]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {

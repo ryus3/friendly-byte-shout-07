@@ -198,7 +198,7 @@ export const AlWaseetProvider = ({ children }) => {
     toast({ title: "تم تسجيل الخروج", description: `تم تسجيل الخروج من ${partnerName}.` });
   }, [activePartner, deliveryPartners, user, setActivePartner]);
   
-  // تحميل حالات الطلبات وإنشاء خريطة التطابق
+  // تحميل حالات الطلبات وإنشاء خريطة التطابق الجديدة
   const loadOrderStatuses = useCallback(async () => {
     if (!token) return;
     
@@ -206,62 +206,23 @@ export const AlWaseetProvider = ({ children }) => {
       console.log('🔄 تحميل حالات الطلبات من الوسيط...');
       const statuses = await AlWaseetAPI.getOrderStatuses(token);
       
-      // إنشاء خريطة مطابقة الحالات
+      // استيراد النظام الجديد لحالات الوسيط
+      const { getStatusConfig } = await import('@/lib/alwaseet-statuses');
+      
+      // إنشاء خريطة مطابقة الحالات بالنظام الجديد
       const statusMap = new Map();
       statuses.forEach(status => {
-        const statusText = status.status?.toLowerCase() || '';
-        const key = String(status.id);
+        const stateId = String(status.id || status.state_id);
+        const statusConfig = getStatusConfig(stateId);
         
-        // مطابقة حالات الوسيط مع حالاتنا المحلية - تحسين شامل
-        if (statusText.includes('فعال') || statusText.includes('active')) {
-          statusMap.set(key, 'pending');
-        } else if (statusText.includes('في انتظار استلام المندوب')) {
-          statusMap.set(key, 'pending');
-        } else if (statusText.includes('استلام') && statusText.includes('مندوب')) {
-          statusMap.set(key, 'shipped');
-        } else if (statusText.includes('تسليم') && statusText.includes('مصادقة')) {
-          // "تم التسليم والمصادقة المالية" -> completed 
-          statusMap.set(key, 'completed');
-        } else if (statusText.includes('تسليم') || statusText.includes('مسلم') || statusText.includes('delivered')) {
-          // "تم التسليم للزبون" (بدون مصادقة) -> delivered
-          statusMap.set(key, 'delivered');
-        } else if (statusText.includes('ملغي') || statusText.includes('إلغاء') || statusText.includes('cancel')) {
-          statusMap.set(key, 'cancelled');
-        } else if (statusText.includes('رفض') || statusText.includes('reject')) {
-          statusMap.set(key, 'cancelled');
-        } else if (statusText.includes('راجع') || statusText.includes('مرجع') || statusText.includes('return')) {
-          // فقط state_id "17" يعني تم الارجاع الى التاجر فعلياً = returned_in_stock
-          // باقي حالات الارجاع تبقى محجوزة = returned
-          if (key === '17') {
-            statusMap.set(key, 'returned_in_stock');
-            console.log(`🏠 حالة ${key}: "${statusText}" → returned_in_stock (تحرير المخزون)`);
-          } else {
-            statusMap.set(key, 'returned');
-            console.log(`🔄 حالة ${key}: "${statusText}" → returned (يبقى محجوز)`);
-          }
-        } else if (statusText.includes('جاري') || statusText.includes('توصيل') || statusText.includes('في الطريق')) {
-          statusMap.set(key, 'delivery');
-        } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('complete')) {
-          statusMap.set(key, 'delivered');
-        } else if (statusText.includes('محضر') || statusText.includes('processing')) {
-          statusMap.set(key, 'pending');
-        } else if (statusText.includes('مؤجل') || statusText.includes('تأجيل') || statusText.includes('postponed')) {
-          // احتفاظ بالحالة للتأجيل - تعيين كـ delivery بدلاً من pending
-          statusMap.set(key, 'delivery');
-        } else if (statusText.includes('لا يمكن الوصول') || statusText.includes('عدم وجود')) {
-          // احتفاظ بالحالة لعدم الوصول - تعيين كـ delivery بدلاً من pending
-          statusMap.set(key, 'delivery');
-        } else if (statusText.includes('waiting') || statusText.includes('انتظار')) {
-          statusMap.set(key, 'pending');
-        } else {
-          // معالجة الحالات المجهولة - تعيين كحالة delivery للحالات غير المعروفة
-          console.warn(`⚠️ حالة غير معروفة: "${statusText}" (${key}) - تعيين كـ delivery`);
-          statusMap.set(key, 'delivery');
-        }
+        // تطبيق الحالة الداخلية المناسبة
+        statusMap.set(stateId, statusConfig.internalStatus);
+        
+        console.log(`📋 State ID ${stateId}: "${status.status}" → ${statusConfig.internalStatus} ${statusConfig.releasesStock ? '(يحرر المخزون)' : '(محجوز)'}`);
       });
       
       setOrderStatusesMap(statusMap);
-      console.log('✅ تم تحميل حالات الطلبات:', statusMap);
+      console.log('✅ تم تحميل حالات الطلبات بالنظام الجديد:', statusMap);
       return statusMap;
     } catch (error) {
       console.error('❌ خطأ في تحميل حالات الطلبات:', error);

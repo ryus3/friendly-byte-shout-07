@@ -454,7 +454,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
   };
 
-  // حذف الطلبات
+  // حذف الطلبات - مع التحقق من صلاحيات الوسيط
   const deleteOrders = async (orderIds, isAiOrder = false) => {
     try {
       if (isAiOrder) {

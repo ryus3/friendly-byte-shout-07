@@ -21,7 +21,9 @@ import {
   Copy,
   Download,
   Eye,
-  Package
+  Package,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
@@ -415,35 +417,61 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                         <tr>
                           <th className="text-right p-2 border-b">state_id</th>
                           <th className="text-right p-2 border-b">الحالة</th>
-                          <th className="text-center p-2 border-b">تحرير المخزون</th>
+                          <th className="text-center p-2 border-b">المخزون/الإجراء</th>
                         </tr>
                       </thead>
-                      <tbody>
+                       <tbody>
                         {statusesData.map((status, index) => {
-                          const stateId = status.id || status.state_id;
-                          const isStockReleasing = stateId === 17 || stateId === '17';
+                          const stateId = String(status.id || status.state_id);
+                          
+                          // استخدام النظام الجديد للتحقق من الصلاحيات
+                          let canDelete = false;
+                          let releasesStock = false;
+                          let statusText = status.status || 'غير محدد';
+                          
+                          try {
+                            const { canDeleteOrder, releasesStock: releases, getStatusConfig } = require('@/lib/alwaseet-statuses');
+                            canDelete = canDeleteOrder(stateId);
+                            releasesStock = releases(stateId);
+                            const config = getStatusConfig(stateId);
+                            statusText = config.text || statusText;
+                          } catch (error) {
+                            // النظام القديم كـ fallback
+                            releasesStock = stateId === '4' || stateId === '17';
+                            canDelete = stateId === '0' || stateId === '1';
+                          }
+                          
                           return (
                             <tr 
                               key={index} 
                               className={`border-b hover:bg-muted/50 ${
-                                isStockReleasing ? 'bg-green-50 border-green-200' : ''
+                                releasesStock ? 'bg-green-50 border-green-200' : 
+                                canDelete ? 'bg-blue-50 border-blue-200' : ''
                               }`}
                             >
                               <td className="p-2 font-mono text-center">
-                                <Badge variant={isStockReleasing ? "success" : "secondary"}>
+                                <Badge variant={
+                                  releasesStock ? "success" : 
+                                  canDelete ? "default" : "secondary"
+                                }>
                                   {stateId}
                                 </Badge>
                               </td>
-                              <td className="p-2">{status.status || 'غير محدد'}</td>
+                              <td className="p-2 text-sm">{statusText}</td>
                               <td className="p-2 text-center">
-                                {isStockReleasing ? (
+                                {releasesStock ? (
                                   <Badge variant="success" className="text-xs">
                                     <Package className="w-3 h-3 ml-1" />
                                     نعم
                                   </Badge>
+                                ) : canDelete ? (
+                                  <Badge variant="default" className="text-xs">
+                                    <Trash2 className="w-3 h-3 ml-1" />
+                                    حذف
+                                  </Badge>
                                 ) : (
                                   <Badge variant="secondary" className="text-xs">
-                                    لا
+                                    محجوز
                                   </Badge>
                                 )}
                               </td>
@@ -456,6 +484,11 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
 
                   <div className="text-xs text-muted-foreground bg-green-50 border border-green-200 p-3 rounded">
                     <Package className="w-4 h-4 inline ml-1 text-green-600" />
+                    فقط الحالات 4 (تم التسليم) و 17 (تم الإرجاع للتاجر) تحرر المخزون.
+                  </div>
+                  
+                  <div className="text-xs text-muted-foreground bg-blue-50 border border-blue-200 p-3 rounded">
+                    <AlertTriangle className="w-4 h-4 inline ml-1 text-blue-600" />
                     قاعدة تحرير المخزون: فقط الحالة state_id: 17 ("تم الارجاع الى التاجر") تحرر المخزون المحجوز من الطلبات
                   </div>
                 </div>
