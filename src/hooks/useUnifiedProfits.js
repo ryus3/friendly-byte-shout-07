@@ -9,7 +9,7 @@ import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, 
  * يضمن عرض نفس البيانات بطريقتين مختلفتين في التصميم
  */
 export const useUnifiedProfits = (timePeriod = 'all') => {
-  const { orders, accounting, products } = useSuper();
+  const { orders, accounting, products, profits: contextProfits } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
   const [profitData, setProfitData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,16 +28,19 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       setLoading(true);
       setError(null);
 
-      // جلب بيانات الأرباح
-      const { data: profitsData } = await supabase
-        .from('profits')
-        .select(`
-          *,
-          order:orders(order_number, status, receipt_received),
-          employee:profiles!employee_id(full_name)
-        `);
+      // جلب بيانات الأرباح: استخدم بيانات المزود الموحد أولاً لتفادي قيود RLS، ثمFallback إلى Supabase
+      let profitsData = Array.isArray(contextProfits) ? contextProfits : [];
+      if (!profitsData || profitsData.length === 0) {
+        const { data } = await supabase
+          .from('profits')
+          .select(`
+            *,
+            order:orders(order_number, status, receipt_received),
+            employee:profiles!employee_id(full_name)
+          `);
+        profitsData = data || [];
+      }
       setAllProfits(profitsData || []);
-
       // استخدام نفس منطق AccountingPage
       if (!orders || !Array.isArray(orders)) {
         console.warn('⚠️ لا توجد بيانات طلبات');
@@ -247,7 +250,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod]);
+  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {
