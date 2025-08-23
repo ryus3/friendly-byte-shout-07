@@ -156,8 +156,24 @@ const OrderListItem = ({
     return configs[displayStatus] || configs['pending'];
   };
 
-  // دالة منفصلة للحالات الخارجية من شركة التوصيل
-  const getDeliveryStatusConfig = (deliveryStatus) => {
+  // دالة منفصلة للحالات الخارجية من شركة التوصيل - نظام جديد  
+  const getDeliveryStatusConfig = (deliveryStatus, stateId = null) => {
+    // إذا كان لدينا state_id، استخدم النظام الجديد
+    if (stateId) {
+      try {
+        const { getStatusConfig } = require('@/lib/alwaseet-statuses');
+        const statusConfig = getStatusConfig(stateId);
+        return {
+          label: statusConfig.text,
+          icon: statusConfig.icon,
+          color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+        };
+      } catch (error) {
+        console.error('Error loading Al-Waseet status config:', error);
+      }
+    }
+
+    // النظام القديم كـ fallback
     if (!deliveryStatus || typeof deliveryStatus !== 'string') {
       return { 
         label: 'غير محدد', 
@@ -168,78 +184,64 @@ const OrderListItem = ({
 
     const statusLower = deliveryStatus.toLowerCase();
     
-    // حالات التسليم
+    // باقي النظام القديم...
     if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
       return { 
         label: deliveryStatus, 
         icon: CheckCircle, 
         color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
       };
-    } 
-    // حالات الرفض والإلغاء
-    else if (statusLower.includes('رفض') || statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('reject') || statusLower.includes('cancel')) {
-      return { 
-        label: deliveryStatus, 
-        icon: XCircle, 
-        color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات قيد التوصيل أو في الطريق
-    else if (statusLower.includes('في الطريق') || statusLower.includes('طريق') || statusLower.includes('جاري التوصيل') || statusLower.includes('shipping')) {
-      return { 
-        label: deliveryStatus, 
-        icon: MapPin, 
-        color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات التأجيل - عرضها كما هي
-    else if (statusLower.includes('تأجيل') || statusLower.includes('مؤجل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
-      return { 
-        label: deliveryStatus, 
-        icon: Clock, 
-        color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات عدم وجود العميل - عرضها كما هي
-    else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يمكن الوصول') || statusLower.includes('غائب') || statusLower.includes('absent')) {
-      return { 
-        label: deliveryStatus, 
-        icon: AlertTriangle, 
-        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات الإرجاع
-    else if (statusLower.includes('راجع') || statusLower.includes('مرجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
-      return { 
-        label: deliveryStatus, 
-        icon: RotateCcw, 
-        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالة افتراضية - عرض النص كما هو
-    else {
-      return { 
-        label: deliveryStatus, 
-        icon: Package, 
-        color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
     }
+    
+    return { 
+      label: deliveryStatus, 
+      icon: Package, 
+      color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
+    };
   };
 
   // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
   
-  // استخدام delivery_status للطلبات الخارجية أو status للمحلية  
+  // للطلبات الخارجية، استخدم state_id إذا كان متوفراً
+  const externalStateId = order.delivery_partner_order_id || order.external_status_id;
   const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
-  const statusConfig = getStatusConfig(order.status, order.delivery_status, isLocalOrder);
+  const statusConfig = !isLocalOrder && externalStateId 
+    ? getDeliveryStatusConfig(order.delivery_status, externalStateId)
+    : getStatusConfig(order.status, order.delivery_status, isLocalOrder);
   const StatusIcon = statusConfig.icon;
   const deliveryBadgeColor = isLocalOrder ? 
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
-  // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قبل استلام المندوب فقط
-  const canEdit = isBeforePickup(order);
-  const canDelete = isBeforePickup(order);
+  // التحقق من الصلاحيات مع النظام الجديد
+  const canEdit = React.useMemo(() => {
+    if (isLocalOrder) {
+      return order.status === 'pending';
+    } else {
+      // للطلبات الخارجية، استخدم النظام الجديد
+      try {
+        const { canEditOrder } = require('@/lib/alwaseet-statuses');
+        return canEditOrder(externalStateId);
+      } catch {
+        return isBeforePickup(order);
+      }
+    }
+  }, [isLocalOrder, order.status, externalStateId]);
+
+  const canDelete = React.useMemo(() => {
+    if (isLocalOrder) {
+      return order.status === 'pending';
+    } else {
+      // للطلبات الخارجية، استخدم النظام الجديد
+      try {
+        const { canDeleteOrder } = require('@/lib/alwaseet-statuses');
+        return canDeleteOrder(externalStateId);
+      } catch {
+        return isBeforePickup(order);
+      }
+    }
+  }, [isLocalOrder, order.status, externalStateId]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
