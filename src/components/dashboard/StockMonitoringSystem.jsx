@@ -38,16 +38,19 @@ const StockMonitoringSystem = () => {
         },
         async (payload) => {
           const { old: oldData, new: newData } = payload;
-          const stockChange = newData.quantity - oldData.quantity;
           
-          // تجنب الإشعارات المتكررة لنفس المنتج
-          const notificationKey = `${newData.product_id}-${newData.variant_id}-${newData.quantity}`;
-          if (notificationHistory.current.has(notificationKey)) {
-            return;
+          // التحقق من الوظيفة المنطقية للإشعارات أولاً
+          const shouldSend = await supabase
+            .rpc('should_send_stock_notification', {
+              p_product_id: newData.product_id,
+              p_variant_id: newData.variant_id,
+              p_notification_type: newData.quantity === 0 ? 'out_of_stock' : 'low_stock',
+              p_stock_level: newData.quantity
+            });
+          
+          if (!shouldSend.data) {
+            return; // لا ترسل إشعار متكرر
           }
-
-          // إضافة إلى التاريخ
-          notificationHistory.current.add(notificationKey);
 
           // جلب تفاصيل المنتج والمتغير
           const { data: inventoryDetails } = await supabase

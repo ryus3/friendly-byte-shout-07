@@ -3218,6 +3218,14 @@ export type Database = {
         Args: { p_days?: number }
         Returns: number
       }
+      compute_reserved_for_variant: {
+        Args: { p_variant_id: string }
+        Returns: number
+      }
+      compute_sold_for_variant: {
+        Args: { p_variant_id: string }
+        Returns: number
+      }
       delete_ai_order_safe: {
         Args: { p_order_id: string }
         Returns: Json
@@ -3347,7 +3355,6 @@ export type Database = {
         Returns: {
           last_sold_date: string
           orders_count: number
-          product_id: string
           sold_quantity: number
           total_cost: number
           total_revenue: number
@@ -3557,6 +3564,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      scan_and_fix_inventory_consistency: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          action_taken: string
+          new_reserved: number
+          new_sold: number
+          old_reserved: number
+          old_sold: number
+          product_name: string
+          variant_id: string
+          variant_info: string
+        }[]
+      }
       select_random_city_for_monthly_discount: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -3564,6 +3584,15 @@ export type Database = {
       setup_monthly_city_benefits: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      should_send_stock_notification: {
+        Args: {
+          p_notification_type: string
+          p_product_id: string
+          p_stock_level: number
+          p_variant_id: string
+        }
+        Returns: boolean
       }
       update_cash_source_balance: {
         Args: {
