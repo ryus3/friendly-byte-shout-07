@@ -31,10 +31,36 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     return allowedTypes.includes(notification.type);
   });
 
-  // أيقونات الإشعارات
-  const getNotificationIcon = (type, priority) => {
+  // أيقونات وألوان الإشعارات حسب حالة التوصيل
+  const getNotificationIcon = (type, priority, message, data) => {
     const iconProps = { className: "w-4 h-4" };
     
+    // تحليل حالة التوصيل من الرسالة أو البيانات
+    if (type === 'order_status_changed') {
+      const status = data?.new_status || data?.delivery_status || '';
+      const msg = message || '';
+      
+      // تم التسليم - أخضر
+      if (status.includes('delivered') || msg.includes('تم التسليم') || msg.includes('delivered')) {
+        return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
+      }
+      // في الطريق/التوصيل - أزرق
+      if (status.includes('delivery') || status.includes('out for delivery') || 
+          msg.includes('في الطريق') || msg.includes('الى مكتب') || msg.includes('out for delivery')) {
+        return <Info {...iconProps} className="w-4 h-4 text-blue-500" />;
+      }
+      // مرفوض/ملغي - أحمر
+      if (status.includes('rejected') || status.includes('cancel') || 
+          msg.includes('مرفوض') || msg.includes('ملغي') || msg.includes('رفض')) {
+        return <X {...iconProps} className="w-4 h-4 text-red-500" />;
+      }
+      // تأخير/إرجاع - برتقالي
+      if (msg.includes('تأخير') || msg.includes('إرجاع') || status.includes('delayed')) {
+        return <AlertCircle {...iconProps} className="w-4 h-4 text-orange-500" />;
+      }
+    }
+    
+    // الألوان القديمة للأنواع الأخرى
     switch (type) {
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
@@ -47,8 +73,34 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان الأولوية
-  const getPriorityColor = (priority) => {
+  // ألوان حسب حالة التوصيل والأولوية
+  const getPriorityColor = (type, priority, message, data) => {
+    // ألوان خاصة لإشعارات تغيير حالة الطلب
+    if (type === 'order_status_changed') {
+      const status = data?.new_status || data?.delivery_status || '';
+      const msg = message || '';
+      
+      // تم التسليم - أخضر
+      if (status.includes('delivered') || msg.includes('تم التسليم') || msg.includes('delivered')) {
+        return 'border-green-500 bg-green-50 dark:bg-green-950/30';
+      }
+      // في الطريق/التوصيل - أزرق
+      if (status.includes('delivery') || status.includes('out for delivery') || 
+          msg.includes('في الطريق') || msg.includes('الى مكتب') || msg.includes('out for delivery')) {
+        return 'border-blue-500 bg-blue-50 dark:bg-blue-950/30';
+      }
+      // مرفوض/ملغي - أحمر
+      if (status.includes('rejected') || status.includes('cancel') || 
+          msg.includes('مرفوض') || msg.includes('ملغي') || msg.includes('رفض')) {
+        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
+      }
+      // تأخير/إرجاع - برتقالي
+      if (msg.includes('تأخير') || msg.includes('إرجاع') || status.includes('delayed')) {
+        return 'border-orange-500 bg-orange-50 dark:bg-orange-950/30';
+      }
+    }
+    
+    // الألوان القديمة للأولوية
     switch (priority) {
       case 'high':
         return 'border-red-500 bg-red-50 dark:bg-red-950/30';
@@ -151,12 +203,12 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                       key={notification.id}
                       className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                         !notification.read ? 'bg-primary/5' : ''
-                      } ${getPriorityColor(notification.priority)}`}
+                      } ${getPriorityColor(notification.type, notification.priority, notification.message, notification.data)}`}
                       onClick={() => handleMarkAsRead(notification.id)}
                     >
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0 mt-1">
-                          {getNotificationIcon(notification.type, notification.priority)}
+                          {getNotificationIcon(notification.type, notification.priority, notification.message, notification.data)}
                         </div>
                         
                         <div className="flex-1 min-w-0">
