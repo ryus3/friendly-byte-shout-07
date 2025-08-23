@@ -1180,10 +1180,10 @@ export const SuperProvider = ({ children }) => {
       const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
       if (upsertErr) throw upsertErr;
 
-      // أرشفة الطلبات بعد التسوية + تثبيت استلام الفاتورة
+      // أرشفة الطلبات بعد التسوية (بدون تغيير receipt_received)
       const { error: ordersErr } = await supabase
         .from('orders')
-        .update({ is_archived: true, receipt_received: true, receipt_received_at: now, receipt_received_by: user?.user_id || user?.id })
+        .update({ is_archived: true })
         .in('id', orderIds);
       if (ordersErr) throw ordersErr;
 

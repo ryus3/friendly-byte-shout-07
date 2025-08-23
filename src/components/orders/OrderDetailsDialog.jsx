@@ -290,18 +290,29 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                       </span>
                     )}
 
-                    {/* شارة استلام الفاتورة للطلبات الخارجية */}
-                    {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
-                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
-                        مستلم الفاتورة ✓
-                      </span>
-                    )}
-
-                    {/* شارة رقم فاتورة الوسيط */}
-                    {order.delivery_partner_invoice_id && (
-                      <span className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200">
-                        فاتورة الوسيط: {order.delivery_partner_invoice_id}
-                      </span>
+                    {/* شارات فاتورة الوسيط المحسنة */}
+                    {order.delivery_partner === 'alwaseet' && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {order.delivery_partner_invoice_id ? (
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
+                            فاتورة الوسيط: {order.delivery_partner_invoice_id} ✓
+                          </span>
+                        ) : order.receipt_received ? (
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                            مستلم يدوياً
+                          </span>
+                        ) : (
+                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">
+                            بانتظار الفاتورة
+                          </span>
+                        )}
+                        
+                        {order.delivery_partner_order_id && (
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                            معرف الوسيط: {order.delivery_partner_order_id}
+                          </span>
+                        )}
+                      </div>
                     )}
 
                     {/* معلومات وقت استلام الفاتورة */}

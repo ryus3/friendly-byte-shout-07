@@ -517,9 +517,8 @@ const Dashboard = () => {
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          // المبلغ الفعلي المستلم = إجمالي المبلغ - رسوم التوصيل
-          const actualReceivedAmount = (o.total_amount || 0) - (o.delivery_fee || 0);
-          return sum + actualReceivedAmount;
+          // المبيعات المستلمة = إجمالي المبلغ بدون خصم التوصيل (كما هو مطلوب)
+          return sum + (o.total_amount || 0);
         }, 0);
 
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
