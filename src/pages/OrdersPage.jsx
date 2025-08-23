@@ -357,11 +357,19 @@ const OrdersPage = () => {
   const filteredOrders = useMemo(() => {
     let tempOrders;
     if (filters.status === 'archived') {
-      // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
-      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
+      // في الأرشيف، إظهار فقط الطلبات المؤرشفة حقيقياً أو المكتملة مع استلام الفاتورة أو الراجعة للمخزن
+      tempOrders = userOrders.filter(o => 
+        o.isArchived === true || 
+        o.status === 'returned_in_stock' ||
+        (o.status === 'completed' && o.receipt_received === true)
+      );
     } else {
-      // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
-      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
+      // إخفاء الطلبات المؤرشفة والراجعة للمخزن والمكتملة مع استلام الفاتورة من القائمة العادية
+      tempOrders = userOrders.filter(o => 
+        !o.isArchived && 
+        o.status !== 'returned_in_stock' && 
+        !(o.status === 'completed' && o.receipt_received === true)
+      );
     }
 
     // تطبيق فلتر الوقت أولاً
