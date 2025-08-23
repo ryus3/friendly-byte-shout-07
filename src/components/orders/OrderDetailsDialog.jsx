@@ -262,6 +262,11 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
 
   const canEditOrder = order.status === 'pending';
   const canSyncOrder = order?.tracking_number && order?.delivery_partner && order.delivery_partner !== 'محلي' && activePartner !== 'local' && isLoggedIn;
+  
+  // تقييد تعديل الحالة للطلبات الخارجية المشحونة/المسلمة
+  const isExternalOrder = order?.delivery_partner && order.delivery_partner !== 'محلي';
+  const isShippedOrDelivered = ['shipped', 'delivery', 'delivered', 'completed'].includes(order.status);
+  const canEditStatusForOrder = canEditStatus && (!isExternalOrder || order.status === 'pending' || order.status === 'returned_in_stock');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -499,7 +504,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               تعديل الطلب
             </Button>
           )}
-          {canEditStatus && (
+            {canEditStatusForOrder && (
             <Button onClick={handleUpdateStatus} disabled={newStatus === order.status}>
               <Edit className="w-4 h-4 ml-2" />
               تحديث الحالة

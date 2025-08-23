@@ -366,13 +366,11 @@ const OrdersPage = () => {
         const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
         const isReturnedToStock = o.status === 'returned_in_stock';
         
-        // طلبات شركة التوصيل: يجب أن تكون delivered مع استلام فاتورة أو completed مع استلام فاتورة
-        const isExternalCompleted = !isLocalOrder && (
-          ((o.delivery_status?.includes('تم التسليم') || o.delivery_status?.includes('مسلم')) && o.receipt_received === true) ||
-          (o.status === 'completed' && o.receipt_received === true)
-        );
+        // شركة التوصيل: أرشفة فقط عند completed + receipt_received
+        // لا تؤرشف الطلبات المُسلّمة بدون استلام فاتورة
+        const isExternalArchived = !isLocalOrder && isCompletedWithReceipt;
         
-        return isExplicitlyArchived || isCompletedWithReceipt || isReturnedToStock || isExternalCompleted;
+        return isExplicitlyArchived || isCompletedWithReceipt || isReturnedToStock || isExternalArchived;
       });
       
       console.log('🗂️ تشخيص الأرشيف - العدد:', tempOrders.length, 'الطلبات:', tempOrders.map(o => ({
@@ -390,13 +388,11 @@ const OrdersPage = () => {
         const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
         const isReturnedToStock = o.status === 'returned_in_stock';
         
-        // طلبات شركة التوصيل: إخفاء المُسلّمة مع استلام فاتورة
-        const isExternalCompleted = !isLocalOrder && (
-          ((o.delivery_status?.includes('تم التسليم') || o.delivery_status?.includes('مسلم')) && o.receipt_received === true) ||
-          (o.status === 'completed' && o.receipt_received === true)
-        );
+        // شركة التوصيل: إخفاء الطلبات المكتملة مع فاتورة فقط
+        // الطلبات المُسلّمة بدون فاتورة تبقى في القائمة العادية
+        const isExternalArchived = !isLocalOrder && isCompletedWithReceipt;
         
-        return !isExplicitlyArchived && !isCompletedWithReceipt && !isReturnedToStock && !isExternalCompleted;
+        return !isExplicitlyArchived && !isCompletedWithReceipt && !isReturnedToStock && !isExternalArchived;
       });
     }
 
