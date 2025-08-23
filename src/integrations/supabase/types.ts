@@ -3138,6 +3138,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      calculate_order_profits: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       calculate_real_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: {

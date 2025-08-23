@@ -53,21 +53,27 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           if (alWaseetResult?.id) {
             console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResult);
             
-            // استخدم الحقول الصحيحة من استجابة الوسيط
-            const waseetId = String(alWaseetResult.id);
-            const waseetTracking = String(alWaseetResult.qr_id || alWaseetResult.tracking_number || '').trim();
+            // Focus on qr_id as primary identifier - this is what customers track
+            const qrId = String(alWaseetResult.qr_id || '').trim();
+            const waseetInternalId = String(alWaseetResult.id || '');
             
-            // إنشاء الطلب المحلي بالربط الصحيح (بدون توحيد خاطئ)
+            // Validate qr_id exists
+            if (!qrId) {
+              console.warn('⚠️ No qr_id received from Al-Waseet, will set tracking_number to null');
+            }
+            
+            // Create local order with qr_id as tracking_number (primary identifier)
+            // delivery_partner_order_id can be null initially - we can look it up later if needed
             const localResult = await createOrder(
               customerInfo,
               cart,
-              waseetTracking || null,
+              qrId || null,
               discount,
               null,
               finalAmount,
               {
-                delivery_partner_order_id: waseetId,
-                tracking_number: waseetTracking || null,
+                delivery_partner_order_id: waseetInternalId || null,
+                tracking_number: qrId || null,
                 delivery_partner: 'alwaseet'
               }
             );
@@ -88,7 +94,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               ),
               description: (
                 <div className="space-y-1">
-                  <p><strong>رقم التتبع:</strong> {waseetTracking || '—'}</p>
+                  <p><strong>رقم التتبع:</strong> {qrId || '—'}</p>
                   <p><strong>العميل:</strong> {customerInfo.name}</p>
                   <p><strong>المبلغ:</strong> {finalAmount.toLocaleString()} د.ع</p>
                   <p><strong>نوع الطلب:</strong> خارجي (مربوط مع الوسيط)</p>
@@ -101,7 +107,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             return {
               success: true,
               orderId: localResult.orderId,
-              trackingNumber: waseetTracking || null,
+              trackingNumber: qrId || null,
               alWaseetId: alWaseetResult.id,
               finalAmount,
               linked: true,

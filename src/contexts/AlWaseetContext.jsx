@@ -889,15 +889,18 @@ export const AlWaseetProvider = ({ children }) => {
       
       const waseetStatusText = waseetOrder.status_text || waseetOrder.status_name || waseetOrder.status || '';
       const waseetStatusId = waseetOrder.status_id || waseetOrder.status;
+      // Enhanced Arabic status mapping focusing on qr_id tracking
       const localStatus =
         statusMap.get(String(waseetStatusId)) ||
         (() => {
           const t = String(waseetStatusText).toLowerCase();
-          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
-          if (t.includes('ملغي') || t.includes('إلغاء')) return 'cancelled';
-          if (t.includes('راجع')) return 'returned';
-          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
-          if (t.includes('جاري') || t.includes('توصيل')) return 'delivery';
+          if (t.includes('تسليم') || t.includes('مسلم') || t.includes('سُلم') || t.includes('مستلم')) return 'delivered';
+          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('مرفوض') || t.includes('فاشل')) return 'cancelled';
+          if (t.includes('راجع') || t.includes('مرتجع')) return 'returned';
+          if (t.includes('مندوب') || t.includes('استلام') || t.includes('في الطريق')) return 'shipped';
+          if (t.includes('جاري') || t.includes('توصيل') || t.includes('قيد التوصيل')) return 'delivery';
+          if (t.includes('فعال') || t.includes('نشط') || t.includes('قيد المعالجة')) return 'pending';
+          if (t.includes('جديد') || t.includes('تم الاستلام')) return 'pending';
           return 'pending';
         })();
 
