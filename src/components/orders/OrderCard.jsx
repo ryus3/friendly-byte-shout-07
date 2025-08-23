@@ -314,8 +314,11 @@ const OrderCard = ({
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
     
+    // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
+    if (!Array.isArray(profits)) return 0;
+    
     // البحث في profits أولاً
-    const profitRecord = profits?.find(p => p.order_id === order.id);
+    const profitRecord = profits.find(p => p.order_id === order.id);
     if (profitRecord && profitRecord.employee_profit) {
       return profitRecord.employee_profit;
     }
@@ -328,8 +331,11 @@ const OrderCard = ({
 
   // تحديد حالة الأرباح والدفع بدقة
   const paymentStatus = useMemo(() => {
+    // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
+    if (!Array.isArray(profits)) return null;
+    
     // البحث عن سجل الربح
-    const profitRecord = profits?.find(p => String(p.order_id) === String(order.id));
+    const profitRecord = profits.find(p => String(p.order_id) === String(order.id));
     
     // تحديد نوع الطلب
     const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';

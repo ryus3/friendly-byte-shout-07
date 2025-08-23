@@ -37,7 +37,7 @@ const OrdersPage = () => {
   const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { profitData } = useUnifiedProfits();
+  const { profitData, allProfits } = useUnifiedProfits();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -663,7 +663,7 @@ const OrdersPage = () => {
               selectedOrders={selectedOrders}
               setSelectedOrders={setSelectedOrders}
               onDeleteOrder={handleDeleteSelected}
-              profits={profitData}
+              profits={allProfits || []}
               viewMode={viewMode}
             />
           </TabsContent>
