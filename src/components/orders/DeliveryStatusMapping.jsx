@@ -25,12 +25,16 @@ const STATUS_MAPPING = {
     'تم التسليم': { local: 'delivered', icon: CheckCircle, color: 'green', display: 'تم التسليم' },
     'تم التسليم والمصادقة المالية': { local: 'completed', icon: CheckCircle, color: 'green', display: 'تم التسليم والمصادقة المالية' },
     'مرجع من العميل': { local: 'returned', icon: RotateCcw, color: 'purple', display: 'مرجع من العميل' },
+    'تم الارجاع الى التاجر': { local: 'returned_in_stock', icon: RotateCcw, color: 'green', display: 'تم الارجاع الى التاجر' },
+    'ارجاع الى التاجر': { local: 'returned', icon: RotateCcw, color: 'purple', display: 'ارجاع الى التاجر' },
+    'قيد الارجاع الى التاجر': { local: 'returned', icon: RotateCcw, color: 'purple', display: 'قيد الارجاع الى التاجر' },
     'ملغي': { local: 'cancelled', icon: XCircle, color: 'red', display: 'ملغي' },
     'رفض الطلب': { local: 'cancelled', icon: XCircle, color: 'red', display: 'رفض الطلب' },
-    'لا يمكن الوصول للعميل': { local: 'pending', icon: Clock, color: 'gray', display: 'لا يمكن الوصول للعميل' },
-    'عدم وجود العميل': { local: 'pending', icon: Clock, color: 'gray', display: 'عدم وجود العميل' },
-    'مؤجل': { local: 'pending', icon: Clock, color: 'gray', display: 'مؤجل' },
-    'تأجيل التوصيل': { local: 'pending', icon: Clock, color: 'gray', display: 'تأجيل التوصيل' }
+    'لا يمكن الوصول للعميل': { local: 'delivery', icon: Truck, color: 'orange', display: 'لا يمكن الوصول للعميل' },
+    'عدم وجود العميل': { local: 'delivery', icon: Truck, color: 'orange', display: 'عدم وجود العميل' },
+    'مؤجل': { local: 'delivery', icon: Truck, color: 'orange', display: 'مؤجل' },
+    'تأجيل التوصيل': { local: 'delivery', icon: Truck, color: 'orange', display: 'تأجيل التوصيل' },
+    'لا يرد': { local: 'delivery', icon: Truck, color: 'orange', display: 'لا يرد' }
   },
   
   // الحالات المحلية في نظامنا
@@ -135,6 +139,46 @@ const DeliveryStatusMapping = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* تفسير حالات الإرجاع */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RotateCcw className="h-5 w-5 text-orange-500" />
+            حالات الإرجاع والمخزون
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>تنبيه مهم:</strong> ليس كل حالات الإرجاع تحرر المخزون المحجوز
+            </AlertDescription>
+          </Alert>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 mt-2"></div>
+              <p><strong>"تم الارجاع الى التاجر" (state_id: 17):</strong> البضاعة وصلت فعلياً للمخزن - يتم تحرير المخزون المحجوز</p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-500 mt-2"></div>
+              <p><strong>"ارجاع الى التاجر" (state_id: 15):</strong> البضاعة في طريقها للمخزن - تبقى محجوزة</p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-orange-500 mt-2"></div>
+              <p><strong>"قيد الارجاع الى التاجر" (state_id: 16):</strong> البضاعة مع المندوب - تبقى محجوزة</p>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <div className="w-2 h-2 rounded-full bg-purple-500 mt-2"></div>
+              <p><strong>جميع حالات الإرجاع الأخرى:</strong> تبقى محجوزة حتى تصل للمخزن فعلياً</p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -230,7 +230,15 @@ export const AlWaseetProvider = ({ children }) => {
         } else if (statusText.includes('رفض') || statusText.includes('reject')) {
           statusMap.set(key, 'cancelled');
         } else if (statusText.includes('راجع') || statusText.includes('مرجع') || statusText.includes('return')) {
-          statusMap.set(key, 'returned');
+          // فقط state_id "17" يعني تم الارجاع الى التاجر فعلياً = returned_in_stock
+          // باقي حالات الارجاع تبقى محجوزة = returned
+          if (key === '17') {
+            statusMap.set(key, 'returned_in_stock');
+            console.log(`🏠 حالة ${key}: "${statusText}" → returned_in_stock (تحرير المخزون)`);
+          } else {
+            statusMap.set(key, 'returned');
+            console.log(`🔄 حالة ${key}: "${statusText}" → returned (يبقى محجوز)`);
+          }
         } else if (statusText.includes('جاري') || statusText.includes('توصيل') || statusText.includes('في الطريق')) {
           statusMap.set(key, 'delivery');
         } else if (statusText.includes('منتهي') || statusText.includes('مكتمل') || statusText.includes('complete')) {
