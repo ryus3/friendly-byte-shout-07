@@ -469,7 +469,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
             </div>
             
             {/* قسم تحديث الحالة - للموظفين والمديرين */}
-            {canEditStatus && (
+            {canEditStatusForOrder && (
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>

@@ -362,8 +362,8 @@ const OrderCard = ({
       }
       
       // 1. إذا تمت التسوية فعلياً (حسب جدول profits) = مدفوع
-      if (profitRecord && (profitRecord.status === 'settled' || profitRecord.settled_at)) {
-        return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
+      if (profitRecord && profitRecord.status === 'settled') {
+        return { status: 'paid', label: 'مُسوّى', color: 'bg-emerald-500' };
       }
       
       // 2. إذا لم تتم التسوية بعد = قابل للتحاسب
