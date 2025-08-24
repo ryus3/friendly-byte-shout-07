@@ -112,49 +112,57 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    if (!item) return 'غير محدد';
+    console.log('🎨 getColorName called with:', { item, variant_id: item?.variant_id });
     
-    // استخدام getVariantDetails أولاً
-    if (item.variant_id) {
-      const variantDetails = getVariantDetails(item.variant_id);
-    if (variantDetails?.color_name) {
-        return variantDetails.color_name;
-      }
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    console.log('🔍 Variant details for color:', variantDetails);
+    
+    if (variantDetails?.color_name && variantDetails.color_name !== 'غير محدد') {
+      console.log('✅ Color found from variant details:', variantDetails.color_name);
+      return variantDetails.color_name;
     }
     
-    // البحث المباشر في color_id
-    if (item.color_id && colors) {
+    // البحث التقليدي كبديل
+    if (item.color_id && colors?.length > 0) {
       const color = colors.find(c => c.id === item.color_id);
-      if (color?.name) {
+      if (color) {
+        console.log('✅ Color found from color_id:', color.name);
         return color.name;
       }
     }
     
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_color || item.color || item.variant_color || 'غير محدد';
+    const fallbackColor = item.product_color || item.color || item.variant_color || 'غير محدد';
+    console.log('⚠️ Using fallback color:', fallbackColor);
+    return fallbackColor;
   };
 
   const getSizeName = (item) => {
-    if (!item) return 'غير محدد';
+    console.log('📏 getSizeName called with:', { item, variant_id: item?.variant_id });
     
-    // استخدام getVariantDetails أولاً
-    if (item.variant_id) {
-      const variantDetails = getVariantDetails(item.variant_id);
-      if (variantDetails?.size_name) {
-        return variantDetails.size_name;
-      }
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    console.log('🔍 Variant details for size:', variantDetails);
+    
+    if (variantDetails?.size_name && variantDetails.size_name !== 'غير محدد') {
+      console.log('✅ Size found from variant details:', variantDetails.size_name);
+      return variantDetails.size_name;
     }
     
-    // البحث المباشر في size_id
-    if (item.size_id && sizes) {
+    // البحث التقليدي كبديل
+    if (item.size_id && sizes?.length > 0) {
       const size = sizes.find(s => s.id === item.size_id);
-      if (size?.name) {
+      if (size) {
+        console.log('✅ Size found from size_id:', size.name);
         return size.name;
       }
     }
     
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_size || item.size || item.variant_size || 'غير محدد';
+    const fallbackSize = item.product_size || item.size || item.variant_size || 'غير محدد';
+    console.log('⚠️ Using fallback size:', fallbackSize);
+    return fallbackSize;
   };
 
   return (
