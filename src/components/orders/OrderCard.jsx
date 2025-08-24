@@ -394,7 +394,7 @@ const OrderCard = ({
                     }[order.status];
                     if (nextStatus) handleStatusChange(nextStatus);
                   }}
-                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto max-w-[140px]`}
+                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto max-w-[180px]`}
                   title="انقر لتحديث الحالة"
                 >
                   <StatusIcon className="h-4 w-4" />

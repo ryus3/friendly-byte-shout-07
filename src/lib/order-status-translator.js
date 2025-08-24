@@ -90,11 +90,11 @@ const DELIVERY_STATUS_PATTERNS = {
     icon: MapPin,
     color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
   },
-  // حالات التأجيل
+  // حالات التأجيل - لون بنفسجي جميل
   'تأجيل|مؤجل|postpone|delay': {
     label: null,
     icon: Clock,
-    color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40'
+    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
   },
   // حالات عدم وجود العميل
   'عدم وجود|لا يمكن الوصول|غائب|absent': {
@@ -138,11 +138,11 @@ const DELIVERY_STATUS_PATTERNS = {
     icon: AlertTriangle,
     color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
   },
-  // مؤجل
+  // مؤجل - لون بنفسجي جميل
   'مؤجل|تأجيل|postponed|delayed': {
     label: null,
     icon: Clock,
-    color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40'
+    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
   }
 };
 
@@ -189,7 +189,7 @@ const getStatusConfig = (status) => {
       return {
         label: config.label,
         icon: config.icon,
-        color: config.color + ' font-bold rounded-lg px-2 py-1 text-xs whitespace-nowrap max-w-[120px]'
+        color: config.color + ' font-bold rounded-lg px-2 py-1 text-xs max-w-[160px]'
       };
   }
 
@@ -214,7 +214,7 @@ const getDeliveryStatusConfig = (deliveryStatus) => {
       return {
         label: config.label || deliveryStatus, // عرض النص الأصلي إذا لم توجد ترجمة
         icon: config.icon,
-        color: config.color + ' font-bold rounded-lg px-2 py-1 text-xs whitespace-nowrap max-w-[120px]'
+        color: config.color + ' font-bold rounded-lg px-2 py-1 text-xs max-w-[160px]'
       };
     }
   }
@@ -223,7 +223,7 @@ const getDeliveryStatusConfig = (deliveryStatus) => {
   return {
     label: deliveryStatus,
     icon: Package,
-    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-2 py-1 text-xs whitespace-nowrap max-w-[120px]'
+    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-2 py-1 text-xs max-w-[160px]'
   };
 };
 
@@ -234,7 +234,7 @@ const getDefaultConfig = (status) => {
   return {
     label: status || 'غير معروف',
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-2 py-1 text-xs whitespace-nowrap max-w-[120px]'
+    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-2 py-1 text-xs max-w-[160px]'
   };
 };
 
@@ -276,7 +276,7 @@ export const getStatusForComponent = (order, componentType = 'default') => {
     return {
       label: 'قيد التوصيل',
       icon: MapPin,
-      color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-2 py-1 text-xs whitespace-nowrap max-w-[120px]'
+      color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-2 py-1 text-xs max-w-[160px]'
     };
   }
 

@@ -204,16 +204,16 @@ const OrderListItem = ({
                   }[order.status];
                   if (nextStatus) handleStatusChange(nextStatus);
                 }}
-                className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2 max-w-[120px]`}
+                className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2 max-w-[160px]`}
                 title="انقر لتحديث الحالة"
               >
-                <StatusIcon className="h-3 w-3" />
+                <StatusIcon className="h-4 w-4" />
                 <span className="ml-1 text-xs">{statusConfig.label}</span>
               </Button>
             ) : (
-              <div className={`flex items-center gap-1 ${statusConfig.color}`}>
-                <StatusIcon className="h-3 w-3" />
-                <span className="text-xs">{statusConfig.label}</span>
+              <div className={`flex items-center gap-1 ${statusConfig.color} max-w-[160px]`}>
+                <StatusIcon className="h-4 w-4 flex-shrink-0" />
+                <ScrollingText text={statusConfig.label} className="text-xs min-w-0 flex-1" />
               </div>
             )}
           </div>
@@ -370,7 +370,7 @@ const OrderListItem = ({
         />
 
         {/* Status */}
-        <div className="min-w-[120px] flex-shrink-0">
+        <div className="min-w-[160px] flex-shrink-0">
           {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
             <Button
               variant="ghost"
@@ -390,13 +390,13 @@ const OrderListItem = ({
               className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
               title="انقر لتحديث الحالة"
             >
-              <StatusIcon className="h-3 w-3" />
+              <StatusIcon className="h-4 w-4" />
               <span className="ml-1">{statusConfig.label}</span>
             </Button>
           ) : (
-            <div className={`flex items-center gap-1 ${statusConfig.color}`}>
-              <StatusIcon className="h-3 w-3" />
-              <span>{statusConfig.label}</span>
+            <div className={`flex items-center gap-1 ${statusConfig.color} max-w-[160px]`}>
+              <StatusIcon className="h-4 w-4 flex-shrink-0" />
+              <ScrollingText text={statusConfig.label} className="min-w-0 flex-1" />
             </div>
           )}
         </div>
