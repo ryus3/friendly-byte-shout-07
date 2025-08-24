@@ -204,14 +204,14 @@ const OrderListItem = ({
                   }[order.status];
                   if (nextStatus) handleStatusChange(nextStatus);
                 }}
-                className={`${statusConfig.color} font-bold rounded-lg text-xs max-w-[180px] px-2 py-1 h-auto hover:shadow-md group-hover:scale-105 transition-all duration-300`}
+                className={`${statusConfig.color} hover:shadow-md group-hover:scale-105 transition-all duration-300 h-auto px-2 py-1 max-w-[160px]`}
                 title="انقر لتحديث الحالة"
               >
                 <StatusIcon className="h-4 w-4" />
                 <ScrollingText text={statusConfig.label} className="ml-1 text-xs min-w-0 flex-1" />
               </Button>
             ) : (
-              <div className={`flex items-center gap-1 ${statusConfig.color} font-bold rounded-lg text-xs max-w-[180px] px-2 py-1 hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
+              <div className={`flex items-center gap-1 ${statusConfig.color} hover:shadow-md group-hover:scale-105 transition-all duration-300 px-2 py-1 max-w-[160px]`}>
                 <StatusIcon className="h-4 w-4 flex-shrink-0" />
                 <ScrollingText text={statusConfig.label} className="text-xs min-w-0 flex-1" />
               </div>
@@ -387,14 +387,14 @@ const OrderListItem = ({
                 }[order.status];
                 if (nextStatus) handleStatusChange(nextStatus);
               }}
-              className={`${statusConfig.color} font-bold rounded-lg text-xs max-w-[180px] px-2 py-1 h-auto hover:shadow-md group-hover:scale-105 transition-all duration-300`}
+              className={`${statusConfig.color} hover:shadow-md group-hover:scale-105 transition-all duration-300 h-auto px-2 py-1`}
               title="انقر لتحديث الحالة"
             >
               <StatusIcon className="h-4 w-4" />
               <ScrollingText text={statusConfig.label} className="ml-1 min-w-0 flex-1" />
             </Button>
           ) : (
-            <div className={`flex items-center gap-1 ${statusConfig.color} font-bold rounded-lg text-xs max-w-[180px] px-2 py-1 hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
+            <div className={`flex items-center gap-1 ${statusConfig.color} hover:shadow-md group-hover:scale-105 transition-all duration-300 px-2 py-1 max-w-[160px]`}>
               <StatusIcon className="h-4 w-4 flex-shrink-0" />
               <ScrollingText text={statusConfig.label} className="min-w-0 flex-1" />
             </div>
