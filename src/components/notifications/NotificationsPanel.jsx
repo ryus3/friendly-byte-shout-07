@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 /**
- * لوحة الإشعارات الأساسية
+ * لوحة الإشعارات الأساسية مع ألوان محسنة حسب حالة التوصيل
  */
 const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className = "" }) => {
   const { hasPermission } = usePermissions();
@@ -201,7 +201,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                   {filteredNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors group ${
                         !notification.read ? 'bg-primary/5' : ''
                       } ${getPriorityColor(notification.type, notification.priority, notification.message, notification.data)}`}
                       onClick={() => handleMarkAsRead(notification.id)}
