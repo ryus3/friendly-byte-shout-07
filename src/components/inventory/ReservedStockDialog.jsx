@@ -394,13 +394,15 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                                  </p>
                                                  {(productColor || productSize) && (
                                                    <p className="text-xs md:text-sm text-muted-foreground">
-                                                     {productColor && (
-                                                       <span className="inline-flex items-center gap-1">
-                                                         <span className="w-2 h-2 rounded-full border border-gray-300" 
-                                                               style={{backgroundColor: productColor.toLowerCase()}}></span>
-                                                         {productColor}
-                                                       </span>
-                                                     )}
+                                                      {productColor && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                          {getColorHex(item) && (
+                                                            <span className="w-2 h-2 rounded-full border border-gray-300" 
+                                                                  style={{backgroundColor: getColorHex(item)}}></span>
+                                                          )}
+                                                          {productColor}
+                                                        </span>
+                                                      )}
                                                      {productColor && productSize && ' • '}
                                                      {productSize && (
                                                        <span className="font-medium">{productSize}</span>

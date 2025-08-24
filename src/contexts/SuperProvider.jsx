@@ -149,6 +149,8 @@ export const SuperProvider = ({ children }) => {
           productname: oi.products?.name,
           product_name: oi.products?.name,
           sku: oi.product_variants?.id || oi.variant_id,
+          variant_id: oi.variant_id, // تأكد من وجود variant_id
+          product_id: oi.product_id,
           product_variants: oi.product_variants
         }))
       : (o.items || []);
@@ -231,20 +233,31 @@ export const SuperProvider = ({ children }) => {
       if (product.variants) {
         const variant = product.variants.find(v => v.id === variantId);
         if (variant) {
-          // البحث عن اللون والحجم من البيانات المرجعية
+          // استخراج البيانات من الكائنات المتداخلة
           let colorName = variant.color_name || variant.color;
+          let colorHex = variant.color_hex;
           let sizeName = variant.size_name || variant.size;
+          
+          // البحث في الكائنات المتداخلة (colors, sizes)
+          if (variant.colors) {
+            colorName = variant.colors.name || colorName;
+            colorHex = variant.colors.hex_code || colorHex;
+          }
+          if (variant.sizes) {
+            sizeName = variant.sizes.name || sizeName;
+          }
           
           // البحث في الألوان المرجعية إذا لم يتم العثور على الاسم
           if (!colorName && variant.color_id && allData.colors) {
             const color = allData.colors.find(c => c.id === variant.color_id);
-            colorName = color?.name || 'غير محدد';
+            colorName = color?.name;
+            colorHex = color?.hex_code || colorHex;
           }
           
           // البحث في الأحجام المرجعية إذا لم يتم العثور على الاسم
           if (!sizeName && variant.size_id && allData.sizes) {
             const size = allData.sizes.find(s => s.id === variant.size_id);
-            sizeName = size?.name || 'غير محدد';
+            sizeName = size?.name;
           }
           
           return {
@@ -252,6 +265,49 @@ export const SuperProvider = ({ children }) => {
             product_id: product.id,
             product_name: product.name,
             color_name: colorName || 'غير محدد',
+            color_hex: colorHex,
+            size_name: sizeName || 'غير محدد'
+          };
+        }
+      }
+      
+      // البحث في product_variants أيضاً
+      if (product.product_variants) {
+        const variant = product.product_variants.find(v => v.id === variantId);
+        if (variant) {
+          // استخراج البيانات من الكائنات المتداخلة
+          let colorName = variant.color_name || variant.color;
+          let colorHex = variant.color_hex;
+          let sizeName = variant.size_name || variant.size;
+          
+          // البحث في الكائنات المتداخلة (colors, sizes)
+          if (variant.colors) {
+            colorName = variant.colors.name || colorName;
+            colorHex = variant.colors.hex_code || colorHex;
+          }
+          if (variant.sizes) {
+            sizeName = variant.sizes.name || sizeName;
+          }
+          
+          // البحث في الألوان المرجعية إذا لم يتم العثور على الاسم
+          if (!colorName && variant.color_id && allData.colors) {
+            const color = allData.colors.find(c => c.id === variant.color_id);
+            colorName = color?.name;
+            colorHex = color?.hex_code || colorHex;
+          }
+          
+          // البحث في الأحجام المرجعية إذا لم يتم العثور على الاسم
+          if (!sizeName && variant.size_id && allData.sizes) {
+            const size = allData.sizes.find(s => s.id === variant.size_id);
+            sizeName = size?.name;
+          }
+          
+          return {
+            ...variant,
+            product_id: product.id,
+            product_name: product.name,
+            color_name: colorName || 'غير محدد',
+            color_hex: colorHex,
             size_name: sizeName || 'غير محدد'
           };
         }
