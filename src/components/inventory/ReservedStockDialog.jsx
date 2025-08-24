@@ -407,12 +407,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                                      )}
                                                    </p>
                                                  )}
-                                                 {/* عرض معرف المنتج إذا كان متوفر */}
-                                                 {(item.product_id || item.sku) && (
-                                                   <p className="text-xs text-gray-500">
-                                                     المعرف: {item.product_id || item.sku}
-                                                   </p>
-                                                 )}
                                                </>
                                              );
                                            })()}
