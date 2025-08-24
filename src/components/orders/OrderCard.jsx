@@ -26,6 +26,7 @@ import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 const OrderCard = ({ 
   order, 
@@ -56,100 +57,6 @@ const OrderCard = ({
     return deliveryStatus.includes('فعال') || 
            deliveryStatus.includes('في انتظار استلام المندوب') ||
            deliveryStatus.includes('active');
-  };
-
-  // تحديد لون وأيقونة الحالة مع دعم شامل لحالات شركة التوصيل
-  const getStatusConfig = (status, deliveryStatus = null, isLocalOrder = true) => {
-    // للطلبات المحلية - استخدم status المحلي
-    if (isLocalOrder) {
-      const displayStatus = status;
-    } else {
-      // للطلبات الخارجية - استخدم delivery_status مع مطابقة محددة
-      const deliveryStatusLower = deliveryStatus?.toLowerCase() || '';
-      
-      // عرض "قيد التجهيز" فقط لحالة "فعال"
-      if (deliveryStatusLower.includes('فعال')) {
-        return { 
-          label: 'قيد التجهيز', 
-          icon: Package,
-          color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-        };
-      }
-      
-      // عرض "تم الشحن" لحالة "تم الاستلام من قبل المندوب"
-      if (deliveryStatusLower.includes('تم الاستلام من قبل المندوب')) {
-        return { 
-          label: 'تم الشحن', 
-          icon: Truck,
-          color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-        };
-      }
-      
-      // لباقي الحالات الخارجية - اعرضها كما هي من شركة التوصيل
-      return getDeliveryStatusConfig(deliveryStatus);
-    }
-    
-    const displayStatus = isLocalOrder ? status : deliveryStatus;
-    
-    const configs = {
-      'pending': { 
-        label: 'قيد التجهيز', 
-        icon: Package,
-        color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'shipped': { 
-        label: 'تم الشحن', 
-        icon: Truck,
-        color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'delivery': { 
-        label: 'قيد التوصيل', 
-        icon: Truck,
-        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'delivered': { 
-        label: 'تم التسليم', 
-        icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'completed': { 
-        label: 'مكتمل', 
-        icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'returned': { 
-        label: 'راجعة', 
-        icon: RotateCcw,
-        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'returned_in_stock': { 
-        label: 'راجع للمخزن', 
-        icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'cancelled': { 
-        label: 'ملغي', 
-        icon: XCircle,
-        color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'return_received': { 
-        label: 'راجع للمخزن', 
-        icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      },
-      'unknown': { 
-        label: 'غير معروف', 
-        icon: AlertTriangle,
-        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
-      }
-    };
-    
-    // إذا كان في المعرفات المحلية، استخدمها
-    if (configs[displayStatus]) {
-      return configs[displayStatus];
-    }
-    
-    return configs[displayStatus] || configs['pending'];
   };
 
   // دالة منفصلة للحالات الخارجية من شركة التوصيل - نظام جديد
@@ -244,11 +151,8 @@ const OrderCard = ({
   // استخدام النظام الجديد للطلبات الخارجية
   const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
   
-  // للطلبات الخارجية، استخدم state_id إذا كان متوفراً
-  const externalStateId = order.delivery_partner_order_id || order.external_status_id;
-  const statusConfig = !isLocalOrder && externalStateId 
-    ? getDeliveryStatusConfig(order.delivery_status, externalStateId)
-    : getStatusConfig(order.status, order.delivery_status, isLocalOrder);
+  // استخدام النظام الموحد للحالات
+  const statusConfig = getStatusForComponent(order);
   
   const StatusIcon = statusConfig.icon;
   const deliveryBadgeColor = isLocalOrder ? 
@@ -261,28 +165,18 @@ const OrderCard = ({
       return order.status === 'pending';
     } else {
       // للطلبات الخارجية، استخدم النظام الجديد
-      try {
-        const { canEditOrder } = require('@/lib/alwaseet-statuses');
-        return canEditOrder(externalStateId);
-      } catch {
-        return isBeforePickup(order);
-      }
+      return order.status === 'pending';
     }
-  }, [isLocalOrder, order.status, externalStateId]);
+  }, [isLocalOrder, order.status]);
 
   const canDelete = React.useMemo(() => {
     if (isLocalOrder) {
       return order.status === 'pending';
     } else {
       // للطلبات الخارجية، استخدم النظام الجديد
-      try {
-        const { canDeleteOrder } = require('@/lib/alwaseet-statuses');
-        return canDeleteOrder(externalStateId);
-      } catch {
-        return isBeforePickup(order);
-      }
+      return order.status === 'pending';
     }
-  }, [isLocalOrder, order.status, externalStateId]);
+  }, [isLocalOrder, order.status]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {

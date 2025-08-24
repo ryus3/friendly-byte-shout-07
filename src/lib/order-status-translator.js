@@ -1,0 +1,254 @@
+import { 
+  Package, 
+  Truck, 
+  CheckCircle, 
+  XCircle,
+  RotateCcw,
+  PackageCheck,
+  Clock,
+  AlertTriangle,
+  MapPin
+} from 'lucide-react';
+
+/**
+ * نظام موحد لترجمة وعرض حالات الطلبات
+ * يستخدم الألوان الجميلة المحددة في index.css
+ */
+
+// ترجمة الحالات مع الألوان والأيقونات الموحدة
+const STATUS_TRANSLATIONS = {
+  // الحالات الأساسية
+  'فعال': {
+    label: 'قيد التجهيز',
+    icon: Package,
+    color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40'
+  },
+  'pending': {
+    label: 'قيد التجهيز',
+    icon: Package,
+    color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40'
+  },
+  'shipped': {
+    label: 'تم الشحن',
+    icon: Truck,
+    color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40'
+  },
+  'delivery': {
+    label: 'قيد التوصيل',
+    icon: Truck,
+    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40'
+  },
+  'delivered': {
+    label: 'تم التسليم',
+    icon: CheckCircle,
+    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40'
+  },
+  'completed': {
+    label: 'مكتمل',
+    icon: CheckCircle,
+    color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40'
+  },
+  'returned': {
+    label: 'راجعة',
+    icon: RotateCcw,
+    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40'
+  },
+  'returned_in_stock': {
+    label: 'راجع للمخزن',
+    icon: PackageCheck,
+    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40'
+  },
+  'return_received': {
+    label: 'راجع للمخزن',
+    icon: PackageCheck,
+    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40'
+  },
+  'cancelled': {
+    label: 'ملغي',
+    icon: XCircle,
+    color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40'
+  }
+};
+
+// حالات خاصة من شركات التوصيل
+const DELIVERY_STATUS_PATTERNS = {
+  // حالات التسليم
+  'تسليم|مسلم|deliver': {
+    label: null, // سيتم عرض النص الأصلي
+    icon: CheckCircle,
+    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40'
+  },
+  // حالات الرفض والإلغاء
+  'رفض|ملغي|إلغاء|reject|cancel': {
+    label: null,
+    icon: XCircle,
+    color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
+  },
+  // حالات قيد التوصيل
+  'في الطريق|طريق|جاري التوصيل|مندوب|shipping': {
+    label: null,
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
+  },
+  // حالات التأجيل
+  'تأجيل|مؤجل|postpone|delay': {
+    label: null,
+    icon: Clock,
+    color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40'
+  },
+  // حالات عدم وجود العميل
+  'عدم وجود|لا يمكن الوصول|غائب|absent': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
+  },
+  // حالات الإرجاع
+  'راجع|مرجع|إرجاع|return': {
+    label: null,
+    icon: RotateCcw,
+    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40'
+  },
+  // في مكتب المحافظة
+  'في مكتب المحافظة|مكتب المحافظة': {
+    label: null,
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40'
+  }
+};
+
+/**
+ * الدالة الرئيسية لترجمة حالة الطلب
+ * @param {string} status - حالة الطلب الأساسية
+ * @param {string} deliveryStatus - حالة التوصيل (للطلبات الخارجية)
+ * @param {boolean} isLocalOrder - هل هو طلب محلي
+ * @returns {object} كائن يحتوي على التسمية والأيقونة واللون
+ */
+export const translateOrderStatus = (status, deliveryStatus = null, isLocalOrder = true) => {
+  // للطلبات المحلية، استخدم status فقط
+  if (isLocalOrder) {
+    return getStatusConfig(status);
+  }
+
+  // للطلبات الخارجية، استخدم delivery_status أولاً
+  if (deliveryStatus) {
+    // التحقق من الترجمات المحددة أولاً
+    const translatedConfig = getStatusConfig(deliveryStatus);
+    if (translatedConfig.label !== deliveryStatus) {
+      return translatedConfig;
+    }
+
+    // البحث في patterns شركات التوصيل
+    return getDeliveryStatusConfig(deliveryStatus);
+  }
+
+  // fallback للحالة الأساسية
+  return getStatusConfig(status);
+};
+
+/**
+ * الحصول على تكوين حالة محددة
+ */
+const getStatusConfig = (status) => {
+  if (!status) {
+    return getDefaultConfig('غير محدد');
+  }
+
+  // البحث في الترجمات المحددة
+  const config = STATUS_TRANSLATIONS[status];
+  if (config) {
+    return {
+      label: config.label,
+      icon: config.icon,
+      color: config.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+    };
+  }
+
+  // إذا لم توجد ترجمة محددة، اعرض النص كما هو
+  return getDefaultConfig(status);
+};
+
+/**
+ * الحصول على تكوين حالات شركة التوصيل
+ */
+const getDeliveryStatusConfig = (deliveryStatus) => {
+  if (!deliveryStatus || typeof deliveryStatus !== 'string') {
+    return getDefaultConfig('غير محدد');
+  }
+
+  const statusLower = deliveryStatus.toLowerCase();
+
+  // البحث في patterns شركات التوصيل
+  for (const [pattern, config] of Object.entries(DELIVERY_STATUS_PATTERNS)) {
+    const regex = new RegExp(pattern, 'i');
+    if (regex.test(statusLower)) {
+      return {
+        label: config.label || deliveryStatus, // عرض النص الأصلي إذا لم توجد ترجمة
+        icon: config.icon,
+        color: config.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+      };
+    }
+  }
+
+  // حالة افتراضية للحالات غير المعروفة
+  return {
+    label: deliveryStatus,
+    icon: Package,
+    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+  };
+};
+
+/**
+ * التكوين الافتراضي للحالات غير المعروفة
+ */
+const getDefaultConfig = (status) => {
+  return {
+    label: status || 'غير معروف',
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+  };
+};
+
+/**
+ * دعم النظام القديم - استخدام alwaseet-statuses إذا كان متوفراً
+ */
+export const getStatusConfigFromAlWaseet = (stateId) => {
+  try {
+    const { getStatusConfig } = require('@/lib/alwaseet-statuses');
+    const statusConfig = getStatusConfig(stateId);
+    return {
+      label: statusConfig.text,
+      icon: statusConfig.icon,
+      color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+    };
+  } catch (error) {
+    console.error('Error loading Al-Waseet status config:', error);
+    return null;
+  }
+};
+
+/**
+ * دالة مساعدة للحصول على تكوين مُحسن لمكون معين
+ */
+export const getStatusForComponent = (order, componentType = 'default') => {
+  const isLocalOrder = !order.tracking_number || 
+                      order.tracking_number.startsWith('RYUS-') || 
+                      order.delivery_partner === 'محلي';
+
+  // للطلبات الخارجية مع state_id، استخدم النظام الجديد
+  const externalStateId = order.delivery_partner_order_id || order.external_status_id;
+  if (!isLocalOrder && externalStateId) {
+    const alWaseetConfig = getStatusConfigFromAlWaseet(externalStateId);
+    if (alWaseetConfig) {
+      return alWaseetConfig;
+    }
+  }
+
+  // استخدام المترجم الموحد
+  return translateOrderStatus(order.status, order.delivery_status, isLocalOrder);
+};
+
+export default {
+  translateOrderStatus,
+  getStatusForComponent,
+  getStatusConfigFromAlWaseet
+};
