@@ -4,6 +4,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scrolling text animation for status badges */
+@keyframes scroll-text {
+  0% { 
+    transform: translateX(100%); 
+  }
+  100% { 
+    transform: translateX(-100%); 
+  }
+}
+
+.animate-scroll {
+  animation: scroll-text 3s linear infinite;
+  will-change: transform;
+}
+
+/* Pause animation on hover */
+.animate-scroll:hover {
+  animation-play-state: paused;
+}
+
 @layer base {
   :root {
     --background: 220 40% 98%;

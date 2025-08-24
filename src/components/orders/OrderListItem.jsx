@@ -27,6 +27,7 @@ import { MobileTableRow, MobileTableCell, MobileTableGrid } from '@/components/u
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import ScrollingText from '@/components/ui/scrolling-text';
 
 const OrderListItem = ({ 
   order, 
@@ -203,7 +204,7 @@ const OrderListItem = ({
                   }[order.status];
                   if (nextStatus) handleStatusChange(nextStatus);
                 }}
-                className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
+                className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2 max-w-[120px]`}
                 title="انقر لتحديث الحالة"
               >
                 <StatusIcon className="h-3 w-3" />

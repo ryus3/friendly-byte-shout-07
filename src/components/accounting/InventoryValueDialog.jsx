@@ -328,6 +328,41 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         const totalCost = quantity * costPrice;
         const expectedProfit = totalValue - totalCost;
 
+        // إضافة بيانات المنتج للمنتجات الفردية
+        const productDisplayName = product.name || 'منتج غير محدد';
+        const colorName = variant.colors?.name || 'لون غير محدد';
+        const sizeName = variant.sizes?.name || 'حجم غير محدد';
+        const productKey = `${product.id}-${variant.id}`;
+        
+        if (!productMap.has(productKey)) {
+          productMap.set(productKey, {
+            id: productKey,
+            name: `${productDisplayName} - ${colorName} - ${sizeName}`,
+            display_name: productDisplayName,
+            color_name: colorName,
+            size_name: sizeName,
+            quantity: 0,
+            available: 0,
+            reserved: 0,
+            value: 0,
+            available_value: 0,
+            reserved_value: 0,
+            cost_value: 0,
+            expected_profit: 0,
+            variants: 1
+          });
+        }
+        
+        const productData = productMap.get(productKey);
+        productData.quantity += quantity;
+        productData.available += available;
+        productData.reserved += reserved;
+        productData.value += totalValue;
+        productData.available_value += availableValue;
+        productData.reserved_value += reservedValue;
+        productData.cost_value += totalCost;
+        productData.expected_profit += expectedProfit;
+
         // معالجة الأقسام
         product.product_departments?.forEach(pd => {
           const dept = pd.departments;
@@ -461,34 +496,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           seasonData.items += 1;
         });
 
-        // معالجة المنتجات
-        const productKey = product.id;
-        if (!productMap.has(productKey)) {
-          productMap.set(productKey, {
-            id: product.id,
-            name: product.name,
-            quantity: 0,
-            available: 0,
-            reserved: 0,
-            value: 0,
-            available_value: 0,
-            reserved_value: 0,
-            cost_value: 0,
-            expected_profit: 0,
-            variants: 0
-          });
-        }
-        
-        const prodData = productMap.get(productKey);
-        prodData.quantity += quantity;
-        prodData.available += available;
-        prodData.reserved += reserved;
-        prodData.value += totalValue;
-        prodData.available_value += availableValue;
-        prodData.reserved_value += reservedValue;
-        prodData.cost_value += totalCost;
-        prodData.expected_profit += expectedProfit;
-        prodData.variants += 1;
+        // منطق المنتجات تم نقله إلى أعلى مع تفاصيل الألوان والأحجام
       });
 
       setInventoryData({

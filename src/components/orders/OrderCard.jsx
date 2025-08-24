@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import ScrollingText from '@/components/ui/scrolling-text';
 
 const OrderCard = ({ 
   order, 
@@ -393,7 +394,7 @@ const OrderCard = ({
                     }[order.status];
                     if (nextStatus) handleStatusChange(nextStatus);
                   }}
-                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto`}
+                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto max-w-[140px]`}
                   title="انقر لتحديث الحالة"
                 >
                   <StatusIcon className="h-4 w-4" />
@@ -401,8 +402,8 @@ const OrderCard = ({
                 </Button>
               ) : (
                 <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
-                  <StatusIcon className="h-4 w-4" />
-                  <span className="font-bold">{statusConfig.label}</span>
+                  <StatusIcon className="h-4 w-4 flex-shrink-0" />
+                  <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
                 </div>
               )}
               

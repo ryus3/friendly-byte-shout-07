@@ -17,6 +17,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSuper } from '@/contexts/SuperProvider';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import ScrollingText from '@/components/ui/scrolling-text';
 
 
 
@@ -35,9 +36,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   }, [open, allUsers]);
 
 
-  // الطلبات المحجوزة (pending, shipped, delivery)
+  // الطلبات المحجوزة - تشمل الطلبات المعادة أيضاً حتى يتم إرجاعها للمخزن
   const reservedOrders = useMemo(() => {
-    return orders?.filter(order => ['pending', 'shipped', 'delivery'].includes(order.status)) || [];
+    return orders?.filter(order => 
+      ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) && 
+      // لا تشمل الطلبات التي تم إرجاعها للمخزن
+      order.status !== 'returned_in_stock'
+    ) || [];
   }, [orders]);
 
   // الموظفون المشاركون في الطلبات المحجوزة
@@ -316,9 +321,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                             const statusConfig = getStatusForComponent(order, 'reservedStock');
                             const StatusIcon = statusConfig.icon;
                             return (
-                               <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-none flex items-center`}>
+                               <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
                                  <StatusIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                                 <span className="truncate">{statusConfig.label}</span>
+                                 <ScrollingText text={statusConfig.label} className="min-w-0 flex-1" />
                                </Badge>
                             );
                           })()}
