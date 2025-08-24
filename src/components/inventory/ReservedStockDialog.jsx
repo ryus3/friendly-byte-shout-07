@@ -26,7 +26,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [employees, setEmployees] = useState([]);
   const { user, allUsers } = useAuth();
   const { isAdmin } = usePermissions();
-  const { orders, products, colors, sizes } = useSuper();
+  const { orders, products, colors, sizes, getVariantDetails } = useSuper();
 
   // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة
   useEffect(() => {
@@ -112,49 +112,37 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    // البحث في الألوان أولاً بـ color_id أو variant_id
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    if (variantDetails?.color_name) {
+      return variantDetails.color_name;
+    }
+    
+    // البحث التقليدي كبديل
     if (item.color_id && colors?.length > 0) {
       const color = colors.find(c => c.id === item.color_id);
       if (color) return color.name;
     }
     
-    if (item.variant_id && colors?.length > 0) {
-      // البحث عبر المنتجات للعثور على اللون
-      const product = products?.find(p => p.id === item.product_id);
-      if (product?.variants?.length > 0) {
-        const variant = product.variants.find(v => v.id === item.variant_id);
-        if (variant?.color_id) {
-          const color = colors.find(c => c.id === variant.color_id);
-          if (color) return color.name;
-        }
-      }
-    }
-    
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_color || item.color || item.variant_color || null;
+    return item.product_color || item.color || item.variant_color || 'غير محدد';
   };
 
   const getSizeName = (item) => {
-    // البحث في الأحجام أولاً بـ size_id أو variant_id
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    if (variantDetails?.size_name) {
+      return variantDetails.size_name;
+    }
+    
+    // البحث التقليدي كبديل
     if (item.size_id && sizes?.length > 0) {
       const size = sizes.find(s => s.id === item.size_id);
       if (size) return size.name;
     }
     
-    if (item.variant_id && sizes?.length > 0) {
-      // البحث عبر المنتجات للعثور على الحجم
-      const product = products?.find(p => p.id === item.product_id);
-      if (product?.variants?.length > 0) {
-        const variant = product.variants.find(v => v.id === item.variant_id);
-        if (variant?.size_id) {
-          const size = sizes.find(s => s.id === variant.size_id);
-          if (size) return size.name;
-        }
-      }
-    }
-    
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_size || item.size || item.variant_size || null;
+    return item.product_size || item.size || item.variant_size || 'غير محدد';
   };
 
   return (

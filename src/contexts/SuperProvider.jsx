@@ -221,6 +221,29 @@ export const SuperProvider = ({ children }) => {
       products: updatedProducts
     };
   }, []);
+
+  // دالة الحصول على بيانات المتغير من النظام الموحد
+  const getVariantDetails = useCallback((variantId) => {
+    if (!variantId || !allData.products) return null;
+    
+    for (const product of allData.products) {
+      // البحث في variants
+      if (product.variants) {
+        const variant = product.variants.find(v => v.id === variantId);
+        if (variant) {
+          return {
+            ...variant,
+            product_id: product.id,
+            product_name: product.name,
+            color_name: variant.color_name || variant.color || null,
+            size_name: variant.size_name || variant.size || null
+          };
+        }
+      }
+    }
+    
+    return null;
+  }, [allData.products]);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
@@ -1671,6 +1694,13 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: error.message };
       }
     },
+
+    // دالة الحصول على تفاصيل المتغير للحجز
+    getVariantDetails,
+
+    // للتوافق مع الألوان والأحجام
+    colors: allData.colors || [],
+    sizes: allData.sizes || [],
   };
 
   // إضافة لوق للتتبع
