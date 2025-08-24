@@ -633,7 +633,7 @@ const OrdersPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
-            <TabsTrigger value="invoices">فواتير شركة التوصيل</TabsTrigger>
+            <TabsTrigger value="invoices">فواتير الوسيط</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">

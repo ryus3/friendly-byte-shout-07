@@ -19,7 +19,6 @@ export const useAlWaseetInvoices = () => {
   const PROCESS_LATEST_ONLY_KEY = 'waseet:processLatestOnly';
   const LAST_PROCESSED_ID_KEY = 'waseet:lastProcessedInvoiceId';
   const LAST_PROCESSED_AT_KEY = 'waseet:lastProcessedAt';
-  const PROCESSED_IDS_KEY = 'waseet:processedInvoiceIds';
 
   const isAutoMarkEnabled = () => {
     try {
@@ -38,28 +37,6 @@ export const useAlWaseetInvoices = () => {
     }
   };
 
-  const getProcessedInvoiceIds = () => {
-    try {
-      const raw = localStorage.getItem(PROCESSED_IDS_KEY);
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr.map(String) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  const addProcessedInvoiceId = (invoiceId) => {
-    try {
-      const current = new Set(getProcessedInvoiceIds());
-      current.add(String(invoiceId));
-      localStorage.setItem(PROCESSED_IDS_KEY, JSON.stringify(Array.from(current)));
-      localStorage.setItem(LAST_PROCESSED_ID_KEY, String(invoiceId));
-      localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
-    } catch {}
-  };
-
-  const wasProcessedBefore = (invoiceId) => getProcessedInvoiceIds().includes(String(invoiceId));
-  
   const autoProcessLatestReceivedInvoice = useCallback(async (allInvoices) => {
     try {
       if (!token || !isLoggedIn || activePartner !== 'alwaseet' || !Array.isArray(allInvoices)) return;
@@ -88,10 +65,13 @@ export const useAlWaseetInvoices = () => {
       const { data: localOrders } = await supabase
         .from('orders')
         .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, status')
+        .eq('delivery_partner', 'alwaseet')
         .in('delivery_partner_order_id', waseetOrderIds)
         .neq('receipt_received', true);
 
-      const updateIds = (localOrders || []).map(o => o.id);
+      const updateIds = (localOrders || [])
+        .filter(o => ['delivered', 'completed'].includes(o.status))
+        .map(o => o.id);
 
       if (updateIds.length === 0) {
         localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
@@ -103,7 +83,6 @@ export const useAlWaseetInvoices = () => {
         .from('orders')
         .update({
           receipt_received: true,
-          delivery_partner: 'alwaseet',
           delivery_partner_invoice_id: String(target.id),
           delivery_partner_invoice_date: invoiceDate,
           invoice_received_at: new Date().toISOString(),
@@ -119,124 +98,8 @@ export const useAlWaseetInvoices = () => {
         description: `تم تعليم ${updateIds.length} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
         variant: 'success'
       });
-     } catch (e) {
-      console.warn('Auto-process latest invoice failed:', e?.message || e);
-    }
-  }, [token, isLoggedIn, activePartner, user?.id, user?.user_id]);
-
-  // Smart auto-processing of only recent/unprocessed invoices (max 2)
-  const autoProcessSmartRecentInvoices = useCallback(async (allInvoices) => {
-    try {
-      if (!token || !isLoggedIn || activePartner !== 'alwaseet' || !Array.isArray(allInvoices)) return;
-      if (!isAutoMarkEnabled()) return;
-
-      // Newest first
-      const sorted = [...allInvoices].sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
-
-      // Skip invoices already marked as processed
-      const recentNotProcessed = sorted.filter(inv => !wasProcessedBefore(inv.id));
-
-      // Prefer received invoices first, else fallback to last two recent
-      const receivedCandidates = recentNotProcessed.filter(inv => inv.status === 'تم الاستلام من قبل التاجر').slice(0, 2);
-      const fallbackCandidates = receivedCandidates.length > 0 ? [] : recentNotProcessed.slice(0, 2);
-      const candidates = [...receivedCandidates, ...fallbackCandidates].slice(0, 2);
-      if (candidates.length === 0) return;
-
-      // Helper: process a single invoice and return number of updated orders
-      const processInvoice = async (invoiceId) => {
-        try {
-          const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
-          const waseetOrders = invoiceData?.orders || [];
-          const invoiceMeta = invoiceData?.invoice?.[0] || null;
-          const invoiceDate = invoiceMeta?.updated_at || invoiceMeta?.created_at || new Date().toISOString();
-
-          const waseetOrderIds = waseetOrders.map(o => String(o.id));
-          let updatedCount = 0;
-
-          // 1) Primary match by delivery_partner_order_id
-          if (waseetOrderIds.length > 0) {
-            const { data: localById } = await supabase
-              .from('orders')
-              .select('id, order_number, status, receipt_received, delivery_partner_order_id, delivery_partner')
-              .in('delivery_partner_order_id', waseetOrderIds)
-              .neq('receipt_received', true);
-
-            const directUpdateIds = (localById || []).map(o => o.id);
-
-            if (directUpdateIds.length > 0) {
-              const { error: updateErr } = await supabase
-                .from('orders')
-                .update({
-                  receipt_received: true,
-                  delivery_partner: 'alwaseet',
-                  delivery_partner_invoice_id: String(invoiceId),
-                  delivery_partner_invoice_date: invoiceDate,
-                  invoice_received_at: new Date().toISOString(),
-                  invoice_received_by: user?.id || user?.user_id || null
-                })
-                .in('id', directUpdateIds);
-              if (!updateErr) updatedCount += directUpdateIds.length;
-            }
-          }
-
-          // 2) Fallback matching by tracking_number/qr_id
-          const qrMap = new Map(); // qr -> remoteId
-          for (const wo of waseetOrders) {
-            const qr = String(wo.qr_id || wo.tracking_number || '').trim();
-            if (qr) qrMap.set(qr, String(wo.id));
-          }
-
-          if (qrMap.size > 0) {
-            const qrValues = Array.from(qrMap.keys());
-            const { data: localByTracking } = await supabase
-              .from('orders')
-              .select('id, order_number, status, receipt_received, delivery_partner_order_id, delivery_partner, tracking_number')
-              .in('tracking_number', qrValues)
-              .neq('receipt_received', true);
-
-            // Update each individually to also fix delivery_partner_order_id
-            for (const lo of (localByTracking || [])) {
-              const remoteId = qrMap.get(String(lo.tracking_number || '').trim());
-              if (!remoteId) continue;
-
-              const { error: upErr } = await supabase
-                .from('orders')
-                .update({
-                  receipt_received: true,
-                  delivery_partner: 'alwaseet',
-                  delivery_partner_order_id: String(remoteId),
-                  delivery_partner_invoice_id: String(invoiceId),
-                  delivery_partner_invoice_date: invoiceDate,
-                  invoice_received_at: new Date().toISOString(),
-                  invoice_received_by: user?.id || user?.user_id || null
-                })
-                .eq('id', lo.id);
-              if (!upErr) updatedCount += 1;
-            }
-          }
-
-          return updatedCount;
-        } catch (err) {
-          console.warn('Process invoice failed:', err?.message || err);
-          return 0;
-        }
-      };
-
-      // Process up to 2 invoices
-      for (const inv of candidates) {
-        const updated = await processInvoice(inv.id);
-        // Mark as processed only if we actually updated at least one order
-        if (updated > 0) {
-          addProcessedInvoiceId(inv.id);
-          toast({
-            title: 'تمت معالجة الفاتورة تلقائياً',
-            description: `فاتورة #${inv.id}: تم تعليم ${updated} طلب كمستلم للفاتورة`,
-            variant: 'success'
-          });
-        }
-      }
     } catch (e) {
-      console.warn('Smart auto-process invoices failed:', e?.message || e);
+      console.warn('Auto-process latest invoice failed:', e?.message || e);
     }
   }, [token, isLoggedIn, activePartner, user?.id, user?.user_id]);
 
@@ -301,8 +164,8 @@ export const useAlWaseetInvoices = () => {
       
       setInvoices(filteredAndSortedInvoices);
       
-      // Background automation: process latest received or recent invoices smartly
-      autoProcessSmartRecentInvoices(invoicesData);
+      // Background automation: process latest received invoice if new
+      autoProcessLatestReceivedInvoice(invoicesData);
       
       return filteredAndSortedInvoices;
     } catch (error) {
@@ -368,6 +231,7 @@ export const useAlWaseetInvoices = () => {
         const { data: localOrders, error: localOrdersError } = await supabase
           .from('orders')
           .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
+          .eq('delivery_partner', 'alwaseet')
           .in('delivery_partner_order_id', waseetOrderIds);
 
         if (localOrdersError) {
@@ -384,12 +248,12 @@ export const useAlWaseetInvoices = () => {
             .from('orders')
             .update({
               receipt_received: true,
-              delivery_partner: 'alwaseet',
               delivery_partner_invoice_id: String(invoiceId),
               delivery_partner_invoice_date: invoiceDate,
               invoice_received_at: new Date().toISOString(),
               invoice_received_by: user?.id || user?.user_id || null
             })
+            .eq('delivery_partner', 'alwaseet')
             .in('id', localOrders.map(o => o.id))
             .select('id');
 
@@ -454,6 +318,7 @@ export const useAlWaseetInvoices = () => {
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('*')
+        .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null);
 
       if (error) {
