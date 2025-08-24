@@ -26,7 +26,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [employees, setEmployees] = useState([]);
   const { user, allUsers } = useAuth();
   const { isAdmin } = usePermissions();
-  const { orders, products, colors, sizes, getVariantDetails, getColorHex } = useSuper();
+  const { orders, products, colors, sizes, getVariantDetails } = useSuper();
 
   // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة
   useEffect(() => {
@@ -112,49 +112,37 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    // استخدام البيانات المتاحة مباشرة من العنصر
-    if (item?.color_name) {
-      return item.color_name;
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    if (variantDetails?.color_name) {
+      return variantDetails.color_name;
     }
     
-    // البحث في colors context بـ color_id
-    if (item?.color_id && colors?.length > 0) {
+    // البحث التقليدي كبديل
+    if (item.color_id && colors?.length > 0) {
       const color = colors.find(c => c.id === item.color_id);
-      if (color?.name) {
-        return color.name;
-      }
-    }
-    
-    // استخدام البيانات المباشرة من product_variants
-    if (item?.product_variants?.colors?.name) {
-      return item.product_variants.colors.name;
+      if (color) return color.name;
     }
     
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item?.product_color || item?.color || item?.variant_color || 'غير محدد';
+    return item.product_color || item.color || item.variant_color || 'غير محدد';
   };
 
   const getSizeName = (item) => {
-    // استخدام البيانات المتاحة مباشرة من العنصر
-    if (item?.size_name) {
-      return item.size_name;
+    // البحث المبسط عبر النظام الموحد
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    if (variantDetails?.size_name) {
+      return variantDetails.size_name;
     }
     
-    // البحث في sizes context بـ size_id
-    if (item?.size_id && sizes?.length > 0) {
+    // البحث التقليدي كبديل
+    if (item.size_id && sizes?.length > 0) {
       const size = sizes.find(s => s.id === item.size_id);
-      if (size?.name) {
-        return size.name;
-      }
-    }
-    
-    // استخدام البيانات المباشرة من product_variants
-    if (item?.product_variants?.sizes?.name) {
-      return item.product_variants.sizes.name;
+      if (size) return size.name;
     }
     
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item?.product_size || item?.size || item?.variant_size || 'غير محدد';
+    return item.product_size || item.size || item.variant_size || 'غير محدد';
   };
 
   return (
@@ -318,7 +306,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
                           {(() => {
-                            const statusConfig = getStatusForComponent(order);
+                            const statusConfig = getStatusForComponent(order, 'reservedStock');
                             const StatusIcon = statusConfig.icon;
                             return (
                                <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
@@ -406,15 +394,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                                  </p>
                                                  {(productColor || productSize) && (
                                                    <p className="text-xs md:text-sm text-muted-foreground">
-                                                      {productColor && (
-                                                        <span className="inline-flex items-center gap-1">
-                                                          {getColorHex(item) && (
-                                                            <span className="w-2 h-2 rounded-full border border-gray-300" 
-                                                                  style={{backgroundColor: getColorHex(item)}}></span>
-                                                          )}
-                                                          {productColor}
-                                                        </span>
-                                                      )}
+                                                     {productColor && (
+                                                       <span className="inline-flex items-center gap-1">
+                                                         <span className="w-2 h-2 rounded-full border border-gray-300" 
+                                                               style={{backgroundColor: productColor.toLowerCase()}}></span>
+                                                         {productColor}
+                                                       </span>
+                                                     )}
                                                      {productColor && productSize && ' • '}
                                                      {productSize && (
                                                        <span className="font-medium">{productSize}</span>

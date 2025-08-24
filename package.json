@@ -4,10 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 8080",
-    "build": "vite build", 
-    "preview": "vite preview",
-    "start": "vite --host 0.0.0.0 --port 8080"
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
@@ -42,7 +41,7 @@
     "@react-pdf/renderer": "^3.4.4",
     "@supabase/supabase-js": "^2.30.0",
     "@tailwindcss/postcss": "^4.1.11",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@vitejs/plugin-react": "^5.0.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",

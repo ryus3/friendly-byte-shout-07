@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, MapPin, Package, CreditCard, Truck, Home, Calendar, Clock, CheckCircle, XCircle, RotateCcw, PackageCheck } from 'lucide-react';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getStatusForComponent } from '@/lib/order-status-translator';
-import ScrollingText from '@/components/ui/scrolling-text';
 
 const RecentOrdersCard = ({ recentOrders }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -24,13 +24,13 @@ const RecentOrdersCard = ({ recentOrders }) => {
   };
 
   const getStatusBadge = (order) => {
-    const statusConfig = getStatusForComponent(order);
+    const statusConfig = getStatusForComponent(order, 'recentOrders');
     const StatusIcon = statusConfig.icon;
     return (
-      <div className={`flex items-center gap-2 ${statusConfig.color} transform hover:scale-105 transition-transform duration-300`}>
-        <StatusIcon className="w-4 h-4" />
-        <ScrollingText text={statusConfig.label} className="text-sm font-medium" />
-      </div>
+      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusConfig.color)}>
+        <StatusIcon className="w-3 h-3" />
+        {statusConfig.label}
+      </Badge>
     );
   };
 
