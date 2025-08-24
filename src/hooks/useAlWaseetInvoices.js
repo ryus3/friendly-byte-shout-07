@@ -62,42 +62,58 @@ export const useAlWaseetInvoices = () => {
       const waseetOrderIds = waseetOrders.map(o => String(o.id));
       if (waseetOrderIds.length === 0) return;
 
-      const { data: localOrders } = await supabase
+      const { data: localOrders, error: localErr } = await supabase
         .from('orders')
-        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, status')
-        .eq('delivery_partner', 'alwaseet')
+        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
         .in('delivery_partner_order_id', waseetOrderIds)
         .neq('receipt_received', true);
 
-      const updateIds = (localOrders || [])
-        .filter(o => ['delivered', 'completed'].includes(o.status))
-        .map(o => o.id);
-
-      if (updateIds.length === 0) {
-        localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
-        localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+      if (localErr) {
+        console.warn('Error fetching local orders for auto-process:', localErr);
         return;
       }
 
-      await supabase
+      const updateIds = (localOrders || []).map(o => o.id);
+
+      if (updateIds.length === 0) {
+        // لا نعلم الفاتورة كمُعالجة إذا لم نجد طلبات محلية للتحديث
+        return;
+      }
+
+      const { data: updatedRows, error: updateErr } = await supabase
         .from('orders')
         .update({
           receipt_received: true,
+          delivery_partner: 'alwaseet',
           delivery_partner_invoice_id: String(target.id),
           delivery_partner_invoice_date: invoiceDate,
           invoice_received_at: new Date().toISOString(),
           invoice_received_by: user?.id || user?.user_id || null
         })
-        .in('id', updateIds);
+        .in('id', updateIds)
+        .select('id');
 
-      localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
-      localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+      if (updateErr) {
+        console.warn('Auto-process update failed:', updateErr?.message || updateErr);
+        toast({
+          title: 'تعذر تعليم استلام الفاتورة تلقائياً',
+          description: 'تحقق من الصلاحيات أو أعد المحاولة من تبويب الفواتير.',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-      toast({
-        title: 'تم تطبيق استلام الفاتورة تلقائياً',
-        description: `تم تعليم ${updateIds.length} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
-        variant: 'success'
-      });
+      const updatedCount = updatedRows?.length || 0;
+      if (updatedCount > 0) {
+        localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+        localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+
+        toast({
+          title: 'تم تطبيق استلام الفاتورة تلقائياً',
+          description: `تم تعليم ${updatedCount} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
+          variant: 'success'
+        });
+      }
     } catch (e) {
       console.warn('Auto-process latest invoice failed:', e?.message || e);
     }
@@ -231,7 +247,6 @@ export const useAlWaseetInvoices = () => {
         const { data: localOrders, error: localOrdersError } = await supabase
           .from('orders')
           .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
-          .eq('delivery_partner', 'alwaseet')
           .in('delivery_partner_order_id', waseetOrderIds);
 
         if (localOrdersError) {
@@ -248,12 +263,12 @@ export const useAlWaseetInvoices = () => {
             .from('orders')
             .update({
               receipt_received: true,
+              delivery_partner: 'alwaseet',
               delivery_partner_invoice_id: String(invoiceId),
               delivery_partner_invoice_date: invoiceDate,
               invoice_received_at: new Date().toISOString(),
               invoice_received_by: user?.id || user?.user_id || null
             })
-            .eq('delivery_partner', 'alwaseet')
             .in('id', localOrders.map(o => o.id))
             .select('id');
 
@@ -288,10 +303,11 @@ export const useAlWaseetInvoices = () => {
       ));
 
       // 8) User feedback
+      const toastVariant = updatedOrdersCount > 0 ? 'success' : 'warning';
       toast({
         title: 'تم تأكيد استلام الفاتورة',
         description: `تم تعليم ${updatedOrdersCount} طلب كمستلم للفاتورة${missingMappingsCount ? `، وتعذر ربط ${missingMappingsCount} طلب` : ''}${profitsUpdatedCount ? `، وتحديث ${profitsUpdatedCount} سجل أرباح` : ''}.`,
-        variant: 'success'
+        variant: toastVariant
       });
 
       // 9) Refresh invoices to get latest
