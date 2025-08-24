@@ -60,97 +60,9 @@ const OrderCard = ({
            deliveryStatus.includes('active');
   };
 
-  // دالة منفصلة للحالات الخارجية من شركة التوصيل - نظام جديد
-  const getDeliveryStatusConfig = (deliveryStatus, stateId = null) => {
-    // إذا كان لدينا state_id، استخدم النظام الجديد
-    if (stateId) {
-      try {
-        const { getStatusConfig } = require('@/lib/alwaseet-statuses');
-        const statusConfig = getStatusConfig(stateId);
-        return {
-          label: statusConfig.text,
-          icon: statusConfig.icon,
-          color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
-        };
-      } catch (error) {
-        console.error('Error loading Al-Waseet status config:', error);
-      }
-    }
-
-    // النظام القديم كـ fallback
-    if (!deliveryStatus || typeof deliveryStatus !== 'string') {
-      return { 
-        label: 'غير محدد', 
-        icon: Package, 
-        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    }
-
-    const statusLower = deliveryStatus.toLowerCase();
-    
-    // حالات التسليم
-    if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
-      return { 
-        label: deliveryStatus, 
-        icon: CheckCircle, 
-        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات الرفض والإلغاء
-    else if (statusLower.includes('رفض') || statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('reject') || statusLower.includes('cancel')) {
-      return { 
-        label: deliveryStatus, 
-        icon: XCircle, 
-        color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات قيد التوصيل أو في الطريق
-    else if (statusLower.includes('في الطريق') || statusLower.includes('طريق') || statusLower.includes('جاري التوصيل') || statusLower.includes('shipping')) {
-      return { 
-        label: deliveryStatus, 
-        icon: MapPin, 
-        color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات التأجيل - عرضها كما هي
-    else if (statusLower.includes('تأجيل') || statusLower.includes('مؤجل') || statusLower.includes('postpone') || statusLower.includes('delay')) {
-      return { 
-        label: deliveryStatus, 
-        icon: Clock, 
-        color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات عدم وجود العميل - عرضها كما هي
-    else if (statusLower.includes('عدم وجود') || statusLower.includes('لا يمكن الوصول') || statusLower.includes('غائب') || statusLower.includes('absent')) {
-      return { 
-        label: deliveryStatus, 
-        icon: AlertTriangle, 
-        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالات الإرجاع
-    else if (statusLower.includes('راجع') || statusLower.includes('مرجع') || statusLower.includes('إرجاع') || statusLower.includes('return')) {
-      return { 
-        label: deliveryStatus, 
-        icon: RotateCcw, 
-        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    } 
-    // حالة افتراضية - عرض النص كما هو
-    else {
-      return { 
-        label: deliveryStatus, 
-        icon: Package, 
-        color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    }
-  };
 
   // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
-  
-  // استخدام النظام الجديد للطلبات الخارجية
-  const displayStatus = !isLocalOrder && order.delivery_status ? order.delivery_status : order.status;
   
   // استخدام النظام الموحد للحالات
   const statusConfig = getStatusForComponent(order);

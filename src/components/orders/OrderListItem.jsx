@@ -64,49 +64,6 @@ const OrderListItem = ({
            deliveryStatus.includes('active');
   };
 
-  // دالة منفصلة للحالات الخارجية من شركة التوصيل - نظام جديد  
-  const getDeliveryStatusConfig = (deliveryStatus, stateId = null) => {
-    // إذا كان لدينا state_id، استخدم النظام الجديد
-    if (stateId) {
-      try {
-        const { getStatusConfig } = require('@/lib/alwaseet-statuses');
-        const statusConfig = getStatusConfig(stateId);
-        return {
-          label: statusConfig.text,
-          icon: statusConfig.icon,
-          color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
-        };
-      } catch (error) {
-        console.error('Error loading Al-Waseet status config:', error);
-      }
-    }
-
-    // النظام القديم كـ fallback
-    if (!deliveryStatus || typeof deliveryStatus !== 'string') {
-      return { 
-        label: 'غير محدد', 
-        icon: Package, 
-        color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    }
-
-    const statusLower = deliveryStatus.toLowerCase();
-    
-    // باقي النظام القديم...
-    if (statusLower.includes('تسليم') || statusLower.includes('مسلم') || statusLower.includes('deliver')) {
-      return { 
-        label: deliveryStatus, 
-        icon: CheckCircle, 
-        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-      };
-    }
-    
-    return { 
-      label: deliveryStatus, 
-      icon: Package, 
-      color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 font-bold rounded-lg px-3 py-1.5 text-xs' 
-    };
-  };
 
   // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
