@@ -326,30 +326,67 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                     {/* تفاصيل المنتج - تخطيط مبسط ومرن */}
                                     <div className="flex-1 min-w-0">
                                       <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
-                                        {/* اسم المنتج */}
-                                        <div className="flex-1 min-w-0">
-                                          <p className="font-bold text-sm md:text-base text-foreground truncate">{item.name}</p>
-                                          {(item.color || item.size) && (
-                                            <p className="text-xs md:text-sm text-muted-foreground">
-                                              {item.color && `${item.color}`}
-                                              {item.color && item.size && ' • '}
-                                              {item.size && item.size}
-                                            </p>
-                                          )}
-                                        </div>
+                                         {/* اسم المنتج مع معالجة أفضل للبيانات */}
+                                         <div className="flex-1 min-w-0">
+                                           {(() => {
+                                             // جمع اسم المنتج من مصادر مختلفة
+                                             const productName = item.product_name || item.name || item.item_name || 'منتج غير محدد';
+                                             const productColor = item.product_color || item.color || item.variant_color;
+                                             const productSize = item.product_size || item.size || item.variant_size;
+                                             
+                                             return (
+                                               <>
+                                                 <p className="font-bold text-sm md:text-base text-foreground truncate">
+                                                   {productName}
+                                                 </p>
+                                                 {(productColor || productSize) && (
+                                                   <p className="text-xs md:text-sm text-muted-foreground">
+                                                     {productColor && (
+                                                       <span className="inline-flex items-center gap-1">
+                                                         <span className="w-2 h-2 rounded-full border border-gray-300" 
+                                                               style={{backgroundColor: productColor.toLowerCase()}}></span>
+                                                         {productColor}
+                                                       </span>
+                                                     )}
+                                                     {productColor && productSize && ' • '}
+                                                     {productSize && (
+                                                       <span className="font-medium">{productSize}</span>
+                                                     )}
+                                                   </p>
+                                                 )}
+                                                 {/* عرض معرف المنتج إذا كان متوفر */}
+                                                 {(item.product_id || item.sku) && (
+                                                   <p className="text-xs text-gray-500">
+                                                     المعرف: {item.product_id || item.sku}
+                                                   </p>
+                                                 )}
+                                               </>
+                                             );
+                                           })()}
+                                         </div>
                                         
-                                        {/* العدد والسعر والمجموع - نص كامل وواضح */}
-                                        <div className="flex items-center gap-2 text-xs">
-                                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 text-xs">
-                                            العدد: {item.quantity}
-                                          </Badge>
-                                          <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-1 text-xs">
-                                            السعر: {item.price?.toLocaleString()} د.ع
-                                          </Badge>
-                                          <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-1 text-xs font-semibold">
-                                            المجموع: {(item.price * item.quantity)?.toLocaleString()} د.ع
-                                          </Badge>
-                                        </div>
+                                         {/* العدد والسعر والمجموع - مع معالجة أفضل للبيانات */}
+                                         <div className="flex items-center gap-2 text-xs">
+                                           {(() => {
+                                             const quantity = item.quantity || 0;
+                                             const price = item.unit_price || item.price || 0;
+                                             const subtotal = quantity * price;
+                                             
+                                             return (
+                                               <>
+                                                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 text-xs">
+                                                   العدد: {quantity}
+                                                 </Badge>
+                                                 <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-1 text-xs">
+                                                   السعر: {price.toLocaleString()} د.ع
+                                                 </Badge>
+                                                 <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-1 text-xs font-semibold">
+                                                   المجموع: {subtotal.toLocaleString()} د.ع
+                                                 </Badge>
+                                               </>
+                                             );
+                                           })()}
+                                         </div>
                                       </div>
                                     </div>
                                   </div>

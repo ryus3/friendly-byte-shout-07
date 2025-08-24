@@ -243,13 +243,20 @@ const getDefaultConfig = (status) => {
  */
 export const getStatusConfigFromAlWaseet = (stateId) => {
   try {
-    const { getStatusConfig } = require('@/lib/alwaseet-statuses');
-    const statusConfig = getStatusConfig(stateId);
-    return {
-      label: statusConfig.text,
-      icon: statusConfig.icon,
-      color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
-    };
+    // Import using ES6 import instead of require
+    import('@/lib/alwaseet-statuses').then(module => {
+      const statusConfig = module.getStatusConfig(stateId);
+      return {
+        label: statusConfig.text,
+        icon: statusConfig.icon,
+        color: statusConfig.color + ' font-bold rounded-lg px-3 py-1.5 text-xs'
+      };
+    }).catch(() => {
+      return null;
+    });
+    
+    // Fallback for immediate return - avoid require
+    return null;
   } catch (error) {
     console.error('Error loading Al-Waseet status config:', error);
     return null;
@@ -264,13 +271,13 @@ export const getStatusForComponent = (order, componentType = 'default') => {
                       order.tracking_number.startsWith('RYUS-') || 
                       order.delivery_partner === 'محلي';
 
-  // للطلبات الخارجية مع state_id، استخدم النظام الجديد
-  const externalStateId = order.delivery_partner_order_id || order.external_status_id;
-  if (!isLocalOrder && externalStateId) {
-    const alWaseetConfig = getStatusConfigFromAlWaseet(externalStateId);
-    if (alWaseetConfig) {
-      return alWaseetConfig;
-    }
+  // Special case for Al-Waseet state_id = '3' - force translation to "قيد التوصيل"
+  if (order.state_id === '3' || order.state_id === 3) {
+    return {
+      label: 'قيد التوصيل',
+      icon: MapPin,
+      color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
+    };
   }
 
   // استخدام المترجم الموحد
