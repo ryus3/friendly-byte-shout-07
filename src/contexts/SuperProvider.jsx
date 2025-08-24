@@ -236,83 +236,19 @@ export const SuperProvider = ({ children }) => {
       if (product.product_variants) {
         const variant = product.product_variants.find(v => v.id === variantId);
         if (variant) {
-          // الحصول على اللون من البيانات المرتبطة مباشرة
-          const color_name = variant.colors?.name;
-          const color_hex = variant.colors?.hex_code;
-          
-          // الحصول على القياس من البيانات المرتبطة مباشرة
-          const size_name = variant.sizes?.name;
-          
           return {
             ...variant,
-            color_name,
-            color_hex,
-            size_name
-          };
-        }
-      }
-    }
-          console.log('✅ Found variant in product_variants:', { 
-            variantId: variant.id,
-            productName: product.name,
-            variant: variant
-          });
-          
-          // استخراج البيانات من الكائنات المتداخلة
-          let colorName = variant.color_name || variant.color;
-          let colorHex = variant.color_hex;
-          let sizeName = variant.size_name || variant.size;
-          
-          console.log('🎨 Initial product_variant data:', { colorName, colorHex, sizeName });
-          
-          // البحث في الكائنات المتداخلة (colors, sizes)
-          if (variant.colors) {
-            colorName = variant.colors.name || colorName;
-            colorHex = variant.colors.hex_code || colorHex;
-            console.log('🎨 Found nested color in product_variants:', { colorName, colorHex });
-          }
-          if (variant.sizes) {
-            sizeName = variant.sizes.name || sizeName;
-            console.log('📏 Found nested size in product_variants:', { sizeName });
-          }
-          
-          // البحث في الألوان المرجعية إذا لم يتم العثور على الاسم
-          if (!colorName && variant.color_id && allData.colors) {
-            const color = allData.colors.find(c => c.id === variant.color_id);
-            if (color) {
-              colorName = color.name;
-              colorHex = color.hex_code || colorHex;
-              console.log('🎨 Found color by ID in product_variants:', { colorId: variant.color_id, colorName, colorHex });
-            }
-          }
-          
-          // البحث في الأحجام المرجعية إذا لم يتم العثور على الاسم
-          if (!sizeName && variant.size_id && allData.sizes) {
-            const size = allData.sizes.find(s => s.id === variant.size_id);
-            if (size) {
-              sizeName = size.name;
-              console.log('📏 Found size by ID in product_variants:', { sizeId: variant.size_id, sizeName });
-            }
-          }
-          
-          const result = {
-            ...variant,
-            product_id: product.id,
             product_name: product.name,
-            color_name: colorName || 'غير محدد',
-            color_hex: colorHex,
-            size_name: sizeName || 'غير محدد'
+            color_name: variant.colors?.name || 'غير محدد',
+            color_hex: variant.colors?.hex_code,
+            size_name: variant.sizes?.name || 'غير محدد'
           };
-          
-          console.log('📦 Final variant details from product_variants:', result);
-          return result;
         }
       }
     }
     
-    console.log('❌ Variant not found in any product');
     return null;
-  }, [allData.products, allData.colors, allData.sizes]);
+  }, [allData.products]);
 
   // دالة الحصول على لون المتغير
   const getColorHex = useCallback((item) => {
