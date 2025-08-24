@@ -1,18 +1,6 @@
 #!/bin/bash
-
-echo "🚀 Starting Vite..."
-
-# Try multiple vite locations
-if [ -f "./node_modules/vite/bin/vite.js" ]; then
-  echo "✅ Using direct vite.js"
-  exec node ./node_modules/vite/bin/vite.js "$@"
-elif [ -f "./node_modules/.bin/vite" ]; then
-  echo "✅ Using .bin/vite"
+if [ -f "./node_modules/.bin/vite" ]; then
   exec ./node_modules/.bin/vite "$@"
-elif command -v npx >/dev/null 2>&1; then
-  echo "✅ Using npx vite"
-  exec npx vite "$@"
 else
-  echo "❌ No vite found, installing..."
-  npm install && exec ./vite "$@"
+  exec npx vite "$@"
 fi
