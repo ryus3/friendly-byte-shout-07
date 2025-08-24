@@ -169,7 +169,7 @@ const [customDateRange, setCustomDateRange] = useState(null);
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            فواتير الوسيط
+            فواتير شركة التوصيل
             <div className="flex items-center gap-3">
               {lastProcessedInvoiceId && (
                 <span className="text-xs text-muted-foreground hidden sm:inline">
