@@ -112,39 +112,61 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    // استخدام البيانات المباشرة من product_variants
-    if (item.product_variants?.colors?.name) {
-      return item.product_variants.colors.name;
-    }
+    console.log('🎨 Item data for color:', {
+      item,
+      color_id: item?.color_id,
+      product_variants: item?.product_variants,
+      colors_length: colors?.length
+    });
     
-    // البحث في colors context كبديل
+    // البحث في colors context أولاً
     if (item.color_id && colors?.length > 0) {
       const color = colors.find(c => c.id === item.color_id);
       if (color) {
+        console.log('✅ Color found from context:', color.name);
         return color.name;
       }
     }
     
+    // استخدام البيانات المباشرة من product_variants
+    if (item.product_variants?.colors?.name) {
+      console.log('✅ Color found from product_variants:', item.product_variants.colors.name);
+      return item.product_variants.colors.name;
+    }
+    
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_color || item.color || item.variant_color || 'غير محدد';
+    const fallbackColor = item.product_color || item.color || item.variant_color || 'غير محدد';
+    console.log('⚠️ Using fallback color:', fallbackColor);
+    return fallbackColor;
   };
 
   const getSizeName = (item) => {
-    // استخدام البيانات المباشرة من product_variants
-    if (item.product_variants?.sizes?.name) {
-      return item.product_variants.sizes.name;
-    }
+    console.log('📏 Item data for size:', {
+      item,
+      size_id: item?.size_id,
+      product_variants: item?.product_variants,
+      sizes_length: sizes?.length
+    });
     
-    // البحث في sizes context كبديل
+    // البحث في sizes context أولاً
     if (item.size_id && sizes?.length > 0) {
       const size = sizes.find(s => s.id === item.size_id);
       if (size) {
+        console.log('✅ Size found from context:', size.name);
         return size.name;
       }
     }
     
+    // استخدام البيانات المباشرة من product_variants
+    if (item.product_variants?.sizes?.name) {
+      console.log('✅ Size found from product_variants:', item.product_variants.sizes.name);
+      return item.product_variants.sizes.name;
+    }
+    
     // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_size || item.size || item.variant_size || 'غير محدد';
+    const fallbackSize = item.product_size || item.size || item.variant_size || 'غير محدد';
+    console.log('⚠️ Using fallback size:', fallbackSize);
+    return fallbackSize;
   };
 
   return (
@@ -308,7 +330,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
                           {(() => {
-                            const statusConfig = getStatusForComponent(order, 'reservedStock');
+                            const statusConfig = getStatusForComponent(order);
                             const StatusIcon = statusConfig.icon;
                             return (
                                <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
