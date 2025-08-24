@@ -394,14 +394,14 @@ const OrderCard = ({
                     }[order.status];
                     if (nextStatus) handleStatusChange(nextStatus);
                   }}
-                  className={`${statusConfig.color} font-bold rounded-lg px-2 py-1 text-xs max-w-[180px] h-auto hover:shadow-md group-hover:scale-105 transition-all duration-300`}
+                  className={`${statusConfig.color} font-bold rounded-lg h-auto transition-all duration-300 ${(statusConfig.label.includes('قيد التوصيل') || statusConfig.label.includes('قيد التجهيز')) ? 'px-3 py-2 max-w-[180px] hover:shadow-lg group-hover:scale-110 transform' : 'px-2 py-1 max-w-[180px] hover:shadow-md group-hover:scale-105'}`}
                   title="انقر لتحديث الحالة"
                 >
                   <StatusIcon className="h-4 w-4" />
                   <span className="font-bold ml-1">{statusConfig.label}</span>
                 </Button>
               ) : (
-                <div className={`flex items-center gap-2 ${statusConfig.color} font-bold rounded-lg px-2 py-1 text-xs max-w-[180px] hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
+                <div className={`flex items-center gap-2 ${statusConfig.color} font-bold rounded-lg text-xs transition-all duration-300 ${(statusConfig.label.includes('قيد التوصيل') || statusConfig.label.includes('قيد التجهيز')) ? 'px-3 py-2 max-w-[180px] hover:shadow-lg group-hover:scale-110 transform' : 'px-2 py-1 max-w-[180px] hover:shadow-md group-hover:scale-105'}`}>
                   <StatusIcon className="h-4 w-4 flex-shrink-0" />
                   <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
                 </div>
