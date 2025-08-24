@@ -112,18 +112,18 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    const variantDetails = getVariantDetails?.(item.variant_id);
-    return variantDetails?.color_name || 'غير محدد';
+    // الوصول المباشر للبيانات مثل OrderDetailsDialog
+    return item.product_variants?.colors?.name || item.color || 'غير محدد';
   };
 
   const getSizeName = (item) => {
-    const variantDetails = getVariantDetails?.(item.variant_id);
-    return variantDetails?.size_name || 'غير محدد';
+    // الوصول المباشر للبيانات مثل OrderDetailsDialog
+    return item.product_variants?.sizes?.name || item.size || 'غير محدد';
   };
 
   const getColorHex = (item) => {
-    const variantDetails = getVariantDetails?.(item.variant_id);
-    return variantDetails?.color_hex || null;
+    // الوصول المباشر لرمز اللون من البيانات
+    return item.product_variants?.colors?.hex_code || null;
   };
 
   return (
