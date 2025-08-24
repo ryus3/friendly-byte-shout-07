@@ -11,7 +11,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 /**
- * لوحة الإشعارات الأساسية مع ألوان محسنة حسب حالة التوصيل
+ * لوحة الإشعارات الأساسية
  */
 const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className = "" }) => {
   const { hasPermission } = usePermissions();
@@ -73,47 +73,41 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان محسنة حسب حالة التوصيل والأولوية
+  // ألوان حسب حالة التوصيل والأولوية
   const getPriorityColor = (type, priority, message, data) => {
     // ألوان خاصة لإشعارات تغيير حالة الطلب
-    if (type === 'order_status_changed' || type === 'order_status_update') {
+    if (type === 'order_status_changed') {
       const status = data?.new_status || data?.delivery_status || '';
       const msg = message || '';
       
       // تم التسليم - أخضر
-      if (status === 'delivered' || msg.includes('تم التسليم') || msg.includes('delivered')) {
-        return 'border-r-green-500 bg-green-50 dark:bg-green-950/30';
+      if (status.includes('delivered') || msg.includes('تم التسليم') || msg.includes('delivered')) {
+        return 'border-green-500 bg-green-50 dark:bg-green-950/30';
       }
       // في الطريق/التوصيل - أزرق
-      if (status === 'in_transit' || status === 'shipped' || status === 'out_for_delivery' || 
-          msg.includes('قيد التوصيل') || msg.includes('تم الشحن') || msg.includes('خرج للتوصيل')) {
-        return 'border-r-blue-500 bg-blue-50 dark:bg-blue-950/30';
+      if (status.includes('delivery') || status.includes('out for delivery') || 
+          msg.includes('في الطريق') || msg.includes('الى مكتب') || msg.includes('out for delivery')) {
+        return 'border-blue-500 bg-blue-50 dark:bg-blue-950/30';
       }
       // مرفوض/ملغي - أحمر
-      if (status === 'rejected' || status === 'canceled' || status === 'failed_delivery' || 
-          msg.includes('تم الرفض') || msg.includes('تم الإلغاء') || msg.includes('فشل التوصيل')) {
-        return 'border-r-red-500 bg-red-50 dark:bg-red-950/30';
+      if (status.includes('rejected') || status.includes('cancel') || 
+          msg.includes('مرفوض') || msg.includes('ملغي') || msg.includes('رفض')) {
+        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
       }
       // تأخير/إرجاع - برتقالي
-      if (status === 'delayed' || status === 'returned' || 
-          msg.includes('متأخر') || msg.includes('تم الإرجاع')) {
-        return 'border-r-orange-500 bg-orange-50 dark:bg-orange-950/30';
-      }
-      // في الانتظار/المعالجة - أصفر
-      if (status === 'pending' || status === 'processing' || 
-          msg.includes('في الانتظار') || msg.includes('قيد المعالجة')) {
-        return 'border-r-yellow-500 bg-yellow-50 dark:bg-yellow-950/30';
+      if (msg.includes('تأخير') || msg.includes('إرجاع') || status.includes('delayed')) {
+        return 'border-orange-500 bg-orange-50 dark:bg-orange-950/30';
       }
     }
     
-    // الألوان العادية للأولوية
+    // الألوان القديمة للأولوية
     switch (priority) {
       case 'high':
-        return 'border-r-red-500 bg-red-50 dark:bg-red-950/30';
+        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
       case 'medium':
-        return 'border-r-yellow-500 bg-yellow-50 dark:bg-yellow-950/30';
+        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30';
       default:
-        return 'border-r-gray-200 bg-gray-50 dark:bg-gray-950/30';
+        return 'border-gray-200 bg-gray-50 dark:bg-gray-950/30';
     }
   };
 
@@ -207,7 +201,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                   {filteredNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors group ${
+                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                         !notification.read ? 'bg-primary/5' : ''
                       } ${getPriorityColor(notification.type, notification.priority, notification.message, notification.data)}`}
                       onClick={() => handleMarkAsRead(notification.id)}
