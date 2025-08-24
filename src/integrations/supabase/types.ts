@@ -3585,6 +3585,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      should_keep_reservation_for_order: {
+        Args: {
+          p_delivery_partner?: string
+          p_delivery_status?: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      should_release_stock_for_order: {
+        Args: {
+          p_delivery_partner?: string
+          p_delivery_status?: string
+          p_status: string
+        }
+        Returns: boolean
+      }
       should_send_stock_notification: {
         Args: {
           p_notification_type: string
@@ -3632,6 +3648,15 @@ export type Database = {
       update_customer_tier_by_phone: {
         Args: { phone_param: string }
         Returns: undefined
+      }
+      update_order_reservation_status: {
+        Args: {
+          p_delivery_partner?: string
+          p_new_delivery_status?: string
+          p_new_status: string
+          p_order_id: string
+        }
+        Returns: Json
       }
       update_reserved_stock: {
         Args: {
