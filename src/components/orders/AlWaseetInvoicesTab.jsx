@@ -39,7 +39,11 @@ const AlWaseetInvoicesTab = () => {
   
   // Time filter state with localStorage
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
-  const [customDateRange, setCustomDateRange] = useState(null);
+const [customDateRange, setCustomDateRange] = useState(null);
+
+  // Auto invoice processing info
+  const lastProcessedInvoiceId = typeof window !== 'undefined' ? localStorage.getItem('waseet:lastProcessedInvoiceId') : null;
+  const lastProcessedAt = typeof window !== 'undefined' ? localStorage.getItem('waseet:lastProcessedAt') : null;
 
   // Filter invoices based on search, status, and time
   const filteredInvoices = useMemo(() => {
@@ -166,14 +170,21 @@ const AlWaseetInvoicesTab = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             فواتير الوسيط
-            <Button 
-              onClick={handleRefresh} 
-              disabled={loading}
-              size="sm"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              تحديث
-            </Button>
+            <div className="flex items-center gap-3">
+              {lastProcessedInvoiceId && (
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  آخر معالجة: #{lastProcessedInvoiceId} • {lastProcessedAt ? new Date(lastProcessedAt).toLocaleString('ar-EG') : ''}
+                </span>
+              )}
+              <Button 
+                onClick={handleRefresh} 
+                disabled={loading}
+                size="sm"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                تحديث
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -23,7 +23,8 @@ import {
   Eye,
   Package,
   AlertTriangle,
-  Trash2
+  Trash2,
+  FileText
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +52,15 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const [singleOrderTracking, setSingleOrderTracking] = React.useState('');
   const [isLoadingStatuses, setIsLoadingStatuses] = React.useState(false);
   const [statusesData, setStatusesData] = React.useState([]);
-  const [showStatusesTable, setShowStatusesTable] = React.useState(false);
+const [showStatusesTable, setShowStatusesTable] = React.useState(false);
+
+  // إعدادات الاستلام التلقائي للفواتير (محفوظة محلياً)
+  const [autoMarkEnabled, setAutoMarkEnabled] = React.useState(() => {
+    try { return localStorage.getItem('waseet:autoMarkEnabled') !== 'false'; } catch { return true; }
+  });
+  const [processLatestOnly, setProcessLatestOnly] = React.useState(() => {
+    try { return localStorage.getItem('waseet:processLatestOnly') !== 'false'; } catch { return true; }
+  });
 
   const handleManualSync = async (type = 'fast') => {
     if (isManualSyncing || isSyncing) return;
@@ -352,6 +361,48 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
               <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
                 <Bell className="w-4 h-4 inline ml-1" />
                 ملاحظة: إيقاف المزامنة التلقائية يقلل من الإشعارات المتكررة ويحسن الأداء
+              </div>
+
+              <Separator />
+
+              {/* إعدادات الاستلام التلقائي للفواتير */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">الاستلام التلقائي لفواتير الوسيط</Label>
+                    <p className="text-xs text-muted-foreground">
+                      تعليم الطلبات كمستلمة عند ظهور فاتورة مُستلمة جديدة
+                    </p>
+                  </div>
+                  <Switch
+                    checked={autoMarkEnabled}
+                    onCheckedChange={(v) => {
+                      setAutoMarkEnabled(v);
+                      try { localStorage.setItem('waseet:autoMarkEnabled', String(v)); } catch {}
+                      toast({ title: v ? 'تم تفعيل الاستلام التلقائي' : 'تم إيقاف الاستلام التلقائي' });
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">وضع المعالجة</Label>
+                    <p className="text-xs text-muted-foreground">
+                      عند التفعيل: معالجة آخر فاتورة جديدة فقط
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <Switch
+                      checked={processLatestOnly}
+                      onCheckedChange={(v) => {
+                        setProcessLatestOnly(v);
+                        try { localStorage.setItem('waseet:processLatestOnly', String(v)); } catch {}
+                        toast({ title: v ? 'آخر فاتورة فقط' : 'كل الفواتير الجديدة' });
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

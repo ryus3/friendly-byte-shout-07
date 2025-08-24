@@ -14,6 +14,95 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
+  // Local automation settings and helpers
+  const AUTO_MARK_ENABLED_KEY = 'waseet:autoMarkEnabled';
+  const PROCESS_LATEST_ONLY_KEY = 'waseet:processLatestOnly';
+  const LAST_PROCESSED_ID_KEY = 'waseet:lastProcessedInvoiceId';
+  const LAST_PROCESSED_AT_KEY = 'waseet:lastProcessedAt';
+
+  const isAutoMarkEnabled = () => {
+    try {
+      const v = localStorage.getItem(AUTO_MARK_ENABLED_KEY);
+      return v === null ? true : v !== 'false';
+    } catch {
+      return true;
+    }
+  };
+  const isProcessLatestOnly = () => {
+    try {
+      const v = localStorage.getItem(PROCESS_LATEST_ONLY_KEY);
+      return v === null ? true : v !== 'false';
+    } catch {
+      return true;
+    }
+  };
+
+  const autoProcessLatestReceivedInvoice = useCallback(async (allInvoices) => {
+    try {
+      if (!token || !isLoggedIn || activePartner !== 'alwaseet' || !Array.isArray(allInvoices)) return;
+      if (!isAutoMarkEnabled()) return;
+
+      const received = [...allInvoices].filter(inv => inv.status === 'تم الاستلام من قبل التاجر');
+      if (received.length === 0) return;
+
+      // Sort by date desc and pick target(s)
+      received.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+      const targets = isProcessLatestOnly() ? [received[0]] : received;
+
+      const lastProcessedId = localStorage.getItem(LAST_PROCESSED_ID_KEY);
+      const target = targets.find(inv => String(inv.id) !== String(lastProcessedId));
+      if (!target) return;
+
+      // Fetch invoice details directly (avoid mutating hook state)
+      const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, target.id);
+      const waseetOrders = invoiceData?.orders || [];
+      const invoiceMeta = invoiceData?.invoice?.[0] || null;
+      const invoiceDate = invoiceMeta?.updated_at || invoiceMeta?.created_at || new Date().toISOString();
+
+      const waseetOrderIds = waseetOrders.map(o => String(o.id));
+      if (waseetOrderIds.length === 0) return;
+
+      const { data: localOrders } = await supabase
+        .from('orders')
+        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, status')
+        .eq('delivery_partner', 'alwaseet')
+        .in('delivery_partner_order_id', waseetOrderIds)
+        .neq('receipt_received', true);
+
+      const updateIds = (localOrders || [])
+        .filter(o => ['delivered', 'completed'].includes(o.status))
+        .map(o => o.id);
+
+      if (updateIds.length === 0) {
+        localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+        localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+        return;
+      }
+
+      await supabase
+        .from('orders')
+        .update({
+          receipt_received: true,
+          delivery_partner_invoice_id: String(target.id),
+          delivery_partner_invoice_date: invoiceDate,
+          invoice_received_at: new Date().toISOString(),
+          invoice_received_by: user?.id || user?.user_id || null
+        })
+        .in('id', updateIds);
+
+      localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+      localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+
+      toast({
+        title: 'تم تطبيق استلام الفاتورة تلقائياً',
+        description: `تم تعليم ${updateIds.length} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
+        variant: 'success'
+      });
+    } catch (e) {
+      console.warn('Auto-process latest invoice failed:', e?.message || e);
+    }
+  }, [token, isLoggedIn, activePartner, user?.id, user?.user_id]);
+
   // Fetch all merchant invoices
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
@@ -74,6 +163,10 @@ export const useAlWaseetInvoices = () => {
         });
       
       setInvoices(filteredAndSortedInvoices);
+      
+      // Background automation: process latest received invoice if new
+      autoProcessLatestReceivedInvoice(invoicesData);
+      
       return filteredAndSortedInvoices;
     } catch (error) {
       console.error('Error fetching invoices:', error);
