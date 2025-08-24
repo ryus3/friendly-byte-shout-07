@@ -112,37 +112,18 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   };
 
   const getColorName = (item) => {
-    // البحث المبسط عبر النظام الموحد
     const variantDetails = getVariantDetails?.(item.variant_id);
-    if (variantDetails?.color_name) {
-      return variantDetails.color_name;
-    }
-    
-    // البحث التقليدي كبديل
-    if (item.color_id && colors?.length > 0) {
-      const color = colors.find(c => c.id === item.color_id);
-      if (color) return color.name;
-    }
-    
-    // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_color || item.color || item.variant_color || 'غير محدد';
+    return variantDetails?.color_name || 'غير محدد';
   };
 
   const getSizeName = (item) => {
-    // البحث المبسط عبر النظام الموحد
     const variantDetails = getVariantDetails?.(item.variant_id);
-    if (variantDetails?.size_name) {
-      return variantDetails.size_name;
-    }
-    
-    // البحث التقليدي كبديل
-    if (item.size_id && sizes?.length > 0) {
-      const size = sizes.find(s => s.id === item.size_id);
-      if (size) return size.name;
-    }
-    
-    // استخدام الاسم المحفوظ في العنصر نفسه
-    return item.product_size || item.size || item.variant_size || 'غير محدد';
+    return variantDetails?.size_name || 'غير محدد';
+  };
+
+  const getColorHex = (item) => {
+    const variantDetails = getVariantDetails?.(item.variant_id);
+    return variantDetails?.color_hex || null;
   };
 
   return (
@@ -392,21 +373,21 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                                  <p className="font-bold text-sm md:text-base text-foreground truncate">
                                                    {productName}
                                                  </p>
-                                                 {(productColor || productSize) && (
-                                                   <p className="text-xs md:text-sm text-muted-foreground">
-                                                     {productColor && (
-                                                       <span className="inline-flex items-center gap-1">
-                                                         <span className="w-2 h-2 rounded-full border border-gray-300" 
-                                                               style={{backgroundColor: productColor.toLowerCase()}}></span>
-                                                         {productColor}
-                                                       </span>
-                                                     )}
-                                                     {productColor && productSize && ' • '}
-                                                     {productSize && (
-                                                       <span className="font-medium">{productSize}</span>
-                                                     )}
-                                                   </p>
-                                                 )}
+                                                      {(productColor !== 'غير محدد' || productSize !== 'غير محدد') && (
+                                                        <p className="text-xs md:text-sm text-muted-foreground">
+                                                          {productColor !== 'غير محدد' && (
+                                                            <span className="inline-flex items-center gap-1">
+                                                              <span className="w-2 h-2 rounded-full border border-gray-300" 
+                                                                    style={{backgroundColor: getColorHex(item) || '#ccc'}}></span>
+                                                              {productColor}
+                                                            </span>
+                                                          )}
+                                                          {productColor !== 'غير محدد' && productSize !== 'غير محدد' && ' • '}
+                                                          {productSize !== 'غير محدد' && (
+                                                            <span className="font-medium">{productSize}</span>
+                                                          )}
+                                                        </p>
+                                                      )}
                                                </>
                                              );
                                            })()}

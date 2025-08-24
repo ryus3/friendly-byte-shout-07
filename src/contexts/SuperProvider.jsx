@@ -227,39 +227,29 @@ export const SuperProvider = ({ children }) => {
     if (!variantId || !allData.products) return null;
     
     for (const product of allData.products) {
-      // البحث في variants
-      if (product.variants) {
-        const variant = product.variants.find(v => v.id === variantId);
-        if (variant) {
-          // البحث عن اللون والحجم من البيانات المرجعية
-          let colorName = variant.color_name || variant.color;
-          let sizeName = variant.size_name || variant.size;
-          
-          // البحث في الألوان المرجعية إذا لم يتم العثور على الاسم
-          if (!colorName && variant.color_id && allData.colors) {
-            const color = allData.colors.find(c => c.id === variant.color_id);
-            colorName = color?.name || 'غير محدد';
-          }
-          
-          // البحث في الأحجام المرجعية إذا لم يتم العثور على الاسم
-          if (!sizeName && variant.size_id && allData.sizes) {
-            const size = allData.sizes.find(s => s.id === variant.size_id);
-            sizeName = size?.name || 'غير محدد';
-          }
-          
-          return {
-            ...variant,
-            product_id: product.id,
-            product_name: product.name,
-            color_name: colorName || 'غير محدد',
-            size_name: sizeName || 'غير محدد'
-          };
-        }
+      // البحث في variants (البنية الموحدة) و product_variants (البنية الأصلية)
+      const variants = product.variants || product.product_variants || [];
+      const variant = variants.find(v => v.id === variantId);
+      
+      if (variant) {
+        // الحصول على الألوان والأحجام من النظام الموحد
+        const colorName = variant.color_name || variant.color || 'غير محدد';
+        const sizeName = variant.size_name || variant.size || 'غير محدد';
+        const colorHex = variant.color_hex || variant.colors?.hex_code || null;
+        
+        return {
+          ...variant,
+          product_id: product.id,
+          product_name: product.name,
+          color_name: colorName,
+          size_name: sizeName,
+          color_hex: colorHex
+        };
       }
     }
     
     return null;
-  }, [allData.products, allData.colors, allData.sizes]);
+  }, [allData.products]);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
