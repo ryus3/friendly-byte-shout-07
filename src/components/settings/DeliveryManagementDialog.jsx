@@ -369,7 +369,7 @@ const [showStatusesTable, setShowStatusesTable] = React.useState(false);
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium">الاستلام التلقائي لفواتير شركة التوصيل</Label>
+                    <Label className="text-sm font-medium">الاستلام التلقائي لفواتير الوسيط</Label>
                     <p className="text-xs text-muted-foreground">
                       تعليم الطلبات كمستلمة عند ظهور فاتورة مُستلمة جديدة
                     </p>
