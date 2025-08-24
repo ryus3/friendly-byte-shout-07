@@ -232,10 +232,10 @@ export const SuperProvider = ({ children }) => {
       const variant = variants.find(v => v.id === variantId);
       
       if (variant) {
-        // الحصول على الألوان والأحجام من النظام الموحد
-        const colorName = variant.color_name || variant.color || 'غير محدد';
-        const sizeName = variant.size_name || variant.size || 'غير محدد';
-        const colorHex = variant.color_hex || variant.colors?.hex_code || null;
+        // الوصول الصحيح للبيانات المجلبة من العلاقات
+        const colorName = variant.colors?.name || variant.color_name || 'غير محدد';
+        const sizeName = variant.sizes?.name || variant.size_name || 'غير محدد';
+        const colorHex = variant.colors?.hex_code || variant.color_hex || null;
         
         return {
           ...variant,
