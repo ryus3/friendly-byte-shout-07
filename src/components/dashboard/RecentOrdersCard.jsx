@@ -24,7 +24,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
   };
 
   const getStatusBadge = (order) => {
-    const statusConfig = getStatusForComponent(order);
+    const statusConfig = getStatusForComponent(order, 'recentOrders');
     const StatusIcon = statusConfig.icon;
     return (
       <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusConfig.color)}>

@@ -114,9 +114,12 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const getColorName = (item) => {
     if (!item) return 'غير محدد';
     
-    // استخدام البيانات المباشرة من product_variants أولاً
-    if (item.product_variants?.colors?.name) {
-      return item.product_variants.colors.name;
+    // استخدام getVariantDetails أولاً
+    if (item.variant_id) {
+      const variantDetails = getVariantDetails(item.variant_id);
+    if (variantDetails?.color_name) {
+        return variantDetails.color_name;
+      }
     }
     
     // البحث المباشر في color_id
@@ -134,9 +137,12 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const getSizeName = (item) => {
     if (!item) return 'غير محدد';
     
-    // استخدام البيانات المباشرة من product_variants أولاً
-    if (item.product_variants?.sizes?.name) {
-      return item.product_variants.sizes.name;
+    // استخدام getVariantDetails أولاً
+    if (item.variant_id) {
+      const variantDetails = getVariantDetails(item.variant_id);
+      if (variantDetails?.size_name) {
+        return variantDetails.size_name;
+      }
     }
     
     // البحث المباشر في size_id
@@ -312,7 +318,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
                           {(() => {
-                            const statusConfig = getStatusForComponent(order);
+                            const statusConfig = getStatusForComponent(order, 'reservedStock');
                             const StatusIcon = statusConfig.icon;
                             return (
                                <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
