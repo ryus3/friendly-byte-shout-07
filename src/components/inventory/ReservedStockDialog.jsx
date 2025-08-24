@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 
 
@@ -251,10 +252,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
-                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm">
-                            <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                            قيد التجهيز
-                          </Badge>
+                          {(() => {
+                            const statusConfig = getStatusForComponent(order, 'reservedStock');
+                            const StatusIcon = statusConfig.icon;
+                            return (
+                              <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm`}>
+                                <StatusIcon className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                                {statusConfig.label}
+                              </Badge>
+                            );
+                          })()}
                           <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
                             #{index + 1}
                           </Badge>

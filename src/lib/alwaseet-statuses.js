@@ -63,7 +63,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
     canDelete: false,
     canEdit: false,
     releasesStock: false,
-    color: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40',
+    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40',
     description: 'قيد التوصيل - في عهدة المندوب'
   },
   '4': {

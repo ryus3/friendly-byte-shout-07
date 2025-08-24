@@ -23,6 +23,7 @@ import {
   Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,33 +43,18 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     } catch { return String(date); }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'pending':
-        return {
-          gradient: 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500'
-        };
-      case 'processing':
-        return {
-          gradient: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600'
-        };
-      case 'completed':
-        return {
-          gradient: 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600'
-        };
-      case 'needs_review':
-        return {
-          gradient: 'bg-gradient-to-br from-red-500 via-pink-500 to-rose-600'
-        };
-      case 'failed':
-        return {
-          gradient: 'bg-gradient-to-br from-gray-500 via-slate-600 to-gray-700'
-        };
-      default:
-        return {
-          gradient: 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700'
-        };
-    }
+  const getUnifiedStatusForOrder = (order) => {
+    // محاكاة بيانات طلب منتظم لاستخدام النظام الموحد
+    const mockOrder = {
+      status: order.status === 'completed' ? 'delivered' : 
+              order.status === 'processing' ? 'delivery' :
+              order.status === 'pending' ? 'pending' : 
+              order.status === 'failed' ? 'cancelled' : 'pending',
+      delivery_status: null,
+      tracking_number: null,
+      delivery_partner: 'محلي'
+    };
+    return getStatusForComponent(mockOrder, 'aiOrders');
   };
 
   const getSourceIcon = (source) => {
@@ -356,8 +342,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
     if (availability === 'available' && !needsReviewAny) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
     if (needsReviewAny) return 'bg-gradient-to-br from-red-500 to-red-700';
-    return getStatusColor(order.status).gradient;
-  }, [availability, needsReviewAny, order.status]);
+    const statusConfig = getUnifiedStatusForOrder(order);
+    return statusConfig.color.includes('gradient') ? statusConfig.color : 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700';
+  }, [availability, needsReviewAny, order]);
 
   const isProblematic = availability !== 'available' || needsReview;
 

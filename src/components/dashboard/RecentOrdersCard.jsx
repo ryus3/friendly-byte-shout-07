@@ -7,6 +7,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 const RecentOrdersCard = ({ recentOrders }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -22,65 +23,13 @@ const RecentOrdersCard = ({ recentOrders }) => {
     navigate('/my-orders');
   };
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      'pending': { 
-        label: 'قيد التجهيز', 
-        icon: Package,
-        className: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'shipped': { 
-        label: 'تم الشحن', 
-        icon: Truck,
-        className: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'delivery': { 
-        label: 'قيد التوصيل', 
-        icon: Truck,
-        className: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'delivered': { 
-        label: 'تم التسليم', 
-        icon: CheckCircle,
-        className: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'completed': { 
-        label: 'مكتمل', 
-        icon: CheckCircle,
-        className: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'returned': { 
-        label: 'راجعة', 
-        icon: RotateCcw,
-        className: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'returned_in_stock': { 
-        label: 'راجع للمخزن', 
-        icon: PackageCheck,
-        className: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      'cancelled': { 
-        label: 'ملغي', 
-        icon: XCircle,
-        className: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      },
-      // معالجة الحالات القديمة
-      'return_received': { 
-        label: 'راجع للمخزن', 
-        icon: PackageCheck,
-        className: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
-      }
-    };
-    const statusInfo = statusMap[status] || { 
-      label: status, 
-      icon: Package,
-      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-lg px-2 py-1 text-xs'
-    };
-    const StatusIcon = statusInfo.icon;
+  const getStatusBadge = (order) => {
+    const statusConfig = getStatusForComponent(order, 'recentOrders');
+    const StatusIcon = statusConfig.icon;
     return (
-      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusInfo.className)}>
+      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusConfig.color)}>
         <StatusIcon className="w-3 h-3" />
-        {statusInfo.label}
+        {statusConfig.label}
       </Badge>
     );
   };
@@ -183,7 +132,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                         <span className="text-sm font-bold text-primary">#{getOrderId(order)}</span>
                         <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
                       </div>
-                      {getStatusBadge(order.status)}
+                      {getStatusBadge(order)}
                     </div>
                     
                     {/* Location and Delivery Info */}

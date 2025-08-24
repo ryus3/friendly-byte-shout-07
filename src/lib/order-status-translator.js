@@ -108,11 +108,41 @@ const DELIVERY_STATUS_PATTERNS = {
     icon: RotateCcw,
     color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40'
   },
+  // حالة خاصة: قيد التوصيل للزبون (في عهدة المندوب) - يجب أن تظهر كـ "قيد التوصيل" بلون سماوي
+  'قيد التوصيل الى الزبون|قيد التوصيل للزبون|في عهدة المندوب|في عهده المندوب': {
+    label: 'قيد التوصيل',
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40'
+  },
   // في مكتب المحافظة
   'في مكتب المحافظة|مكتب المحافظة': {
     label: null,
     icon: MapPin,
     color: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40'
+  },
+  // في الطريق الى مكتب المحافظة  
+  'في الطريق الى مكتب المحافظة|في الطريق الى المكتب|طريق المحافظة': {
+    label: null,
+    icon: Truck,
+    color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
+  },
+  // لا يرد
+  'لا يرد|ما يرد|عدم الرد|no answer': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
+  },
+  // مغلق
+  'مغلق|مقفل|closed': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
+  },
+  // مؤجل
+  'مؤجل|تأجيل|postponed|delayed': {
+    label: null,
+    icon: Clock,
+    color: 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40'
   }
 };
 
