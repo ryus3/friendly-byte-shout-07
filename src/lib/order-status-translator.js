@@ -76,73 +76,73 @@ const DELIVERY_STATUS_PATTERNS = {
   'تسليم|مسلم|deliver': {
     label: null, // سيتم عرض النص الأصلي
     icon: CheckCircle,
-    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40'
   },
   // حالات الرفض والإلغاء
   'رفض|ملغي|إلغاء|reject|cancel': {
     label: null,
     icon: XCircle,
-    color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
   },
   // حالات قيد التوصيل
   'في الطريق|طريق|جاري التوصيل|مندوب|shipping': {
     label: null,
     icon: MapPin,
-    color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
   },
   // حالات التأجيل - لون بنفسجي جميل
   'تأجيل|مؤجل|postpone|delay': {
     label: null,
     icon: Clock,
-    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
   },
   // حالات عدم وجود العميل
   'عدم وجود|لا يمكن الوصول|غائب|absent': {
     label: null,
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
   },
   // حالات الإرجاع
   'راجع|مرجع|إرجاع|return': {
     label: null,
     icon: RotateCcw,
-    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40'
   },
   // حالة خاصة: قيد التوصيل للزبون (في عهدة المندوب) - لون تركوازي جميل مع أيقونة أصغر
   'قيد التوصيل الى الزبون|قيد التوصيل للزبون|في عهدة المندوب|في عهده المندوب': {
     label: 'للزبون',
     icon: MapPin,
-    color: 'bg-gradient-to-r from-teal-400 to-cyan-500 text-white border border-teal-300/50 shadow-lg shadow-teal-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-teal-400 to-cyan-500 text-white border border-teal-300/50 shadow-lg shadow-teal-400/40'
   },
   // في مكتب المحافظة
   'في مكتب المحافظة|مكتب المحافظة': {
     label: null,
     icon: MapPin,
-    color: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40'
   },
   // في الطريق الى مكتب المحافظة  
   'في الطريق الى مكتب المحافظة|في الطريق الى المكتب|طريق المحافظة': {
     label: null,
     icon: Truck,
-    color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40'
   },
   // لا يرد
   'لا يرد|ما يرد|عدم الرد|no answer': {
     label: null,
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40'
   },
   // مغلق
   'مغلق|مقفل|closed': {
     label: null,
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40'
   },
   // مؤجل - لون بنفسجي جميل
   'مؤجل|تأجيل|postponed|delayed': {
     label: null,
     icon: Clock,
-    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
+    color: 'px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40'
   }
 };
 
