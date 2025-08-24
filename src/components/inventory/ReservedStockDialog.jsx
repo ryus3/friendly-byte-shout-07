@@ -15,7 +15,7 @@ import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useSuper } from '@/contexts/SuperProvider';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 
 
@@ -25,7 +25,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [employees, setEmployees] = useState([]);
   const { user, allUsers } = useAuth();
   const { isAdmin } = usePermissions();
-  const { orders } = useInventory();
+  const { orders, products, colors, sizes } = useSuper();
 
   // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة
   useEffect(() => {
@@ -90,6 +90,66 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
       return employee.full_name || employee.username || 'موظف غير معروف';
     }
     return 'موظف غير معروف';
+  };
+
+  // دوال مساعدة للحصول على بيانات المنتجات من الجالب الموحد
+  const getProductName = (item) => {
+    // البحث في المنتجات أولاً بـ product_id
+    if (item.product_id && products?.length > 0) {
+      const product = products.find(p => p.id === item.product_id);
+      if (product) {
+        return product.name || product.product_name || 'منتج غير محدد';
+      }
+    }
+    
+    // استخدام الاسم المحفوظ في العنصر نفسه
+    return item.product_name || item.name || item.item_name || 'منتج غير محدد';
+  };
+
+  const getColorName = (item) => {
+    // البحث في الألوان أولاً بـ color_id أو variant_id
+    if (item.color_id && colors?.length > 0) {
+      const color = colors.find(c => c.id === item.color_id);
+      if (color) return color.name;
+    }
+    
+    if (item.variant_id && colors?.length > 0) {
+      // البحث عبر المنتجات للعثور على اللون
+      const product = products?.find(p => p.id === item.product_id);
+      if (product?.variants?.length > 0) {
+        const variant = product.variants.find(v => v.id === item.variant_id);
+        if (variant?.color_id) {
+          const color = colors.find(c => c.id === variant.color_id);
+          if (color) return color.name;
+        }
+      }
+    }
+    
+    // استخدام الاسم المحفوظ في العنصر نفسه
+    return item.product_color || item.color || item.variant_color || null;
+  };
+
+  const getSizeName = (item) => {
+    // البحث في الأحجام أولاً بـ size_id أو variant_id
+    if (item.size_id && sizes?.length > 0) {
+      const size = sizes.find(s => s.id === item.size_id);
+      if (size) return size.name;
+    }
+    
+    if (item.variant_id && sizes?.length > 0) {
+      // البحث عبر المنتجات للعثور على الحجم
+      const product = products?.find(p => p.id === item.product_id);
+      if (product?.variants?.length > 0) {
+        const variant = product.variants.find(v => v.id === item.variant_id);
+        if (variant?.size_id) {
+          const size = sizes.find(s => s.id === variant.size_id);
+          if (size) return size.name;
+        }
+      }
+    }
+    
+    // استخدام الاسم المحفوظ في العنصر نفسه
+    return item.product_size || item.size || item.variant_size || null;
   };
 
   return (
@@ -256,10 +316,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                             const statusConfig = getStatusForComponent(order, 'reservedStock');
                             const StatusIcon = statusConfig.icon;
                             return (
-                              <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm`}>
-                                <StatusIcon className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                                {statusConfig.label}
-                              </Badge>
+                               <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-none flex items-center`}>
+                                 <StatusIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                                 <span className="truncate">{statusConfig.label}</span>
+                               </Badge>
                             );
                           })()}
                           <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
@@ -328,11 +388,11 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                       <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
                                          {/* اسم المنتج مع معالجة أفضل للبيانات */}
                                          <div className="flex-1 min-w-0">
-                                           {(() => {
-                                             // جمع اسم المنتج من مصادر مختلفة
-                                             const productName = item.product_name || item.name || item.item_name || 'منتج غير محدد';
-                                             const productColor = item.product_color || item.color || item.variant_color;
-                                             const productSize = item.product_size || item.size || item.variant_size;
+                                            {(() => {
+                                              // جمع اسم المنتج من الجالب الموحد
+                                              const productName = getProductName(item);
+                                              const productColor = getColorName(item);
+                                              const productSize = getSizeName(item);
                                              
                                              return (
                                                <>
