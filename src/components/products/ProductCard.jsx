@@ -25,28 +25,9 @@ const ProductCard = React.memo(({ product, onSelect }) => {
 
   const reservedStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
-    const reserved = product.variants.reduce((sum, v) => {
-      // التحقق من مصادر مختلفة للمخزون المحجوز
-      const reservedValue = v.inventory?.[0]?.reserved_quantity || 
-                      v.inventory?.reserved_quantity || 
-                      v.reserved_quantity || 
-                      v.reserved_stock || 
-                      v.reserved || 0;
-      
-      // طباعة للتشخيص
-      if (reservedValue > 0) {
-        console.log(`🔒 منتج ${product.name} - محجوز: ${reservedValue}`, v);
-      }
-      
-      return sum + reservedValue;
-    }, 0);
-    
-    if (reserved > 0) {
-      console.log(`📦 إجمالي المحجوز لـ ${product.name}: ${reserved}`);
-    }
-    
-    return reserved;
-  }, [product.variants, product.name]);
+    // النظام الموحد يحسب المخزون المحجوز تلقائياً
+    return product.variants.reduce((sum, v) => sum + (v.reserved_quantity || 0), 0);
+  }, [product.variants]);
 
 
   const uniqueColorsWithHex = useMemo(() => {

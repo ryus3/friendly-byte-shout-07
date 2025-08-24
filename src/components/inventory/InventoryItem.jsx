@@ -12,8 +12,8 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
   }
 
   const stock = variant.quantity || 0;
-  const reserved = variant.reserved_quantity || variant.reserved || 0;
-  const available = stock - reserved;
+  const reserved = variant.reserved_quantity || 0; // النظام الموحد يحسب هذا تلقائياً
+  const available = variant.available_quantity || Math.max(0, stock - reserved);
   
   // استخدام النظام المركزي للحصول على الكمية المباعة
   const soldData = getVariantSoldData(variant.id);

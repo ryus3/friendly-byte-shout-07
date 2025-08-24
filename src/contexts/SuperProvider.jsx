@@ -166,6 +166,61 @@ export const SuperProvider = ({ children }) => {
       isAiOrder: false,
     };
   }, []);
+
+  // نظام الحجز الموحد - حساب الكميات المحجوزة الحقيقية
+  const calculateUnifiedReservations = useCallback((data) => {
+    if (!data?.products || !data?.orders) return data;
+
+    // إنشاء خريطة للكميات المحجوزة لكل variant
+    const reservationMap = new Map();
+
+    // حساب الحجز من الطلبات النشطة
+    data.orders.forEach(order => {
+      // الطلبات التي تحجز المخزون
+      const shouldReserveStock = ['pending', 'shipped', 'delivery', 'returned'].includes(order.status);
+      
+      if (shouldReserveStock && order.order_items) {
+        order.order_items.forEach(item => {
+          if (item.variant_id) {
+            const currentReserved = reservationMap.get(item.variant_id) || 0;
+            reservationMap.set(item.variant_id, currentReserved + (item.quantity || 0));
+          }
+        });
+      }
+    });
+
+    // تحديث البيانات مع الكميات المحجوزة الحقيقية
+    const updatedProducts = data.products.map(product => ({
+      ...product,
+      variants: (product.variants || []).map(variant => {
+        const realReservedQuantity = reservationMap.get(variant.id) || 0;
+        return {
+          ...variant,
+          reserved_quantity: realReservedQuantity,
+          available_quantity: Math.max(0, (variant.quantity || 0) - realReservedQuantity)
+        };
+      }),
+      product_variants: (product.product_variants || []).map(variant => {
+        const realReservedQuantity = reservationMap.get(variant.id) || 0;
+        return {
+          ...variant,
+          reserved_quantity: realReservedQuantity,
+          available_quantity: Math.max(0, (variant.quantity || 0) - realReservedQuantity)
+        };
+      })
+    }));
+
+    console.log('🔒 نظام الحجز الموحد:', {
+      totalVariants: reservationMap.size,
+      reservedItems: Array.from(reservationMap.entries()).filter(([_, qty]) => qty > 0).length,
+      sampleReservations: Array.from(reservationMap.entries()).slice(0, 3)
+    });
+
+    return {
+      ...data,
+      products: updatedProducts
+    };
+  }, []);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
@@ -360,11 +415,14 @@ export const SuperProvider = ({ children }) => {
       // تصفية الطلبات الذكية قيد الحذف التفاؤلي لمنع الوميض
       processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));
       
-      // تطبيق الحماية الدائمة ضد الطلبات المحذوفة
+    // تطبيق الحماية الدائمة ضد الطلبات المحذوفة
       processedData.orders = (processedData.orders || []).filter(o => !permanentlyDeletedOrders.has(o.id));
       processedData.aiOrders = (processedData.aiOrders || []).filter(o => !permanentlyDeletedAiOrders.has(o.id));
       
-      setAllData(processedData);
+      // حساب الكميات المحجوزة الحقيقية وتحديثها في البيانات
+      const updatedDataWithReservations = calculateUnifiedReservations(processedData);
+      
+      setAllData(updatedDataWithReservations);
       
       // تحديث accounting بنفس الطريقة القديمة
       setAccounting(prev => ({
