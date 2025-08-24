@@ -88,13 +88,10 @@ export const useAlWaseetInvoices = () => {
       const { data: localOrders } = await supabase
         .from('orders')
         .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, status')
-        .eq('delivery_partner', 'alwaseet')
         .in('delivery_partner_order_id', waseetOrderIds)
         .neq('receipt_received', true);
 
-      const updateIds = (localOrders || [])
-        .filter(o => ['delivered', 'completed'].includes(o.status))
-        .map(o => o.id);
+      const updateIds = (localOrders || []).map(o => o.id);
 
       if (updateIds.length === 0) {
         localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
@@ -106,6 +103,7 @@ export const useAlWaseetInvoices = () => {
         .from('orders')
         .update({
           receipt_received: true,
+          delivery_partner: 'alwaseet',
           delivery_partner_invoice_id: String(target.id),
           delivery_partner_invoice_date: invoiceDate,
           invoice_received_at: new Date().toISOString(),
@@ -160,19 +158,17 @@ export const useAlWaseetInvoices = () => {
             const { data: localById } = await supabase
               .from('orders')
               .select('id, order_number, status, receipt_received, delivery_partner_order_id, delivery_partner')
-              .eq('delivery_partner', 'alwaseet')
               .in('delivery_partner_order_id', waseetOrderIds)
               .neq('receipt_received', true);
 
-            const directUpdateIds = (localById || [])
-              .filter(o => ['delivered', 'completed'].includes(o.status))
-              .map(o => o.id);
+            const directUpdateIds = (localById || []).map(o => o.id);
 
             if (directUpdateIds.length > 0) {
               const { error: updateErr } = await supabase
                 .from('orders')
                 .update({
                   receipt_received: true,
+                  delivery_partner: 'alwaseet',
                   delivery_partner_invoice_id: String(invoiceId),
                   delivery_partner_invoice_date: invoiceDate,
                   invoice_received_at: new Date().toISOString(),
@@ -195,13 +191,11 @@ export const useAlWaseetInvoices = () => {
             const { data: localByTracking } = await supabase
               .from('orders')
               .select('id, order_number, status, receipt_received, delivery_partner_order_id, delivery_partner, tracking_number')
-              .eq('delivery_partner', 'alwaseet')
               .in('tracking_number', qrValues)
               .neq('receipt_received', true);
 
             // Update each individually to also fix delivery_partner_order_id
             for (const lo of (localByTracking || [])) {
-              if (!['delivered', 'completed'].includes(lo.status)) continue;
               const remoteId = qrMap.get(String(lo.tracking_number || '').trim());
               if (!remoteId) continue;
 
@@ -209,6 +203,7 @@ export const useAlWaseetInvoices = () => {
                 .from('orders')
                 .update({
                   receipt_received: true,
+                  delivery_partner: 'alwaseet',
                   delivery_partner_order_id: String(remoteId),
                   delivery_partner_invoice_id: String(invoiceId),
                   delivery_partner_invoice_date: invoiceDate,
@@ -373,7 +368,6 @@ export const useAlWaseetInvoices = () => {
         const { data: localOrders, error: localOrdersError } = await supabase
           .from('orders')
           .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
-          .eq('delivery_partner', 'alwaseet')
           .in('delivery_partner_order_id', waseetOrderIds);
 
         if (localOrdersError) {
@@ -390,12 +384,12 @@ export const useAlWaseetInvoices = () => {
             .from('orders')
             .update({
               receipt_received: true,
+              delivery_partner: 'alwaseet',
               delivery_partner_invoice_id: String(invoiceId),
               delivery_partner_invoice_date: invoiceDate,
               invoice_received_at: new Date().toISOString(),
               invoice_received_by: user?.id || user?.user_id || null
             })
-            .eq('delivery_partner', 'alwaseet')
             .in('id', localOrders.map(o => o.id))
             .select('id');
 
@@ -460,7 +454,6 @@ export const useAlWaseetInvoices = () => {
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null);
 
       if (error) {
