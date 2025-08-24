@@ -394,14 +394,14 @@ const OrderCard = ({
                     }[order.status];
                     if (nextStatus) handleStatusChange(nextStatus);
                   }}
-                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto max-w-[180px]`}
+                  className={`${statusConfig.color} font-bold rounded-lg px-2 py-1 text-xs max-w-[180px] h-auto hover:shadow-md group-hover:scale-105 transition-all duration-300`}
                   title="انقر لتحديث الحالة"
                 >
                   <StatusIcon className="h-4 w-4" />
                   <span className="font-bold ml-1">{statusConfig.label}</span>
                 </Button>
               ) : (
-                <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
+                <div className={`flex items-center gap-2 ${statusConfig.color} font-bold rounded-lg px-2 py-1 text-xs max-w-[180px] hover:shadow-md group-hover:scale-105 transition-all duration-300`}>
                   <StatusIcon className="h-4 w-4 flex-shrink-0" />
                   <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
                 </div>
