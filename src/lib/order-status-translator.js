@@ -21,52 +21,52 @@ const STATUS_TRANSLATIONS = {
   'فعال': {
     label: 'قيد التجهيز',
     icon: Package,
-    color: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'pending': {
     label: 'قيد التجهيز',
     icon: Package,
-    color: 'bg-gradient-to-r from-amber-400 to-yellow-500 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'shipped': {
     label: 'تم الشحن',
     icon: Truck,
-    color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'delivery': {
     label: 'قيد التوصيل',
     icon: Truck,
-    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'delivered': {
     label: 'تم التسليم',
     icon: CheckCircle,
-    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'completed': {
     label: 'مكتمل',
     icon: CheckCircle,
-    color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'returned': {
     label: 'راجعة',
     icon: RotateCcw,
-    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'returned_in_stock': {
     label: 'راجع للمخزن',
     icon: PackageCheck,
-    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'return_received': {
     label: 'راجع للمخزن',
     icon: PackageCheck,
-    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   'cancelled': {
     label: 'ملغي',
     icon: XCircle,
-    color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 
@@ -214,7 +214,7 @@ const getDeliveryStatusConfig = (deliveryStatus) => {
       return {
         label: config.label || deliveryStatus, // عرض النص الأصلي إذا لم توجد ترجمة
         icon: config.icon,
-        color: config.color + ' px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+        color: config.color + ' px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
       };
     }
   }
@@ -223,7 +223,7 @@ const getDeliveryStatusConfig = (deliveryStatus) => {
   return {
     label: deliveryStatus,
     icon: Package,
-    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   };
 };
 
@@ -234,7 +234,7 @@ const getDefaultConfig = (status) => {
   return {
     label: status || 'غير معروف',
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   };
 };
 
@@ -276,7 +276,7 @@ export const getStatusForComponent = (order, componentType = 'default') => {
     return {
       label: 'قيد التوصيل',
       icon: MapPin,
-      color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-3 py-2 text-sm max-w-[160px] font-bold rounded-lg'
+      color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
     };
   }
 
