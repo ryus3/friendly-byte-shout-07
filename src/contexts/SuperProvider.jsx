@@ -316,6 +316,29 @@ export const SuperProvider = ({ children }) => {
     
     return null;
   }, [allData.products, allData.colors, allData.sizes]);
+
+  // دالة الحصول على لون المتغير
+  const getColorHex = useCallback((item) => {
+    if (!item) return null;
+    
+    // البحث عبر variant_id أولاً
+    if (item.variant_id) {
+      const variantDetails = getVariantDetails(item.variant_id);
+      if (variantDetails?.color_hex) {
+        return variantDetails.color_hex;
+      }
+    }
+    
+    // البحث المباشر في color_id
+    if (item.color_id && allData.colors) {
+      const color = allData.colors.find(c => c.id === item.color_id);
+      if (color?.hex_code) {
+        return color.hex_code;
+      }
+    }
+    
+    return null;
+  }, [getVariantDetails, allData.colors]);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {
@@ -1769,6 +1792,7 @@ export const SuperProvider = ({ children }) => {
 
     // دالة الحصول على تفاصيل المتغير للحجز
     getVariantDetails,
+    getColorHex,
 
     // للتوافق مع الألوان والأحجام
     colors: allData.colors || [],

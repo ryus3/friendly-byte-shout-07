@@ -26,7 +26,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [employees, setEmployees] = useState([]);
   const { user, allUsers } = useAuth();
   const { isAdmin } = usePermissions();
-  const { orders, products, colors, sizes, getVariantDetails } = useSuper();
+  const { orders, products, colors, sizes, getVariantDetails, getColorHex } = useSuper();
 
   // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة
   useEffect(() => {
