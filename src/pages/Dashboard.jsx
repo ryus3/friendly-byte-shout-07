@@ -262,8 +262,8 @@ const Dashboard = () => {
                 query.set('status', 'delivered');
                 navigate(`/my-orders?${query.toString()}`);
                 break;
-        case 'pendingSales':
-                query.set('status', 'shipped');
+            case 'pendingSales':
+                query.set('pendingSales', '1');
                 navigate(`/my-orders?${query.toString()}`);
                 break;
             case 'netProfit':
@@ -521,8 +521,25 @@ const Dashboard = () => {
           return sum + (o.total_amount || 0);
         }, 0);
 
-        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
-        const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
+        // المبيعات المعلقة: تشمل المشحونة وقيد التوصيل (محلي وخارجي) وتستبعد قيد التجهيز/المُسلّمة/الملغاة/الراجعة
+        const isExternal = (o) => o?.tracking_number && !String(o.tracking_number).startsWith('RYUS-') && o?.delivery_partner !== 'محلي';
+        const isDeliveredExternal = (o) => {
+          const s = (o?.delivery_status || '').toString().toLowerCase();
+          return /تسليم|مسلم|deliver/i.test(s) || o?.status === 'delivered' || o?.status === 'completed';
+        };
+        const isCancelledExternal = (o) => /رفض|ملغي|إلغاء|reject|cancel/i.test((o?.delivery_status||'')) || o?.status === 'cancelled';
+        const isReturnFinalExternal = (o) => /راجع|مرجع|إرجاع|return/i.test((o?.delivery_status||'')) || o?.status === 'returned' || o?.status === 'returned_in_stock';
+        const isPendingSale = (o) => {
+          if (isExternal(o)) {
+            if (isDeliveredExternal(o) || isCancelledExternal(o) || isReturnFinalExternal(o)) return false;
+            if (o?.status === 'pending') return false; // استبعاد قيد التجهيز
+            return true; // أي حالة قبل التسليم تعتبر معلّقة
+          }
+          return o?.status === 'shipped' || o?.status === 'delivery';
+        };
+
+        const pendingCandidates = visibleOrders.filter(isPendingSale);
+        const pendingSalesOrders = filterOrdersByPeriod(pendingCandidates, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
           const productsSalesOnly = (o.total_amount || 0);
           return sum + productsSalesOnly;
@@ -660,7 +677,7 @@ const Dashboard = () => {
             format: 'currency', 
             currentPeriod: periods.pendingSales, 
             onPeriodChange: (p) => handlePeriodChange('pendingSales', p), 
-            onClick: canViewAllData ? () => openSummaryDialog('pendingSales', dashboardData.pendingSalesOrders, 'pendingSales') : () => navigate('/my-orders?status=shipped')
+            onClick: canViewAllData ? () => openSummaryDialog('pendingSales', dashboardData.pendingSalesOrders, 'pendingSales') : () => navigate('/my-orders?pendingSales=1')
         },
     ].filter(Boolean);
 
@@ -677,7 +694,7 @@ const Dashboard = () => {
                         title={{
                             pendingProfit: 'الطلبات ذات الأرباح المعلقة',
                             deliveredSales: 'الطلبات المسلمة',
-                            pendingSales: 'الطلبات قيد الشحن',
+                            pendingSales: 'المبيعات المعلقة',
                         }[dialog.type]}
                         orders={dialog.orders}
                         periodLabel={dialog.periodLabel}
