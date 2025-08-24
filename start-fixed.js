@@ -6,10 +6,14 @@ const fs = require('fs');
 
 console.log('🚀 Starting development server...');
 
+// Update PATH to include node_modules/.bin
+const nodeModulesBin = path.join(__dirname, 'node_modules', '.bin');
+process.env.PATH = `${nodeModulesBin}:${process.env.PATH || ''}`;
+
 // Try different vite execution methods
 const vitePaths = [
   path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js'),
-  path.join(__dirname, 'node_modules', '.bin', 'vite')
+  path.join(nodeModulesBin, 'vite')
 ];
 
 let found = false;

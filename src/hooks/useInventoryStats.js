@@ -25,9 +25,31 @@ const useInventoryStats = () => {
 
   const computeReservedFallback = () => {
     try {
-      const reservedOrders = (orders || []).filter(o => ['pending','delivery','shipped'].includes(o.status));
-      return reservedOrders.length;
-    } catch {
+      // الطلبات المحجوزة - نفس المنطق في ReservedStockDialog
+      const reservedOrders = (orders || []).filter(o => 
+        ['pending', 'delivery', 'shipped', 'returned'].includes(o.status) && 
+        o.status !== 'returned_in_stock'
+      );
+      
+      // حساب مجموع الكميات المحجوزة من عناصر الطلبات
+      const totalReservedQuantity = reservedOrders.reduce((total, order) => {
+        return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
+      }, 0);
+      
+      console.log('🔢 [InventoryStats] حساب المخزون المحجوز:', {
+        reservedOrdersCount: reservedOrders.length,
+        totalReservedQuantity,
+        orders: reservedOrders.map(o => ({ 
+          id: o.id, 
+          status: o.status, 
+          itemsCount: o.items?.length || 0,
+          totalQuantity: o.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
+        }))
+      });
+      
+      return totalReservedQuantity;
+    } catch (err) {
+      console.error('❌ [InventoryStats] خطأ في حساب المخزون المحجوز:', err);
       return 0;
     }
   };
