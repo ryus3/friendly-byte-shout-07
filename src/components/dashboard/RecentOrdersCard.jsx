@@ -27,10 +27,10 @@ const RecentOrdersCard = ({ recentOrders }) => {
     const statusConfig = getStatusForComponent(order);
     const StatusIcon = statusConfig.icon;
     return (
-      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusConfig.color)}>
+      <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-md ${statusConfig.color} font-bold`}>
         <StatusIcon className="w-3 h-3" />
         {statusConfig.label}
-      </Badge>
+      </div>
     );
   };
 
