@@ -810,6 +810,109 @@ export type Database = {
           },
         ]
       }
+      delivery_invoice_orders: {
+        Row: {
+          amount: number | null
+          created_at: string
+          external_order_id: string | null
+          id: string
+          invoice_id: string
+          order_id: string | null
+          raw: Json
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          invoice_id: string
+          order_id?: string | null
+          raw?: Json
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          external_order_id?: string | null
+          id?: string
+          invoice_id?: string
+          order_id?: string | null
+          raw?: Json
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "v_delivery_invoices_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_invoices: {
+        Row: {
+          amount: number | null
+          created_at: string
+          external_id: string
+          id: string
+          issued_at: string | null
+          orders_count: number | null
+          partner: string
+          raw: Json
+          received: boolean
+          received_at: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          external_id: string
+          id?: string
+          issued_at?: string | null
+          orders_count?: number | null
+          partner?: string
+          raw?: Json
+          received?: boolean
+          received_at?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          external_id?: string
+          id?: string
+          issued_at?: string | null
+          orders_count?: number | null
+          partner?: string
+          raw?: Json
+          received?: boolean
+          received_at?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delivery_partner_tokens: {
         Row: {
           created_at: string
@@ -3083,7 +3186,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_delivery_invoices_summary: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          external_id: string | null
+          id: string | null
+          issued_at: string | null
+          linked_local_orders: number | null
+          linked_orders: number | null
+          orders_count: number | null
+          partner: string | null
+          received: boolean | null
+          received_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_purchase_cost_record: {
