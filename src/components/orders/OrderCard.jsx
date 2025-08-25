@@ -99,7 +99,7 @@ const OrderCard = ({
 
   const handleDelete = () => {
     if (onDeleteOrder) {
-      onDeleteOrder(order); // تمرير الطلب كاملاً بدلاً من الـ ID فقط
+      onDeleteOrder([order.id]); // تمرير مصفوفة تحتوي على ID الطلب
     }
     setShowDeleteDialog(false);
   };

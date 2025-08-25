@@ -513,8 +513,26 @@ const OrdersPage = () => {
       toast({ title: 'خطأ في الصلاحيات', description: 'لا تمتلك صلاحية حذف الطلبات.', variant: 'destructive' });
       return;
     }
+
+    // تطبيع المدخلات للتأكد من أنها مصفوفة من IDs
+    const normalizeToIds = (input) => {
+      if (!input) return [];
+      if (Array.isArray(input)) {
+        return input.filter(item => {
+          if (typeof item === 'string') return true;
+          if (typeof item === 'object' && item?.id) return true;
+          return false;
+        }).map(item => typeof item === 'string' ? item : item.id);
+      }
+      if (typeof input === 'string') return [input];
+      if (typeof input === 'object' && input?.id) return [input.id];
+      return [];
+    };
+
+    const orderIds = normalizeToIds(ordersToDelete);
+    console.log('🗑️ معرفات الطلبات المطلوب حذفها:', orderIds);
     
-    const ordersToDeleteFiltered = ordersToDelete.filter(id => 
+    const ordersToDeleteFiltered = orderIds.filter(id => 
       !deletedOrdersSet.current.has(id) && 
       orders.some(o => o.id === id)
     );
