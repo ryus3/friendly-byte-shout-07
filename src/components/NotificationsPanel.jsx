@@ -112,109 +112,114 @@ const iconMap = {
   default: SystemIcon,
 };
 
+// نظام ألوان احترافي مطابق للصورة مع تدرجات جميلة
 const typeColorMap = {
-  // استخدام نظام الألوان من index.css مع تحسينات للتناسق
+  // إشعارات المخزون - برتقالي/أصفر
   low_stock: { 
-    bg: 'bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-amber-500 dark:border-amber-400',
+    bg: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20', 
+    border: 'border-l-4 border-amber-500',
     text: 'text-foreground', 
     icon: 'text-amber-600 dark:text-amber-400',
     dot: 'bg-amber-500'
   },
   stock_warning: { 
-    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    bg: 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20', 
+    border: 'border-l-4 border-orange-500',
     text: 'text-foreground', 
     icon: 'text-orange-600 dark:text-orange-400',
     dot: 'bg-orange-500'
   },
   out_of_stock: { 
-    bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-red-500 dark:border-red-400',
+    bg: 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20', 
+    border: 'border-l-4 border-red-500',
     text: 'text-foreground', 
     icon: 'text-red-600 dark:text-red-400',
     dot: 'bg-red-500'
   },
+  
+  // إشعارات الطلبات - أخضر للمكتمل، أزرق للشحن والتحديثات
   order_completed: { 
-    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-green-500 dark:border-green-400',
+    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', 
+    border: 'border-l-4 border-green-500',
     text: 'text-foreground', 
     icon: 'text-green-600 dark:text-green-400',
     dot: 'bg-green-500'
   },
   order_shipped: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-blue-500 dark:border-blue-400',
+    bg: 'bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20', 
+    border: 'border-l-4 border-blue-500',
     text: 'text-foreground', 
     icon: 'text-blue-600 dark:text-blue-400',
     dot: 'bg-blue-500'
   },
   order_status_changed: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-blue-500 dark:border-blue-400',
+    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', 
+    border: 'border-l-4 border-blue-500',
     text: 'text-foreground', 
     icon: 'text-blue-600 dark:text-blue-400',
     dot: 'bg-blue-500'
   },
   new_order: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-primary dark:border-primary',
+    bg: 'bg-gradient-to-r from-primary/5 to-primary/10 dark:from-primary/10 dark:to-primary/20', 
+    border: 'border-l-4 border-primary',
     text: 'text-foreground', 
     icon: 'text-primary',
     dot: 'bg-primary'
   },
   new_order_employee: { 
-    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20', 
+    border: 'border-l-4 border-yellow-500',
     text: 'text-foreground', 
     icon: 'text-yellow-600 dark:text-yellow-400',
     dot: 'bg-yellow-500'
   },
+  
+  // إشعارات أخرى
   ai_order: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-transparent',
+    bg: 'bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20', 
+    border: 'border-l-4 border-violet-500',
     text: 'text-foreground', 
-    icon: 'text-indigo-600 dark:text-indigo-400',
+    icon: 'text-violet-600 dark:text-violet-400',
     dot: 'bg-violet-500'
   },
   new_registration: { 
-    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-purple-500 dark:border-purple-400',
+    bg: 'bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20', 
+    border: 'border-l-4 border-purple-500',
     text: 'text-foreground', 
     icon: 'text-purple-600 dark:text-purple-400',
     dot: 'bg-purple-500'
   },
   profit_settlement: { 
-    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20', 
+    border: 'border-l-4 border-yellow-500',
     text: 'text-foreground', 
     icon: 'text-yellow-600 dark:text-yellow-400',
     dot: 'bg-yellow-500'
   },
   profit_settlement_request: { 
-    bg: 'bg-emerald-50/80 dark:bg-emerald-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+    bg: 'bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20', 
+    border: 'border-l-4 border-emerald-500',
     text: 'text-foreground', 
     icon: 'text-emerald-600 dark:text-emerald-400',
     dot: 'bg-emerald-500'
   },
   employee_settlement_completed: { 
-    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-green-500 dark:border-green-400',
+    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', 
+    border: 'border-l-4 border-green-500',
     text: 'text-foreground', 
     icon: 'text-green-600 dark:text-green-400',
     dot: 'bg-green-500'
   },
   system: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
+    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20', 
+    border: 'border-l-4 border-slate-500',
     text: 'text-foreground', 
     icon: 'text-slate-600 dark:text-slate-400',
     dot: 'bg-slate-500'
   },
   default: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
+    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-900/20 dark:to-gray-900/20', 
+    border: 'border-l-4 border-slate-500',
     text: 'text-foreground', 
     icon: 'text-slate-600 dark:text-slate-400',
     dot: 'bg-slate-500'

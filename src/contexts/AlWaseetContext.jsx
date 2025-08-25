@@ -27,6 +27,15 @@ export const AlWaseetProvider = ({ children }) => {
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
+  
+  // استيراد نظام الإشعارات
+  const [notificationsContext, setNotificationsContext] = useState(null);
+  useEffect(() => {
+    import('@/contexts/NotificationsSystemContext').then(module => {
+      const { useNotificationsSystem } = module;
+      setNotificationsContext({ useNotificationsSystem });
+    }).catch(() => {});
+  }, []);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -384,6 +393,72 @@ export const AlWaseetProvider = ({ children }) => {
       return { corrected: 0, linked: 0, updated: 0 };
     }
   }, [token, correctionComplete, orderStatusesMap, loadOrderStatuses, setCorrectionComplete]);
+
+  // دالة إنشاء إشعارات طلبات الوسيط مع منع التكرار
+  const createOrderStatusNotification = useCallback((order, oldStatus, newStatus) => {
+    try {
+      // تحقق من وجود نظام الإشعارات
+      if (!notificationsContext?.useNotificationsSystem) return;
+      
+      const { getStatusConfig } = require('@/lib/alwaseet-statuses');
+      const trackingNumber = order.tracking_number || order.qr_id;
+      
+      if (!trackingNumber || !newStatus) return;
+      
+      // منع التكرار - تحقق من آخر حالة مُبلغ عنها
+      const lastKey = `${trackingNumber}_status`;
+      const lastStatus = lastNotificationStatus[lastKey];
+      
+      if (lastStatus === newStatus) {
+        console.log(`🔕 تخطي إشعار مكرر للطلب ${trackingNumber}: الحالة ${newStatus}`);
+        return;
+      }
+      
+      // الحالات المهمة فقط التي تستحق الإشعار
+      const criticalStates = ['2', '4', '17', '25', '26', '31', '32'];
+      if (!criticalStates.includes(String(newStatus))) {
+        console.log(`🔕 تخطي إشعار للطلب ${trackingNumber}: الحالة ${newStatus} غير مهمة`);
+        return;
+      }
+      
+      const statusConfig = getStatusConfig(newStatus);
+      
+      // إنشاء الإشعار بالتنسيق المطلوب
+      const notification = {
+        id: `alwaseet_${trackingNumber}_${newStatus}_${Date.now()}`,
+        type: 'order_status_changed',
+        title: `تحديث طلب ${trackingNumber}`,
+        message: `${trackingNumber} ${statusConfig.text}`,
+        data: {
+          tracking_number: trackingNumber,
+          order_id: order.id,
+          old_status: oldStatus,
+          new_status: newStatus,
+          status_text: statusConfig.text,
+          status_color: statusConfig.color
+        },
+        created_at: new Date().toISOString(),
+        is_read: false,
+        priority: criticalStates.includes(String(newStatus)) ? 'high' : 'medium'
+      };
+      
+      // إضافة الإشعار إلى النظام
+      const { createNotification } = notificationsContext.useNotificationsSystem();
+      if (createNotification) {
+        createNotification(notification);
+        
+        // حفظ آخر حالة مُبلغ عنها
+        setLastNotificationStatus(prev => ({
+          ...prev,
+          [lastKey]: newStatus
+        }));
+        
+        console.log(`✅ تم إنشاء إشعار للطلب ${trackingNumber}: ${statusConfig.text}`);
+      }
+    } catch (error) {
+      console.warn('⚠️ خطأ في إنشاء إشعار الطلب:', error);
+    }
+  }, [notificationsContext, lastNotificationStatus, setLastNotificationStatus]);
 
   // ربط معرفات الوسيط للطلبات الموجودة لدينا عبر الـ tracking_number
   const linkRemoteIdsForExistingOrders = useCallback(async () => {
