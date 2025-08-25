@@ -1,6 +1,3 @@
 #!/bin/bash
-if [ -f "./node_modules/.bin/vite" ]; then
-  exec ./node_modules/.bin/vite "$@"
-else
-  exec npx vite "$@"
-fi
+# Force using npx vite instead of direct vite
+exec npx vite "$@"

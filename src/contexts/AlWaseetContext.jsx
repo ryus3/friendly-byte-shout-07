@@ -40,7 +40,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة إرسال إشعارات تغيير حالة الطلبات مع تنسيق محسن
+  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي
   const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
     if (!createNotification || !trackingNumber || !stateId) return;
     
@@ -48,49 +48,61 @@ export const AlWaseetProvider = ({ children }) => {
     const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
     if (!importantStates.includes(String(stateId))) return;
     
-    // منع التكرار
-    const notificationKey = `${trackingNumber}_${stateId}`;
-    if (lastNotificationStatus[notificationKey]) return;
+    // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
+    const trackingKey = `${trackingNumber}`;
+    const lastStateId = lastNotificationStatus[trackingKey];
+    
+    // إذا كانت نفس الحالة، لا ترسل إشعار
+    if (lastStateId === String(stateId)) return;
     
     const statusConfig = getStatusConfig(Number(stateId));
     
-    // تحسين النص حسب state_id
+    // تحسين النص حسب state_id مع تنسيق موحد
     let message = '';
+    let priority = 'medium';
+    
     switch (String(stateId)) {
       case '2':
         message = `${trackingNumber} تم الاستلام من قبل المندوب`;
+        priority = 'medium';
         break;
       case '4':
         message = `${trackingNumber} تم التسليم بنجاح`;
+        priority = 'high';
         break;
       case '17':
         message = `${trackingNumber} تم الإرجاع`;
+        priority = 'medium';
         break;
       case '25':
       case '26':
         message = `${trackingNumber} العميل لا يرد`;
+        priority = 'low';
         break;
       case '31':
       case '32':
         message = `${trackingNumber} تم الإلغاء`;
+        priority = 'high';
         break;
       default:
         message = `${trackingNumber} ${statusConfig.text || statusText}`;
+        priority = statusConfig.priority || 'medium';
     }
     
     createNotification({
       type: 'alwaseet_status_change',
       title: 'تحديث حالة الطلب',
       message,
+      priority,
       data: { 
         tracking_number: trackingNumber,
-        state_id: stateId,
-        status_text: statusText
-      },
-      priority: 'medium'
+        state_id: String(stateId),
+        status_text: statusText,
+        timestamp: new Date().toISOString()
+      }
     });
     
-    // حفظ الإشعار المُرسل
+    // حفظ الحالة الجديدة لهذا الطلب
     setLastNotificationStatus(prev => ({
       ...prev,
       [notificationKey]: true

@@ -27,56 +27,112 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
-// دالة للحصول على ألوان إشعارات الوسيط حسب state_id
+// دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
 const getAlWaseetNotificationColors = (stateId) => {
-  const statusConfig = getStatusConfig(Number(stateId));
-  const color = statusConfig.color || 'blue';
-  
-  // ألوان حسب حالة الوسيط
-  switch (color) {
-    case 'green':
+  if (!stateId) {
+    return {
+      bg: 'bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/10 dark:to-slate-800/10',
+      border: 'border-r-4 border-slate-300 dark:border-slate-600',
+      text: 'text-foreground',
+      icon: 'text-slate-600 dark:text-slate-400',
+      dot: 'bg-slate-500'
+    };
+  }
+
+  // تحديد الألوان حسب state_id بدقة
+  switch (String(stateId)) {
+    case '2': // استلام المندوب - أزرق
       return {
-        bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/10 dark:to-green-800/10',
-        border: 'border-r-4 border-green-500 dark:border-green-400',
-        text: 'text-foreground',
-        icon: 'text-green-600 dark:text-green-400',
-        dot: 'bg-green-500'
-      };
-    case 'red':
-      return {
-        bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/10 dark:to-red-800/10',
-        border: 'border-r-4 border-red-500 dark:border-red-400',
-        text: 'text-foreground',
-        icon: 'text-red-600 dark:text-red-400',
-        dot: 'bg-red-500'
-      };
-    case 'yellow':
-    case 'orange':
-      return {
-        bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/10 dark:to-orange-800/10',
-        border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
-        text: 'text-foreground',
-        icon: 'text-yellow-600 dark:text-yellow-400',
-        dot: 'bg-yellow-500'
-      };
-    case 'gray':
-    case 'grey':
-      return {
-        bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/10 dark:to-gray-800/10',
-        border: 'border-r-4 border-gray-500 dark:border-gray-400',
-        text: 'text-foreground',
-        icon: 'text-gray-600 dark:text-gray-400',
-        dot: 'bg-gray-500'
-      };
-    case 'blue':
-    default:
-      return {
-        bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/10',
-        border: 'border-r-4 border-blue-500 dark:border-blue-400',
-        text: 'text-foreground',
+        bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20',
+        border: 'border-r-4 border-blue-400 dark:border-blue-500',
+        text: 'text-blue-900 dark:text-blue-100',
         icon: 'text-blue-600 dark:text-blue-400',
         dot: 'bg-blue-500'
       };
+    case '4': // تم التسليم - أخضر
+      return {
+        bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20',
+        border: 'border-r-4 border-green-400 dark:border-green-500',
+        text: 'text-green-900 dark:text-green-100',
+        icon: 'text-green-600 dark:text-green-400',
+        dot: 'bg-green-500'
+      };
+    case '17': // إرجاع - رمادي
+      return {
+        bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
+        border: 'border-r-4 border-gray-400 dark:border-gray-500',
+        text: 'text-gray-900 dark:text-gray-100',
+        icon: 'text-gray-600 dark:text-gray-400',
+        dot: 'bg-gray-500'
+      };
+    case '25':
+    case '26': // لا يرد - أصفر/برتقالي
+      return {
+        bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/20 dark:to-orange-800/20',
+        border: 'border-r-4 border-yellow-400 dark:border-yellow-500',
+        text: 'text-yellow-900 dark:text-yellow-100',
+        icon: 'text-yellow-600 dark:text-yellow-400',
+        dot: 'bg-yellow-500'
+      };
+    case '31':
+    case '32': // إلغاء/رفض - أحمر
+      return {
+        bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
+        border: 'border-r-4 border-red-400 dark:border-red-500',
+        text: 'text-red-900 dark:text-red-100',
+        icon: 'text-red-600 dark:text-red-400',
+        dot: 'bg-red-500'
+      };
+    default:
+      // استخدام النظام القديم للحالات الأخرى
+      const statusConfig = getStatusConfig(Number(stateId));
+      const color = statusConfig.color || 'blue';
+      
+      switch (color) {
+        case 'green':
+          return {
+            bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/10 dark:to-green-800/10',
+            border: 'border-r-4 border-green-500 dark:border-green-400',
+            text: 'text-foreground',
+            icon: 'text-green-600 dark:text-green-400',
+            dot: 'bg-green-500'
+          };
+        case 'red':
+          return {
+            bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/10 dark:to-red-800/10',
+            border: 'border-r-4 border-red-500 dark:border-red-400',
+            text: 'text-foreground',
+            icon: 'text-red-600 dark:text-red-400',
+            dot: 'bg-red-500'
+          };
+        case 'yellow':
+        case 'orange':
+          return {
+            bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/10 dark:to-orange-800/10',
+            border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+            text: 'text-foreground',
+            icon: 'text-yellow-600 dark:text-yellow-400',
+            dot: 'bg-yellow-500'
+          };
+        case 'gray':
+        case 'grey':
+          return {
+            bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/10 dark:to-gray-800/10',
+            border: 'border-r-4 border-gray-500 dark:border-gray-400',
+            text: 'text-foreground',
+            icon: 'text-gray-600 dark:text-gray-400',
+            dot: 'bg-gray-500'
+          };
+        case 'blue':
+        default:
+          return {
+            bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/10',
+            border: 'border-r-4 border-blue-500 dark:border-blue-400',
+            text: 'text-foreground',
+            icon: 'text-blue-600 dark:text-blue-400',
+            dot: 'bg-blue-500'
+          };
+      }
   }
 };
 

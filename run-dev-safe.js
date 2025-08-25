@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
 const { spawn } = require('child_process');
+const path = require('path');
 
-console.log('🚀 Starting development server safely...');
+console.log('🚀 بدء الخادم الآمن مع إصلاح مشكلة vite...');
 
-const child = spawn('npx', ['vite', 'dev', '--host', '0.0.0.0', '--port', '8080'], {
+// Try vite-start.js first
+console.log('📦 تشغيل vite-start.js...');
+const child = spawn('node', ['vite-start.js'], {
   stdio: 'inherit',
-  shell: true,
+  cwd: __dirname,
   env: {
     ...process.env,
     NODE_ENV: 'development'
@@ -14,11 +17,28 @@ const child = spawn('npx', ['vite', 'dev', '--host', '0.0.0.0', '--port', '8080'
 });
 
 child.on('error', (error) => {
-  console.error('❌ Error starting dev server:', error.message);
-  console.log('💡 Make sure dependencies are installed: npm install');
-  process.exit(1);
+  console.error('❌ خطأ في بدء الخادم:', error.message);
+  console.log('🔄 محاولة npx vite...');
+  
+  // Fallback to npx vite
+  const fallback = spawn('npx', ['vite', 'dev', '--host', '0.0.0.0', '--port', '8080'], {
+    stdio: 'inherit',
+    shell: true,
+    env: {
+      ...process.env,
+      NODE_ENV: 'development'
+    }
+  });
+  
+  fallback.on('error', (err) => {
+    console.error('❌ فشل في جميع المحاولات:', err.message);
+    console.log('💡 يرجى تشغيل: npm install');
+    process.exit(1);
+  });
 });
 
 child.on('exit', (code) => {
-  process.exit(code || 0);
+  if (code !== 0) {
+    console.log(`الخادم توقف بكود ${code}`);
+  }
 });
