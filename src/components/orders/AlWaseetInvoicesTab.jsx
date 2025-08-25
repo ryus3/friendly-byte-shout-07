@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
-// Professional StatCard component for invoices
+// Professional StatCard component for invoices with improved design
 const InvoiceStatCard = ({ icon: Icon, title, value, colorClass, delay, subtitle }) => (
   <div
     className={cn(
@@ -32,24 +32,27 @@ const InvoiceStatCard = ({ icon: Icon, title, value, colorClass, delay, subtitle
       "shadow-lg shadow-black/10 dark:shadow-black/30",
       "hover:shadow-2xl hover:shadow-primary/10",
       "dark:hover:shadow-primary/20",
-      "group"
+      "group cursor-pointer"
     )}
     style={{ animationDelay: `${delay * 100}ms` }}
   >
-     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-     <div 
-       className="absolute inset-px rounded-xl opacity-60"
-       style={{
-         backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-       }}
-     ></div>
+    {/* Professional gradient overlay */}
+    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+    
+    {/* Beautiful radial gradient background circles */}
+    <div 
+      className="absolute inset-px rounded-xl opacity-60"
+      style={{
+        backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+      }}
+    ></div>
 
-     <div className="flex items-start justify-between">
-       <div className="flex-1">
-         <p className="text-muted-foreground text-sm font-medium text-right">{title}</p>
-         <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2 text-right">{(value || 0).toLocaleString()}</h3>
-         {subtitle && <p className="text-xs text-muted-foreground mt-1 text-right">{subtitle}</p>}
-       </div>
+    <div className="flex items-start justify-between relative z-10">
+      <div className="flex-1 text-right">
+        <p className="text-muted-foreground text-sm font-medium">{title}</p>
+        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{(value || 0).toLocaleString()}</h3>
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+      </div>
       <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110", colorClass)}>
         <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
       </div>
