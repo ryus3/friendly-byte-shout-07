@@ -68,17 +68,15 @@ const SyncStatusIndicator = ({ className }) => {
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
         "bg-background",
-        isSyncing || syncMode === 'countdown' || syncMode === 'initial' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
+        syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
       onClick={handleClick}
       title={
-        isSyncing 
+        syncMode === 'syncing'
           ? "جاري المزامنة..." 
-          : syncMode === 'initial'
-            ? `مزامنة أولية خلال ${syncCountdown} ثانية`
           : syncMode === 'countdown'
-            ? `المزامنة التالية خلال ${syncCountdown} ثانية`
+            ? `المزامنة خلال ${syncCountdown} ثانية`
             : lastSyncAt 
               ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
               : "اضغط للمزامنة السريعة"
@@ -106,7 +104,7 @@ const SyncStatusIndicator = ({ className }) => {
         />
         
         {/* Progress circle - only shown during countdown */}
-        {(syncMode === 'countdown' || syncMode === 'initial') && syncCountdown > 0 && (
+        {syncMode === 'countdown' && syncCountdown > 0 && (
           <circle
             cx="20"
             cy="20"
@@ -126,7 +124,7 @@ const SyncStatusIndicator = ({ className }) => {
       <div className="relative z-10 flex items-center justify-center">
         {syncMode === 'syncing' ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        ) : (syncMode === 'countdown' || syncMode === 'initial') && syncCountdown > 0 ? (
+        ) : syncMode === 'countdown' && syncCountdown > 0 ? (
           <span className={cn("text-sm font-medium", getNumberColor())}>
             {syncCountdown}
           </span>

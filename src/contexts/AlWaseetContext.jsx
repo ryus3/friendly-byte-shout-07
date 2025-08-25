@@ -1353,6 +1353,10 @@ export const AlWaseetProvider = ({ children }) => {
           const correctionResult = await comprehensiveOrderCorrection();
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
         }
+
+        // بدء المزامنة مع العد التنازلي
+        console.log('🔄 بدء المزامنة الأولية مع العد التنازلي...');
+        performSyncWithCountdown();
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }
@@ -1364,7 +1368,7 @@ export const AlWaseetProvider = ({ children }) => {
     return () => {
       if (initialTimeout) clearTimeout(initialTimeout);
     };
-  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair]);
+  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair, performSyncWithCountdown]);
 
   const value = {
     isLoggedIn,
