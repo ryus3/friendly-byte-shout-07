@@ -4,6 +4,8 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { useNotifications } from './NotificationsContext';
 
 const AlWaseetContext = createContext();
 
@@ -11,6 +13,7 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
@@ -26,7 +29,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'syncing', 'standby'
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
-  const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
+  const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', new Map());
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -666,23 +669,28 @@ export const AlWaseetProvider = ({ children }) => {
         if (needsStatusUpdate) {
           updates.status = localStatus;
           
-          // إشعار ذكي فقط عند تغيير الحالة الفعلي
-          const orderKey = localOrder.qr_id || localOrder.order_number || localOrder.id;
-          const lastStatus = lastNotificationStatus[orderKey];
+          // إشعار ذكي فقط عند تغيير state_id
+          const trackingNumber = localOrder.tracking_number || localOrder.qr_id || localOrder.order_number;
+          const stateId = String(waseetStatusId || '');
+          const lastStateId = lastNotificationStatus.get(trackingNumber);
           
-          if (showNotifications && lastStatus !== localStatus) {
+          if (showNotifications && lastStateId !== stateId) {
             statusChanges.push({
-              orderNumber: localOrder.qr_id || localOrder.order_number,
+              orderId: localOrder.id,
+              orderNumber: localOrder.order_number,
+              trackingNumber: trackingNumber,
+              stateId: stateId,
               oldStatus: localOrder.status,
               newStatus: localStatus,
               deliveryStatus: waseetStatusText
             });
             
-            // تحديث آخر حالة تم إشعار المستخدم بها
-            setLastNotificationStatus(prev => ({
-              ...prev,
-              [orderKey]: localStatus
-            }));
+            // تحديث آخر state_id تم إشعار المستخدم به
+            setLastNotificationStatus(prev => {
+              const newMap = new Map(prev);
+              newMap.set(trackingNumber, stateId);
+              return newMap;
+            });
           }
         }
 
@@ -730,38 +738,44 @@ export const AlWaseetProvider = ({ children }) => {
         console.log(`🔧 تم إصلاح ${repaired} معرف وسيط في المزامنة السريعة`);
       }
 
-      // إشعارات ذكية مجمعة
+      // إشعارات للحالات المهمة فقط مع منع التكرار
       if (showNotifications && statusChanges.length > 0) {
-        const getStatusLabel = (status) => {
-          const labels = {
-            'pending': 'قيد التجهيز',
-            'shipped': 'تم الشحن',
-            'delivery': 'قيد التوصيل',
-            'delivered': 'تم التسليم',
-            'cancelled': 'ملغي',
-            'returned': 'مرجع',
-            'completed': 'مكتمل',
-            'unknown': 'غير معروف'
-          };
-          return labels[status] || status;
-        };
-
-        if (statusChanges.length === 1) {
-          const change = statusChanges[0];
-          toast({
-            title: "🔄 تحديث حالة طلب",
-            description: `الطلب ${change.orderNumber}: ${getStatusLabel(change.oldStatus)} → ${getStatusLabel(change.newStatus)}`,
-            variant: "info",
-            duration: 5000
-          });
-        } else {
-          toast({
-            title: "🔄 تحديث حالات الطلبات",
-            description: `تم تحديث ${statusChanges.length} طلب بحالات جديدة من شركة التوصيل`,
-            variant: "info",
-            duration: 5000
-          });
-        }
+        // تحديد الحالات المهمة للإشعارات
+        const importantStatuses = ['2', '4', '17', '25', '26', '31', '32'];
+        
+        statusChanges.forEach(change => {
+          const stateId = String(change.stateId || '');
+          const waseetConfig = getStatusConfig(stateId);
+          const trackingNumber = change.trackingNumber || change.orderNumber;
+          
+          // إظهار إشعار فقط للحالات المهمة وعند تغيير الـ state_id
+          if (importantStatuses.includes(stateId)) {
+            const lastNotifiedStateId = lastNotificationStatus.get(trackingNumber);
+            
+            if (lastNotifiedStateId !== stateId) {
+              addNotification({
+                title: `${trackingNumber} ${waseetConfig.text}`,
+                message: waseetConfig.text,
+                type: 'alwaseet_status',
+                priority: stateId === '4' ? 'high' : (stateId === '31' || stateId === '32') ? 'high' : 'medium',
+                metadata: {
+                  orderId: change.orderId,
+                  trackingNumber: trackingNumber,
+                  stateId: stateId,
+                  statusText: waseetConfig.text,
+                  statusColor: waseetConfig.color
+                }
+              });
+              
+              // حفظ آخر حالة تم الإشعار عنها
+              setLastNotificationStatus(prev => {
+                const newMap = new Map(prev);
+                newMap.set(trackingNumber, stateId);
+                return newMap;
+              });
+            }
+          }
+        });
       }
 
       return { updated, checked, statusChanges: statusChanges.length };

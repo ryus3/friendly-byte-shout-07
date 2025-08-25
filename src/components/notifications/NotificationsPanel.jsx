@@ -1,86 +1,107 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Bell, BellOff, X, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bell, BellOff, Trash2, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-/**
- * لوحة الإشعارات الأساسية
- */
 const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className = "" }) => {
   const { hasPermission } = usePermissions();
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification
-  } = useNotificationsSystem();
-
+  const { notifications, markAsRead, markAllAsRead, deleteNotification } = useNotificationsSystem();
   const [isOpen, setIsOpen] = useState(false);
 
-  // فلترة الإشعارات حسب الأنواع المسموحة
+  // تصفية الإشعارات حسب الصلاحيات والأنواع المسموحة
   const filteredNotifications = notifications.filter(notification => {
-    if (allowedTypes.length === 0) return true;
-    return allowedTypes.includes(notification.type);
-  });
+    if (allowedTypes.length > 0 && !allowedTypes.includes(notification.type)) {
+      return false;
+    }
 
-  // أيقونات الإشعارات
-  const getNotificationIcon = (type, priority) => {
-    const iconProps = { className: "w-4 h-4" };
+    // فلترة حسب الصلاحيات
+    if (notification.type === 'admin' && !hasPermission('manage_all_data')) {
+      return false;
+    }
     
+    if (notification.type === 'employees' && !hasPermission('manage_employees')) {
+      return false;
+    }
+
+    return true;
+  }).slice(0, 20); // عرض آخر 20 إشعار فقط
+
+  const unreadCount = filteredNotifications.filter(n => !n.read).length;
+
+  // الحصول على الأيقونة المناسبة لنوع الإشعار
+  const getNotificationIcon = (type, priority) => {
+    const iconProps = {
+      className: `w-4 h-4 ${priority === 'high' ? 'text-red-500' : priority === 'medium' ? 'text-orange-500' : 'text-blue-500'}`
+    };
+
     switch (type) {
-      case 'success':
-        return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
-      case 'warning':
-        return <AlertCircle {...iconProps} className="w-4 h-4 text-yellow-500" />;
-      case 'error':
-        return <X {...iconProps} className="w-4 h-4 text-red-500" />;
+      case 'stock':
+        return <Bell {...iconProps} />;
+      case 'order':
+      case 'alwaseet_status':
+        return <Bell {...iconProps} />;
+      case 'system':
+        return <Bell {...iconProps} />;
+      case 'employees':
+        return <Bell {...iconProps} />;
+      case 'admin':
+        return <Bell {...iconProps} />;
       default:
-        return <Info {...iconProps} className="w-4 h-4 text-blue-500" />;
+        return <Bell {...iconProps} />;
     }
   };
 
-  // ألوان الأولوية
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high':
-        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
-      case 'medium':
-        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30';
-      default:
-        return 'border-gray-200 bg-gray-50 dark:bg-gray-950/30';
+  // ألوان الحالات المطابقة لنظام alwaseet-statuses
+  const getStatusColorClasses = (notification) => {
+    const stateId = notification.metadata?.stateId;
+    const type = notification.type;
+    
+    if (type === 'alwaseet_status' && stateId) {
+      // استخدام نفس الألوان من alwaseet-statuses.js
+      switch (stateId) {
+        case '2': // تم الاستلام من المندوب
+          return 'bg-gradient-to-r from-orange-500/10 to-amber-600/10 border-r-orange-500 text-orange-700 dark:text-orange-300';
+        case '4': // تم التسليم
+          return 'bg-gradient-to-r from-green-500/10 to-emerald-600/10 border-r-green-500 text-green-700 dark:text-green-300';
+        case '17': // مرتجع
+          return 'bg-gradient-to-r from-gray-500/10 to-slate-600/10 border-r-gray-500 text-gray-700 dark:text-gray-300';
+        case '25':
+        case '26': // لا يرد
+          return 'bg-gradient-to-r from-yellow-500/10 to-amber-600/10 border-r-yellow-500 text-yellow-700 dark:text-yellow-300';
+        case '31':
+        case '32': // ملغي/مرفوض
+          return 'bg-gradient-to-r from-red-500/10 to-rose-600/10 border-r-red-500 text-red-700 dark:text-red-300';
+        default:
+          return 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 border-r-blue-500 text-blue-700 dark:text-blue-300';
+      }
+    }
+    
+    // ألوان افتراضية للأنواع الأخرى
+    switch (notification.priority) {
+      case 'high': return 'border-r-red-500 bg-red-50 dark:bg-red-950/30';
+      case 'medium': return 'border-r-orange-500 bg-orange-50 dark:bg-orange-950/30';
+      case 'low': return 'border-r-blue-500 bg-blue-50 dark:bg-blue-950/30';
+      default: return 'border-r-gray-500 bg-gray-50 dark:bg-gray-950/30';
     }
   };
 
-  const handleMarkAsRead = async (notificationId) => {
-    try {
-      await markAsRead(notificationId);
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-    }
+  const handleMarkAsRead = (notificationId) => {
+    markAsRead(notificationId);
   };
 
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead();
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-    }
+  const handleMarkAllAsRead = () => {
+    const unreadIds = filteredNotifications.filter(n => !n.read).map(n => n.id);
+    unreadIds.forEach(id => markAsRead(id));
   };
 
-  const handleDeleteNotification = async (notificationId) => {
-    try {
-      await deleteNotification(notificationId);
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-    }
+  const handleDeleteNotification = (notificationId) => {
+    deleteNotification(notificationId);
   };
 
   return (
@@ -89,14 +110,14 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
       <Button
         variant="ghost"
         size="sm"
-        className="relative"
         onClick={() => setIsOpen(!isOpen)}
+        className="relative"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
           <Badge 
             variant="destructive" 
-            className="absolute -top-2 -right-2 px-1 min-w-[1.2rem] h-5 text-xs"
+            className="absolute -top-2 -right-2 px-1 min-w-[1.25rem] h-5 text-xs"
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </Badge>
@@ -149,9 +170,9 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                   {filteredNotifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        !notification.read ? 'bg-primary/5' : ''
-                      } ${getPriorityColor(notification.priority)}`}
+                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors group ${
+                        !notification.read ? 'font-medium' : 'opacity-75'
+                      } ${getStatusColorClasses(notification)}`}
                       onClick={() => handleMarkAsRead(notification.id)}
                     >
                       <div className="flex items-start gap-3">
