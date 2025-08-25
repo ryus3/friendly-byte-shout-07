@@ -13,7 +13,16 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
-  const { createNotification } = useNotificationsSystem();
+  
+  // استخدام اختياري لنظام الإشعارات
+  let createNotification = null;
+  try {
+    const notificationsSystem = useNotificationsSystem();
+    createNotification = notificationsSystem.createNotification;
+  } catch (error) {
+    // NotificationsSystemProvider غير متاح بعد
+    console.log('NotificationsSystem not ready yet');
+  }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
