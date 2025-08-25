@@ -124,7 +124,7 @@ const SyncStatusIndicator = ({ className }) => {
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
-        {isSyncing ? (
+        {syncMode === 'syncing' ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
         ) : (syncMode === 'countdown' || syncMode === 'initial') && syncCountdown > 0 ? (
           <span className={cn("text-sm font-medium", getNumberColor())}>

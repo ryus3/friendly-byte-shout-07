@@ -1188,7 +1188,7 @@ export const AlWaseetProvider = ({ children }) => {
   const performSyncWithCountdown = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
-    setIsSyncing(true);
+    // Start countdown mode WITHOUT setting isSyncing to true yet
     setSyncMode('countdown');
     setSyncCountdown(15);
 
@@ -1207,6 +1207,9 @@ export const AlWaseetProvider = ({ children }) => {
     setTimeout(async () => {
       try {
         console.log('🔄 تنفيذ المزامنة...');
+        // NOW set syncing to true when actual sync starts
+        setIsSyncing(true);
+        setSyncMode('syncing');
         await fastSyncPendingOrders();
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
