@@ -56,4 +56,27 @@ function tryDirectExecution() {
   }
 }
 
-startVite();
+// Try to run vite directly first, then fallback to npx
+console.log('🔧 Trying to start development server...');
+
+// Set NODE_ENV
+process.env.NODE_ENV = 'development';
+
+// Try direct node execution first
+const vitePath = path.join(process.cwd(), 'node_modules', 'vite', 'bin', 'vite.js');
+if (fs.existsSync(vitePath)) {
+  console.log('✅ Found vite binary, starting directly...');
+  const child = spawn('node', [vitePath, '--host', '0.0.0.0', '--port', '8080'], {
+    stdio: 'inherit',
+    cwd: process.cwd(),
+    env: process.env
+  });
+  
+  child.on('error', (error) => {
+    console.error('❌ Direct execution failed:', error.message);
+    startVite();
+  });
+} else {
+  console.log('💡 Vite binary not found, trying npx...');
+  startVite();
+}

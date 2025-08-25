@@ -94,6 +94,25 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
       // استخدام الدالة الجديدة للمزامنة المباشرة
       const syncResult = await syncOrderByQR(order.tracking_number);
       
+      // التحقق من الحذف التلقائي
+      if (syncResult && syncResult.autoDeleted) {
+        // إغلاق الحوار وإظهار رسالة الحذف التلقائي
+        onOpenChange(false);
+        
+        toast({
+          title: "تم حذف الطلب تلقائياً",
+          description: syncResult.message,
+          variant: "default"
+        });
+        
+        // إعادة تحميل الصفحة لإزالة الطلب المحذوف
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+        
+        return;
+      }
+      
       if (syncResult && syncResult.needs_update) {
         // إعادة تحميل الصفحة لإظهار التحديثات
         window.location.reload();

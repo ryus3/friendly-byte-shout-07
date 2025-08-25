@@ -833,10 +833,29 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
       
+      // جلب الطلب المحلي أولاً للتحقق من شروط الحذف التلقائي
+      const { data: localOrder, error: localErr } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('tracking_number', qrId)
+        .maybeSingle();
+
+      if (localErr) {
+        console.error('❌ خطأ في جلب الطلب المحلي:', localErr);
+        return null;
+      }
+
       // جلب الطلب من الوسيط
       const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
+        
+        // التحقق من إمكانية الحذف التلقائي
+        if (localOrder && canAutoDeleteOrder(localOrder)) {
+          console.log(`🗑️ حذف تلقائي للطلب ${qrId} - محذوف من الوسيط`);
+          return await performAutoDelete(localOrder);
+        }
+        
         return null;
       }
 
@@ -863,18 +882,6 @@ export const AlWaseetProvider = ({ children }) => {
           if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
           return 'pending';
         })();
-
-      // جلب الطلب المحلي
-      const { data: localOrder, error: localErr } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('tracking_number', qrId)
-        .maybeSingle();
-
-      if (localErr) {
-        console.error('❌ خطأ في جلب الطلب المحلي:', localErr);
-        return null;
-      }
 
       if (!localOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);
@@ -932,6 +939,65 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, orderStatusesMap, loadOrderStatuses]);
 
+  // دالة للتحقق من إمكانية الحذف التلقائي
+  const canAutoDeleteOrder = (order) => {
+    // شروط الحذف التلقائي:
+    // 1. طلب الوسيط (delivery_partner = 'alwaseet')
+    // 2. لم يتم استلام الإيصال (receipt_received = false)
+    // 3. الحالة تسمح بالحذف (active, disabled, inactive, preparing)
+    const allowedStatuses = ['active', 'disabled', 'inactive', 'preparing', 'pending'];
+    
+    return order.delivery_partner === 'alwaseet' && 
+           !order.receipt_received && 
+           allowedStatuses.includes(order.status);
+  };
+
+  // دالة لتنفيذ الحذف التلقائي
+  const performAutoDelete = async (order) => {
+    try {
+      console.log(`🗑️ بدء الحذف التلقائي للطلب ${order.id}`);
+      
+      // تحرير المخزون المحجوز
+      if (order.order_items && order.order_items.length > 0) {
+        for (const item of order.order_items) {
+          try {
+            await supabase.rpc('release_stock_item', {
+              p_product_id: item.product_id,
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity
+            });
+            console.log(`✅ تم تحرير ${item.quantity} من المنتج ${item.product_id}`);
+          } catch (releaseErr) {
+            console.warn(`⚠️ فشل في تحرير المخزون للعنصر:`, releaseErr);
+          }
+        }
+      }
+
+      // حذف الطلب من قاعدة البيانات
+      const { error: deleteErr } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', order.id);
+
+      if (deleteErr) {
+        console.error('❌ فشل في حذف الطلب:', deleteErr);
+        return { success: false, error: deleteErr };
+      }
+
+      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً`);
+      
+      return { 
+        success: true, 
+        autoDeleted: true,
+        message: `تم حذف الطلب ${order.tracking_number} تلقائياً لأنه محذوف من شركة التوصيل`
+      };
+      
+    } catch (error) {
+      console.error('❌ خطأ في الحذف التلقائي:', error);
+      return { success: false, error };
+    }
+  };
+
   // مزامنة طلب واحد بـ tracking number
   const syncOrderByTracking = async (trackingNumber) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
@@ -969,6 +1035,19 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (!waseetOrder) {
         console.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
+        
+        // التحقق من إمكانية الحذف التلقائي
+        const { data: localOrder, error: localErr } = await supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .eq('tracking_number', trackingNumber)
+          .maybeSingle();
+
+        if (!localErr && localOrder && canAutoDeleteOrder(localOrder)) {
+          console.log(`🗑️ حذف تلقائي للطلب ${trackingNumber} - محذوف من الوسيط`);
+          return await performAutoDelete(localOrder);
+        }
+        
         return null;
       }
       
