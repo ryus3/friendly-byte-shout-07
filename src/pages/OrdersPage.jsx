@@ -29,6 +29,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
+import OrderStatusIndicator from '@/components/orders/OrderStatusIndicator';
 
 
 
@@ -602,6 +603,9 @@ const OrdersPage = () => {
                 </Button>
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             </div>
+            <div className="flex items-center gap-2">
+                <OrderStatusIndicator />
+            </div>
         </div>
         
          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -633,7 +637,7 @@ const OrdersPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="orders">الطلبات</TabsTrigger>
-            <TabsTrigger value="invoices">فواتير الوسيط</TabsTrigger>
+            <TabsTrigger value="invoices">فواتير شركة التوصيل</TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
