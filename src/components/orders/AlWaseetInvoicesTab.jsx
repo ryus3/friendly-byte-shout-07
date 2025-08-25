@@ -15,11 +15,47 @@ import {
   AlertTriangle,
   Calendar
 } from 'lucide-react';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { cn } from '@/lib/utils';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+
+// Professional StatCard component for invoices
+const InvoiceStatCard = ({ icon: Icon, title, value, colorClass, delay, subtitle }) => (
+  <div
+    className={cn(
+      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale",
+      "shadow-lg shadow-black/10 dark:shadow-black/30",
+      "hover:shadow-2xl hover:shadow-primary/10",
+      "dark:hover:shadow-primary/20",
+      "group"
+    )}
+    style={{ animationDelay: `${delay * 100}ms` }}
+  >
+     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+     <div 
+       className="absolute inset-px rounded-xl opacity-60"
+       style={{
+         backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+       }}
+     ></div>
+
+     <div className="flex items-start justify-between">
+       <div className="flex-1">
+         <p className="text-muted-foreground text-sm font-medium text-right">{title}</p>
+         <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2 text-right">{(value || 0).toLocaleString()}</h3>
+         {subtitle && <p className="text-xs text-muted-foreground mt-1 text-right">{subtitle}</p>}
+       </div>
+      <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110", colorClass)}>
+        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+      </div>
+    </div>
+  </div>
+);
 
 const AlWaseetInvoicesTab = () => {
   const { isLoggedIn, activePartner } = useAlWaseet();
@@ -109,56 +145,40 @@ const AlWaseetInvoicesTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Statistics Cards */}
+      {/* Professional Statistics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي الفواتير</p>
-                <p className="text-2xl font-bold">{stats.totalInvoices}</p>
-              </div>
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">فواتير معلقة</p>
-                <p className="text-2xl font-bold">{stats.pendingInvoices}</p>
-              </div>
-              <Clock className="h-8 w-8 text-amber-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي المبالغ</p>
-                <p className="text-2xl font-bold">{stats.totalAmount.toLocaleString()}</p>
-                <p className="text-xs text-muted-foreground">د.ع</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
-                <p className="text-2xl font-bold">{stats.totalOrders}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+        <InvoiceStatCard 
+          title="إجمالي الفواتير"
+          value={stats.totalInvoices}
+          icon={FileText}
+          colorClass="bg-gradient-to-tr from-blue-500 to-cyan-400"
+          delay={0}
+        />
+        
+        <InvoiceStatCard 
+          title="فواتير معلقة"
+          value={stats.pendingInvoices}
+          icon={Clock}
+          colorClass="bg-gradient-to-tr from-orange-400 to-yellow-500"
+          delay={0.1}
+        />
+        
+        <InvoiceStatCard 
+          title="إجمالي المبالغ"
+          value={stats.totalAmount}
+          icon={DollarSign}
+          colorClass="bg-gradient-to-tr from-green-500 to-emerald-400"
+          delay={0.2}
+          subtitle="د.ع"
+        />
+        
+        <InvoiceStatCard 
+          title="إجمالي الطلبات"
+          value={stats.totalOrders}
+          icon={Package}
+          colorClass="bg-gradient-to-tr from-purple-500 to-violet-400"
+          delay={0.3}
+        />
       </div>
 
       {/* Filters and Actions */}
