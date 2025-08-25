@@ -3,7 +3,9 @@ import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
+import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
 const AlWaseetContext = createContext();
 
@@ -11,6 +13,7 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
+  const { createNotification } = useNotificationsSystem();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
@@ -27,6 +30,40 @@ export const AlWaseetProvider = ({ children }) => {
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
+
+  // دالة إرسال إشعارات تغيير حالة الطلبات
+  const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
+    if (!createNotification || !trackingNumber || !stateId) return;
+    
+    // الحالات المهمة التي تستحق إشعارات
+    const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
+    if (!importantStates.includes(String(stateId))) return;
+    
+    // منع التكرار
+    const notificationKey = `${trackingNumber}_${stateId}`;
+    if (lastNotificationStatus[notificationKey]) return;
+    
+    const statusConfig = getStatusConfig(Number(stateId));
+    const message = `${trackingNumber} ${statusConfig.text || statusText}`;
+    
+    createNotification({
+      type: 'alwaseet_status_change',
+      title: 'تحديث حالة الطلب',
+      message,
+      data: { 
+        tracking_number: trackingNumber,
+        state_id: stateId,
+        status_text: statusText
+      },
+      priority: 'medium'
+    });
+    
+    // حفظ الإشعار المُرسل
+    setLastNotificationStatus(prev => ({
+      ...prev,
+      [notificationKey]: true
+    }));
+  }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -873,6 +910,9 @@ export const AlWaseetProvider = ({ children }) => {
                 .eq('id', existingOrder.id);
               updatedCount++;
               console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
+              
+              // إرسال إشعار تغيير الحالة للحالات المهمة
+              createOrderStatusNotification(trackingNumber, waseetOrder.state_id, waseetStatusText);
             }
           }
         } catch (error) {

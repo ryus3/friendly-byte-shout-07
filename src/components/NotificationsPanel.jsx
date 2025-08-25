@@ -25,6 +25,60 @@ import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
+
+// دالة للحصول على ألوان إشعارات الوسيط حسب state_id
+const getAlWaseetNotificationColors = (stateId) => {
+  const statusConfig = getStatusConfig(Number(stateId));
+  const color = statusConfig.color || 'blue';
+  
+  // ألوان حسب حالة الوسيط
+  switch (color) {
+    case 'green':
+      return {
+        bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/10 dark:to-green-800/10',
+        border: 'border-r-4 border-green-500 dark:border-green-400',
+        text: 'text-foreground',
+        icon: 'text-green-600 dark:text-green-400',
+        dot: 'bg-green-500'
+      };
+    case 'red':
+      return {
+        bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/10 dark:to-red-800/10',
+        border: 'border-r-4 border-red-500 dark:border-red-400',
+        text: 'text-foreground',
+        icon: 'text-red-600 dark:text-red-400',
+        dot: 'bg-red-500'
+      };
+    case 'yellow':
+    case 'orange':
+      return {
+        bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/10 dark:to-orange-800/10',
+        border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+        text: 'text-foreground',
+        icon: 'text-yellow-600 dark:text-yellow-400',
+        dot: 'bg-yellow-500'
+      };
+    case 'gray':
+    case 'grey':
+      return {
+        bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/10 dark:to-gray-800/10',
+        border: 'border-r-4 border-gray-500 dark:border-gray-400',
+        text: 'text-foreground',
+        icon: 'text-gray-600 dark:text-gray-400',
+        dot: 'bg-gray-500'
+      };
+    case 'blue':
+    default:
+      return {
+        bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/10',
+        border: 'border-r-4 border-blue-500 dark:border-blue-400',
+        text: 'text-foreground',
+        icon: 'text-blue-600 dark:text-blue-400',
+        dot: 'bg-blue-500'
+      };
+  }
+};
 
 // أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
@@ -143,6 +197,13 @@ const typeColorMap = {
     dot: 'bg-green-500'
   },
   order_shipped: { 
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-blue-500 dark:border-blue-400',
+    text: 'text-foreground', 
+    icon: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500'
+  },
+  alwaseet_status_change: { 
     bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
     border: 'border-r-4 border-blue-500 dark:border-blue-400',
     text: 'text-foreground', 
@@ -441,7 +502,15 @@ const NotificationsPanel = () => {
               {allNotifications.length > 0 ? (
                 allNotifications.slice(0, 8).map(notification => {
                   const notificationType = notification.type || 'default';
-                  const colors = typeColorMap[notificationType] || typeColorMap.default;
+                  
+                  // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
+                  let colors;
+                  if (notificationType === 'alwaseet_status_change' && notification.data?.state_id) {
+                    colors = getAlWaseetNotificationColors(notification.data.state_id);
+                  } else {
+                    colors = typeColorMap[notificationType] || typeColorMap.default;
+                  }
+                  
                   const IconComponent = iconMap[notificationType] || iconMap.default;
                   
                   return (
