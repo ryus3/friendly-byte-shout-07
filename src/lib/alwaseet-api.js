@@ -187,8 +187,61 @@ export const receiveInvoice = async (token, invoiceId) => {
   return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
 };
 
-// Get specific order by QR/tracking number
+// Get specific order by QR/tracking number with enhanced search and fallback
 export const getOrderByQR = async (token, qrId) => {
-  const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
-  return orders.find(order => order.qr_id === String(qrId) || order.id === String(qrId));
+  try {
+    // First search in merchant orders
+    const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+    
+    // Enhanced search: match by qr_id, tracking_number, or id
+    const qrStr = String(qrId);
+    let order = orders.find(order => 
+      order.qr_id === qrStr || 
+      order.tracking_number === qrStr || 
+      order.id === qrStr
+    );
+    
+    if (order) {
+      console.log(`✅ Found order ${qrId} in merchant-orders:`, order.id);
+      return order;
+    }
+    
+    // Fallback: search in invoice orders if not found in merchant orders
+    console.log(`🔍 Order ${qrId} not found in merchant-orders, searching invoices...`);
+    
+    try {
+      const invoices = await handleApiCall('get_merchant_invoices', 'GET', token, null, { token });
+      
+      for (const invoice of invoices) {
+        try {
+          const invoiceOrders = await handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { 
+            token, 
+            invoice_id: invoice.id 
+          });
+          
+          const foundOrder = invoiceOrders.find(order => 
+            order.qr_id === qrStr || 
+            order.tracking_number === qrStr || 
+            order.id === qrStr
+          );
+          
+          if (foundOrder) {
+            console.log(`✅ Found order ${qrId} in invoice ${invoice.id}:`, foundOrder.id);
+            return foundOrder;
+          }
+        } catch (err) {
+          console.warn(`⚠️ Error searching invoice ${invoice.id}:`, err.message);
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Error searching invoices:', err.message);
+    }
+    
+    console.log(`❌ Order ${qrId} not found anywhere`);
+    return null;
+    
+  } catch (error) {
+    console.error(`❌ Error in getOrderByQR for ${qrId}:`, error);
+    throw error;
+  }
 };
