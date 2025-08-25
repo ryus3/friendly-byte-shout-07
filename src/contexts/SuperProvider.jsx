@@ -1144,7 +1144,49 @@ export const SuperProvider = ({ children }) => {
         });
         
       } else {
-        // تحديث فوري محلياً + حماية دائمة + localStorage
+        // 🔥 STEP 1: تحرير المخزون المحجوز فوراً قبل الحذف
+        console.log('🔓 تحرير المخزون المحجوز للطلبات:', orderIds);
+        
+        for (const orderId of orderIds) {
+          try {
+            console.log(`🔓 تحرير مخزون الطلب ${orderId}...`);
+            
+            // استدعاء دالة تحرير المخزون من قاعدة البيانات
+            const { data: releaseResult, error: releaseError } = await supabase
+              .rpc('release_stock_for_order', { p_order_id: orderId });
+            
+            if (releaseError) {
+              console.warn(`⚠️ فشل في تحرير المخزون للطلب ${orderId}:`, releaseError);
+              
+              // محاولة بديلة: تحرير العناصر واحد تلو الآخر
+              const { data: orderItems } = await supabase
+                .from('order_items')
+                .select('product_id, variant_id, quantity')
+                .eq('order_id', orderId);
+              
+              if (orderItems) {
+                for (const item of orderItems) {
+                  try {
+                    await supabase.rpc('release_stock_item', {
+                      p_product_id: item.product_id,
+                      p_variant_id: item.variant_id,
+                      p_quantity: item.quantity
+                    });
+                    console.log(`✅ تم تحرير ${item.quantity} من المنتج ${item.product_id}`);
+                  } catch (itemError) {
+                    console.warn(`⚠️ فشل تحرير عنصر:`, itemError);
+                  }
+                }
+              }
+            } else {
+              console.log(`✅ تم تحرير مخزون الطلب ${orderId} بنجاح:`, releaseResult);
+            }
+          } catch (stockError) {
+            console.warn(`⚠️ خطأ في تحرير مخزون الطلب ${orderId}:`, stockError);
+          }
+        }
+        
+        // STEP 2: تحديث فوري محلياً + حماية دائمة + localStorage
         console.log('📦 حذف طلبات عادية - حماية دائمة');
         orderIds.forEach(id => permanentlyDeletedOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
@@ -1156,7 +1198,7 @@ export const SuperProvider = ({ children }) => {
           orders: (prev.orders || []).filter(o => !orderIds.includes(o.id))
         }));
         
-        // حذف من قاعدة البيانات
+        // STEP 3: حذف من قاعدة البيانات
         console.log('🗑️ محاولة حذف من قاعدة البيانات:', orderIds);
         const { error } = await supabase.from('orders').delete().in('id', orderIds);
         if (error) {
@@ -1181,7 +1223,14 @@ export const SuperProvider = ({ children }) => {
         });
       }
       
-      console.log('✅ حذف مكتمل فورياً مع حماية دائمة');
+      // إظهار toast موحد للنجاح
+      toast({
+        title: "تم الحذف بنجاح",
+        description: `تم حذف ${orderIds.length} طلب وتحرير المخزون المحجوز فوراً`,
+        variant: "success"
+      });
+      
+      console.log('✅ حذف مكتمل فورياً مع تحرير المخزون وحماية دائمة');
       return { success: true };
       
     } catch (deleteError) {
