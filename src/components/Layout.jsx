@@ -304,13 +304,13 @@ const Layout = ({ children }) => {
               </div>
             </div>
             
-              <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
-                <SyncStatusIndicator />
-                <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
-                  <Bot className="w-5 h-5" />
-                </Button>
-                <NotificationsPanel />
-              </div>
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
+              <SyncStatusIndicator debugMode={true} />
+              <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
+                <Bot className="w-5 h-5" />
+              </Button>
+              <NotificationsPanel />
+            </div>
           </div>
         </header>
 

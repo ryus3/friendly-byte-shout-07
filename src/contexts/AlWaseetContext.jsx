@@ -23,11 +23,10 @@ export const AlWaseetProvider = ({ children }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncCountdown, setSyncCountdown] = useState(0);
   const [lastSyncAt, setLastSyncAt] = useState(null);
-  const [syncMode, setSyncMode] = useState('initial'); // 'initial', 'countdown', 'syncing', 'standby'
+  const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'standby'
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
-  const [nextSyncTime, setNextSyncTime] = useState(null);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -485,7 +484,6 @@ export const AlWaseetProvider = ({ children }) => {
         if (showNotifications) {
           toast({ title: 'لا توجد تحديثات', description: 'لا توجد طلبات بحاجة لمزامنة سريعة.' });
         }
-        setLastSyncAt(new Date());
         return { updated: 0, checked: 0 };
       }
 
@@ -689,7 +687,6 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      setLastSyncAt(new Date());
       return { updated, checked, statusChanges: statusChanges.length };
     } catch (e) {
       console.error('❌ خطأ في المزامنة السريعة:', e);
@@ -1191,6 +1188,7 @@ export const AlWaseetProvider = ({ children }) => {
   const performSyncWithCountdown = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
+    setIsSyncing(true);
     setSyncMode('countdown');
     setSyncCountdown(15);
 
@@ -1208,8 +1206,6 @@ export const AlWaseetProvider = ({ children }) => {
     // Wait for countdown then sync
     setTimeout(async () => {
       try {
-        setSyncMode('syncing');
-        setIsSyncing(true);
         console.log('🔄 تنفيذ المزامنة...');
         await fastSyncPendingOrders();
         setLastSyncAt(new Date());
@@ -1225,70 +1221,30 @@ export const AlWaseetProvider = ({ children }) => {
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
-  // Initial sync on login - immediate countdown trigger
+  // Initial sync on login
   useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'initial') {
-      console.log('🚀 مزامنة أولية عند تسجيل الدخول - بدء العد التنازلي...');
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
+      console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
+      setSyncMode('initial');
       performSyncWithCountdown();
     }
-  }, [isLoggedIn, activePartner, syncMode, performSyncWithCountdown]);
+  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
 
-  // Periodic auto-sync respecting settings
+  // Periodic sync every 10 minutes
   useEffect(() => {
     let intervalId;
-    if (
-      isLoggedIn &&
-      activePartner === 'alwaseet' &&
-      syncMode === 'standby' &&
-      autoSyncEnabled === true &&
-      Number(syncInterval) > 0
-    ) {
-      console.log(`⏱️ جدولة مزامنة تلقائية كل ${Math.round(Number(syncInterval)/60000)} دقيقة (autoSyncEnabled=${autoSyncEnabled})`);
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby') {
       intervalId = setInterval(() => {
-        if (!isSyncing && syncMode === 'standby') {
-          console.log('⏰ وقت المزامنة الدورية...');
+        if (!isSyncing) {
+          console.log('⏰ مزامنة دورية (كل 10 دقائق)...');
           performSyncWithCountdown();
         }
-      }, Number(syncInterval));
+      }, syncInterval);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
-
-  // Enforce manual mode when interval is 0
-  useEffect(() => {
-    if (Number(syncInterval) === 0 && autoSyncEnabled) {
-      setAutoSyncEnabled(false);
-      toast({ title: 'تم إيقاف المزامنة التلقائية', description: 'تم تفعيل الوضع اليدوي (لن تتم مزامنة تلقائية).'});
-    }
-  }, [syncInterval, autoSyncEnabled, setAutoSyncEnabled]);
-
-  // Live countdown to next scheduled sync (when not in 15s pre-sync)
-  useEffect(() => {
-    if (
-      !isLoggedIn ||
-      activePartner !== 'alwaseet' ||
-      !autoSyncEnabled ||
-      Number(syncInterval) <= 0 ||
-      syncMode !== 'standby' ||
-      isSyncing
-    ) {
-      return;
-    }
-
-    const tick = () => {
-      if (syncMode === 'countdown' || isSyncing) return;
-      if (!lastSyncAt) return;
-      const nextAt = new Date(lastSyncAt).getTime() + Number(syncInterval);
-      const remaining = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
-      setSyncCountdown(remaining);
-    };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [isLoggedIn, activePartner, autoSyncEnabled, syncInterval, lastSyncAt, syncMode, isSyncing]);
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {
@@ -1448,7 +1404,6 @@ export const AlWaseetProvider = ({ children }) => {
     syncCountdown,
     syncMode,
     lastSyncAt,
-    nextSyncTime,
     performSyncWithCountdown,
     autoSyncEnabled,
     setAutoSyncEnabled,
