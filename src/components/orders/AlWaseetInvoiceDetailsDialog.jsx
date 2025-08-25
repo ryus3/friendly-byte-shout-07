@@ -79,10 +79,10 @@ const AlWaseetInvoiceDetailsDialog = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
+        <DialogHeader dir="rtl">
+          <DialogTitle className="flex items-center justify-end gap-2 text-right">
             تفاصيل فاتورة شركة التوصيل #{invoice.id}
+            <Package className="h-5 w-5" />
           </DialogTitle>
         </DialogHeader>
 
@@ -90,35 +90,34 @@ const AlWaseetInvoiceDetailsDialog = ({
           <div className="space-y-6">
             {/* Invoice Summary */}
             <Card>
-              <CardHeader>
+              <CardHeader dir="rtl">
                 <CardTitle className="flex items-center justify-between">
-                  معلومات الفاتورة
                   <Badge variant={isReceived ? 'success' : 'secondary'}>
                     {isReceived ? 'مُستلمة' : 'معلقة'}
                   </Badge>
+                  <span className="text-right">معلومات الفاتورة</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent dir="rtl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <div>
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="text-right">
                       <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
                       <p className="font-semibold">{amount.toLocaleString()} د.ع</p>
                     </div>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                    <div>
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="text-right">
                       <p className="text-sm text-muted-foreground">عدد الطلبات</p>
                       <p className="font-semibold">{ordersCount}</p>
                     </div>
+                    <Package className="h-4 w-4 text-muted-foreground" />
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <div>
+                  <div className="flex items-center justify-end gap-2">
+                    <div className="text-right">
                       <p className="text-sm text-muted-foreground">آخر تحديث</p>
                       <p className="font-semibold text-sm">
                         {invoice.updated_at && format(
@@ -127,6 +126,7 @@ const AlWaseetInvoiceDetailsDialog = ({
                         )}
                       </p>
                     </div>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
                   </div>
 
                   <div>
@@ -136,8 +136,8 @@ const AlWaseetInvoiceDetailsDialog = ({
                         className="w-full"
                         disabled={loading}
                       >
-                        <CheckCircle className="h-4 w-4 mr-2" />
                         تأكيد الاستلام
+                        <CheckCircle className="h-4 w-4 ml-2" />
                       </Button>
                     )}
                   </div>
@@ -146,9 +146,9 @@ const AlWaseetInvoiceDetailsDialog = ({
             </Card>
 
             {/* Al-Waseet Orders */}
-            <Card>
+            <Card dir="rtl">
               <CardHeader>
-                <CardTitle>طلبات شركة التوصيل في هذه الفاتورة</CardTitle>
+                <CardTitle className="text-right">طلبات شركة التوصيل في هذه الفاتورة</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -172,9 +172,9 @@ const AlWaseetInvoiceDetailsDialog = ({
             </Card>
 
             {/* Linked Local Orders */}
-            <Card>
+            <Card dir="rtl">
               <CardHeader>
-                <CardTitle>الطلبات المحلية المرتبطة</CardTitle>
+                <CardTitle className="text-right">الطلبات المحلية المرتبطة</CardTitle>
               </CardHeader>
               <CardContent>
                 {loadingLinked ? (

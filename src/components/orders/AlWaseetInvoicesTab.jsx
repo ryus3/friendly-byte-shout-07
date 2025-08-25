@@ -162,18 +162,18 @@ const AlWaseetInvoicesTab = () => {
       </div>
 
       {/* Filters and Actions */}
-      <Card>
+      <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            فواتير شركة التوصيل
             <Button 
               onClick={handleRefresh} 
               disabled={loading}
               size="sm"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               تحديث
+              <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
             </Button>
+            <span className="text-right">فواتير شركة التوصيل</span>
           </CardTitle>
         </CardHeader>
         <CardContent>

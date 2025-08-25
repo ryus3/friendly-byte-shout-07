@@ -69,42 +69,42 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow" dir="rtl">
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg">فاتورة #{invoice.id}</h3>
             <Badge variant={getStatusVariant(invoice.status)}>
               {isReceived ? 'مُستلمة' : 'معلقة'}
             </Badge>
+            <h3 className="font-semibold text-lg text-right">فاتورة #{invoice.id}</h3>
           </div>
 
           {/* Amount */}
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center justify-end gap-2">
             <span className="font-semibold text-primary">
               {amount.toLocaleString()} د.ع
             </span>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Orders count */}
-          <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-muted-foreground">
               {ordersCount} طلب مُسلم
             </span>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Date */}
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center justify-end gap-2">
             <span className="text-sm text-muted-foreground">
               {invoice.updated_at && formatDistanceToNow(
                 new Date(invoice.updated_at), 
                 { addSuffix: true, locale: ar }
               )}
             </span>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Actions */}
@@ -115,8 +115,8 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
               onClick={onView}
               className="flex-1"
             >
-              <Eye className="h-4 w-4 mr-2" />
               عرض التفاصيل
+              <Eye className="h-4 w-4 ml-2" />
             </Button>
             
             {!isReceived && (
@@ -126,8 +126,8 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
                 onClick={onReceive}
                 className="flex-1"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
                 تأكيد الاستلام
+                <CheckCircle className="h-4 w-4 ml-2" />
               </Button>
             )}
           </div>
