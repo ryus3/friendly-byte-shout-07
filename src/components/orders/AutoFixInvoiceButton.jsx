@@ -14,9 +14,9 @@ const AutoFixInvoiceButton = () => {
       const { data: unfixedOrders, error } = await supabase
         .from('orders')
         .select('id, order_number, status, delivery_partner, delivery_partner_order_id')
+        .eq('delivery_partner', 'alwaseet')
         .in('status', ['delivered', 'completed'])
-        .eq('receipt_received', false)
-        .not('delivery_partner_order_id', 'is', null);
+        .eq('receipt_received', false);
 
       if (error) {
         throw error;

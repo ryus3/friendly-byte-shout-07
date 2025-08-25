@@ -504,6 +504,30 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
+      // Extra corrective pass: fix inconsistent orders (has receipt_received_at but receipt_received=false)
+      try {
+        const { data: inconsistentOrders, error: incErr } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('delivery_partner', 'alwaseet')
+          .in('status', ['delivered', 'completed'])
+          .eq('receipt_received', false)
+          .not('receipt_received_at', 'is', null)
+          .limit(200);
+
+        if (!incErr && inconsistentOrders && inconsistentOrders.length > 0) {
+          console.log(`🩹 Fixing inconsistent orders: ${inconsistentOrders.length}`);
+          const { error: fixErr } = await supabase.functions.invoke('mark-invoice-received', {
+            body: { orderIds: inconsistentOrders.map(o => o.id), invoiceId: 'bg-fix' }
+          });
+          if (fixErr) {
+            console.warn('❌ Background inconsistency fix failed:', fixErr?.message || fixErr);
+          }
+        }
+      } catch (e) {
+        console.warn('Background inconsistency scan error:', e?.message || e);
+      }
+
       setLastBackgroundCheck(new Date().toISOString());
     } catch (error) {
       console.warn('Background invoice processing error:', error?.message || error);
