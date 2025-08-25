@@ -82,7 +82,7 @@ const AlWaseetInvoiceDetailsDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            تفاصيل فاتورة الوسيط #{invoice.id}
+            تفاصيل فاتورة شركة التوصيل #{invoice.id}
           </DialogTitle>
         </DialogHeader>
 
@@ -148,7 +148,7 @@ const AlWaseetInvoiceDetailsDialog = ({
             {/* Al-Waseet Orders */}
             <Card>
               <CardHeader>
-                <CardTitle>طلبات الوسيط في هذه الفاتورة</CardTitle>
+                <CardTitle>طلبات شركة التوصيل في هذه الفاتورة</CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (

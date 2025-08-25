@@ -62,9 +62,10 @@ export const useAlWaseetInvoices = () => {
       const waseetOrderIds = waseetOrders.map(o => String(o.id));
       if (waseetOrderIds.length === 0) return;
 
+      // Try primary matching by delivery_partner_order_id
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
-        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
+        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
         .in('delivery_partner_order_id', waseetOrderIds)
         .neq('receipt_received', true);
 
@@ -73,7 +74,33 @@ export const useAlWaseetInvoices = () => {
         return;
       }
 
-      const updateIds = (localOrders || []).map(o => o.id);
+      let matchedOrders = localOrders || [];
+
+      // Fallback matching using tracking_number/qr_id if no direct matches
+      if (matchedOrders.length === 0) {
+        const { data: fallbackOrders, error: fallbackErr } = await supabase
+          .from('orders')
+          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
+          .in('tracking_number', waseetOrderIds)
+          .neq('receipt_received', true);
+
+        if (!fallbackErr && fallbackOrders?.length > 0) {
+          matchedOrders = fallbackOrders;
+          
+          // Update delivery_partner_order_id for fallback matches
+          for (const order of matchedOrders) {
+            const waseetOrder = waseetOrders.find(w => String(w.id) === order.tracking_number);
+            if (waseetOrder) {
+              await supabase
+                .from('orders')
+                .update({ delivery_partner_order_id: String(waseetOrder.id) })
+                .eq('id', order.id);
+            }
+          }
+        }
+      }
+
+      const updateIds = matchedOrders.map(o => o.id);
 
       if (updateIds.length === 0) {
         // لا نعلم الفاتورة كمُعالجة إذا لم نجد طلبات محلية للتحديث
@@ -244,21 +271,48 @@ export const useAlWaseetInvoices = () => {
       let missingMappingsCount = 0;
 
       if (waseetOrderIds.length > 0) {
+        // Try primary matching by delivery_partner_order_id
         const { data: localOrders, error: localOrdersError } = await supabase
           .from('orders')
-          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received')
+          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
           .in('delivery_partner_order_id', waseetOrderIds);
 
         if (localOrdersError) {
           console.error('Error fetching local orders for invoice linking:', localOrdersError);
         }
 
+        let matchedOrders = localOrders || [];
+
+        // Fallback matching using tracking_number/qr_id if no direct matches
+        if (matchedOrders.length === 0) {
+          const { data: fallbackOrders, error: fallbackErr } = await supabase
+            .from('orders')
+            .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
+            .in('tracking_number', waseetOrderIds)
+            .neq('receipt_received', true);
+
+          if (!fallbackErr && fallbackOrders?.length > 0) {
+            matchedOrders = fallbackOrders;
+            
+            // Update delivery_partner_order_id for fallback matches
+            for (const order of matchedOrders) {
+              const waseetOrder = waseetOrders.find(w => String(w.id) === order.tracking_number);
+              if (waseetOrder) {
+                await supabase
+                  .from('orders')
+                  .update({ delivery_partner_order_id: String(waseetOrder.id) })
+                  .eq('id', order.id);
+              }
+            }
+          }
+        }
+
         // Orders that couldn't be matched locally
-        const matchedIds = new Set((localOrders || []).map(o => String(o.delivery_partner_order_id)));
+        const matchedIds = new Set(matchedOrders.map(o => String(o.delivery_partner_order_id) || o.tracking_number));
         missingMappingsCount = waseetOrderIds.filter(id => !matchedIds.has(id)).length;
 
         // 5) Update matched local orders to mark receipt received and attach invoice meta
-        if (localOrders && localOrders.length > 0) {
+        if (matchedOrders && matchedOrders.length > 0) {
           const { data: updated, error: updateError } = await supabase
             .from('orders')
             .update({
@@ -269,7 +323,7 @@ export const useAlWaseetInvoices = () => {
               invoice_received_at: new Date().toISOString(),
               invoice_received_by: user?.id || user?.user_id || null
             })
-            .in('id', localOrders.map(o => o.id))
+            .in('id', matchedOrders.map(o => o.id))
             .select('id');
 
           if (updateError) {
@@ -279,7 +333,7 @@ export const useAlWaseetInvoices = () => {
           }
 
           // 6) Try updating related profits status to 'invoice_received' if not settled
-          const localOrderIds = (localOrders || []).map(o => o.id);
+          const localOrderIds = matchedOrders.map(o => o.id);
           if (localOrderIds.length > 0) {
             const { data: updatedProfits, error: profitsError } = await supabase
               .from('profits')
