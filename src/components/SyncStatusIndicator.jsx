@@ -4,56 +4,32 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCw } from 'lucide-react';
 
-const SyncStatusIndicator = ({ className, debugMode = false }) => {
+const SyncStatusIndicator = ({ className }) => {
   const { 
     isSyncing, 
     syncCountdown, 
     syncMode, 
     lastSyncAt, 
-    fastSyncPendingOrders,
+    performSyncWithCountdown,
     isLoggedIn,
     activePartner 
   } = useAlWaseet();
   
   const { theme } = useTheme();
 
-  // Debug mode for testing - shows component always
-  const shouldShow = debugMode || (isLoggedIn && activePartner === 'alwaseet');
-  
-  if (!shouldShow) {
+  // Only show when logged into AlWaseet
+  if (!isLoggedIn || activePartner !== 'alwaseet') {
     return null;
   }
 
   const [isSpinning, setIsSpinning] = useState(false);
-  const [debugCountdown, setDebugCountdown] = useState(debugMode ? 15 : 0);
-
-  // Debug mode countdown for testing
-  useEffect(() => {
-    if (debugMode && debugCountdown > 0) {
-      const timer = setTimeout(() => {
-        setDebugCountdown(prev => prev - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [debugMode, debugCountdown]);
-
-  // Use debug countdown if in debug mode, otherwise use real countdown
-  const currentCountdown = debugMode ? debugCountdown : syncCountdown;
-  const currentIsSyncing = debugMode ? false : isSyncing;
 
   const handleClick = () => {
-    if (debugMode) {
-      setIsSpinning(true);
-      // Start countdown after animation completes
-      setTimeout(() => {
-        setDebugCountdown(15);
-        setIsSpinning(false);
-      }, 1500);
-    } else if (!currentIsSyncing && syncMode === 'standby') {
+    if (!isSyncing && syncMode === 'standby') {
       setIsSpinning(true);
       // Start sync after animation completes
       setTimeout(() => {
-        fastSyncPendingOrders();
+        performSyncWithCountdown();
         setIsSpinning(false);
       }, 1500);
     }
@@ -75,7 +51,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
   // SVG Circle properties  
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const progress = currentCountdown > 0 ? (15 - currentCountdown) / 15 : 0;
+  const progress = syncCountdown > 0 ? (15 - syncCountdown) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   // Get number color based on theme
@@ -92,20 +68,20 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
         "bg-background",
-        currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
+        isSyncing || syncMode === 'countdown' || syncMode === 'initial' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
       onClick={handleClick}
       title={
-        debugMode 
-          ? `وضع الاختبار - العد: ${currentCountdown}`
-          : currentIsSyncing 
-            ? "جاري المزامنة..." 
-            : currentCountdown > 0 
-              ? `المزامنة التالية خلال ${currentCountdown} ثانية`
-              : lastSyncAt 
-                ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
-                : "اضغط للمزامنة السريعة"
+        isSyncing 
+          ? "جاري المزامنة..." 
+          : syncMode === 'initial'
+            ? `مزامنة أولية خلال ${syncCountdown} ثانية`
+          : syncMode === 'countdown'
+            ? `المزامنة التالية خلال ${syncCountdown} ثانية`
+            : lastSyncAt 
+              ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
+              : "اضغط للمزامنة السريعة"
       }
     >
       {/* Background and Progress circles */}
@@ -130,7 +106,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
         />
         
         {/* Progress circle - only shown during countdown */}
-        {currentCountdown > 0 && (
+        {(syncMode === 'countdown' || syncMode === 'initial') && syncCountdown > 0 && (
           <circle
             cx="20"
             cy="20"
@@ -148,11 +124,11 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
-        {currentIsSyncing ? (
+        {isSyncing ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        ) : currentCountdown > 0 ? (
+        ) : (syncMode === 'countdown' || syncMode === 'initial') && syncCountdown > 0 ? (
           <span className={cn("text-sm font-medium", getNumberColor())}>
-            {currentCountdown}
+            {syncCountdown}
           </span>
         ) : (
           <RefreshCw className={cn(

@@ -23,7 +23,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncCountdown, setSyncCountdown] = useState(0);
   const [lastSyncAt, setLastSyncAt] = useState(null);
-  const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'standby'
+  const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'syncing', 'standby'
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
