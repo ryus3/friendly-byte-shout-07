@@ -725,7 +725,7 @@ export const SuperProvider = ({ children }) => {
         return; // لا إعادة جلب للطلبات الذكية
       }
 
-      // تحديث فوري لعناصر الطلبات: إعادة جلب الطلب المحدد ودمجه
+      // تحديث فوري لعناصر الطلبات: إعادة جلب الطلب المحدد ودمجه + إعادة حساب الحجوزات فوراً
       if (table === 'order_items') {
         const orderId = payload.new?.order_id || payload.old?.order_id;
         if (orderId) {
@@ -736,16 +736,21 @@ export const SuperProvider = ({ children }) => {
               setAllData(prev => {
                 const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
                 
+                let updatedData;
                 if (existingOrderIndex >= 0) {
                   // الطلب موجود، قم بتحديثه
                   const updatedOrders = [...(prev.orders || [])];
                   updatedOrders[existingOrderIndex] = normalized;
-                  return { ...prev, orders: updatedOrders };
+                  updatedData = { ...prev, orders: updatedOrders };
                 } else {
-                  // الطلب غير موجود، أضفه (هذا يحل مشكلة الطلبات المفقودة)
+                  // الطلب غير موجود، أضفه
                   console.log('🔍 إضافة طلب مفقود من order_items real-time:', normalized.order_number);
-                  return { ...prev, orders: [normalized, ...(prev.orders || [])] };
+                  updatedData = { ...prev, orders: [normalized, ...(prev.orders || [])] };
                 }
+                
+                // إعادة حساب الحجوزات فوراً لتحديث المخزون على صفحة المنتجات
+                console.log('🔒 إعادة حساب الحجوزات فوراً بعد تحديث order_items');
+                return calculateUnifiedReservations(updatedData);
               });
             } catch (e) {
               console.warn('⚠️ فشل تحديث الطلب بعد تغيير عناصره', e);

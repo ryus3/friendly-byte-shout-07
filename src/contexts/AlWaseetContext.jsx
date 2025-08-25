@@ -446,6 +446,68 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token]);
 
+  // دالة الحذف التلقائي للطلبات المحذوفة من الوسيط
+  const handleAutoDeleteOrder = useCallback(async (orderId, source = 'manual') => {
+    try {
+      console.log(`🗑️ handleAutoDeleteOrder: بدء حذف الطلب ${orderId} من ${source}`);
+      
+      // 1. جلب تفاصيل الطلب قبل الحذف
+      const { data: orderToDelete, error: fetchError } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', orderId)
+        .single();
+        
+      if (fetchError || !orderToDelete) {
+        console.error('❌ فشل في جلب الطلب للحذف:', fetchError);
+        return false;
+      }
+      
+      // 2. تحرير المخزون المحجوز
+      if (orderToDelete.order_items && orderToDelete.order_items.length > 0) {
+        for (const item of orderToDelete.order_items) {
+          try {
+            await supabase.rpc('release_stock_item', {
+              p_product_id: item.product_id,
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity
+            });
+            console.log(`📦 تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
+          } catch (releaseError) {
+            console.warn('⚠️ تعذر تحرير المخزون للعنصر:', item.product_id, releaseError);
+          }
+        }
+      }
+      
+      // 3. حذف الطلب من قاعدة البيانات
+      const { error: deleteError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+        
+      if (deleteError) {
+        console.error('❌ فشل في حذف الطلب:', deleteError);
+        return false;
+      }
+      
+      console.log(`✅ تم حذف الطلب ${orderToDelete.order_number || orderId} تلقائياً من ${source}`);
+      
+      // 4. إشعار المستخدم عند الحذف التلقائي
+      if (source === 'fastSync') {
+        toast({
+          title: "حذف تلقائي",
+          description: `تم حذف الطلب ${orderToDelete.order_number || orderToDelete.tracking_number} تلقائياً لأنه غير موجود في الوسيط`,
+          variant: "default"
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ خطأ في الحذف التلقائي:', error);
+      return false;
+    }
+  }, [supabase, toast]);
+
   // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25) - صامتة مع إشعارات ذكية + fallback search
   const fastSyncPendingOrders = useCallback(async (showNotifications = false) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
@@ -526,6 +588,14 @@ export const AlWaseetProvider = ({ children }) => {
               needsIdRepair = true; // نحتاج لإصلاح المعرف
             }
           }
+        }
+
+        // تطبيق الحذف التلقائي إذا لم نجد الطلب في الوسيط
+        // ولكن فقط للطلبات في الحالات المحددة للأمان
+        if (!waseetOrder && ['pending', 'active', 'disabled', 'inactive'].includes(localOrder.status)) {
+          console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+          await handleAutoDeleteOrder(localOrder.id, 'fastSync');
+          continue;
         }
 
         if (!waseetOrder) {
@@ -643,6 +713,13 @@ export const AlWaseetProvider = ({ children }) => {
         if (!upErr) {
           updated++;
           console.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
+          
+          // تطبيق الحذف التلقائي إذا كان الطلب غير موجود في الوسيط
+          // ولكن فقط للطلبات في الحالات المحددة
+          if (!waseetOrder && ['pending', 'active', 'disabled', 'inactive'].includes(localOrder.status)) {
+            console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+            await handleAutoDeleteOrder(localOrder.id, 'fastSync');
+          }
         } else {
           console.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
         }

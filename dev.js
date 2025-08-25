@@ -1,23 +1,12 @@
 #!/usr/bin/env node
 
-const { spawn } = require('child_process');
+const { execSync } = require('child_process');
 
-console.log('🚀 Starting development server...');
-
-const child = spawn('npx', ['vite', '--host', '0.0.0.0', '--port', '8080'], {
-  stdio: 'inherit',
-  cwd: process.cwd(),
-  env: {
-    ...process.env,
-    NODE_ENV: 'development'
-  }
-});
-
-child.on('error', (error) => {
-  console.error('❌ Error starting server:', error.message);
-  process.exit(1);
-});
-
-child.on('exit', (code) => {
-  process.exit(code || 0);
-});
+try {
+  console.log('🚀 تشغيل خادم التطوير...');
+  execSync('npx vite --host 0.0.0.0 --port 8080', { stdio: 'inherit' });
+} catch (error) {
+  console.log('📦 تثبيت vite والتشغيل...');
+  execSync('npm install vite@latest', { stdio: 'inherit' });
+  execSync('npx vite --host 0.0.0.0 --port 8080', { stdio: 'inherit' });
+}
