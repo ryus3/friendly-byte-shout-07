@@ -131,35 +131,6 @@ export const AlWaseetProvider = ({ children }) => {
       console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
     }
   }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
-      console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
-    }
-      type: 'alwaseet_status_change', 
-      trackingNumber, 
-      stateId, 
-      message 
-    });
-    
-    createNotification({
-      type: 'alwaseet_status_change',
-      title: 'تحديث حالة الطلب',
-      message,
-      priority,
-      data: { 
-        tracking_number: trackingNumber,
-        state_id: String(stateId),
-        status_text: statusText,
-        timestamp: new Date().toISOString()
-      }
-    });
-    
-    // حفظ الحالة الجديدة لهذا الطلب
-    setLastNotificationStatus(prev => ({
-      ...prev,
-      [trackingKey]: String(stateId)
-    }));
-    
-    console.log('💾 حفظ حالة جديدة:', { trackingKey, stateId });
-  }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);

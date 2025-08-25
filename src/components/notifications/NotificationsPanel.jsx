@@ -100,21 +100,17 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
       
       // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
       if (!stateId && notification.message) {
-        const trackingMatch = notification.message.match(/^(\d+)\s/);
-        if (trackingMatch) {
-          const trackingNumber = trackingMatch[1];
-          // استخراج state_id من النص بناءً على نوع الرسالة
-          if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-            stateId = '2';
-          } else if (notification.message.includes('تم التسليم بنجاح')) {
-            stateId = '4';
-          } else if (notification.message.includes('تم الإرجاع')) {
-            stateId = '17';
-          } else if (notification.message.includes('العميل لا يرد')) {
-            stateId = '25';
-          } else if (notification.message.includes('تم الإلغاء')) {
-            stateId = '31';
-          }
+        // استخراج state_id من النص بناءً على نوع الرسالة
+        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
+          stateId = '2';
+        } else if (notification.message.includes('تم التسليم بنجاح')) {
+          stateId = '4';
+        } else if (notification.message.includes('تم الإرجاع')) {
+          stateId = '17';
+        } else if (notification.message.includes('العميل لا يرد')) {
+          stateId = '25';
+        } else if (notification.message.includes('تم الإلغاء')) {
+          stateId = '31';
         }
       }
       
@@ -146,20 +142,17 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
       
       // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
       if (!stateId && notification.message) {
-        const trackingMatch = notification.message.match(/^(\d+)\s/);
-        if (trackingMatch) {
-          // استخراج state_id من النص بناءً على نوع الرسالة
-          if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-            stateId = '2';
-          } else if (notification.message.includes('تم التسليم بنجاح')) {
-            stateId = '4';
-          } else if (notification.message.includes('تم الإرجاع')) {
-            stateId = '17';
-          } else if (notification.message.includes('العميل لا يرد')) {
-            stateId = '25';
-          } else if (notification.message.includes('تم الإلغاء')) {
-            stateId = '31';
-          }
+        // استخراج state_id من النص بناءً على نوع الرسالة
+        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
+          stateId = '2';
+        } else if (notification.message.includes('تم التسليم بنجاح')) {
+          stateId = '4';
+        } else if (notification.message.includes('تم الإرجاع')) {
+          stateId = '17';
+        } else if (notification.message.includes('العميل لا يرد')) {
+          stateId = '25';
+        } else if (notification.message.includes('تم الإلغاء')) {
+          stateId = '31';
         }
       }
       
