@@ -178,10 +178,10 @@ const AlWaseetInvoicesTab = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">
-            {/* Time Filter and Status Filter - Always Side by Side */}
-            <div className="flex flex-row gap-2 flex-wrap">
+            {/* Time Filter and Status Filter - Equal Width Side by Side */}
+            <div className="flex gap-2">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
-                <SelectTrigger className="w-36 sm:w-40">
+                <SelectTrigger className="flex-1">
                   <Calendar className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="الفترة" />
                 </SelectTrigger>
@@ -197,7 +197,7 @@ const AlWaseetInvoicesTab = () => {
               </Select>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 sm:w-40">
+                <SelectTrigger className="flex-1">
                   <SelectValue placeholder="الحالة" />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,15 +206,16 @@ const AlWaseetInvoicesTab = () => {
                   <SelectItem value="received">مُستلمة</SelectItem>
                 </SelectContent>
               </Select>
-              
-              {timeFilter === 'custom' && (
-                <DateRangePicker
-                  date={customDateRange}
-                  onDateChange={handleCustomDateRangeChange}
-                  className="w-40 sm:w-auto"
-                />
-              )}
             </div>
+            
+            {/* Custom Date Range Picker */}
+            {timeFilter === 'custom' && (
+              <DateRangePicker
+                date={customDateRange}
+                onDateChange={handleCustomDateRangeChange}
+                className="w-full"
+              />
+            )}
             
             {/* Search Filter */}
             <div className="relative">
