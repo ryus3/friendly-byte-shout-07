@@ -853,13 +853,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "v_delivery_invoices_summary"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "delivery_invoice_orders_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -3186,24 +3179,7 @@ export type Database = {
       }
     }
     Views: {
-      v_delivery_invoices_summary: {
-        Row: {
-          amount: number | null
-          created_at: string | null
-          external_id: string | null
-          id: string | null
-          issued_at: string | null
-          linked_local_orders: number | null
-          linked_orders: number | null
-          orders_count: number | null
-          partner: string | null
-          received: boolean | null
-          received_at: string | null
-          status: string | null
-          updated_at: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_purchase_cost_record: {
