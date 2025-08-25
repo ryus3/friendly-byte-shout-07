@@ -463,8 +463,8 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا) + المُسلمة
-      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned', 'delivered'];
+      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا)
+      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
         .select('id, status, delivery_status, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
@@ -823,7 +823,7 @@ export const AlWaseetProvider = ({ children }) => {
     }
   };
 
-  // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري وربط المعرفات
+  // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
   const syncOrderByQR = useCallback(async (qrId) => {
     if (!token) {
       console.warn('❌ لا يوجد توكن للمزامنة');
@@ -833,7 +833,7 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
       
-      // جلب الطلب من الوسيط (الآن مع fallback للفواتير)
+      // جلب الطلب من الوسيط
       const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
@@ -882,67 +882,45 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // تحضير التحديثات
-      const updates = {};
-      let needsUpdate = false;
-
-      // تحديث الحالة إذا كانت مختلفة
-      if (localOrder.status !== correctLocalStatus) {
-        updates.status = correctLocalStatus;
-        needsUpdate = true;
-      }
-
-      // تحديث حالة التوصيل
-      if ((localOrder.delivery_status || '') !== waseetStatusText) {
-        updates.delivery_status = waseetStatusText;
-        needsUpdate = true;
-      }
-
-      // ⭐ حفظ معرف طلب الوسيط إن كان مفقوداً - المحور الرئيسي
-      if (!localOrder.delivery_partner_order_id && waseetOrder.id) {
-        updates.delivery_partner_order_id = String(waseetOrder.id);
-        updates.delivery_partner = 'alwaseet';
-        needsUpdate = true;
-        console.log(`🔗 ربط معرف الوسيط للطلب ${qrId}: ${waseetOrder.id}`);
-      }
+      const updates = {
+        status: correctLocalStatus,
+        delivery_status: waseetStatusText,
+        delivery_partner_order_id: String(waseetOrder.id),
+        updated_at: new Date().toISOString()
+      };
 
       // تحديث رسوم التوصيل
       if (waseetOrder.delivery_price) {
         const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
-        if (deliveryPrice >= 0 && deliveryPrice !== (localOrder.delivery_fee || 0)) {
+        if (deliveryPrice >= 0) {
           updates.delivery_fee = deliveryPrice;
-          needsUpdate = true;
         }
       }
 
       // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
-      if (waseetOrder.deliver_confirmed_fin === 1 && !localOrder.receipt_received) {
+      if (waseetOrder.deliver_confirmed_fin === 1) {
         updates.receipt_received = true;
-        needsUpdate = true;
         // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
         if (correctLocalStatus === 'delivered') {
           updates.status = 'completed';
         }
       }
 
-      // تطبيق التحديثات فقط إذا كانت مطلوبة
-      if (needsUpdate) {
-        updates.updated_at = new Date().toISOString();
-        
-        const { error: updateErr } = await supabase
-          .from('orders')
-          .update(updates)
-          .eq('id', localOrder.id);
+      // تطبيق التحديثات
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', localOrder.id);
 
-        if (updateErr) {
-          console.error('❌ خطأ في تحديث الطلب:', updateErr);
-          return null;
-        }
-
-        console.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
+      if (updateErr) {
+        console.error('❌ خطأ في تحديث الطلب:', updateErr);
+        return null;
       }
+
+      console.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
       
       return {
-        needs_update: needsUpdate,
+        needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
         updates,
         waseet_order: waseetOrder,
         local_order: { ...localOrder, ...updates }
