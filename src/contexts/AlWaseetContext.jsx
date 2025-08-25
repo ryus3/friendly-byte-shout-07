@@ -23,10 +23,11 @@ export const AlWaseetProvider = ({ children }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncCountdown, setSyncCountdown] = useState(0);
   const [lastSyncAt, setLastSyncAt] = useState(null);
-  const [syncMode, setSyncMode] = useState('standby'); // 'initial', 'countdown', 'standby'
+  const [syncMode, setSyncMode] = useState('initial'); // 'initial', 'countdown', 'syncing', 'standby'
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
+  const [nextSyncTime, setNextSyncTime] = useState(null);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -1190,7 +1191,6 @@ export const AlWaseetProvider = ({ children }) => {
   const performSyncWithCountdown = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
-    setIsSyncing(true);
     setSyncMode('countdown');
     setSyncCountdown(15);
 
@@ -1208,6 +1208,8 @@ export const AlWaseetProvider = ({ children }) => {
     // Wait for countdown then sync
     setTimeout(async () => {
       try {
+        setSyncMode('syncing');
+        setIsSyncing(true);
         console.log('🔄 تنفيذ المزامنة...');
         await fastSyncPendingOrders();
         setLastSyncAt(new Date());
@@ -1223,14 +1225,13 @@ export const AlWaseetProvider = ({ children }) => {
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
-  // Initial sync on login
+  // Initial sync on login - immediate countdown trigger
   useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
-      console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
-      setSyncMode('initial');
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'initial') {
+      console.log('🚀 مزامنة أولية عند تسجيل الدخول - بدء العد التنازلي...');
       performSyncWithCountdown();
     }
-  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
+  }, [isLoggedIn, activePartner, syncMode, performSyncWithCountdown]);
 
   // Periodic auto-sync respecting settings
   useEffect(() => {
@@ -1244,7 +1245,7 @@ export const AlWaseetProvider = ({ children }) => {
     ) {
       console.log(`⏱️ جدولة مزامنة تلقائية كل ${Math.round(Number(syncInterval)/60000)} دقيقة (autoSyncEnabled=${autoSyncEnabled})`);
       intervalId = setInterval(() => {
-        if (!isSyncing) {
+        if (!isSyncing && syncMode === 'standby') {
           console.log('⏰ وقت المزامنة الدورية...');
           performSyncWithCountdown();
         }
@@ -1447,6 +1448,7 @@ export const AlWaseetProvider = ({ children }) => {
     syncCountdown,
     syncMode,
     lastSyncAt,
+    nextSyncTime,
     performSyncWithCountdown,
     autoSyncEnabled,
     setAutoSyncEnabled,

@@ -51,7 +51,7 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       }, 1500);
     } else if (!currentIsSyncing && syncMode === 'standby') {
       setIsSpinning(true);
-      // Start sync after animation completes
+      // Start manual sync countdown after animation completes
       setTimeout(() => {
         fastSyncPendingOrders();
         setIsSpinning(false);
@@ -75,8 +75,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
   // SVG Circle properties  
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const isPreSync = !debugMode && syncMode === 'countdown';
-  const progress = isPreSync && currentCountdown > 0 ? (15 - Math.min(currentCountdown, 15)) / 15 : 0;
+  const isCountdownMode = !debugMode && (syncMode === 'initial' || syncMode === 'countdown');
+  const progress = isCountdownMode && currentCountdown > 0 ? (15 - Math.min(currentCountdown, 15)) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   // Get number color based on theme
@@ -93,20 +93,22 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
         "bg-background",
-        currentIsSyncing ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
+        (currentIsSyncing || syncMode === 'syncing' || syncMode === 'initial' || syncMode === 'countdown') ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
       onClick={handleClick}
       title={
         debugMode 
           ? `وضع الاختبار - العد: ${currentCountdown}`
-          : currentIsSyncing 
+          : (currentIsSyncing || syncMode === 'syncing')
             ? "جاري المزامنة..." 
-            : currentCountdown > 0 
-              ? `المزامنة التالية خلال ${currentCountdown} ثانية`
-              : lastSyncAt 
-                ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
-                : "اضغط للمزامنة السريعة"
+            : (syncMode === 'initial')
+              ? `مزامنة أولية خلال ${currentCountdown} ثانية`
+              : (syncMode === 'countdown')
+                ? `المزامنة التلقائية خلال ${currentCountdown} ثانية`
+                : lastSyncAt 
+                  ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
+                  : "اضغط للمزامنة السريعة"
       }
     >
       {/* Background and Progress circles */}
@@ -130,8 +132,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           className="text-muted-foreground/30"
         />
         
-        {/* Progress circle - only shown during pre-sync countdown */}
-        {isPreSync && currentCountdown > 0 && (
+        {/* Progress circle - shown during countdown modes (initial/countdown) */}
+        {isCountdownMode && currentCountdown > 0 && (
           <circle
             cx="20"
             cy="20"
@@ -149,9 +151,9 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
 
       {/* Center content */}
       <div className="relative z-10 flex items-center justify-center">
-        {currentIsSyncing ? (
+        {currentIsSyncing || syncMode === 'syncing' ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        ) : currentCountdown > 0 ? (
+        ) : (syncMode === 'initial' || syncMode === 'countdown') && currentCountdown > 0 ? (
           <span className={cn("text-sm font-medium", getNumberColor())}>
             {currentCountdown}
           </span>
