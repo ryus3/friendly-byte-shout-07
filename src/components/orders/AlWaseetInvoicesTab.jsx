@@ -181,7 +181,7 @@ const AlWaseetInvoicesTab = () => {
             {/* Time Filter and Status Filter - Equal Width Side by Side */}
             <div className="flex gap-2">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1" dir="rtl">
                   <Calendar className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="الفترة" />
                 </SelectTrigger>
@@ -197,7 +197,7 @@ const AlWaseetInvoicesTab = () => {
               </Select>
               
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className="flex-1" dir="rtl">
                   <SelectValue placeholder="الحالة" />
                 </SelectTrigger>
                 <SelectContent>

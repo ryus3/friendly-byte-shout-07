@@ -74,37 +74,37 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg text-left">فاتورة #{invoice.id}</h3>
             <Badge variant={getStatusVariant(invoice.status)}>
               {isReceived ? 'مُستلمة' : 'معلقة'}
             </Badge>
-            <h3 className="font-semibold text-lg text-right">فاتورة #{invoice.id}</h3>
           </div>
 
           {/* Amount */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-start gap-2">
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="font-semibold text-primary">
               {amount.toLocaleString()} د.ع
             </span>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Orders count */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-start gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
               {ordersCount} طلب مُسلم
             </span>
-            <Package className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Date */}
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-start gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
               {invoice.updated_at && formatDistanceToNow(
                 new Date(invoice.updated_at), 
                 { addSuffix: true, locale: ar }
               )}
             </span>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
 
           {/* Actions */}
