@@ -75,7 +75,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
   // SVG Circle properties  
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const progress = currentCountdown > 0 ? (15 - currentCountdown) / 15 : 0;
+  const isPreSync = !debugMode && syncMode === 'countdown';
+  const progress = isPreSync && currentCountdown > 0 ? (15 - Math.min(currentCountdown, 15)) / 15 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   // Get number color based on theme
@@ -129,8 +130,8 @@ const SyncStatusIndicator = ({ className, debugMode = false }) => {
           className="text-muted-foreground/30"
         />
         
-        {/* Progress circle - only shown during countdown */}
-        {currentCountdown > 0 && (
+        {/* Progress circle - only shown during pre-sync countdown */}
+        {isPreSync && currentCountdown > 0 && (
           <circle
             cx="20"
             cy="20"

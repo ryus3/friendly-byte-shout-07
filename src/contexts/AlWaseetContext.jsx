@@ -484,6 +484,7 @@ export const AlWaseetProvider = ({ children }) => {
         if (showNotifications) {
           toast({ title: 'لا توجد تحديثات', description: 'لا توجد طلبات بحاجة لمزامنة سريعة.' });
         }
+        setLastSyncAt(new Date());
         return { updated: 0, checked: 0 };
       }
 
@@ -687,6 +688,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
+      setLastSyncAt(new Date());
       return { updated, checked, statusChanges: statusChanges.length };
     } catch (e) {
       console.error('❌ خطأ في المزامنة السريعة:', e);
@@ -1230,21 +1232,62 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
 
-  // Periodic sync every 10 minutes
+  // Periodic auto-sync respecting settings
   useEffect(() => {
     let intervalId;
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby') {
+    if (
+      isLoggedIn &&
+      activePartner === 'alwaseet' &&
+      syncMode === 'standby' &&
+      autoSyncEnabled === true &&
+      Number(syncInterval) > 0
+    ) {
+      console.log(`⏱️ جدولة مزامنة تلقائية كل ${Math.round(Number(syncInterval)/60000)} دقيقة (autoSyncEnabled=${autoSyncEnabled})`);
       intervalId = setInterval(() => {
         if (!isSyncing) {
-          console.log('⏰ مزامنة دورية (كل 10 دقائق)...');
+          console.log('⏰ وقت المزامنة الدورية...');
           performSyncWithCountdown();
         }
-      }, syncInterval);
+      }, Number(syncInterval));
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
+
+  // Enforce manual mode when interval is 0
+  useEffect(() => {
+    if (Number(syncInterval) === 0 && autoSyncEnabled) {
+      setAutoSyncEnabled(false);
+      toast({ title: 'تم إيقاف المزامنة التلقائية', description: 'تم تفعيل الوضع اليدوي (لن تتم مزامنة تلقائية).'});
+    }
+  }, [syncInterval, autoSyncEnabled, setAutoSyncEnabled]);
+
+  // Live countdown to next scheduled sync (when not in 15s pre-sync)
+  useEffect(() => {
+    if (
+      !isLoggedIn ||
+      activePartner !== 'alwaseet' ||
+      !autoSyncEnabled ||
+      Number(syncInterval) <= 0 ||
+      syncMode !== 'standby' ||
+      isSyncing
+    ) {
+      return;
+    }
+
+    const tick = () => {
+      if (syncMode === 'countdown' || isSyncing) return;
+      if (!lastSyncAt) return;
+      const nextAt = new Date(lastSyncAt).getTime() + Number(syncInterval);
+      const remaining = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+      setSyncCountdown(remaining);
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [isLoggedIn, activePartner, autoSyncEnabled, syncInterval, lastSyncAt, syncMode, isSyncing]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {
