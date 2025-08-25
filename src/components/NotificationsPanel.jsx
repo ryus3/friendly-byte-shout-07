@@ -426,19 +426,29 @@ const NotificationsPanel = () => {
     }
   };
 
-  // دمج الإشعارات من النظامين مع إزالة التكرار القوي (حسب النوع والعنوان والنص)
+  // تحسين دمج الإشعارات ومنع التكرار الذكي
   const merged = [
     ...notifications.filter(n => n.type !== 'welcome'),
     ...systemNotifications
   ];
-  const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+  
   const uniqueMap = new Map();
   for (const n of merged) {
-    const key = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
-    if (!uniqueMap.has(key)) uniqueMap.set(key, n);
+    let uniqueKey = n.id;
+    
+    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id
+    if (n.type === 'alwaseet_status_change' && n.data?.tracking_number && n.data?.state_id) {
+      uniqueKey = `alwaseet_${n.data.tracking_number}_${n.data.state_id}`;
+    } else {
+      // إشعارات أخرى - منع التكرار بناءً على المحتوى
+      const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+      uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
+    }
+    
+    if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
   }
-  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   
+  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (

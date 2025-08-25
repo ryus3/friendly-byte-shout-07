@@ -4,7 +4,7 @@ import { spawn } from 'child_process';
 
 console.log('🚀 Starting development server with npx vite...');
 
-const child = spawn('npx', ['vite', 'dev'], {
+const child = spawn('npx', ['vite', 'dev', '--host', '0.0.0.0', '--port', '8080'], {
   stdio: 'inherit'
 });
 

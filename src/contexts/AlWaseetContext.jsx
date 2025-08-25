@@ -40,7 +40,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة إرسال إشعارات تغيير حالة الطلبات
+  // دالة إرسال إشعارات تغيير حالة الطلبات مع تنسيق محسن
   const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
     if (!createNotification || !trackingNumber || !stateId) return;
     
@@ -53,7 +53,30 @@ export const AlWaseetProvider = ({ children }) => {
     if (lastNotificationStatus[notificationKey]) return;
     
     const statusConfig = getStatusConfig(Number(stateId));
-    const message = `${trackingNumber} ${statusConfig.text || statusText}`;
+    
+    // تحسين النص حسب state_id
+    let message = '';
+    switch (String(stateId)) {
+      case '2':
+        message = `${trackingNumber} تم الاستلام من قبل المندوب`;
+        break;
+      case '4':
+        message = `${trackingNumber} تم التسليم بنجاح`;
+        break;
+      case '17':
+        message = `${trackingNumber} تم الإرجاع`;
+        break;
+      case '25':
+      case '26':
+        message = `${trackingNumber} العميل لا يرد`;
+        break;
+      case '31':
+      case '32':
+        message = `${trackingNumber} تم الإلغاء`;
+        break;
+      default:
+        message = `${trackingNumber} ${statusConfig.text || statusText}`;
+    }
     
     createNotification({
       type: 'alwaseet_status_change',
