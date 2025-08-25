@@ -37,7 +37,7 @@ const AlWaseetInvoicesList = ({
           <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">لا توجد فواتير</h3>
           <p className="text-muted-foreground">
-            لم يتم العثور على أي فواتير من شركة التوصيل حتى الآن
+            لم يتم العثور على أي فواتير من الوسيط حتى الآن
           </p>
         </CardContent>
       </Card>

@@ -39,11 +39,7 @@ const AlWaseetInvoicesTab = () => {
   
   // Time filter state with localStorage
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
-const [customDateRange, setCustomDateRange] = useState(null);
-
-  // Auto invoice processing info
-  const lastProcessedInvoiceId = typeof window !== 'undefined' ? localStorage.getItem('waseet:lastProcessedInvoiceId') : null;
-  const lastProcessedAt = typeof window !== 'undefined' ? localStorage.getItem('waseet:lastProcessedAt') : null;
+  const [customDateRange, setCustomDateRange] = useState(null);
 
   // Filter invoices based on search, status, and time
   const filteredInvoices = useMemo(() => {
@@ -102,9 +98,9 @@ const [customDateRange, setCustomDateRange] = useState(null);
       <Card>
         <CardContent className="p-8 text-center">
           <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">غير متصل بشركة التوصيل</h3>
+          <h3 className="text-lg font-semibold mb-2">غير متصل بالوسيط</h3>
           <p className="text-muted-foreground mb-4">
-            يجب تسجيل الدخول إلى شركة التوصيل أولاً لعرض الفواتير
+            يجب تسجيل الدخول إلى الوسيط أولاً لعرض الفواتير
           </p>
         </CardContent>
       </Card>
@@ -169,22 +165,15 @@ const [customDateRange, setCustomDateRange] = useState(null);
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            فواتير شركة التوصيل
-            <div className="flex items-center gap-3">
-              {lastProcessedInvoiceId && (
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  آخر معالجة: #{lastProcessedInvoiceId} • {lastProcessedAt ? new Date(lastProcessedAt).toLocaleString('ar-EG') : ''}
-                </span>
-              )}
-              <Button 
-                onClick={handleRefresh} 
-                disabled={loading}
-                size="sm"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                تحديث
-              </Button>
-            </div>
+            فواتير الوسيط
+            <Button 
+              onClick={handleRefresh} 
+              disabled={loading}
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              تحديث
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
