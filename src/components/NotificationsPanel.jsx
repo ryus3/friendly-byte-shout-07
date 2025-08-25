@@ -483,6 +483,23 @@ const NotificationsPanel = () => {
   };
 
   // تحسين دمج الإشعارات ومنع التكرار الذكي
+  // دوال مساعدة لاستخراج tracking/state عند غياب data
+  const parseAlwaseetStateIdFromMessage = (msg = '') => {
+    const m = msg.match(/\b(تم التسليم|تم الإلغاء|لا يرد|تم الإرجاع|تم الاستلام)/);
+    if (!m) return null;
+    switch (m[1]) {
+      case 'تم الاستلام': return '2';
+      case 'تم التسليم': return '4';
+      case 'تم الإرجاع': return '17';
+      case 'لا يرد': return '26';
+      case 'تم الإلغاء': return '31';
+      default: return null;
+    }
+  };
+  const parseTrackingFromMessage = (msg = '') => {
+    const m = msg.match(/\b(\d{6,})\b/);
+    return m ? m[1] : null;
+  };
   const merged = [
     ...notifications.filter(n => n.type !== 'welcome'),
     ...systemNotifications
@@ -492,10 +509,18 @@ const NotificationsPanel = () => {
   for (const n of merged) {
     let uniqueKey = n.id;
     
-    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id
-    if (n.type === 'alwaseet_status_change' && n.data?.tracking_number && n.data?.state_id) {
-      uniqueKey = `alwaseet_${n.data.tracking_number}_${n.data.state_id}`;
-    } else {
+    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id (مع تعويض عند غياب data)
+    if (n.type === 'alwaseet_status_change') {
+      const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message);
+      const sid = n.data?.state_id || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
+      if (tracking && sid) {
+        uniqueKey = `alwaseet_${tracking}_${sid}`;
+      } else if (tracking) {
+        uniqueKey = `alwaseet_${tracking}_${(n.message || '').slice(0, 32)}`;
+      }
+    }
+    
+    if (!uniqueKey) {
       // إشعارات أخرى - منع التكرار بناءً على المحتوى
       const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
       uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
@@ -571,8 +596,9 @@ const NotificationsPanel = () => {
                   
                   // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
                   let colors;
-                  if (notificationType === 'alwaseet_status_change' && notification.data?.state_id) {
-                    colors = getAlWaseetNotificationColors(notification.data.state_id);
+                  if (notificationType === 'alwaseet_status_change') {
+                    const sid = notification.data?.state_id || parseAlwaseetStateIdFromMessage(notification.message) || notification.data?.status_id;
+                    colors = getAlWaseetNotificationColors(sid);
                   } else {
                     colors = typeColorMap[notificationType] || typeColorMap.default;
                   }
