@@ -105,7 +105,7 @@ export const AlWaseetProvider = ({ children }) => {
     // حفظ الحالة الجديدة لهذا الطلب
     setLastNotificationStatus(prev => ({
       ...prev,
-      [notificationKey]: true
+      [trackingKey]: String(stateId)
     }));
   }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
 
