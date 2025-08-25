@@ -27,6 +27,7 @@ import { MobileTableRow, MobileTableCell, MobileTableGrid } from '@/components/u
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import { canDeleteOrder } from '@/lib/order-deletion-utils';
 import ScrollingText from '@/components/ui/scrolling-text';
 
 const OrderListItem = ({ 
@@ -86,13 +87,8 @@ const OrderListItem = ({
   }, [isLocalOrder, order.status]);
 
   const canDelete = React.useMemo(() => {
-    if (isLocalOrder) {
-      return order.status === 'pending';
-    } else {
-      // الطلبات الخارجية: مسموح قبل الاستلام من المندوب (فعال/في انتظار الاستلام)
-      return isBeforePickup(order);
-    }
-  }, [isLocalOrder, order.status, order.delivery_status]);
+    return canDeleteOrder(order);
+  }, [order]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {

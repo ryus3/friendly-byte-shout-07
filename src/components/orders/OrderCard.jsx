@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
 import ScrollingText from '@/components/ui/scrolling-text';
 
 const OrderCard = ({ 
@@ -83,16 +84,8 @@ const OrderCard = ({
   }, [isLocalOrder, order.status]);
 
   const canDelete = React.useMemo(() => {
-    if (isLocalOrder) {
-      return order.status === 'pending';
-    }
-    // الطلبات الخارجية: مسموح قبل استلام المندوب (فعال/في انتظار الاستلام)
-    const deliveryStatus = (order.delivery_status || '').toLowerCase();
-    return order.status === 'pending' ||
-           deliveryStatus.includes('فعال') ||
-           deliveryStatus.includes('active') ||
-           deliveryStatus.includes('في انتظار استلام المندوب');
-  }, [isLocalOrder, order.status, order.delivery_status]);
+    return canDeleteOrder(order);
+  }, [order]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
