@@ -98,9 +98,9 @@ const AlWaseetInvoicesTab = () => {
       <Card>
         <CardContent className="p-8 text-center">
           <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">غير متصل بالوسيط</h3>
+          <h3 className="text-lg font-semibold mb-2">غير متصل بشركة التوصيل</h3>
           <p className="text-muted-foreground mb-4">
-            يجب تسجيل الدخول إلى الوسيط أولاً لعرض الفواتير
+            يجب تسجيل الدخول إلى شركة التوصيل أولاً لعرض الفواتير
           </p>
         </CardContent>
       </Card>
@@ -165,7 +165,7 @@ const AlWaseetInvoicesTab = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            فواتير الوسيط
+            فواتير شركة التوصيل
             <Button 
               onClick={handleRefresh} 
               disabled={loading}
