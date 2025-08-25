@@ -50,7 +50,21 @@ export const useAlWaseetInvoices = () => {
       const targets = isProcessLatestOnly() ? [received[0]] : received;
 
       const lastProcessedId = localStorage.getItem(LAST_PROCESSED_ID_KEY);
-      const target = targets.find(inv => String(inv.id) !== String(lastProcessedId));
+      const lastProcessedAt = localStorage.getItem(LAST_PROCESSED_AT_KEY);
+      
+      // Don't process the same invoice if recently processed (within 5 minutes)
+      const target = targets.find(inv => {
+        if (String(inv.id) === String(lastProcessedId)) {
+          if (lastProcessedAt) {
+            const lastProcessTime = new Date(lastProcessedAt);
+            const now = new Date();
+            const minutesSince = (now - lastProcessTime) / (1000 * 60);
+            return minutesSince > 5; // Allow reprocessing after 5 minutes
+          }
+        }
+        return String(inv.id) !== String(lastProcessedId);
+      });
+      
       if (!target) return;
 
       // Fetch invoice details directly (avoid mutating hook state)
@@ -62,11 +76,12 @@ export const useAlWaseetInvoices = () => {
       const waseetOrderIds = waseetOrders.map(o => String(o.id));
       if (waseetOrderIds.length === 0) return;
 
-      // Try primary matching by delivery_partner_order_id
+      // Try primary matching by delivery_partner_order_id for delivered orders only
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
-        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
+        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id, status')
         .in('delivery_partner_order_id', waseetOrderIds)
+        .in('status', ['delivered', 'completed'])
         .neq('receipt_received', true);
 
       if (localErr) {
@@ -80,8 +95,9 @@ export const useAlWaseetInvoices = () => {
       if (matchedOrders.length === 0) {
         const { data: fallbackOrders, error: fallbackErr } = await supabase
           .from('orders')
-          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
+          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id, status')
           .in('tracking_number', waseetOrderIds)
+          .in('status', ['delivered', 'completed'])
           .neq('receipt_received', true);
 
         if (!fallbackErr && fallbackOrders?.length > 0) {
@@ -128,11 +144,16 @@ export const useAlWaseetInvoices = () => {
 
         if (updateResult?.success) {
           const actualUpdates = updateResult.results.filter(r => r.updated).length;
+          const failedUpdates = updateResult.results.filter(r => !r.success).length;
+          const concurrentModifications = updateResult.results.filter(r => 
+            r.error && r.errorType === 'concurrent_modification'
+          ).length;
           
-          if (actualUpdates > 0) {
-            localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
-            localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+          // Always mark as processed to avoid infinite loops
+          localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+          localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
 
+          if (actualUpdates > 0) {
             toast({
               title: 'تم تطبيق استلام الفاتورة تلقائياً',
               description: `تم تعليم ${actualUpdates} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
@@ -140,8 +161,17 @@ export const useAlWaseetInvoices = () => {
             });
           }
           
-          if (updateResult.summary.failed > 0) {
-            console.warn(`فشل في تحديث ${updateResult.summary.failed} طلب تلقائياً`);
+          if (failedUpdates > 0) {
+            console.warn(`فشل في تحديث ${failedUpdates} طلب تلقائياً (${concurrentModifications} بسبب تعديل متزامن)`);
+            
+            // If many concurrent modifications, suggest manual review
+            if (concurrentModifications > 0) {
+              toast({
+                title: 'تنبيه: تعديل متزامن',
+                description: `${concurrentModifications} طلب لم يُحدث بسبب تعديل متزامن - تحقق من الطلبات يدوياً`,
+                variant: 'warning'
+              });
+            }
           }
         }
       }
