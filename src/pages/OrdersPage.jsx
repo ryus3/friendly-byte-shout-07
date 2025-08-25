@@ -259,21 +259,17 @@ const OrdersPage = () => {
     };
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     const statusFilter = params.get('status');
     const trackingNumber = params.get('trackingNumber');
     const highlightOrder = params.get('highlight');
-    const pendingSalesParam = params.get('pendingSales');
     
     if (statusFilter) {
       setFilters(prev => ({ ...prev, status: statusFilter, period: 'all', archiveSubStatus: 'all' }));
     }
     if (trackingNumber) {
       setFilters(prev => ({ ...prev, searchTerm: trackingNumber, period: 'all', status: 'all', archiveSubStatus: 'all' }));
-    }
-    if (pendingSalesParam === '1') {
-      setFilters(prev => ({ ...prev, status: 'pendingSales', period: 'all', archiveSubStatus: 'all' }));
     }
     
     if (highlightOrder && orders) {
@@ -421,23 +417,6 @@ const OrdersPage = () => {
         (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
       );
       
-      // Helpers لمنطق المبيعات المعلقة
-      const isExternal = (o) => o?.tracking_number && !String(o.tracking_number).startsWith('RYUS-') && o?.delivery_partner !== 'محلي';
-      const isDeliveredExternal = (o) => {
-        const s = (o?.delivery_status || '').toString().toLowerCase();
-        return /تسليم|مسلم|deliver/i.test(s) || o?.status === 'delivered' || o?.status === 'completed';
-      };
-      const isCancelledExternal = (o) => /رفض|ملغي|إلغاء|reject|cancel/i.test((o?.delivery_status||'')) || o?.status === 'cancelled';
-      const isReturnFinalExternal = (o) => /راجع|مرجع|إرجاع|return/i.test((o?.delivery_status||'')) || o?.status === 'returned' || o?.status === 'returned_in_stock';
-      const isPendingSale = (o) => {
-        if (isExternal(o)) {
-          if (isDeliveredExternal(o) || isCancelledExternal(o) || isReturnFinalExternal(o)) return false;
-          if (o?.status === 'pending') return false; // استبعاد قيد التجهيز
-          return true; // أي حالة قبل التسليم تعتبر معلّقة
-        }
-        return o?.status === 'shipped' || o?.status === 'delivery';
-      };
-
       let matchesStatus = true;
       
       if (status === 'archived') {
@@ -450,8 +429,6 @@ const OrdersPage = () => {
       } else if (status === 'all') {
         // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
         matchesStatus = true;
-      } else if (status === 'pendingSales') {
-        matchesStatus = isPendingSale(order);
       } else {
         // فلترة حسب الحالة المحددة - فقط للطلبات غير المؤرشفة
         matchesStatus = order.status === status;
