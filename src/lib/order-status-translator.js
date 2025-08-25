@@ -126,23 +126,119 @@ const DELIVERY_STATUS_PATTERNS = {
     icon: Truck,
     color: 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
-  // لا يرد
+  // لا يرد - رمادي مطفي
   'لا يرد|ما يرد|عدم الرد|no answer': {
     label: null,
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border border-slate-300/50 shadow-lg shadow-slate-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
-  // مغلق
+  // لا يرد بعد الاتفاق - بنفسجي محمر
+  'لا يرد بعد الاتفاق|no answer after agreement': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-purple-600 to-violet-700 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // مغلق - رمادي أغمق
   'مغلق|مقفل|closed': {
     label: null,
     icon: AlertTriangle,
-    color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-slate-600 to-slate-700 text-white border border-slate-300/50 shadow-lg shadow-slate-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
-  // مؤجل - لون بنفسجي جميل
+  // مغلق بعد الاتفاق - بنفسجي أغمق
+  'مغلق بعد الاتفاق|closed after agreement': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-violet-700 to-purple-800 text-white border border-violet-300/50 shadow-lg shadow-violet-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // مؤجل - بنفسجي هادئ
   'مؤجل|تأجيل|postponed|delayed': {
     label: null,
     icon: Clock,
-    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+    color: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // مؤجل لحين اعادة الطلب لاحقا
+  'مؤجل لحين اعادة الطلب لاحقا|postponed until reorder': {
+    label: null,
+    icon: Clock,
+    color: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // الغاء الطلب - أحمر مهني
+  'الغاء الطلب|cancel order': {
+    label: null,
+    icon: XCircle,
+    color: 'bg-gradient-to-r from-red-600 to-red-700 text-white border border-red-300/50 shadow-lg shadow-red-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // رفض الطلب - أحمر مهني
+  'رفض الطلب|reject order': {
+    label: null,
+    icon: XCircle,
+    color: 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // تم تغيير محافظة الزبون - أزرق مهني
+  'تم تغيير محافظة الزبون|customer province changed': {
+    label: null,
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // مفصول عن الخدمة - رمادي إداري
+  'مفصول عن الخدمة|disconnected from service': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-gray-700 to-slate-800 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // طلب مكرر - رمادي محايد
+  'طلب مكرر|duplicate order': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border border-slate-300/50 shadow-lg shadow-slate-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // مستلم مسبقا - أخضر إيجابي
+  'مستلم مسبقا|already received': {
+    label: null,
+    icon: CheckCircle,
+    color: 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // الرقم غير معرف - برتقالي تقني
+  'الرقم غير معرف|number not identified': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-orange-600 to-orange-700 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // الرقم غير داخل في الخدمة - كهرماني تقني
+  'الرقم غير داخل في الخدمة|number not in service': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-amber-600 to-amber-700 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // العنوان غير دقيق - أزرق خدمي
+  'العنوان غير دقيق|address not accurate': {
+    label: null,
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-blue-500 to-blue-600 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // لم يطلب - رمادي محايد
+  'لم يطلب|did not order': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-slate-500 to-slate-600 text-white border border-slate-300/50 shadow-lg shadow-slate-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // حظر المندوب - أحمر قوي
+  'حظر المندوب|delivery agent blocked': {
+    label: null,
+    icon: XCircle,
+    color: 'bg-gradient-to-r from-rose-700 to-rose-800 text-white border border-rose-300/50 shadow-lg shadow-rose-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // لا يمكن الاتصال بالرقم - كهرماني أغمق
+  'لا يمكن الاتصال بالرقم|cannot contact number': {
+    label: null,
+    icon: AlertTriangle,
+    color: 'bg-gradient-to-r from-amber-700 to-amber-800 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  // تغيير المندوب - أزرق خدمي
+  'تغيير المندوب|change delivery agent': {
+    label: null,
+    icon: Truck,
+    color: 'bg-gradient-to-r from-blue-600 to-blue-700 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 
