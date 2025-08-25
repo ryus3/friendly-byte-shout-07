@@ -104,20 +104,26 @@ export const AlWaseetProvider = ({ children }) => {
       priority 
     });
     
-    // إرسال الإشعار مع البيانات المطلوبة
+    // إرسال الإشعار مع البيانات المطلوبة والتأكد من وجود state_id
     try {
-      createNotification({
+      const notificationData = {
         type: 'alwaseet_status_change',
         title: 'تحديث حالة الطلب',
         message: message,
         priority: priority,
         data: {
-          state_id: String(stateId),
+          state_id: String(stateId), // التأكد من وجود state_id هنا
           tracking_number: trackingNumber,
           status_text: statusText,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          // إضافة البيانات للتوافق مع الإشعارات القديمة
+          order_id: trackingNumber,
+          order_number: trackingNumber
         }
-      });
+      };
+      
+      console.log('📤 بيانات الإشعار المرسلة:', notificationData);
+      createNotification(notificationData);
       
       // تحديث آخر حالة مرسلة
       setLastNotificationStatus(prev => ({

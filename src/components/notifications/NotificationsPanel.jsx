@@ -95,8 +95,16 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      // أولاً، جرب استخراج state_id من البيانات
-      let stateId = notification.data?.state_id;
+      // استخراج state_id من عدة مصادر
+      let stateId = notification.data?.state_id || 
+                   notification.data?.order_status || 
+                   notification.data?.new_status;
+      
+      console.log('🔍 استخراج state_id من الإشعار:', { 
+        stateId, 
+        data: notification.data, 
+        message: notification.message 
+      });
       
       // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
       if (!stateId && notification.message) {
@@ -112,10 +120,13 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
         } else if (notification.message.includes('تم الإلغاء')) {
           stateId = '31';
         }
+        
+        console.log('🔍 state_id المستخرج من النص:', stateId);
       }
       
       if (stateId) {
         const colors = getAlWaseetNotificationColors(stateId);
+        console.log('🎨 تطبيق أيقونة ملونة:', { stateId, colors });
         return <Info {...iconProps} className={`w-4 h-4 ${colors.icon}`} />;
       }
     }
@@ -137,8 +148,16 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   const getNotificationStyles = (notification) => {
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      // أولاً، جرب استخراج state_id من البيانات
-      let stateId = notification.data?.state_id;
+      // استخراج state_id من عدة مصادر
+      let stateId = notification.data?.state_id || 
+                   notification.data?.order_status || 
+                   notification.data?.new_status;
+      
+      console.log('🔍 استخراج state_id من الإشعار للألوان:', { 
+        stateId, 
+        data: notification.data, 
+        message: notification.message 
+      });
       
       // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
       if (!stateId && notification.message) {
@@ -154,11 +173,14 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
         } else if (notification.message.includes('تم الإلغاء')) {
           stateId = '31';
         }
+        
+        console.log('🔍 state_id المستخرج من النص للألوان:', stateId);
       }
       
       if (stateId) {
-        console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, message: notification.message });
-        return getAlWaseetNotificationColors(stateId);
+        const colors = getAlWaseetNotificationColors(stateId);
+        console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, colors, message: notification.message });
+        return colors;
       }
     }
     
