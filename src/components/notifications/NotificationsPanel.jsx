@@ -95,8 +95,28 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      const stateId = notification.data?.state_id || 
-                     notification.message?.match(/^\d+/)?.[0]; // استخراج الرقم من بداية الرسالة
+      // أولاً، جرب استخراج state_id من البيانات
+      let stateId = notification.data?.state_id;
+      
+      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
+      if (!stateId && notification.message) {
+        const trackingMatch = notification.message.match(/^(\d+)\s/);
+        if (trackingMatch) {
+          const trackingNumber = trackingMatch[1];
+          // استخراج state_id من النص بناءً على نوع الرسالة
+          if (notification.message.includes('تم الاستلام من قبل المندوب')) {
+            stateId = '2';
+          } else if (notification.message.includes('تم التسليم بنجاح')) {
+            stateId = '4';
+          } else if (notification.message.includes('تم الإرجاع')) {
+            stateId = '17';
+          } else if (notification.message.includes('العميل لا يرد')) {
+            stateId = '25';
+          } else if (notification.message.includes('تم الإلغاء')) {
+            stateId = '31';
+          }
+        }
+      }
       
       if (stateId) {
         const colors = getAlWaseetNotificationColors(stateId);
@@ -121,8 +141,27 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   const getNotificationStyles = (notification) => {
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      const stateId = notification.data?.state_id || 
-                     notification.message?.match(/^\d+/)?.[0]; // استخراج الرقم من بداية الرسالة
+      // أولاً، جرب استخراج state_id من البيانات
+      let stateId = notification.data?.state_id;
+      
+      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
+      if (!stateId && notification.message) {
+        const trackingMatch = notification.message.match(/^(\d+)\s/);
+        if (trackingMatch) {
+          // استخراج state_id من النص بناءً على نوع الرسالة
+          if (notification.message.includes('تم الاستلام من قبل المندوب')) {
+            stateId = '2';
+          } else if (notification.message.includes('تم التسليم بنجاح')) {
+            stateId = '4';
+          } else if (notification.message.includes('تم الإرجاع')) {
+            stateId = '17';
+          } else if (notification.message.includes('العميل لا يرد')) {
+            stateId = '25';
+          } else if (notification.message.includes('تم الإلغاء')) {
+            stateId = '31';
+          }
+        }
+      }
       
       if (stateId) {
         console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, message: notification.message });

@@ -97,7 +97,42 @@ export const AlWaseetProvider = ({ children }) => {
         priority = statusConfig.priority || 'medium';
     }
     
-    console.log('✅ إرسال إشعار الوسيط:', { 
+    console.log('✅ إرسال إشعار الوسيط:', {
+      trackingNumber, 
+      stateId, 
+      message, 
+      priority 
+    });
+    
+    // إرسال الإشعار مع البيانات المطلوبة
+    try {
+      createNotification({
+        type: 'alwaseet_status_change',
+        title: 'تحديث حالة الطلب',
+        message: message,
+        priority: priority,
+        data: {
+          state_id: String(stateId),
+          tracking_number: trackingNumber,
+          status_text: statusText,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      // تحديث آخر حالة مرسلة
+      setLastNotificationStatus(prev => ({
+        ...prev,
+        [trackingKey]: String(stateId)
+      }));
+      
+      console.log('🎯 تم إرسال إشعار الوسيط بنجاح');
+      
+    } catch (error) {
+      console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
+    }
+  }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
+      console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
+    }
       type: 'alwaseet_status_change', 
       trackingNumber, 
       stateId, 
