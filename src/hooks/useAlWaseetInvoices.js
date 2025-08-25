@@ -107,39 +107,43 @@ export const useAlWaseetInvoices = () => {
         return;
       }
 
-      const { data: updatedRows, error: updateErr } = await supabase
-        .from('orders')
-        .update({
-          receipt_received: true,
-          delivery_partner: 'alwaseet',
-          delivery_partner_invoice_id: String(target.id),
-          delivery_partner_invoice_date: invoiceDate,
-          invoice_received_at: new Date().toISOString(),
-          invoice_received_by: user?.id || user?.user_id || null
-        })
-        .in('id', updateIds)
-        .select('id');
-
-      if (updateErr) {
-        console.warn('Auto-process update failed:', updateErr?.message || updateErr);
-        toast({
-          title: 'تعذر تعليم استلام الفاتورة تلقائياً',
-          description: 'تحقق من الصلاحيات أو أعد المحاولة من تبويب الفواتير.',
-          variant: 'destructive'
+      if (updateIds.length > 0) {
+        // Use Edge Function for automatic processing
+        const { data: updateResult, error: updateErr } = await supabase.functions.invoke('mark-invoice-received', {
+          body: {
+            orderIds: updateIds,
+            invoiceId: target.id
+          }
         });
-        return;
-      }
 
-      const updatedCount = updatedRows?.length || 0;
-      if (updatedCount > 0) {
-        localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
-        localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+        if (updateErr) {
+          console.warn('Auto-process update failed:', updateErr?.message || updateErr);
+          toast({
+            title: 'تعذر تعليم استلام الفاتورة تلقائياً',
+            description: 'تحقق من الصلاحيات أو أعد المحاولة من تبويب الفواتير.',
+            variant: 'destructive'
+          });
+          return;
+        }
 
-        toast({
-          title: 'تم تطبيق استلام الفاتورة تلقائياً',
-          description: `تم تعليم ${updatedCount} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
-          variant: 'success'
-        });
+        if (updateResult?.success) {
+          const actualUpdates = updateResult.results.filter(r => r.updated).length;
+          
+          if (actualUpdates > 0) {
+            localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+            localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
+
+            toast({
+              title: 'تم تطبيق استلام الفاتورة تلقائياً',
+              description: `تم تعليم ${actualUpdates} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
+              variant: 'success'
+            });
+          }
+          
+          if (updateResult.summary.failed > 0) {
+            console.warn(`فشل في تحديث ${updateResult.summary.failed} طلب تلقائياً`);
+          }
+        }
       }
     } catch (e) {
       console.warn('Auto-process latest invoice failed:', e?.message || e);
@@ -253,116 +257,104 @@ export const useAlWaseetInvoices = () => {
 
     setLoading(true);
     try {
-      // 1) Confirm invoice on Al-Waseet
+      // 1) Confirm invoice on شركة التوصيل
       await AlWaseetAPI.receiveInvoice(token, invoiceId);
 
       // 2) Fetch invoice details (orders + invoice meta)
       const invoiceData = await fetchInvoiceOrders(invoiceId);
       const waseetOrders = invoiceData?.orders || [];
-      const invoiceMeta = invoiceData?.invoice?.[0] || null;
-      const invoiceDate = invoiceMeta?.updated_at || invoiceMeta?.created_at || new Date().toISOString();
 
-      // 3) Map Waseet order IDs to strings for local matching
-      const waseetOrderIds = waseetOrders.map(o => String(o.id));
-
-      // 4) Fetch matching local orders
-      let updatedOrdersCount = 0;
-      let profitsUpdatedCount = 0;
-      let missingMappingsCount = 0;
-
-      if (waseetOrderIds.length > 0) {
-        // Try primary matching by delivery_partner_order_id
-        const { data: localOrders, error: localOrdersError } = await supabase
+      // 3) Collect matching local order IDs
+      const orderIds = [];
+      
+      for (const waseetOrder of waseetOrders) {
+        // Try primary matching by delivery_partner_order_id first
+        let { data: localOrders } = await supabase
           .from('orders')
-          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
-          .in('delivery_partner_order_id', waseetOrderIds);
-
-        if (localOrdersError) {
-          console.error('Error fetching local orders for invoice linking:', localOrdersError);
-        }
-
-        let matchedOrders = localOrders || [];
-
-        // Fallback matching using tracking_number/qr_id if no direct matches
-        if (matchedOrders.length === 0) {
-          const { data: fallbackOrders, error: fallbackErr } = await supabase
-            .from('orders')
-            .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id')
-            .in('tracking_number', waseetOrderIds)
-            .neq('receipt_received', true);
-
-          if (!fallbackErr && fallbackOrders?.length > 0) {
-            matchedOrders = fallbackOrders;
+          .select('id, order_number, delivery_partner_order_id')
+          .eq('delivery_partner_order_id', waseetOrder.id.toString())
+          .eq('receipt_received', false);
+        
+        // Fallback matching using tracking_number if no direct matches
+        if (!localOrders || localOrders.length === 0) {
+          if (waseetOrder.tracking_number) {
+            const { data: trackingOrders } = await supabase
+              .from('orders')
+              .select('id, order_number, delivery_partner_order_id')
+              .or(`tracking_number.eq.${waseetOrder.tracking_number},qr_id.eq.${waseetOrder.tracking_number}`)
+              .eq('receipt_received', false);
             
-            // Update delivery_partner_order_id for fallback matches
-            for (const order of matchedOrders) {
-              const waseetOrder = waseetOrders.find(w => String(w.id) === order.tracking_number);
-              if (waseetOrder) {
-                await supabase
-                  .from('orders')
-                  .update({ delivery_partner_order_id: String(waseetOrder.id) })
-                  .eq('id', order.id);
+            if (trackingOrders && trackingOrders.length > 0) {
+              localOrders = trackingOrders;
+              
+              // Update delivery_partner_order_id for fallback matches
+              for (const order of trackingOrders) {
+                if (!order.delivery_partner_order_id) {
+                  await supabase
+                    .from('orders')
+                    .update({ delivery_partner_order_id: waseetOrder.id.toString() })
+                    .eq('id', order.id);
+                }
               }
             }
           }
         }
+        
+        if (localOrders && localOrders.length > 0) {
+          orderIds.push(...localOrders.map(order => order.id));
+        }
+      }
 
-        // Orders that couldn't be matched locally
-        const matchedIds = new Set(matchedOrders.map(o => String(o.delivery_partner_order_id) || o.tracking_number));
-        missingMappingsCount = waseetOrderIds.filter(id => !matchedIds.has(id)).length;
-
-        // 5) Update matched local orders to mark receipt received and attach invoice meta
-        if (matchedOrders && matchedOrders.length > 0) {
-          const { data: updated, error: updateError } = await supabase
-            .from('orders')
-            .update({
-              receipt_received: true,
-              delivery_partner: 'alwaseet',
-              delivery_partner_invoice_id: String(invoiceId),
-              delivery_partner_invoice_date: invoiceDate,
-              invoice_received_at: new Date().toISOString(),
-              invoice_received_by: user?.id || user?.user_id || null
-            })
-            .in('id', matchedOrders.map(o => o.id))
-            .select('id');
-
-          if (updateError) {
-            console.error('Error updating local orders with invoice receipt:', updateError);
-          } else {
-            updatedOrdersCount = updated?.length || 0;
+      if (orderIds.length > 0) {
+        // Use Edge Function to update orders
+        const { data: updateResult, error } = await supabase.functions.invoke('mark-invoice-received', {
+          body: {
+            orderIds,
+            invoiceId
           }
-
-          // 6) Try updating related profits status to 'invoice_received' if not settled
-          const localOrderIds = matchedOrders.map(o => o.id);
-          if (localOrderIds.length > 0) {
-            const { data: updatedProfits, error: profitsError } = await supabase
-              .from('profits')
-              .update({ status: 'invoice_received', updated_at: new Date().toISOString() })
-              .in('order_id', localOrderIds)
-              .neq('status', 'settled')
-              .select('id');
-
-            if (profitsError) {
-              console.warn('Skipping profits update due to RLS/permissions or other error:', profitsError.message);
-            } else {
-              profitsUpdatedCount = updatedProfits?.length || 0;
-            }
+        });
+        
+        if (error) {
+          console.error('خطأ في Edge Function:', error);
+          toast({
+            title: "خطأ",
+            description: "حدث خطأ أثناء تحديث الطلبات",
+            variant: "destructive"
+          });
+        } else if (updateResult?.success) {
+          const { summary } = updateResult;
+          const actualUpdates = updateResult.results.filter(r => r.updated).length;
+          
+          if (actualUpdates > 0) {
+            toast({
+              title: "تم استقبال الفاتورة",
+              description: `تم تحديث ${actualUpdates} طلب${actualUpdates > 1 ? 'اً' : ''} كمستلم الفاتورة`,
+              variant: "success"
+            });
+          } else {
+            toast({
+              title: "تم استقبال الفاتورة",
+              description: "جميع الطلبات كانت مستلمة الفاتورة مسبقاً",
+              variant: "info"
+            });
+          }
+          
+          if (summary.failed > 0) {
+            console.warn(`فشل في تحديث ${summary.failed} طلب`);
           }
         }
+      } else {
+        toast({
+          title: "تم استقبال الفاتورة",
+          description: "لم يتم العثور على طلبات محلية مطابقة",
+          variant: "warning"
+        });
       }
 
       // 7) Update invoice status locally for UI
       setInvoices(prev => prev.map(inv =>
         inv.id === invoiceId ? { ...inv, status: 'تم الاستلام من قبل التاجر' } : inv
       ));
-
-      // 8) User feedback
-      const toastVariant = updatedOrdersCount > 0 ? 'success' : 'warning';
-      toast({
-        title: 'تم تأكيد استلام الفاتورة',
-        description: `تم تعليم ${updatedOrdersCount} طلب كمستلم للفاتورة${missingMappingsCount ? `، وتعذر ربط ${missingMappingsCount} طلب` : ''}${profitsUpdatedCount ? `، وتحديث ${profitsUpdatedCount} سجل أرباح` : ''}.`,
-        variant: toastVariant
-      });
 
       // 9) Refresh invoices to get latest
       await fetchInvoices();
