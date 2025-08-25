@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Perform the update with precise conditions to avoid trigger conflicts
+          // Perform the update using minimal WHERE to avoid trigger write conflicts
           const { data, error } = await supabaseClient
             .from('orders')
             .update({
@@ -100,9 +100,8 @@ Deno.serve(async (req) => {
               receipt_received_by: '91484496-b887-44f7-9e5d-be9db5567604'
             })
             .eq('id', orderId)
-            .eq('receipt_received', false)
-            .in('status', ['delivered', 'completed'])
             .select('id, order_number, status, receipt_received');
+
 
           if (error) throw error;
 
@@ -163,6 +162,17 @@ Deno.serve(async (req) => {
           }
           
           if (retryCount >= 3) {
+            // Last-chance minimal update to avoid trigger race
+            try {
+              await supabaseClient
+                .from('orders')
+                .update({
+                  receipt_received: true,
+                  receipt_received_at: new Date().toISOString(),
+                  receipt_received_by: '91484496-b887-44f7-9e5d-be9db5567604'
+                })
+                .eq('id', orderId);
+            } catch (_) {}
             // Final check: see if the order was actually updated despite the error
             const { data: finalCheck } = await supabaseClient
               .from('orders')
