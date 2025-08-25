@@ -91,17 +91,18 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Perform the update with precise conditions
+          // Perform the update with precise conditions to avoid trigger conflicts
           const { data, error } = await supabaseClient
             .from('orders')
             .update({
               receipt_received: true,
-              receipt_received_at: new Date().toISOString()
+              receipt_received_at: new Date().toISOString(),
+              receipt_received_by: '91484496-b887-44f7-9e5d-be9db5567604'
             })
             .eq('id', orderId)
             .eq('receipt_received', false)
             .in('status', ['delivered', 'completed'])
-            .select('id, order_number, status');
+            .select('id, order_number, status, receipt_received');
 
           if (error) throw error;
 
@@ -116,14 +117,33 @@ Deno.serve(async (req) => {
             });
             successCount++;
           } else {
-            console.log(`Order ${currentOrder.order_number} update returned no rows - may have been updated by another process`);
-            results.push({
-              orderId,
-              orderNumber: currentOrder.order_number,
-              success: true,
-              updated: false,
-              reason: 'No update needed or concurrent modification'
-            });
+            // Post-check: verify if the order was actually updated by trigger
+            const { data: postCheck } = await supabaseClient
+              .from('orders')
+              .select('id, order_number, receipt_received')
+              .eq('id', orderId)
+              .single();
+            
+            if (postCheck && postCheck.receipt_received === true) {
+              console.log(`Order ${currentOrder.order_number} was updated by trigger - considering successful`);
+              results.push({
+                orderId,
+                orderNumber: currentOrder.order_number,
+                success: true,
+                updated: true,
+                reason: 'Updated by database trigger'
+              });
+              successCount++;
+            } else {
+              console.log(`Order ${currentOrder.order_number} update returned no rows - may have been updated by another process`);
+              results.push({
+                orderId,
+                orderNumber: currentOrder.order_number,
+                success: true,
+                updated: false,
+                reason: 'No update needed or concurrent modification'
+              });
+            }
           }
           
           success = true;
@@ -143,16 +163,35 @@ Deno.serve(async (req) => {
           }
           
           if (retryCount >= 3) {
-            results.push({
-              orderId,
-              success: false,
-              error: error.message,
-              errorType: error.message.includes('tuple to be updated') ? 'concurrent_modification' : 'other'
-            });
-            errorCount++;
+            // Final check: see if the order was actually updated despite the error
+            const { data: finalCheck } = await supabaseClient
+              .from('orders')
+              .select('id, order_number, receipt_received')
+              .eq('id', orderId)
+              .single();
+            
+            if (finalCheck && finalCheck.receipt_received === true) {
+              console.log(`Order ${orderId} was actually updated despite error - considering successful`);
+              results.push({
+                orderId,
+                orderNumber: finalCheck.order_number,
+                success: true,
+                updated: true,
+                reason: 'Eventually updated despite errors'
+              });
+              successCount++;
+            } else {
+              results.push({
+                orderId,
+                success: false,
+                error: error.message,
+                errorType: error.message.includes('tuple to be updated') ? 'concurrent_modification' : 'other'
+              });
+              errorCount++;
+            }
           } else {
-            // Wait before retry
-            await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+            // Exponential backoff for better retry handling
+            await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, retryCount - 1)));
           }
         }
       }

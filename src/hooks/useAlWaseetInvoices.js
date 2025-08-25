@@ -76,50 +76,66 @@ export const useAlWaseetInvoices = () => {
       const waseetOrderIds = waseetOrders.map(o => String(o.id));
       if (waseetOrderIds.length === 0) return;
 
-      // Try primary matching by delivery_partner_order_id for delivered orders only
-      const { data: localOrders, error: localErr } = await supabase
-        .from('orders')
-        .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id, status')
-        .in('delivery_partner_order_id', waseetOrderIds)
-        .in('status', ['delivered', 'completed'])
-        .neq('receipt_received', true);
+      // First, get merchant orders to map invoice order IDs to QR IDs
+      const merchantOrders = await AlWaseetAPI.getMerchantOrders(token);
+      const orderIdToQrMap = new Map();
+      merchantOrders.forEach(mo => {
+        if (mo.id && mo.qr_id) {
+          orderIdToQrMap.set(String(mo.id), String(mo.qr_id));
+        }
+      });
 
-      if (localErr) {
-        console.warn('Error fetching local orders for auto-process:', localErr);
-        return;
-      }
+      const matchedOrderIds = [];
 
-      let matchedOrders = localOrders || [];
+      // Process each invoice order
+      for (const waseetOrder of waseetOrders) {
+        const orderId = String(waseetOrder.id);
+        const qrId = orderIdToQrMap.get(orderId);
 
-      // Fallback matching using tracking_number/qr_id if no direct matches
-      if (matchedOrders.length === 0) {
-        const { data: fallbackOrders, error: fallbackErr } = await supabase
+        // Try primary matching by delivery_partner_order_id for delivered orders only
+        let { data: localOrders } = await supabase
           .from('orders')
-          .select('id, order_number, delivery_partner_order_id, delivery_partner, receipt_received, tracking_number, qr_id, status')
-          .in('tracking_number', waseetOrderIds)
+          .select('id, delivery_partner_order_id')
+          .eq('delivery_partner_order_id', orderId)
           .in('status', ['delivered', 'completed'])
           .neq('receipt_received', true);
 
-        if (!fallbackErr && fallbackOrders?.length > 0) {
-          matchedOrders = fallbackOrders;
-          
-          // Update delivery_partner_order_id for fallback matches
-          for (const order of matchedOrders) {
-            const waseetOrder = waseetOrders.find(w => String(w.id) === order.tracking_number);
-            if (waseetOrder) {
-              await supabase
-                .from('orders')
-                .update({ delivery_partner_order_id: String(waseetOrder.id) })
-                .eq('id', order.id);
+        // Fallback matching using QR ID if no direct matches
+        if ((!localOrders || localOrders.length === 0) && qrId) {
+          const { data: qrOrders } = await supabase
+            .from('orders')
+            .select('id, delivery_partner_order_id, tracking_number')
+            .or(`tracking_number.eq.${qrId},qr_id.eq.${qrId}`)
+            .in('status', ['delivered', 'completed'])
+            .neq('receipt_received', true);
+
+          if (qrOrders && qrOrders.length > 0) {
+            localOrders = qrOrders;
+            
+            // Update delivery_partner_order_id for future matching
+            for (const order of qrOrders) {
+              if (!order.delivery_partner_order_id) {
+                await supabase
+                  .from('orders')
+                  .update({ delivery_partner_order_id: orderId })
+                  .eq('id', order.id);
+              }
             }
           }
         }
+
+        if (localOrders && localOrders.length > 0) {
+          matchedOrderIds.push(...localOrders.map(o => o.id));
+        }
       }
 
-      const updateIds = matchedOrders.map(o => o.id);
+      const updateIds = matchedOrderIds;
 
       if (updateIds.length === 0) {
-        // لا نعلم الفاتورة كمُعالجة إذا لم نجد طلبات محلية للتحديث
+        console.log(`No local orders found to update for invoice ${target.id}`);
+        // Mark as processed even if no orders found to avoid infinite processing
+        localStorage.setItem(LAST_PROCESSED_ID_KEY, String(target.id));
+        localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
         return;
       }
 
@@ -154,6 +170,7 @@ export const useAlWaseetInvoices = () => {
           localStorage.setItem(LAST_PROCESSED_AT_KEY, new Date().toISOString());
 
           if (actualUpdates > 0) {
+            console.log(`✅ Auto-processed invoice ${target.id}: ${actualUpdates} orders marked as received`);
             toast({
               title: 'تم تطبيق استلام الفاتورة تلقائياً',
               description: `تم تعليم ${actualUpdates} طلب من فاتورة #${target.id} كمستلم للفاتورة`,
@@ -294,37 +311,47 @@ export const useAlWaseetInvoices = () => {
       const invoiceData = await fetchInvoiceOrders(invoiceId);
       const waseetOrders = invoiceData?.orders || [];
 
-      // 3) Collect matching local order IDs
+      // 3) Get merchant orders to map invoice order IDs to QR IDs
+      const merchantOrders = await AlWaseetAPI.getMerchantOrders(token);
+      const orderIdToQrMap = new Map();
+      merchantOrders.forEach(mo => {
+        if (mo.id && mo.qr_id) {
+          orderIdToQrMap.set(String(mo.id), String(mo.qr_id));
+        }
+      });
+
+      // 4) Collect matching local order IDs
       const orderIds = [];
       
       for (const waseetOrder of waseetOrders) {
+        const orderId = String(waseetOrder.id);
+        const qrId = orderIdToQrMap.get(orderId);
+
         // Try primary matching by delivery_partner_order_id first
         let { data: localOrders } = await supabase
           .from('orders')
           .select('id, order_number, delivery_partner_order_id')
-          .eq('delivery_partner_order_id', waseetOrder.id.toString())
+          .eq('delivery_partner_order_id', orderId)
           .eq('receipt_received', false);
         
-        // Fallback matching using tracking_number if no direct matches
-        if (!localOrders || localOrders.length === 0) {
-          if (waseetOrder.tracking_number) {
-            const { data: trackingOrders } = await supabase
-              .from('orders')
-              .select('id, order_number, delivery_partner_order_id')
-              .or(`tracking_number.eq.${waseetOrder.tracking_number},qr_id.eq.${waseetOrder.tracking_number}`)
-              .eq('receipt_received', false);
+        // Fallback matching using QR ID if no direct matches
+        if ((!localOrders || localOrders.length === 0) && qrId) {
+          const { data: qrOrders } = await supabase
+            .from('orders')
+            .select('id, order_number, delivery_partner_order_id, tracking_number')
+            .or(`tracking_number.eq.${qrId},qr_id.eq.${qrId}`)
+            .eq('receipt_received', false);
+          
+          if (qrOrders && qrOrders.length > 0) {
+            localOrders = qrOrders;
             
-            if (trackingOrders && trackingOrders.length > 0) {
-              localOrders = trackingOrders;
-              
-              // Update delivery_partner_order_id for fallback matches
-              for (const order of trackingOrders) {
-                if (!order.delivery_partner_order_id) {
-                  await supabase
-                    .from('orders')
-                    .update({ delivery_partner_order_id: waseetOrder.id.toString() })
-                    .eq('id', order.id);
-                }
+            // Update delivery_partner_order_id for future matching
+            for (const order of qrOrders) {
+              if (!order.delivery_partner_order_id) {
+                await supabase
+                  .from('orders')
+                  .update({ delivery_partner_order_id: orderId })
+                  .eq('id', order.id);
               }
             }
           }
@@ -356,15 +383,16 @@ export const useAlWaseetInvoices = () => {
           const actualUpdates = updateResult.results.filter(r => r.updated).length;
           
           if (actualUpdates > 0) {
+            console.log(`✅ Manual invoice receipt: ${actualUpdates} orders updated for invoice ${invoiceId}`);
             toast({
               title: "تم استقبال الفاتورة",
-              description: `تم تحديث ${actualUpdates} طلب${actualUpdates > 1 ? 'اً' : ''} كمستلم الفاتورة`,
+              description: `تم العثور على ${orderIds.length} طلب محلي وتم تحديث ${actualUpdates} طلب كمستلم الفاتورة`,
               variant: "success"
             });
           } else {
             toast({
               title: "تم استقبال الفاتورة",
-              description: "جميع الطلبات كانت مستلمة الفاتورة مسبقاً",
+              description: `تم العثور على ${orderIds.length} طلب محلي - جميعها كانت مستلمة الفاتورة مسبقاً`,
               variant: "info"
             });
           }
@@ -374,9 +402,10 @@ export const useAlWaseetInvoices = () => {
           }
         }
       } else {
+        console.log(`⚠️ No local orders found for invoice ${invoiceId}`);
         toast({
           title: "تم استقبال الفاتورة",
-          description: "لم يتم العثور على طلبات محلية مطابقة",
+          description: "لم يتم العثور على طلبات محلية مطابقة - تأكد من حالة الطلبات",
           variant: "warning"
         });
       }

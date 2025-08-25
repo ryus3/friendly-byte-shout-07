@@ -78,6 +78,10 @@ export const AlWaseetProvider = ({ children }) => {
     fetchToken();
   }, [fetchToken]);
 
+  // Background invoice automation state
+  const [backgroundCheckEnabled, setBackgroundCheckEnabled] = useLocalStorage('bg_invoice_check', true);
+  const [lastBackgroundCheck, setLastBackgroundCheck] = useState(null);
+
   // Auto-sync will be set up after functions are defined
 
   const login = useCallback(async (username, password, partner = 'alwaseet') => {
@@ -384,6 +388,147 @@ export const AlWaseetProvider = ({ children }) => {
       return { corrected: 0, linked: 0, updated: 0 };
     }
   }, [token, correctionComplete, orderStatusesMap, loadOrderStatuses, setCorrectionComplete]);
+
+  // Background invoice processing function
+  const processReceivedInvoicesInBackground = useCallback(async () => {
+    try {
+      if (!token || !isLoggedIn || activePartner !== 'alwaseet' || !backgroundCheckEnabled) return;
+      
+      console.log('🔄 Background invoice check running...');
+      
+      // Get all invoices to check for received ones
+      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+      const receivedInvoices = invoicesData.filter(inv => inv.status === 'تم الاستلام من قبل التاجر');
+      
+      if (receivedInvoices.length === 0) {
+        console.log('📋 No received invoices to process');
+        return;
+      }
+      
+      // Process each received invoice
+      for (const invoice of receivedInvoices) {
+        const lastProcessedId = localStorage.getItem('waseet:lastProcessedInvoiceId');
+        const lastProcessedAt = localStorage.getItem('waseet:lastProcessedAt');
+        
+        // Skip if recently processed (within 10 minutes)
+        if (String(invoice.id) === String(lastProcessedId) && lastProcessedAt) {
+          const lastTime = new Date(lastProcessedAt);
+          const now = new Date();
+          const minutesSince = (now - lastTime) / (1000 * 60);
+          if (minutesSince < 10) continue;
+        }
+        
+        console.log(`📋 Processing invoice ${invoice.id} in background...`);
+        
+        // Get invoice orders via ID, then map to merchant orders to get QR IDs
+        const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
+        const invoiceOrders = invoiceData?.orders || [];
+        
+        if (invoiceOrders.length === 0) continue;
+        
+        // Get merchant orders to map IDs to QR IDs
+        const merchantOrders = await AlWaseetAPI.getMerchantOrders(token);
+        const orderIdToQrMap = new Map();
+        merchantOrders.forEach(mo => {
+          if (mo.id && mo.qr_id) {
+            orderIdToQrMap.set(String(mo.id), String(mo.qr_id));
+          }
+        });
+        
+        const localOrderIds = [];
+        
+        for (const invoiceOrder of invoiceOrders) {
+          const orderId = String(invoiceOrder.id);
+          const qrId = orderIdToQrMap.get(orderId);
+          
+          // Try direct matching first
+          let { data: localOrders } = await supabase
+            .from('orders')
+            .select('id, delivery_partner_order_id')
+            .eq('delivery_partner_order_id', orderId)
+            .in('status', ['delivered', 'completed'])
+            .neq('receipt_received', true);
+          
+          // Try QR matching if no direct match
+          if ((!localOrders || localOrders.length === 0) && qrId) {
+            const { data: qrOrders } = await supabase
+              .from('orders')
+              .select('id, delivery_partner_order_id, tracking_number')
+              .or(`tracking_number.eq.${qrId},qr_id.eq.${qrId}`)
+              .in('status', ['delivered', 'completed'])
+              .neq('receipt_received', true);
+            
+            if (qrOrders && qrOrders.length > 0) {
+              localOrders = qrOrders;
+              
+              // Update delivery_partner_order_id for future matching
+              for (const order of qrOrders) {
+                if (!order.delivery_partner_order_id) {
+                  await supabase
+                    .from('orders')
+                    .update({ delivery_partner_order_id: orderId })
+                    .eq('id', order.id);
+                }
+              }
+            }
+          }
+          
+          if (localOrders && localOrders.length > 0) {
+            localOrderIds.push(...localOrders.map(o => o.id));
+          }
+        }
+        
+        if (localOrderIds.length > 0) {
+          console.log(`📋 Found ${localOrderIds.length} orders to update for invoice ${invoice.id}`);
+          
+          // Use Edge Function to mark orders as received
+          const { data: updateResult, error } = await supabase.functions.invoke('mark-invoice-received', {
+            body: {
+              orderIds: localOrderIds,
+              invoiceId: invoice.id
+            }
+          });
+          
+          if (!error && updateResult?.success) {
+            const actualUpdates = updateResult.results.filter(r => r.updated).length;
+            if (actualUpdates > 0) {
+              console.log(`✅ Background processed invoice ${invoice.id}: ${actualUpdates} orders marked as received`);
+            }
+            
+            // Mark as processed to avoid infinite loops
+            localStorage.setItem('waseet:lastProcessedInvoiceId', String(invoice.id));
+            localStorage.setItem('waseet:lastProcessedAt', new Date().toISOString());
+          } else {
+            console.warn(`❌ Background processing failed for invoice ${invoice.id}:`, error?.message || 'Unknown error');
+          }
+        }
+      }
+      
+      setLastBackgroundCheck(new Date().toISOString());
+    } catch (error) {
+      console.warn('Background invoice processing error:', error?.message || error);
+    }
+  }, [token, isLoggedIn, activePartner, backgroundCheckEnabled]);
+
+  // Background timer for invoice processing
+  useEffect(() => {
+    if (!token || !isLoggedIn || activePartner !== 'alwaseet' || !backgroundCheckEnabled) return;
+    
+    // Initial check after 5 seconds
+    const initialTimer = setTimeout(() => {
+      processReceivedInvoicesInBackground();
+    }, 5000);
+    
+    // Periodic check every 2 minutes
+    const intervalTimer = setInterval(() => {
+      processReceivedInvoicesInBackground();
+    }, 120000); // 2 minutes
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(intervalTimer);
+    };
+  }, [token, isLoggedIn, activePartner, backgroundCheckEnabled, processReceivedInvoicesInBackground]);
 
   // ربط معرفات الوسيط للطلبات الموجودة لدينا عبر الـ tracking_number
   const linkRemoteIdsForExistingOrders = useCallback(async () => {
@@ -1409,6 +1554,10 @@ export const AlWaseetProvider = ({ children }) => {
     setAutoSyncEnabled,
     correctionComplete,
     setCorrectionComplete,
+    backgroundCheckEnabled,
+    setBackgroundCheckEnabled,
+    lastBackgroundCheck,
+    processReceivedInvoicesInBackground,
   };
 
   return (
