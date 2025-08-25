@@ -85,11 +85,14 @@ const OrderCard = ({
   const canDelete = React.useMemo(() => {
     if (isLocalOrder) {
       return order.status === 'pending';
-    } else {
-      // للطلبات الخارجية، استخدم النظام الجديد
-      return order.status === 'pending';
     }
-  }, [isLocalOrder, order.status]);
+    // الطلبات الخارجية: مسموح قبل استلام المندوب (فعال/في انتظار الاستلام)
+    const deliveryStatus = (order.delivery_status || '').toLowerCase();
+    return order.status === 'pending' ||
+           deliveryStatus.includes('فعال') ||
+           deliveryStatus.includes('active') ||
+           deliveryStatus.includes('في انتظار استلام المندوب');
+  }, [isLocalOrder, order.status, order.delivery_status]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {

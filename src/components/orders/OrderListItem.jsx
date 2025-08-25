@@ -89,10 +89,10 @@ const OrderListItem = ({
     if (isLocalOrder) {
       return order.status === 'pending';
     } else {
-      // للطلبات الخارجية، استخدم النظام الجديد
-      return order.status === 'pending';
+      // الطلبات الخارجية: مسموح قبل الاستلام من المندوب (فعال/في انتظار الاستلام)
+      return isBeforePickup(order);
     }
-  }, [isLocalOrder, order.status]);
+  }, [isLocalOrder, order.status, order.delivery_status]);
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
