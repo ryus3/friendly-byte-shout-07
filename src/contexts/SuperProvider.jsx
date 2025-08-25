@@ -1157,9 +1157,11 @@ export const SuperProvider = ({ children }) => {
         }));
         
         // حذف من قاعدة البيانات
+        console.log('🗑️ محاولة حذف من قاعدة البيانات:', orderIds);
         const { error } = await supabase.from('orders').delete().in('id', orderIds);
         if (error) {
           console.error('❌ فشل حذف orders:', error);
+          console.error('❌ تفاصيل الخطأ:', { message: error.message, details: error.details, hint: error.hint });
           // إعادة محاولة مرة واحدة
           setTimeout(async () => {
             try {

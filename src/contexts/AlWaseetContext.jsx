@@ -1228,7 +1228,6 @@ export const AlWaseetProvider = ({ children }) => {
   useEffect(() => {
     if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
       console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
-      setSyncMode('initial');
       performSyncWithCountdown();
     }
   }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
@@ -1354,9 +1353,8 @@ export const AlWaseetProvider = ({ children }) => {
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
         }
 
-        // بدء المزامنة مع العد التنازلي
-        console.log('🔄 بدء المزامنة الأولية مع العد التنازلي...');
-        performSyncWithCountdown();
+        // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
+        console.log('✅ تم الانتهاء من المهام الأولية');
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }
