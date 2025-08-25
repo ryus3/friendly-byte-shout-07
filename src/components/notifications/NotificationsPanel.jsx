@@ -31,11 +31,81 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     return allowedTypes.includes(notification.type);
   });
 
-  // أيقونات الإشعارات
-  const getNotificationIcon = (type, priority) => {
+  // دالة الحصول على ألوان إشعارات الوسيط حسب state_id
+  const getAlWaseetNotificationColors = (stateId) => {
+    console.log('🎨 تطبيق لون حسب state_id:', stateId);
+    
+    switch (String(stateId)) {
+      case '2': // تم الاستلام من قبل المندوب
+        return {
+          bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30',
+          border: 'border-r-blue-500',
+          text: 'text-blue-800 dark:text-blue-200',
+          icon: 'text-blue-600',
+          dot: 'bg-blue-500'
+        };
+      case '4': // تم التسليم بنجاح
+        return {
+          bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30',
+          border: 'border-r-green-500',
+          text: 'text-green-800 dark:text-green-200',
+          icon: 'text-green-600',
+          dot: 'bg-green-500'
+        };
+      case '17': // تم الإرجاع
+        return {
+          bg: 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30',
+          border: 'border-r-orange-500',
+          text: 'text-orange-800 dark:text-orange-200',
+          icon: 'text-orange-600',
+          dot: 'bg-orange-500'
+        };
+      case '25':
+      case '26': // العميل لا يرد
+        return {
+          bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
+          border: 'border-r-yellow-500',
+          text: 'text-yellow-800 dark:text-yellow-200',
+          icon: 'text-yellow-600',
+          dot: 'bg-yellow-500'
+        };
+      case '31':
+      case '32': // تم الإلغاء
+        return {
+          bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
+          border: 'border-r-red-500',
+          text: 'text-red-800 dark:text-red-200',
+          icon: 'text-red-600',
+          dot: 'bg-red-500'
+        };
+      default:
+        return {
+          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
+          border: 'border-r-gray-400',
+          text: 'text-gray-800 dark:text-gray-200',
+          icon: 'text-gray-600',
+          dot: 'bg-gray-400'
+        };
+    }
+  };
+
+  // أيقونات الإشعارات مع الألوان
+  const getNotificationIcon = (notification) => {
     const iconProps = { className: "w-4 h-4" };
     
-    switch (type) {
+    // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
+    if (notification.type === 'alwaseet_status_change') {
+      const stateId = notification.data?.state_id || 
+                     notification.message?.match(/^\d+/)?.[0]; // استخراج الرقم من بداية الرسالة
+      
+      if (stateId) {
+        const colors = getAlWaseetNotificationColors(stateId);
+        return <Info {...iconProps} className={`w-4 h-4 ${colors.icon}`} />;
+      }
+    }
+    
+    // الأيقونات العادية للأنواع الأخرى
+    switch (notification.type) {
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
       case 'warning':
@@ -47,15 +117,45 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان الأولوية
-  const getPriorityColor = (priority) => {
-    switch (priority) {
+  // ألوان الإشعار الكاملة
+  const getNotificationStyles = (notification) => {
+    // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
+    if (notification.type === 'alwaseet_status_change') {
+      const stateId = notification.data?.state_id || 
+                     notification.message?.match(/^\d+/)?.[0]; // استخراج الرقم من بداية الرسالة
+      
+      if (stateId) {
+        console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, message: notification.message });
+        return getAlWaseetNotificationColors(stateId);
+      }
+    }
+    
+    // الألوان العادية للأنواع الأخرى
+    switch (notification.priority) {
       case 'high':
-        return 'border-red-500 bg-red-50 dark:bg-red-950/30';
+        return {
+          bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
+          border: 'border-r-red-500',
+          text: 'text-red-800 dark:text-red-200',
+          icon: 'text-red-600',
+          dot: 'bg-red-500'
+        };
       case 'medium':
-        return 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/30';
+        return {
+          bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
+          border: 'border-r-yellow-500',
+          text: 'text-yellow-800 dark:text-yellow-200',
+          icon: 'text-yellow-600',
+          dot: 'bg-yellow-500'
+        };
       default:
-        return 'border-gray-200 bg-gray-50 dark:bg-gray-950/30';
+        return {
+          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
+          border: 'border-r-gray-400',
+          text: 'text-gray-800 dark:text-gray-200',
+          icon: 'text-gray-600',
+          dot: 'bg-gray-400'
+        };
     }
   };
 
@@ -146,55 +246,61 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredNotifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`p-4 border-r-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        !notification.read ? 'bg-primary/5' : ''
-                      } ${getPriorityColor(notification.priority)}`}
-                      onClick={() => handleMarkAsRead(notification.id)}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 mt-1">
-                          {getNotificationIcon(notification.type, notification.priority)}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`text-sm font-medium ${
-                            !notification.read ? 'text-foreground' : 'text-muted-foreground'
-                          }`}>
-                            {notification.title}
-                          </h4>
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {formatDistanceToNow(new Date(notification.created_at), {
-                              addSuffix: true,
-                              locale: ar
-                            })}
-                          </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-1">
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-primary rounded-full"></div>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteNotification(notification.id);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
+                  {filteredNotifications.map((notification) => {
+                    const styles = getNotificationStyles(notification);
+                    
+                    return (
+                      <div
+                        key={notification.id}
+                        className={`p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
+                          !notification.read ? 'shadow-sm' : ''
+                        } ${styles.bg} ${styles.border}`}
+                        onClick={() => handleMarkAsRead(notification.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 mt-1">
+                            {getNotificationIcon(notification)}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className={`text-sm font-medium ${
+                              !notification.read ? styles.text : 'text-muted-foreground'
+                            }`}>
+                              {notification.title}
+                            </h4>
+                            <p className={`text-xs mt-1 line-clamp-2 ${
+                              !notification.read ? styles.text : 'text-muted-foreground'
+                            }`}>
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatDistanceToNow(new Date(notification.created_at), {
+                                addSuffix: true,
+                                locale: ar
+                              })}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-center gap-1">
+                            {!notification.read && (
+                              <div className={`w-2 h-2 rounded-full ${styles.dot}`}></div>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteNotification(notification.id);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </ScrollArea>

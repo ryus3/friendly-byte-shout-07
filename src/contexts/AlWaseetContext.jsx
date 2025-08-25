@@ -44,16 +44,24 @@ export const AlWaseetProvider = ({ children }) => {
   const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
     if (!createNotification || !trackingNumber || !stateId) return;
     
+    console.log('🔔 محاولة إرسال إشعار:', { trackingNumber, stateId, statusText });
+    
     // الحالات المهمة التي تستحق إشعارات
     const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
-    if (!importantStates.includes(String(stateId))) return;
+    if (!importantStates.includes(String(stateId))) {
+      console.log('⏭️ تجاهل state_id غير مهم:', stateId);
+      return;
+    }
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
     const trackingKey = `${trackingNumber}`;
     const lastStateId = lastNotificationStatus[trackingKey];
     
     // إذا كانت نفس الحالة، لا ترسل إشعار
-    if (lastStateId === String(stateId)) return;
+    if (lastStateId === String(stateId)) {
+      console.log('🔄 منع تكرار - نفس الحالة:', { trackingNumber, stateId, lastStateId });
+      return;
+    }
     
     const statusConfig = getStatusConfig(Number(stateId));
     
@@ -89,6 +97,13 @@ export const AlWaseetProvider = ({ children }) => {
         priority = statusConfig.priority || 'medium';
     }
     
+    console.log('✅ إرسال إشعار الوسيط:', { 
+      type: 'alwaseet_status_change', 
+      trackingNumber, 
+      stateId, 
+      message 
+    });
+    
     createNotification({
       type: 'alwaseet_status_change',
       title: 'تحديث حالة الطلب',
@@ -107,6 +122,8 @@ export const AlWaseetProvider = ({ children }) => {
       ...prev,
       [trackingKey]: String(stateId)
     }));
+    
+    console.log('💾 حفظ حالة جديدة:', { trackingKey, stateId });
   }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
 
   const [cities, setCities] = useState([]);
@@ -955,8 +972,14 @@ export const AlWaseetProvider = ({ children }) => {
               updatedCount++;
               console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
               
-              // إرسال إشعار تغيير الحالة للحالات المهمة
-              createOrderStatusNotification(trackingNumber, waseetOrder.state_id, waseetStatusText);
+              // إرسال إشعار تغيير الحالة للحالات المهمة مع تحديد state_id الصحيح
+              const actualStateId = waseetOrder.state_id || waseetOrder.status_id || waseetOrder.statusId;
+              if (actualStateId) {
+                console.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId: actualStateId, statusText: waseetStatusText });
+                createOrderStatusNotification(trackingNumber, actualStateId, waseetStatusText);
+              } else {
+                console.warn('⚠️ لا يوجد state_id للطلب:', trackingNumber, waseetOrder);
+              }
             }
           }
         } catch (error) {
