@@ -14,9 +14,9 @@ export const AppProviders = ({ children }) => {
     <SupabaseProvider>
       <ThemeProvider>
         <UnifiedAuthProvider>
-          <AlWaseetProvider>
-            <NotificationsSystemProvider>
-              <NotificationsProvider>
+          <NotificationsSystemProvider>
+            <NotificationsProvider>
+              <AlWaseetProvider>
                 <AiChatProvider>
                   <ProfitsProvider>
                     <SuperProvider>
@@ -26,9 +26,9 @@ export const AppProviders = ({ children }) => {
                     </SuperProvider>
                   </ProfitsProvider>
                 </AiChatProvider>
-              </NotificationsProvider>
-            </NotificationsSystemProvider>
-          </AlWaseetProvider>
+              </AlWaseetProvider>
+            </NotificationsProvider>
+          </NotificationsSystemProvider>
         </UnifiedAuthProvider>
       </ThemeProvider>
     </SupabaseProvider>
