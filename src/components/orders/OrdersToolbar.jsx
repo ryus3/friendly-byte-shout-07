@@ -6,7 +6,6 @@ import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode } from 'lucide-react'
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import QROrderScanner from './QROrderScanner';
-import AutoFixInvoiceButton from './AutoFixInvoiceButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,9 +85,6 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         >
           <QrCode className="h-4 w-4" />
         </Button>
-
-        {/* Auto Fix Invoice Button */}
-        <AutoFixInvoiceButton />
 
         {/* View Mode Toggle */}
         <div className="flex items-center border rounded-lg p-1 bg-muted/30 flex-shrink-0">
