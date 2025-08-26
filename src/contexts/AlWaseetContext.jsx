@@ -1144,9 +1144,9 @@ export const AlWaseetProvider = ({ children }) => {
     // 4. الطلب أقدم من 10 دقائق لتجنب الحذف الفوري
     const allowedStatuses = ['active', 'disabled', 'inactive', 'preparing', 'pending'];
     
-    // التحقق من عمر الطلب (10 دقائق = 600000 مللي ثانية)
+    // التحقق من عمر الطلب (30 دقيقة = 1800000 مللي ثانية)
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAgeBeforeDelete = 10 * 60 * 1000; // 10 دقائق
+    const minAgeBeforeDelete = 30 * 60 * 1000; // 30 دقيقة
     
     return order.delivery_partner === 'alwaseet' && 
            !order.receipt_received && 
@@ -1154,7 +1154,71 @@ export const AlWaseetProvider = ({ children }) => {
            orderAge >= minAgeBeforeDelete;
   };
 
-  // دالة لتنفيذ الحذف التلقائي
+  // دالة محسنة للحذف التلقائي مع تحقق متعدد
+  const performAutoCleanup = async () => {
+    try {
+      const ordersToCheck = orders.filter(shouldDeleteOrder);
+      
+      if (ordersToCheck.length === 0) return;
+
+      console.log(`🔍 فحص ${ordersToCheck.length} طلب للحذف التلقائي...`);
+
+      for (const order of ordersToCheck) {
+        let verificationAttempts = 0;
+        let orderExists = false;
+        const maxAttempts = 3;
+
+        // محاولات متعددة للتحقق
+        while (verificationAttempts < maxAttempts && !orderExists) {
+          try {
+            verificationAttempts++;
+            console.log(`🔄 محاولة ${verificationAttempts}/${maxAttempts} للطلب: ${order.tracking_number}`);
+
+            const response = await fetch('/api/alwaseet/check-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ trackingNumber: order.tracking_number })
+            });
+
+            if (response.ok) {
+              const result = await response.json();
+              
+              if (result.exists && result.status !== 'not_found') {
+                orderExists = true;
+                console.log(`✅ الطلب موجود في الوسيط (محاولة ${verificationAttempts}): ${order.tracking_number}`);
+                break;
+              }
+            }
+
+            // انتظار بين المحاولات
+            if (verificationAttempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          } catch (error) {
+            console.error(`❌ خطأ في المحاولة ${verificationAttempts} للطلب ${order.tracking_number}:`, error);
+          }
+        }
+
+        // إذا لم يوجد الطلب بعد كل المحاولات، احذفه
+        if (!orderExists) {
+          console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
+          
+          // إشعار المدير
+          showToast({
+            title: "تنبيه: حذف طلب تلقائي",
+            description: `تم حذف الطلب ${order.tracking_number} لعدم وجوده في شركة التوصيل`,
+            variant: "destructive"
+          });
+
+          await performAutoDelete(order);
+        }
+      }
+    } catch (error) {
+      console.error('❌ خطأ في الحذف التلقائي:', error);
+    }
+  };
+
+  // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
     try {
       console.log(`🗑️ بدء الحذف التلقائي للطلب ${order.id}`);
