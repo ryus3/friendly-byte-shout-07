@@ -113,8 +113,8 @@ const AlWaseetInvoicesTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Revolutionary Statistics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      {/* Revolutionary Statistics Cards - Equal Dimensions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Invoices Card - Vibrant Blue */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -123,7 +123,7 @@ const AlWaseetInvoicesTab = () => {
           whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-600 dark:via-blue-700 dark:to-blue-800 shadow-2xl hover:shadow-blue-500/25 hover:shadow-2xl transition-all duration-500">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-600 dark:via-blue-700 dark:to-blue-800 shadow-2xl hover:shadow-blue-500/25 hover:shadow-2xl transition-all duration-500 min-h-[120px] h-full">
             {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
             <div className="absolute -top-10 -right-10 w-16 h-16 bg-blue-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
@@ -134,12 +134,12 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-blue-100">إجمالي الفواتير</p>
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs font-medium text-blue-100 leading-tight">إجمالي الفواتير</p>
                   <motion.p 
-                    className="text-3xl font-bold text-white drop-shadow-lg"
+                    className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.3 }}
@@ -150,9 +150,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg"
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Receipt className="h-8 w-8 text-white drop-shadow-sm" />
+                  <Receipt className="h-5 w-5 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -167,7 +167,7 @@ const AlWaseetInvoicesTab = () => {
           whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 dark:from-orange-600 dark:via-red-600 dark:to-red-700 shadow-2xl hover:shadow-orange-500/25 hover:shadow-2xl transition-all duration-500">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 dark:from-orange-600 dark:via-red-600 dark:to-red-700 shadow-2xl hover:shadow-orange-500/25 hover:shadow-2xl transition-all duration-500 min-h-[120px] h-full">
             {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
             <div className="absolute -top-10 -right-10 w-16 h-16 bg-orange-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
@@ -178,12 +178,12 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-orange-100">فواتير معلقة</p>
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs font-medium text-orange-100 leading-tight">فواتير معلقة</p>
                   <motion.p 
-                    className="text-3xl font-bold text-white drop-shadow-lg"
+                    className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.4 }}
@@ -194,9 +194,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg"
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Clock className="h-8 w-8 text-white drop-shadow-sm" />
+                  <Clock className="h-5 w-5 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -211,7 +211,7 @@ const AlWaseetInvoicesTab = () => {
           whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 dark:from-emerald-600 dark:via-teal-600 dark:to-teal-700 shadow-2xl hover:shadow-emerald-500/25 hover:shadow-2xl transition-all duration-500">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 dark:from-emerald-600 dark:via-teal-600 dark:to-teal-700 shadow-2xl hover:shadow-emerald-500/25 hover:shadow-2xl transition-all duration-500 min-h-[120px] h-full">
             {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
             <div className="absolute -top-10 -right-10 w-16 h-16 bg-emerald-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
@@ -222,12 +222,12 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-emerald-100">إجمالي المبالغ</p>
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs font-medium text-emerald-100 leading-tight">إجمالي المبالغ</p>
                   <motion.p 
-                    className="text-3xl font-bold text-white drop-shadow-lg"
+                    className="text-xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.5 }}
@@ -239,9 +239,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg"
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Banknote className="h-8 w-8 text-white drop-shadow-sm" />
+                  <Banknote className="h-5 w-5 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -256,7 +256,7 @@ const AlWaseetInvoicesTab = () => {
           whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 dark:from-purple-600 dark:via-indigo-600 dark:to-indigo-700 shadow-2xl hover:shadow-purple-500/25 hover:shadow-2xl transition-all duration-500">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 dark:from-purple-600 dark:via-indigo-600 dark:to-indigo-700 shadow-2xl hover:shadow-purple-500/25 hover:shadow-2xl transition-all duration-500 min-h-[120px] h-full">
             {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
             <div className="absolute -top-10 -right-10 w-16 h-16 bg-purple-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
@@ -267,12 +267,12 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-purple-100">إجمالي الطلبات</p>
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs font-medium text-purple-100 leading-tight">إجمالي الطلبات</p>
                   <motion.p 
-                    className="text-3xl font-bold text-white drop-shadow-lg"
+                    className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.6 }}
@@ -283,9 +283,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg"
+                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Package className="h-8 w-8 text-white drop-shadow-sm" />
+                  <Package className="h-5 w-5 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
