@@ -20,7 +20,6 @@ import OrdersStats from '@/components/orders/OrdersStats';
 import OrdersToolbar from '@/components/orders/OrdersToolbar';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-
 import EditOrderDialog from '@/components/orders/EditOrderDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
@@ -656,23 +655,20 @@ const OrdersPage = () => {
           </TabsList>
 
           <TabsContent value="orders" className="space-y-6">
-            <div className="flex justify-between items-start gap-4">
-              <OrdersToolbar
-                filters={filters} 
-                onFiltersChange={handleToolbarFilterChange}
-                viewMode={viewMode}
-                onViewModeChange={handleViewModeChange}
-                onOrderFound={(foundOrder) => {
-                  setSelectedOrder(foundOrder);
-                  setDialogs(prev => ({ ...prev, details: true }));
-                }}
-                onUpdateOrderStatus={handleUpdateOrderStatus}
-                employeeOptions={employeeOptions}
-                selectedEmployeeId={selectedEmployeeId}
-                onEmployeeChange={setSelectedEmployeeId}
-              />
-              
-            </div>
+            <OrdersToolbar
+              filters={filters} 
+              onFiltersChange={handleToolbarFilterChange}
+              viewMode={viewMode}
+              onViewModeChange={handleViewModeChange}
+              onOrderFound={(foundOrder) => {
+                setSelectedOrder(foundOrder);
+                setDialogs(prev => ({ ...prev, details: true }));
+              }}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
+              employeeOptions={employeeOptions}
+              selectedEmployeeId={selectedEmployeeId}
+              onEmployeeChange={setSelectedEmployeeId}
+            />
             
             {selectedOrders.length > 0 && hasPermission('manage_orders') && (
               <Card className="p-3 sm:p-4 bg-card rounded-lg border">
