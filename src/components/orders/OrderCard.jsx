@@ -137,7 +137,7 @@ const OrderCard = ({
       const colorInfo = item.product_variants?.colors?.name || item.color || '';
       const sizeInfo = item.product_variants?.sizes?.name || item.size || '';
       // عرض اللون والقياس معاً إذا كانوا موجودين
-      const parts = [colorInfo, sizeInfo].filter(Boolean);
+      const parts = [sizeInfo, colorInfo].filter(Boolean);
       const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
       
       return { 
@@ -521,7 +521,7 @@ const OrderCard = ({
                       
                       {/* الصف الثاني: اللون - القياس (أسفل اسم المنتج) */}
                       {productSummary.variantInfo && (
-                        <div className="flex items-center gap-2 mt-1 mr-6">
+                        <div className="flex items-center gap-2 mt-1 justify-end mr-2">
                           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
                             {productSummary.variantInfo}
                           </span>
