@@ -457,7 +457,7 @@ const OrderCard = ({
                   {order.customer_city && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                       <Building className="h-3 w-3" />
-                      <span>{order.customer_city}{order.customer_province ? ' - ' + order.customer_province : ''}</span>
+                      <span>{order.customer_city || order.customer_province || order.customer_address}</span>
                     </div>
                   )}
                 </div>
@@ -506,24 +506,22 @@ const OrderCard = ({
                 {productSummary && (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
-                      {/* الصف الأول: أيقونة (يمين) + اسم المنتج + العدد (يسار) */}
+                      {/* الصف الأول: أيقونة (أقصى يمين) + اسم المنتج + العدد (أقصى يسار) */}
                       <div className="flex items-center justify-between text-primary font-bold">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{productSummary.displayText}</span>
-                          {productSummary.isSingle && (
-                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                              × {productSummary.quantity}
-                            </span>
-                          )}
+                        <div className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                          {productSummary.quantity || 1} قطعة
                         </div>
-                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
-                          <Package className="h-4 w-4" />
+                        <div className="flex items-center gap-2 flex-row-reverse">
+                          <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                            <Package className="h-4 w-4" />
+                          </div>
+                          <span className="text-sm">{productSummary.displayText}</span>
                         </div>
                       </div>
                       
-                      {/* الصف الثاني: اللون (يمين) - القياس */}
+                      {/* الصف الثاني: اللون - القياس (أقصى اليسار) */}
                       {productSummary.variantInfo && (
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-start mt-1">
                           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
                             {productSummary.variantInfo}
                           </span>
