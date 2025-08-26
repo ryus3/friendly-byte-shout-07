@@ -360,7 +360,7 @@ const OrderCard = ({
                        </span>
                      </div>
                    )}
-                   <div className="flex flex-col gap-1 items-start">
+                   <div className="flex flex-col gap-1 items-end">
                      <div className="flex justify-end w-full">
                        <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
                          <Building className="h-3 w-3" />
