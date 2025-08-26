@@ -287,28 +287,16 @@ const OrderCard = ({
         <CardContent className="relative p-4">
           <div className="space-y-3">
             
-            {/* Order Number & Selection Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
-                />
-                <div className="text-right" dir="ltr">
-                  <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                    {order.tracking_number || order.order_number}
-                  </h3>
-                </div>
-              </div>
-              
-              {/* Status Badge - قابل للنقر للطلبات المحلية */}
+            {/* Header العالمي */}
+            <div className="flex items-start justify-between">
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يمين */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
+                    // تحديد الحالة التالية
                     const nextStatus = {
                       'pending': 'shipped',
                       'shipped': 'delivery', 
@@ -330,45 +318,26 @@ const OrderCard = ({
                   <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
                 </div>
               )}
-            </div>
-
-            {/* Product Section - محسن */}
-            {productSummary && (
-              <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-4 border border-muted/30 mb-4">
-                <div className="flex items-center justify-between" dir="rtl">
-                  {/* Product Icon & Info - يمين */}
-                  <div className="flex items-center gap-3">
-                    <Package className="h-5 w-5 text-primary flex-shrink-0" />
-                    <div className="min-w-0">
-                      <div className="font-bold text-sm text-foreground">{productSummary.displayText}</div>
-                      {productSummary.variantInfo && (
-                        <div className="text-xs text-muted-foreground mt-1" dir="rtl">
-                          {productSummary.variantInfo}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {/* Quantity Badge - يسار */}
-                  <Badge variant="secondary" className="bg-primary/10 text-primary font-bold px-3 py-1 flex-shrink-0">
-                    {productSummary.quantity}x
-                  </Badge>
-                </div>
-              </div>
-            )}
-
-            {/* Total Price Section - بارز */}
-            <div className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl p-4 text-center border border-primary/20 mb-4">
-              <div className="text-2xl font-black text-primary mb-1">
-                {order.total_price?.toLocaleString()} د.ع
-              </div>
-              <div className="text-xs text-muted-foreground">شامل التوصيل</div>
               
-              {/* Employee Profit Display */}
-              {employeeProfit > 0 && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && (
-                <div className="text-xs text-emerald-600 font-semibold mt-1">
-                  ربح الموظف: {employeeProfit.toLocaleString()} د.ع
+               <div className="flex items-center gap-3">
+                <div className="text-right" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
                 </div>
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onSelect?.(order.id)}
+                  className="shrink-0 scale-125 border-2"
+                />
+              </div>
+              
+              {/* مؤشر دفع المستحقات */}
+              {order.status === 'completed' && order.isArchived && (
+                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
+                  <CheckCircle className="w-3 h-3 ml-1" />
+                  مدفوع المستحقات
+                </Badge>
               )}
             </div>
 
@@ -485,30 +454,84 @@ const OrderCard = ({
                     <Phone className="h-3 w-3" />
                     <span>{order.customer_phone}</span>
                   </div>
-                   {(order.customer_city || order.customer_province) && (
-                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
-                       <MapPin className="h-3 w-3" />
-                       <span>
-                         {order.customer_address || 
-                          (order.customer_city && order.customer_province 
-                            ? `${order.customer_city} - ${order.customer_province}`
-                            : order.customer_city || order.customer_province)
-                         }
-                       </span>
-                     </div>
-                   )}
+                   {order.customer_city && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
+                      <MapPin className="h-3 w-3" />
+                      <span>{order.customer_address || `${order.customer_city}${order.customer_province ? ' - ' + order.customer_province : ''}`}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Payment Status Badge - للطلبات المكتملة */}
-            {paymentStatus && (
-              <div className="flex justify-center">
-                <Badge className={`${paymentStatus.color} text-white font-bold px-3 py-1`}>
-                  {paymentStatus.label}
-                </Badge>
+            {/* Product & Price مع توصيل في نفس السطر */}
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
+              <div className="flex items-center justify-between">
+                 <div className="flex items-center gap-2 text-right">
+                  <div className="space-y-1">
+                    {/* عرض ربح الموظف */}
+                    {employeeProfit > 0 && (
+                      <div className="flex items-center gap-1 text-xs justify-end">
+                        <span className="font-bold text-emerald-600">
+                          {employeeProfit.toLocaleString()} د.ع
+                        </span>
+                        <span className="text-muted-foreground">:ربح الموظف</span>
+                      </div>
+                    )}
+                    
+                    {/* السعر الإجمالي */}
+                    <div className="flex items-center gap-1 justify-end">
+                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                      <span className="font-bold text-lg text-primary">
+                        {order.final_amount?.toLocaleString()}
+                      </span>
+                      {order.delivery_fee > 0 && (
+                        <span className="text-xs text-muted-foreground font-medium">
+                          شامل التوصيل
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* حالة الدفع - فقط للطلبات المكتملة */}
+                    {paymentStatus && (
+                      <div className="flex items-center gap-1 justify-end">
+                        <span className="text-xs font-medium">{paymentStatus.label}</span>
+                        <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* معلومات المنتج */}
+                {productSummary && (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      {/* الصف الأول: أيقونة (أقصى يمين) + اسم المنتج + العدد */}
+                      <div className="flex items-center gap-2 text-primary font-bold">
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                          <Package className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm">{productSummary.displayText}</span>
+                        {productSummary.isSingle && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                            X{productSummary.quantity}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* الصف الثاني: اللون - القياس (أسفل اسم المنتج) */}
+                      {productSummary.variantInfo && (
+                        <div className="flex items-center gap-2 mt-1 mr-10">
+                          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
+                            {productSummary.variantInfo}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
 
 
 
