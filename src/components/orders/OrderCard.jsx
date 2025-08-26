@@ -453,7 +453,7 @@ const OrderCard = ({
                   {order.customer_city && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                       <Building className="h-3 w-3" />
-                      <span>{order.customer_city}</span>
+                      <span>{order.customer_city}{order.customer_province ? ' - ' + order.customer_province : ''}</span>
                     </div>
                   )}
                 </div>
@@ -503,15 +503,15 @@ const OrderCard = ({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1 text-right">
                       <div className="flex items-center gap-2 text-primary font-bold justify-end">
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                          <Package className="h-4 w-4" />
+                        </div>
                         <span className="text-sm">{productSummary.displayText}</span>
                         {productSummary.isSingle && (
                           <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
                             × {productSummary.quantity}
                           </span>
                         )}
-                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
-                          <Package className="h-4 w-4" />
-                        </div>
                       </div>
                       {productSummary.variantInfo && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground justify-end mt-1">

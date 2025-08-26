@@ -1141,11 +1141,17 @@ export const AlWaseetProvider = ({ children }) => {
     // 1. طلب الوسيط (delivery_partner = 'alwaseet')
     // 2. لم يتم استلام الإيصال (receipt_received = false)
     // 3. الحالة تسمح بالحذف (active, disabled, inactive, preparing)
+    // 4. الطلب أقدم من 10 دقائق لتجنب الحذف الفوري
     const allowedStatuses = ['active', 'disabled', 'inactive', 'preparing', 'pending'];
+    
+    // التحقق من عمر الطلب (10 دقائق = 600000 مللي ثانية)
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    const minAgeBeforeDelete = 10 * 60 * 1000; // 10 دقائق
     
     return order.delivery_partner === 'alwaseet' && 
            !order.receipt_received && 
-           allowedStatuses.includes(order.status);
+           allowedStatuses.includes(order.status) &&
+           orderAge >= minAgeBeforeDelete;
   };
 
   // دالة لتنفيذ الحذف التلقائي
