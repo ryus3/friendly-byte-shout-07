@@ -374,10 +374,13 @@ const filteredOrders = useMemo(() => {
       const byCreator = (order.created_by === employeeIdSelected) || (order.created_by === selectedEmployeeCode);
       const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === employeeIdSelected || p.employee_id === selectedEmployeeCode));
       employeeMatch = byCreator || byProfit;
-
-      // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح
-      if (isAdminCreated && !employeeMatch) return false;
+    } else {
+      // عند عدم تحديد موظف معين (جميع الموظفين)، استبعاد طلبات المدير نهائياً
+      if (isAdminCreated) return false;
     }
+
+    // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح (للموظف المحدد)
+    if (employeeIdSelected && isAdminCreated && !employeeMatch) return false;
 
     // فلتر الحالة
     const statusMatch = filters.status === 'all' || order.status === filters.status;
