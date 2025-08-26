@@ -463,61 +463,66 @@ const OrderCard = ({
             {/* Product & Price مع توصيل في نفس السطر */}
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
               <div className="flex items-center justify-between">
-                {productSummary && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-primary font-bold">
-                      <Package className="h-4 w-4" />
-                      <span className="text-sm">{productSummary.displayText}</span>
-                      {productSummary.isSingle && (
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                          × {productSummary.quantity}
-                        </span>
-                      )}
-                    </div>
-                    {productSummary.variantInfo && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mr-6">
-                        <span className="bg-secondary px-2 py-1 rounded-md font-medium">
-                          {productSummary.variantInfo}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                <div className="flex items-center gap-2 text-left">
+                 <div className="flex items-center gap-2 text-right">
                   <div className="space-y-1">
                     {/* عرض ربح الموظف */}
                     {employeeProfit > 0 && (
-                      <div className="flex items-center gap-1 text-xs">
-                        <span className="text-muted-foreground">ربح الموظف:</span>
+                      <div className="flex items-center gap-1 text-xs justify-end">
                         <span className="font-bold text-emerald-600">
                           {employeeProfit.toLocaleString()} د.ع
                         </span>
+                        <span className="text-muted-foreground">:ربح الموظف</span>
                       </div>
                     )}
                     
                     {/* السعر الإجمالي */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 justify-end">
+                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                      <span className="font-bold text-lg text-primary">
+                        {order.final_amount?.toLocaleString()}
+                      </span>
                       {order.delivery_fee > 0 && (
                         <span className="text-xs text-muted-foreground font-medium">
                           شامل التوصيل
                         </span>
                       )}
-                      <span className="font-bold text-lg text-primary">
-                        {order.final_amount?.toLocaleString()}
-                      </span>
-                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
                     </div>
                     
                     {/* حالة الدفع - فقط للطلبات المكتملة */}
                     {paymentStatus && (
-                      <div className="flex items-center gap-1">
-                        <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
+                      <div className="flex items-center gap-1 justify-end">
                         <span className="text-xs font-medium">{paymentStatus.label}</span>
+                        <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
                       </div>
                     )}
                   </div>
                 </div>
+
+                {/* معلومات المنتج */}
+                {productSummary && (
+                  <div className="flex items-center gap-2 flex-1 min-w-0 flex-row-reverse">
+                    <div className="min-w-0 flex-1 text-right">
+                      <div className="flex items-center gap-2 text-primary font-bold justify-end">
+                        <span className="text-sm">{productSummary.displayText}</span>
+                        {productSummary.isSingle && (
+                          <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                            × {productSummary.quantity}
+                          </span>
+                        )}
+                      </div>
+                      {productSummary.variantInfo && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground justify-end mt-1">
+                          <span className="bg-secondary px-2 py-1 rounded-md font-medium">
+                            {productSummary.variantInfo}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                      <Package className="h-4 w-4" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
