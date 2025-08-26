@@ -6,7 +6,6 @@ import { useAuth } from './UnifiedAuthContext';
 import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
-import { isBeforePickup } from '@/lib/order-deletion-utils';
 
 const AlWaseetContext = createContext();
 
@@ -40,7 +39,6 @@ export const AlWaseetProvider = ({ children }) => {
   const [autoSyncEnabled, setAutoSyncEnabled] = useLocalStorage('auto_sync_enabled', true);
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
-  const [missingTracker, setMissingTracker] = useLocalStorage('waseet_missing_tracker', {});
 
   // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي
   const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
@@ -341,55 +339,6 @@ export const AlWaseetProvider = ({ children }) => {
       return new Map();
     }
   }, [token]);
-
-  // ======== Missing tracker and safe-delete helpers ========
-  const getOrderAgeMs = useCallback((order) => {
-    const t = new Date(order.created_at || order.createdAt || 0).getTime();
-    return isNaN(t) ? Number.POSITIVE_INFINITY : Date.now() - t;
-  }, []);
-
-  const verifyOrderExistsRemote = useCallback(async (order) => {
-    try {
-      if (!token) return { exists: null, apiError: true };
-      let remote = null;
-      if (order.delivery_partner_order_id) {
-        try { remote = await AlWaseetAPI.getOrderById(token, String(order.delivery_partner_order_id)); } catch (_) {}
-      }
-      if (!remote) {
-        const qr = order.tracking_number || order.qr_id;
-        if (qr) { try { remote = await AlWaseetAPI.getOrderByQR(token, String(qr)); } catch (_) {} }
-      }
-      return { exists: !!remote, data: remote, apiError: false };
-    } catch (e) {
-      console.warn('verifyOrderExistsRemote error', e);
-      return { exists: null, apiError: true };
-    }
-  }, [token]);
-
-  const updateMissingTracker = useCallback((order, exists) => {
-    const key = String(order.id || order.tracking_number || order.qr_id);
-    const prev = missingTracker[key] || { misses: 0, lastCheckedAt: 0 };
-    const now = Date.now();
-    const next = exists ? { misses: 0, lastCheckedAt: now } : { misses: (prev.misses || 0) + 1, lastCheckedAt: now };
-    setMissingTracker({ ...missingTracker, [key]: next });
-    return next;
-  }, [missingTracker, setMissingTracker]);
-
-  const shouldAttemptSecondDelete = (tracker) => {
-    if (!tracker) return false;
-    const now = Date.now();
-    return (now - (tracker.lastCheckedAt || 0)) >= 5 * 60 * 1000 || (tracker.misses || 0) > 1;
-  };
-
-  const canSafeDeleteByPolicy = useCallback((order, tracker) => {
-    if (!order || order.delivery_partner !== 'alwaseet') return false;
-    if (order.receipt_received) return false;
-    const allowedLocal = ['pending','active','inactive','disabled','preparing'];
-    if (!allowedLocal.includes(order.status)) return false;
-    if (getOrderAgeMs(order) < 60 * 60 * 1000) return false; // >= 60 min
-    if (!tracker || (tracker.misses || 0) < 2) return false; // two consecutive misses
-    return true;
-  }, [getOrderAgeMs]);
 
   // Helper: chunking
   const chunkArray = useCallback((arr, size) => {
