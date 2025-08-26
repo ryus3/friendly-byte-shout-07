@@ -134,10 +134,10 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-3 relative z-10 h-full flex flex-col justify-between">
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
-                  <p className="text-xs font-medium text-blue-100 leading-tight">إجمالي الفواتير</p>
+                  <p className="text-sm font-medium text-blue-100 leading-tight">إجمالي الفواتير</p>
                   <motion.p 
                     className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
@@ -150,9 +150,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
+                  className="p-2.5 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Receipt className="h-5 w-5 text-white drop-shadow-sm" />
+                  <Receipt className="h-6 w-6 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -178,10 +178,10 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-3 relative z-10 h-full flex flex-col justify-between">
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
-                  <p className="text-xs font-medium text-orange-100 leading-tight">فواتير معلقة</p>
+                  <p className="text-sm font-medium text-orange-100 leading-tight">فواتير معلقة</p>
                   <motion.p 
                     className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
@@ -194,9 +194,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
+                  className="p-2.5 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Clock className="h-5 w-5 text-white drop-shadow-sm" />
+                  <Clock className="h-6 w-6 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -222,26 +222,26 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-3 relative z-10 h-full flex flex-col justify-between">
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
-                  <p className="text-xs font-medium text-emerald-100 leading-tight">إجمالي المبالغ</p>
+                  <p className="text-sm font-medium text-emerald-100 leading-tight">إجمالي المبالغ</p>
                   <motion.p 
-                    className="text-xl font-bold text-white drop-shadow-lg leading-none"
+                    className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.5 }}
                   >
                     {stats.totalAmount.toLocaleString()}
                   </motion.p>
-                  <p className="text-xs font-medium text-emerald-200">د.ع</p>
+                  <p className="text-sm font-medium text-emerald-200">د.ع</p>
                 </div>
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
+                  className="p-2.5 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Banknote className="h-5 w-5 text-white drop-shadow-sm" />
+                  <Banknote className="h-6 w-6 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
@@ -267,10 +267,10 @@ const AlWaseetInvoicesTab = () => {
             {/* Glow effect overlay */}
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             
-            <CardContent className="p-3 relative z-10 h-full flex flex-col justify-between">
+            <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
-                  <p className="text-xs font-medium text-purple-100 leading-tight">إجمالي الطلبات</p>
+                  <p className="text-sm font-medium text-purple-100 leading-tight">إجمالي الطلبات</p>
                   <motion.p 
                     className="text-2xl font-bold text-white drop-shadow-lg leading-none"
                     initial={{ scale: 0.5 }}
@@ -283,9 +283,9 @@ const AlWaseetInvoicesTab = () => {
                 <motion.div
                   whileHover={{ rotate: 360, scale: 1.1 }}
                   transition={{ duration: 0.5 }}
-                  className="p-2 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
+                  className="p-2.5 bg-white/20 backdrop-blur-sm rounded-lg shadow-lg flex-shrink-0"
                 >
-                  <Package className="h-5 w-5 text-white drop-shadow-sm" />
+                  <Package className="h-6 w-6 text-white drop-shadow-sm" />
                 </motion.div>
               </div>
             </CardContent>
