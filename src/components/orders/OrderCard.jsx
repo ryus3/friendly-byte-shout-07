@@ -353,15 +353,15 @@ const OrderCard = ({
                   </div>
                    {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (
-                     <div className="flex items-center gap-2 justify-end">
+                     <div className="flex items-center gap-2 justify-start">
                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
                          <User className="h-3 w-3 inline-block mr-1" />
                          {order.created_by_name}
                        </span>
                      </div>
                    )}
-                   <div className="flex flex-col gap-1 items-end">
-                     <div className="flex justify-end w-full">
+                   <div className="flex flex-col gap-1 items-start">
+                     <div className="flex justify-start w-full">
                        <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
                          <Building className="h-3 w-3" />
                          {order.delivery_partner}
