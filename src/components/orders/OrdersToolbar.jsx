@@ -73,20 +73,20 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
 
   return (
     <div className="bg-card rounded-xl p-3 sm:p-4 border">
-      {/* الصف الأول: QR Scanner + View Mode + Search */}
+      {/* الصف الأول: Search + View Mode + QR Scanner */}
       <div className="flex items-center gap-3 mb-3">
-        {/* QR Scanner Button */}
-        <Button 
-          onClick={() => setShowQRScanner(true)}
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl flex-shrink-0"
-          title="مسح QR Code"
-        >
-          <QrCode className="h-4 w-4" />
-        </Button>
+        {/* Search Input - في البداية */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="البحث برقم الطلب الموحد..." 
+            value={filters.searchTerm} 
+            onChange={handleSearchChange} 
+            className="pl-9 h-9 text-sm" 
+          />
+        </div>
 
-        {/* View Mode Toggle */}
+        {/* View Mode Toggle - في الوسط */}
         <div className="flex items-center border rounded-lg p-1 bg-muted/30 flex-shrink-0">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -106,16 +106,16 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Button>
         </div>
 
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input 
-            placeholder="البحث برقم الطلب الموحد..." 
-            value={filters.searchTerm} 
-            onChange={handleSearchChange} 
-            className="pr-9 h-9 text-sm" 
-          />
-        </div>
+        {/* QR Scanner Button - في النهاية */}
+        <Button 
+          onClick={() => setShowQRScanner(true)}
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl flex-shrink-0"
+          title="مسح QR Code"
+        >
+          <QrCode className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* الصف الثاني: الفلاتر */}
