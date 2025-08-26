@@ -358,6 +358,12 @@ const OrderCard = ({
                          <User className="h-3 w-3 inline-block mr-1" />
                          {order.created_by_name}
                        </span>
+                       {/* شارة alwaseet بجانب المدير العام */}
+                       {order.delivery_partner === 'alwaseet' && (
+                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 rounded-full">
+                           alwaseet
+                         </Badge>
+                       )}
                      </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
