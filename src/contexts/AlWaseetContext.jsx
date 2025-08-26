@@ -669,6 +669,35 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [supabase, toast]);
 
+  // تحقق آمن وربما حذف بعد فشلين متتاليين وشروط الأمان
+  const safeCheckAndMaybeDelete = useCallback(async (order, source = 'fastSync', notify = false) => {
+    const res = await verifyOrderExistsRemote(order);
+    const tracker = updateMissingTracker(order, res.exists === true);
+
+    if (res.exists === true) {
+      // موجود في الوسيط: لا حذف
+      return { autoDeleted: false, reason: 'exists_remote' };
+    }
+    if (res.apiError) {
+      // مشكلة API: لا نزيد المخاطر
+      return { autoDeleted: false, reason: 'api_error' };
+    }
+
+    // يحتاج فشلين متتاليين وبينهما وقت كافٍ + سياسة أمان
+    if (canSafeDeleteByPolicy(order, tracker) && shouldAttemptSecondDelete(tracker)) {
+      const ok = await handleAutoDeleteOrder(order.id, source);
+      if (ok && notify) {
+        toast({
+          title: 'حذف تلقائي آمن',
+          description: `تم حذف الطلب ${order.order_number || order.tracking_number} بعد تحققين مستقلين وعدم وجوده في الوسيط`,
+        });
+      }
+      return { autoDeleted: ok, reason: ok ? 'safe_deleted' : 'delete_failed' };
+    }
+
+    return { autoDeleted: false, reason: 'not_enough_misses' };
+  }, [verifyOrderExistsRemote, updateMissingTracker, canSafeDeleteByPolicy, shouldAttemptSecondDelete, handleAutoDeleteOrder, toast]);
+
   // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25) - صامتة مع إشعارات ذكية + fallback search
   const fastSyncPendingOrders = useCallback(async (showNotifications = false) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
@@ -751,11 +780,9 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // تطبيق الحذف التلقائي إذا لم نجد الطلب في الوسيط
-        // ولكن فقط للطلبات في الحالات المحددة للأمان
-        if (!waseetOrder && ['pending', 'active', 'disabled', 'inactive'].includes(localOrder.status)) {
-          console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
-          await handleAutoDeleteOrder(localOrder.id, 'fastSync');
+        // تطبيق تحقق آمن بدلاً من الحذف الفوري عندما لا نجد الطلب في الوسيط
+        if (!waseetOrder) {
+          await safeCheckAndMaybeDelete(localOrder, 'fastSync', showNotifications);
           continue;
         }
 
@@ -875,11 +902,9 @@ export const AlWaseetProvider = ({ children }) => {
           updated++;
           console.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
           
-          // تطبيق الحذف التلقائي إذا كان الطلب غير موجود في الوسيط
-          // ولكن فقط للطلبات في الحالات المحددة
-          if (!waseetOrder && ['pending', 'active', 'disabled', 'inactive'].includes(localOrder.status)) {
-            console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
-            await handleAutoDeleteOrder(localOrder.id, 'fastSync');
+          // عند عدم وجود الطلب في الوسيط: نفّذ تحقق آمن بدلاً من الحذف الفوري
+          if (!waseetOrder) {
+            await safeCheckAndMaybeDelete(localOrder, 'fastSync', showNotifications);
           }
         } else {
           console.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
@@ -1092,17 +1117,15 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      // جلب الطلب من الوسيط
       const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
-        
-        // التحقق من إمكانية الحذف التلقائي
-        if (localOrder && canAutoDeleteOrder(localOrder)) {
-          console.log(`🗑️ حذف تلقائي للطلب ${qrId} - محذوف من الوسيط`);
-          return await performAutoDelete(localOrder);
+        if (localOrder) {
+          const res = await safeCheckAndMaybeDelete(localOrder, 'manualCheck', true);
+          if (res.autoDeleted) {
+            return { autoDeleted: true, message: `تم حذف الطلب ${localOrder.order_number || localOrder.tracking_number} لعدم وجوده في شركة التوصيل` };
+          }
         }
-        
         return null;
       }
 
