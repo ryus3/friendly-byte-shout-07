@@ -454,10 +454,14 @@ const OrderCard = ({
                     <Phone className="h-3 w-3" />
                     <span>{order.customer_phone}</span>
                   </div>
-                  {order.customer_city && (
+                  {(order.customer_city || order.customer_province) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                       <MapPin className="h-3 w-3" />
-                      <span>{`${order.customer_province}${order.customer_city ? ' - ' + order.customer_city : ''}`}</span>
+                      <span>
+                        {order.customer_city && order.customer_province 
+                          ? `${order.customer_city} - ${order.customer_province}`
+                          : order.customer_city || order.customer_province}
+                      </span>
                     </div>
                   )}
                 </div>
