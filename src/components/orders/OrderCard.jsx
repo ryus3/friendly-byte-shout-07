@@ -137,7 +137,7 @@ const OrderCard = ({
       const colorInfo = item.product_variants?.colors?.name || item.color || '';
       const sizeInfo = item.product_variants?.sizes?.name || item.size || '';
       // عرض اللون والقياس معاً إذا كانوا موجودين
-      const parts = [sizeInfo, colorInfo].filter(Boolean);
+      const parts = [colorInfo, sizeInfo].filter(Boolean);
       const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
       
       return { 
