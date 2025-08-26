@@ -76,13 +76,13 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
       {/* الصف الأول: Search + View Mode + QR Scanner */}
       <div className="flex items-center gap-3 mb-3">
         {/* Search Input - في البداية */}
-        <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <div className="relative flex-1 min-w-0" dir="rtl">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="البحث برقم الطلب الموحد..." 
             value={filters.searchTerm} 
             onChange={handleSearchChange} 
-            className="pl-9 h-9 text-sm" 
+            className="pr-9 h-9 text-sm text-right" 
           />
         </div>
 
