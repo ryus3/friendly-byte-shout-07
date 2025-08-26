@@ -507,10 +507,10 @@ const OrderCard = ({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
                       {/* الصف الأول: أيقونة (أقصى يمين) + اسم المنتج + العدد (أقصى يسار) */}
-                      <div className="flex items-center justify-between text-primary font-bold">
-                        <div className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                          {productSummary.quantity || 1} قطعة
-                        </div>
+                       <div className="flex items-center justify-between text-primary font-bold">
+                         <div className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                           X{productSummary.quantity || 1}
+                         </div>
                         <div className="flex items-center gap-2 flex-row-reverse">
                           <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
                             <Package className="h-4 w-4" />
@@ -519,19 +519,14 @@ const OrderCard = ({
                         </div>
                       </div>
                       
-                      {/* الصف الثاني: اللون - القياس (أقصى اليسار) */}
-                      {productSummary.variantInfo && (
-                        <div className="flex items-center justify-start mt-1">
-                          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
-                            {productSummary.variantInfo}
-                          </span>
-                          {productSummary.colorInfo && (
-                            <div className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" 
-                                 style={{backgroundColor: productSummary.colorHex || '#ccc'}} 
-                                 title={productSummary.colorInfo} />
-                          )}
-                        </div>
-                      )}
+                       {/* الصف الثاني: اللون - القياس (أقصى اليسار) */}
+                       {productSummary.variantInfo && (
+                         <div className="flex items-center justify-start mt-1">
+                           <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
+                             {productSummary.variantInfo}
+                           </span>
+                         </div>
+                       )}
                     </div>
                   </div>
                 )}

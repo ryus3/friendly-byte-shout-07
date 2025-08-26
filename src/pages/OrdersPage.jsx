@@ -20,7 +20,7 @@ import OrdersStats from '@/components/orders/OrdersStats';
 import OrdersToolbar from '@/components/orders/OrdersToolbar';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import OrderRecoveryButton from '@/components/orders/OrderRecoveryButton';
+
 import EditOrderDialog from '@/components/orders/EditOrderDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
@@ -671,7 +671,7 @@ const OrdersPage = () => {
                 selectedEmployeeId={selectedEmployeeId}
                 onEmployeeChange={setSelectedEmployeeId}
               />
-              <OrderRecoveryButton />
+              
             </div>
             
             {selectedOrders.length > 0 && hasPermission('manage_orders') && (
