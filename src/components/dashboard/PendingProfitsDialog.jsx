@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PackageCheck, DollarSign, Calendar, User, MapPin, Phone } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import superAPI from '@/api/SuperAPI';
 
 const PendingProfitsDialog = ({ 

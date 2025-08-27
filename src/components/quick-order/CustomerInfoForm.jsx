@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';

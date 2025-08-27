@@ -2,7 +2,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { createAlWaseetOrder } from '@/lib/alwaseet-api';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { CheckCircle } from 'lucide-react';
 
 const UnifiedOrderCreatorContext = createContext();

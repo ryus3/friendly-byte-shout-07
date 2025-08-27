@@ -8,7 +8,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 

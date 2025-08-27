@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Calendar, Sun, Gift } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const SeasonsOccasionsManager = () => {
   const [seasonsOccasions, setSeasonsOccasions] = useState([]);

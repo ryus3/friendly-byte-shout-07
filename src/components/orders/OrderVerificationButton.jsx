@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const OrderVerificationButton = ({ order, onVerificationComplete }) => {
   const [isVerifying, setIsVerifying] = useState(false);

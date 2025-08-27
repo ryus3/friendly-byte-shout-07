@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import Loader from '@/components/ui/loader';
 import { Card, CardContent } from '@/components/ui/card';
 

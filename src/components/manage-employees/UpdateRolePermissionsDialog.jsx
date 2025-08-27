@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Loader2, Shield } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const UpdateRolePermissionsDialog = ({ open, onOpenChange }) => {
   const { updatePermissionsByRole } = useAuth();

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Package, User, Settings, Eye } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import UnifiedRoleManager from './UnifiedRoleManager';
 import UnifiedProductPermissionsManager from './UnifiedProductPermissionsManager';
 import { supabase } from '@/lib/customSupabaseClient';

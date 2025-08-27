@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Edit, Trash2, Package } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const ProductTypesManager = () => {
   const [productTypes, setProductTypes] = useState([]);

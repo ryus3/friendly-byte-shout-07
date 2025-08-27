@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useVariants } from '@/contexts/VariantsContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Package, Palette, Ruler, Grid3X3, Tag, Calendar } from 'lucide-react';
 
 const EmployeeVariantPermissions = ({ employee, onSave }) => {

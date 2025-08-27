@@ -8,7 +8,7 @@ import { ShoppingCart, Trash2, Tag, PackagePlus } from 'lucide-react';
 import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 

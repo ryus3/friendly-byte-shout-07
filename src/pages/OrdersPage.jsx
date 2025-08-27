@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';

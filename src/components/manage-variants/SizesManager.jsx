@@ -8,7 +8,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Plus, Trash2, Pencil, Star, Hash, Type } from 'lucide-react';
 import AddEditSizeDialog from './AddEditSizeDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 
 const SortableSizeItem = ({ item, onEdit, onDelete }) => {
