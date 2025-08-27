@@ -1166,14 +1166,8 @@ export const AlWaseetProvider = ({ children }) => {
     if (order.delivery_partner !== 'alwaseet') return false;
 
     const deliveryText = String(order.delivery_status || '').toLowerCase().trim();
-    const orderStatus = String(order.status || '').toLowerCase().trim();
-    
-    // إذا لم تكن هناك حالة تسليم ولكن الطلب في حالة pending محلياً
-    if (!deliveryText && orderStatus === 'pending') return true;
-    
     if (!deliveryText) return false;
     const prePickupKeywords = [
-      'pending', 'قيد التجهيز', // إضافة كلمات مفتاحية جديدة
       'فعال','active',
       'في انتظار استلام المندوب','waiting for pickup','pending pickup',
       'جديد','new',
@@ -1185,6 +1179,7 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
   const canAutoDeleteOrder = (order) => {
     return order?.delivery_partner === 'alwaseet' &&
+           !!order?.delivery_partner_order_id &&
            order?.receipt_received !== true &&
            isPrePickupForWaseet(order);
   };
@@ -1590,28 +1585,7 @@ export const AlWaseetProvider = ({ children }) => {
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
-        // تطبيق مبدأ زر "تحقق الآن" تلقائياً بدون أي تغيير في المنطق
-        if (token) {
-          const { data: eligibleOrders, error } = await supabase
-            .from('orders')
-            .select('id, tracking_number')
-            .eq('delivery_partner', 'alwaseet')
-            .not('tracking_number', 'is', null)
-            .eq('receipt_received', false)
-            .in('status', ['pending', 'delivery', 'shipped', 'returned'])
-            .limit(200);
-          if (!error && eligibleOrders?.length) {
-            for (const o of eligibleOrders) {
-              if (o.tracking_number) {
-                try {
-                  await syncOrderByQR(o.tracking_number);
-                } catch (e) {
-                  console.error('❌ خطأ في مزامنة طلب تلقائياً:', o.tracking_number, e);
-                }
-              }
-            }
-          }
-        }
+        await fastSyncPendingOrders();
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
@@ -1623,7 +1597,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }, 15000);
 
-  }, [activePartner, isLoggedIn, isSyncing, syncOrderByQR, token]);
+  }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
