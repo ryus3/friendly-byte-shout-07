@@ -701,7 +701,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
-        if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
+        if (!waseetOrder && canAutoDeleteOrderSync(localOrder)) {
           // مهلة أمان 5 دقائق قبل أي حذف تلقائي
           const createdAt = new Date(localOrder.created_at);
           const ageMs = Date.now() - (createdAt?.getTime?.() || 0);
@@ -852,7 +852,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
           
           // تطبيق الحذف التلقائي إذا كان الطلب غير موجود في الوسيط
-          if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
+          if (!waseetOrder && canAutoDeleteOrderSync(localOrder)) {
             // تحقق نهائي من الوسيط عبر QR/Tracking قبل الحذف
             const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
             let remoteCheck = null;
@@ -1100,7 +1100,7 @@ export const AlWaseetProvider = ({ children }) => {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
         
         // التحقق من إمكانية الحذف التلقائي
-        if (localOrder && canAutoDeleteOrder(localOrder)) {
+        if (localOrder && canAutoDeleteOrderSync(localOrder)) {
           console.log(`🗑️ حذف تلقائي للطلب ${qrId} - محذوف من الوسيط`);
           return await performAutoDelete(localOrder);
         }
@@ -2068,7 +2068,7 @@ export const AlWaseetProvider = ({ children }) => {
         if (!confirmKey) continue;
         
         // التحقق من إمكانية الحذف التلقائي وفق الشروط المحلية
-        if (!canAutoDeleteOrder(localOrder)) continue;
+        if (!canAutoDeleteOrderSync(localOrder)) continue;
         
         // مهلة أمان 5 دقائق
         const createdAt = new Date(localOrder.created_at);
@@ -2106,7 +2106,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ خطأ في فحص الطلبات للحذف:', error);
     }
-  }, [token, canAutoDeleteOrder, handleAutoDeleteOrder]);
+  }, [token, canAutoDeleteOrderSync, handleAutoDeleteOrder]);
 
   // Auto-sync and repair on login
   useEffect(() => {
