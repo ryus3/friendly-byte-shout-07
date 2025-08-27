@@ -1188,6 +1188,35 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, orderStatusesMap, loadOrderStatuses]);
 
+  // دالة فحص الحذف التلقائي (يجب أن تكون قبل runUnifiedSync)
+  const canAutoDeleteOrderSync = useCallback((order) => {
+    if (!order) {
+      console.warn('🚫 لا يمكن فحص طلب فارغ');
+      return false;
+    }
+
+    // شروط صارمة للحذف التلقائي الآمن
+    const isValidForDeletion = (
+      order.status === 'pending' &&                     // فقط الطلبات قيد التجهيز
+      order.delivery_partner === 'alwaseet' &&          // فقط طلبات الوسيط
+      !order.receipt_received &&                        // لم يتم استلام إيصال
+      order.created_at &&                               // لديه تاريخ إنشاء
+      new Date() - new Date(order.created_at) > 10 * 60 * 1000  // أقدم من 10 دقائق
+    );
+
+    console.log('🔍 فحص إمكانية الحذف التلقائي:', {
+      orderId: order.id,
+      trackingNumber: order.tracking_number,
+      status: order.status,
+      deliveryPartner: order.delivery_partner,
+      receiptReceived: order.receipt_received,
+      ageInMinutes: order.created_at ? Math.round((new Date() - new Date(order.created_at)) / 60000) : 'غير محدد',
+      canDelete: isValidForDeletion
+    });
+
+    return isValidForDeletion;
+  }, []);
+
   // دالة المزامنة الموحدة الجديدة
   const runUnifiedSync = useCallback(async (showMessages = true) => {
     if (!token) {
@@ -1448,36 +1477,6 @@ export const AlWaseetProvider = ({ children }) => {
     ];
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
-
-  // استيراد منطق الحذف الآمن مرة واحدة في بداية الملف
-  const canAutoDeleteOrderSync = useCallback((order) => {
-    if (!order) {
-      console.warn('🚫 لا يمكن فحص طلب فارغ');
-      return false;
-    }
-
-    // شروط صارمة للحذف التلقائي الآمن
-    const isValidForDeletion = (
-      order.status === 'pending' &&                     // فقط الطلبات قيد التجهيز
-      order.delivery_partner === 'alwaseet' &&          // فقط طلبات الوسيط
-      !order.receipt_received &&                        // لم يتم استلام إيصال
-      order.created_at &&                               // لديه تاريخ إنشاء
-      new Date() - new Date(order.created_at) > 10 * 60 * 1000  // أقدم من 10 دقائق
-    );
-
-    console.log('🔍 فحص إمكانية الحذف التلقائي:', {
-      orderId: order.id,
-      trackingNumber: order.tracking_number,
-      status: order.status,
-      deliveryPartner: order.delivery_partner,
-      receiptReceived: order.receipt_received,
-      ageInMinutes: order.created_at ? Math.round((new Date() - new Date(order.created_at)) / 60000) : 'غير محدد',
-      canDelete: isValidForDeletion
-    });
-
-    return isValidForDeletion;
-  }, []);
-
 
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
