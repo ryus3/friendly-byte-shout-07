@@ -23,27 +23,7 @@ const DELETABLE_DELIVERY_STATUSES = [
  * @returns {boolean} - هل يمكن حذف الطلب تلقائياً
  */
 export const canAutoDeleteOrder = (order) => {
-  if (!order) {
-    console.warn('🚫 لا يمكن فحص طلب فارغ');
-    return false;
-  }
-
-  // الطلبات المحلية pending وبدون استلام فاتورة
-  if (order.status === 'pending' && !order.receipt_received) {
-    // يجب أن يكون لديه tracking_number أو delivery_partner_order_id للتحقق
-    const hasTrackingInfo = !!(order.tracking_number || order.delivery_partner_order_id);
-    console.log('🔍 فحص إمكانية الحذف التلقائي:', {
-      orderId: order.id,
-      orderNumber: order.order_number,
-      status: order.status,
-      receiptReceived: order.receipt_received,
-      hasTrackingInfo,
-      canAutoDelete: hasTrackingInfo
-    });
-    
-    return hasTrackingInfo;
-  }
-
+  // تعطيل الحذف التلقائي نهائياً لمنع أي حذف خاطئ. سيتم تفعيله لاحقاً بعد اعتماد تحقق آمن 100%.
   return false;
 };
 

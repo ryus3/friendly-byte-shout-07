@@ -1439,103 +1439,10 @@ export const AlWaseetProvider = ({ children }) => {
   };
 
   const canAutoDeleteOrder = (order) => {
-    return order?.delivery_partner === 'alwaseet' &&
-           order?.receipt_received !== true &&
-           String(order?.status || '').toLowerCase().trim() === 'pending' &&
-           (!!order?.tracking_number || !!order?.delivery_partner_order_id);
+    // تعطيل الحذف التلقائي نهائياً لمنع أي حذف خاطئ. سيتم تفعيله لاحقاً بعد اعتماد تحقق آمن 100%.
+    return false;
   };
 
-    try {
-      // تحميل حالات الطلبات إذا لم تكن محملة
-      let statusMap = orderStatusesMap;
-      if (statusMap.size === 0) {
-        statusMap = await loadOrderStatuses();
-      }
-
-      // تحديد الحالة المحلية الصحيحة
-      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId;
-      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
-      
-      const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
-        (() => {
-          const t = String(waseetStatusText || '').toLowerCase();
-          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
-          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
-          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
-          if (t.includes('راجع')) return 'returned';
-          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
-          if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
-          return 'pending';
-        })();
-
-      // البحث عن الطلب المحلي
-      const { data: localOrder } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('tracking_number', trackingNumber)
-        .single();
-
-      if (!localOrder) {
-        return null;
-      }
-
-      // تحضير التحديثات
-      const updates = {
-        status: correctLocalStatus,
-        delivery_status: waseetStatusText,
-        delivery_partner_order_id: String(waseetOrder.id),
-        updated_at: new Date().toISOString()
-      };
-
-      // تحديث رسوم التوصيل
-      if (waseetOrder.delivery_price) {
-        const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
-        if (deliveryPrice >= 0) {
-          updates.delivery_fee = deliveryPrice;
-        }
-      }
-
-      // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
-      if (waseetOrder.deliver_confirmed_fin === 1) {
-        updates.receipt_received = true;
-        // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
-        if (correctLocalStatus === 'delivered') {
-          updates.status = 'completed';
-        }
-      }
-
-      // التحقق من الحاجة للتحديث
-      const needs_update = localOrder.status !== correctLocalStatus || 
-                          localOrder.delivery_status !== waseetStatusText ||
-                          !localOrder.delivery_partner_order_id ||
-                          (waseetOrder.delivery_price && localOrder.delivery_fee !== parseInt(waseetOrder.delivery_price)) ||
-                          (waseetOrder.deliver_confirmed_fin === 1 && !localOrder.receipt_received);
-
-      if (needs_update) {
-        // تطبيق التحديثات
-        const { error: updateErr } = await supabase
-          .from('orders')
-          .update(updates)
-          .eq('id', localOrder.id);
-
-        if (updateErr) {
-          console.error('❌ خطأ في تحديث الطلب:', updateErr);
-          return null;
-        }
-      }
-
-      return {
-        needs_update,
-        updates,
-        waseet_order: waseetOrder,
-        local_order: { ...localOrder, ...updates }
-      };
-
-    } catch (error) {
-      console.error(`❌ خطأ في مزامنة بيانات الطلب ${trackingNumber}:`, error);
-      return null;
-    }
-  }, [orderStatusesMap, loadOrderStatuses]);
 
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
