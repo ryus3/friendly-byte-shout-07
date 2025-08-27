@@ -23,8 +23,31 @@ const DELETABLE_DELIVERY_STATUSES = [
  * @returns {boolean} - هل يمكن حذف الطلب تلقائياً
  */
 export const canAutoDeleteOrder = (order) => {
-  // تعطيل الحذف التلقائي نهائياً لمنع أي حذف خاطئ. سيتم تفعيله لاحقاً بعد اعتماد تحقق آمن 100%.
-  return false;
+  if (!order) {
+    console.warn('🚫 لا يمكن فحص طلب فارغ');
+    return false;
+  }
+
+  // شروط صارمة للحذف التلقائي الآمن
+  const isValidForDeletion = (
+    order.status === 'pending' &&                     // فقط الطلبات قيد التجهيز
+    order.delivery_partner === 'alwaseet' &&          // فقط طلبات الوسيط
+    !order.receipt_received &&                        // لم يتم استلام إيصال
+    order.created_at &&                               // لديه تاريخ إنشاء
+    new Date() - new Date(order.created_at) > 10 * 60 * 1000  // أقدم من 10 دقائق
+  );
+
+  console.log('🔍 فحص إمكانية الحذف التلقائي:', {
+    orderId: order.id,
+    trackingNumber: order.tracking_number,
+    status: order.status,
+    deliveryPartner: order.delivery_partner,
+    receiptReceived: order.receipt_received,
+    ageInMinutes: order.created_at ? Math.round((new Date() - new Date(order.created_at)) / 60000) : 'غير محدد',
+    canDelete: isValidForDeletion
+  });
+
+  return isValidForDeletion;
 };
 
 /**
