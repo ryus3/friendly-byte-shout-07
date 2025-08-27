@@ -1166,8 +1166,14 @@ export const AlWaseetProvider = ({ children }) => {
     if (order.delivery_partner !== 'alwaseet') return false;
 
     const deliveryText = String(order.delivery_status || '').toLowerCase().trim();
+    const orderStatus = String(order.status || '').toLowerCase().trim();
+    
+    // إذا لم تكن هناك حالة تسليم ولكن الطلب في حالة pending محلياً
+    if (!deliveryText && orderStatus === 'pending') return true;
+    
     if (!deliveryText) return false;
     const prePickupKeywords = [
+      'pending', 'قيد التجهيز', // إضافة كلمات مفتاحية جديدة
       'فعال','active',
       'في انتظار استلام المندوب','waiting for pickup','pending pickup',
       'جديد','new',
@@ -1179,7 +1185,6 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
   const canAutoDeleteOrder = (order) => {
     return order?.delivery_partner === 'alwaseet' &&
-           !!order?.delivery_partner_order_id &&
            order?.receipt_received !== true &&
            isPrePickupForWaseet(order);
   };
