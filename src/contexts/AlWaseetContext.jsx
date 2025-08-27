@@ -1178,12 +1178,11 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
   const canAutoDeleteOrder = (order) => {
-    return order?.delivery_partner === 'alwaseet' &&
-           !!order?.delivery_partner_order_id &&
-           order?.receipt_received !== true &&
-           isPrePickupForWaseet(order);
+    const isWaseet = order?.delivery_partner === 'alwaseet';
+    const hasKey = Boolean(order?.tracking_number || order?.qr_id);
+    const notInvoiced = order?.receipt_received !== true;
+    return isWaseet && hasKey && notInvoiced && isPrePickupForWaseet(order);
   };
-
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
   const performAutoCleanup = async () => {
     try {
@@ -1718,14 +1717,13 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات...');
       
-      // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
+      // جلب الطلبات المحلية المرشحة للحذف (alwaseet، قبل الاستلام، غير مستلمة الفاتورة)
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
-        .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
-        .in('status', ['pending', 'active', 'disabled', 'inactive'])
+        .in('status', ['pending', 'delivery', 'shipped', 'returned'])
         .limit(50);
         
       if (error || !localOrders?.length) return;
