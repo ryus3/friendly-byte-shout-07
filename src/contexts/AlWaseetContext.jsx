@@ -1165,32 +1165,25 @@ export const AlWaseetProvider = ({ children }) => {
     if (!order) return false;
     if (order.delivery_partner !== 'alwaseet') return false;
 
-    const statusText = String(order.status || '').toLowerCase().trim();
-    // إن كان الطلب محلياً بحالة pending نعتبره قبل الاستلام
-    if (statusText === 'pending') return true;
-
     const deliveryText = String(order.delivery_status || '').toLowerCase().trim();
+    if (!deliveryText) return false;
     const prePickupKeywords = [
       'فعال','active',
       'في انتظار استلام المندوب','waiting for pickup','pending pickup',
       'جديد','new',
-      'معطل','غير فعال','disabled','inactive',
-      'pending'
+      'معطل','غير فعال','disabled','inactive'
     ];
-
-    // إن لم تتوفر حالة تسليم، نعتمد على الحالة المحلية
-    if (!deliveryText) return statusText === 'pending';
-
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
   // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
   const canAutoDeleteOrder = (order) => {
-    const isWaseet = order?.delivery_partner === 'alwaseet';
-    const hasKey = Boolean(order?.tracking_number || order?.qr_id);
-    const notInvoiced = order?.receipt_received !== true;
-    return isWaseet && hasKey && notInvoiced && isPrePickupForWaseet(order);
+    return order?.delivery_partner === 'alwaseet' &&
+           !!order?.delivery_partner_order_id &&
+           order?.receipt_received !== true &&
+           isPrePickupForWaseet(order);
   };
+
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
   const performAutoCleanup = async () => {
     try {
@@ -1725,23 +1718,21 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات...');
       
-      // جلب الطلبات المحلية المرشحة للحذف (alwaseet، قبل الاستلام، غير مستلمة الفاتورة)
+      // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
+        .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
-        .in('status', ['pending', 'delivery', 'shipped', 'returned'])
+        .in('status', ['pending', 'active', 'disabled', 'inactive'])
         .limit(50);
         
       if (error || !localOrders?.length) return;
       
       // جلب جميع طلبات الوسيط للمقارنة
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      const norm = (v) => String(v ?? '').trim();
-      const waseetOrderIds = new Set(waseetOrders.map(o => norm(o.id)));
-      const remoteQrIds = new Set(waseetOrders.map(o => norm(o.qr_id)));
-      const remoteTracking = new Set(waseetOrders.map(o => norm(o.tracking_number)));
+      const waseetOrderIds = new Set(waseetOrders.map(o => String(o.id)));
       
       let deletedCount = 0;
       
@@ -1749,37 +1740,25 @@ export const AlWaseetProvider = ({ children }) => {
         // التحقق من إمكانية الحذف التلقائي
         if (!canAutoDeleteOrder(localOrder)) continue;
         
-        // فحص الوجود باستخدام أكثر من معرف (id / qr_id / tracking_number)
-        const localId = norm(localOrder.delivery_partner_order_id);
-        const localQr = norm(localOrder.qr_id);
-        const localTn = norm(localOrder.tracking_number);
-        
-        const existsRemotely =
-          (localId && waseetOrderIds.has(localId)) ||
-          (localQr && (remoteQrIds.has(localQr) || remoteTracking.has(localQr))) ||
-          (localTn && (remoteTracking.has(localTn) || remoteQrIds.has(localTn)));
-        
-        console.log('🧮 تحقق وجود الطلب في الوسيط قبل الحذف:', {
-          localId, localQr, localTn, existsRemotely
-        });
-        
-        if (existsRemotely) continue;
-        
-        // تحقق نهائي مباشر قبل الحذف عبر API
-        const confirmKey = localTn || localQr;
-        let remoteCheck = null;
-        if (confirmKey) {
-          try {
-            remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
-          } catch (e) {
-            console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (deletion pass):', e);
+        // التحقق من عدم وجود الطلب في الوسيط
+        const waseetId = String(localOrder.delivery_partner_order_id);
+        if (!waseetOrderIds.has(waseetId)) {
+          // تحقق نهائي مباشر قبل الحذف
+          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
+          let remoteCheck = null;
+          if (confirmKey) {
+            try {
+              remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
+            } catch (e) {
+              console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (deletion pass):', e);
+            }
           }
-        }
-        
-        if (!remoteCheck) {
-          console.log('🗑️ حذف تلقائي للطلب بعد مزامنة الحالات:', localOrder.tracking_number);
-          await handleAutoDeleteOrder(localOrder.id, 'deletionPass');
-          deletedCount++;
+          
+          if (!remoteCheck) {
+            console.log('🗑️ حذف تلقائي للطلب بعد مزامنة الحالات:', localOrder.tracking_number);
+            await handleAutoDeleteOrder(localOrder.id, 'deletionPass');
+            deletedCount++;
+          }
         }
       }
       
