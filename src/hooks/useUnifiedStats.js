@@ -50,7 +50,7 @@ export const useUnifiedStats = () => {
     const salesWithoutDelivery = totalRevenue - deliveryFees;
     
     return {
-      total: filteredData.orders.length,
+      total: filteredData.orders.filter(o => !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length,
       completed: completedOrders.length,
       pending: pendingOrders.length,
       shipped: shippedOrders.length,
