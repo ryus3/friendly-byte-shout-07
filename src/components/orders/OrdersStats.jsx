@@ -25,12 +25,12 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     const filtered = globalPeriod !== 'all' ? filterOrdersByPeriod(safeOrders, globalPeriod) : safeOrders;
 
     if (status === 'all') {
-      return filtered.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
+      return filtered.filter(o => !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
     }
     if (status === 'archived') {
-      return filtered.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock').length;
+      return filtered.filter(o => o.isarchived || o.status === 'completed' || o.status === 'returned_in_stock').length;
     }
-    return filtered.filter(o => o.status === status && !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
+    return filtered.filter(o => o.status === status && !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
   };
 
   const createClickHandler = (status) => () => {
