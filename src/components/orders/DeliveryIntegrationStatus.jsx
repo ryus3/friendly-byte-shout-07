@@ -25,8 +25,7 @@ const DeliveryIntegrationStatus = () => {
     token, 
     waseetUser,
     loading,
-    syncAndApplyOrders,
-    fastSyncPendingOrders,
+    runUnifiedSync,
     getMerchantOrders,
     linkRemoteIdsForExistingOrders,
     autoSyncEnabled,
@@ -68,20 +67,15 @@ const DeliveryIntegrationStatus = () => {
     }
   };
 
-  // مزامنة سريعة يدوية مع إشعارات
+  // مزامنة موحدة
   const handleFastSync = async () => {
     setSyncing(true);
     try {
-      const result = await fastSyncPendingOrders(true); // إشعارات مفعلة للمزامنة اليدوية
-      toast({
-        title: 'مزامنة سريعة مكتملة',
-        description: `تم فحص ${result.checked} طلب وتحديث ${result.updated} طلب`,
-        variant: 'success'
-      });
+      await runUnifiedSync();
       await checkConnectionStatus();
     } catch (error) {
       toast({
-        title: 'خطأ في المزامنة السريعة',
+        title: 'خطأ في المزامنة',
         description: error.message,
         variant: 'destructive'
       });
@@ -90,15 +84,15 @@ const DeliveryIntegrationStatus = () => {
     }
   };
 
-  // مزامنة شاملة
+  // مزامنة شاملة (نفس الموحدة)
   const handleFullSync = async () => {
     setSyncing(true);
     try {
-      await syncAndApplyOrders();
+      await runUnifiedSync();
       await checkConnectionStatus();
     } catch (error) {
       toast({
-        title: 'خطأ في المزامنة الشاملة',
+        title: 'خطأ في المزامنة',
         description: error.message,
         variant: 'destructive'
       });

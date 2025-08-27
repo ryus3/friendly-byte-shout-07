@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
+import OrderVerificationButton from './OrderVerificationButton';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 
 const getStatusInfo = (order) => {
@@ -385,6 +386,17 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               {syncing ? 'جاري التحقق...' : 'تحقق الآن'}
             </Button>
           )}
+          
+          {/* زر فحص الوجود الاختياري في المعاينة */}
+          {order?.delivery_partner === 'alwaseet' && order?.tracking_number && (
+            <OrderVerificationButton 
+              order={order} 
+              onVerificationComplete={(orderId, action) => {
+                // لا نقوم بأي شيء هنا - الزر للفحص اليدوي فقط
+              }}
+            />
+          )}
+          
           {canEditOrder && onEditOrder && (
             <Button variant="secondary" onClick={handleEditClick}>
               <Edit className="w-4 h-4 ml-2" />

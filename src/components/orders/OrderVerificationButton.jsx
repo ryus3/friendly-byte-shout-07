@@ -8,7 +8,7 @@ import { toast } from '@/components/ui/use-toast';
 const OrderVerificationButton = ({ order, onVerificationComplete }) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
-  const { verifyOrderExistence, autoDeleteMissingOrder, isLoggedIn } = useAlWaseet();
+  const { verifyOrderExistence, isLoggedIn } = useAlWaseet();
 
   const handleVerification = async () => {
     if (!order?.tracking_number) {
@@ -44,30 +44,12 @@ const OrderVerificationButton = ({ order, onVerificationComplete }) => {
           variant: "default"
         });
       } else if (!result.error) {
-        // الطلب غير موجود - عرض خيار الحذف التلقائي
-        if (order.status === 'pending' && !order.receipt_received) {
-          const deleteResult = await autoDeleteMissingOrder(order);
-          if (deleteResult.deleted) {
-            toast({
-              title: "🗑️ تم الحذف التلقائي",
-              description: `تم حذف الطلب ${order.order_number} لعدم وجوده في الوسيط`,
-              variant: "default"
-            });
-            onVerificationComplete?.(order.id, 'deleted');
-          } else {
-            toast({
-              title: "❌ فشل الحذف",
-              description: deleteResult.error || "لا يمكن حذف الطلب",
-              variant: "destructive"
-            });
-          }
-        } else {
-          toast({
-            title: "⚠️ الطلب غير موجود",
-            description: `الطلب ${order.tracking_number} غير موجود في الوسيط`,
-            variant: "destructive"
-          });
-        }
+        // الطلب غير موجود - عرض معلومات فقط (بدون حذف تلقائي)
+        toast({
+          title: "⚠️ الطلب غير موجود",
+          description: `الطلب ${order.tracking_number} غير موجود في الوسيط. سيتم حذفه تلقائياً عند المزامنة التالية.`,
+          variant: "destructive"
+        });
       } else {
         toast({
           title: "خطأ في الفحص",
