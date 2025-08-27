@@ -6,7 +6,7 @@ import {
 	ToastTitle,
 	ToastViewport,
 } from '@/components/ui/toast.jsx';
-import { useToast } from '@/components/ui/use-toast.js';
+import { useToast } from '@/hooks/use-toast';
 import React from 'react';
 
 // أيقونات احترافية نظيفة بدون رموز مزعجة
