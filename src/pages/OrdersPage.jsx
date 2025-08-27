@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -34,7 +34,7 @@ import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
-  const { syncAndApplyOrders, syncOrderByTracking, runUnifiedSync, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 /**

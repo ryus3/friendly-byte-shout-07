@@ -10,7 +10,7 @@ import {
   HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import AddEditDepartmentDialog from './AddEditDepartmentDialog';
 import { useSuper } from '@/contexts/SuperProvider';
 

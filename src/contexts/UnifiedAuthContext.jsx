@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedPermissionsProvider } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 

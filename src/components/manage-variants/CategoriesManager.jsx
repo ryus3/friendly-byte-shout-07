@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import Loader from '@/components/ui/loader';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';

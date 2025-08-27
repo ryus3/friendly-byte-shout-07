@@ -13,7 +13,7 @@ import {
   HardHat, Paintbrush, Laptop, Smartphone, Headphones
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const AddEditDepartmentDialog = ({ isOpen, onClose, department, onSuccess }) => {
   const [formData, setFormData] = useState({

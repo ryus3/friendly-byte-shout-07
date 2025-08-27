@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star, Package, DollarSign, Palette, Ruler, Hash, Calendar, Info, ShoppingCart, Zap, Plus, Minus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
 import Barcode from 'react-barcode';
 

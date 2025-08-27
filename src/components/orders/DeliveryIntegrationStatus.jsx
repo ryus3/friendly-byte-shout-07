@@ -16,7 +16,7 @@ import {
   Link2
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const DeliveryIntegrationStatus = () => {
   const { 

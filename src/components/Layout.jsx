@@ -9,7 +9,7 @@ import {
   Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet, Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast.js';
 import { useTheme } from '@/contexts/ThemeContext.jsx';
 import NotificationsPanel from '@/components/NotificationsPanel.jsx';
 import BottomNav from '@/components/BottomNav.jsx';
