@@ -493,10 +493,7 @@ const Dashboard = () => {
             topProducts: []
         };
 
-        const filteredTotalOrders = filterOrdersByPeriod(
-          visibleOrders.filter(o => !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock'), 
-          periods.totalOrders
-        );
+        const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed');
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
