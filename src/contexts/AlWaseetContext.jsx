@@ -1027,6 +1027,9 @@ export const AlWaseetProvider = ({ children }) => {
       
       // Silent sync - no toast notification
       
+      // After status sync, check for orders that need deletion (not found in remote)
+      await performDeletionPassAfterStatusSync();
+      
       return waseetOrders;
     } catch (error) {
       console.error('❌ خطأ في المزامنة:', error);
@@ -1556,7 +1559,7 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
 
-  // Perform sync with countdown
+  // Perform sync with countdown - can be triggered manually even if autoSync is disabled
   const performSyncWithCountdown = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
@@ -1596,21 +1599,21 @@ export const AlWaseetProvider = ({ children }) => {
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
-  // Initial sync on login
+  // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt) {
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt && autoSyncEnabled) {
       console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
       performSyncWithCountdown();
     }
-  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, performSyncWithCountdown]);
+  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, autoSyncEnabled, performSyncWithCountdown]);
 
-  // Periodic sync every 10 minutes
+  // Periodic sync every 10 minutes - respects autoSyncEnabled setting
   useEffect(() => {
     let intervalId;
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby') {
+    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && autoSyncEnabled) {
       intervalId = setInterval(() => {
         if (!isSyncing) {
-          console.log('⏰ مزامنة دورية (كل 10 دقائق)...');
+          console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
           performSyncWithCountdown();
         }
       }, syncInterval);
@@ -1618,7 +1621,7 @@ export const AlWaseetProvider = ({ children }) => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, performSyncWithCountdown]);
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {
@@ -1708,6 +1711,65 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, correctionComplete]);
 
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات
+  const performDeletionPassAfterStatusSync = useCallback(async () => {
+    if (!token) return;
+    
+    try {
+      console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات...');
+      
+      // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
+      const { data: localOrders, error } = await supabase
+        .from('orders')
+        .select('id, tracking_number, qr_id, delivery_partner_order_id, delivery_status, status, receipt_received')
+        .eq('delivery_partner', 'alwaseet')
+        .not('delivery_partner_order_id', 'is', null)
+        .eq('receipt_received', false)
+        .in('status', ['pending', 'active', 'disabled', 'inactive'])
+        .limit(50);
+        
+      if (error || !localOrders?.length) return;
+      
+      // جلب جميع طلبات الوسيط للمقارنة
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      const waseetOrderIds = new Set(waseetOrders.map(o => String(o.id)));
+      
+      let deletedCount = 0;
+      
+      for (const localOrder of localOrders) {
+        // التحقق من إمكانية الحذف التلقائي
+        if (!canAutoDeleteOrder(localOrder)) continue;
+        
+        // التحقق من عدم وجود الطلب في الوسيط
+        const waseetId = String(localOrder.delivery_partner_order_id);
+        if (!waseetOrderIds.has(waseetId)) {
+          // تحقق نهائي مباشر قبل الحذف
+          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
+          let remoteCheck = null;
+          if (confirmKey) {
+            try {
+              remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
+            } catch (e) {
+              console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (deletion pass):', e);
+            }
+          }
+          
+          if (!remoteCheck) {
+            console.log('🗑️ حذف تلقائي للطلب بعد مزامنة الحالات:', localOrder.tracking_number);
+            await handleAutoDeleteOrder(localOrder.id, 'deletionPass');
+            deletedCount++;
+          }
+        }
+      }
+      
+      if (deletedCount > 0) {
+        console.log(`🗑️ تم حذف ${deletedCount} طلب تلقائياً بعد مزامنة الحالات`);
+      }
+    } catch (error) {
+      console.error('❌ خطأ في فحص الطلبات للحذف:', error);
+    }
+  }, [token, canAutoDeleteOrder, handleAutoDeleteOrder]);
+
   // Auto-sync and repair on login
   useEffect(() => {
     if (!isLoggedIn || !token || activePartner === 'local') return;
@@ -1738,7 +1800,7 @@ export const AlWaseetProvider = ({ children }) => {
     return () => {
       if (initialTimeout) clearTimeout(initialTimeout);
     };
-  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair, performSyncWithCountdown]);
+  }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair]);
 
   const value = {
     isLoggedIn,
@@ -1775,6 +1837,7 @@ export const AlWaseetProvider = ({ children }) => {
     fastSyncPendingOrders,
     linkRemoteIdsForExistingOrders,
     comprehensiveOrderCorrection,
+    performDeletionPassAfterStatusSync,
     
     // Sync status exports
     isSyncing,

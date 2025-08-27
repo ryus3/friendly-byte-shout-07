@@ -5,14 +5,15 @@ import { cn } from '@/lib/utils';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 const SyncStatusIndicator = ({ className }) => {
-  const { 
-    isSyncing, 
-    syncCountdown, 
-    syncMode, 
-    lastSyncAt, 
+  const {
+    isSyncing,
+    syncCountdown,
+    syncMode,
+    lastSyncAt,
     performSyncWithCountdown,
     isLoggedIn,
-    activePartner 
+    activePartner,
+    autoSyncEnabled
   } = useAlWaseet();
   
   const { theme } = useTheme();
@@ -68,6 +69,7 @@ const SyncStatusIndicator = ({ className }) => {
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
         "bg-background",
+        autoSyncEnabled ? "border border-border" : "border border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/30", // Paused styling
         syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}
@@ -78,8 +80,8 @@ const SyncStatusIndicator = ({ className }) => {
           : syncMode === 'countdown'
             ? `المزامنة خلال ${syncCountdown} ثانية`
             : lastSyncAt 
-              ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}`
-              : "اضغط للمزامنة السريعة"
+              ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
+              : `اضغط للمزامنة السريعة${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
       }
     >
       {/* Background and Progress circles */}
@@ -130,7 +132,10 @@ const SyncStatusIndicator = ({ className }) => {
           </span>
         ) : (
           <RefreshCw className={cn(
-            "w-4 h-4 transition-all duration-500 text-muted-foreground",
+            "w-4 h-4 transition-all duration-500",
+            autoSyncEnabled 
+              ? "text-muted-foreground" 
+              : "text-orange-500 dark:text-orange-400", // Paused state
             isSpinning && "animate-[spin_1.5s_ease-in-out]"
           )} />
         )}
