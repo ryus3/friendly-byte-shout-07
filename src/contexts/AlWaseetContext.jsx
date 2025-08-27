@@ -700,9 +700,8 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // تطبيق الحذف التلقائي إذا لم نجد الطلب في الوسيط
-        // ولكن فقط للطلبات في الحالات المحددة للأمان
-        if (!waseetOrder && ['pending', 'active', 'disabled', 'inactive'].includes(localOrder.status)) {
+        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
+        if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
           console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
           await handleAutoDeleteOrder(localOrder.id, 'fastSync');
           continue;
@@ -1135,23 +1134,28 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, orderStatusesMap, loadOrderStatuses]);
 
-  // دالة للتحقق من إمكانية الحذف التلقائي
+  // Helper: التحقق أن الطلب قبل استلام المندوب (AlWaseet)
+  const isPrePickupForWaseet = (order) => {
+    if (!order) return false;
+    if (order.delivery_partner !== 'alwaseet') return false;
+
+    const localPending = String(order.status || '').toLowerCase().trim() === 'pending';
+    const deliveryText = String(order.delivery_status || '').toLowerCase().trim();
+    const prePickupKeywords = [
+      'فعال','active',
+      'في انتظار استلام المندوب','waiting for pickup','pending pickup',
+      'جديد','new',
+      'معطل','غير فعال','disabled','inactive'
+    ];
+    const matchText = prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
+    return localPending || matchText;
+  };
+
+  // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
   const canAutoDeleteOrder = (order) => {
-    // شروط الحذف التلقائي:
-    // 1. طلب الوسيط (delivery_partner = 'alwaseet')
-    // 2. لم يتم استلام الإيصال (receipt_received = false)
-    // 3. الحالة تسمح بالحذف (active, disabled, inactive, preparing)
-    // 4. الطلب أقدم من 10 دقائق لتجنب الحذف الفوري
-    const allowedStatuses = ['active', 'disabled', 'inactive', 'preparing', 'pending'];
-    
-    // التحقق من عمر الطلب (30 دقيقة = 1800000 مللي ثانية)
-    const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAgeBeforeDelete = 30 * 60 * 1000; // 30 دقيقة
-    
-    return order.delivery_partner === 'alwaseet' && 
-           !order.receipt_received && 
-           allowedStatuses.includes(order.status) &&
-           orderAge >= minAgeBeforeDelete;
+    return order?.delivery_partner === 'alwaseet' &&
+           order?.receipt_received !== true &&
+           isPrePickupForWaseet(order);
   };
 
   // دالة محسنة للحذف التلقائي مع تحقق متعدد

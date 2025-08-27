@@ -10,7 +10,11 @@ const DELETABLE_DELIVERY_STATUSES = [
   'waiting for pickup',
   'pending pickup',
   'جديد',
-  'new'
+  'new',
+  'معطل',
+  'غير فعال',
+  'disabled',
+  'inactive'
 ];
 
 /**
