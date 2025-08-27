@@ -25,6 +25,7 @@ import {
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
+import OrderVerificationButton from './OrderVerificationButton';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
