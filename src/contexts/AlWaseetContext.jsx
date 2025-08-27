@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
