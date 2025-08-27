@@ -37,7 +37,7 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     setAutoSyncEnabled,
     syncInterval,
     setSyncInterval,
-    fastSyncPendingOrders,
+    runUnifiedSync,
     syncAndApplyOrders,
     comprehensiveOrderCorrection,
     syncOrderByTracking,
@@ -60,10 +60,10 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     try {
       let result;
       if (type === 'fast') {
-        result = await fastSyncPendingOrders(true);
+        result = await runUnifiedSync(true);
         toast({
-          title: "مزامنة سريعة مكتملة",
-          description: `تم تحديث ${result.updated} طلب من أصل ${result.checked}`,
+          title: "مزامنة موحدة مكتملة",
+          description: result?.message || `تم فحص وتحديث الطلبات بنجاح`,
         });
       } else if (type === 'full') {
         result = await syncAndApplyOrders();

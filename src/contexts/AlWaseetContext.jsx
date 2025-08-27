@@ -1438,67 +1438,6 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-      if (!localOrder) {
-        return null;
-      }
-
-      // تحضير التحديثات
-      const updates = {
-        status: correctLocalStatus,
-        delivery_status: waseetStatusText,
-        delivery_partner_order_id: String(waseetOrder.id),
-        updated_at: new Date().toISOString()
-      };
-
-      // تحديث رسوم التوصيل
-      if (waseetOrder.delivery_price) {
-        const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
-        if (deliveryPrice >= 0) {
-          updates.delivery_fee = deliveryPrice;
-        }
-      }
-
-      // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
-      if (waseetOrder.deliver_confirmed_fin === 1) {
-        updates.receipt_received = true;
-        // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
-        if (correctLocalStatus === 'delivered') {
-          updates.status = 'completed';
-        }
-      }
-
-      // التحقق من الحاجة للتحديث
-      const needs_update = localOrder.status !== correctLocalStatus || 
-                          localOrder.delivery_status !== waseetStatusText ||
-                          !localOrder.delivery_partner_order_id ||
-                          (waseetOrder.delivery_price && localOrder.delivery_fee !== parseInt(waseetOrder.delivery_price)) ||
-                          (waseetOrder.deliver_confirmed_fin === 1 && !localOrder.receipt_received);
-
-      if (needs_update) {
-        // تطبيق التحديثات
-        const { error: updateErr } = await supabase
-          .from('orders')
-          .update(updates)
-          .eq('id', localOrder.id);
-
-        if (updateErr) {
-          console.error('❌ خطأ في تحديث الطلب:', updateErr);
-          return null;
-        }
-      }
-
-      return {
-        needs_update,
-        updates,
-        waseet_order: waseetOrder,
-        local_order: { ...localOrder, ...updates }
-      };
-
-    } catch (error) {
-      console.error(`❌ خطأ في مزامنة بيانات الطلب ${trackingNumber}:`, error);
-      return null;
-    }
-  }, [orderStatusesMap, loadOrderStatuses]);
 
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {

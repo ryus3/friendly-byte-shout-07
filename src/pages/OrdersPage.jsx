@@ -34,7 +34,7 @@ import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
-  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking, runUnifiedSync, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();
