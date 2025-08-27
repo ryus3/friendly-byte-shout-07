@@ -937,7 +937,7 @@ export const AlWaseetProvider = ({ children }) => {
   }, [activePartner, isLoggedIn, token, orderStatusesMap, loadOrderStatuses, linkRemoteIdsForExistingOrders, chunkArray, lastNotificationStatus, setLastNotificationStatus]);
 
   // مزامنة الطلبات مع تحديث الحالات في قاعدة البيانات
-  const syncAndApplyOrders = async () => {
+  const syncAndApplyOrders = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
       toast({ title: "غير متاح", description: "مزامنة الطلبات متاحة فقط عند تسجيل الدخول لشركة توصيل." });
       return [];
@@ -1070,7 +1070,7 @@ export const AlWaseetProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activePartner, isLoggedIn, token, orderStatusesMap, loadOrderStatuses]);
 
   // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
   const syncOrderByQR = useCallback(async (qrId) => {
@@ -1664,7 +1664,7 @@ export const AlWaseetProvider = ({ children }) => {
   };
 
   // للتوافق مع الإصدار السابق
-  const syncOrders = syncAndApplyOrders;
+  const syncOrders = useCallback(syncAndApplyOrders, [syncAndApplyOrders]);
 
   const getMerchantOrders = useCallback(async () => {
     if (token) {
