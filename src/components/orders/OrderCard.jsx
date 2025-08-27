@@ -25,7 +25,6 @@ import {
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
-import OrderVerificationButton from './OrderVerificationButton';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
@@ -540,20 +539,6 @@ const OrderCard = ({
             {additionalButtons && (
               <div className="flex justify-center pt-2">
                 {additionalButtons}
-              </div>
-            )}
-            
-            {/* Order verification for AlWaseet orders */}
-            {order.delivery_partner === 'alwaseet' && order.tracking_number && (
-              <div className="mt-3 pt-3 border-t border-border/50">
-                <OrderVerificationButton 
-                  order={order} 
-                  onVerificationComplete={(orderId, action) => {
-                    if (action === 'deleted') {
-                      window.location.reload(); // Refresh to remove deleted order
-                    }
-                  }}
-                />
               </div>
             )}
           </div>

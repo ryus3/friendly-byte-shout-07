@@ -1445,88 +1445,6 @@ export const AlWaseetProvider = ({ children }) => {
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
   }, [token]);
 
-  // دالة للتحقق من وجود الطلب في الوسيط
-  const verifyOrderExistence = useCallback(async (trackingNumber) => {
-    if (!token || !trackingNumber) {
-      return { exists: false, error: 'معطيات ناقصة' };
-    }
-
-    try {
-      console.log(`🔍 فحص وجود الطلب ${trackingNumber} في الوسيط...`);
-      
-      const order = await AlWaseetAPI.getOrderByQR(token, trackingNumber);
-      
-      if (order) {
-        console.log(`✅ الطلب ${trackingNumber} موجود في الوسيط:`, order);
-        return { 
-          exists: true, 
-          order,
-          deliveryPartnerId: String(order.id),
-          statusId: order.status_id || order.statusId,
-          statusText: order.status || order.status_text
-        };
-      } else {
-        console.log(`❌ الطلب ${trackingNumber} غير موجود في الوسيط`);
-        return { exists: false };
-      }
-    } catch (error) {
-      console.error(`💥 خطأ في فحص الطلب ${trackingNumber}:`, error);
-      return { exists: false, error: error.message };
-    }
-  }, [token]);
-
-  // دالة لحذف الطلب المحلي إذا لم يعد موجوداً في الوسيط
-  const autoDeleteMissingOrder = useCallback(async (localOrder) => {
-    if (!localOrder || localOrder.status !== 'pending' || localOrder.receipt_received) {
-      return { deleted: false, reason: 'الطلب لا يلبي شروط الحذف التلقائي' };
-    }
-
-    try {
-      console.log(`🗑️ حذف تلقائي للطلب المفقود:`, localOrder.order_number);
-      
-      // حذف الطلب من قاعدة البيانات
-      const { error } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', localOrder.id);
-
-      if (error) {
-        console.error('❌ خطأ في حذف الطلب:', error);
-        return { deleted: false, error: error.message };
-      }
-
-      // إشعار نجاح الحذف
-      toast({
-        title: "تم حذف الطلب تلقائياً",
-        description: `الطلب ${localOrder.order_number} لم يعد موجوداً في شركة التوصيل`,
-        variant: "default"
-      });
-
-      // إرسال إشعار للنظام
-      if (createNotification) {
-        createNotification({
-          title: 'حذف طلب تلقائي',
-          message: `تم حذف الطلب ${localOrder.order_number} لعدم وجوده في شركة التوصيل`,
-          type: 'auto_deletion',
-          priority: 'medium',
-          data: {
-            order_id: localOrder.id,
-            order_number: localOrder.order_number,
-            tracking_number: localOrder.tracking_number,
-            reason: 'missing_from_delivery_partner'
-          }
-        });
-      }
-
-      console.log(`✅ تم حذف الطلب ${localOrder.order_number} تلقائياً`);
-      return { deleted: true };
-
-    } catch (error) {
-      console.error('💥 خطأ في الحذف التلقائي:', error);
-      return { deleted: false, error: error.message };
-    }
-  }, [createNotification]);
-
   const fetchCities = useCallback(async () => {
     if (token) {
       try {
@@ -1920,10 +1838,6 @@ export const AlWaseetProvider = ({ children }) => {
     linkRemoteIdsForExistingOrders,
     comprehensiveOrderCorrection,
     performDeletionPassAfterStatusSync,
-    
-    // Order verification functions
-    verifyOrderExistence,
-    autoDeleteMissingOrder,
     
     // Sync status exports
     isSyncing,
