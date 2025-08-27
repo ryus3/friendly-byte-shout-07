@@ -91,17 +91,17 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     try {
       console.log(`🔄 مزامنة الطلب ${order.tracking_number}...`);
       
-      // استخدام الدالة الجديدة للمزامنة المباشرة بوضع يدوي
-      const syncResult = await syncOrderByQR(order.tracking_number, { showNotifications: true, mode: 'manual' });
+      // استخدام الدالة الجديدة للمزامنة المباشرة
+      const syncResult = await syncOrderByQR(order.tracking_number);
       
-      // التحقق من الحذف اليدوي
-      if (syncResult && syncResult.deleted) {
-        // إغلاق الحوار وإظهار رسالة الحذف
+      // التحقق من الحذف التلقائي
+      if (syncResult && syncResult.autoDeleted) {
+        // إغلاق الحوار وإظهار رسالة الحذف التلقائي
         onOpenChange(false);
         
         toast({
-          title: "تم حذف الطلب",
-          description: "الطلب غير موجود في شركة التوصيل وتم حذفه محلياً",
+          title: "تم حذف الطلب تلقائياً",
+          description: syncResult.message,
           variant: "default"
         });
         
@@ -113,16 +113,16 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
         return;
       }
       
-      if (syncResult && syncResult.success && syncResult.updated) {
+      if (syncResult && syncResult.needs_update) {
         // إعادة تحميل الصفحة لإظهار التحديثات
         window.location.reload();
         
         toast({
           title: "تمت المزامنة بنجاح",
-          description: `تم تحديث حالة الطلب`,
-          variant: "default"
+          description: `تم تحديث حالة الطلب إلى: ${syncResult.updates.status}`,
+          variant: "success"
         });
-      } else if (syncResult && syncResult.success) {
+      } else if (syncResult) {
         toast({
           title: "الطلب محدث",
           description: "الطلب محدث بالفعل ولا يحتاج لمزامنة",
@@ -130,8 +130,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
         });
       } else {
         toast({
-          title: "فشل في المزامنة",
-          description: syncResult?.error || "حدث خطأ أثناء المزامنة",
+          title: "خطأ في المزامنة",
+          description: "لم يتم العثور على الطلب في شركة التوصيل",
           variant: "destructive"
         });
       }
