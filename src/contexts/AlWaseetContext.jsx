@@ -1438,36 +1438,6 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-    try {
-      // تحميل حالات الطلبات إذا لم تكن محملة
-      let statusMap = orderStatusesMap;
-      if (statusMap.size === 0) {
-        statusMap = await loadOrderStatuses();
-      }
-
-      // تحديد الحالة المحلية الصحيحة
-      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId;
-      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
-      
-      const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
-        (() => {
-          const t = String(waseetStatusText || '').toLowerCase();
-          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
-          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
-          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
-          if (t.includes('راجع')) return 'returned';
-          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
-          if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
-          return 'pending';
-        })();
-
-      // البحث عن الطلب المحلي
-      const { data: localOrder } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('tracking_number', trackingNumber)
-        .single();
-
       if (!localOrder) {
         return null;
       }
@@ -1949,7 +1919,7 @@ export const AlWaseetProvider = ({ children }) => {
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
-        await fastSyncPendingOrders();
+        await runUnifiedSync(false);
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
@@ -1961,7 +1931,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }, 15000);
 
-  }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
+  }, [activePartner, isLoggedIn, isSyncing, runUnifiedSync]);
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
