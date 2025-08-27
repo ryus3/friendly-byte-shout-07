@@ -18,7 +18,37 @@ const DELETABLE_DELIVERY_STATUSES = [
 ];
 
 /**
- * التحقق من إمكانية حذف الطلب
+ * التحقق من إمكانية الحذف التلقائي للطلب
+ * @param {Object} order - بيانات الطلب
+ * @returns {boolean} - هل يمكن حذف الطلب تلقائياً
+ */
+export const canAutoDeleteOrder = (order) => {
+  if (!order) {
+    console.warn('🚫 لا يمكن فحص طلب فارغ');
+    return false;
+  }
+
+  // الطلبات المحلية pending وبدون استلام فاتورة
+  if (order.status === 'pending' && !order.receipt_received) {
+    // يجب أن يكون لديه tracking_number أو delivery_partner_order_id للتحقق
+    const hasTrackingInfo = !!(order.tracking_number || order.delivery_partner_order_id);
+    console.log('🔍 فحص إمكانية الحذف التلقائي:', {
+      orderId: order.id,
+      orderNumber: order.order_number,
+      status: order.status,
+      receiptReceived: order.receipt_received,
+      hasTrackingInfo,
+      canAutoDelete: hasTrackingInfo
+    });
+    
+    return hasTrackingInfo;
+  }
+
+  return false;
+};
+
+/**
+ * التحقق من إمكانية حذف الطلب (للحذف اليدوي)
  * @param {Object} order - بيانات الطلب
  * @returns {boolean} - هل يمكن حذف الطلب
  */
@@ -67,6 +97,26 @@ export const canDeleteOrder = (order) => {
   });
   
   return canDelete;
+};
+
+/**
+ * التحقق من أن الطلب قبل استلام المندوب للوسيط
+ * @param {Object} order - بيانات الطلب
+ * @returns {boolean}
+ */
+export const isPrePickupForWaseet = (order) => {
+  if (!order || order.delivery_partner !== 'alwaseet') return false;
+  
+  // إذا كان الطلب pending وبدون استلام فاتورة، فهو قبل الاستلام
+  if (order.status === 'pending' && !order.receipt_received) {
+    return true;
+  }
+  
+  // فحص حالات التسليم النصية أيضاً
+  const deliveryStatus = (order.delivery_status || '').toLowerCase().trim();
+  return DELETABLE_DELIVERY_STATUSES.some(status => 
+    deliveryStatus.includes(status.toLowerCase())
+  );
 };
 
 /**

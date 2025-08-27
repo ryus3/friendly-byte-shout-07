@@ -541,6 +541,20 @@ const OrderCard = ({
                 {additionalButtons}
               </div>
             )}
+            
+            {/* Order verification for AlWaseet orders */}
+            {order.delivery_partner === 'alwaseet' && order.tracking_number && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <OrderVerificationButton 
+                  order={order} 
+                  onVerificationComplete={(orderId, action) => {
+                    if (action === 'deleted') {
+                      window.location.reload(); // Refresh to remove deleted order
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
