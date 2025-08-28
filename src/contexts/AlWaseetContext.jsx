@@ -1606,11 +1606,27 @@ export const AlWaseetProvider = ({ children }) => {
   const performSyncWithCountdown = useCallback(async () => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
-    // Start countdown mode WITHOUT setting isSyncing to true yet
+    // Start sync immediately and show countdown as visual indicator
     setSyncMode('countdown');
-    setSyncCountdown(15);
+    setSyncCountdown(10);
+    setIsSyncing(true);
 
-    // Countdown timer
+    // Start sync immediately
+    const syncPromise = (async () => {
+      try {
+        console.log('🔄 تنفيذ المزامنة...');
+        setSyncMode('syncing');
+        await fastSyncPendingOrders();
+        console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
+        await performDeletionPassAfterStatusSync();
+        setLastSyncAt(new Date());
+        console.log('✅ تمت المزامنة بنجاح');
+      } catch (error) {
+        console.error('❌ خطأ في المزامنة:', error);
+      }
+    })();
+
+    // Countdown timer (visual indicator)
     const countdownInterval = setInterval(() => {
       setSyncCountdown(prev => {
         if (prev <= 1) {
@@ -1621,26 +1637,13 @@ export const AlWaseetProvider = ({ children }) => {
       });
     }, 1000);
 
-    // Wait for countdown then sync
+    // Wait for both sync and countdown to complete
     setTimeout(async () => {
-      try {
-        console.log('🔄 تنفيذ المزامنة...');
-        // NOW set syncing to true when actual sync starts
-        setIsSyncing(true);
-        setSyncMode('syncing');
-        await fastSyncPendingOrders();
-        console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
-        await performDeletionPassAfterStatusSync();
-        setLastSyncAt(new Date());
-        console.log('✅ تمت المزامنة بنجاح');
-      } catch (error) {
-        console.error('❌ خطأ في المزامنة:', error);
-      } finally {
-        setIsSyncing(false);
-        setSyncMode('standby');
-        setSyncCountdown(0);
-      }
-    }, 15000);
+      await syncPromise;
+      setIsSyncing(false);
+      setSyncMode('standby');
+      setSyncCountdown(0);
+    }, 10000);
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
