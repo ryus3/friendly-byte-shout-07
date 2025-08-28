@@ -836,19 +836,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
-        // مزامنة فورية بعد إنشاء الطلب في الوسيط لتحديث الحالة
-        if (activePartner === 'alwaseet' && trackingNumber && syncOrderByTracking) {
-          setTimeout(async () => {
-            try {
-              console.log(`🔄 مزامنة فورية للطلب الجديد: ${trackingNumber}`);
-              const syncResult = await syncOrderByTracking(trackingNumber);
-              if (syncResult) {
-                console.log(`✅ تم تحديث حالة الطلب: ${syncResult.local_status}`);
-              }
-            } catch (error) {
-              console.error('❌ خطأ في المزامنة الفورية:', error);
-            }
-          }, 3000); // انتظار 3 ثوانٍ للسماح لشركة التوصيل بمعالجة الطلب
+        // المزامنة التلقائية ستحدث عبر Real-time events فقط لمنع التضارب
+        if (activePartner === 'alwaseet' && trackingNumber) {
+          console.log(`🆔 طلب الوسيط تم إنشاؤه برقم: ${trackingNumber} - سيتم التحديث التلقائي`);
         }
         
         // إشعار محسن مع QR ID
@@ -870,8 +860,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           variant: 'success',
           duration: 5000
         });
-        resetForm();
-        if(onOrderCreated) onOrderCreated();
+        
+        // تأخير قصير قبل مسح النموذج لضمان اكتمال العمليات
+        setTimeout(() => {
+          resetForm();
+          if(onOrderCreated) onOrderCreated();
+        }, 150); // تأخير قصير لمنع التضارب مع العمليات الخلفية
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {
       console.error('Error creating order:', error);

@@ -10,14 +10,31 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'orders'
     }, (payload) => {
-      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
+      // إرسال أحداث مخصصة مع debouncing لمنع التضارب
       const type = payload.eventType;
+      
+      // إضافة debouncing للأحداث لمنع التضارب
+      const debounceEvent = (eventName, detail, delay = 100) => {
+        const key = `${eventName}_${detail.id || detail.order_number || 'unknown'}`;
+        clearTimeout(window.realtimeDebounceTimers?.[key]);
+        window.realtimeDebounceTimers = window.realtimeDebounceTimers || {};
+        
+        window.realtimeDebounceTimers[key] = setTimeout(() => {
+          try {
+            window.dispatchEvent(new CustomEvent(eventName, { detail }));
+          } catch (error) {
+            console.warn('خطأ في حدث Real-time:', error);
+          }
+          delete window.realtimeDebounceTimers[key];
+        }, delay);
+      };
+      
       if (type === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
+        debounceEvent('orderCreated', payload.new, 200);
       } else if (type === 'UPDATE') {
-        window.dispatchEvent(new CustomEvent('orderUpdated', { detail: payload.new }));
+        debounceEvent('orderUpdated', payload.new, 150);
       } else if (type === 'DELETE') {
-        window.dispatchEvent(new CustomEvent('orderDeleted', { detail: payload.old }));
+        debounceEvent('orderDeleted', payload.old, 100);
       }
     })
     .subscribe();
@@ -30,14 +47,31 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'ai_orders'
     }, (payload) => {
-      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
+      // إرسال أحداث مخصصة مع debouncing لمنع التضارب
       const type = payload.eventType;
+      
+      // استخدام نفس نظام debouncing للطلبات الذكية
+      const debounceAiEvent = (eventName, detail, delay = 100) => {
+        const key = `${eventName}_${detail.id || 'unknown'}`;
+        clearTimeout(window.realtimeDebounceTimers?.[key]);
+        window.realtimeDebounceTimers = window.realtimeDebounceTimers || {};
+        
+        window.realtimeDebounceTimers[key] = setTimeout(() => {
+          try {
+            window.dispatchEvent(new CustomEvent(eventName, { detail }));
+          } catch (error) {
+            console.warn('خطأ في حدث AI Real-time:', error);
+          }
+          delete window.realtimeDebounceTimers[key];
+        }, delay);
+      };
+      
       if (type === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
+        debounceAiEvent('aiOrderCreated', payload.new, 200);
       } else if (type === 'UPDATE') {
-        window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: payload.new }));
+        debounceAiEvent('aiOrderUpdated', payload.new, 150);
       } else if (type === 'DELETE') {
-        window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: payload.old }));
+        debounceAiEvent('aiOrderDeleted', payload.old, 100);
       }
     })
     .subscribe();
