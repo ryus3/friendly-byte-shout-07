@@ -18,8 +18,97 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
   const updateOrder = async (orderId, updates, newProducts = null, originalItems = null) => {
     try {
-      // Implementation will be restored later
-      return { success: true };
+      console.log('🔄 useOrders - بدء تحديث الطلب:', { orderId, updates, newProducts });
+      
+      // تحديث الطلب في قاعدة البيانات
+      const { data: updatedOrder, error: updateError } = await supabase
+        .from('orders')
+        .update({
+          customer_name: updates.customer_name,
+          customer_phone: updates.customer_phone,
+          customer_phone2: updates.customer_phone2,
+          customer_city: updates.customer_city,
+          customer_province: updates.customer_province,
+          customer_address: updates.customer_address,
+          notes: updates.notes,
+          total_amount: updates.total_amount,
+          delivery_fee: updates.delivery_fee,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .select('*')
+        .single();
+
+      if (updateError) {
+        throw new Error(`فشل في تحديث الطلب: ${updateError.message}`);
+      }
+
+      // تحديث المنتجات إذا تم تمريرها
+      if (newProducts && Array.isArray(newProducts)) {
+        // حذف المنتجات القديمة
+        const { error: deleteError } = await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', orderId);
+
+        if (deleteError) {
+          console.error('خطأ في حذف المنتجات القديمة:', deleteError);
+        }
+
+        // إضافة المنتجات الجديدة
+        if (newProducts.length > 0) {
+          const orderItemsToInsert = newProducts.map(item => ({
+            order_id: orderId,
+            product_id: item.product_id,
+            variant_id: item.variant_id || null,
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price || 0,
+            total_price: item.total_price || 0
+          }));
+
+          const { error: insertError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+
+          if (insertError) {
+            console.error('خطأ في إضافة المنتجات الجديدة:', insertError);
+          }
+        }
+
+        // تحديث المخزون
+        if (onStockUpdate) {
+          // استرداد المخزون للمنتجات القديمة
+          if (originalItems && Array.isArray(originalItems)) {
+            for (const item of originalItems) {
+              await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'add');
+            }
+          }
+
+          // خصم المخزون للمنتجات الجديدة
+          for (const item of newProducts) {
+            await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'subtract');
+          }
+        }
+      }
+
+      // تحديث حالة الطلبات المحلية
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId 
+            ? { ...order, ...updates, items: newProducts || order.items }
+            : order
+        )
+      );
+
+      // إضافة إشعار
+      if (addNotification) {
+        addNotification(
+          `تم تحديث الطلب ${updatedOrder.order_number || updatedOrder.tracking_number}`,
+          'success'
+        );
+      }
+
+      return { success: true, order: updatedOrder };
     } catch (error) {
       console.error('Error in updateOrder:', error);
       return { success: false, error: error.message };

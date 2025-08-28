@@ -22,7 +22,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
-  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
+  const { createOrder, updateOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -53,9 +53,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
   
-  // ملء البيانات من الطلب الذكي عند وجوده
+  // حالة التعديل
+  const isEditMode = aiOrderData?.editMode || false;
+  const originalOrder = aiOrderData?.originalOrder || null;
+
+  // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
-    console.log('AI Order Data received:', aiOrderData);
+    console.log('AI/Edit Order Data received:', aiOrderData, { isEditMode });
     if (aiOrderData) {
       // Parse city and address intelligently
       const parseLocationData = (address, city) => {
@@ -98,6 +102,39 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       
       const { parsedCity, parsedRegion } = parseLocationData(aiOrderData.customer_address, aiOrderData.customer_city);
+      
+      // في وضع التعديل، استخدم البيانات مباشرة
+      if (isEditMode) {
+        setFormData(prev => ({
+          ...prev,
+          name: aiOrderData.customer_name || '',
+          phone: aiOrderData.customer_phone || '',
+          second_phone: aiOrderData.customer_phone2 || '',
+          city: aiOrderData.customer_city || 'بغداد',
+          region: aiOrderData.customer_province || '',
+          address: aiOrderData.customer_address || '',
+          notes: aiOrderData.notes || '',
+          price: aiOrderData.total_amount || 0,
+          delivery_fee: aiOrderData.delivery_fee || 0
+        }));
+        
+        // تحديد شريك التوصيل
+        if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
+          setActivePartner('alwaseet');
+        } else {
+          setActivePartner('local');
+        }
+        
+        // تحميل المنتجات إلى السلة
+        if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+          clearCart();
+          aiOrderData.items.forEach(item => {
+            addToCart(null, item, item.quantity, false);
+          });
+        }
+        
+        return; // انتهاء وضع التعديل
+      }
       
       setFormData(prev => ({
         ...prev,
@@ -202,7 +239,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         addToCart(product, variant, item.quantity || 1, false);
       }
     }
-  }, [aiOrderData, clearCart, addToCart]);
+  }, [aiOrderData, clearCart, addToCart, isEditMode]);
   
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
@@ -723,69 +760,162 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     return phone;
   };
 
+  // معالجة الإرسال (تحديث أو إنشاء)
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm() || !isDeliveryPartnerSelected || isSubmittingState) return;
-    if (setIsSubmitting) setIsSubmitting(true);
+    e?.preventDefault();
+    
+    console.log('🚀 QuickOrderContent - بدء معالجة الطلب', { isEditMode });
+    
+    const isFormValid = validateForm();
+    if (!isFormValid) {
+      console.log('❌ QuickOrderContent - فشل التحقق من صحة النموذج');
+      return;
+    }
+
+    if (cart.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "يجب اختيار منتج واحد على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmitting?.(true);
     
     try {
-      const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      const finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
-      
-      const orderData = {
-        ...formData,
-        items: cart.map(item => ({
-          product_id: item.id,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity
-        })),
-        total_amount: Math.round(finalTotal),
-        discount,
-        delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
-        final_amount: Math.round(finalTotal),
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_address: formData.address,
-        customer_city: formData.city,
-        customer_province: formData.province,
-        notes: formData.notes,
-        payment_status: 'pending',
-        delivery_status: 'pending',
-        status: 'pending'
-      };
-
-      // إذا كان هذا تعديل على طلب ذكي، قم بالموافقة عليه وإنشاء طلب عادي
-      if (isDialog && aiOrderData) {
-        try {
-          const result = await createOrder(orderData);
-          if (result.success) {
-            // حذف الطلب الذكي بعد الموافقة عليه
-            await approveAiOrder(aiOrderData.id);
-            
-            toast({
-              title: "تم بنجاح!",
-              description: "تم إنشاء الطلب بنجاح من الطلب الذكي",
-              variant: "success",
-            });
-            
-            if (onOrderCreated) {
-              onOrderCreated();
-            }
-          } else {
-            throw new Error(result.message || 'فشل في إنشاء الطلب');
-          }
-        } catch (error) {
-          console.error('Error creating order from AI order:', error);
-          toast({
-            title: "خطأ",
-            description: error.message || "حدث خطأ أثناء إنشاء الطلب",
-            variant: "destructive",
-          });
-        }
-        return;
+      if (isEditMode && originalOrder) {
+        // وضع التعديل - استخدام updateOrder
+        await handleUpdateOrder();
+      } else {
+        // وضع الإنشاء العادي
+        await handleCreateOrder();
       }
+    } catch (error) {
+      console.error('❌ QuickOrderContent - خطأ في معالجة الطلب:', error);
+      toast({
+        title: "خطأ",
+        description: error.message || "حدث خطأ أثناء معالجة الطلب",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting?.(false);
+    }
+  };
+
+  // معالجة تحديث الطلب
+  const handleUpdateOrder = async () => {
+    console.log('📝 QuickOrderContent - بدء تحديث الطلب:', originalOrder.id);
+    
+    const cartItems = cart.map(item => ({
+      product_id: item.productId,
+      variant_id: item.variantId,
+      quantity: item.quantity,
+      unit_price: item.price,
+      total_price: item.total,
+      productname: item.productName,
+      color: item.color,
+      size: item.size,
+      barcode: item.barcode,
+      image: item.image
+    }));
+
+    // حساب السعر النهائي مع تطبيق الخصم ورسوم التوصيل
+    const deliveryFeeAmount = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
+    const finalTotal = subtotal - discount + (applyLoyaltyDelivery ? 0 : deliveryFeeAmount);
+
+    const orderUpdates = {
+      customer_name: formData.name,
+      customer_phone: formData.phone,
+      customer_phone2: formData.second_phone,
+      customer_city: formData.city,
+      customer_province: formData.region,
+      customer_address: formData.address,
+      notes: formData.notes,
+      total_amount: finalTotal,
+      delivery_fee: applyLoyaltyDelivery ? 0 : deliveryFeeAmount,
+      items: cartItems
+    };
+
+    const result = await updateOrder(originalOrder.id, orderUpdates, cartItems, originalOrder.items);
+    
+    if (result.success) {
+      toast({
+        title: "✅ تم التحديث بنجاح",
+        description: "تم تحديث الطلب بنجاح",
+        variant: "default"
+      });
+      
+      if (onOrderCreated) {
+        onOrderCreated(result.order);
+      }
+      
+      // مسح النموذج والسلة
+      resetForm();
+    } else {
+      throw new Error(result.error || 'فشل في تحديث الطلب');
+    }
+  };
+
+  // معالجة إنشاء الطلب
+  const handleCreateOrder = async () => {
+    const deliveryFeeAmount = settings?.deliveryFee || 5000;
+    const finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+    
+    const orderData = {
+      ...formData,
+      items: cart.map(item => ({
+        product_id: item.id,
+        variant_id: item.variantId,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity
+      })),
+      total_amount: Math.round(finalTotal),
+      discount,
+      delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
+      final_amount: Math.round(finalTotal),
+      customer_name: formData.name,
+      customer_phone: formData.phone,
+      customer_address: formData.address,
+      customer_city: formData.city,
+      customer_province: formData.province,
+      notes: formData.notes,
+      payment_status: 'pending',
+      delivery_status: 'pending',
+      status: 'pending'
+    };
+
+    // إذا كان هذا تعديل على طلب ذكي، قم بالموافقة عليه وإنشاء طلب عادي
+    if (isDialog && aiOrderData && !isEditMode) {
+      try {
+        const result = await createOrder(orderData);
+        if (result.success) {
+          // حذف الطلب الذكي بعد الموافقة عليه
+          await approveAiOrder(aiOrderData.id);
+          
+          toast({
+            title: "تم بنجاح!",
+            description: "تم إنشاء الطلب بنجاح من الطلب الذكي",
+            variant: "success",
+          });
+          
+          if (onOrderCreated) {
+            onOrderCreated();
+          }
+        } else {
+          throw new Error(result.message || 'فشل في إنشاء الطلب');
+        }
+      } catch (error) {
+        console.error('Error creating order from AI order:', error);
+        toast({
+          title: "خطأ",
+          description: error.message || "حدث خطأ أثناء إنشاء الطلب",
+          variant: "destructive",
+        });
+      }
+      return;
+    }
 
       // إنشاء طلب عادي - الكود الأصلي
       let trackingNumber = null;
@@ -1064,9 +1194,22 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         {isDialog && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitDisabled}>
-                {isSubmittingState && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                حفظ التعديلات وإنشاء الطلب
+              <Button
+                type="submit"
+                disabled={isSubmittingState || cart.length === 0 || !isDeliveryPartnerSelected}
+                className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+              >
+                {isSubmittingState ? (
+                  <>
+                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                    {isEditMode ? 'جاري الحفظ...' : 'جاري الإرسال...'}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="ml-2 h-5 w-5" />
+                    {isEditMode ? 'حفظ التعديلات' : 'إرسال الطلب'}
+                  </>
+                )}
               </Button>
           </motion.div>
         )}
