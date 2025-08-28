@@ -45,10 +45,10 @@ const SearchableSelectFixed = ({
     }
   }, [open]);
 
-  // Close dropdown when clicking outside - improved for dialogs
+  // تحسين إدارة إغلاق القائمة - دعم كامل للهاتف
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // منع الإغلاق أثناء التنقل بالكيبورد
+      // منع الإغلاق أثناء التنقل بالكيبورد أو اللمس النشط
       if (isNavigatingWithKeyboard) {
         return;
       }
@@ -56,9 +56,11 @@ const SearchableSelectFixed = ({
       // تجنب الإغلاق المبكر عند التفاعل مع القائمة
       if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
           buttonRef.current && !buttonRef.current.contains(event.target)) {
-        const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
-        if (!isDialogClick) {
+        // تحقق إضافي للحوارات والعناصر التفاعلية
+        const isInteractiveElement = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay], [data-option]');
+        if (!isInteractiveElement) {
           setOpen(false);
+          setSearch('');
         }
       }
     };
@@ -72,19 +74,20 @@ const SearchableSelectFixed = ({
     };
 
     if (open) {
-      // تأخير إضافة المستمعين لتجنب الإغلاق الفوري
-      setTimeout(() => {
+      // تأخير أقل لتحسين سرعة الاستجابة
+      const timer = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside, { passive: false });
         document.addEventListener('keydown', handleEscapeKey);
-      }, 100);
+      }, 50);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside);
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
     }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
   }, [open, isNavigatingWithKeyboard]);
 
   // Focus search input when opening - enhanced for dialogs
@@ -105,11 +108,17 @@ const SearchableSelectFixed = ({
   };
 
   const handleOptionSelect = (optionValue) => {
+    // منع إغلاق القائمة أثناء اللمس
+    setIsNavigatingWithKeyboard(true);
+    
     onValueChange(optionValue);
+    
+    // إغلاق فوري للقائمة
     setTimeout(() => {
       setOpen(false);
       setSearch('');
-    }, 50);
+      setIsNavigatingWithKeyboard(false);
+    }, 30);
   };
 
   const handleSearchChange = (e) => {
@@ -225,13 +234,18 @@ const SearchableSelectFixed = ({
                   handleOptionSelect(optionValue);
                 }}
                 onTouchStart={(e) => {
-                  e.preventDefault();
+                  // منع التمرير أثناء اللمس
                   e.stopPropagation();
+                  setIsNavigatingWithKeyboard(true);
                 }}
                 onTouchEnd={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   handleOptionSelect(optionValue);
+                }}
+                onTouchMove={(e) => {
+                  // السماح بالتمرير الطبيعي
+                  e.stopPropagation();
                 }}
                 onMouseEnter={(e) => {
                   // إزالة التمييز من العناصر الأخرى

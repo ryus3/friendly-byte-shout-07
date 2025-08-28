@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Trash2, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,19 +49,30 @@ const OrderDetailsForm = ({
   
   const finalTotal = total + deliveryFee;
 
-  // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
+  // ضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
-    // للتوصيل المحلي: ضمان "عادي" كقيمة افتراضية دائماً
-    if (activePartner === 'local' && (!formData.size || formData.size === '')) {
-      console.log('🎯 تعيين حجم الطلب الافتراضي: عادي');
-      handleSelectChange('size', 'عادي');
+    // للتوصيل المحلي: ضمان "عادي" دائماً
+    if (activePartner === 'local') {
+      if (formData.size !== 'عادي') {
+        console.log('🎯 تعيين حجم الطلب الافتراضي: عادي');
+        handleSelectChange('size', 'عادي');
+      }
     }
     // لشركة الوسيط: التأكد من وجود أحجام قبل التعيين
-    else if (activePartner === 'alwaseet' && packageSizes.length > 0 && (!formData.size || formData.size === '')) {
-      console.log('🎯 تعيين حجم الطلب الافتراضي للوسيط:', packageSizes[0]?.id);
-      handleSelectChange('size', String(packageSizes[0]?.id || ''));
+    else if (activePartner === 'alwaseet' && packageSizes.length > 0) {
+      if (!formData.size || formData.size === '') {
+        console.log('🎯 تعيين حجم الطلب الافتراضي للوسيط:', packageSizes[0]?.id);
+        handleSelectChange('size', String(packageSizes[0]?.id || ''));
+      }
     }
-  }, [activePartner, packageSizes, formData.size, handleSelectChange]);
+  }, [activePartner, packageSizes, handleSelectChange]);
+
+  // ضمان تعيين "عادي" فوراً عند التبديل للتوصيل المحلي
+  useEffect(() => {
+    if (activePartner === 'local' && formData.size !== 'عادي') {
+      handleSelectChange('size', 'عادي');
+    }
+  }, [activePartner]);
 
   // تحديث السعر النهائي في الحقل تلقائياً
   useEffect(() => {
@@ -218,36 +229,41 @@ const OrderDetailsForm = ({
         </div>
         <div className="space-y-2">
           <Label>حجم الطلب</Label>
-          <Select name="size" onValueChange={(v) => handleSelectChange('size', v)} value={formData.size} disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)}>
-            <SelectTrigger>
-                <SelectValue placeholder={loadingPackageSizes ? "تحميل..." : "اختر حجم الطلب"} />
-            </SelectTrigger>
-            <SelectContent className="z-[100]" modal={true}>
-              {activePartner === 'local' ? (
-                <>
-                  <SelectItem value="عادي">عادي</SelectItem>
-                  <SelectItem value="متوسط">متوسط</SelectItem>
-                  <SelectItem value="كبير">كبير</SelectItem>
-                  <SelectItem value="كبير جدا">كبير جدا</SelectItem>
-                </>
-              ) : (
-                packageSizes.map(size => (
-                  <SelectItem key={size.id} value={String(size.id)}>{size.size}</SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+          <SearchableSelectFixed
+            value={formData.size}
+            onValueChange={(v) => handleSelectChange('size', v)}
+            options={activePartner === 'local' ? [
+              { value: 'عادي', label: 'عادي' },
+              { value: 'متوسط', label: 'متوسط' },
+              { value: 'كبير', label: 'كبير' },
+              { value: 'كبير جدا', label: 'كبير جدا' }
+            ] : packageSizes.map(size => ({
+              value: String(size.id),
+              label: size.size
+            }))}
+            placeholder={loadingPackageSizes ? "تحميل..." : "اختر حجم الطلب"}
+            searchPlaceholder="بحث عن حجم..."
+            emptyText="لا توجد أحجام متاحة"
+            disabled={isSubmittingState || (activePartner === 'alwaseet' && loadingPackageSizes)}
+            className="w-full"
+          />
         </div>
         <div className="space-y-2">
           <Label>نوع الطلب</Label>
-          <Select name="type" onValueChange={(v) => handleSelectChange('type', v)} value={formData.type} disabled={isSubmittingState}>
-            <SelectTrigger><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
-            <SelectContent className="z-[100]" modal={true}>
-              <SelectItem value="new">طلب جديد</SelectItem>
-              <SelectItem value="exchange">استبدال</SelectItem>
-              <SelectItem value="return">ارجاع</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelectFixed
+            value={formData.type}
+            onValueChange={(v) => handleSelectChange('type', v)}
+            options={[
+              { value: 'new', label: 'طلب جديد' },
+              { value: 'exchange', label: 'استبدال' },
+              { value: 'return', label: 'ارجاع' }
+            ]}
+            placeholder="اختر نوع الطلب"
+            searchPlaceholder="بحث عن نوع..."
+            emptyText="لا توجد أنواع متاحة"
+            disabled={isSubmittingState}
+            className="w-full"
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="promocode">البروموكود</Label>
