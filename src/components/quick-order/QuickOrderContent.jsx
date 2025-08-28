@@ -453,6 +453,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     console.log('✅ مسح النموذج - تم بنجاح');
   }, [clearCart, activePartner]);
 
+  // إصلاح جذري: إعادة تعيين المدينة الافتراضية بعد resetForm
+  useEffect(() => {
+    // فقط لشركة الوسيط عندما يكون city_id فارغ أو null والمدن متوفرة
+    if (activePartner === 'alwaseet' && (!formData.city_id || formData.city_id === '') && cities.length > 0) {
+      const baghdadCity = cities.find(city => 
+        city.name?.toLowerCase().includes('بغداد') || 
+        city.name?.toLowerCase().includes('baghdad')
+      );
+      const defaultCity = baghdadCity || cities[0];
+      
+      console.log('🔄 إعادة تعيين المدينة الافتراضية بعد مسح النموذج:', defaultCity.name);
+      setFormData(prev => ({
+        ...prev,
+        city_id: String(defaultCity.id)
+      }));
+    }
+  }, [formData.city_id, cities, activePartner]);
+
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
     if (user?.default_customer_name && user?.default_customer_name !== defaultCustomerName && !nameTouched) {
@@ -520,7 +538,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCities(safeCities);
           setPackageSizes(safePackageSizes);
 
-          // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
+  // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
               city.name?.toLowerCase().includes('بغداد') || 
