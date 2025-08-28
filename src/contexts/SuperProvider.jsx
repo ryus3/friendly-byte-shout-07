@@ -1030,8 +1030,28 @@ export const SuperProvider = ({ children }) => {
       const instantTime = performance.now() - startTime;
       console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
       
-      // الاعتماد على real-time subscriptions للتحديث التلقائي فقط - لا نحتاج invalidate
-      // الطلب معروض فورياً والـ subscriptions ستتولى التحديث التلقائي
+      // جلب التفاصيل الكاملة في الخلفية مع تأخير أطول لمنع التجمد
+      setTimeout(async () => {
+        try {
+          const fullOrder = await superAPI.getOrderById(createdOrder.id);
+          if (fullOrder) {
+            const normalized = normalizeOrder(fullOrder);
+            setAllData(prev => ({
+              ...prev,
+              orders: prev.orders.map(o => 
+                o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
+              )
+            }));
+            console.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
+          }
+        } catch (error) {
+          console.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
+        }
+      }, 1500); // تأخير أطول لمنع التداخل مع العمليات الأخرى
+
+      // إبطال الكاش للتزامن مع الخادم
+      superAPI.invalidate('all_data');
+      superAPI.invalidate('orders_only');
 
       return {
         success: true,
