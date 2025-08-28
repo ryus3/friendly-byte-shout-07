@@ -1234,7 +1234,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
           
           // إشعار المدير
-          showToast({
+          toast({
             title: "تنبيه: حذف طلب تلقائي",
             description: `تم حذف الطلب ${order.tracking_number} لعدم وجوده في شركة التوصيل`,
             variant: "destructive"
@@ -1774,7 +1774,7 @@ export const AlWaseetProvider = ({ children }) => {
       console.log(`✅ انتهى فحص الطلبات للحذف التلقائي: ${processedCount} طلب تم فحصه، ${deletedCount} طلب تم حذفه`);
       
       if (deletedCount > 0) {
-        showToast({
+        toast({
           title: "حذف تلقائي للطلبات",
           description: `تم حذف ${deletedCount} طلب تلقائياً من الطلبات المحذوفة في شركة التوصيل`,
         });
@@ -1783,7 +1783,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ خطأ في فحص الطلبات للحذف:', error);
     }
-  }, [token, syncOrderByQR, showToast]);
+  }, [token, syncOrderByQR, toast]);
 
   // Auto-sync and repair on login
   useEffect(() => {
