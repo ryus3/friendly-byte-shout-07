@@ -559,12 +559,12 @@ const Dashboard = () => {
             pendingSalesOrders,
             // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
             topCustomers: (() => {
-                const customers = canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                const customers = getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
                 console.log('🔥 Dashboard - Top Customers Result:', customers);
                 return customers;
             })(),
             topProvinces: (() => {
-                const provinces = canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                const provinces = getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
                 console.log('🔥 Dashboard - Top Provinces Result:', provinces);
                 return provinces;
             })(),
