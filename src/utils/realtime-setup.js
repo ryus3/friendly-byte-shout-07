@@ -1,8 +1,24 @@
 import { supabase } from '@/integrations/supabase/client';
 
-// إعداد Real-time للجداول المطلوبة بدون إعادة تحميل الصفحة
+// إعداد Real-time مع debouncing لمنع التجمد
 export const setupRealtime = () => {
-  // تشغيل الإشعارات الفورية للطلبات العادية
+  let debounceTimers = new Map();
+  
+  const debouncedDispatch = (eventName, detail, delay = 200) => {
+    const existingTimer = debounceTimers.get(eventName);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+    
+    const newTimer = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(eventName, { detail }));
+      debounceTimers.delete(eventName);
+    }, delay);
+    
+    debounceTimers.set(eventName, newTimer);
+  };
+
+  // تشغيل الإشعارات الفورية للطلبات العادية مع debouncing
   const ordersChannel = supabase
     .channel('orders-realtime')
     .on('postgres_changes', {
@@ -10,19 +26,18 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'orders'
     }, (payload) => {
-      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
       const type = payload.eventType;
       if (type === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
+        debouncedDispatch('orderCreated', payload.new, 150);
       } else if (type === 'UPDATE') {
-        window.dispatchEvent(new CustomEvent('orderUpdated', { detail: payload.new }));
+        debouncedDispatch('orderUpdated', payload.new, 200);
       } else if (type === 'DELETE') {
-        window.dispatchEvent(new CustomEvent('orderDeleted', { detail: payload.old }));
+        debouncedDispatch('orderDeleted', payload.old, 150);
       }
     })
     .subscribe();
 
-  // تشغيل الإشعارات الفورية للطلبات الذكية
+  // تشغيل الإشعارات الفورية للطلبات الذكية مع debouncing
   const aiOrdersChannel = supabase
     .channel('ai-orders-realtime')
     .on('postgres_changes', {
@@ -30,19 +45,18 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'ai_orders'
     }, (payload) => {
-      // إرسال أحداث مخصصة حسب نوع الحدث بدون إعادة تحميل
       const type = payload.eventType;
       if (type === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
+        debouncedDispatch('aiOrderCreated', payload.new, 150);
       } else if (type === 'UPDATE') {
-        window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: payload.new }));
+        debouncedDispatch('aiOrderUpdated', payload.new, 200);
       } else if (type === 'DELETE') {
-        window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: payload.old }));
+        debouncedDispatch('aiOrderDeleted', payload.old, 150);
       }
     })
     .subscribe();
 
-  // تشغيل الإشعارات الفورية للإشعارات
+  // تشغيل الإشعارات الفورية للإشعارات مع debouncing
   const notificationsChannel = supabase
     .channel('notifications-realtime')
     .on('postgres_changes', {
@@ -50,12 +64,15 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'notifications'
     }, (payload) => {
-      // إرسال حدث مخصص فقط بدون إعادة تحميل
-      window.dispatchEvent(new CustomEvent('notificationCreated', { detail: payload.new }));
+      debouncedDispatch('notificationCreated', payload.new, 100);
     })
     .subscribe();
 
   return () => {
+    // تنظيف جميع الـ timers المعلقة
+    debounceTimers.forEach(timer => clearTimeout(timer));
+    debounceTimers.clear();
+    
     supabase.removeChannel(ordersChannel);
     supabase.removeChannel(aiOrdersChannel);
     supabase.removeChannel(notificationsChannel);
