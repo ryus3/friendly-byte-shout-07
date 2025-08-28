@@ -218,15 +218,41 @@ const SearchableSelectFixed = ({
                   isSelected && "bg-accent text-accent-foreground"
                 )}
                 onTouchStart={(e) => {
-                  if (isTouchDevice) {
-                    e.stopPropagation();
+                  // Track touch start for scroll detection
+                  e.currentTarget.touchStartY = e.touches[0].clientY;
+                  e.currentTarget.touchStartX = e.touches[0].clientX;
+                  e.currentTarget.touchStartTime = Date.now();
+                }}
+                onTouchMove={(e) => {
+                  // Track touch movement to detect scrolling
+                  if (e.currentTarget.touchStartY !== undefined) {
+                    const deltaY = Math.abs(e.touches[0].clientY - e.currentTarget.touchStartY);
+                    const deltaX = Math.abs(e.touches[0].clientX - e.currentTarget.touchStartX);
+                    
+                    // If user moved more than 10px, it's likely scrolling
+                    if (deltaY > 10 || deltaX > 10) {
+                      e.currentTarget.isScrolling = true;
+                    }
                   }
                 }}
                 onTouchEnd={(e) => {
                   if (isTouchDevice) {
                     e.stopPropagation();
-                    e.preventDefault();
-                    handleOptionSelect(optionValue);
+                    
+                    const touchDuration = Date.now() - (e.currentTarget.touchStartTime || 0);
+                    const isScrolling = e.currentTarget.isScrolling;
+                    
+                    // Only select if it's a quick tap (not scrolling)
+                    if (!isScrolling && touchDuration < 300) {
+                      e.preventDefault();
+                      handleOptionSelect(optionValue);
+                    }
+                    
+                    // Reset touch tracking
+                    e.currentTarget.touchStartY = undefined;
+                    e.currentTarget.touchStartX = undefined;
+                    e.currentTarget.touchStartTime = undefined;
+                    e.currentTarget.isScrolling = false;
                   }
                 }}
                 onClick={(e) => {
