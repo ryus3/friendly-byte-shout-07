@@ -168,6 +168,7 @@ export const AlWaseetProvider = ({ children }) => {
         setToken(data.token);
         setWaseetUser(data.partner_data);
         setIsLoggedIn(true);
+        setActivePartner('alwaseet');
       } else {
         if (data) {
             await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
@@ -304,7 +305,7 @@ export const AlWaseetProvider = ({ children }) => {
     setCities([]);
     setRegions([]);
     setPackageSizes([]);
-    setActivePartner('alwaseet');
+    setActivePartner('local');
     toast({ title: "تم تسجيل الخروج", description: `تم تسجيل الخروج من ${partnerName}.` });
   }, [activePartner, deliveryPartners, user, setActivePartner]);
   
