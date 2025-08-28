@@ -1713,64 +1713,77 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, correctionComplete]);
 
-  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
   const performDeletionPassAfterStatusSync = useCallback(async () => {
     if (!token) return;
     
     try {
-      console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات...');
+      console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات (مثل زر تحقق الآن)...');
       
-      // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
+      // جلب الطلبات المحلية المرشحة للحذف - نفس شروط زر "تحقق الآن"
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
-        .in('status', ['pending', 'active', 'disabled', 'inactive'])
-        .limit(50);
+        .limit(100);
         
-      if (error || !localOrders?.length) return;
+      if (error || !localOrders?.length) {
+        console.log('✅ لا توجد طلبات مرشحة للحذف التلقائي');
+        return;
+      }
       
-      // جلب جميع طلبات الوسيط للمقارنة
-      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      const waseetOrderIds = new Set(waseetOrders.map(o => String(o.id)));
+      console.log(`🔍 فحص ${localOrders.length} طلب للحذف التلقائي...`);
       
+      let processedCount = 0;
       let deletedCount = 0;
       
+      // معالجة كل طلب باستخدام نفس دالة syncOrderByQR المستخدمة في زر "تحقق الآن"
       for (const localOrder of localOrders) {
-        // التحقق من إمكانية الحذف التلقائي
-        if (!canAutoDeleteOrder(localOrder)) continue;
+        processedCount++;
+        const trackingKey = localOrder.tracking_number || localOrder.qr_id;
         
-        // التحقق من عدم وجود الطلب في الوسيط
-        const waseetId = String(localOrder.delivery_partner_order_id);
-        if (!waseetOrderIds.has(waseetId)) {
-          // تحقق نهائي مباشر قبل الحذف
-          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
-          let remoteCheck = null;
-          if (confirmKey) {
-            try {
-              remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
-            } catch (e) {
-              console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (deletion pass):', e);
-            }
+        if (!trackingKey) {
+          console.warn(`⚠️ لا يوجد tracking_number أو qr_id للطلب ${localOrder.id}`);
+          continue;
+        }
+        
+        try {
+          console.log(`🔄 [${processedCount}/${localOrders.length}] فحص الطلب ${trackingKey}...`);
+          
+          // استخدام نفس دالة syncOrderByQR المستخدمة في الزر اليدوي
+          const syncResult = await syncOrderByQR(trackingKey);
+          
+          // التحقق من الحذف التلقائي
+          if (syncResult && syncResult.autoDeleted) {
+            deletedCount++;
+            console.log(`🗑️ تم حذف الطلب ${trackingKey} تلقائياً`);
+          } else if (syncResult) {
+            console.log(`✅ تم تحديث الطلب ${trackingKey}`);
           }
           
-          if (!remoteCheck) {
-            console.log('🗑️ حذف تلقائي للطلب بعد مزامنة الحالات:', localOrder.tracking_number);
-            await handleAutoDeleteOrder(localOrder.id, 'deletionPass');
-            deletedCount++;
-          }
+          // توقف قصير بين الطلبات لتجنب إرهاق الAPI
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          console.error(`❌ خطأ في معالجة الطلب ${trackingKey}:`, error);
         }
       }
       
+      console.log(`✅ انتهى فحص الطلبات للحذف التلقائي: ${processedCount} طلب تم فحصه، ${deletedCount} طلب تم حذفه`);
+      
       if (deletedCount > 0) {
-        console.log(`🗑️ تم حذف ${deletedCount} طلب تلقائياً بعد مزامنة الحالات`);
+        showToast({
+          title: "حذف تلقائي للطلبات",
+          description: `تم حذف ${deletedCount} طلب تلقائياً من الطلبات المحذوفة في شركة التوصيل`,
+        });
       }
+      
     } catch (error) {
       console.error('❌ خطأ في فحص الطلبات للحذف:', error);
     }
-  }, [token, canAutoDeleteOrder, handleAutoDeleteOrder]);
+  }, [token, syncOrderByQR, showToast]);
 
   // Auto-sync and repair on login
   useEffect(() => {

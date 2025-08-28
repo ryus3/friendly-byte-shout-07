@@ -190,5 +190,9 @@ export const receiveInvoice = async (token, invoiceId) => {
 // Get specific order by QR/tracking number
 export const getOrderByQR = async (token, qrId) => {
   const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
-  return orders.find(order => order.qr_id === String(qrId) || order.id === String(qrId));
+  return orders.find(order => 
+    order.qr_id === String(qrId) || 
+    order.id === String(qrId) || 
+    order.tracking_number === String(qrId)
+  );
 };
