@@ -1030,11 +1030,8 @@ export const SuperProvider = ({ children }) => {
       const instantTime = performance.now() - startTime;
       console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
       
-      // إبطال الكاش للتزامن مع الخادم (فوري بدون setTimeout)
-      superAPI.invalidate('all_data');
-      superAPI.invalidate('orders_only');
-      
-      // الاعتماد على real-time subscriptions للتحديث التلقائي
+      // الاعتماد على real-time subscriptions للتحديث التلقائي فقط - لا نحتاج invalidate
+      // الطلب معروض فورياً والـ subscriptions ستتولى التحديث التلقائي
 
       return {
         success: true,
