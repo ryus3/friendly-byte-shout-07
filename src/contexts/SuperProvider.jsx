@@ -600,8 +600,8 @@ export const SuperProvider = ({ children }) => {
           orders: [filtered.orders[0], ...(prev.orders || [])]
         }));
         
-        // جلب order_items في الخلفية
-        setTimeout(() => fetchOrderItemsBackground(newOrder.id), 100);
+        // جلب order_items في الخلفية (بدون تأخير)
+        fetchOrderItemsBackground(newOrder.id);
       }
     } catch (err) {
       console.error('❌ addOrderInstantly: خطأ في الإضافة الفورية:', err);
@@ -611,40 +611,27 @@ export const SuperProvider = ({ children }) => {
   // دالة لجلب order_items في الخلفية وتحديث الطلب
   const fetchOrderItemsBackground = useCallback(async (orderId) => {
     try {
-      console.log('🔄 fetchOrderItemsBackground: جلب تفاصيل الطلب', orderId);
+      const startTime = performance.now();
+      console.log('⚡ fetchOrderItemsBackground: جلب تفاصيل فوري للطلب', orderId);
       
-      const { data: orderItems, error } = await supabase
-        .from('order_items')
-        .select(`
-          *,
-          products(name),
-          product_variants(id, price, cost_price)
-        `)
-        .eq('order_id', orderId);
+      // استخدام SuperAPI للاستفادة من cache محسن
+      const fullOrder = await superAPI.getOrderById(orderId);
         
-      if (!error && orderItems) {
+      if (fullOrder && fullOrder.order_items?.length > 0) {
+        const normalized = normalizeOrder(fullOrder);
+        
+        // تحديث الطلب مع التفاصيل الكاملة
         setAllData(prev => ({
           ...prev,
-          orders: (prev.orders || []).map(order => 
-            order.id === orderId 
-              ? {
-                  ...order,
-                  order_items: orderItems,
-                  items: orderItems.map(oi => ({
-                    quantity: oi.quantity || 1,
-                    price: oi.unit_price ?? oi.product_variants?.price ?? 0,
-                    cost_price: oi.product_variants?.cost_price ?? 0,
-                    productname: oi.products?.name,
-                    product_name: oi.products?.name,
-                    sku: oi.product_variants?.id || oi.variant_id,
-                    product_variants: oi.product_variants
-                  })),
-                  isInstantOrder: false // إزالة العلامة بعد جلب التفاصيل
-                }
+          orders: (prev.orders || []).map(order =>
+            order.id === orderId
+              ? { ...normalized, _fullySynced: true }
               : order
           )
         }));
-        console.log('✅ تم تحديث الطلب بالتفاصيل الكاملة');
+        
+        const fetchTime = performance.now() - startTime;
+        console.log(`✅ تزامن كامل للطلب في ${fetchTime.toFixed(1)}ms:`, normalized.order_number);
       }
     } catch (err) {
       console.error('❌ fetchOrderItemsBackground: خطأ في جلب التفاصيل:', err);
@@ -1012,59 +999,48 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: 'فشل في إضافة عناصر الطلب' };
       }
 
-      // جلب الطلب كاملاً مع إعادة المحاولة والـ fallback الذكي
+      // عرض الطلب فوراً مع البيانات المحلية (نهج جديد لسرعة فائقة)
       const startTime = performance.now();
-      let fullOrder = null;
-      let attempts = 0;
-      const maxAttempts = 3;
       
-      while (attempts < maxAttempts && !fullOrder) {
-        attempts++;
+      // إنشاء طلب محلي فوري من البيانات المتاحة
+      const instantOrder = {
+        ...createdOrder,
+        order_items: itemsRows.map((item, index) => ({
+          ...item,
+          id: `instant_${Date.now()}_${index}`,
+          products: allData.products?.find(p => p.id === item.product_id),
+          product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
+        })),
+        _instantDisplay: true
+      };
+      
+      // عرض الطلب فوراً في الواجهة (0ms تقريباً)
+      setAllData(prev => ({
+        ...prev,
+        orders: [instantOrder, ...(prev.orders || [])]
+      }));
+      
+      const instantTime = performance.now() - startTime;
+      console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
+      
+      // جلب التفاصيل الكاملة في الخلفية (بدون انتظار المستخدم)
+      setTimeout(async () => {
         try {
-          fullOrder = await superAPI.getOrderById(createdOrder.id);
-          if (fullOrder) break;
-          
-          if (attempts < maxAttempts) {
-            console.log(`🔄 إعادة محاولة جلب الطلب ${attempts}/${maxAttempts} بعد 150ms`);
-            await new Promise(resolve => setTimeout(resolve, 150));
+          const fullOrder = await superAPI.getOrderById(createdOrder.id);
+          if (fullOrder) {
+            const normalized = normalizeOrder(fullOrder);
+            setAllData(prev => ({
+              ...prev,
+              orders: prev.orders.map(o => 
+                o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
+              )
+            }));
+            console.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
           }
         } catch (error) {
-          console.warn(`⚠️ فشل محاولة ${attempts} لجلب الطلب:`, error);
-          if (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 150));
-          }
+          console.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
         }
-      }
-      
-      if (fullOrder) {
-        const normalized = normalizeOrder(fullOrder);
-        setAllData(prev => ({
-          ...prev,
-          orders: [normalized, ...(prev.orders || [])]
-        }));
-        const displayTime = performance.now() - startTime;
-        console.log(`✅ طلب كامل فوري في ${displayTime.toFixed(1)}ms:`, normalized.order_number);
-      } else {
-        // Fallback ذكي: إنشاء طلب محلياً من البيانات المتاحة
-        console.warn('⚠️ فشل جلب الطلب، استخدام fallback محلي');
-        const fallbackOrder = {
-          ...createdOrder,
-          order_items: itemsRows.map((item, index) => ({
-            ...item,
-            id: `temp_${Date.now()}_${index}`,
-            products: allData.products?.find(p => p.id === item.product_id),
-            product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
-          })),
-          _pendingSync: true
-        };
-        
-        setAllData(prev => ({
-          ...prev,
-          orders: [fallbackOrder, ...(prev.orders || [])]
-        }));
-        const displayTime = performance.now() - startTime;
-        console.log(`📋 طلب fallback محلي في ${displayTime.toFixed(1)}ms:`, fallbackOrder.order_number);
-      }
+      }, 50); // تأخير قصير جداً لضمان العرض الفوري أولاً
 
       // إبطال الكاش للتزامن مع الخادم
       superAPI.invalidate('all_data');

@@ -21,6 +21,7 @@ const SearchableSelectFixed = ({
   const buttonRef = useRef(null);
   const searchInputRef = useRef(null);
   const [isInDialog, setIsInDialog] = useState(false);
+  const [isNavigatingWithKeyboard, setIsNavigatingWithKeyboard] = useState(false);
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -47,6 +48,11 @@ const SearchableSelectFixed = ({
   // Close dropdown when clicking outside - improved for dialogs
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // منع الإغلاق أثناء التنقل بالكيبورد
+      if (isNavigatingWithKeyboard) {
+        return;
+      }
+      
       // تجنب الإغلاق المبكر عند التفاعل مع القائمة
       if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
           buttonRef.current && !buttonRef.current.contains(event.target)) {
@@ -61,6 +67,7 @@ const SearchableSelectFixed = ({
       if (event.key === 'Escape' && open) {
         setOpen(false);
         setSearch('');
+        setIsNavigatingWithKeyboard(false);
       }
     };
 
@@ -70,7 +77,7 @@ const SearchableSelectFixed = ({
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('touchstart', handleClickOutside);
         document.addEventListener('keydown', handleEscapeKey);
-      }, 150);
+      }, 100);
     }
     
     return () => {
@@ -78,7 +85,7 @@ const SearchableSelectFixed = ({
       document.removeEventListener('touchstart', handleClickOutside);
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [open]);
+  }, [open, isNavigatingWithKeyboard]);
 
   // Focus search input when opening - enhanced for dialogs
   useEffect(() => {
@@ -116,6 +123,10 @@ const SearchableSelectFixed = ({
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
+      
+      // تعيين فلاج التنقل بالكيبورد
+      setIsNavigatingWithKeyboard(true);
+      
       // البحث عن العنصر التالي أو السابق وتمييزه
       const options = dropdownRef.current?.querySelectorAll('[data-option]');
       if (options) {
@@ -136,6 +147,10 @@ const SearchableSelectFixed = ({
           options[nextIndex].scrollIntoView({ block: 'nearest' });
         }
       }
+      
+      // إزالة فلاج التنقل بالكيبورد بعد تأخير قصير
+      setTimeout(() => setIsNavigatingWithKeyboard(false), 200);
+      
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
@@ -144,9 +159,11 @@ const SearchableSelectFixed = ({
       if (selectedOption) {
         selectedOption.click();
       }
+      setIsNavigatingWithKeyboard(false);
     } else if (e.key === 'Escape') {
       setOpen(false);
       setSearch('');
+      setIsNavigatingWithKeyboard(false);
     }
   };
 

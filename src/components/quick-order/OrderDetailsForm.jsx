@@ -51,8 +51,15 @@ const OrderDetailsForm = ({
 
   // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
-    if (!formData.size) {
+    // للتوصيل المحلي: ضمان "عادي" كقيمة افتراضية دائماً
+    if (activePartner === 'local' && (!formData.size || formData.size === '')) {
+      console.log('🎯 تعيين حجم الطلب الافتراضي: عادي');
       handleSelectChange('size', 'عادي');
+    }
+    // لشركة الوسيط: التأكد من وجود أحجام قبل التعيين
+    else if (activePartner === 'alwaseet' && packageSizes.length > 0 && (!formData.size || formData.size === '')) {
+      console.log('🎯 تعيين حجم الطلب الافتراضي للوسيط:', packageSizes[0]?.id);
+      handleSelectChange('size', String(packageSizes[0]?.id || ''));
     }
   }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 

@@ -12,8 +12,9 @@ class SuperAPI {
     this.loading = new Set();
     this.subscriptions = new Map();
     
-    // 3 دقائق cache - يقلل 95% من الطلبات
-    this.CACHE_TTL = 3 * 60 * 1000;
+    // 30 ثانية cache للطلبات الجديدة - تحسين الأداء
+    this.CACHE_TTL = 30 * 1000;
+    this.ORDER_CACHE_TTL = 10 * 1000; // 10 ثواني للطلبات فقط
     
     console.log('🚀 SuperAPI: نظام موحد لحل فوضى البيانات');
     // مفتاح تخزين محلي
@@ -22,16 +23,19 @@ class SuperAPI {
     this._invalidateTimer = null;
   }
 
-  // التحقق من صحة البيانات المحفوظة
+  // التحقق من صحة البيانات المحفوظة مع cache TTL محسن للطلبات
   isCacheValid(key) {
     if (!this.cache.has(key)) return false;
     
     const timestamp = this.timestamps.get(key);
     const age = Date.now() - timestamp;
-    const isValid = age < this.CACHE_TTL;
+    
+    // استخدام cache TTL أقصر للطلبات لضمان التحديث السريع
+    const ttl = (key.includes('order') || key.includes('all_data')) ? this.ORDER_CACHE_TTL : this.CACHE_TTL;
+    const isValid = age < ttl;
     
     if (!isValid) {
-      console.log(`🗑️ انتهت صلاحية cache لـ: ${key}`);
+      console.log(`🗑️ انتهت صلاحية cache لـ: ${key} (${age}ms > ${ttl}ms)`);
       this.cache.delete(key);
       this.timestamps.delete(key);
     }
@@ -453,11 +457,13 @@ return this.fetch('all_data', async () => {
           
           // معالجة فورية للطلبات وعناصرها بدون تأخير
           if (table === 'orders' || table === 'ai_orders' || table === 'order_items') {
-            // لا تبطل الكاش - دع SuperProvider يتعامل مع التحديث مباشرة
-            console.log(`⚡ تحديث فوري لـ ${table} - تجاوز الكاش`);
+            // إبطال فوري للطلبات لضمان الحصول على أحدث البيانات
+            this.invalidate('all_data');
+            this.invalidate('orders_only');
+            console.log(`⚡ تحديث فوري لـ ${table} مع إبطال cache فوري`);
           } else {
             // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
-            this.debouncedInvalidateAll(200); // تقليل الوقت للاستجابة السريعة
+            this.debouncedInvalidateAll(50); // تقليل الوقت إلى 50ms للاستجابة السريعة
           }
           
           if (callback) callback(table, payload);
