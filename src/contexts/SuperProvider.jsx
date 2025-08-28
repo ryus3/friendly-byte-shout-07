@@ -836,9 +836,17 @@ export const SuperProvider = ({ children }) => {
 
   // إعادة التحقق عند عودة التبويب للتركيز إذا انتهت صلاحية الكاش
   useEffect(() => {
-    // إزالة ميكانيكية visibility change لمنع التجمد نهائياً
-    // الاعتماد على real-time subscriptions فقط للتحديث التلقائي
-    return () => {}; // no cleanup needed
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          if (!superAPI.isCacheValid('all_data')) {
+            fetchAllData();
+          }
+        } catch {}
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [fetchAllData]);
 
   // تأكيد تفعيل Webhook للتليغرام تلقائياً (مرة واحدة عند تشغيل التطبيق)
@@ -1022,8 +1030,11 @@ export const SuperProvider = ({ children }) => {
       const instantTime = performance.now() - startTime;
       console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
       
-      // الاعتماد على real-time subscriptions للتحديث التلقائي فقط - لا نحتاج invalidate
-      // الطلب معروض فورياً والـ subscriptions ستتولى التحديث التلقائي
+      // إبطال الكاش للتزامن مع الخادم (فوري بدون setTimeout)
+      superAPI.invalidate('all_data');
+      superAPI.invalidate('orders_only');
+      
+      // الاعتماد على real-time subscriptions للتحديث التلقائي
 
       return {
         success: true,
