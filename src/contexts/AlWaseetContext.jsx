@@ -1713,64 +1713,77 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, correctionComplete]);
 
-  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
   const performDeletionPassAfterStatusSync = useCallback(async () => {
     if (!token) return;
     
     try {
-      console.log('🔍 فحص الطلبات للحذف التلقائي بعد مزامنة الحالات...');
+      console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
-      // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
+      // جلب الطلبات المحلية المرشحة للحذف - نفس الشروط المستخدمة في syncOrderByQR
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
-        .in('status', ['pending', 'active', 'disabled', 'inactive'])
-        .limit(50);
+        .limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
         
-      if (error || !localOrders?.length) return;
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات المحلية:', error);
+        return;
+      }
       
-      // جلب جميع طلبات الوسيط للمقارنة
-      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      const waseetOrderIds = new Set(waseetOrders.map(o => String(o.id)));
+      if (!localOrders?.length) {
+        console.log('✅ لا توجد طلبات مرشحة للفحص');
+        return;
+      }
       
+      console.log(`🔍 سيتم فحص ${localOrders.length} طلب باستخدام syncOrderByQR...`);
+      
+      let checkedCount = 0;
       let deletedCount = 0;
       
+      // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
       for (const localOrder of localOrders) {
-        // التحقق من إمكانية الحذف التلقائي
-        if (!canAutoDeleteOrder(localOrder)) continue;
+        const trackingNumber = localOrder.tracking_number || localOrder.qr_id;
+        if (!trackingNumber) {
+          console.warn(`⚠️ لا يوجد tracking_number للطلب ${localOrder.id}`);
+          continue;
+        }
         
-        // التحقق من عدم وجود الطلب في الوسيط
-        const waseetId = String(localOrder.delivery_partner_order_id);
-        if (!waseetOrderIds.has(waseetId)) {
-          // تحقق نهائي مباشر قبل الحذف
-          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
-          let remoteCheck = null;
-          if (confirmKey) {
-            try {
-              remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
-            } catch (e) {
-              console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (deletion pass):', e);
-            }
+        try {
+          console.log(`🔄 فحص الطلب ${trackingNumber} باستخدام syncOrderByQR...`);
+          
+          // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
+          const syncResult = await syncOrderByQR(trackingNumber);
+          checkedCount++;
+          
+          // التحقق من الحذف التلقائي
+          if (syncResult?.autoDeleted) {
+            deletedCount++;
+            console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
+          } else if (syncResult) {
+            console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
+          } else {
+            console.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
           }
           
-          if (!remoteCheck) {
-            console.log('🗑️ حذف تلقائي للطلب بعد مزامنة الحالات:', localOrder.tracking_number);
-            await handleAutoDeleteOrder(localOrder.id, 'deletionPass');
-            deletedCount++;
-          }
+        } catch (error) {
+          console.error(`❌ خطأ في فحص الطلب ${trackingNumber}:`, error);
         }
       }
       
+      console.log(`✅ انتهاء الفحص التلقائي: تم فحص ${checkedCount} طلب، حذف ${deletedCount} طلب`);
+      
       if (deletedCount > 0) {
-        console.log(`🗑️ تم حذف ${deletedCount} طلب تلقائياً بعد مزامنة الحالات`);
+        console.log(`🗑️ إجمالي الطلبات المحذوفة تلقائياً: ${deletedCount}`);
       }
+      
     } catch (error) {
-      console.error('❌ خطأ في فحص الطلبات للحذف:', error);
+      console.error('❌ خطأ في فحص الطلبات للحذف التلقائي:', error);
     }
-  }, [token, canAutoDeleteOrder, handleAutoDeleteOrder]);
+  }, [token, syncOrderByQR]);
 
   // Auto-sync and repair on login
   useEffect(() => {
