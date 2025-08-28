@@ -273,12 +273,6 @@ export const SuperProvider = ({ children }) => {
   const fetchAllData = useCallback(async () => {
     if (!user) return;
     
-    const startTime = Date.now();
-    const timeoutId = setTimeout(() => {
-      console.warn('⚠️ fetchAllData: العملية تستغرق وقتاً طويلاً');
-      setLoading(false);
-    }, 10000); // timeout بعد 10 ثواني
-    
     try {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
@@ -559,19 +553,9 @@ export const SuperProvider = ({ children }) => {
           seasons: []
         });
       }
-    } catch (error) {
-      console.error('❌ fetchAllData: خطأ غير متوقع:', error);
-      setAllData({
-        orders: [],
-        products: [],
-        customers: [],
-        settings: {}
-      });
     } finally {
-      clearTimeout(timeoutId);
       lastFetchAtRef.current = Date.now();
       setLoading(false);
-      console.log(`⏱️ fetchAllData: انتهت العملية في ${Date.now() - startTime}ms`);
     }
   }, [user]);
 
