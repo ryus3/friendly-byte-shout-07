@@ -639,7 +639,7 @@ export const AlWaseetProvider = ({ children }) => {
       const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
-        .select('id, status, delivery_status, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
+        .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .in('status', targetStatuses)
         .limit(200);
@@ -1723,7 +1723,7 @@ export const AlWaseetProvider = ({ children }) => {
       // جلب الطلبات المحلية المرشحة للحذف (delivery_partner = alwaseet, has delivery_partner_order_id, pre-pickup status)
       const { data: localOrders, error } = await supabase
         .from('orders')
-        .select('id, tracking_number, qr_id, delivery_partner_order_id, delivery_status, status, receipt_received')
+        .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
