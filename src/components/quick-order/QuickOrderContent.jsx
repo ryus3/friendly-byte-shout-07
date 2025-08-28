@@ -420,8 +420,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       name: '', 
       phone: '', 
       second_phone: '', 
-      city_id: '', 
-      region_id: '', 
+      city_id: null, 
+      region_id: null,
       city: '', 
       region: '', 
       address: '', 
@@ -521,7 +521,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setPackageSizes(safePackageSizes);
 
           // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
-          if (!formData.city_id && safeCities.length > 0) {
+          if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
               city.name?.toLowerCase().includes('بغداد') || 
               city.name?.toLowerCase().includes('baghdad')

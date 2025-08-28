@@ -600,8 +600,10 @@ export const SuperProvider = ({ children }) => {
           orders: [filtered.orders[0], ...(prev.orders || [])]
         }));
         
-        // جلب order_items في الخلفية (بدون تأخير)
-        fetchOrderItemsBackground(newOrder.id);
+        // جلب order_items في الخلفية مع تأخير لمنع التجمد
+        setTimeout(() => {
+          fetchOrderItemsBackground(newOrder.id);
+        }, 2000);
       }
     } catch (err) {
       console.error('❌ addOrderInstantly: خطأ في الإضافة الفورية:', err);
