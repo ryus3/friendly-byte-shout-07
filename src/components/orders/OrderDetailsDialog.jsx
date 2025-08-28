@@ -129,11 +129,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           variant: "default"
         });
       } else {
-        toast({
-          title: "خطأ في المزامنة",
-          description: "لم يتم العثور على الطلب في شركة التوصيل",
-          variant: "destructive"
-        });
+        // لا نعرض رسالة خطأ هنا لأن syncOrderByQR تتعامل مع الحذف التلقائي
+        console.log("⚠️ لم يتم العثور على الطلب في الوسيط أو لا يحتاج تحديث");
       }
     } catch (error) {
       console.error('❌ خطأ في مزامنة الطلب:', error);

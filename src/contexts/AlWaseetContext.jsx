@@ -1071,10 +1071,17 @@ export const AlWaseetProvider = ({ children }) => {
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
         
-        // التحقق من إمكانية الحذف التلقائي
+      // التحقق من إمكانية الحذف التلقائي
         if (localOrder && canAutoDeleteOrder(localOrder)) {
           console.log(`🗑️ حذف تلقائي للطلب ${qrId} - محذوف من الوسيط`);
-          return await performAutoDelete(localOrder);
+          const deleteResult = await performAutoDelete(localOrder);
+          if (deleteResult) {
+            return { 
+              ...deleteResult, 
+              autoDeleted: true,
+              message: `تم حذف الطلب ${qrId} تلقائياً - غير موجود في شركة التوصيل`
+            };
+          }
         }
         
         return null;
@@ -1176,12 +1183,11 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-  // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة وآمنة)
+  // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة ومرنة)
   const canAutoDeleteOrder = (order) => {
     return order?.delivery_partner === 'alwaseet' &&
-           !!order?.delivery_partner_order_id &&
            order?.receipt_received !== true &&
-           isPrePickupForWaseet(order);
+           (order?.tracking_number || order?.qr_id); // فقط نحتاج رقم تتبع للتحقق
   };
 
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
