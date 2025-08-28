@@ -27,7 +27,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'alwaseet');
+  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
   const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
 

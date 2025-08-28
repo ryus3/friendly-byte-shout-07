@@ -22,6 +22,7 @@ const SearchableSelectFixed = ({
   const searchInputRef = useRef(null);
   const [isInDialog, setIsInDialog] = useState(false);
   const [isNavigatingWithKeyboard, setIsNavigatingWithKeyboard] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -37,58 +38,52 @@ const SearchableSelectFixed = ({
 
   const displayText = selectedOption?.label || selectedOption?.name || placeholder;
   
-  // Detect if component is inside a Radix Dialog
+  // Detect touch device and dialog presence
   useEffect(() => {
+    setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    
     if (buttonRef.current) {
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
       setIsInDialog(!!dialogContainer);
     }
   }, [open]);
 
-  // منع إغلاق القائمة عند اللمس والتنقل
+  // Simplified interaction handling for better mobile support
   useEffect(() => {
-    const handleInteraction = (event) => {
-      // منع الإغلاق تماماً أثناء التنقل أو اللمس النشط
-      if (isNavigatingWithKeyboard) {
-        event.preventDefault();
-        event.stopPropagation();
+    if (!open) return;
+
+    const handleGlobalClick = (event) => {
+      const target = event.target;
+      const button = buttonRef.current;
+      const dropdown = dropdownRef.current;
+
+      // Don't close if clicking inside our components
+      if (button?.contains(target) || dropdown?.contains(target)) {
         return;
       }
-      
-      // فحص دقيق للعناصر المسموح لها بإغلاق القائمة
-      const isDropdownElement = dropdownRef.current?.contains(event.target);
-      const isButtonElement = buttonRef.current?.contains(event.target);
-      const isDialogElement = event.target.closest('[role="dialog"], [data-radix-dialog-overlay]');
-      
-      // إغلاق فقط عند النقر خارج القائمة والزر وليس في الحوار
-      if (!isDropdownElement && !isButtonElement && !isDialogElement) {
+
+      // Close dropdown for outside clicks with minimal delay
+      setTimeout(() => setOpen(false), 50);
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
         setOpen(false);
         setSearch('');
+        setIsNavigatingWithKeyboard(false);
+        buttonRef.current?.focus();
       }
     };
 
-    if (open) {
-      // بدء مراقبة التفاعلات فوراً
-      document.addEventListener('mousedown', handleInteraction, { capture: true });
-      document.addEventListener('touchstart', handleInteraction, { passive: false, capture: true });
-      
-      // مفتاح الهروب منفصل
-      const handleEscape = (e) => {
-        if (e.key === 'Escape') {
-          setOpen(false);
-          setSearch('');
-          setIsNavigatingWithKeyboard(false);
-        }
-      };
-      document.addEventListener('keydown', handleEscape);
-      
-      return () => {
-        document.removeEventListener('mousedown', handleInteraction, { capture: true });
-        document.removeEventListener('touchstart', handleInteraction, { capture: true });
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
-  }, [open, isNavigatingWithKeyboard]);
+    // Only listen to clicks, avoid touch conflicts
+    document.addEventListener('click', handleGlobalClick, true);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('click', handleGlobalClick, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open]);
 
   // Focus search input when opening - enhanced for dialogs
   useEffect(() => {
@@ -108,17 +103,12 @@ const SearchableSelectFixed = ({
   };
 
   const handleOptionSelect = (optionValue) => {
-    // منع إغلاق القائمة أثناء اللمس
-    setIsNavigatingWithKeyboard(true);
-    
     onValueChange(optionValue);
-    
-    // إغلاق فوري للقائمة
-    setTimeout(() => {
-      setOpen(false);
-      setSearch('');
-      setIsNavigatingWithKeyboard(false);
-    }, 30);
+    setOpen(false);
+    setSearch('');
+    setIsNavigatingWithKeyboard(false);
+    // Return focus to the button after selection
+    setTimeout(() => buttonRef.current?.focus(), 100);
   };
 
   const handleSearchChange = (e) => {
@@ -127,16 +117,14 @@ const SearchableSelectFixed = ({
     setSearch(e.target.value);
   };
 
-  // منع إغلاق القائمة عند استخدام لوحة المفاتيح
+  // Improved keyboard navigation
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       e.stopPropagation();
       
-      // تعيين فلاج التنقل بالكيبورد
       setIsNavigatingWithKeyboard(true);
       
-      // البحث عن العنصر التالي أو السابق وتمييزه
       const options = dropdownRef.current?.querySelectorAll('[data-option]');
       if (options) {
         const currentIndex = Array.from(options).findIndex(opt => opt.classList.contains('bg-accent'));
@@ -148,25 +136,26 @@ const SearchableSelectFixed = ({
           nextIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
         }
         
-        // إزالة التمييز السابق
+        // Remove previous highlight
         options.forEach(opt => opt.classList.remove('bg-accent'));
-        // إضافة التمييز للعنصر الجديد
+        // Add highlight to new option
         if (options[nextIndex]) {
           options[nextIndex].classList.add('bg-accent');
           options[nextIndex].scrollIntoView({ block: 'nearest' });
         }
       }
       
-      // إزالة فلاج التنقل بالكيبورد بعد تأخير قصير
-      setTimeout(() => setIsNavigatingWithKeyboard(false), 200);
+      // Reset keyboard navigation flag with minimal delay
+      setTimeout(() => setIsNavigatingWithKeyboard(false), 100);
       
     } else if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      // اختيار العنصر المميز
       const selectedOption = dropdownRef.current?.querySelector('[data-option].bg-accent');
       if (selectedOption) {
-        selectedOption.click();
+        const value = selectedOption.getAttribute('data-value') || 
+                     filteredOptions[Array.from(dropdownRef.current.querySelectorAll('[data-option]')).indexOf(selectedOption)]?.value;
+        if (value) handleOptionSelect(value);
       }
       setIsNavigatingWithKeyboard(false);
     } else if (e.key === 'Escape') {
@@ -220,41 +209,39 @@ const SearchableSelectFixed = ({
               <div
                 key={optionValue}
                 data-option
+                data-value={optionValue}
                 className={cn(
                   "relative flex cursor-pointer select-none items-center rounded-sm py-2 px-3 text-sm outline-none transition-colors",
                   "hover:bg-accent hover:text-accent-foreground",
                   "focus:bg-accent focus:text-accent-foreground",
-                  "touch-manipulation min-h-[44px]", // ارتفاع أدنى للمس أفضل
+                  "touch-manipulation min-h-[44px]",
                   isSelected && "bg-accent text-accent-foreground"
                 )}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  handleOptionSelect(optionValue);
-                }}
                 onTouchStart={(e) => {
-                  // منع أي تفاعل أثناء اللمس
-                  e.stopPropagation();
-                  setIsNavigatingWithKeyboard(true);
+                  if (isTouchDevice) {
+                    e.stopPropagation();
+                  }
                 }}
                 onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  // تأخير قصير لضمان التسجيل الصحيح
-                  setTimeout(() => {
+                  if (isTouchDevice) {
+                    e.stopPropagation();
+                    e.preventDefault();
                     handleOptionSelect(optionValue);
-                  }, 10);
+                  }
                 }}
-                onMouseDown={(e) => {
-                  // منع النقر من إغلاق القائمة
-                  e.stopPropagation();
-                  setIsNavigatingWithKeyboard(true);
+                onClick={(e) => {
+                  if (!isTouchDevice) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleOptionSelect(optionValue);
+                  }
                 }}
                 onMouseEnter={(e) => {
-                  // تمييز العنصر عند التمرير
-                  const allOptions = dropdownRef.current?.querySelectorAll('[data-option]');
-                  allOptions?.forEach(opt => opt.classList.remove('bg-accent'));
-                  e.currentTarget.classList.add('bg-accent');
+                  if (!isTouchDevice) {
+                    const allOptions = dropdownRef.current?.querySelectorAll('[data-option]');
+                    allOptions?.forEach(opt => opt.classList.remove('bg-accent'));
+                    e.currentTarget.classList.add('bg-accent');
+                  }
                 }}
                 style={{ 
                   WebkitTapHighlightColor: 'rgba(0,0,0,0)',

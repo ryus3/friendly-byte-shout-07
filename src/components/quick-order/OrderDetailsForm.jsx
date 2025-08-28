@@ -51,18 +51,20 @@ const OrderDetailsForm = ({
 
   // ضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
+    console.log('🔄 Setting default size - activePartner:', activePartner, 'current size:', formData.size);
+    
     // للتوصيل المحلي: ضمان "عادي" دائماً
-    if (activePartner === 'local') {
+    if (activePartner === 'local' || !activePartner) {
       if (formData.size !== 'عادي') {
-        console.log('🎯 تعيين حجم محلي: عادي');
+        console.log('📦 Setting default size to "عادي" for local delivery');
         handleSelectChange('size', 'عادي');
       }
     }
     // لشركة الوسيط: استخدام أول حجم متاح فقط
-    else if (activePartner === 'alwaseet' && packageSizes.length > 0) {
+    else if (activePartner === 'alwaseet' && packageSizes && packageSizes.length > 0) {
       const firstPackageId = String(packageSizes[0]?.id || '');
       if (formData.size !== firstPackageId) {
-        console.log('🎯 تعيين حجم الوسيط:', firstPackageId);
+        console.log('📦 Setting default size to:', firstPackageId, 'for alwaseet');
         handleSelectChange('size', firstPackageId);
       }
     }
