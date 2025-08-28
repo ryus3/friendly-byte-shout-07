@@ -1071,17 +1071,31 @@ export const AlWaseetProvider = ({ children }) => {
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
         
-      // التحقق من إمكانية الحذف التلقائي
+        // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
         if (localOrder && canAutoDeleteOrder(localOrder)) {
-          console.log(`🗑️ حذف تلقائي للطلب ${qrId} - محذوف من الوسيط`);
-          const deleteResult = await performAutoDelete(localOrder);
-          if (deleteResult) {
-            return { 
-              ...deleteResult, 
-              autoDeleted: true,
-              message: `تم حذف الطلب ${qrId} تلقائياً - غير موجود في شركة التوصيل`
-            };
+          console.log(`⚠️ التحقق من حذف الطلب ${qrId} - لم يُعثر عليه في الوسيط`);
+          
+          // إعادة محاولة البحث للتأكد (قد يكون هناك تأخير في التزامن)
+          await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
+          const doubleCheckOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
+          
+          if (!doubleCheckOrder) {
+            console.log(`🗑️ تأكيد الحذف التلقائي للطلب ${qrId} - غير موجود فعلياً في الوسيط`);
+            const deleteResult = await performAutoDelete(localOrder);
+            if (deleteResult) {
+              return { 
+                ...deleteResult, 
+                autoDeleted: true,
+                message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في شركة التوصيل`
+              };
+            }
+          } else {
+            console.log(`✅ الطلب ${qrId} موجود فعلياً - لن يُحذف`);
+            // معالجة الطلب الموجود
+            return await processWaseetOrderUpdate(localOrder, doubleCheckOrder);
           }
+        } else {
+          console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
         }
         
         return null;
@@ -1183,11 +1197,33 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-  // دالة للتحقق من إمكانية الحذف التلقائي (مبسطة ومرنة)
+  // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية)
   const canAutoDeleteOrder = (order) => {
-    return order?.delivery_partner === 'alwaseet' &&
-           order?.receipt_received !== true &&
-           (order?.tracking_number || order?.qr_id); // فقط نحتاج رقم تتبع للتحقق
+    if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
+      return false;
+    }
+    
+    // التحقق من وجود رقم تتبع
+    if (!order?.tracking_number && !order?.qr_id) {
+      return false;
+    }
+    
+    // حماية زمنية: عدم حذف الطلبات الجديدة (أقل من 15 دقيقة)
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    const minAgeForDeletion = 15 * 60 * 1000; // 15 دقيقة
+    if (orderAge < minAgeForDeletion) {
+      console.log(`⏰ الطلب ${order.order_number} جديد جداً (${Math.round(orderAge/60000)} دقيقة) - لن يُحذف`);
+      return false;
+    }
+    
+    // حماية حالة الطلب: فقط الطلبات في حالات معينة
+    const safeStatusesForDeletion = ['pending', 'shipped', 'delivery'];
+    if (!safeStatusesForDeletion.includes(order.status)) {
+      console.log(`🔒 الطلب ${order.order_number} في حالة ${order.status} - لن يُحذف`);
+      return false;
+    }
+    
+    return true;
   };
 
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
