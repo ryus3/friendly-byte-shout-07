@@ -836,17 +836,9 @@ export const SuperProvider = ({ children }) => {
 
   // إعادة التحقق عند عودة التبويب للتركيز إذا انتهت صلاحية الكاش
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        try {
-          if (!superAPI.isCacheValid('all_data')) {
-            fetchAllData();
-          }
-        } catch {}
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    // إزالة ميكانيكية visibility change لمنع التجمد نهائياً
+    // الاعتماد على real-time subscriptions فقط للتحديث التلقائي
+    return () => {}; // no cleanup needed
   }, [fetchAllData]);
 
   // تأكيد تفعيل Webhook للتليغرام تلقائياً (مرة واحدة عند تشغيل التطبيق)
