@@ -1608,7 +1608,7 @@ export const AlWaseetProvider = ({ children }) => {
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
     setSyncMode('countdown');
-    setSyncCountdown(15);
+    setSyncCountdown(10);
 
     // Countdown timer
     const countdownInterval = setInterval(() => {
@@ -1640,7 +1640,7 @@ export const AlWaseetProvider = ({ children }) => {
         setSyncMode('standby');
         setSyncCountdown(0);
       }
-    }, 15000);
+    }, 10000);
 
   }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
 
