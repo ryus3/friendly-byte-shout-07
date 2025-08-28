@@ -273,6 +273,12 @@ export const SuperProvider = ({ children }) => {
   const fetchAllData = useCallback(async () => {
     if (!user) return;
     
+    // إعداد timeout protection لمنع التجمد
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ SuperProvider: انتهت مهلة تحميل البيانات - إجبار setLoading(false)');
+      setLoading(false);
+    }, 15000);
+    
     try {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
@@ -554,7 +560,8 @@ export const SuperProvider = ({ children }) => {
         });
       }
     } finally {
-      lastFetchAtRef.current = Date.now();
+      // ضمان إلغاء timeout وإنهاء حالة التحميل
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   }, [user]);
