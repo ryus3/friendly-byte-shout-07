@@ -875,11 +875,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           variant: 'success',
           duration: 5000
         });
-        // تأخير resetForm لمنع التجمد أثناء العمليات الأخرى
-        setTimeout(() => {
-          resetForm();
-          if(onOrderCreated) onOrderCreated();
-        }, 100);
+        // تنفيذ فوري بدون setTimeout
+        resetForm();
+        if(onOrderCreated) onOrderCreated();
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
     } catch (error) {
       console.error('Error creating order:', error);
