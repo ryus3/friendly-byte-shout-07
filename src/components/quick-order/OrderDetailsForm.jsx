@@ -54,25 +54,19 @@ const OrderDetailsForm = ({
     // للتوصيل المحلي: ضمان "عادي" دائماً
     if (activePartner === 'local') {
       if (formData.size !== 'عادي') {
-        console.log('🎯 تعيين حجم الطلب الافتراضي: عادي');
+        console.log('🎯 تعيين حجم محلي: عادي');
         handleSelectChange('size', 'عادي');
       }
     }
-    // لشركة الوسيط: التأكد من وجود أحجام قبل التعيين
+    // لشركة الوسيط: استخدام أول حجم متاح فقط
     else if (activePartner === 'alwaseet' && packageSizes.length > 0) {
-      if (!formData.size || formData.size === '') {
-        console.log('🎯 تعيين حجم الطلب الافتراضي للوسيط:', packageSizes[0]?.id);
-        handleSelectChange('size', String(packageSizes[0]?.id || ''));
+      const firstPackageId = String(packageSizes[0]?.id || '');
+      if (formData.size !== firstPackageId) {
+        console.log('🎯 تعيين حجم الوسيط:', firstPackageId);
+        handleSelectChange('size', firstPackageId);
       }
     }
-  }, [activePartner, packageSizes, handleSelectChange]);
-
-  // ضمان تعيين "عادي" فوراً عند التبديل للتوصيل المحلي
-  useEffect(() => {
-    if (activePartner === 'local' && formData.size !== 'عادي') {
-      handleSelectChange('size', 'عادي');
-    }
-  }, [activePartner]);
+  }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 
   // تحديث السعر النهائي في الحقل تلقائياً
   useEffect(() => {

@@ -45,47 +45,47 @@ const SearchableSelectFixed = ({
     }
   }, [open]);
 
-  // تحسين إدارة إغلاق القائمة - دعم كامل للهاتف
+  // منع إغلاق القائمة عند اللمس والتنقل
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      // منع الإغلاق أثناء التنقل بالكيبورد أو اللمس النشط
+    const handleInteraction = (event) => {
+      // منع الإغلاق تماماً أثناء التنقل أو اللمس النشط
       if (isNavigatingWithKeyboard) {
+        event.preventDefault();
+        event.stopPropagation();
         return;
       }
       
-      // تجنب الإغلاق المبكر عند التفاعل مع القائمة
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-          buttonRef.current && !buttonRef.current.contains(event.target)) {
-        // تحقق إضافي للحوارات والعناصر التفاعلية
-        const isInteractiveElement = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay], [data-option]');
-        if (!isInteractiveElement) {
-          setOpen(false);
-          setSearch('');
-        }
-      }
-    };
-
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape' && open) {
+      // فحص دقيق للعناصر المسموح لها بإغلاق القائمة
+      const isDropdownElement = dropdownRef.current?.contains(event.target);
+      const isButtonElement = buttonRef.current?.contains(event.target);
+      const isDialogElement = event.target.closest('[role="dialog"], [data-radix-dialog-overlay]');
+      
+      // إغلاق فقط عند النقر خارج القائمة والزر وليس في الحوار
+      if (!isDropdownElement && !isButtonElement && !isDialogElement) {
         setOpen(false);
         setSearch('');
-        setIsNavigatingWithKeyboard(false);
       }
     };
 
     if (open) {
-      // تأخير أقل لتحسين سرعة الاستجابة
-      const timer = setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-        document.addEventListener('touchstart', handleClickOutside, { passive: false });
-        document.addEventListener('keydown', handleEscapeKey);
-      }, 50);
+      // بدء مراقبة التفاعلات فوراً
+      document.addEventListener('mousedown', handleInteraction, { capture: true });
+      document.addEventListener('touchstart', handleInteraction, { passive: false, capture: true });
+      
+      // مفتاح الهروب منفصل
+      const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+          setOpen(false);
+          setSearch('');
+          setIsNavigatingWithKeyboard(false);
+        }
+      };
+      document.addEventListener('keydown', handleEscape);
       
       return () => {
-        clearTimeout(timer);
-        document.removeEventListener('mousedown', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
-        document.removeEventListener('keydown', handleEscapeKey);
+        document.removeEventListener('mousedown', handleInteraction, { capture: true });
+        document.removeEventListener('touchstart', handleInteraction, { capture: true });
+        document.removeEventListener('keydown', handleEscape);
       };
     }
   }, [open, isNavigatingWithKeyboard]);
@@ -221,11 +221,10 @@ const SearchableSelectFixed = ({
                 key={optionValue}
                 data-option
                 className={cn(
-                  "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none transition-colors",
+                  "relative flex cursor-pointer select-none items-center rounded-sm py-2 px-3 text-sm outline-none transition-colors",
                   "hover:bg-accent hover:text-accent-foreground",
-                  "active:bg-accent active:text-accent-foreground",
                   "focus:bg-accent focus:text-accent-foreground",
-                  "touch-manipulation",
+                  "touch-manipulation min-h-[44px]", // ارتفاع أدنى للمس أفضل
                   isSelected && "bg-accent text-accent-foreground"
                 )}
                 onClick={(e) => {
@@ -234,24 +233,27 @@ const SearchableSelectFixed = ({
                   handleOptionSelect(optionValue);
                 }}
                 onTouchStart={(e) => {
-                  // منع التمرير أثناء اللمس
+                  // منع أي تفاعل أثناء اللمس
                   e.stopPropagation();
                   setIsNavigatingWithKeyboard(true);
                 }}
                 onTouchEnd={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleOptionSelect(optionValue);
+                  // تأخير قصير لضمان التسجيل الصحيح
+                  setTimeout(() => {
+                    handleOptionSelect(optionValue);
+                  }, 10);
                 }}
-                onTouchMove={(e) => {
-                  // السماح بالتمرير الطبيعي
+                onMouseDown={(e) => {
+                  // منع النقر من إغلاق القائمة
                   e.stopPropagation();
+                  setIsNavigatingWithKeyboard(true);
                 }}
                 onMouseEnter={(e) => {
-                  // إزالة التمييز من العناصر الأخرى
+                  // تمييز العنصر عند التمرير
                   const allOptions = dropdownRef.current?.querySelectorAll('[data-option]');
                   allOptions?.forEach(opt => opt.classList.remove('bg-accent'));
-                  // تمييز العنصر الحالي
                   e.currentTarget.classList.add('bg-accent');
                 }}
                 style={{ 
