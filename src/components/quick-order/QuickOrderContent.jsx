@@ -39,14 +39,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     second_phone: '', 
     city_id: '', 
     region_id: '', 
-    city: '', 
+    city: 'بغداد', // القيمة الافتراضية للمدينة
     region: '', 
     address: '', 
     notes: '', 
     details: '', 
     quantity: 1, 
     price: 0, 
-    size: 'عادي', 
+    size: 'عادي', // القيمة الافتراضية لحجم الطلب
     type: 'new', 
     promocode: '',
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
@@ -520,6 +520,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCities(safeCities);
           setPackageSizes(safePackageSizes);
 
+          // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
+          if (!formData.city_id && safeCities.length > 0) {
+            const baghdadCity = safeCities.find(city => 
+              city.name?.toLowerCase().includes('بغداد') || 
+              city.name?.toLowerCase().includes('baghdad')
+            );
+            const defaultCity = baghdadCity || safeCities[0];
+            setFormData(prev => ({
+              ...prev,
+              city_id: String(defaultCity.id)
+            }));
+          }
+
+          // تعيين حجم "عادي" افتراضياً
           const normalSize = safePackageSizes.find(s => s.size && (s.size.toLowerCase().includes('normal') || s.size.includes('عادي')));
           if (normalSize) {
              setFormData(prev => ({ ...prev, size: String(normalSize.id) }));

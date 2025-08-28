@@ -47,25 +47,36 @@ const SearchableSelectFixed = ({
   // Close dropdown when clicking outside - improved for dialogs
   useEffect(() => {
     const handleClickOutside = (event) => {
-      setTimeout(() => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-            buttonRef.current && !buttonRef.current.contains(event.target)) {
-          const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
-          if (!isDialogClick) {
-            setOpen(false);
-          }
+      // تجنب الإغلاق المبكر عند التفاعل مع القائمة
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
+          buttonRef.current && !buttonRef.current.contains(event.target)) {
+        const isDialogClick = event.target.closest('[role="dialog"], .dialog-overlay, [data-radix-dialog-overlay]');
+        if (!isDialogClick) {
+          setOpen(false);
         }
-      }, 100);
+      }
+    };
+
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && open) {
+        setOpen(false);
+        setSearch('');
+      }
     };
 
     if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
+      // تأخير إضافة المستمعين لتجنب الإغلاق الفوري
+      setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        document.addEventListener('keydown', handleEscapeKey);
+      }, 150);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [open]);
 
@@ -100,6 +111,45 @@ const SearchableSelectFixed = ({
     setSearch(e.target.value);
   };
 
+  // منع إغلاق القائمة عند استخدام لوحة المفاتيح
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      e.stopPropagation();
+      // البحث عن العنصر التالي أو السابق وتمييزه
+      const options = dropdownRef.current?.querySelectorAll('[data-option]');
+      if (options) {
+        const currentIndex = Array.from(options).findIndex(opt => opt.classList.contains('bg-accent'));
+        let nextIndex = -1;
+        
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < options.length - 1 ? currentIndex + 1 : 0;
+        } else {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : options.length - 1;
+        }
+        
+        // إزالة التمييز السابق
+        options.forEach(opt => opt.classList.remove('bg-accent'));
+        // إضافة التمييز للعنصر الجديد
+        if (options[nextIndex]) {
+          options[nextIndex].classList.add('bg-accent');
+          options[nextIndex].scrollIntoView({ block: 'nearest' });
+        }
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // اختيار العنصر المميز
+      const selectedOption = dropdownRef.current?.querySelector('[data-option].bg-accent');
+      if (selectedOption) {
+        selectedOption.click();
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+      setSearch('');
+    }
+  };
+
   // Render dropdown content
   const renderDropdownContent = () => (
     <div 
@@ -116,15 +166,15 @@ const SearchableSelectFixed = ({
       <div className="p-1 border-b border-border">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={handleSearchChange}
-            onKeyDown={(e) => e.stopPropagation()}
-            className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-            autoComplete="off"
-          />
+            <Input
+              ref={searchInputRef}
+              placeholder={searchPlaceholder}
+              value={search}
+              onChange={handleSearchChange}
+              onKeyDown={handleKeyDown}
+              className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+              autoComplete="off"
+            />
         </div>
       </div>
 
@@ -143,6 +193,7 @@ const SearchableSelectFixed = ({
             return (
               <div
                 key={optionValue}
+                data-option
                 className={cn(
                   "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none transition-colors",
                   "hover:bg-accent hover:text-accent-foreground",
@@ -164,6 +215,13 @@ const SearchableSelectFixed = ({
                   e.preventDefault();
                   e.stopPropagation();
                   handleOptionSelect(optionValue);
+                }}
+                onMouseEnter={(e) => {
+                  // إزالة التمييز من العناصر الأخرى
+                  const allOptions = dropdownRef.current?.querySelectorAll('[data-option]');
+                  allOptions?.forEach(opt => opt.classList.remove('bg-accent'));
+                  // تمييز العنصر الحالي
+                  e.currentTarget.classList.add('bg-accent');
                 }}
                 style={{ 
                   WebkitTapHighlightColor: 'rgba(0,0,0,0)',
