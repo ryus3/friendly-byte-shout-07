@@ -97,6 +97,10 @@ function AppContent() {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
   }
 
+  if (!user && !loading) {
+    return <Navigate to="/login" replace />;
+  }
+
   const childrenWithProps = (Component, props = {}) => (
     <Layout>
       <Component {...props} />
