@@ -1023,12 +1023,8 @@ export const SuperProvider = ({ children }) => {
       const instantTime = performance.now() - startTime;
       console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
       
-      // إبطال الكاش للتزامن مع الخادم (بدون setTimeout لمنع التجمد)
-      superAPI.debouncedInvalidateAll(100); // استخدام التزامن المؤجل لمنع التضارب
-      
-      // تزامن خلفي مؤجل لضمان عدم التضارب مع العمليات الأخرى
-      let backgroundSyncTimeout;
-      const performBackgroundSync = async () => {
+      // جلب التفاصيل الكاملة في الخلفية (بدون انتظار المستخدم)
+      setTimeout(async () => {
         try {
           const fullOrder = await superAPI.getOrderById(createdOrder.id);
           if (fullOrder) {
@@ -1044,12 +1040,11 @@ export const SuperProvider = ({ children }) => {
         } catch (error) {
           console.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
         }
-      };
-      
-      backgroundSyncTimeout = setTimeout(performBackgroundSync, 2000); // تأخير أطول لمنع التضارب
-      
-      // تنظيف Timeout عند إلغاء التحميل
-      return () => clearTimeout(backgroundSyncTimeout);
+      }, 50); // تأخير قصير جداً لضمان العرض الفوري أولاً
+
+      // إبطال الكاش للتزامن مع الخادم
+      superAPI.invalidate('all_data');
+      superAPI.invalidate('orders_only');
 
       return {
         success: true,
