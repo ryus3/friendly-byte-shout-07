@@ -63,7 +63,7 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
                        <>
                          <span className="font-medium text-primary">{item.phone}</span>
                          <span className="mx-1">•</span>
-                         <span>{item.value} طلب</span>
+                         <span>{item.value}</span>
                        </>
                      ) : item.value}
                    </p>

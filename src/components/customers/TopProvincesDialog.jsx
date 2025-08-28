@@ -76,11 +76,15 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
           break;
       }
 
-      // استخدام بيانات السياق إن توفرت لتقليل الاستهلاك
+      // استخدام بيانات السياق إن توفرت لتقليل الاستهلاك - فرض بيانات المستخدم فقط
       let ordersData;
       const range = getDateRange(selectedPeriod);
+      const { user } = useSuper();
+      const userUUID = user?.id;
+      
       if (Array.isArray(ctxOrders) && ctxOrders.length > 0) {
         ordersData = ctxOrders
+          .filter(o => o.created_by === userUUID) // فرض بيانات المستخدم فقط
           .filter(o => (o.status === 'completed' || o.status === 'delivered'))
           .filter(o => o.customer_province && o.customer_province !== '')
           .filter(o => {
@@ -106,6 +110,7 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
             status,
             created_at
           `)
+          .eq('created_by', userUUID) // فرض بيانات المستخدم فقط
           .in('status', ['completed', 'delivered'])
           .not('customer_province', 'is', null)
           .neq('customer_province', '')

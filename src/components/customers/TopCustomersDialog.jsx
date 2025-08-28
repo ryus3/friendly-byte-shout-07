@@ -23,7 +23,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId }) => {
     { key: 'year', label: 'سنة' }
   ];
 
-  const { analytics, loading, setDateRange } = useOrdersAnalytics();
+  const { analytics, loading, setDateRange } = useOrdersAnalytics(true);
   
   // تفعيل فلترة الفترة الزمنية فعلياً عبر hook التحليلات
   const getDateRangeFor = (key) => {

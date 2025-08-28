@@ -9,7 +9,7 @@ import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
  * يستخدم البيانات الموحدة من useInventory() بدلاً من الطلبات المنفصلة
  * إصلاح جذري: لا مزيد من استخدام supabase مباشرة!
  */
-const useOrdersAnalytics = () => {
+const useOrdersAnalytics = (forceUserDataOnly = false) => {
   // Defensive check to ensure React hooks are available
   if (!React || typeof useState !== 'function') {
     console.error('React hooks not available in useOrdersAnalytics');
@@ -60,8 +60,8 @@ const useOrdersAnalytics = () => {
     
     const userUUID = getUserUUID(user);
     
-    // فلترة الطلبات حسب الصلاحيات
-    const visibleOrders = canViewAllOrders ? orders : orders.filter(order => 
+    // فلترة الطلبات حسب الصلاحيات - أو فرض بيانات المستخدم فقط
+    const visibleOrders = (canViewAllOrders && !forceUserDataOnly) ? orders : orders.filter(order => 
       order.created_by === userUUID
     );
 
@@ -228,8 +228,8 @@ const useOrdersAnalytics = () => {
         value: `${product.quantity} قطعة`
       }));
 
-    // الأرباح المعلقة (من البيانات الموحدة)
-    const visibleProfits = canViewAllOrders ? profits : profits?.filter(profit => 
+    // الأرباح المعلقة (من البيانات الموحدة) - أو فرض بيانات المستخدم فقط
+    const visibleProfits = (canViewAllOrders && !forceUserDataOnly) ? profits : profits?.filter(profit => 
       profit.employee_id === userUUID
     );
     
