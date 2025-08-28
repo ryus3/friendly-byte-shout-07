@@ -59,7 +59,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
-    console.log('AI/Edit Order Data received:', aiOrderData, { isEditMode });
+    console.log('🚀 QuickOrderContent - AI/Edit Order Data received:', aiOrderData, { isEditMode });
     if (aiOrderData) {
       // Parse city and address intelligently
       const parseLocationData = (address, city) => {
@@ -125,12 +125,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setActivePartner('local');
         }
         
-        // تحميل المنتجات إلى السلة
+        // تحميل المنتجات إلى السلة في وضع التعديل
         if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+          console.log('🛒 QuickOrderContent - Loading cart items for edit mode:', aiOrderData.items);
           clearCart();
           aiOrderData.items.forEach(item => {
+            console.log('🔍 Adding item to cart:', item);
             addToCart(null, item, item.quantity, false);
           });
+          console.log('✅ Cart loaded successfully for edit mode');
+        } else {
+          console.log('⚠️ No items found in aiOrderData for edit mode');
         }
         
         return; // انتهاء وضع التعديل

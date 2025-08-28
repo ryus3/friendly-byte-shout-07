@@ -6,10 +6,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = (order) => {
-    if (!order) return null;
+    if (!order) {
+      console.log('❌ No order data provided to EditOrderDialog');
+      return null;
+    }
     
-    // تحويل المنتجات لصيغة cart items
-    const cartItems = (order.items || []).map(item => ({
+    console.log('🔍 EditOrderDialog - Raw order data received:', order);
+    console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
+    
+    // تحويل المنتجات لصيغة cart items - استخدم order_items بدلاً من items
+    const cartItems = (order.order_items || order.items || []).map(item => ({
       id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
       productId: item.product_id,
       variantId: item.variant_id,
@@ -24,7 +30,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       sku: item.sku || ''
     }));
 
-    return {
+    console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
+
+    const editData = {
       // معلومات العميل
       customer_name: order.customer_name || '',
       customer_phone: order.customer_phone || '',
@@ -49,6 +57,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       orderId: order.id,
       originalOrder: order
     };
+
+    console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
+    return editData;
   };
 
   const handleOrderUpdated = (updatedOrder) => {
