@@ -1586,6 +1586,8 @@ export const AlWaseetProvider = ({ children }) => {
         setIsSyncing(true);
         setSyncMode('syncing');
         await fastSyncPendingOrders();
+        console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
+        await performDeletionPassAfterStatusSync();
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
