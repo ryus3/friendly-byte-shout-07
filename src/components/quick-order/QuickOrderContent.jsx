@@ -520,19 +520,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCities(safeCities);
           setPackageSizes(safePackageSizes);
 
-          // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
-          if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
-            const baghdadCity = safeCities.find(city => 
-              city.name?.toLowerCase().includes('بغداد') || 
-              city.name?.toLowerCase().includes('baghdad')
-            );
-            const defaultCity = baghdadCity || safeCities[0];
-            setFormData(prev => ({
-              ...prev,
-              city_id: String(defaultCity.id)
-            }));
-          }
-
           // تعيين حجم "عادي" افتراضياً
           const normalSize = safePackageSizes.find(s => s.size && (s.size.toLowerCase().includes('normal') || s.size.includes('عادي')));
           if (normalSize) {
@@ -540,46 +527,65 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           } else if (safePackageSizes.length > 0) {
             setFormData(prev => ({ ...prev, size: String(safePackageSizes[0].id) }));
           }
-        } catch (error) {
-          setDataFetchError(true);
-          toast({ title: "خطأ", description: "فشل تحميل بيانات شركة التوصيل. قد يكون التوكن غير صالح أو منتهي الصلاحية.", variant: "destructive" }); 
-        } finally { 
-          setLoadingCities(false); 
-          setLoadingPackageSizes(false);
-          setInitialDataLoaded(true);
-        }
-      } else if (activePartner === 'local') {
-        setFormData(prev => ({...prev, size: 'عادي' }));
-        setInitialDataLoaded(true);
-        setDataFetchError(false);
-      }
-    };
-    
-    if(isDeliveryPartnerSelected) {
-        if(activePartner === 'alwaseet' && !isWaseetLoggedIn) {
-            setInitialDataLoaded(false);
-        } else {
-            fetchInitialData();
-        }
+    } catch (error) {
+      setDataFetchError(true);
+      toast({ title: "خطأ", description: "فشل تحميل بيانات شركة التوصيل. قد يكون التوكن غير صالح أو منتهي الصلاحية.", variant: "destructive" }); 
+    } finally { 
+      setLoadingCities(false); 
+      setLoadingPackageSizes(false);
+      setInitialDataLoaded(true);
     }
-  }, [activePartner, waseetToken, isWaseetLoggedIn, isDeliveryPartnerSelected]);
+  } else if (activePartner === 'local') {
+    setFormData(prev => ({...prev, size: 'عادي' }));
+    setInitialDataLoaded(true);
+    setDataFetchError(false);
+  }
+};
 
-  useEffect(() => {
-    if (formData.city_id && activePartner === 'alwaseet' && waseetToken) {
-      const fetchRegionsData = async () => {
-        setLoadingRegions(true);
-        setRegions([]);
-        setFormData(prev => ({ ...prev, region_id: '' }));
-        try {
-            const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
-            const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
-            setRegions(safeRegions);
-        } catch (error) { toast({ title: "خطأ", description: "فشل تحميل المناطق.", variant: "destructive" }); }
-        finally { setLoadingRegions(false); }
-      };
-      fetchRegionsData();
+if(isDeliveryPartnerSelected) {
+    if(activePartner === 'alwaseet' && !isWaseetLoggedIn) {
+        setInitialDataLoaded(false);
+    } else {
+        fetchInitialData();
     }
-  }, [formData.city_id, activePartner, waseetToken]);
+}
+}, [activePartner, waseetToken, isDeliveryPartnerSelected, isWaseetLoggedIn]);
+
+// useEffect منفصل لإعادة تعيين المدينة الافتراضية بعد resetForm
+useEffect(() => {
+if (activePartner === 'alwaseet' && cities.length > 0 && (!formData.city_id || formData.city_id === null || formData.city_id === '')) {
+  const baghdadCity = cities.find(city => 
+    city.name?.toLowerCase().includes('بغداد') || 
+    city.name?.toLowerCase().includes('baghdad')
+  );
+  const defaultCity = baghdadCity || cities[0];
+  setFormData(prev => ({
+    ...prev,
+    city_id: String(defaultCity.id)
+  }));
+}
+}, [formData.city_id, cities, activePartner]);
+
+// useEffect لجلب المناطق عند اختيار المدينة
+useEffect(() => {
+if (activePartner === 'alwaseet' && formData.city_id && waseetToken) {
+  const fetchRegions = async () => {
+    setLoadingRegions(true);
+    try {
+      const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
+      const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
+      setRegions(safeRegions);
+      setFormData(prev => ({ ...prev, region_id: null }));
+      setErrors(prev => ({ ...prev, region_id: '' }));
+    } catch (error) {
+      toast({ title: "خطأ", description: "فشل تحميل مناطق المدينة", variant: "destructive" });
+    } finally {
+      setLoadingRegions(false);
+    }
+  };
+  fetchRegions();
+}
+}, [formData.city_id, activePartner, waseetToken]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
