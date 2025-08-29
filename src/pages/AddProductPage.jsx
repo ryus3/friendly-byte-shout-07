@@ -38,6 +38,8 @@ const SortableColorCard = React.memo((props) => {
 });
 
 const AddProductPage = () => {
+  console.log('🚀 AddProductPage: بداية التحميل');
+  
   useScrollToTop(); // فتح الصفحة من الأعلى
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,8 +48,12 @@ const AddProductPage = () => {
   const editProductData = location.state?.editProduct; // للتحديد إذا كنا في وضع التعديل
   const isEditMode = !!editProductData;
 
+  console.log('🔍 AddProductPage: إعدادات أساسية', { isEditMode, editProductData: !!editProductData });
+
   const { addProduct, updateProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
+
+  console.log('🔍 AddProductPage: حُملت السياقات بنجاح');
   
   // حفظ البيانات المؤقت
   const [tempProductData, setTempProductData] = useLocalStorage('temp_product_data', null);
