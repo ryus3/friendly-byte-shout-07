@@ -13,7 +13,7 @@ const AddVariantDialogs = ({ onAddColor, onAddSize, sizeType }) => {
             <AddEditColorDialog 
                 open={colorDialogOpen} 
                 onOpenChange={setColorDialogOpen} 
-                onSuccessfulSubmit={onAddColor}
+                onSuccess={onAddColor}
             />
 
             <button id="add-size-dialog-trigger" onClick={() => setSizeDialogOpen(true)} className="hidden"></button>

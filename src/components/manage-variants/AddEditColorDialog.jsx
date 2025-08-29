@@ -44,7 +44,7 @@ function intelligentStringToColor(str) {
   return color;
 }
 
-const AddEditColorDialog = ({ open, onOpenChange, color: initialColor, onSuccess, initialName = '' }) => {
+const AddEditColorDialog = ({ open, onOpenChange, color: initialColor, onSuccess, onSuccessfulSubmit, initialName = '' }) => {
   const [name, setName] = useState('');
   const [hexCode, setHexCode] = useState('#000000');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,7 +76,8 @@ const AddEditColorDialog = ({ open, onOpenChange, color: initialColor, onSuccess
     }
     setIsSubmitting(true);
     
-    const success = await onSuccess({ name, hex_code: hexCode });
+    const handleCallback = onSuccess || onSuccessfulSubmit;
+    const success = await handleCallback({ name, hex_code: hexCode });
     
     if (success) {
       toast({ title: 'تم الحفظ بنجاح' });
