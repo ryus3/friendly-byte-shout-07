@@ -82,16 +82,16 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
             </Label>
             
             <div className="space-y-3">
-               {/* رؤوس الأعمدة - مخفية على الهاتف */}
-                <div className="hidden md:grid grid-cols-7 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
-                  <div className="text-center">القياس</div>
-                  <div className="text-center">الكمية</div>
-                  <div className="text-center">التكلفة</div>
-                  <div className="text-center">سعر البيع</div>
-                  <div className="text-center">ربح الموظف</div>
-                  <div className="text-center">ملاحظة</div>
-                  <div className="text-center">إجراءات</div>
-                </div>
+              {/* رؤوس الأعمدة */}
+               <div className="grid grid-cols-7 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
+                 <div className="text-center">القياس</div>
+                 <div className="text-center">الكمية</div>
+                 <div className="text-center">التكلفة</div>
+                 <div className="text-center">سعر البيع</div>
+                 <div className="text-center">ربح الموظف</div>
+                 <div className="text-center">ملاحظة</div>
+                 <div className="text-center">إجراءات</div>
+               </div>
 
               {/* صفوف المتغيرات */}
               {(() => {
@@ -99,16 +99,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                 if (isEditMode && showInventoryData) {
                   const colorVariants = variants.filter(v => 
                     v.color_id === color.id || v.colorId === color.id
-                  ).sort((a, b) => {
-                    // ترتيب القياسات حسب display_order أو الاسم
-                    const aDisplayOrder = a.sizes?.display_order || 0;
-                    const bDisplayOrder = b.sizes?.display_order || 0;
-                    if (aDisplayOrder !== bDisplayOrder) return aDisplayOrder - bDisplayOrder;
-                    
-                    const aName = a.sizes?.name || a.size || '';
-                    const bName = b.sizes?.name || b.size || '';
-                    return aName.localeCompare(bName);
-                  });
+                  );
                   
                   console.log(`🎨 عرض متغيرات اللون ${color.name}:`, colorVariants);
                   
@@ -118,19 +109,17 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                     
                     return (
                       <div key={variant.id || index} 
-                           className="grid grid-cols-1 md:grid-cols-7 items-start md:items-center gap-3 md:gap-2 p-4 md:p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                           className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                         
-                         {/* القياس - أول عنصر على الهاتف */}
-                         <div className="md:text-center">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">القياس:</label>
-                           <div className="font-medium text-primary bg-primary/10 px-3 py-2 rounded-md text-base md:text-sm w-fit mx-auto md:mx-0">
+                         {/* القياس */}
+                         <div className="text-center">
+                           <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
                              {sizeName}
                            </div>
                          </div>
                          
                          {/* الكمية */}
                          <div className="space-y-1">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">الكمية:</label>
                            <Input 
                              type="number" 
                              placeholder="0" 
@@ -152,7 +141,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                          
                          {/* التكلفة */}
                          <div className="space-y-1">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">التكلفة:</label>
                            <Input 
                              type="number" 
                              placeholder="0"
@@ -170,7 +158,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                          
                          {/* سعر البيع */}
                          <div className="space-y-1">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">سعر البيع:</label>
                            <Input 
                              type="number" 
                              placeholder="0"
@@ -187,7 +174,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                          
                          {/* ربح الموظف */}
                          <div className="space-y-1">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">ربح الموظف:</label>
                            <Input 
                              type="number" 
                              placeholder="0"
@@ -205,7 +191,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                          
                          {/* التلميحات الذكية */}
                          <div className="space-y-1">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">ملاحظة:</label>
                            <Input 
                              type="text" 
                              placeholder="مثال: مناسب لوزن 50-60 كغ"
@@ -221,8 +206,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                          </div>
                          
                          {/* الإجراءات */}
-                         <div className="md:text-center">
-                           <label className="text-sm font-medium text-muted-foreground md:hidden">الباركود:</label>
+                         <div className="text-center">
                            <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
                              {variant.barcode || 'سيتم إنشاؤه تلقائياً'}
                            </div>
@@ -233,11 +217,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                 }
                 
                 // الكود الأصلي للمنتجات الجديدة
-                const itemsToRender = allSizesForType && allSizesForType.length > 0 ? 
-                  allSizesForType.sort((a, b) => {
-                    // ترتيب القياسات حسب display_order
-                    return (a.display_order || 0) - (b.display_order || 0);
-                  }) : variants;
+                const itemsToRender = allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants;
                 
                 return itemsToRender.map((variant, index) => {
                   if (!variant) return null;
@@ -252,19 +232,17 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                   
                   return (
                     <div key={isNewProduct ? variant.sizeId : variant.id || index} 
-                         className="grid grid-cols-1 md:grid-cols-7 items-start md:items-center gap-3 md:gap-2 p-4 md:p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                         className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                       
-                      {/* القياس - أول عنصر على الهاتف */}
-                      <div className="md:text-center">
-                        <label className="text-sm font-medium text-muted-foreground md:hidden">القياس:</label>
-                        <div className="font-medium text-primary bg-primary/10 px-3 py-2 rounded-md text-base md:text-sm w-fit mx-auto md:mx-0">
+                      {/* القياس */}
+                      <div className="text-center">
+                        <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
                           {sizeName}
                         </div>
                       </div>
                       
                       {/* الكمية */}
                       <div className="space-y-1">
-                        <label className="text-sm font-medium text-muted-foreground md:hidden">الكمية:</label>
                          <Input 
                            type="number" 
                            placeholder="0" 
@@ -288,7 +266,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                       
                       {/* التكلفة */}
                       <div className="space-y-1">
-                        <label className="text-sm font-medium text-muted-foreground md:hidden">التكلفة:</label>
                          <Input 
                            type="number" 
                            placeholder="0"
@@ -306,7 +283,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         
                         {/* سعر البيع */}
                         <div className="space-y-1">
-                          <label className="text-sm font-medium text-muted-foreground md:hidden">سعر البيع:</label>
                            <Input 
                              type="number" 
                              placeholder="0"
@@ -324,7 +300,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         
                         {/* ربح الموظف */}
                         <div className="space-y-1">
-                          <label className="text-sm font-medium text-muted-foreground md:hidden">ربح الموظف:</label>
                            <Input 
                              type="number" 
                              placeholder="0"
