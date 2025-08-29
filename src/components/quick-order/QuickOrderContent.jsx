@@ -130,8 +130,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           console.log('🛒 QuickOrderContent - Loading cart items for edit mode:', aiOrderData.items);
           clearCart();
           aiOrderData.items.forEach(item => {
-            console.log('🔍 Adding item to cart:', item);
-            addToCart(null, item, item.quantity, false);
+            if (item) {
+              console.log('🔍 Adding item to cart:', item);
+              // استخدام setCart مباشرة لتجنب الحاجة لكائن product
+              setCart(prev => [...prev, {
+                id: item.id || `${item.productId}-${item.variantId}`,
+                productId: item.productId,
+                variantId: item.variantId, 
+                sku: item.sku || '',
+                productName: item.productName || item.product_name || 'منتج',
+                image: item.image || '/placeholder.svg',
+                color: item.color || '',
+                size: item.size || '',
+                quantity: item.quantity || 1,
+                price: item.price || 0,
+                costPrice: item.costPrice || item.cost_price || 0,
+                total: item.total || (item.price * item.quantity) || 0,
+                barcode: item.barcode || '',
+                stock: item.stock || 999
+              }]);
+            }
           });
           console.log('✅ Cart loaded successfully for edit mode');
         } else {
