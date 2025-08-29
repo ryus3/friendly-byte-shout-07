@@ -38,7 +38,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           profit_amount: productData.profitAmount || 0,
           barcode: mainBarcode,
           is_active: productData.isVisible,
-          created_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+          created_by: user?.user_id || user?.id
         })
         .select()
         .single();
@@ -214,7 +214,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             variant_id: variant.id,
             quantity: parseInt(variantData.quantity) || 0,
             min_stock: parseInt(variantData.minStock) || 5,
-            last_updated_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+            last_updated_by: user?.user_id || user?.id
           };
         });
 

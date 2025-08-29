@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
@@ -49,9 +48,6 @@ const AddProductPage = () => {
   const { addProduct, updateProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
   
-  // LocalStorage للبيانات المؤقتة
-  const [tempProductData, setTempProductData] = useLocalStorage('temp_product_data', null);
-  
   const [productInfo, setProductInfo] = useState({
     name: '', price: '', costPrice: '', description: '', profitAmount: '', profitPercentage: '',
   });
@@ -91,50 +87,6 @@ const AddProductPage = () => {
     };
     fetchDepartments();
   }, []);
-
-  // استرداد البيانات المؤقتة عند التحميل (فقط إذا لم نكن في وضع التعديل)
-  useEffect(() => {
-    if (!isEditMode && tempProductData) {
-      console.log('📋 استرداد البيانات المؤقتة:', tempProductData);
-      
-      if (tempProductData.productInfo) setProductInfo(tempProductData.productInfo);
-      if (tempProductData.selectedCategories) setSelectedCategories(tempProductData.selectedCategories);
-      if (tempProductData.selectedProductTypes) setSelectedProductTypes(tempProductData.selectedProductTypes);
-      if (tempProductData.selectedSeasonsOccasions) setSelectedSeasonsOccasions(tempProductData.selectedSeasonsOccasions);
-      if (tempProductData.selectedDepartments) setSelectedDepartments(tempProductData.selectedDepartments);
-      if (tempProductData.selectedColors) setSelectedColors(tempProductData.selectedColors);
-      if (tempProductData.sizeType) setSizeType(tempProductData.sizeType);
-      if (tempProductData.colorSizeTypes) setColorSizeTypes(tempProductData.colorSizeTypes);
-      if (tempProductData.variants) setVariants(tempProductData.variants);
-      
-      toast({
-        title: 'تم استرداد البيانات',
-        description: 'تم استرداد البيانات التي كنت تكتبها سابقاً.',
-        duration: 3000
-      });
-    }
-  }, [tempProductData, isEditMode]);
-
-  // حفظ البيانات تلقائياً أثناء الكتابة (فقط إذا لم نكن في وضع التعديل)
-  useEffect(() => {
-    if (!isEditMode && (productInfo.name || selectedColors.length > 0)) {
-      const dataToSave = {
-        productInfo,
-        selectedCategories,
-        selectedProductTypes,
-        selectedSeasonsOccasions,
-        selectedDepartments,
-        selectedColors,
-        sizeType,
-        colorSizeTypes,
-        variants
-      };
-      
-      setTempProductData(dataToSave);
-    }
-  }, [productInfo, selectedCategories, selectedProductTypes, selectedSeasonsOccasions, 
-      selectedDepartments, selectedColors, sizeType, colorSizeTypes, variants, 
-      isEditMode, setTempProductData]);
 
   // تحميل بيانات المنتج في وضع التعديل
   useEffect(() => {
@@ -357,11 +309,6 @@ const AddProductPage = () => {
     }
 
     if (result.success) {
-      // مسح البيانات المؤقتة عند النجاح
-      if (!isEditMode) {
-        setTempProductData(null);
-      }
-      
       toast({ 
         title: 'نجاح', 
         description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
