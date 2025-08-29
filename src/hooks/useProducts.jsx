@@ -349,70 +349,86 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           departments: productData.selectedDepartments
         });
 
-        // فقط إذا تم إرسال تصنيفات جديدة، قم بالتحديث
-        const hasCategoriesUpdate = productData.selectedCategories !== undefined;
-        const hasProductTypesUpdate = productData.selectedProductTypes !== undefined;
-        const hasSeasonsOccasionsUpdate = productData.selectedSeasonsOccasions !== undefined;
-        const hasDepartmentsUpdate = productData.selectedDepartments !== undefined;
+        // التحقق الآمن من تحديث التصنيفات - فقط إذا كانت محددة صراحة
+        const shouldUpdateCategories = Array.isArray(productData.selectedCategories);
+        const shouldUpdateProductTypes = Array.isArray(productData.selectedProductTypes);
+        const shouldUpdateSeasonsOccasions = Array.isArray(productData.selectedSeasonsOccasions);
+        const shouldUpdateDepartments = Array.isArray(productData.selectedDepartments);
 
-        if (hasCategoriesUpdate || hasProductTypesUpdate || hasSeasonsOccasionsUpdate || hasDepartmentsUpdate) {
-          console.log('🔄 تحديث التصنيفات:', {
-            categories: hasCategoriesUpdate,
-            productTypes: hasProductTypesUpdate,
-            seasonsOccasions: hasSeasonsOccasionsUpdate,
-            departments: hasDepartmentsUpdate
+        if (shouldUpdateCategories || shouldUpdateProductTypes || shouldUpdateSeasonsOccasions || shouldUpdateDepartments) {
+          console.log('🔄 تحديث التصنيفات المحددة:', {
+            categories: shouldUpdateCategories ? `${productData.selectedCategories.length} عنصر` : 'بدون تحديث',
+            productTypes: shouldUpdateProductTypes ? `${productData.selectedProductTypes.length} عنصر` : 'بدون تحديث',
+            seasonsOccasions: shouldUpdateSeasonsOccasions ? `${productData.selectedSeasonsOccasions.length} عنصر` : 'بدون تحديث',
+            departments: shouldUpdateDepartments ? `${productData.selectedDepartments.length} عنصر` : 'بدون تحديث'
           });
 
-          // حذف وإعادة إدراج التصنيفات المُحدثة فقط
-          if (hasCategoriesUpdate) {
+          // تحديث التصنيفات المحددة فقط
+          if (shouldUpdateCategories) {
+            console.log('🏷️ تحديث التصنيفات الرئيسية...');
             await supabase.from('product_categories').delete().eq('product_id', productId);
-            if (productData.selectedCategories && productData.selectedCategories.length > 0) {
+            if (productData.selectedCategories.length > 0) {
               const categoryRelations = productData.selectedCategories.map(categoryId => ({
                 product_id: productId,
                 category_id: categoryId
               }));
-              await supabase.from('product_categories').insert(categoryRelations);
-              console.log('✅ تم تحديث التصنيفات:', categoryRelations);
+              const { error } = await supabase.from('product_categories').insert(categoryRelations);
+              if (error) throw error;
+              console.log('✅ تم تحديث التصنيفات الرئيسية:', categoryRelations.length);
+            } else {
+              console.log('🗑️ تم حذف جميع التصنيفات الرئيسية');
             }
           }
 
-          if (hasProductTypesUpdate) {
+          if (shouldUpdateProductTypes) {
+            console.log('📦 تحديث أنواع المنتجات...');
             await supabase.from('product_product_types').delete().eq('product_id', productId);
-            if (productData.selectedProductTypes && productData.selectedProductTypes.length > 0) {
+            if (productData.selectedProductTypes.length > 0) {
               const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
                 product_id: productId,
                 product_type_id: typeId
               }));
-              await supabase.from('product_product_types').insert(productTypeRelations);
-              console.log('✅ تم تحديث أنواع المنتجات:', productTypeRelations);
+              const { error } = await supabase.from('product_product_types').insert(productTypeRelations);
+              if (error) throw error;
+              console.log('✅ تم تحديث أنواع المنتجات:', productTypeRelations.length);
+            } else {
+              console.log('🗑️ تم حذف جميع أنواع المنتجات');
             }
           }
 
-          if (hasSeasonsOccasionsUpdate) {
+          if (shouldUpdateSeasonsOccasions) {
+            console.log('📅 تحديث المواسم والمناسبات...');
             await supabase.from('product_seasons_occasions').delete().eq('product_id', productId);
-            if (productData.selectedSeasonsOccasions && productData.selectedSeasonsOccasions.length > 0) {
+            if (productData.selectedSeasonsOccasions.length > 0) {
               const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
                 product_id: productId,
                 season_occasion_id: seasonId
               }));
-              await supabase.from('product_seasons_occasions').insert(seasonRelations);
-              console.log('✅ تم تحديث المواسم والمناسبات:', seasonRelations);
+              const { error } = await supabase.from('product_seasons_occasions').insert(seasonRelations);
+              if (error) throw error;
+              console.log('✅ تم تحديث المواسم والمناسبات:', seasonRelations.length);
+            } else {
+              console.log('🗑️ تم حذف جميع المواسم والمناسبات');
             }
           }
 
-          if (hasDepartmentsUpdate) {
+          if (shouldUpdateDepartments) {
+            console.log('🏢 تحديث الأقسام...');
             await supabase.from('product_departments').delete().eq('product_id', productId);
-            if (productData.selectedDepartments && productData.selectedDepartments.length > 0) {
+            if (productData.selectedDepartments.length > 0) {
               const departmentRelations = productData.selectedDepartments.map(deptId => ({
                 product_id: productId,
                 department_id: deptId
               }));
-              await supabase.from('product_departments').insert(departmentRelations);
-              console.log('✅ تم تحديث الأقسام:', departmentRelations);
+              const { error } = await supabase.from('product_departments').insert(departmentRelations);
+              if (error) throw error;
+              console.log('✅ تم تحديث الأقسام:', departmentRelations.length);
+            } else {
+              console.log('🗑️ تم حذف جميع الأقسام');
             }
           }
         } else {
-          console.log('ℹ️ لم يتم إرسال تصنيفات للتحديث - الاحتفاظ بالتصنيفات الحالية');
+          console.log('ℹ️ لم يتم تحديد تصنيفات للتحديث - الاحتفاظ بالتصنيفات الحالية');
         }
 
         // 3. Handle images upload

@@ -153,11 +153,13 @@ const AddProductPage = () => {
     fetchDepartments();
   }, []);
 
-  // تحميل بيانات المنتج في وضع التعديل مع معالجة محسنة للتصنيفات
+  // تحميل بيانات المنتج في وضع التعديل - محسن لتجنب infinite re-renders
   useEffect(() => {
-    if (isEditMode && editProductData) {
-      console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
-      
+    if (!isEditMode || !editProductData) return;
+    
+    console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData.name);
+    
+    const loadProductData = () => {
       try {
         // تحميل البيانات الأساسية
         setProductInfo({
@@ -178,73 +180,31 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات مع معالجة شاملة للبيانات الموجودة
+        // استخراج التصنيفات مع معالجة شاملة
         const categoriesData = editProductData.categories || editProductData.product_categories || [];
         const productTypesData = editProductData.product_types || editProductData.product_product_types || [];
         const seasonsData = editProductData.seasons_occasions || editProductData.product_seasons_occasions || [];
         const departmentsData = editProductData.departments || editProductData.product_departments || [];
 
-        console.log('📋 تحميل التصنيفات للمنتج:', {
-          categories: categoriesData,
-          productTypes: productTypesData,
-          seasons: seasonsData,
-          departments: departmentsData
-        });
-
-        // استخراج المعرفات من البيانات مع مراعاة البنية المختلفة
-        const extractCategoryIds = (data) => {
+        // دوال استخراج آمنة
+        const extractIds = (data, idField, objField) => {
           if (!data || data.length === 0) return [];
-          
-          // إذا كانت البيانات من نوع categories (علاقة مباشرة)
-          if (data[0]?.category_id) {
-            return data.map(item => item.category_id);
-          }
-          // إذا كانت البيانات من نوع categories.category (علاقة متداخلة)
-          if (data[0]?.category) {
-            return data.map(item => item.category.id);
-          }
-          // إذا كانت البيانات مباشرة (للمعرفات)
-          if (typeof data[0] === 'string') {
-            return data;
-          }
-          return [];
-        };
-
-        const extractProductTypeIds = (data) => {
-          if (!data || data.length === 0) return [];
-          if (data[0]?.product_type_id) return data.map(item => item.product_type_id);
-          if (data[0]?.product_type) return data.map(item => item.product_type.id);
+          if (data[0]?.[idField]) return data.map(item => item[idField]);
+          if (data[0]?.[objField]) return data.map(item => item[objField].id);
           if (typeof data[0] === 'string') return data;
           return [];
         };
 
-        const extractSeasonIds = (data) => {
-          if (!data || data.length === 0) return [];
-          if (data[0]?.season_occasion_id) return data.map(item => item.season_occasion_id);
-          if (data[0]?.season_occasion) return data.map(item => item.season_occasion.id);
-          if (typeof data[0] === 'string') return data;
-          return [];
-        };
+        const categoryIds = extractIds(categoriesData, 'category_id', 'category');
+        const productTypeIds = extractIds(productTypesData, 'product_type_id', 'product_type');
+        const seasonIds = extractIds(seasonsData, 'season_occasion_id', 'season_occasion');
+        const departmentIds = extractIds(departmentsData, 'department_id', 'department');
 
-        const extractDepartmentIds = (data) => {
-          if (!data || data.length === 0) return [];
-          if (data[0]?.department_id) return data.map(item => item.department_id);
-          if (data[0]?.department) return data.map(item => item.department.id);
-          if (typeof data[0] === 'string') return data;
-          return [];
-        };
-
-        // تطبيق الاستخراج مع تسجيل النتائج
-        const categoryIds = extractCategoryIds(categoriesData);
-        const productTypeIds = extractProductTypeIds(productTypesData);
-        const seasonIds = extractSeasonIds(seasonsData);
-        const departmentIds = extractDepartmentIds(departmentsData);
-
-        console.log('🔍 المعرفات المستخرجة:', {
-          categoryIds,
-          productTypeIds,
-          seasonIds,
-          departmentIds
+        console.log('🔍 التصنيفات المستخرجة:', {
+          categories: categoryIds,
+          productTypes: productTypeIds,
+          seasons: seasonIds,
+          departments: departmentIds
         });
 
         // تحديد التصنيفات
@@ -253,17 +213,8 @@ const AddProductPage = () => {
         setSelectedSeasonsOccasions(seasonIds);
         setSelectedDepartments(departmentIds);
 
-        // إضافة معرف خاص للمنتجات بدون تصنيفات
-        if (categoryIds.length === 0 && productTypeIds.length === 0 && 
-            seasonIds.length === 0 && departmentIds.length === 0) {
-          console.warn('⚠️ تحذير: المنتج "' + editProductData.name + '" لا يحتوي على أي تصنيفات');
-        } else {
-          console.log('✅ تم تحميل التصنيفات للمنتج "' + editProductData.name + '" بنجاح');
-        }
-
         // تحميل الألوان والمتغيرات
         if (editProductData.variants && editProductData.variants.length > 0) {
-          // استخراج الألوان الفريدة
           const uniqueColors = [];
           const colorImages = {};
           const extractedColorSizeTypes = {};
@@ -279,12 +230,10 @@ const AddProductPage = () => {
                 });
               }
               
-              // تحميل صور الألوان إذا وجدت
               if (variant.images && variant.images.length > 0) {
                 colorImages[variant.colors.id] = variant.images[0];
               }
 
-              // استخراج أنواع القياسات لكل لون من البيانات الحقيقية
               if (variant.sizes) {
                 const colorId = variant.colors.id;
                 const sizeType = variant.sizes.type || 'letter';
@@ -302,25 +251,16 @@ const AddProductPage = () => {
           
           setSelectedColors(uniqueColors);
           setColorImages(colorImages);
-          
-          // تحديد نوع القياس الافتراضي من أول متغير
-          if (editProductData.variants[0]?.sizes?.type) {
-            setSizeType(editProductData.variants[0].sizes.type);
-          }
-          
-          // تعيين أنواع القياسات المستخرجة
+          setSizeType(editProductData.variants[0]?.sizes?.type || 'letter');
           setColorSizeTypes(extractedColorSizeTypes);
-          console.log('🎨 أنواع القياسات المستخرجة:', extractedColorSizeTypes);
           
-          // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
+          // تحويل المتغيرات للتنسيق المطلوب
           const formattedVariants = editProductData.variants.map(variant => {
-            // العثور على كمية المخزون للمتغير
             let inventoryQuantity = 0;
             if (editProductData.inventory) {
               const variantInventory = editProductData.inventory.find(inv => inv.variant_id === variant.id);
               inventoryQuantity = variantInventory?.quantity || 0;
             } else if (variant.inventory) {
-              // fallback من البيانات الموحدة حيث تكون بيانات المخزون داخل كل متغير
               const inv = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
               inventoryQuantity = inv?.quantity || 0;
             }
@@ -332,18 +272,17 @@ const AddProductPage = () => {
               color: variant.colors?.name || 'لون غير محدد',
               color_hex: variant.colors?.hex_code || '#000000',
               size: variant.sizes?.name || 'قياس غير محدد',
-              quantity: inventoryQuantity, // استخدام الكمية من المخزون
+              quantity: inventoryQuantity,
               costPrice: variant.cost_price || editProductData.cost_price || 0,
               profitAmount: variant.profit_amount || editProductData.profit_amount || 0,
               hint: variant.hint || ''
             };
           });
           
-          console.log('📊 المتغيرات المحولة:', formattedVariants);
           setVariants(formattedVariants);
         }
         
-        console.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل');
+        console.log('✅ تم تحميل بيانات المنتج بنجاح');
       } catch (error) {
         console.error('❌ خطأ في تحميل بيانات المنتج للتعديل:', error);
         toast({
@@ -353,59 +292,46 @@ const AddProductPage = () => {
         });
         navigate('/manage-products');
       }
-    }
-  }, [isEditMode, editProductData, navigate]);
-
-  useEffect(() => {
-    // لا نولد متغيرات جديدة في وضع التعديل
-    if (isEditMode) return;
-    
-    const generateVariants = () => {
-      if (selectedColors.length === 0) {
-        setVariants([]);
-        return;
-      }
-  
-      const newVariants = [];
-      selectedColors.forEach(color => {
-        // للألوان التي لها أنواع قياسات محددة
-        const colorSizes = colorSizeTypes[color.id] || [sizeType];
-        
-        colorSizes.forEach(sizeTypeForColor => {
-          const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
-          
-          if (sizesForThisType.length > 0) {
-            sizesForThisType.forEach(size => {
-              // توليد باركود فريد للمتغير
-              const barcode = generateUniqueBarcode(
-                productInfo.name || 'منتج',
-                color.name,
-                size.name
-              );
-              newVariants.push({
-                colorId: color.id,
-                sizeId: size.id,
-                color: color.name,
-                color_hex: color.hex_code,
-                size: size.name,
-                sizeType: sizeTypeForColor,
-                quantity: 0,
-                price: parseFloat(productInfo.price) || 0,
-                costPrice: parseFloat(productInfo.costPrice) || 0,
-                barcode: barcode,
-                hint: ''
-              });
-            });
-          }
-        });
-      });
-      setVariants(newVariants);
     };
     
-    if (settings && sizes.length > 0) {
-        generateVariants();
-    }
-  }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
+    loadProductData();
+  }, [editProductData?.id, isEditMode]); // استخدام primitive values فقط
+
+  // توليد المتغيرات - محسن لتجنب infinite re-renders
+  useEffect(() => {
+    if (isEditMode || !settings || sizes.length === 0 || selectedColors.length === 0) return;
+    
+    const newVariants = [];
+    selectedColors.forEach(color => {
+      const colorSizes = colorSizeTypes[color.id] || [sizeType];
+      
+      colorSizes.forEach(sizeTypeForColor => {
+        const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+        
+        sizesForThisType.forEach(size => {
+          const barcode = generateUniqueBarcode(
+            productInfo.name || 'منتج',
+            color.name,
+            size.name
+          );
+          newVariants.push({
+            colorId: color.id,
+            sizeId: size.id,
+            color: color.name,
+            color_hex: color.hex_code,
+            size: size.name,
+            sizeType: sizeTypeForColor,
+            quantity: 0,
+            price: parseFloat(productInfo.price) || 0,
+            costPrice: parseFloat(productInfo.costPrice) || 0,
+            barcode: barcode,
+            hint: ''
+          });
+        });
+      });
+    });
+    setVariants(newVariants);
+  }, [selectedColors.length, sizeType, Object.keys(colorSizeTypes).length, sizes.length, productInfo.price, productInfo.costPrice]);
 
   // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
   useEffect(() => {
