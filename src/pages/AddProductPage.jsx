@@ -184,11 +184,34 @@ const AddProductPage = () => {
         const seasonsData = editProductData.product_seasons_occasions || [];
         const departmentsData = editProductData.product_departments || [];
 
-        // تحديد التصنيفات (أو مصفوفة فارغة إذا لم توجد)
-        setSelectedCategories(categoriesData.map(pc => pc.category_id));
-        setSelectedProductTypes(productTypesData.map(pt => pt.product_type_id));
-        setSelectedSeasonsOccasions(seasonsData.map(so => so.season_occasion_id));
-        setSelectedDepartments(departmentsData.map(pd => pd.department_id));
+        // تحديد التصنيفات مع معالجة محسنة للمعرفات
+        const extractedCategories = categoriesData.map(pc => 
+          pc.category_id || pc.categories?.id || pc.category?.id
+        ).filter(Boolean);
+        
+        const extractedProductTypes = productTypesData.map(pt => 
+          pt.product_type_id || pt.product_types?.id || pt.product_type?.id
+        ).filter(Boolean);
+        
+        const extractedSeasons = seasonsData.map(so => 
+          so.season_occasion_id || so.seasons_occasions?.id || so.season_occasion?.id
+        ).filter(Boolean);
+        
+        const extractedDepartments = departmentsData.map(pd => 
+          pd.department_id || pd.departments?.id || pd.department?.id
+        ).filter(Boolean);
+
+        setSelectedCategories(extractedCategories);
+        setSelectedProductTypes(extractedProductTypes);
+        setSelectedSeasonsOccasions(extractedSeasons);
+        setSelectedDepartments(extractedDepartments);
+
+        console.log('🏷️ تم تحميل التصنيفات:', {
+          categories: extractedCategories,
+          productTypes: extractedProductTypes, 
+          seasons: extractedSeasons,
+          departments: extractedDepartments
+        });
 
         // إضافة معرف خاص للمنتجات بدون تصنيفات
         if (categoriesData.length === 0 && productTypesData.length === 0 && 
