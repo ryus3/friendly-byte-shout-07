@@ -1679,10 +1679,53 @@ export const SuperProvider = ({ children }) => {
       await fetchAllData();
       return res;
     },
-    deleteProducts: async (...args) => {
-      const res = await dbDeleteProducts(...args);
-      await fetchAllData();
-      return res;
+    deleteProducts: async (productIds) => {
+      if (!productIds || (Array.isArray(productIds) && productIds.length === 0)) {
+        console.error('❌ SuperProvider: لا توجد منتجات محددة للحذف');
+        return { success: false, error: 'لا توجد منتجات محددة للحذف' };
+      }
+
+      const idsArray = Array.isArray(productIds) ? productIds : [productIds];
+      console.log('🗑️ SuperProvider: بدء حذف المنتجات:', idsArray);
+      
+      // الحذف الفوري من الواجهة (optimistic update)
+      setAllData(prev => ({
+        ...prev,
+        products: prev.products.filter(p => !idsArray.includes(p.id))
+      }));
+      
+      try {
+        const res = await dbDeleteProducts(idsArray);
+        
+        if (res?.success || res?.data || !res?.error) {
+          console.log('✅ SuperProvider: تم الحذف بنجاح من قاعدة البيانات');
+          
+          // إضافة إشعار للحذف الناجح
+          if (addNotification) {
+            addNotification({
+              title: 'تم الحذف بنجاح',
+              message: `تم حذف ${idsArray.length} منتج بنجاح`,
+              type: 'success'
+            });
+          }
+          
+          return { success: true };
+        } else {
+          console.error('❌ SuperProvider: فشل الحذف من قاعدة البيانات:', res);
+          
+          // استعادة المنتجات في حالة الفشل
+          await fetchAllData();
+          
+          return { success: false, error: res?.error || 'فشل في الحذف' };
+        }
+      } catch (error) {
+        console.error('❌ SuperProvider: خطأ في حذف المنتجات:', error);
+        
+        // استعادة المنتجات في حالة الخطأ
+        await fetchAllData();
+        
+        return { success: false, error: error.message };
+      }
     },
     updateVariantStock: async (...args) => {
       const res = await dbUpdateVariantStock(...args);

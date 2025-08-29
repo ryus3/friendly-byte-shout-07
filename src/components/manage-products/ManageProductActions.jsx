@@ -68,9 +68,7 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
           variant: "default"
         });
         
-        // تحديث فوري للواجهة
-        if (onProductUpdate) onProductUpdate();
-        if (refetchProducts) refetchProducts();
+        // لا حاجة لتحديث إضافي - تم بالفعل في SuperProvider
       } else {
         toast({ 
           title: "خطأ في الحذف", 

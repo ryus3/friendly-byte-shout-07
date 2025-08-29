@@ -145,8 +145,8 @@ const ManageProductsPage = () => {
   }, []);
 
   const onProductUpdate = useCallback(() => {
-    refreshProducts();
-  }, [refreshProducts]);
+    // لا حاجة لتحديث إضافي - يتم تلقائياً في SuperProvider
+  }, []);
 
   const handleScanSuccess = useCallback((decodedText) => {
     setIsScannerOpen(false);

@@ -34,7 +34,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           name: productData.name,
           description: productData.description,
           base_price: productData.price,
-          cost_price: productData.costPrice,
+          cost_price: productData.costPrice || 0,
           profit_amount: productData.profitAmount || 0,
           barcode: mainBarcode,
           is_active: productData.isVisible,
