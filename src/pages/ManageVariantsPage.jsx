@@ -251,7 +251,7 @@ const ManageVariantsPage = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border shadow-lg overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
               <div className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <TabsList className="w-full grid grid-cols-6 h-auto p-2 bg-transparent">
+                <TabsList className="w-full grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 h-auto p-2 bg-transparent">
                   {tabConfig.map((tab) => {
                     const IconComponent = tab.icon;
                     const tabStats = stats[tab.value] || { count: 0, status: 'فارغة' };
@@ -262,26 +262,26 @@ const ManageVariantsPage = () => {
                         key={tab.value}
                         value={tab.value}
                         className={`
-                          relative p-4 space-y-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
+                          relative p-2 md:p-4 space-y-1 md:space-y-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
                           data-[state=active]:shadow-lg rounded-xl transition-all duration-300
                           ${isActive ? 'transform scale-105' : 'hover:scale-102'}
                         `}
                       >
-                        <div className="flex flex-col items-center space-y-2">
+                        <div className="flex flex-col items-center space-y-1 md:space-y-2">
                           <div className={`
-                            p-2 rounded-lg bg-gradient-to-r ${tab.color} 
+                            p-1.5 md:p-2 rounded-lg bg-gradient-to-r ${tab.color} 
                             ${isActive ? 'shadow-lg' : 'opacity-70'}
                             transition-all duration-300
                           `}>
-                            <IconComponent className="h-5 w-5 text-white" />
+                            <IconComponent className="h-4 w-4 md:h-5 md:w-5 text-white" />
                           </div>
                           <div className="text-center">
-                            <p className={`font-semibold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`font-semibold text-xs md:text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {tab.label}
                             </p>
                             <Badge 
                               variant={isActive ? "default" : "secondary"} 
-                              className="text-xs mt-1"
+                              className="text-xs mt-0.5 md:mt-1"
                             >
                               {tabStats.count}
                             </Badge>
