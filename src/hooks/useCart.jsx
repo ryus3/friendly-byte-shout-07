@@ -2,15 +2,16 @@
 import React, { useState, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 
-export const useCart = () => {
+export const useCart = (isEditMode = false) => {
   const [cart, setCart] = useState([]);
 
-  const addToCart = useCallback((product, variant, quantity, showToast = true) => {
+  const addToCart = useCallback((product, variant, quantity, showToast = true, skipStockCheck = false) => {
     const totalStock = Math.max(0, variant.quantity || 0);
     const reservedStock = Math.max(0, variant.reserved || 0);
     const availableStock = Math.max(0, totalStock - reservedStock);
 
-    if (quantity > availableStock) {
+    // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
+    if (!isEditMode && !skipStockCheck && quantity > availableStock) {
       toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة هذا المنتج. الكمية المتاحة للبيع: ${availableStock}`, variant: "destructive" });
       return false;
     }
@@ -38,7 +39,8 @@ export const useCart = () => {
         const newQuantity = existingItem.quantity + quantity;
         const availableStockForExisting = (existingItem.stock || 0) - (existingItem.reserved || 0);
         
-        if (newQuantity > availableStockForExisting) {
+        // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
+        if (!isEditMode && !skipStockCheck && newQuantity > availableStockForExisting) {
           toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة المزيد. الكمية المتاحة للبيع: ${availableStockForExisting}`, variant: "destructive" });
           return prev;
         }
@@ -108,14 +110,15 @@ export const useCart = () => {
     setCart(prev => prev.filter(item => item.id !== itemId));
   }, []);
 
-  const updateCartItemQuantity = useCallback((itemId, newQuantity) => {
+  const updateCartItemQuantity = useCallback((itemId, newQuantity, skipStockCheck = false) => {
     setCart(prev => prev.map(item => {
       if (item.id === itemId) {
         const totalStock = Math.max(0, item.stock || 0);
         const reservedStock = Math.max(0, item.reserved || 0);
         const availableStock = Math.max(0, totalStock - reservedStock);
         
-        if (newQuantity > availableStock) {
+        // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
+        if (!isEditMode && !skipStockCheck && newQuantity > availableStock) {
           toast({ title: "الكمية غير متوفرة", description: `المخزون المتاح للبيع: ${availableStock}`, variant: "destructive" });
           return { ...item, quantity: Math.max(0, availableStock), total: item.price * Math.max(0, availableStock) };
         }
@@ -123,7 +126,7 @@ export const useCart = () => {
       }
       return item;
     }).filter(Boolean));
-  }, []);
+  }, [isEditMode]);
 
   const clearCart = useCallback(() => {
     setCart([]);
@@ -137,5 +140,6 @@ export const useCart = () => {
     removeFromCart,
     updateCartItemQuantity,
     clearCart,
+    isEditMode,
   };
 };

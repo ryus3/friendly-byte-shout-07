@@ -21,10 +21,14 @@ import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
-import EditOrderDataLoader from './EditOrderDataLoader';
+
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
-  const { createOrder, updateOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
+  // حالة التعديل
+  const isEditMode = aiOrderData?.editMode || false;
+  
+  const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
+  const { cart, clearCart, addToCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -55,8 +59,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
   
-  // حالة التعديل
-  const isEditMode = aiOrderData?.editMode || false;
   const originalOrder = aiOrderData?.originalOrder || null;
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
@@ -182,7 +184,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 barcode: item.barcode || ''
               };
               
-              addToCart(tempProduct, tempVariant, item.quantity || 1, false);
+              addToCart(tempProduct, tempVariant, item.quantity || 1, false, true); // تجاهل فحص المخزون في وضع التعديل
               console.log('✅ Added product to cart for edit mode:', { tempProduct, tempVariant, quantity: item.quantity });
             }
           });
@@ -482,6 +484,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
+  
+  // متغيرات لتتبع المعرفات المحددة للمدن والمناطق والحزم
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [selectedPackageSize, setSelectedPackageSize] = useState('عادي');
 
   // تم دمج جلب البيانات مع الاستدعاء الأول في السطر 24
 
@@ -505,9 +512,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // حساب المجاميع
   const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
-  const currentDeliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
+  const deliveryFee = useMemo(() => {
+    if (activePartner === 'local') {
+      return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
+    }
+    return 0; // لشركات التوصيل الخارجية لا توجد رسوم إضافية
+  }, [activePartner, applyLoyaltyDelivery, settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
-  const priceWithDelivery = useMemo(() => total + currentDeliveryFee, [total, currentDeliveryFee]);
+  const finalTotal = useMemo(() => total + deliveryFee, [total, deliveryFee]);
   
   const resetForm = useCallback(() => {
     // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
@@ -701,16 +713,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     const cartSubtotal = safeCart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity) || 0), 0);
     
     // حساب رسوم التوصيل بناءً على نوع الشريك
-    let currentDeliveryFee = 0;
+    let calculatedDeliveryFee = 0;
     if (activePartner === 'local') {
-      // للتوصيل المحلي، أضف رسوم التوصيل
-      currentDeliveryFee = settings?.deliveryFee || 0;
+      // للتوصيل المحلي، أضف رسوم التوصيل (إلا إذا كان التوصيل مجانياً)
+      calculatedDeliveryFee = applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
     }
     // للوسيط أو الشركات الأخرى، لا توجد رسوم إضافية
     
     // حساب السعر النهائي: (مجموع المنتجات - الخصم) + رسوم التوصيل
     const totalAfterDiscount = cartSubtotal - (discount || 0);
-    const finalPriceWithDelivery = totalAfterDiscount + currentDeliveryFee;
+    const finalPriceWithDelivery = totalAfterDiscount + calculatedDeliveryFee;
     
     const detailsString = safeCart
       .map(item => 
@@ -723,9 +735,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ...prev, 
       quantity: quantityCount > 0 ? quantityCount : 1,
       price: finalPriceWithDelivery > 0 ? finalPriceWithDelivery : '',
+      delivery_fee: calculatedDeliveryFee,
       details: detailsString,
     }));
-  }, [cart, settings?.deliveryFee, activePartner, discount]);
+  }, [cart, settings?.deliveryFee, activePartner, discount, applyLoyaltyDelivery]);
 
   const validateField = (name, value) => {
     let errorMsg = '';
@@ -894,20 +907,34 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً
       if (activePartner === 'alwaseet' && isWaseetLoggedIn && originalOrder?.tracking_number) {
+        // تحضير المنتجات للوسيط بالتنسيق الصحيح
+        const cartItems = cart.map(item => ({
+          product_name: item.productName || item.name,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.price,
+          note: ''
+        }));
+
         const alwaseetData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
           name: formData.name,
           phone: formData.phone,
           phone2: formData.second_phone || undefined,
-          city_id: formData.city_id,
-          region_id: formData.region_id,
+          city_id: selectedCityId || formData.city_id,
+          region_id: selectedRegionId || formData.region_id,
           address: formData.address,
-          details: formData.details,
-          quantity: formData.quantity,
-          price: formData.price,
-          size: formData.size,
+          details: cartItems.map(item => 
+            `${item.product_name} (${item.color}, ${item.size}) × ${item.quantity} = ${item.price} د.ع`
+          ).join('\n'),
+          quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+          price: finalTotal,
+          size: selectedPackageSize || 'عادي',
           notes: formData.notes,
-          replacement: formData.type === 'exchange' ? 1 : 0
+          replacement: 0,
+          // إضافة تفاصيل المنتجات
+          items: cartItems
         };
 
         console.log('🔧 Updating Al-Waseet order with data:', alwaseetData);
@@ -1202,12 +1229,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   return (
     <>
-      {/* مساعد تحميل البيانات في وضع التعديل */}
-      <EditOrderDataLoader 
-        aiOrderData={aiOrderData} 
-        isEditMode={isEditMode} 
-        onDataLoaded={() => console.log('✅ تم تحميل بيانات التعديل')}
-      />
       
       <PageWrapper {...pageProps} className={!isDialog ? "max-w-4xl mx-auto space-y-6" : "space-y-4 font-arabic"}>
         {!isDialog && (
@@ -1302,12 +1323,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         )}
       </PageWrapper>
 
-      {/* تحميل البيانات للتعديل */}
-      <EditOrderDataLoader 
-        aiOrderData={aiOrderData}
-        isEditMode={isEditMode}
-        onDataLoaded={() => console.log('✅ Edit data loaded successfully')}
-      />
 
       <DeliveryPartnerDialog open={deliveryPartnerDialogOpen} onOpenChange={setDeliveryPartnerDialogOpen} />
       <ProductSelectionDialog 

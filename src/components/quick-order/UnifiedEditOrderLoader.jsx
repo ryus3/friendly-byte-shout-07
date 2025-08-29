@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -7,7 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
  * يدعم التعديل الكامل للمنتجات (إضافة، حذف، تعديل)
  */
 export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }) => {
-  const { allData, addToCart, clearCart } = useInventory();
+  const { allData, clearCart } = useInventory();
+  const { addToCart } = useCart(true); // تمكين وضع التعديل
 
   useEffect(() => {
     if (!isEditMode || !aiOrderData?.items || !Array.isArray(aiOrderData.items)) {
@@ -60,8 +62,8 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
                   stock: fullVariant.inventory?.[0]?.quantity || 0
                 });
                 
-                // إضافة المنتج الحقيقي للسلة مع إمكانية التعديل الكامل
-                addToCart(fullProduct, fullVariant, item.quantity || 1, false);
+                // إضافة المنتج الحقيقي للسلة مع تجاهل فحص المخزون في وضع التعديل
+                addToCart(fullProduct, fullVariant, item.quantity || 1, false, true);
               } else {
                 throw new Error('المنتج غير موجود في قاعدة البيانات');
               }
@@ -74,7 +76,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
 
               if (cachedProduct && cachedVariant) {
                 console.log('✅ تم العثور على المنتج في البيانات المحملة');
-                addToCart(cachedProduct, cachedVariant, item.quantity || 1, false);
+                addToCart(cachedProduct, cachedVariant, item.quantity || 1, false, true);
               } else {
                 console.log('⚠️ إنشاء منتج مؤقت قابل للتعديل الكامل');
                 
@@ -117,7 +119,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
                   }]
                 };
 
-                addToCart(editableProduct, editableVariant, item.quantity || 1, false);
+                addToCart(editableProduct, editableVariant, item.quantity || 1, false, true);
                 
                 console.log('✅ تم إنشاء منتج مؤقت قابل للتعديل الكامل');
               }
