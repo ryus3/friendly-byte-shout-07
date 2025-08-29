@@ -24,7 +24,6 @@ import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, updateOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
-  const { setCart } = useCart();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -134,23 +133,28 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           aiOrderData.items.forEach(item => {
             if (item) {
               console.log('🔍 Adding item to cart:', item);
-              // استخدام setCart مباشرة لتجنب الحاجة لكائن product
-              setCart(prev => [...prev, {
-                id: item.id || `${item.productId}-${item.variantId}`,
-                productId: item.productId,
-                variantId: item.variantId, 
+              // استخدام addToCart مع كائن منتج ومتغير مؤقت
+              const tempProduct = {
+                id: item.productId,
+                name: item.productName || item.product_name || 'منتج',
+                images: [item.image || '/placeholder.svg'],
+                price: item.price || 0,
+                cost_price: item.costPrice || item.cost_price || 0
+              };
+              
+              const tempVariant = {
+                id: item.variantId,
                 sku: item.sku || '',
-                productName: item.productName || item.product_name || 'منتج',
-                image: item.image || '/placeholder.svg',
                 color: item.color || '',
                 size: item.size || '',
-                quantity: item.quantity || 1,
+                quantity: item.stock || 999,
+                reserved: 0,
                 price: item.price || 0,
-                costPrice: item.costPrice || item.cost_price || 0,
-                total: item.total || (item.price * item.quantity) || 0,
-                barcode: item.barcode || '',
-                stock: item.stock || 999
-              }]);
+                cost_price: item.costPrice || item.cost_price || 0,
+                image: item.image || '/placeholder.svg'
+              };
+              
+              addToCart(tempProduct, tempVariant, item.quantity || 1, false);
             }
           });
           console.log('✅ Cart loaded successfully for edit mode');
