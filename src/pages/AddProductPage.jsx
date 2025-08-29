@@ -127,6 +127,13 @@ const AddProductPage = () => {
   const [departments, setDepartments] = useState([]);
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
+  // استخدام useMemo لتحسين الأداء ومنع إعادة الحساب غير الضرورية
+  const colorSizeTypesLength = useMemo(() => Object.keys(colorSizeTypes).length, [colorSizeTypes]);
+  const colorImagesLength = useMemo(() => Object.keys(colorImages).length, [colorImages]);
+  const selectedColorsLength = useMemo(() => selectedColors.length, [selectedColors]);
+  const generalImagesLength = useMemo(() => generalImages.length, [generalImages]);
+  const variantsLength = useMemo(() => variants.length, [variants]);
+
   const allSizesForType = useMemo(() => {
     // في وضع التعديل، نعرض المتغيرات الفعلية بدلاً من القياسات المتاحة
     if (isEditMode) {
@@ -291,162 +298,169 @@ const AddProductPage = () => {
     }
   }, [isEditMode, editProductData, navigate]);
 
+  // استخدام useCallback لتحسين الأداء
+  const generateVariants = useCallback(() => {
+    if (isEditMode || selectedColors.length === 0) {
+      if (!isEditMode) setVariants([]);
+      return;
+    }
+
+    const newVariants = [];
+    selectedColors.forEach(color => {
+      // للألوان التي لها أنواع قياسات محددة
+      const colorSizes = colorSizeTypes[color.id] || [sizeType];
+      
+      colorSizes.forEach(sizeTypeForColor => {
+        const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+        
+        if (sizesForThisType.length > 0) {
+          sizesForThisType.forEach(size => {
+            // توليد باركود فريد للمتغير
+            const barcode = generateUniqueBarcode(
+              productInfo.name || 'منتج',
+              color.name,
+              size.name
+            );
+            newVariants.push({
+              colorId: color.id,
+              sizeId: size.id,
+              color: color.name,
+              color_hex: color.hex_code,
+              size: size.name,
+              sizeType: sizeTypeForColor,
+              quantity: 0,
+              price: parseFloat(productInfo.price) || 0,
+              costPrice: parseFloat(productInfo.costPrice) || 0,
+              barcode: barcode,
+              hint: ''
+            });
+          });
+        }
+      });
+    });
+    setVariants(newVariants);
+  }, [isEditMode, selectedColors, colorSizeTypes, sizeType, sizes, productInfo.name, productInfo.price, productInfo.costPrice]);
+
   useEffect(() => {
-    // لا نولد متغيرات جديدة في وضع التعديل
-    if (isEditMode) return;
+    if (settings && sizes.length > 0 && !isEditMode) {
+      generateVariants();
+    }
+  }, [generateVariants, settings, sizes.length, isEditMode]);
+
+  // استخدام useCallback لتوليد متغيرات الألوان الجديدة في وضع التعديل
+  const generateVariantsForNewColors = useCallback(() => {
+    if (!isEditMode) return;
     
-    const generateVariants = () => {
-      if (selectedColors.length === 0) {
-        setVariants([]);
-        return;
-      }
-  
+    setVariants(currentVariants => {
+      // العثور على الألوان الجديدة التي لا توجد لها متغيرات
+      const existingColorIds = [...new Set(currentVariants.map(v => v.colorId || v.color_id))];
+      const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
+      
+      if (newColors.length === 0) return currentVariants;
+      
+      console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
+      
       const newVariants = [];
-      selectedColors.forEach(color => {
-        // للألوان التي لها أنواع قياسات محددة
+      newColors.forEach(color => {
+        // استخدام نوع القياس المحدد للون أو الافتراضي
         const colorSizes = colorSizeTypes[color.id] || [sizeType];
         
         colorSizes.forEach(sizeTypeForColor => {
           const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
           
-          if (sizesForThisType.length > 0) {
-            sizesForThisType.forEach(size => {
-              // توليد باركود فريد للمتغير
-              const barcode = generateUniqueBarcode(
-                productInfo.name || 'منتج',
-                color.name,
-                size.name
-              );
-              newVariants.push({
-                colorId: color.id,
-                sizeId: size.id,
-                color: color.name,
-                color_hex: color.hex_code,
-                size: size.name,
-                sizeType: sizeTypeForColor,
-                quantity: 0,
-                price: parseFloat(productInfo.price) || 0,
-                costPrice: parseFloat(productInfo.costPrice) || 0,
-                barcode: barcode,
-                hint: ''
-              });
-            });
-          }
-        });
-      });
-      setVariants(newVariants);
-    };
-    
-    if (settings && sizes.length > 0) {
-        generateVariants();
-    }
-  }, [selectedColors.length, sizeType, Object.keys(colorSizeTypes).length, sizes.length, productInfo.price, productInfo.costPrice, settings, isEditMode]);
-
-  // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
-  useEffect(() => {
-    if (!isEditMode) return;
-    
-    const generateVariantsForNewColors = () => {
-      setVariants(currentVariants => {
-        // العثور على الألوان الجديدة التي لا توجد لها متغيرات
-        const existingColorIds = [...new Set(currentVariants.map(v => v.colorId || v.color_id))];
-        const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
-        
-        if (newColors.length === 0) return currentVariants;
-        
-        console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
-        
-        const newVariants = [];
-        newColors.forEach(color => {
-          // استخدام نوع القياس المحدد للون أو الافتراضي
-          const colorSizes = colorSizeTypes[color.id] || [sizeType];
-          
-          colorSizes.forEach(sizeTypeForColor => {
-            const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+          sizesForThisType.forEach(size => {
+            const barcode = generateUniqueBarcode(
+              productInfo.name || 'منتج',
+              color.name,
+              size.name
+            );
             
-            sizesForThisType.forEach(size => {
-              const barcode = generateUniqueBarcode(
-                productInfo.name || 'منتج',
-                color.name,
-                size.name
-              );
-              
-              newVariants.push({
-                colorId: color.id,
-                sizeId: size.id,
-                color: color.name,
-                color_hex: color.hex_code,
-                size: size.name,
-                sizeType: sizeTypeForColor,
-                quantity: 0,
-                price: parseFloat(productInfo.price) || 0,
-                costPrice: parseFloat(productInfo.costPrice) || 0,
-                barcode: barcode,
-                hint: ''
-              });
+            newVariants.push({
+              colorId: color.id,
+              sizeId: size.id,
+              color: color.name,
+              color_hex: color.hex_code,
+              size: size.name,
+              sizeType: sizeTypeForColor,
+              quantity: 0,
+              price: parseFloat(productInfo.price) || 0,
+              costPrice: parseFloat(productInfo.costPrice) || 0,
+              barcode: barcode,
+              hint: ''
             });
           });
         });
-        
-        if (newVariants.length > 0) {
-          console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
-          return [...currentVariants, ...newVariants];
-        }
-        
-        return currentVariants;
       });
-    };
-    
-    if (sizes.length > 0 && selectedColors.length > 0) {
+      
+      if (newVariants.length > 0) {
+        console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
+        return [...currentVariants, ...newVariants];
+      }
+      
+      return currentVariants;
+    });
+  }, [isEditMode, selectedColors, colorSizeTypes, sizeType, sizes, productInfo.name, productInfo.price, productInfo.costPrice]);
+
+  // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
+  useEffect(() => {
+    if (isEditMode && sizes.length > 0 && selectedColorsLength > 0) {
       generateVariantsForNewColors();
     }
-  }, [selectedColors.length, sizes.length, Object.keys(colorSizeTypes).length, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
+  }, [generateVariantsForNewColors, isEditMode, sizes.length, selectedColorsLength]);
 
-  // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
-  useEffect(() => {
-    if (!isEditMode && (productInfo.name?.trim() || selectedColors.length > 0)) {
-      const timeoutId = setTimeout(() => {
-        const dataToSave = {
-          productInfo,
-          generalImages: generalImages.map(img => img?.name || img), // حفظ أسماء الملفات فقط
-          selectedCategories,
-          selectedProductTypes,
-          selectedSeasonsOccasions,
-          selectedDepartments,
-          selectedColors,
-          sizeType,
-          colorSizeTypes,
-          variants,
-          colorImages: Object.keys(colorImages), // حفظ معرفات الألوان فقط
-          lastSaved: Date.now(),
-          savedAt: new Date().toISOString()
-        };
-        setTempProductData(dataToSave);
-        
-        // عرض مؤشر الحفظ
-        console.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
-      }, 2000); // حفظ بعد ثانيتين من عدم النشاط
-
-      return () => clearTimeout(timeoutId);
+  // استخدام useCallback لحفظ البيانات مع تحسين الأداء
+  const saveTemporaryData = useCallback(() => {
+    if (!isEditMode && (productInfo.name?.trim() || selectedColorsLength > 0)) {
+      const dataToSave = {
+        productInfo,
+        generalImages: generalImages.map(img => img?.name || img), // حفظ أسماء الملفات فقط
+        selectedCategories,
+        selectedProductTypes,
+        selectedSeasonsOccasions,
+        selectedDepartments,
+        selectedColors,
+        sizeType,
+        colorSizeTypes,
+        variants,
+        colorImages: Object.keys(colorImages), // حفظ معرفات الألوان فقط
+        lastSaved: Date.now(),
+        savedAt: new Date().toISOString()
+      };
+      setTempProductData(dataToSave);
+      
+      // عرض مؤشر الحفظ
+      console.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
     }
   }, [
-    productInfo.name, 
-    productInfo.price, 
-    productInfo.costPrice, 
-    productInfo.description, 
-    generalImages.length,
+    isEditMode,
+    productInfo,
+    selectedColorsLength,
+    generalImagesLength,
     selectedCategories.length,
     selectedProductTypes.length,
     selectedSeasonsOccasions.length,
     selectedDepartments.length,
-    selectedColors.length,
     sizeType,
-    Object.keys(colorSizeTypes).length,
-    variants.length,
-    Object.keys(colorImages).length,
-    isEditMode,
+    colorSizeTypesLength,
+    variantsLength,
+    colorImagesLength,
+    generalImages,
+    selectedCategories,
+    selectedProductTypes,
+    selectedSeasonsOccasions,
+    selectedDepartments,
+    selectedColors,
+    colorSizeTypes,
+    variants,
+    colorImages,
     setTempProductData
   ]);
+
+  // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
+  useEffect(() => {
+    const timeoutId = setTimeout(saveTemporaryData, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [saveTemporaryData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
