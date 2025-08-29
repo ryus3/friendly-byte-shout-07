@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
 import { Check, ChevronDown, Tag, Package, Calendar, Building2, Plus } from 'lucide-react';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import AddEditDepartmentDialog from '@/components/manage-variants/AddEditDepartmentDialog';
@@ -331,12 +331,8 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
                 if (!item) {
-                  // عرض معرف مؤقت مع تصميم مميز
-                  return (
-                    <Badge key={itemId} variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                      <span className="text-xs">ID: {itemId}</span>
-                    </Badge>
-                  );
+                  // البحث عن الاسم الحقيقي من قاعدة البيانات باستخدام useEffect منفصل
+                  return <MissingItemBadge key={itemId} itemId={itemId} />;
                 }
                 return (
                   <Badge key={item.id} variant="secondary" className="gap-1">
@@ -591,6 +587,54 @@ const SeasonOccasionDialog = ({ open, onOpenChange, onSuccess }) => {
         </form>
       </DialogContent>
     </Dialog>
+  );
+};
+
+// مكون منفصل لعرض العناصر المفقودة والبحث عنها
+const MissingItemBadge = ({ itemId }) => {
+  const [itemName, setItemName] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchItemName = async () => {
+      try {
+        setLoading(true);
+        
+        // البحث في جميع الجداول المختلفة
+        const searches = await Promise.all([
+          supabase.from('categories').select('name').eq('id', itemId).single(),
+          supabase.from('departments').select('name').eq('id', itemId).single(), 
+          supabase.from('product_types').select('name').eq('id', itemId).single(),
+          supabase.from('seasons_occasions').select('name').eq('id', itemId).single()
+        ]);
+
+        // العثور على النتيجة الصحيحة
+        const result = searches.find(s => s.data && !s.error);
+        if (result?.data?.name) {
+          setItemName(result.data.name);
+        }
+      } catch (error) {
+        console.error('خطأ في جلب اسم العنصر:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItemName();
+  }, [itemId]);
+
+  if (loading) {
+    return (
+      <Badge variant="outline" className="gap-1 bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">
+        <span className="text-xs">جاري التحميل...</span>
+      </Badge>
+    );
+  }
+
+  return (
+    <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+      <span className="text-xs">{itemName || `غير معروف: ${itemId.slice(0, 8)}`}</span>
+    </Badge>
   );
 };
 
