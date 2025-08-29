@@ -49,12 +49,12 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
 
 
   return (
-    <Card dir="rtl">
+    <Card>
       <CardHeader>
         <CardTitle>معلومات الزبون والشحن</CardTitle>
         <CardDescription>الرجاء التأكد من صحة معلومات الزبون لضمان وصول الشحنة.</CardDescription>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6" dir="rtl">
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
           <div className="relative">

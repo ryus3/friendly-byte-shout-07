@@ -4,63 +4,41 @@ import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
-  console.log('🔍 EditOrderDialog - مُستقبل بيانات الطلب:', order);
-  
-// تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent مع تحميل المدن والمناطق كمعرفات
-  const convertOrderToEditData = async (order) => {
+  // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
+  const convertOrderToEditData = (order) => {
     if (!order) {
-      console.log('❌ لا توجد بيانات طلب لـ EditOrderDialog');
+      console.log('❌ No order data provided to EditOrderDialog');
       return null;
     }
     
-    console.log('🔍 EditOrderDialog - بيانات الطلب الخام المُستقبلة:', order);
-    console.log('🔍 EditOrderDialog - عناصر الطلب المتاحة:', order.order_items || order.items);
+    console.log('🔍 EditOrderDialog - Raw order data received:', order);
+    console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
     
     // تحويل المنتجات لصيغة cart items مع product_id و variant_id للتحميل الصحيح
-    const cartItems = (order.order_items || order.items || []).map(item => {
-      console.log('🛒 تحويل عنصر:', item);
-      return {
-        id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
-        productId: item.product_id,
-        variantId: item.variant_id,
-        productName: item.productname || item.product_name || 'منتج',
-        product_name: item.productname || item.product_name || 'منتج',
-        size: item.size || '',
-        color: item.color || '',
-        price: item.unit_price || item.price || 0,
-        unit_price: item.unit_price || item.price || 0,
-        quantity: item.quantity || 1,
-        total: (item.unit_price || item.price || 0) * (item.quantity || 1),
-        image: item.image || '/placeholder.svg',
-        barcode: item.barcode || '',
-        sku: item.sku || '',
-        // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
-        product_id: item.product_id,
-        variant_id: item.variant_id,
-        costPrice: item.cost_price || 0,
-        cost_price: item.cost_price || 0
-      };
-    });
+    const cartItems = (order.order_items || order.items || []).map(item => ({
+      id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
+      productId: item.product_id,
+      variantId: item.variant_id,
+      productName: item.productname || item.product_name || 'منتج',
+      product_name: item.productname || item.product_name || 'منتج',
+      size: item.size || '',
+      color: item.color || '',
+      price: item.unit_price || item.price || 0,
+      unit_price: item.unit_price || item.price || 0,
+      quantity: item.quantity || 1,
+      total: (item.unit_price || item.price || 0) * (item.quantity || 1),
+      image: item.image || '/placeholder.svg',
+      barcode: item.barcode || '',
+      sku: item.sku || '',
+      // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
+      product_id: item.product_id,
+      variant_id: item.variant_id
+    }));
 
-    console.log('🛒 EditOrderDialog - عناصر السلة المُحولة:', cartItems);
-
-    // استخراج معرفات المدينة والمنطقة الأصلية من الطلب
-    let city_id = order.city_id || '';
-    let region_id = order.region_id || '';
-    
-    // إذا لم توجد المعرفات، محاولة العثور عليها من أسماء المدن والمناطق
-    if (!city_id && order.customer_city) {
-      console.log('🔍 البحث عن معرف المدينة لـ:', order.customer_city);
-      // سيتم العثور على المعرف في QuickOrderContent من خلال API الوسيط
-    }
-    
-    if (!region_id && order.customer_province) {
-      console.log('🔍 البحث عن معرف المنطقة لـ:', order.customer_province);
-      // سيتم العثور على المعرف في QuickOrderContent من خلال API الوسيط
-    }
+    console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
 
     const editData = {
-      // معلومات العميل - مع ضمان وجود جميع البيانات والمعرفات
+      // معلومات العميل - مع ضمان وجود جميع البيانات
       customer_name: order.customer_name || '',
       customer_phone: order.customer_phone || '',
       customer_phone2: order.customer_phone2 || order.second_phone || '',
@@ -68,23 +46,15 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
       
-      // معرفات المدينة والمنطقة للوسيط
-      city_id: city_id,
-      region_id: region_id,
-      
       // تفاصيل الطلب - مع حساب صحيح للأسعار
       notes: order.notes || '',
       total_amount: order.total_amount || order.final_amount || 0,
       delivery_fee: order.delivery_fee || 0,
-      discount: order.discount || 0,
       // حساب الإجمالي مع رسوم التوصيل
       final_total: (order.total_amount || order.final_amount || 0) + (order.delivery_fee || 0),
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
-      order_type: order.order_type || 'new',
-      package_size: order.package_size || 'عادي',
-      promocode: order.promocode || '',
       
       // المنتجات - مع معرفات صحيحة للتحميل
       items: cartItems,
@@ -92,14 +62,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       // بيانات إضافية للتعديل
       editMode: true,
       orderId: order.id,
-      originalOrder: order,
-      
-      // بيانات خاصة بالوسيط
-      waseet_order_id: order.waseet_order_id || order.tracking_number,
-      alwaseet_qr_id: order.tracking_number || order.order_number
+      originalOrder: order
     };
 
-    console.log('📋 EditOrderDialog - بيانات التعديل النهائية المُحضرة:', editData);
+    console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
     return editData;
   };
 
@@ -110,21 +76,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     onOpenChange(false);
   };
 
-  const [editData, setEditData] = React.useState(null);
-  
-  // تحميل بيانات التعديل عند فتح الحوار
-  React.useEffect(() => {
-    const loadEditData = async () => {
-      if (order) {
-        const data = await convertOrderToEditData(order);
-        setEditData(data);
-      }
-    };
-    
-    if (open && order) {
-      loadEditData();
-    }
-  }, [open, order]);
+  const editData = convertOrderToEditData(order);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -133,19 +85,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         dir="rtl"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-        <div className="relative h-full flex flex-col" dir="rtl">
-          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm" dir="rtl">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right" dir="rtl">
+        <div className="relative h-full flex flex-col">
+          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right">
               ✏️ تعديل الطلب - {order?.order_number || order?.tracking_number}
-              <div className="text-sm text-muted-foreground font-normal mt-1 text-right" dir="rtl">
+              <div className="text-sm text-muted-foreground font-normal mt-1">
                 تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : ''}
                 {order?.customer_name && ` • العميل: ${order.customer_name}`}
               </div>
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 p-0" dir="rtl">
-            <div className="p-6" dir="rtl">
+          <ScrollArea className="flex-1 p-0">
+            <div className="p-6">
               {editData ? (
                 <QuickOrderContent
                   isDialog={true}
@@ -154,7 +106,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                   key={`edit-${order?.id}`} // لإعادة تحميل المكون عند تغيير الطلب
                 />
               ) : (
-                <div className="flex items-center justify-center h-64" dir="rtl">
+                <div className="flex items-center justify-center h-64">
                   <div className="text-center">
                     <h3 className="text-lg font-semibold text-muted-foreground">
                       خطأ في تحميل بيانات الطلب
