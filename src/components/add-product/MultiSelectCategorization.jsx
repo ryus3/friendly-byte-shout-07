@@ -44,15 +44,34 @@ const MultiSelectCategorization = ({
 
   // البيانات تأتي من النظام التوحيدي
 
-  // وظائف للتحقق من تطابق البيانات مع IDs المحددة
-  const [dataLoaded, setDataLoaded] = useState(false);
+  // حالة تحميل البيانات المحسنة
+  const [dataReady, setDataReady] = useState(false);
   
-  // التحقق من تحميل البيانات بالكامل
+  // التحقق من جاهزية البيانات للعرض
   useEffect(() => {
-    if (!loading && categories.length > 0 && departments.length > 0 && productTypes.length > 0 && seasonsOccasions.length > 0) {
-      setDataLoaded(true);
+    const hasBasicData = !loading && categories.length > 0 && departments.length > 0;
+    const hasAllData = hasBasicData && productTypes.length > 0 && seasonsOccasions.length > 0;
+    
+    // إذا كانت البيانات الأساسية متوفرة، اعرضها فوراً
+    if (hasBasicData) {
+      setDataReady(true);
     }
   }, [loading, categories, departments, productTypes, seasonsOccasions]);
+
+  // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
+  const getSelectedDisplayItems = (selectedIds, items, label) => {
+    if (!selectedIds || selectedIds.length === 0) return [];
+    
+    return selectedIds.map(id => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        return { id, name: item.name, found: true };
+      } else {
+        // عرض ID مؤقت حتى يتم تحميل الاسم
+        return { id, name: `${label} (${id})`, found: false };
+      }
+    });
+  };
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -135,7 +154,7 @@ const MultiSelectCategorization = ({
     });
   };
 
-  if (loading || !dataLoaded) {
+  if (loading || !dataReady) {
     return (
       <Card>
         <CardHeader>
@@ -289,10 +308,10 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
                 if (!item) {
-                  // عرض ID إذا لم يتم العثور على البيانات الكاملة
+                  // عرض معرف مؤقت مع تصميم مميز
                   return (
-                    <Badge key={itemId} variant="outline" className="gap-1 bg-yellow-50 text-yellow-700 border-yellow-200">
-                      <span className="text-xs">تحميل...</span>
+                    <Badge key={itemId} variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                      <span className="text-xs">ID: {itemId}</span>
                     </Badge>
                   );
                 }
