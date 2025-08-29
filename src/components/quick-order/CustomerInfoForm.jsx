@@ -49,11 +49,12 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
 
 
   return (
-    <Card dir="rtl">
-      <CardHeader>
-        <CardTitle className="text-right">معلومات الزبون والشحن</CardTitle>
-        <CardDescription className="text-right">الرجاء التأكد من صحة معلومات الزبون لضمان وصول الشحنة.</CardDescription>
-      </CardHeader>
+    <div dir="rtl">
+      <Card dir="rtl">
+        <CardHeader>
+          <CardTitle className="text-right">معلومات الزبون والشحن</CardTitle>
+          <CardDescription className="text-right">الرجاء التأكد من صحة معلومات الزبون لضمان وصول الشحنة.</CardDescription>
+        </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
@@ -261,7 +262,8 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           />
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 };
 

@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
+import { UnifiedEditOrderLoader } from '@/components/quick-order/UnifiedEditOrderLoader';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
+  const { isLoggedIn, token } = useAlWaseet();
+  
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = async (order) => {
     if (!order) {
@@ -37,34 +42,43 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
     console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
 
-    // تحويل اسماء المدن والمناطق إلى معرفات Al Waseet
+    // تحويل أسماء المدن والمناطق إلى معرفات Al Waseet
     let city_id = '';
     let region_id = '';
     
-    if (order.delivery_partner === 'alwaseet') {
+    if (order.delivery_partner === 'alwaseet' && isLoggedIn && token) {
       try {
-        // تحويل اسم المدينة إلى معرف
-        const { getCities, getRegionsByCity } = await import('@/lib/alwaseet-api');
-        const { isLoggedIn, token } = await import('@/contexts/AlWaseetContext').then(m => m.useAlWaseet?.() || {});
+        console.log('🔄 تحويل أسماء المدن والمناطق إلى معرفات Al Waseet...');
         
-        if (isLoggedIn && token) {
-          const cities = await getCities(token);
-          const cityMatch = cities.find(city => city.name === order.customer_city);
-          if (cityMatch) {
-            city_id = cityMatch.id;
-            
-            // تحويل اسم المنطقة إلى معرف
-            const regions = await getRegionsByCity(token, cityMatch.id);
-            const regionMatch = regions.find(region => region.name === order.customer_province);
-            if (regionMatch) {
-              region_id = regionMatch.id;
-            }
+        const cities = await getCities(token);
+        const cityMatch = cities.find(city => city.name === order.customer_city);
+        
+        if (cityMatch) {
+          city_id = cityMatch.id;
+          console.log(`✅ تم العثور على المدينة: ${order.customer_city} → ID: ${city_id}`);
+          
+          const regions = await getRegionsByCity(token, cityMatch.id);
+          const regionMatch = regions.find(region => region.name === order.customer_province);
+          
+          if (regionMatch) {
+            region_id = regionMatch.id;
+            console.log(`✅ تم العثور على المنطقة: ${order.customer_province} → ID: ${region_id}`);
+          } else {
+            console.warn(`⚠️ لم يتم العثور على المنطقة: ${order.customer_province}`);
           }
+        } else {
+          console.warn(`⚠️ لم يتم العثور على المدينة: ${order.customer_city}`);
         }
       } catch (error) {
         console.warn('⚠️ Failed to convert city/region names to IDs:', error);
       }
     }
+
+    // حساب الإجمالي الصحيح للطلب
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.total || 0), 0);
+    const deliveryFee = order.delivery_fee || 0;
+    const discount = order.discount || 0;
+    const finalTotal = subtotal + deliveryFee - discount;
 
     const editData = {
       // معلومات العميل - مع ضمان وجود جميع البيانات
@@ -75,16 +89,16 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
       
-      // معرفات Al Waseet للمدينة والمنطقة
-      city_id: city_id,
-      region_id: region_id,
+      // معرفات Al Waseet للمدينة والمنطقة (الأصلية)
+      city_id: city_id || order.city_id || '',
+      region_id: region_id || order.region_id || '',
       
       // تفاصيل الطلب - مع حساب صحيح للأسعار
       notes: order.notes || '',
-      total_amount: order.total_amount || order.final_amount || 0,
-      delivery_fee: order.delivery_fee || 0,
-      // حساب الإجمالي مع رسوم التوصيل
-      final_total: (order.total_amount || order.final_amount || 0) + (order.delivery_fee || 0),
+      total_amount: subtotal,
+      delivery_fee: deliveryFee,
+      discount: discount,
+      final_total: finalTotal,
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
@@ -95,7 +109,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       // بيانات إضافية للتعديل
       editMode: true,
       orderId: order.id,
-      originalOrder: order
+      originalOrder: order,
+      
+      // بيانات Al Waseet الأصلية
+      delivery_partner_order_id: order.delivery_partner_order_id || ''
     };
 
     console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
@@ -141,14 +158,24 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           </DialogHeader>
 
           <ScrollArea className="flex-1 p-0">
-            <div className="p-6">
+            <div className="p-6" dir="rtl">
               {editData ? (
-                <QuickOrderContent
-                  isDialog={true}
-                  aiOrderData={editData}
-                  onOrderCreated={handleOrderUpdated}
-                  key={`edit-${order?.id}`} // لإعادة تحميل المكون عند تغيير الطلب
-                />
+                <>
+                  {/* مكون تحميل البيانات المحسن للتعديل */}
+                  <UnifiedEditOrderLoader
+                    aiOrderData={editData}
+                    isEditMode={true}
+                    onDataLoaded={() => console.log('✅ تم تحميل البيانات للتعديل')}
+                  />
+                  
+                  {/* واجهة التعديل الكاملة */}
+                  <QuickOrderContent
+                    isDialog={true}
+                    aiOrderData={editData}
+                    onOrderCreated={handleOrderUpdated}
+                    key={`edit-${order?.id}`} // لإعادة تحميل المكون عند تغيير الطلب
+                  />
+                </>
               ) : (
                 <div className="flex items-center justify-center h-64">
                   <div className="text-center">

@@ -137,7 +137,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // تحديد شريك التوصيل وتحميل البيانات اللازمة
         if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
           setActivePartner('alwaseet');
-          // سيتم تحميل المدن والمناطق تلقائياً عبر useEffect
+          
+          // في وضع التعديل، تحديد المدينة والمنطقة من المعرفات الأصلية
+          if (aiOrderData.editMode && aiOrderData.city_id && aiOrderData.region_id) {
+            setSelectedCityId(aiOrderData.city_id);
+            setSelectedRegionId(aiOrderData.region_id);
+            console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
+              city_id: aiOrderData.city_id,
+              region_id: aiOrderData.region_id
+            });
+          }
         } else {
           setActivePartner('local');
         }

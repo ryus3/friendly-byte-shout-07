@@ -145,7 +145,26 @@ export const editAlWaseetOrder = async (orderData, token) => {
   formattedData.package_size = parseInt(formattedData.package_size) || 0;
   formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
-  return handleApiCall('edit-order', 'POST', token, formattedData, { token });
+  console.log('📤 إرسال طلب التحديث إلى Al Waseet:', formattedData);
+  
+  const response = await handleApiCall('edit-order', 'POST', token, formattedData, { token });
+  
+  console.log('📥 استجابة تحديث Al Waseet:', response);
+  
+  if (response && response.errNum === "S000") {
+    console.log('✅ تم تحديث الطلب في Al Waseet بنجاح');
+    return { 
+      success: true, 
+      data: response.data,
+      message: 'تم تحديث الطلب في شركة التوصيل بنجاح'
+    };
+  } else {
+    console.error('❌ فشل تحديث الطلب في Al Waseet:', response);
+    return { 
+      success: false, 
+      error: response?.msg || 'فشل تحديث الطلب في شركة التوصيل'
+    };
+  }
 };
 
 export const getMerchantOrders = async (token) => {
