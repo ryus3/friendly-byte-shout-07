@@ -581,7 +581,18 @@ const AddProductPage = () => {
   }, []);
   
   const loading = inventoryLoading || variantsLoading;
-  if (loading && !isSubmitting) return <div className="h-full w-full flex items-center justify-center"><Loader /></div>;
+  
+  // إذا كان في حالة تحميل ولا يوجد إرسال، عرض شاشة التحميل
+  const shouldShowLoader = loading && !isSubmitting;
+
+  // عرض شاشة التحميل إذا لزم الأمر
+  if (shouldShowLoader) {
+    return (
+      <div className="h-full w-full flex items-center justify-center">
+        <Loader />
+      </div>
+    );
+  }
 
   return (
     <>
