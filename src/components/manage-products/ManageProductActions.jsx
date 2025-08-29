@@ -44,28 +44,47 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
   };
 
   const handleDelete = async () => {
+    const productId = product.id;
+    const productName = product.name;
+    
     try {
-      const { success } = await deleteProducts([product.id]);
+      // إغلاق الحوار فوراً
+      setIsDeleteOpen(false);
+      
+      // عرض toast للتحميل
+      toast({
+        title: "جاري الحذف...",
+        description: `حذف "${productName}"`,
+        variant: "default"
+      });
+
+      const { success } = await deleteProducts([productId]);
+      
       if (success) {
-        // Success message is already shown in deleteProducts function
+        // رسالة نجاح مفصلة
+        toast({
+          title: "تم الحذف بنجاح ✅",
+          description: `تم حذف "${productName}" نهائياً من النظام`,
+          variant: "default"
+        });
+        
+        // تحديث فوري للواجهة
         if (onProductUpdate) onProductUpdate();
         if (refetchProducts) refetchProducts();
       } else {
         toast({ 
-          title: "خطأ", 
-          description: "فشل حذف المنتج.", 
+          title: "خطأ في الحذف", 
+          description: `فشل حذف "${productName}"`, 
           variant: "destructive" 
         });
       }
     } catch (error) {
       console.error('Delete error:', error);
       toast({ 
-        title: "خطأ", 
-        description: "حدث خطأ أثناء الحذف.", 
+        title: "خطأ أثناء الحذف", 
+        description: `حدث خطأ أثناء حذف "${productName}"`, 
         variant: "destructive" 
       });
-    } finally {
-      setIsDeleteOpen(false);
     }
   };
   

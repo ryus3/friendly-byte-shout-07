@@ -815,16 +815,19 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             }
         }
 
-        // تحديث الحالة المحلية فوراً
+        // تحديث الحالة المحلية فوراً - هذا الأهم للحذف الفوري
         if (successfulDeletions.length > 0) {
-            setProducts(prev => prev.filter(p => !successfulDeletions.includes(p.id)));
-            
-            // عرض رسالة النجاح فوراً
-            toast({
-                title: "تم الحذف بنجاح",
-                description: `تم حذف ${successfulDeletions.length} منتج(ات) نهائياً من النظام`,
-                variant: "default"
+            // إزالة فورية من الحالة المحلية
+            setProducts(prev => {
+                const newProducts = prev.filter(p => !successfulDeletions.includes(p.id));
+                console.log(`🔄 تم تحديث الحالة المحلية: حذف ${successfulDeletions.length} منتج(ات)`);
+                return newProducts;
             });
+            
+            // تحديث إضافي للmemory cache إذا وجد
+            if (typeof window !== 'undefined' && window.productsCache) {
+                window.productsCache = window.productsCache.filter(p => !successfulDeletions.includes(p.id));
+            }
         }
 
         if (failedDeletions.length > 0 && successfulDeletions.length === 0) {

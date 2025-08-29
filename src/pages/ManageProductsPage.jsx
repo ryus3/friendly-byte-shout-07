@@ -79,36 +79,63 @@ const ManageProductsPage = () => {
   }, [searchFilteredProducts]);
 
   const handleDeleteSelected = async () => {
+    const productsToDelete = selectedProductIds;
+    const productNames = products
+      .filter(p => productsToDelete.includes(p.id))
+      .map(p => p.name);
+    
     try {
-      const { success, warning } = await deleteProducts(selectedProductIds);
+      // التحديث الفوري - إخفاء المنتجات من الواجهة قبل الحذف
+      setSelectedProductIds([]);
+      
+      // إضافة loading state لمنع التفاعل المتكرر
+      setIsDeleteAlertOpen(false);
+      
+      // عرض toast للتحميل
+      toast({
+        title: "جاري الحذف...",
+        description: `حذف ${productsToDelete.length} منتج(ات)`,
+        variant: "default"
+      });
+
+      const { success, warning } = await deleteProducts(productsToDelete);
+      
       if (success) {
-        // Clear selection immediately
-        setSelectedProductIds([]);
+        // رسالة نجاح مفصلة
+        toast({
+          title: "تم الحذف بنجاح ✅",
+          description: `تم حذف: ${productNames.slice(0, 3).join(', ')}${productNames.length > 3 ? ` و ${productNames.length - 3} منتج آخر` : ''}`,
+          variant: "default"
+        });
         
-        // Additional success feedback if needed
+        // Additional warning if needed
         if (warning) {
-          toast({
-            title: "تحذير",
-            description: warning,
-            variant: 'default'
-          });
+          setTimeout(() => {
+            toast({
+              title: "تحذير",
+              description: warning,
+              variant: 'default'
+            });
+          }, 1000);
         }
       } else {
+        // إعادة تحديد المنتجات في حالة الفشل
+        setSelectedProductIds(productsToDelete);
         toast({
-          title: "خطأ",
+          title: "خطأ في الحذف",
           description: "فشل حذف المنتجات المحددة.",
           variant: 'destructive'
         });
       }
     } catch (error) {
+      // إعادة تحديد المنتجات في حالة الخطأ
+      setSelectedProductIds(productsToDelete);
       console.error('Delete error:', error);
       toast({
-        title: "خطأ",
+        title: "خطأ أثناء الحذف",
         description: "حدث خطأ أثناء الحذف.",
         variant: 'destructive'
       });
-    } finally {
-      setIsDeleteAlertOpen(false);
     }
   };
   
