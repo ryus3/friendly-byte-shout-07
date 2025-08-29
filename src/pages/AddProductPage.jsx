@@ -400,7 +400,7 @@ const AddProductPage = () => {
     if (sizes.length > 0 && selectedColors.length > 0) {
       generateVariantsForNewColors();
     }
-  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
+  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode]);
 
   // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {
@@ -430,9 +430,10 @@ const AddProductPage = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [
-    productInfo, generalImages, selectedCategories, selectedProductTypes,
-    selectedSeasonsOccasions, selectedDepartments, selectedColors, sizeType,
-    colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
+    productInfo.name, productInfo.price, productInfo.costPrice, productInfo.description,
+    selectedCategories.length, selectedProductTypes.length, selectedSeasonsOccasions.length, 
+    selectedDepartments.length, selectedColors.length, sizeType, variants.length, 
+    Object.keys(colorImages).length, isEditMode, setTempProductData
   ]);
 
   const handleSubmit = async (e) => {
