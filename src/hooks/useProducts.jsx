@@ -252,7 +252,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             *,
             color:colors(id, name, hex_code),
             size:sizes(id, name),
-            inventory(quantity, min_stock, reserved_stock)
+            inventory(quantity, min_stock, reserved_quantity)
           ),
           categories:product_categories(category_id, categories(name)),
           product_types:product_product_types(product_type_id, product_types(name)),

@@ -408,13 +408,40 @@ const AddProductPage = () => {
       
       toast({ 
         title: 'نجاح', 
-        description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
+        description: isEditMode ? `تم تحديث المنتج "${productInfo.name}" بنجاح!` : `تمت إضافة المنتج "${productInfo.name}" بنجاح!`,
+        variant: 'default'
       });
+      
+      if (!isEditMode) {
+        // تفريغ النموذج للمنتج الجديد
+        setProductInfo({
+          name: '',
+          price: '',
+          costPrice: '',
+          profitAmount: '',
+          profitPercentage: '',
+          description: '',
+          note: ''
+        });
+        setGeneralImages([]);
+        setSelectedCategories([]);
+        setSelectedProductTypes([]);
+        setSelectedSeasonsOccasions([]);
+        setSelectedDepartments([]);
+        setSelectedColors([]);
+        setSizeType('');
+        setColorSizeTypes({});
+        setVariants([]);
+        setColorImages({});
+        setUploadProgress(0);
+      }
+      
       if (fromPurchases) {
         navigate(fromPurchases, { state: { productJustAdded: true } });
-      } else {
+      } else if (isEditMode) {
         navigate('/manage-products');
       }
+      // في حالة إضافة منتج جديد، نبقى في الصفحة مع النموذج المفرغ
     } else {
       toast({ title: 'خطأ', description: result.error, variant: 'destructive' });
     }
