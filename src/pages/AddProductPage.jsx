@@ -343,50 +343,54 @@ const AddProductPage = () => {
     if (!isEditMode) return;
     
     const generateVariantsForNewColors = () => {
-      // العثور على الألوان الجديدة التي لا توجد لها متغيرات
-      const existingColorIds = [...new Set(variants.map(v => v.colorId || v.color_id))];
-      const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
-      
-      if (newColors.length === 0) return;
-      
-      console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
-      
-      const newVariants = [];
-      newColors.forEach(color => {
-        // استخدام نوع القياس المحدد للون أو الافتراضي
-        const colorSizes = colorSizeTypes[color.id] || [sizeType];
+      setVariants(currentVariants => {
+        // العثور على الألوان الجديدة التي لا توجد لها متغيرات
+        const existingColorIds = [...new Set(currentVariants.map(v => v.colorId || v.color_id))];
+        const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
         
-        colorSizes.forEach(sizeTypeForColor => {
-          const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+        if (newColors.length === 0) return currentVariants;
+        
+        console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
+        
+        const newVariants = [];
+        newColors.forEach(color => {
+          // استخدام نوع القياس المحدد للون أو الافتراضي
+          const colorSizes = colorSizeTypes[color.id] || [sizeType];
           
-          sizesForThisType.forEach(size => {
-            const barcode = generateUniqueBarcode(
-              productInfo.name || 'منتج',
-              color.name,
-              size.name
-            );
+          colorSizes.forEach(sizeTypeForColor => {
+            const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
             
-            newVariants.push({
-              colorId: color.id,
-              sizeId: size.id,
-              color: color.name,
-              color_hex: color.hex_code,
-              size: size.name,
-              sizeType: sizeTypeForColor,
-              quantity: 0,
-              price: parseFloat(productInfo.price) || 0,
-              costPrice: parseFloat(productInfo.costPrice) || 0,
-              barcode: barcode,
-              hint: ''
+            sizesForThisType.forEach(size => {
+              const barcode = generateUniqueBarcode(
+                productInfo.name || 'منتج',
+                color.name,
+                size.name
+              );
+              
+              newVariants.push({
+                colorId: color.id,
+                sizeId: size.id,
+                color: color.name,
+                color_hex: color.hex_code,
+                size: size.name,
+                sizeType: sizeTypeForColor,
+                quantity: 0,
+                price: parseFloat(productInfo.price) || 0,
+                costPrice: parseFloat(productInfo.costPrice) || 0,
+                barcode: barcode,
+                hint: ''
+              });
             });
           });
         });
+        
+        if (newVariants.length > 0) {
+          console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
+          return [...currentVariants, ...newVariants];
+        }
+        
+        return currentVariants;
       });
-      
-      if (newVariants.length > 0) {
-        setVariants(prev => [...prev, ...newVariants]);
-        console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
-      }
     };
     
     if (sizes.length > 0 && selectedColors.length > 0) {
