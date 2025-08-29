@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
 import { Check, ChevronDown, Tag, Package, Calendar, Building2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import AddEditDepartmentDialog from '@/components/manage-variants/AddEditDepartmentDialog';
 import AddEditCategoryDialog from '@/components/manage-variants/AddEditCategoryDialog';
@@ -43,6 +43,16 @@ const MultiSelectCategorization = ({
   const [seasonOccasionDialogOpen, setSeasonOccasionDialogOpen] = useState(false);
 
   // البيانات تأتي من النظام التوحيدي
+
+  // وظائف للتحقق من تطابق البيانات مع IDs المحددة
+  const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // التحقق من تحميل البيانات بالكامل
+  useEffect(() => {
+    if (!loading && categories.length > 0 && departments.length > 0 && productTypes.length > 0 && seasonsOccasions.length > 0) {
+      setDataLoaded(true);
+    }
+  }, [loading, categories, departments, productTypes, seasonsOccasions]);
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -125,7 +135,7 @@ const MultiSelectCategorization = ({
     });
   };
 
-  if (loading) {
+  if (loading || !dataLoaded) {
     return (
       <Card>
         <CardHeader>
@@ -135,6 +145,7 @@ const MultiSelectCategorization = ({
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="text-xs text-muted-foreground mt-2">جاري تحميل بيانات التصنيفات...</div>
           </div>
         </CardContent>
       </Card>
@@ -277,7 +288,14 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             ) : (
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
-                if (!item) return null;
+                if (!item) {
+                  // عرض ID إذا لم يتم العثور على البيانات الكاملة
+                  return (
+                    <Badge key={itemId} variant="outline" className="gap-1 bg-yellow-50 text-yellow-700 border-yellow-200">
+                      <span className="text-xs">تحميل...</span>
+                    </Badge>
+                  );
+                }
                 return (
                   <Badge key={item.id} variant="secondary" className="gap-1">
                     {item.name}
