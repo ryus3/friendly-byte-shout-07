@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useCart } from '@/hooks/useCart.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import { getCities, getRegionsByCity, createAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
@@ -23,6 +24,7 @@ import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, updateOrder, settings, cart, clearCart, addToCart, approveAiOrder, orders } = useInventory();
+  const { setCart } = useCart();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
