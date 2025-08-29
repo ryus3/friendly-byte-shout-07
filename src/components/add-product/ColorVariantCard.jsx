@@ -83,33 +83,64 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
             
             <div className="space-y-3">
               {/* رؤوس الأعمدة */}
-               <div className="grid grid-cols-7 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
+               <div className="grid grid-cols-5 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
                  <div className="text-center">القياس</div>
                  <div className="text-center">الكمية</div>
-                 <div className="text-center">التكلفة</div>
-                 <div className="text-center">سعر البيع</div>
-                 <div className="text-center">ربح الموظف</div>
                  <div className="text-center">ملاحظة</div>
-                 <div className="text-center">إجراءات</div>
+                 <div className="text-center">QR كود</div>
+                 <div className="text-center">حذف</div>
                </div>
 
               {/* صفوف المتغيرات */}
               {(() => {
                 // في وضع التعديل، نستخدم المتغيرات الموجودة فعلياً المفلترة حسب اللون
                 if (isEditMode && showInventoryData) {
+                  // ترتيب القياسات بالشكل الصحيح: S, M, L, XL ثم الأرقام 
+                  const sortVariants = (variants) => {
+                    return variants.sort((a, b) => {
+                      const aSizeName = a.sizes?.name || a.size || '';
+                      const bSizeName = b.sizes?.name || b.size || '';
+                      
+                      // ترتيب الحروف أولاً
+                      const letterOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+                      const aLetterIndex = letterOrder.indexOf(aSizeName.toUpperCase());
+                      const bLetterIndex = letterOrder.indexOf(bSizeName.toUpperCase());
+                      
+                      // إذا كان كلاهما حروف
+                      if (aLetterIndex !== -1 && bLetterIndex !== -1) {
+                        return aLetterIndex - bLetterIndex;
+                      }
+                      
+                      // إذا كان الأول حرف والثاني رقم
+                      if (aLetterIndex !== -1 && bLetterIndex === -1) return -1;
+                      if (aLetterIndex === -1 && bLetterIndex !== -1) return 1;
+                      
+                      // إذا كان كلاهما أرقام
+                      const aNum = parseInt(aSizeName);
+                      const bNum = parseInt(bSizeName);
+                      if (!isNaN(aNum) && !isNaN(bNum)) {
+                        return aNum - bNum;
+                      }
+                      
+                      // ترتيب أبجدي للحالات الأخرى
+                      return aSizeName.localeCompare(bSizeName);
+                    });
+                  };
+
                   const colorVariants = variants.filter(v => 
                     v.color_id === color.id || v.colorId === color.id
                   );
                   
-                  console.log(`🎨 عرض متغيرات اللون ${color.name}:`, colorVariants);
+                  const sortedVariants = sortVariants(colorVariants);
+                  console.log(`🎨 عرض متغيرات اللون ${color.name} مرتبة:`, sortedVariants);
                   
-                  return colorVariants.map((variant, index) => {
+                  return sortedVariants.map((variant, index) => {
                     const sizeName = variant.sizes?.name || variant.size || 'غير محدد';
                     const currentQuantity = variant.inventory?.quantity || variant.quantity || 0;
                     
                     return (
                       <div key={variant.id || index} 
-                           className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                           className="grid grid-cols-5 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                         
                          {/* القياس */}
                          <div className="text-center">
@@ -139,57 +170,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                            )}
                          </div>
                          
-                         {/* التكلفة */}
-                         <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="text-center"
-                             value={variant.cost_price || variant.costPrice || costPrice || ''} 
-                             onChange={e => {
-                               const newCost = parseFloat(e.target.value) || 0;
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'costPrice', newCost);
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'cost_price', newCost);
-                             }} 
-                             min="0"
-                             step="0.01"
-                           />
-                         </div>
-                         
-                         {/* سعر البيع */}
-                         <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="text-center font-medium"
-                             value={variant.price || price || ''} 
-                             onChange={e => {
-                               const newPrice = parseFloat(e.target.value) || 0;
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'price', newPrice);
-                             }} 
-                             min="0"
-                             step="0.01"
-                           />
-                         </div>
-                         
-                         {/* ربح الموظف */}
-                         <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="text-center"
-                             value={variant.profit_amount || variant.profitAmount || profitAmount || ''} 
-                             onChange={e => {
-                               const newProfitAmount = parseFloat(e.target.value) || 0;
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'profitAmount', newProfitAmount);
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'profit_amount', newProfitAmount);
-                             }} 
-                             min="0"
-                             step="100"
-                           />
-                         </div>
-                         
-                         {/* التلميحات الذكية */}
+                         {/* الملاحظة التوضيحية */}
                          <div className="space-y-1">
                            <Input 
                              type="text" 
@@ -200,26 +181,93 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                                handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
                              }} 
                            />
-                           <p className="text-xs text-muted-foreground text-center">
-                             تلميح ذكي للزبائن
-                           </p>
                          </div>
                          
-                         {/* الإجراءات */}
+                         {/* QR كود */}
                          <div className="text-center">
-                           <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                             {variant.barcode || 'سيتم إنشاؤه تلقائياً'}
-                           </div>
+                           <Dialog>
+                             <DialogTrigger asChild>
+                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                 <BarcodeIcon className="h-4 w-4" />
+                               </Button>
+                             </DialogTrigger>
+                             <DialogContent className="sm:max-w-md">
+                               <DialogHeader>
+                                 <DialogTitle>باركود المنتج</DialogTitle>
+                               </DialogHeader>
+                               <div className="flex flex-col items-center space-y-4">
+                                 {variant.barcode && (
+                                   <Barcode 
+                                     value={variant.barcode} 
+                                     format="CODE128"
+                                     width={2}
+                                     height={60}
+                                     displayValue={true}
+                                   />
+                                 )}
+                                 <div className="text-sm text-muted-foreground text-center">
+                                   {productName} - {color.name} - {sizeName}
+                                 </div>
+                               </div>
+                             </DialogContent>
+                           </Dialog>
+                         </div>
+                         
+                         {/* حذف */}
+                         <div className="text-center">
+                           <Button 
+                             variant="ghost" 
+                             size="sm" 
+                             onClick={() => handleRemoveSizeFromColor(variant.size_id || variant.sizeId)}
+                             className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
                          </div>
                       </div>
                     );
                   });
                 }
                 
+                // ترتيب القياسات بالشكل الصحيح: S, M, L, XL ثم الأرقام 
+                const sortVariants = (variants) => {
+                  return variants.sort((a, b) => {
+                    const aSizeName = a.size || '';
+                    const bSizeName = b.size || '';
+                    
+                    // ترتيب الحروف أولاً
+                    const letterOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+                    const aLetterIndex = letterOrder.indexOf(aSizeName.toUpperCase());
+                    const bLetterIndex = letterOrder.indexOf(bSizeName.toUpperCase());
+                    
+                    // إذا كان كلاهما حروف
+                    if (aLetterIndex !== -1 && bLetterIndex !== -1) {
+                      return aLetterIndex - bLetterIndex;
+                    }
+                    
+                    // إذا كان الأول حرف والثاني رقم
+                    if (aLetterIndex !== -1 && bLetterIndex === -1) return -1;
+                    if (aLetterIndex === -1 && bLetterIndex !== -1) return 1;
+                    
+                    // إذا كان كلاهما أرقام
+                    const aNum = parseInt(aSizeName);
+                    const bNum = parseInt(bSizeName);
+                    if (!isNaN(aNum) && !isNaN(bNum)) {
+                      return aNum - bNum;
+                    }
+                    
+                    // ترتيب أبجدي للحالات الأخرى
+                    return aSizeName.localeCompare(bSizeName);
+                  });
+                };
+
                 // الكود الأصلي للمنتجات الجديدة
                 const itemsToRender = allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants;
                 
-                return itemsToRender.map((variant, index) => {
+                // تطبيق الترتيب على القياسات
+                const sortedItemsToRender = sortVariants(itemsToRender);
+                
+                return sortedItemsToRender.map((variant, index) => {
                   if (!variant) return null;
                   
                   // التحقق من الفلترة حسب اللون في حالة وجود متغيرات فعلية
@@ -232,7 +280,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                   
                   return (
                     <div key={isNewProduct ? variant.sizeId : variant.id || index} 
-                         className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                         className="grid grid-cols-5 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                       
                       {/* القياس */}
                       <div className="text-center">
@@ -264,70 +312,19 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         )}
                       </div>
                       
-                      {/* التكلفة */}
+                      {/* الملاحظة التوضيحية */}
                       <div className="space-y-1">
-                         <Input 
-                           type="number" 
-                           placeholder="0"
-                           className="text-center"
-                           value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
-                           onChange={e => {
-                             const newCost = parseFloat(e.target.value) || 0;
-                             console.log(`💰 تحديث التكلفة للون ${color.name} قياس ${sizeName}:`, newCost);
-                             handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', newCost);
-                           }} 
-                           min="0"
-                           step="0.01"
-                         />
-                        </div>
-                        
-                        {/* سعر البيع */}
-                        <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="text-center font-medium"
-                             value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
-                             onChange={e => {
-                               const newPrice = parseFloat(e.target.value) || 0;
-                               console.log(`🏷️ تحديث السعر للون ${color.name} قياس ${sizeName}:`, newPrice);
-                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', newPrice);
-                             }} 
-                             min="0"
-                             step="0.01"
-                           />
-                        </div>
-                        
-                        {/* ربح الموظف */}
-                        <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0"
-                             className="text-center"
-                             value={isNewProduct ? (variantData.profitAmount || profitAmount || '') : (variantData.profit_amount || profitAmount || '')} 
-                             onChange={e => {
-                               const newProfitAmount = parseFloat(e.target.value) || 0;
-                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'profitAmount', newProfitAmount);
-                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'profit_amount', newProfitAmount);
-                             }} 
-                             min="0"
-                             step="100"
-                           />
-                        </div>
-                        
-                        {/* الملاحظة */}
-                        <div className="space-y-1">
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                 <Input 
-                                   type="text" 
-                                   placeholder="مثال: مناسب لوزن 50-60 كغ" 
-                                   className="text-center text-xs"
-                                   value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
-                                   onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
-                                 />
-                              </TooltipTrigger>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                               <Input 
+                                 type="text" 
+                                 placeholder="مثال: مناسب لوزن 50-60 كغ" 
+                                 className="text-center text-xs"
+                                 value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
+                                 onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                               />
+                            </TooltipTrigger>
                               <TooltipContent><p>تلميح ذكي للزبائن عن هذا القياس</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>

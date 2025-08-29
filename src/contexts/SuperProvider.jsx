@@ -12,7 +12,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
-import { useProductsDB } from '@/hooks/useProductsDB';
+import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
 
 const SuperContext = createContext();
@@ -91,15 +91,15 @@ export const SuperProvider = ({ children }) => {
   // أرباح وفواتير التسوية من السياق المتخصص (مع بقاء التوصيل عبر المزود الموحد)
   const { settlementInvoices } = useProfits() || { settlementInvoices: [] };
   
-  // استدعاء useProductsDB في المكان الصحيح
+  // استدعاء useProducts في المكان الصحيح
   const {
     addProduct: dbAddProduct,
     updateProduct: dbUpdateProduct,
     deleteProducts: dbDeleteProducts,
     updateVariantStock: dbUpdateVariantStock,
     getLowStockProducts: dbGetLowStockProducts,
-    refetch: dbRefetchProducts,
-  } = useProductsDB();
+    refreshProducts: dbRefetchProducts,
+  } = useProducts();
   
   // حالة البيانات الموحدة - نفس البنية القديمة بالضبط
   const [allData, setAllData] = useState({

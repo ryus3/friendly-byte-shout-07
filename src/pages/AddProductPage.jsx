@@ -385,13 +385,22 @@ const AddProductPage = () => {
                  <Button 
                    onClick={handleSubmit}
                    disabled={isSubmitting || isUploading || !settings}
-                   className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                   className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-medium"
                    size="sm"
                  >
-                    {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
-                    <span className="hidden sm:inline mr-2">
-                      {isSubmitting || isUploading ? "جاري الحفظ..." : isEditMode ? "حفظ التحديثات" : "حفظ المنتج"}
-                    </span>
+                    {isSubmitting || isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                        <span className="text-sm">جاري الحفظ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <PackagePlus className="w-4 h-4 ml-2" />
+                        <span className="text-sm sm:text-base">
+                          {isEditMode ? "حفظ التحديثات" : "حفظ المنتج"}
+                        </span>
+                      </>
+                    )}
                  </Button>
               </div>
               
