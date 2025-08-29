@@ -28,31 +28,34 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
   const buttonText = "تغيير الوضع";
 
   return (
-    <motion.div dir="rtl" variants={cardVariants} initial="initial" animate="animate" className={`relative p-5 rounded-xl shadow-lg overflow-hidden ${getCardStyle()}`}>
-      <Icon className="absolute -left-4 -bottom-4 w-28 h-28 opacity-10" />
-      <div className="relative z-10 flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4 flex-row-reverse">
-          <div className="flex-1 text-right">
-            <div className="flex items-center gap-3 mb-1 justify-end">
+    <motion.div variants={cardVariants} initial="initial" animate="animate" className={`relative p-5 rounded-xl shadow-lg overflow-hidden ${getCardStyle()}`}>
+      <Icon className="absolute -right-4 -bottom-4 w-28 h-28 opacity-10" />
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-lg bg-white/20 flex items-center justify-center">
+            <Icon className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
               <h3 className="font-bold text-xl">{title}</h3>
             </div>
-            <div className="text-sm opacity-90 text-right">
+            <div className="text-sm opacity-90">
               {isLocal ? (
                 <p>{description}</p>
               ) : (
                 isLoggedIn ? (
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <div className="flex items-center gap-2 flex-row-reverse">
-                      <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
                       <ShieldCheck className="w-5 h-5 text-emerald-300" />
+                      <span>الطلبات جاهزة للإرسال إلى شركة التوصيل</span>
                     </div>
                     {waseetUser?.username && (
                       <div className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-slate-900/90 via-blue-900/90 to-slate-900/90 backdrop-blur-sm border border-blue-400/30 shadow-2xl shadow-blue-500/25">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
                         <span className="bg-gradient-to-r from-sky-300 via-blue-200 to-cyan-300 bg-clip-text text-transparent font-bold text-sm tracking-wide">
                           {waseetUser.username.toUpperCase()}
                         </span>
-                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       </div>
                     )}
                   </div>
@@ -62,9 +65,6 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
               )}
             </div>
           </div>
-          <div className="w-14 h-14 rounded-lg bg-white/20 flex items-center justify-center">
-            <Icon className="w-7 h-7 text-white" />
-          </div>
         </div>
         <Button 
           type="button" 
@@ -73,8 +73,8 @@ const DeliveryStatusCard = ({ mode, activePartner, isLoggedIn, onManageClick, wa
           className="bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white backdrop-blur-sm" 
           onClick={onManageClick}
         >
+          <Truck className="w-4 h-4 ml-2" />
           {buttonText}
-          <Truck className="w-4 h-4 mr-2" />
         </Button>
       </div>
     </motion.div>

@@ -6,7 +6,7 @@ import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Textarea } from '@/components/ui/textarea';
 import { PlusCircle, Trash2, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/hooks/useCart';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const OrderDetailsForm = ({ 
@@ -32,7 +32,7 @@ const OrderDetailsForm = ({
   applyLoyaltyDelivery = false,
   onToggleLoyaltyDelivery
 }) => {
-  const { cart, removeFromCart } = useCart(true); // تمرير isEditMode = true
+  const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
   
   // حساب رسوم التوصيل مع إعفاء الولاء
