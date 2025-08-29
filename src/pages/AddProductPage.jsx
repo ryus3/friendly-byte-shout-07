@@ -311,6 +311,11 @@ const AddProductPage = () => {
         title: 'نجاح', 
         description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
       });
+      
+      // إعادة جلب البيانات لضمان ظهور المنتج
+      console.log('🔄 إعادة جلب البيانات بعد حفظ المنتج...');
+      await refetchProducts();
+      
       if (fromPurchases) {
         navigate(fromPurchases, { state: { productJustAdded: true } });
       } else {
@@ -389,6 +394,9 @@ const AddProductPage = () => {
                    size="sm"
                  >
                     {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+                    <span className="sm:hidden mr-2 text-xs">
+                      {isSubmitting || isUploading ? "حفظ..." : "حفظ"}
+                    </span>
                     <span className="hidden sm:inline mr-2">
                       {isSubmitting || isUploading ? "جاري الحفظ..." : isEditMode ? "حفظ التحديثات" : "حفظ المنتج"}
                     </span>
