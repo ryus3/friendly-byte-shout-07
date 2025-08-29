@@ -14,42 +14,49 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     console.log('🔍 EditOrderDialog - Raw order data received:', order);
     console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
     
-    // تحويل المنتجات لصيغة cart items - استخدم order_items بدلاً من items
+    // تحويل المنتجات لصيغة cart items مع product_id و variant_id للتحميل الصحيح
     const cartItems = (order.order_items || order.items || []).map(item => ({
       id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
       productId: item.product_id,
       variantId: item.variant_id,
       productName: item.productname || item.product_name || 'منتج',
+      product_name: item.productname || item.product_name || 'منتج',
       size: item.size || '',
       color: item.color || '',
       price: item.unit_price || item.price || 0,
+      unit_price: item.unit_price || item.price || 0,
       quantity: item.quantity || 1,
       total: (item.unit_price || item.price || 0) * (item.quantity || 1),
       image: item.image || '/placeholder.svg',
       barcode: item.barcode || '',
-      sku: item.sku || ''
+      sku: item.sku || '',
+      // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
+      product_id: item.product_id,
+      variant_id: item.variant_id
     }));
 
     console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
 
     const editData = {
-      // معلومات العميل
+      // معلومات العميل - مع ضمان وجود جميع البيانات
       customer_name: order.customer_name || '',
       customer_phone: order.customer_phone || '',
-      customer_phone2: order.customer_phone2 || '',
-      customer_city: order.customer_city || '',
-      customer_province: order.customer_province || order.region || '',
-      customer_address: order.customer_address || '',
+      customer_phone2: order.customer_phone2 || order.second_phone || '',
+      customer_city: order.customer_city || order.city || '',
+      customer_province: order.customer_province || order.region || order.province || '',
+      customer_address: order.customer_address || order.address || '',
       
-      // تفاصيل الطلب
+      // تفاصيل الطلب - مع حساب صحيح للأسعار
       notes: order.notes || '',
-      total_amount: order.total_amount || 0,
+      total_amount: order.total_amount || order.final_amount || 0,
       delivery_fee: order.delivery_fee || 0,
+      // حساب الإجمالي مع رسوم التوصيل
+      final_total: (order.total_amount || order.final_amount || 0) + (order.delivery_fee || 0),
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
       
-      // المنتجات
+      // المنتجات - مع معرفات صحيحة للتحميل
       items: cartItems,
       
       // بيانات إضافية للتعديل
@@ -73,12 +80,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[95vh] p-0 gap-0 bg-gradient-to-br from-background/95 via-background to-background/90 backdrop-blur-lg">
+      <DialogContent 
+        className="max-w-7xl max-h-[95vh] p-0 gap-0 bg-gradient-to-br from-background/95 via-background to-background/90 backdrop-blur-lg"
+        dir="rtl"
+      >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
         <div className="relative h-full flex flex-col">
           <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right">
               ✏️ تعديل الطلب - {order?.order_number || order?.tracking_number}
+              <div className="text-sm text-muted-foreground font-normal mt-1">
+                تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : ''}
+                {order?.customer_name && ` • العميل: ${order.customer_name}`}
+              </div>
             </DialogTitle>
           </DialogHeader>
 
