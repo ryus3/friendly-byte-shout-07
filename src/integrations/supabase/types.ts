@@ -2142,6 +2142,7 @@ export type Database = {
           id: string
           images: string[] | null
           is_active: boolean
+          last_updated_by: string | null
           name: string
           profit_amount: number | null
           updated_at: string
@@ -2157,6 +2158,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean
+          last_updated_by?: string | null
           name: string
           profit_amount?: number | null
           updated_at?: string
@@ -2172,6 +2174,7 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean
+          last_updated_by?: string | null
           name?: string
           profit_amount?: number | null
           updated_at?: string

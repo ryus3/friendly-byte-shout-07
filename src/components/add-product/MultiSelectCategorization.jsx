@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
 import { Check, ChevronDown, Tag, Package, Calendar, Building2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import AddEditDepartmentDialog from '@/components/manage-variants/AddEditDepartmentDialog';
 import AddEditCategoryDialog from '@/components/manage-variants/AddEditCategoryDialog';
@@ -43,6 +43,45 @@ const MultiSelectCategorization = ({
   const [seasonOccasionDialogOpen, setSeasonOccasionDialogOpen] = useState(false);
 
   // البيانات تأتي من النظام التوحيدي
+
+  // حالة تحميل البيانات المحسنة مع معالجة المنتجات بدون تصنيفات
+  const [dataReady, setDataReady] = useState(false);
+  const [showEmptyState, setShowEmptyState] = useState(false);
+  
+  // التحقق من جاهزية البيانات للعرض
+  useEffect(() => {
+    const hasBasicData = !loading && categories.length > 0 && departments.length > 0;
+    
+    if (hasBasicData) {
+      setDataReady(true);
+      
+      // التحقق من وجود تصنيفات محددة للمنتج
+      const hasSelectedData = selectedCategories?.length > 0 || 
+                             selectedDepartments?.length > 0 || 
+                             selectedProductTypes?.length > 0 || 
+                             selectedSeasonsOccasions?.length > 0;
+      
+      // إذا لم تكن هناك تصنيفات محددة، اعرض حالة فارغة مع إمكانية الإضافة
+      if (!hasSelectedData) {
+        setShowEmptyState(true);
+      }
+    }
+  }, [loading, categories, departments, productTypes, seasonsOccasions, selectedCategories, selectedDepartments, selectedProductTypes, selectedSeasonsOccasions]);
+
+  // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
+  const getSelectedDisplayItems = (selectedIds, items, label) => {
+    if (!selectedIds || selectedIds.length === 0) return [];
+    
+    return selectedIds.map(id => {
+      const item = items.find(i => i.id === id);
+      if (item) {
+        return { id, name: item.name, found: true };
+      } else {
+        // عرض ID مؤقت حتى يتم تحميل الاسم
+        return { id, name: `${label} (${id})`, found: false };
+      }
+    });
+  };
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -125,7 +164,7 @@ const MultiSelectCategorization = ({
     });
   };
 
-  if (loading) {
+  if (loading || !dataReady) {
     return (
       <Card>
         <CardHeader>
@@ -135,11 +174,25 @@ const MultiSelectCategorization = ({
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2"></div>
+            <div className="text-xs text-muted-foreground mt-2">جاري تحميل بيانات التصنيفات...</div>
           </div>
         </CardContent>
       </Card>
     );
   }
+
+  // التحقق إذا كانت هناك تصنيفات محددة لإخفاء الحالة الفارغة
+  const hasAnySelections = selectedCategories?.length > 0 || 
+                           selectedDepartments?.length > 0 || 
+                           selectedProductTypes?.length > 0 || 
+                           selectedSeasonsOccasions?.length > 0;
+
+  // إخفاء الحالة الفارغة إذا تم تحديد أي تصنيفات
+  useEffect(() => {
+    if (hasAnySelections) {
+      setShowEmptyState(false);
+    }
+  }, [hasAnySelections]);
 
   return (
     <Card>
@@ -277,7 +330,14 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             ) : (
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
-                if (!item) return null;
+                if (!item) {
+                  // عرض معرف مؤقت مع تصميم مميز
+                  return (
+                    <Badge key={itemId} variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                      <span className="text-xs">ID: {itemId}</span>
+                    </Badge>
+                  );
+                }
                 return (
                   <Badge key={item.id} variant="secondary" className="gap-1">
                     {item.name}

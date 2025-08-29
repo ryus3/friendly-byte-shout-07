@@ -202,12 +202,13 @@ const ManageProductsPage = () => {
         
 
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/') } className="w-full sm:w-auto">
-                <ArrowRight className="h-4 w-4 ml-2" />
-                رجوع
-            </Button>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-center sm:text-right">إدارة المنتجات</h1>
+        <div className="text-center space-y-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                إدارة المنتجات
+            </h1>
+            <p className="text-muted-foreground text-sm">
+                إضافة وتعديل وحذف المنتجات في النظام
+            </p>
         </div>
 
         <ManageProductsToolbar
