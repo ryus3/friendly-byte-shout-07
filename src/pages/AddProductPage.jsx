@@ -7,7 +7,7 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2, QrCode } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
