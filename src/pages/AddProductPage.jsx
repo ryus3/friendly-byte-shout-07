@@ -340,7 +340,7 @@ const AddProductPage = () => {
     if (settings && sizes.length > 0) {
         generateVariants();
     }
-  }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
+  }, [selectedColors.length, sizeType, Object.keys(colorSizeTypes).length, sizes.length, productInfo.price, productInfo.costPrice, settings, isEditMode]);
 
   // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
   useEffect(() => {
@@ -400,7 +400,7 @@ const AddProductPage = () => {
     if (sizes.length > 0 && selectedColors.length > 0) {
       generateVariantsForNewColors();
     }
-  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
+  }, [selectedColors.length, sizes.length, Object.keys(colorSizeTypes).length, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
 
   // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {
@@ -430,9 +430,22 @@ const AddProductPage = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [
-    productInfo, generalImages, selectedCategories, selectedProductTypes,
-    selectedSeasonsOccasions, selectedDepartments, selectedColors, sizeType,
-    colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
+    productInfo.name, 
+    productInfo.price, 
+    productInfo.costPrice, 
+    productInfo.description, 
+    generalImages.length,
+    selectedCategories.length,
+    selectedProductTypes.length,
+    selectedSeasonsOccasions.length,
+    selectedDepartments.length,
+    selectedColors.length,
+    sizeType,
+    Object.keys(colorSizeTypes).length,
+    variants.length,
+    Object.keys(colorImages).length,
+    isEditMode,
+    setTempProductData
   ]);
 
   const handleSubmit = async (e) => {
