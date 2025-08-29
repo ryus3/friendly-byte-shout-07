@@ -310,24 +310,32 @@ const AddProductPage = () => {
     }
   }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
 
-  // حفظ البيانات تلقائياً كلما تغيرت
+  // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {
-    if (!isEditMode) {
-      const dataToSave = {
-        productInfo,
-        generalImages,
-        selectedCategories,
-        selectedProductTypes,
-        selectedSeasonsOccasions,
-        selectedDepartments,
-        selectedColors,
-        sizeType,
-        colorSizeTypes,
-        variants,
-        colorImages,
-        lastSaved: Date.now()
-      };
-      setTempProductData(dataToSave);
+    if (!isEditMode && (productInfo.name?.trim() || selectedColors.length > 0)) {
+      const timeoutId = setTimeout(() => {
+        const dataToSave = {
+          productInfo,
+          generalImages: generalImages.map(img => img?.name || img), // حفظ أسماء الملفات فقط
+          selectedCategories,
+          selectedProductTypes,
+          selectedSeasonsOccasions,
+          selectedDepartments,
+          selectedColors,
+          sizeType,
+          colorSizeTypes,
+          variants,
+          colorImages: Object.keys(colorImages), // حفظ معرفات الألوان فقط
+          lastSaved: Date.now(),
+          savedAt: new Date().toISOString()
+        };
+        setTempProductData(dataToSave);
+        
+        // عرض مؤشر الحفظ
+        console.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
+      }, 2000); // حفظ بعد ثانيتين من عدم النشاط
+
+      return () => clearTimeout(timeoutId);
     }
   }, [
     productInfo, generalImages, selectedCategories, selectedProductTypes,
@@ -509,9 +517,16 @@ const AddProductPage = () => {
                      </Button>
                    </div>
                    <div>
-                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                        {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-                      </h1>
+                      <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                          {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                        </h1>
+                        {tempProductData?.savedAt && !isEditMode && (
+                          <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">
+                            محفوظ: {new Date(tempProductData.savedAt).toLocaleTimeString('ar-EG')}
+                          </div>
+                        )}
+                      </div>
                      {selectedDepartment && (
                        <div className="flex items-center gap-2 mt-2">
                          <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -529,9 +544,16 @@ const AddProductPage = () => {
               
               {/* العنوان للهاتف */}
               <div className="md:hidden text-center">
-                 <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                   {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-                 </h1>
+                 <div className="flex items-center justify-center gap-2">
+                   <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                     {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                   </h1>
+                   {tempProductData?.savedAt && !isEditMode && (
+                     <div className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-center">
+                       محفوظ
+                     </div>
+                   )}
+                 </div>
                 {selectedDepartment && (
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <Building2 className="h-3 w-3 text-muted-foreground" />

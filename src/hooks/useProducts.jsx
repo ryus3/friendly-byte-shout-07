@@ -291,19 +291,47 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
 
   const updateProduct = useCallback(async (productId, productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress = () => {}) => {
     try {
+        const currentUserId = user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604';
+        
         console.log('🔄 بدء تحديث المنتج:', productId, productData);
         
+        // Upload new images first
+        let uploadedImagePaths = [];
+        if (imageFiles.general?.length > 0) {
+          for (let i = 0; i < imageFiles.general.length; i++) {
+            const file = imageFiles.general[i];
+            if (file && typeof file !== 'string') {
+              const uploadPath = await uploadImage(file, 'product-images', `products/${Date.now()}_${file.name}`);
+              if (uploadPath) {
+                uploadedImagePaths.push(uploadPath);
+              }
+            }
+            if (setUploadProgress) {
+              setUploadProgress(Math.round(((i + 1) / imageFiles.general.length) * 30));
+            }
+          }
+        }
+        
         // 1. Update product basic info
+        const updateData = {
+            name: productData.name,
+            description: productData.description,
+            base_price: parseFloat(productData.price) || 0,
+            cost_price: parseFloat(productData.costPrice) || 0,
+            profit_amount: parseFloat(productData.profitAmount) || 0,
+            is_active: productData.isVisible !== false,
+            updated_at: new Date().toISOString(),
+            last_updated_by: currentUserId
+        };
+
+        // Add images if uploaded
+        if (uploadedImagePaths.length > 0) {
+          updateData.images = uploadedImagePaths;
+        }
+
         const { error: productUpdateError } = await supabase
             .from('products')
-            .update({
-                name: productData.name,
-                description: productData.description,
-                base_price: parseFloat(productData.price) || 0,
-                cost_price: parseFloat(productData.costPrice) || 0,
-                profit_amount: parseFloat(productData.profitAmount) || 0,
-                is_active: productData.isVisible !== false,
-            })
+            .update(updateData)
             .eq('id', productId);
 
         if (productUpdateError) {
@@ -667,7 +695,14 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           console.log('✅ تم تحديث القائمة المحلية بنجاح');
         }
 
-        // إضافة إشعار النجاح
+        // إضافة توست النجاح الفوري
+        toast({
+          title: "تم التحديث بنجاح",
+          description: `تم تحديث المنتج "${productData.name}" وحفظ جميع التغييرات`,
+          variant: "default"
+        });
+
+        // إضافة إشعار النجاح للنظام
         if (addNotification) {
             addNotification({
               title: '✅ تم تحديث المنتج بنجاح',
@@ -699,36 +734,116 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
   }, []);
 
   const deleteProducts = useCallback(async (productIds) => {
+    if (!productIds?.length) return { success: false, error: 'لا توجد منتجات لحذفها' };
+    
+    console.log("🗑️ بدء حذف المنتجات:", productIds);
+    
     try {
-        const imagePaths = [];
+        const failedDeletions = [];
+        const successfulDeletions = [];
+
         for (const productId of productIds) {
-            const { data: files, error } = await supabase.storage.from('product-images').list(`public/${productId}`, {
-                limit: 100,
-                offset: 0,
+            try {
+                console.log(`🗑️ حذف المنتج: ${productId}`);
+                
+                // جلب بيانات المنتج والعلاقات المرتبطة به
+                const { data: productData, error: productError } = await supabase
+                    .from('products')
+                    .select('*, variants:product_variants(*), inventory(*)')
+                    .eq('id', productId)
+                    .single();
+
+                if (productError && productError.code !== 'PGRST116') {
+                    console.warn(`لا يمكن جلب المنتج ${productId}:`, productError);
+                }
+
+                // حذف جميع البيانات المرتبطة أولاً
+                if (productData) {
+                    console.log(`🧹 تنظيف البيانات المرتبطة للمنتج ${productId}`);
+                    
+                    // حذف المخزون
+                    await supabase.from('inventory').delete().eq('product_id', productId);
+                    
+                    // حذف المتغيرات
+                    await supabase.from('product_variants').delete().eq('product_id', productId);
+                    
+                    // حذف العلاقات
+                    await Promise.all([
+                        supabase.from('product_categories').delete().eq('product_id', productId),
+                        supabase.from('product_departments').delete().eq('product_id', productId),
+                        supabase.from('product_product_types').delete().eq('product_id', productId),
+                        supabase.from('product_seasons_occasions').delete().eq('product_id', productId),
+                        supabase.from('qr_codes').delete().eq('product_id', productId)
+                    ]);
+                    
+                    // حذف الصور من التخزين
+                    if (productData.images && Array.isArray(productData.images)) {
+                        for (const imageUrl of productData.images) {
+                            try {
+                                const pathSegments = imageUrl.split('/');
+                                const fileName = pathSegments[pathSegments.length - 1];
+                                const bucketPath = `products/${fileName}`;
+                                
+                                await supabase.storage
+                                    .from('product-images')
+                                    .remove([bucketPath]);
+                                    
+                                console.log(`🖼️ تم حذف الصورة: ${bucketPath}`);
+                            } catch (imgError) {
+                                console.warn(`خطأ في حذف الصورة ${imageUrl}:`, imgError);
+                            }
+                        }
+                    }
+                }
+
+                // أخيراً حذف المنتج نفسه
+                const { error: deleteError } = await supabase
+                    .from('products')
+                    .delete()
+                    .eq('id', productId);
+
+                if (deleteError) {
+                    console.error(`فشل حذف المنتج ${productId}:`, deleteError);
+                    failedDeletions.push(productId);
+                } else {
+                    console.log(`✅ تم حذف المنتج بالكامل: ${productId}`);
+                    successfulDeletions.push(productId);
+                }
+            } catch (error) {
+                console.error(`خطأ في حذف المنتج ${productId}:`, error);
+                failedDeletions.push(productId);
+            }
+        }
+
+        // تحديث الحالة المحلية فوراً
+        if (successfulDeletions.length > 0) {
+            setProducts(prev => prev.filter(p => !successfulDeletions.includes(p.id)));
+            
+            // عرض رسالة النجاح فوراً
+            toast({
+                title: "تم الحذف بنجاح",
+                description: `تم حذف ${successfulDeletions.length} منتج(ات) نهائياً من النظام`,
+                variant: "default"
             });
-            if (error) {
-                console.warn(`Could not list images for product ${productId}:`, error.message);
-            } else if (files) {
-                files.forEach(file => imagePaths.push(`public/${productId}/${file.name}`));
-            }
         }
 
-        const { error: dbError } = await supabase.from('products').delete().in('id', productIds);
-        if (dbError) throw dbError;
-        
-        if (imagePaths.length > 0) {
-            const { error: storageError } = await supabase.storage.from('product-images').remove(imagePaths);
-            if (storageError) {
-                console.error("Error deleting product images from storage:", storageError);
-                toast({ title: 'تحذير', description: 'تم حذف المنتجات من قاعدة البيانات ولكن فشل حذف بعض الصور.', variant: 'default' });
-            }
+        if (failedDeletions.length > 0 && successfulDeletions.length === 0) {
+            return { success: false, error: `فشل حذف جميع المنتجات المحددة` };
+        } else if (failedDeletions.length > 0) {
+            return { 
+                success: true, 
+                warning: `تم حذف ${successfulDeletions.length} منتج، فشل حذف ${failedDeletions.length} منتج` 
+            };
         }
 
-        setProducts(prev => prev.filter(p => !productIds.includes(p.id)));
-        return { success: true };
-    } catch(error) {
-        console.error("Error deleting products:", error);
-        toast({ title: 'خطأ', description: 'فشل حذف المنتجات.', variant: 'destructive' });
+        return { success: true, deleted: successfulDeletions.length };
+    } catch (error) {
+        console.error('خطأ في حذف المنتجات:', error);
+        toast({ 
+            title: 'خطأ', 
+            description: `فشل حذف المنتجات: ${error.message}`, 
+            variant: 'destructive' 
+        });
         return { success: false, error: error.message };
     }
   }, [setProducts]);

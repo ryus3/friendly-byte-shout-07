@@ -44,14 +44,29 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
   };
 
   const handleDelete = async () => {
-    const { success } = await deleteProducts([product.id]);
-    if (success) {
-      toast({ title: "نجاح", description: `تم حذف المنتج "${product.name}" بنجاح.` });
-      if (onProductUpdate) onProductUpdate();
-    } else {
-      toast({ title: "خطأ", description: "فشل حذف المنتج.", variant: "destructive" });
+    try {
+      const { success } = await deleteProducts([product.id]);
+      if (success) {
+        // Success message is already shown in deleteProducts function
+        if (onProductUpdate) onProductUpdate();
+        if (refetchProducts) refetchProducts();
+      } else {
+        toast({ 
+          title: "خطأ", 
+          description: "فشل حذف المنتج.", 
+          variant: "destructive" 
+        });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء الحذف.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsDeleteOpen(false);
     }
-    setIsDeleteOpen(false);
   };
   
   const handleEditProduct = () => {

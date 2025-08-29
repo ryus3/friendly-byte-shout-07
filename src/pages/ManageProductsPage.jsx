@@ -79,22 +79,37 @@ const ManageProductsPage = () => {
   }, [searchFilteredProducts]);
 
   const handleDeleteSelected = async () => {
-    const { success } = await deleteProducts(selectedProductIds);
-    if (success) {
+    try {
+      const { success, warning } = await deleteProducts(selectedProductIds);
+      if (success) {
+        // Clear selection immediately
+        setSelectedProductIds([]);
+        
+        // Additional success feedback if needed
+        if (warning) {
+          toast({
+            title: "تحذير",
+            description: warning,
+            variant: 'default'
+          });
+        }
+      } else {
+        toast({
+          title: "خطأ",
+          description: "فشل حذف المنتجات المحددة.",
+          variant: 'destructive'
+        });
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
       toast({
-        title: "تم الحذف",
-        description: `تم حذف ${selectedProductIds.length} منتج(ات) بنجاح.`,
-        variant: 'success'
-      });
-      setSelectedProductIds([]);
-    } else {
-       toast({
         title: "خطأ",
-        description: "فشل حذف المنتجات المحددة.",
+        description: "حدث خطأ أثناء الحذف.",
         variant: 'destructive'
       });
+    } finally {
+      setIsDeleteAlertOpen(false);
     }
-    setIsDeleteAlertOpen(false);
   };
   
   const handleDeleteSingle = useCallback((product) => {
