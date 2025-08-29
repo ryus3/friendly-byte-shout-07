@@ -29,6 +29,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
+  
+  // حماية من البيانات غير الصحيحة في cart
+  console.log('🛒 QuickOrderContent - Cart state debug:', { cart: Array.isArray(cart) ? cart.length : 'not array', aiOrderData: !!aiOrderData });
+  // حالة التعديل
+  
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -159,45 +164,55 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setActivePartner('local');
         }
         
-        // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
-        if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-          console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
-          clearCart();
-          
-          aiOrderData.items.forEach(item => {
-            if (item && item.product_id && item.variant_id) {
-              console.log('🔍 Loading real product for:', item);
-              
-              // استخدام البيانات الأصلية مع المعرفات الصحيحة
-              const tempProduct = {
-                id: item.product_id,
-                name: item.productName || item.product_name || 'منتج',
-                images: [item.image || '/placeholder.svg'],
-                price: item.unit_price || item.price || 0,
-                cost_price: item.costPrice || item.cost_price || 0
-              };
-              
-              const tempVariant = {
-                id: item.variant_id,
-                sku: item.sku || '',
-                color: item.color || '',
-                size: item.size || '',
-                quantity: item.stock || 999,
-                reserved: 0,
-                price: item.unit_price || item.price || 0,
-                cost_price: item.costPrice || item.cost_price || 0,
-                image: item.image || '/placeholder.svg',
-                barcode: item.barcode || ''
-              };
-              
-              addToCart(tempProduct, tempVariant, item.quantity || 1, false, true); // تجاهل فحص المخزون في وضع التعديل
-              console.log('✅ Added product to cart for edit mode:', { tempProduct, tempVariant, quantity: item.quantity });
-            }
-          });
-          console.log('✅ Cart loaded successfully for edit mode');
-        } else {
-          console.log('⚠️ No items found in aiOrderData for edit mode');
-        }
+         // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
+         if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+           console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
+           clearCart();
+           
+           aiOrderData.items.forEach((item, index) => {
+             if (item && item.product_id && item.variant_id) {
+               console.log(`🔍 Loading real product ${index + 1}:`, item);
+               
+               // التحقق من صحة البيانات قبل المعالجة
+               const safeItem = {
+                 ...item,
+                 quantity: item.quantity || 1,
+                 price: item.unit_price || item.price || 0,
+                 cost_price: item.costPrice || item.cost_price || 0
+               };
+               
+               // استخدام البيانات الأصلية مع المعرفات الصحيحة
+               const tempProduct = {
+                 id: safeItem.product_id,
+                 name: safeItem.productName || safeItem.product_name || 'منتج',
+                 images: [safeItem.image || '/placeholder.svg'],
+                 price: safeItem.price,
+                 cost_price: safeItem.cost_price
+               };
+               
+               const tempVariant = {
+                 id: safeItem.variant_id,
+                 sku: safeItem.sku || '',
+                 color: safeItem.color || '',
+                 size: safeItem.size || '',
+                 quantity: safeItem.stock || 999,
+                 reserved: 0,
+                 price: safeItem.price,
+                 cost_price: safeItem.cost_price,
+                 image: safeItem.image || '/placeholder.svg',
+                 barcode: safeItem.barcode || ''
+               };
+               
+               console.log(`✅ Adding product ${index + 1} to cart for edit mode:`, { tempProduct, tempVariant, quantity: safeItem.quantity });
+               addToCart(tempProduct, tempVariant, safeItem.quantity, false, true); // تجاهل فحص المخزون في وضع التعديل
+             } else {
+               console.warn(`⚠️ Skipping invalid item ${index + 1}:`, item);
+             }
+           });
+           console.log('✅ Cart loaded successfully for edit mode');
+         } else {
+           console.log('⚠️ No items found in aiOrderData for edit mode');
+         }
         
         return; // انتهاء وضع التعديل
       }
@@ -517,7 +532,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   });
 
   // حساب المجاميع
-  const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
+   const subtotal = useMemo(() => {
+     // أضافة logging مفصل لتشخيص الخطأ
+     console.log('🔍 Calculating subtotal - Cart debug:', {
+       cart,
+       isArray: Array.isArray(cart),
+       length: cart?.length,
+       items: cart?.map((item, index) => ({
+         index,
+         hasQuantity: 'quantity' in (item || {}),
+         hasTotal: 'total' in (item || {}),
+         quantity: item?.quantity,
+         total: item?.total,
+         isValid: item && typeof item.total === 'number'
+       }))
+     });
+     
+     const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
+     const result = safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
+     console.log('✅ Subtotal calculated:', result);
+     return result;
+   }, [cart]);
   const deliveryFee = useMemo(() => {
     if (activePartner === 'local') {
       return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
@@ -944,13 +979,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_province: formData.region,
         notes: formData.notes,
         delivery_partner: activePartner === 'alwaseet' ? 'alwaseet' : 'محلي',
-        items: cart.map(item => ({
-          product_id: item.productId,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.total
-        })),
+         items: cart.filter(item => item && item.quantity).map(item => ({
+           product_id: item.productId,
+           variant_id: item.variantId,
+           quantity: item.quantity || 0,
+           unit_price: item.price || 0,
+           total_price: item.total || 0
+         })),
         total_amount: subtotal,
         delivery_fee: deliveryFee,
         final_amount: finalTotal,
@@ -964,14 +999,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً
       if (activePartner === 'alwaseet' && isWaseetLoggedIn && originalOrder?.tracking_number) {
         // تحضير المنتجات للوسيط بالتنسيق الصحيح
-        const cartItems = cart.map(item => ({
-          product_name: item.productName || item.name,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.price,
-          note: ''
-        }));
+         const cartItems = cart.filter(item => item && item.quantity).map(item => ({
+           product_name: item.productName || item.name || 'منتج غير محدد',
+           color: item.color || '',
+           size: item.size || '',
+           quantity: item.quantity || 0,
+           price: item.price || 0,
+           note: ''
+         }));
 
         const alwaseetData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
@@ -1208,8 +1243,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     try {
       console.log('🔄 بدء تحديث الطلب - وضع التعديل');
       
-      // حساب الإجمالي الجديد
-      const newSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
+       // حساب الإجمالي الجديد مع حماية من الأخطاء
+       const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
+       const newSubtotal = safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
       const newTotal = newSubtotal - discount;
       const newFinalTotal = newTotal + deliveryFee;
       
