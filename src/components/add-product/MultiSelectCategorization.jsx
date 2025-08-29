@@ -68,7 +68,7 @@ const MultiSelectCategorization = ({
     }
   }, [loading, categories, departments, productTypes, seasonsOccasions, selectedCategories, selectedDepartments, selectedProductTypes, selectedSeasonsOccasions]);
 
-  // التحقق من وجود عناصر محددة وإظهارها مع معالجة محسنة للأسماء
+  // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
   const getSelectedDisplayItems = (selectedIds, items, label) => {
     if (!selectedIds || selectedIds.length === 0) return [];
     
@@ -77,8 +77,8 @@ const MultiSelectCategorization = ({
       if (item) {
         return { id, name: item.name, found: true };
       } else {
-        // عرض "جاري تحميل..." بدلاً من ID مؤقت
-        return { id, name: `جاري تحميل ${label}...`, found: false };
+        // عرض ID مؤقت حتى يتم تحميل الاسم
+        return { id, name: `${label} (${id})`, found: false };
       }
     });
   };
