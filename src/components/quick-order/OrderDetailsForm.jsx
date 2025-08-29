@@ -30,7 +30,8 @@ const OrderDetailsForm = ({
   applyLoyaltyDiscount = true,
   onToggleLoyaltyDiscount,
   applyLoyaltyDelivery = false,
-  onToggleLoyaltyDelivery
+  onToggleLoyaltyDelivery,
+  isEditMode = false
 }) => {
   const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();

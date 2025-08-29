@@ -85,19 +85,19 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         dir="rtl"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-        <div className="relative h-full flex flex-col">
-          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right">
+        <div className="relative h-full flex flex-col" dir="rtl">
+          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm" dir="rtl">
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right" dir="rtl">
               ✏️ تعديل الطلب - {order?.order_number || order?.tracking_number}
-              <div className="text-sm text-muted-foreground font-normal mt-1">
+              <div className="text-sm text-muted-foreground font-normal mt-1 text-right" dir="rtl">
                 تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : ''}
                 {order?.customer_name && ` • العميل: ${order.customer_name}`}
               </div>
             </DialogTitle>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 p-0">
-            <div className="p-6">
+          <ScrollArea className="flex-1 p-0" dir="rtl">
+            <div className="p-6" dir="rtl">
               {editData ? (
                 <QuickOrderContent
                   isDialog={true}
@@ -106,7 +106,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                   key={`edit-${order?.id}`} // لإعادة تحميل المكون عند تغيير الطلب
                 />
               ) : (
-                <div className="flex items-center justify-center h-64">
+                <div className="flex items-center justify-center h-64" dir="rtl">
                   <div className="text-center">
                     <h3 className="text-lg font-semibold text-muted-foreground">
                       خطأ في تحميل بيانات الطلب
