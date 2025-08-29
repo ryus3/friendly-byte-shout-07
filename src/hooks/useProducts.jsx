@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
-export const useProducts = (initialProducts, settings, addNotification, user, departments = [], allColors = [], sizes = []) => {
-  const [products, setProducts] = useState(initialProducts);
+export const useProducts = (initialProducts = [], settings = null, addNotification = null, user = null, departments = [], allColors = [], sizes = []) => {
+  const [products, setProducts] = useState(initialProducts || []);
 
   const uploadImage = async (file, bucket, path) => {
     if (typeof file === 'string') return file; // It's already a URL
@@ -19,7 +19,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
     return publicUrl;
   };
 
-  const addProduct = useCallback(async (productData, imageFiles, setUploadProgress) => {
+  const addProduct = useCallback(async (productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress = () => {}) => {
     try {
       console.log('🏗️ بدء إضافة المنتج:', productData.name);
       
@@ -287,9 +287,9 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
       console.error("Error adding product:", error);
       return { success: false, error: error.message };
     }
-  }, [settings, user]);
+  }, [settings, user, addNotification]);
 
-  const updateProduct = useCallback(async (productId, productData, imageFiles, setUploadProgress) => {
+  const updateProduct = useCallback(async (productId, productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress = () => {}) => {
     try {
         console.log('🔄 بدء تحديث المنتج:', productId, productData);
         
@@ -691,7 +691,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
         }
         return { success: false, error: error.message };
     }
-  }, [addNotification, user]);
+  }, [addNotification, user, settings]);
 
   const deleteProduct = useCallback(async (productId) => {
     toast({ title: 'تنبيه', description: 'حذف المنتج لم يتم تنفيذه بعد.' });
