@@ -21,20 +21,22 @@ const SortableColorItem = ({ item, onEdit, onDelete }) => {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-center gap-4 p-2 mb-2 border rounded-md bg-card"
+      className="flex items-center gap-2 md:gap-4 p-2 mb-2 border rounded-md bg-card"
     >
-      <div {...listeners} className="cursor-grab p-1">
-        <GripVertical className="w-5 h-5 text-muted-foreground" />
+      <div {...listeners} className="cursor-grab p-1 hidden md:block">
+        <GripVertical className="w-4 h-4 md:w-5 md:h-5 text-muted-foreground" />
       </div>
-      <div className="w-6 h-6 rounded-full border" style={{ backgroundColor: item.hex_code }}></div>
-      <span className="flex-grow font-medium">{item.name}</span>
-      <span className="text-sm text-muted-foreground">{item.hex_code}</span>
-      <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-        <Pencil className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)}>
-        <Trash2 className="w-4 h-4 text-destructive" />
-      </Button>
+      <div className="w-5 h-5 md:w-6 md:h-6 rounded-full border flex-shrink-0" style={{ backgroundColor: item.hex_code }}></div>
+      <span className="flex-grow font-medium text-sm md:text-base truncate">{item.name}</span>
+      <span className="text-xs md:text-sm text-muted-foreground hidden sm:block">{item.hex_code}</span>
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)}>
+          <Pencil className="w-3 h-3 md:w-4 md:h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(item.id)}>
+          <Trash2 className="w-3 h-3 md:w-4 md:h-4 text-destructive" />
+        </Button>
+      </div>
     </div>
   );
 };
@@ -45,7 +47,7 @@ const ColorsManager = () => {
   const [editingColor, setEditingColor] = useState(null);
 
   const sortedColors = useMemo(() => 
-    [...colors].sort((a, b) => a.order - b.order),
+    [...colors].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
     [colors]
   );
 
