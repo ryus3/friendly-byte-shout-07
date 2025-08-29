@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useFiltersData } from '@/hooks/useFiltersData';
 import { AddEditDepartmentDialog } from '@/components/manage-variants/AddEditDepartmentDialog';
 import { AddEditCategoryDialog } from '@/components/manage-variants/AddEditCategoryDialog';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون منفصل لعرض العناصر المفقودة والبحث عنها
 const MissingItemBadge = ({ itemId }) => {
