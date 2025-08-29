@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Package, Sparkles, TrendingUp, Plus, Tags, Palette, Ruler, Settings } from 'lucide-react';
@@ -10,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/use-toast';
 
 const AddProductPage = () => {
+  useScrollToTop(); // فتح الصفحة من الأعلى
   const navigate = useNavigate();
   const [departments, setDepartments] = useState([]);
   const [stats, setStats] = useState({

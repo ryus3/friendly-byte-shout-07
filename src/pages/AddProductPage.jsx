@@ -1,6 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ const SortableColorCard = React.memo((props) => {
 });
 
 const AddProductPage = () => {
+  useScrollToTop(); // فتح الصفحة من الأعلى
   const navigate = useNavigate();
   const location = useLocation();
   const fromPurchases = location.state?.from;

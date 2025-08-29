@@ -149,48 +149,45 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                            </div>
                          </div>
                          
-                         {/* الكمية */}
-                         <div className="space-y-1">
-                           <Input 
-                             type="number" 
-                             placeholder="0" 
-                             className="text-center font-medium"
-                             value={currentQuantity || ''} 
-                             onChange={e => {
-                               const newQuantity = parseInt(e.target.value) || 0;
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'quantity', newQuantity);
-                             }} 
-                             min="0"
-                           />
-                           {currentQuantity < 5 && currentQuantity > 0 && (
-                             <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
-                           )}
-                           {currentQuantity === 0 && (
-                             <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
-                           )}
-                         </div>
+                          {/* الكمية */}
+                          <div className="text-center">
+                            <Input 
+                              type="number" 
+                              placeholder="0" 
+                              className="text-center font-medium w-full"
+                              value={currentQuantity || ''} 
+                              onChange={e => {
+                                const newQuantity = parseInt(e.target.value) || 0;
+                                handleVariantChange(color.id, variant.size_id || variant.sizeId, 'quantity', newQuantity);
+                              }} 
+                              min="0"
+                            />
+                            {currentQuantity < 5 && currentQuantity > 0 && (
+                              <p className="text-xs text-orange-600 text-center mt-1">⚠️ مخزون منخفض</p>
+                            )}
+                          </div>
                          
-                         {/* الملاحظة التوضيحية */}
-                         <div className="space-y-1">
-                           <Input 
-                             type="text" 
-                             placeholder="مثال: مناسب لوزن 50-60 كغ"
-                             className="text-center text-xs"
-                             value={variant.hint || ''} 
-                             onChange={e => {
-                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
-                             }} 
-                           />
-                         </div>
+                          {/* الملاحظة التوضيحية */}
+                          <div className="text-center">
+                            <Input 
+                              type="text" 
+                              placeholder="مثال: مناسب لوزن 50-60 كغ"
+                              className="text-center text-xs w-full"
+                              value={variant.hint || ''} 
+                              onChange={e => {
+                                handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
+                              }} 
+                            />
+                          </div>
                          
-                         {/* QR كود */}
-                         <div className="text-center">
-                           <Dialog>
-                             <DialogTrigger asChild>
-                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                 <BarcodeIcon className="h-4 w-4" />
-                               </Button>
-                             </DialogTrigger>
+                          {/* QR كود */}
+                          <div className="text-center">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 mx-auto">
+                                  <BarcodeIcon className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
                              <DialogContent className="sm:max-w-md">
                                <DialogHeader>
                                  <DialogTitle>باركود المنتج</DialogTitle>
@@ -213,17 +210,17 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                            </Dialog>
                          </div>
                          
-                         {/* حذف */}
-                         <div className="text-center">
-                           <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             onClick={() => handleRemoveSizeFromColor(variant.size_id || variant.sizeId)}
-                             className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
-                         </div>
+                          {/* حذف */}
+                          <div className="text-center">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleRemoveSizeFromColor(variant.size_id || variant.sizeId)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mx-auto"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                       </div>
                     );
                   });
@@ -289,54 +286,50 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         </div>
                       </div>
                       
-                      {/* الكمية */}
-                      <div className="space-y-1">
-                         <Input 
-                           type="number" 
-                           placeholder="0" 
-                           className="text-center font-medium"
-                           value={currentQuantity || ''} 
-                           onChange={e => {
-                             const newQuantity = parseInt(e.target.value) || 0;
-                             console.log(`🔢 تحديث الكمية للون ${color.name} قياس ${sizeName}:`, newQuantity);
-                             handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', newQuantity);
-                           }} 
-                           min="0"
-                           step="1"
-                         />
-                        {currentQuantity < 5 && currentQuantity > 0 && (
-                          <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
-                        )}
-                        {currentQuantity === 0 && (
-                          <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
-                        )}
-                      </div>
+                       {/* الكمية */}
+                       <div className="text-center">
+                          <Input 
+                            type="number" 
+                            placeholder="0" 
+                            className="text-center font-medium w-full"
+                            value={currentQuantity || ''} 
+                            onChange={e => {
+                              const newQuantity = parseInt(e.target.value) || 0;
+                              console.log(`🔢 تحديث الكمية للون ${color.name} قياس ${sizeName}:`, newQuantity);
+                              handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', newQuantity);
+                            }} 
+                            min="0"
+                            step="1"
+                          />
+                         {currentQuantity < 5 && currentQuantity > 0 && (
+                           <p className="text-xs text-orange-600 text-center mt-1">⚠️ مخزون منخفض</p>
+                         )}
+                       </div>
                       
-                      {/* الملاحظة التوضيحية */}
-                      <div className="space-y-1">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                               <Input 
-                                 type="text" 
-                                 placeholder="مثال: مناسب لوزن 50-60 كغ" 
-                                 className="text-center text-xs"
-                                 value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
-                                 onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
-                               />
-                            </TooltipTrigger>
-                              <TooltipContent><p>تلميح ذكي للزبائن عن هذا القياس</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                       {/* الملاحظة التوضيحية */}
+                       <div className="text-center">
+                         <TooltipProvider>
+                           <Tooltip>
+                             <TooltipTrigger asChild>
+                                <Input 
+                                  type="text" 
+                                  placeholder="مثال: مناسب لوزن 50-60 كغ" 
+                                  className="text-center text-xs w-full"
+                                  value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
+                                  onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                                />
+                             </TooltipTrigger>
+                               <TooltipContent><p>تلميح ذكي للزبائن عن هذا القياس</p></TooltipContent>
+                             </Tooltip>
+                           </TooltipProvider>
+                         </div>
                         
-                        {/* الإجراءات */}
-                        <div className="flex justify-center gap-1">
-                          {/* زر الباركود */}
-                          <Dialog>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
+                         {/* QR كود */}
+                         <div className="text-center">
+                           <Dialog>
+                             <TooltipProvider>
+                               <Tooltip>
+                                 <TooltipTrigger asChild>
                                   <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
                                       <BarcodeIcon className="w-4 h-4" />
@@ -402,23 +395,24 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                             </DialogContent>
                           </Dialog>
                           
-                          {/* زر الحذف */}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10" 
-                                  onClick={() => handleRemoveSizeFromColor(isNewProduct ? variantData.sizeId : variantData.size_id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>حذف هذا القياس</p></TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
+                          {/* حذف */}
+                          <div className="text-center">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 mx-auto" 
+                                    onClick={() => handleRemoveSizeFromColor(isNewProduct ? variantData.sizeId : variantData.size_id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent><p>حذف هذا القياس</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
                       </div>
                     );
                   });
