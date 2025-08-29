@@ -144,6 +144,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           if (aiOrderData.editMode && aiOrderData.city_id && aiOrderData.region_id) {
             setSelectedCityId(aiOrderData.city_id);
             setSelectedRegionId(aiOrderData.region_id);
+            // تحديث formData أيضاً لضمان التزامن
+            setFormData(prev => ({
+              ...prev,
+              city_id: aiOrderData.city_id,
+              region_id: aiOrderData.region_id
+            }));
             console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
               city_id: aiOrderData.city_id,
               region_id: aiOrderData.region_id
@@ -1347,30 +1353,30 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         <>
             <div className="space-y-2">
               <Label>المدينة</Label>
-              <SearchableSelectFixed
-                value={formData.city_id}
-                onValueChange={(v) => handleSelectChange('city_id', v)}
-                options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
-                placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
-                searchPlaceholder="بحث في المدن..."
-                emptyText="لا توجد مدينة بهذا الاسم"
-                className={errors.city_id ? "border-red-500" : ""}
-                disabled={loadingCities || dataFetchError}
-              />
+               <SearchableSelectFixed
+                 value={selectedCityId || formData.city_id}
+                 onValueChange={(v) => handleSelectChange('city_id', v)}
+                 options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
+                 placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
+                 searchPlaceholder="بحث في المدن..."
+                 emptyText="لا توجد مدينة بهذا الاسم"
+                 className={errors.city_id ? "border-red-500" : ""}
+                 disabled={loadingCities || dataFetchError}
+               />
               {errors.city_id && <p className="text-sm text-red-500">{errors.city_id}</p>}
             </div>
             <div className="space-y-2">
               <Label>المنطقة او القضاء</Label>
-              <SearchableSelectFixed
-                value={formData.region_id}
-                onValueChange={(v) => handleSelectChange('region_id', v)}
-                options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
-                placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
-                searchPlaceholder="بحث في المناطق..."
-                emptyText="لا توجد منطقة بهذا الاسم"
-                className={errors.region_id ? "border-red-500" : ""}
-                disabled={!formData.city_id || loadingRegions || dataFetchError}
-              />
+               <SearchableSelectFixed
+                 value={selectedRegionId || formData.region_id}
+                 onValueChange={(v) => handleSelectChange('region_id', v)}
+                 options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
+                 placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
+                 searchPlaceholder="بحث في المناطق..."
+                 emptyText="لا توجد منطقة بهذا الاسم"
+                 className={errors.region_id ? "border-red-500" : ""}
+                 disabled={!selectedCityId && !formData.city_id || loadingRegions || dataFetchError}
+               />
               {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
             </div>
         </>
