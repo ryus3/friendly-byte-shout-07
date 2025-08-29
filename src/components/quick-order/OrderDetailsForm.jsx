@@ -117,17 +117,17 @@ const OrderDetailsForm = ({
             <div className="mt-4 p-4 bg-secondary/50 rounded-lg border space-y-2">
               <div className="flex justify-between text-sm">
                 <span>مجموع المنتجات:</span>
-                <span>{subtotal.toLocaleString()} د.ع</span>
+                <span>{(subtotal || 0).toLocaleString()} د.ع</span>
               </div>
               
               <div className="flex justify-between text-sm">
                 <span>رسوم التوصيل:</span>
-                <span>{deliveryFee.toLocaleString()} د.ع</span>
+                <span>{(deliveryFee || 0).toLocaleString()} د.ع</span>
               </div>
               
               <div className="flex justify-between text-sm font-medium border-t pt-2">
                 <span>المجموع الكلي:</span>
-                <span>{(subtotal + deliveryFee).toLocaleString()} د.ع</span>
+                <span>{((subtotal || 0) + (deliveryFee || 0)).toLocaleString()} د.ع</span>
               </div>
               
               {/* مزايا الولاء */}
@@ -141,7 +141,7 @@ const OrderDetailsForm = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-purple-700 dark:text-purple-300">
-                      {loyaltyDiscount.toLocaleString('ar')} د.ع
+                      {(loyaltyDiscount || 0).toLocaleString('ar')} د.ع
                     </span>
                     <input
                       type="checkbox"
@@ -163,7 +163,7 @@ const OrderDetailsForm = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-green-700 dark:text-green-300">
-                      {baseDeliveryFee.toLocaleString('ar')} د.ع
+                      {(baseDeliveryFee || 0).toLocaleString('ar')} د.ع
                     </span>
                     <input
                       type="checkbox"
@@ -186,10 +186,10 @@ const OrderDetailsForm = ({
                     type="number"
                     min="0"
                     max={subtotal}
-                    value={applyLoyaltyDiscount ? Math.max(0, discount - loyaltyDiscount) : discount} 
+                    value={applyLoyaltyDiscount ? Math.max(0, (discount || 0) - (loyaltyDiscount || 0)) : (discount || 0)} 
                     onChange={(e) => {
-                      const manualDiscount = Math.max(0, Math.min(subtotal, Number(e.target.value)));
-                      const totalDiscount = applyLoyaltyDiscount ? loyaltyDiscount + manualDiscount : manualDiscount;
+                      const manualDiscount = Math.max(0, Math.min((subtotal || 0), Number(e.target.value)));
+                      const totalDiscount = applyLoyaltyDiscount ? (loyaltyDiscount || 0) + manualDiscount : manualDiscount;
                       setDiscount(totalDiscount);
                     }} 
                     className="w-24 text-right"
@@ -198,16 +198,16 @@ const OrderDetailsForm = ({
                 </div>
               )}
               
-              {discount > 0 && (
+              {(discount || 0) > 0 && (
                 <div className="flex justify-between text-sm text-destructive">
                   <span>الخصم:</span>
-                  <span>-{discount.toLocaleString()} د.ع</span>
+                  <span>-{(discount || 0).toLocaleString()} د.ع</span>
                 </div>
               )}
               
               <div className="flex justify-between text-base font-semibold border-t pt-2">
                 <span>المجموع النهائي:</span>
-                <span className="text-primary">{finalTotal.toLocaleString()} د.ع</span>
+                <span className="text-primary">{(finalTotal || 0).toLocaleString()} د.ع</span>
               </div>
             </div>
           )}
