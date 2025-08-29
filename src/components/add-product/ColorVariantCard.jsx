@@ -330,70 +330,71 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                              <TooltipProvider>
                                <Tooltip>
                                  <TooltipTrigger asChild>
-                                  <DialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
-                                      <BarcodeIcon className="w-4 h-4" />
-                                    </Button>
-                                  </DialogTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent><p>عرض الباركود</p></TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle className="text-center">🏷️ باركود المتغير</DialogTitle>
-                                <p className="text-center text-muted-foreground text-sm">
-                                  {color.name} • {sizeName}
-                                </p>
-                              </DialogHeader>
-                              <div className="flex flex-col items-center justify-center p-6 space-y-4">
-                                {(() => {
-                                  const barcodeValue = isNewProduct ? variantData.barcode : variantData.barcode;
-                                  
-                                  if (barcodeValue && barcodeValue.trim() !== '') {
-                                    return (
-                                      <div className="text-center space-y-3">
-                                        <div className="p-4 bg-white rounded-lg border">
-                                          <Barcode 
-                                            value={barcodeValue} 
-                                            width={1.5}
-                                            height={40}
-                                            fontSize={10}
-                                            displayValue={true}
-                                            background="#ffffff"
-                                            lineColor="#000000"
-                                          />
-                                        </div>
-                                        <p className="font-mono text-sm bg-muted px-3 py-1 rounded">
-                                          {barcodeValue}
-                                        </p>
-                                      </div>
-                                    );
-                                  } else {
-                                    const previewBarcode = `PROD${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-                                    return (
-                                      <div className="text-center space-y-3">
-                                        <div className="p-4 bg-white rounded-lg border">
-                                          <Barcode 
-                                            value={previewBarcode} 
-                                            width={1.5}
-                                            height={40}
-                                            fontSize={10}
-                                            displayValue={true}
-                                            background="#ffffff"
-                                            lineColor="#000000"
-                                          />
-                                        </div>
-                                        <p className="text-muted-foreground text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded">
-                                          ⚠️ معاينة - سيتم توليد باركود حقيقي عند الحفظ
-                                        </p>
-                                      </div>
-                                    );
-                                  }
-                                })()}
-                              </div>
-                            </DialogContent>
-                          </Dialog>
+                                   <DialogTrigger asChild>
+                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-primary hover:bg-primary/10 mx-auto">
+                                       <BarcodeIcon className="w-4 h-4" />
+                                     </Button>
+                                   </DialogTrigger>
+                                 </TooltipTrigger>
+                                 <TooltipContent><p>عرض الباركود</p></TooltipContent>
+                               </Tooltip>
+                             </TooltipProvider>
+                             <DialogContent className="max-w-md">
+                               <DialogHeader>
+                                 <DialogTitle className="text-center">🏷️ باركود المتغير</DialogTitle>
+                                 <p className="text-center text-muted-foreground text-sm">
+                                   {color.name} • {sizeName}
+                                 </p>
+                               </DialogHeader>
+                               <div className="flex flex-col items-center justify-center p-6 space-y-4">
+                                 {(() => {
+                                   const barcodeValue = isNewProduct ? variantData.barcode : variantData.barcode;
+                                   
+                                   if (barcodeValue && barcodeValue.trim() !== '') {
+                                     return (
+                                       <div className="text-center space-y-3">
+                                         <div className="p-4 bg-white rounded-lg border">
+                                           <Barcode 
+                                             value={barcodeValue} 
+                                             width={1.5}
+                                             height={40}
+                                             fontSize={10}
+                                             displayValue={true}
+                                             background="#ffffff"
+                                             lineColor="#000000"
+                                           />
+                                         </div>
+                                         <p className="font-mono text-sm bg-muted px-3 py-1 rounded">
+                                           {barcodeValue}
+                                         </p>
+                                       </div>
+                                     );
+                                   } else {
+                                     const previewBarcode = `PROD${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+                                     return (
+                                       <div className="text-center space-y-3">
+                                         <div className="p-4 bg-white rounded-lg border">
+                                           <Barcode 
+                                             value={previewBarcode} 
+                                             width={1.5}
+                                             height={40}
+                                             fontSize={10}
+                                             displayValue={true}
+                                             background="#ffffff"
+                                             lineColor="#000000"
+                                           />
+                                         </div>
+                                         <p className="text-muted-foreground text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded">
+                                           ⚠️ معاينة - سيتم توليد باركود حقيقي عند الحفظ
+                                         </p>
+                                       </div>
+                                     );
+                                   }
+                                 })()}
+                               </div>
+                             </DialogContent>
+                           </Dialog>
+                         </div>
                           
                           {/* حذف */}
                           <div className="text-center">
