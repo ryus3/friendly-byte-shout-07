@@ -178,22 +178,87 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات مع معالجة المنتجات بدون تصنيفات
-        const categoriesData = editProductData.product_categories || [];
-        const productTypesData = editProductData.product_product_types || [];
-        const seasonsData = editProductData.product_seasons_occasions || [];
-        const departmentsData = editProductData.product_departments || [];
+        // تحميل التصنيفات مع معالجة شاملة للبيانات الموجودة
+        const categoriesData = editProductData.categories || editProductData.product_categories || [];
+        const productTypesData = editProductData.product_types || editProductData.product_product_types || [];
+        const seasonsData = editProductData.seasons_occasions || editProductData.product_seasons_occasions || [];
+        const departmentsData = editProductData.departments || editProductData.product_departments || [];
 
-        // تحديد التصنيفات (أو مصفوفة فارغة إذا لم توجد)
-        setSelectedCategories(categoriesData.map(pc => pc.category_id));
-        setSelectedProductTypes(productTypesData.map(pt => pt.product_type_id));
-        setSelectedSeasonsOccasions(seasonsData.map(so => so.season_occasion_id));
-        setSelectedDepartments(departmentsData.map(pd => pd.department_id));
+        console.log('📋 تحميل التصنيفات للمنتج:', {
+          categories: categoriesData,
+          productTypes: productTypesData,
+          seasons: seasonsData,
+          departments: departmentsData
+        });
+
+        // استخراج المعرفات من البيانات مع مراعاة البنية المختلفة
+        const extractCategoryIds = (data) => {
+          if (!data || data.length === 0) return [];
+          
+          // إذا كانت البيانات من نوع categories (علاقة مباشرة)
+          if (data[0]?.category_id) {
+            return data.map(item => item.category_id);
+          }
+          // إذا كانت البيانات من نوع categories.category (علاقة متداخلة)
+          if (data[0]?.category) {
+            return data.map(item => item.category.id);
+          }
+          // إذا كانت البيانات مباشرة (للمعرفات)
+          if (typeof data[0] === 'string') {
+            return data;
+          }
+          return [];
+        };
+
+        const extractProductTypeIds = (data) => {
+          if (!data || data.length === 0) return [];
+          if (data[0]?.product_type_id) return data.map(item => item.product_type_id);
+          if (data[0]?.product_type) return data.map(item => item.product_type.id);
+          if (typeof data[0] === 'string') return data;
+          return [];
+        };
+
+        const extractSeasonIds = (data) => {
+          if (!data || data.length === 0) return [];
+          if (data[0]?.season_occasion_id) return data.map(item => item.season_occasion_id);
+          if (data[0]?.season_occasion) return data.map(item => item.season_occasion.id);
+          if (typeof data[0] === 'string') return data;
+          return [];
+        };
+
+        const extractDepartmentIds = (data) => {
+          if (!data || data.length === 0) return [];
+          if (data[0]?.department_id) return data.map(item => item.department_id);
+          if (data[0]?.department) return data.map(item => item.department.id);
+          if (typeof data[0] === 'string') return data;
+          return [];
+        };
+
+        // تطبيق الاستخراج مع تسجيل النتائج
+        const categoryIds = extractCategoryIds(categoriesData);
+        const productTypeIds = extractProductTypeIds(productTypesData);
+        const seasonIds = extractSeasonIds(seasonsData);
+        const departmentIds = extractDepartmentIds(departmentsData);
+
+        console.log('🔍 المعرفات المستخرجة:', {
+          categoryIds,
+          productTypeIds,
+          seasonIds,
+          departmentIds
+        });
+
+        // تحديد التصنيفات
+        setSelectedCategories(categoryIds);
+        setSelectedProductTypes(productTypeIds);
+        setSelectedSeasonsOccasions(seasonIds);
+        setSelectedDepartments(departmentIds);
 
         // إضافة معرف خاص للمنتجات بدون تصنيفات
-        if (categoriesData.length === 0 && productTypesData.length === 0 && 
-            seasonsData.length === 0 && departmentsData.length === 0) {
+        if (categoryIds.length === 0 && productTypeIds.length === 0 && 
+            seasonIds.length === 0 && departmentIds.length === 0) {
           console.warn('⚠️ تحذير: المنتج "' + editProductData.name + '" لا يحتوي على أي تصنيفات');
+        } else {
+          console.log('✅ تم تحميل التصنيفات للمنتج "' + editProductData.name + '" بنجاح');
         }
 
         // تحميل الألوان والمتغيرات
@@ -467,10 +532,11 @@ const AddProductPage = () => {
       costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : null,
       profitAmount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
       profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : null,
-      selectedCategories,
-      selectedProductTypes,
-      selectedSeasonsOccasions,
-      selectedDepartments,
+      // إرسال التصنيفات فقط في وضع الإضافة أو إذا تم تعديلها
+      selectedCategories: isEditMode ? (selectedCategories?.length > 0 ? selectedCategories : undefined) : selectedCategories,
+      selectedProductTypes: isEditMode ? (selectedProductTypes?.length > 0 ? selectedProductTypes : undefined) : selectedProductTypes,
+      selectedSeasonsOccasions: isEditMode ? (selectedSeasonsOccasions?.length > 0 ? selectedSeasonsOccasions : undefined) : selectedSeasonsOccasions,
+      selectedDepartments: isEditMode ? (selectedDepartments?.length > 0 ? selectedDepartments : undefined) : selectedDepartments,
       variants: variants.map(v => ({
         ...v,
         quantity: parseInt(v.quantity) || 0,
@@ -479,6 +545,14 @@ const AddProductPage = () => {
       })),
       isVisible: true,
     };
+    
+    console.log('📤 بيانات التصنيفات المرسلة للتحديث:', {
+      selectedCategories: productData.selectedCategories,
+      selectedProductTypes: productData.selectedProductTypes,
+      selectedSeasonsOccasions: productData.selectedSeasonsOccasions,
+      selectedDepartments: productData.selectedDepartments,
+      isEditMode
+    });
     
     console.log('📦 بيانات المنتج النهائية للحفظ:', productData);
     

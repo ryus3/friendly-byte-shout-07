@@ -72,11 +72,15 @@ const MultiSelectCategorization = ({
   const getSelectedDisplayItems = (selectedIds, items, label) => {
     if (!selectedIds || selectedIds.length === 0) return [];
     
+    console.log(`🔍 فحص العناصر المحددة لـ ${label}:`, { selectedIds, items: items?.map(i => ({ id: i.id, name: i.name })) });
+    
     return selectedIds.map(id => {
       const item = items.find(i => i.id === id);
       if (item) {
+        console.log(`✅ تم العثور على ${label}:`, item.name);
         return { id, name: item.name, found: true };
       } else {
+        console.warn(`⚠️ لم يتم العثور على ${label} بالمعرف:`, id);
         // عرض ID مؤقت حتى يتم تحميل الاسم
         return { id, name: `${label} (${id})`, found: false };
       }
