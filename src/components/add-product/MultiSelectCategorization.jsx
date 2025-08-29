@@ -44,29 +44,19 @@ const MultiSelectCategorization = ({
 
   // البيانات تأتي من النظام التوحيدي
 
-  // حالة تحميل البيانات المحسنة مع معالجة المنتجات بدون تصنيفات
+  // حالة تحميل البيانات المحسنة
   const [dataReady, setDataReady] = useState(false);
-  const [showEmptyState, setShowEmptyState] = useState(false);
   
   // التحقق من جاهزية البيانات للعرض
   useEffect(() => {
     const hasBasicData = !loading && categories.length > 0 && departments.length > 0;
+    const hasAllData = hasBasicData && productTypes.length > 0 && seasonsOccasions.length > 0;
     
+    // إذا كانت البيانات الأساسية متوفرة، اعرضها فوراً
     if (hasBasicData) {
       setDataReady(true);
-      
-      // التحقق من وجود تصنيفات محددة للمنتج
-      const hasSelectedData = selectedCategories?.length > 0 || 
-                             selectedDepartments?.length > 0 || 
-                             selectedProductTypes?.length > 0 || 
-                             selectedSeasonsOccasions?.length > 0;
-      
-      // إذا لم تكن هناك تصنيفات محددة، اعرض حالة فارغة مع إمكانية الإضافة
-      if (!hasSelectedData) {
-        setShowEmptyState(true);
-      }
     }
-  }, [loading, categories, departments, productTypes, seasonsOccasions, selectedCategories, selectedDepartments, selectedProductTypes, selectedSeasonsOccasions]);
+  }, [loading, categories, departments, productTypes, seasonsOccasions]);
 
   // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
   const getSelectedDisplayItems = (selectedIds, items, label) => {
@@ -180,19 +170,6 @@ const MultiSelectCategorization = ({
       </Card>
     );
   }
-
-  // التحقق إذا كانت هناك تصنيفات محددة لإخفاء الحالة الفارغة
-  const hasAnySelections = selectedCategories?.length > 0 || 
-                           selectedDepartments?.length > 0 || 
-                           selectedProductTypes?.length > 0 || 
-                           selectedSeasonsOccasions?.length > 0;
-
-  // إخفاء الحالة الفارغة إذا تم تحديد أي تصنيفات
-  useEffect(() => {
-    if (hasAnySelections) {
-      setShowEmptyState(false);
-    }
-  }, [hasAnySelections]);
 
   return (
     <Card>
