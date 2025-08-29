@@ -1,14 +1,14 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2, QrCode, Save, AlertTriangle } from 'lucide-react';
+import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2, QrCode } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -16,7 +16,6 @@ import Loader from '@/components/ui/loader';
 import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/customSupabaseClient';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
 import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
@@ -43,15 +42,11 @@ const AddProductPage = () => {
   const location = useLocation();
   const fromPurchases = location.state?.from;
   const selectedDepartment = location.state?.selectedDepartment;
-  const editProductData = location.state?.editProduct;
+  const editProductData = location.state?.editProduct; // للتحديد إذا كنا في وضع التعديل
   const isEditMode = !!editProductData;
 
   const { addProduct, updateProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
-  
-  // استخدام localStorage للحفظ المؤقت
-  const [tempProductData, setTempProductData] = useLocalStorage('temp_product_data', null);
-  const [showTempDataAlert, setShowTempDataAlert] = useState(false);
   
   const [productInfo, setProductInfo] = useState({
     name: '', price: '', costPrice: '', description: '', profitAmount: '', profitPercentage: '',
@@ -75,91 +70,6 @@ const AddProductPage = () => {
     const typeToFilter = sizeType || 'letter';
     return sizes.filter(s => s.type === typeToFilter);
   }, [sizes, sizeType]);
-
-  // التحقق من وجود بيانات مؤقتة عند فتح الصفحة
-  useEffect(() => {
-    if (!isEditMode && tempProductData && Object.keys(tempProductData).length > 0) {
-      // التحقق من أن البيانات حديثة (أقل من 24 ساعة)
-      const savedTime = tempProductData.savedAt;
-      const now = Date.now();
-      const timeDiff = now - savedTime;
-      const hoursOld = timeDiff / (1000 * 60 * 60);
-      
-      if (hoursOld < 24) {
-        setShowTempDataAlert(true);
-      } else {
-        // مسح البيانات القديمة
-        setTempProductData(null);
-      }
-    }
-  }, [isEditMode, tempProductData, setTempProductData]);
-
-  // استعادة البيانات المؤقتة
-  const restoreTempData = useCallback(() => {
-    if (tempProductData) {
-      setProductInfo(tempProductData.productInfo || {});
-      setSelectedCategories(tempProductData.selectedCategories || []);
-      setSelectedProductTypes(tempProductData.selectedProductTypes || []);
-      setSelectedSeasonsOccasions(tempProductData.selectedSeasonsOccasions || []);
-      setSelectedDepartments(tempProductData.selectedDepartments || []);
-      setSelectedColors(tempProductData.selectedColors || []);
-      setSizeType(tempProductData.sizeType || 'letter');
-      setColorSizeTypes(tempProductData.colorSizeTypes || {});
-      setVariants(tempProductData.variants || []);
-      setColorImages(tempProductData.colorImages || {});
-      // ملاحظة: لا نستعيد الصور العامة للحفاظ على الأداء
-      setShowTempDataAlert(false);
-      toast({
-        title: '✅ تم استعادة البيانات',
-        description: 'تم استعادة البيانات المحفوظة مؤقتاً بنجاح',
-      });
-    }
-  }, [tempProductData]);
-
-  // مسح البيانات المؤقتة
-  const clearTempData = useCallback(() => {
-    setTempProductData(null);
-    setShowTempDataAlert(false);
-    toast({
-      title: 'تم مسح البيانات المؤقتة',
-      description: 'يمكنك البدء بإدخال بيانات جديدة',
-    });
-  }, [setTempProductData]);
-
-  // حفظ تلقائي للبيانات المؤقتة عند التغيير
-  useEffect(() => {
-    if (!isEditMode && !isSubmitting) {
-      // فقط في حالة وجود بيانات مفيدة
-      const hasData = productInfo.name || selectedColors.length > 0 || variants.length > 0;
-      
-      if (hasData) {
-        const dataToSave = {
-          productInfo,
-          selectedCategories,
-          selectedProductTypes,
-          selectedSeasonsOccasions,
-          selectedDepartments,
-          selectedColors,
-          sizeType,
-          colorSizeTypes,
-          variants,
-          colorImages,
-          savedAt: Date.now()
-        };
-        
-        // تأخير الحفظ للتقليل من عدد العمليات
-        const timeoutId = setTimeout(() => {
-          setTempProductData(dataToSave);
-        }, 1000);
-        
-        return () => clearTimeout(timeoutId);
-      }
-    }
-  }, [
-    productInfo, selectedCategories, selectedProductTypes, selectedSeasonsOccasions,
-    selectedDepartments, selectedColors, sizeType, colorSizeTypes, variants, 
-    colorImages, isEditMode, isSubmitting, setTempProductData
-  ]);
 
   // جلب الأقسام
   useEffect(() => {
@@ -399,11 +309,6 @@ const AddProductPage = () => {
     }
 
     if (result.success) {
-      // مسح البيانات المؤقتة بعد النجاح
-      if (!isEditMode) {
-        setTempProductData(null);
-      }
-      
       toast({ 
         title: 'نجاح', 
         description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
@@ -469,26 +374,6 @@ const AddProductPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         <div className="container mx-auto p-2 md:p-6 space-y-3 md:space-y-6">
           
-          {/* تنبيه البيانات المؤقتة */}
-          {showTempDataAlert && (
-            <Alert className="border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
-              <Save className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200">
-                <div className="flex items-center justify-between">
-                  <span>يوجد بيانات محفوظة مؤقتاً لمنتج لم يتم حفظه. هل تريد استعادتها؟</span>
-                  <div className="flex gap-2 ml-4">
-                    <Button onClick={restoreTempData} size="sm" variant="outline" className="text-xs">
-                      استعادة
-                    </Button>
-                    <Button onClick={clearTempData} size="sm" variant="ghost" className="text-xs">
-                      مسح
-                    </Button>
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
-          
           {/* Header محسن للهاتف */}
           <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border shadow-lg">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-blue-600/10" />
@@ -534,88 +419,71 @@ const AddProductPage = () => {
                         طباعة ملصقات QR
                      </Button>
                    </div>
+                   <div>
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                        {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                      </h1>
+                     {selectedDepartment && (
+                       <div className="flex items-center gap-2 mt-2">
+                         <Building2 className="h-4 w-4 text-muted-foreground" />
+                         <span className="text-sm text-muted-foreground">
+                           القسم المحدد: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
+                         </span>
+                       </div>
+                     )}
+                   </div>
                 </div>
-                
-                <div className="flex gap-4">
-                   <Button 
-                     onClick={handleSubmit}
-                     disabled={isSubmitting || isUploading || !settings}
-                     className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
-                   >
-                      {isSubmitting || isUploading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin ml-2" />
-                          جاري الحفظ...
-                        </>
-                      ) : (
-                        <>
-                          <PackagePlus className="w-4 h-4 ml-2" />
-                          {isEditMode ? "حفظ التحديثات" : "حفظ المنتج"}
-                        </>
-                      )}
-                   </Button>
+                <div className="flex items-center gap-4">
+                   {isUploading && <Progress value={uploadProgress} className="w-32" />}
                 </div>
               </div>
               
-              <div className="mt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
-                    <PackagePlus className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              {/* العنوان للهاتف */}
+              <div className="md:hidden text-center">
+                 <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                   {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                 </h1>
+                {selectedDepartment && (
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <Building2 className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      القسم: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
+                    </span>
                   </div>
-                  <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-foreground">
-                      {isEditMode ? `تعديل المنتج: ${editProductData?.name}` : 'إضافة منتج جديد'}
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                      {isEditMode ? 'تحديث بيانات المنتج ومتغيراته' : 'إضافة منتج جديد مع تحديد الألوان والقياسات والكميات'}
-                    </p>
+                )}
+                {isUploading && (
+                  <div className="mt-2">
+                    <Progress value={uploadProgress} className="w-full h-2" />
                   </div>
-                </div>
+                )}
+              </div>
+              
+              {/* أزرار إضافية للهاتف */}
+              <div className="md:hidden flex justify-center gap-2 mt-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/manage-variants')}>
+                   <Building2 className="h-4 w-4" />
+                   <span className="text-xs mr-1">المتغيرات</span>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/qr-labels')}>
+                   <QrCode className="h-4 w-4" />
+                   <span className="text-xs mr-1">طباعة QR</span>
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* شريط التقدم - للهاتف فقط */}
-          {(isSubmitting || isUploading) && (
-            <Card className="md:hidden">
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>تقدم الرفع</span>
-                    <span>{Math.round(uploadProgress)}%</span>
-                  </div>
-                  <Progress value={uploadProgress} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* نموذج إضافة المنتج */}
-          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-6">
-            
-            {/* القسم الأول: البيانات الأساسية */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  البيانات الأساسية للمنتج
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProductPrimaryInfo
-                  productInfo={productInfo}
+          {/* نموذج الإضافة محسن للهاتف */}
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-6 pb-20">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
+              <div className="lg:col-span-2 space-y-3 md:space-y-6">
+                <ProductPrimaryInfo 
+                  productInfo={productInfo} 
                   setProductInfo={setProductInfo}
                   generalImages={generalImages}
                   onImageSelect={handleGeneralImageSelect}
                   onImageRemove={handleGeneralImageRemove}
                 />
-              </CardContent>
-            </Card>
-
-            {/* القسم الثاني: التصنيفات */}
-            <Card>
-              <CardContent className="p-4 md:p-6">
-                <MultiSelectCategorization
+                <MultiSelectCategorization 
                   selectedCategories={selectedCategories}
                   setSelectedCategories={setSelectedCategories}
                   selectedProductTypes={selectedProductTypes}
@@ -625,76 +493,92 @@ const AddProductPage = () => {
                   selectedDepartments={selectedDepartments}
                   setSelectedDepartments={setSelectedDepartments}
                 />
-              </CardContent>
-            </Card>
-
-            {/* القسم الثالث: اختيار المتغيرات */}
-            <Card>
-              <CardContent className="p-4 md:p-6">
-                <ProductVariantSelection
+                <ProductVariantSelection 
                   selectedColors={selectedColors}
                   setSelectedColors={setSelectedColors}
                   sizeType={sizeType}
                   setSizeType={setSizeType}
                   colorSizeTypes={colorSizeTypes}
                   setColorSizeTypes={setColorSizeTypes}
-                  allSizesForType={allSizesForType}
                 />
-              </CardContent>
-            </Card>
-
-            {/* قسم إدارة متغيرات الألوان */}
-            {selectedColors.length > 0 && (
+              </div>
+              
+              {/* معلومات إضافية في الشريط الجانبي */}
+              <div className="space-y-3 md:space-y-6 order-first lg:order-last">
+                {selectedDepartment && (
+                  <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-primary text-sm md:text-base">
+                        <Sparkles className="h-4 w-4 md:h-5 md:w-5" />
+                        القسم المحدد
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 md:space-y-3">
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <div className={`p-1.5 md:p-2 rounded-lg bg-gradient-to-r ${selectedDepartment.color}`}>
+                            <Building2 className="h-3 w-3 md:h-4 md:w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm md:text-base">{selectedDepartment.name}</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">{selectedDepartment.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* نصائح سريعة - مخفية على الهاتف */}
+                <Card className="hidden lg:block">
+                  <CardHeader>
+                    <CardTitle className="text-sm">نصائح سريعة</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-muted-foreground">
+                    <p>• تأكد من إدخال سعر التكلفة لحساب الأرباح</p>
+                    <p>• اختر ألوان متعددة لزيادة خيارات العملاء</p>
+                    <p>• أضف صور عالية الجودة للمنتج</p>
+                    <p>• اختر التصنيفات المناسبة لتسهيل البحث</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            
+            {variants.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-semibold">إدارة متغيرات الألوان</CardTitle>
-                </CardHeader>
-                <CardContent>
+                <CardHeader><CardTitle className="text-lg md:text-xl">إدارة المتغيرات النهائية</CardTitle></CardHeader>
+                <CardContent className="p-3 md:p-6">
                   <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                     <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-4">
-                        {selectedColors.map((color) => (
-                          <SortableColorCard
-                            key={color.id}
-                            color={color}
-                            allSizesForType={allSizesForType}
-                            variants={variants}
-                            setVariants={setVariants}
-                            productInfo={productInfo}
-                            colorImage={colorImages[color.id]}
-                            onColorImageSelect={handleColorImageSelect}
-                            onColorImageRemove={handleColorImageRemove}
-                            sizeType={sizeType}
-                            colorSizeTypes={colorSizeTypes}
-                            sizes={sizes}
-                          />
-                        ))}
+                      <div className="space-y-3 md:space-y-4">
+                         {selectedColors.map((color) => (
+                            <SortableColorCard
+                              key={color.id}
+                              id={color.id}
+                              color={color}
+                              allSizesForType={isEditMode ? [] : variants.filter(v => v.colorId === color.id)}
+                              variants={variants}
+                              setVariants={setVariants}
+                              price={productInfo.price}
+                              costPrice={productInfo.costPrice}
+                              profitAmount={productInfo.profitAmount}
+                              handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
+                              handleImageRemove={() => handleColorImageRemove(color.id)}
+                              initialImage={colorImages[color.id] || null}
+                              colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
+                              isEditMode={isEditMode}
+                              showInventoryData={isEditMode}
+                              productName={productInfo.name}
+                            />
+                         ))}
                       </div>
                     </SortableContext>
                   </DndContext>
                 </CardContent>
               </Card>
             )}
-
-            {/* شريط التقدم للشاشات الكبيرة */}
-            {(isSubmitting || isUploading) && (
-              <Card className="hidden md:block">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>تقدم رفع الصور والبيانات</span>
-                      <span>{Math.round(uploadProgress)}%</span>
-                    </div>
-                    <Progress value={uploadProgress} className="h-3" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      يرجى عدم مغادرة الصفحة أثناء الرفع...
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
           </form>
+          
         </div>
       </div>
     </>

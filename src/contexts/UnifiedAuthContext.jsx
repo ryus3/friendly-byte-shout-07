@@ -95,9 +95,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         roles,
         // توحيد المعرف: استخدم id من supabaseUser (وهو auth.users.id)
         id: supabaseUser.id,
-        user_id: supabaseUser.id,  // للتوافق مع الكود القديم
-        // التأكد من وجود المعرف بطرق متعددة للتوافق
-        uuid: supabaseUser.id
+        user_id: supabaseUser.id  // للتوافق مع الكود القديم
       };
     } catch (error) {
       console.error('Profile fetch failed:', error);
