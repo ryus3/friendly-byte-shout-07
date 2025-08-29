@@ -11,7 +11,7 @@ import { useDuplicateCustomerAlert } from '@/hooks/useDuplicateCustomerAlert';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
+const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount, selectedCityId, selectedRegionId, cities, regions }) => {
   const [wasCleared, setWasCleared] = useState(false);
   const nameInputRef = useRef(null);
   
@@ -247,7 +247,7 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Input id="second_phone" name="second_phone" value={formData.second_phone} onChange={handleChange} disabled={isSubmittingState} />
         </div>
         <fieldset disabled={!isDeliveryPartnerSelected || isSubmittingState} className="contents">
-          {partnerSpecificFields()}
+          {partnerSpecificFields(selectedCityId, selectedRegionId, cities, regions)}
         </fieldset>
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="address" className="text-right">اقرب نقطة دالة</Label>

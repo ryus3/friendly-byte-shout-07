@@ -597,6 +597,56 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [activePartner, defaultDeliveryPartner, setDefaultDeliveryPartner]);
 
+  // تحميل بيانات التعديل من AI أو البيانات المرسلة
+  useEffect(() => {
+    if (aiOrderData && aiOrderData.editMode) {
+      console.log('📋 تحميل بيانات التعديل من aiOrderData:', aiOrderData);
+      
+      // تحديث النموذج ببيانات الطلب الأصلي
+      setFormData(prev => ({
+        ...prev,
+        name: aiOrderData.customer_name || '',
+        phone: aiOrderData.customer_phone || '',
+        second_phone: aiOrderData.customer_phone2 || '',
+        city: aiOrderData.customer_city || '',
+        region: aiOrderData.customer_province || '',
+        city_id: aiOrderData.city_id || null,
+        region_id: aiOrderData.region_id || null,
+        address: aiOrderData.customer_address || '',
+        notes: aiOrderData.notes || '',
+        details: aiOrderData.notes || '',
+        price: aiOrderData.final_total || 0,
+        size: aiOrderData.package_size || 'عادي',
+        type: 'update'
+      }));
+
+      // تحديد المدينة والمنطقة إذا كانت متوفرة
+      if (aiOrderData.city_id) {
+        setSelectedCityId(String(aiOrderData.city_id));
+        console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', aiOrderData.city_id);
+      }
+      if (aiOrderData.region_id) {
+        setSelectedRegionId(String(aiOrderData.region_id));
+        console.log('🗺️ تم تحديد المنطقة من بيانات التعديل:', aiOrderData.region_id);
+      }
+
+      // تحديث السلة بالمنتجات
+      if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+        clearCart();
+        aiOrderData.items.forEach(item => {
+          addToCart(item);
+        });
+      }
+
+      console.log('✅ تم تحميل بيانات التعديل بنجاح - معرفات العنوان:', {
+        city_id: aiOrderData.city_id,
+        region_id: aiOrderData.region_id,
+        city: aiOrderData.customer_city,
+        region: aiOrderData.customer_province
+      });
+    }
+  }, [aiOrderData, clearCart, addToCart]);
+
   // تحديث الاسم في النموذج عند تغيير الافتراضي (دون إزعاج المستخدم)
   useEffect(() => {
     if (!nameTouched && defaultCustomerName && (!formData.name || formData.name.trim() === '')) {
@@ -1146,6 +1196,116 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         }
     }
   };
+
+  // إضافة دالة للتعامل مع تحديث الطلبات
+  const handleOrderUpdate = async () => {
+    try {
+      console.log('🔄 بدء تحديث الطلب - وضع التعديل');
+      
+      // حساب الإجمالي الجديد
+      const newSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
+      const newTotal = newSubtotal - discount;
+      const newFinalTotal = newTotal + deliveryFee;
+      
+      // تطبيع رقم الهاتف
+      const normalizedPhone = normalizePhone(formData.phone);
+      if (!normalizedPhone) {
+        throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
+      }
+      
+      // بناء بيانات التحديث
+      const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
+      const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
+      
+      const updateData = {
+        customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
+        customer_phone: normalizedPhone,
+        customer_phone2: formData.second_phone || '',
+        customer_city: city,
+        customer_province: region,
+        customer_address: formData.address || '',
+        city_id: formData.city_id || null,
+        region_id: formData.region_id || null,
+        notes: formData.notes || '',
+        discount: discount,
+        total_amount: newSubtotal,
+        final_total: newFinalTotal,
+        delivery_fee: deliveryFee,
+        updated_at: new Date().toISOString()
+      };
+
+      // تحديث الطلب في النظام المحلي
+      console.log('🔄 تحديث الطلب في النظام المحلي...', updateData);
+      await updateOrder(aiOrderData.orderId, updateData);
+
+      // إذا كان شريك الوسيط متصل وهناك معرف طلب خارجي، قم بتحديث الطلب
+      if (isWaseetLoggedIn && activePartner === 'alwaseet' && aiOrderData.delivery_partner_order_id) {
+        const editData = {
+          order_id: aiOrderData.delivery_partner_order_id,
+          customer_name: updateData.customer_name,
+          customer_phone: updateData.customer_phone,
+          customer_phone2: updateData.customer_phone2,
+          customer_city_id: formData.city_id,
+          customer_region_id: formData.region_id,
+          customer_address: updateData.customer_address,
+          package_size_id: formData.size,
+          notes: updateData.notes,
+          price: newFinalTotal
+        };
+
+        console.log('🔄 تحديث الطلب في الوسيط...', editData);
+        
+        try {
+          const editResponse = await editAlWaseetOrder(editData, waseetToken);
+          if (editResponse?.success) {
+            console.log('✅ تم تحديث الطلب في الوسيط بنجاح');
+            toast({
+              title: "✅ تم التحديث بنجاح",
+              description: "تم تحديث الطلب في شركة التوصيل بنجاح",
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+          } else {
+            console.error('❌ فشل تحديث الطلب في الوسيط:', editResponse);
+            toast({
+              title: "⚠️ تحذير",
+              description: "تم تحديث الطلب محلياً لكن فشل التحديث في شركة التوصيل",
+              variant: "destructive",
+            });
+          }
+        } catch (error) {
+          console.error('❌ خطأ في تحديث الطلب في الوسيط:', error);
+          toast({
+            title: "⚠️ تحذير", 
+            description: "تم تحديث الطلب محلياً لكن حدث خطأ في الاتصال مع شركة التوصيل",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // إشعار بنجاح التحديث
+      toast({
+        title: "✅ تم تحديث الطلب بنجاح",
+        description: `العميل: ${updateData.customer_name} • المبلغ: ${Math.round(newFinalTotal).toLocaleString()} د.ع`,
+        className: "bg-green-50 border-green-200 text-green-800",
+        duration: 4000
+      });
+
+      // إعادة تعيين النموذج والإغلاق
+      setTimeout(() => {
+        resetForm();
+        if(onOrderCreated) onOrderCreated();
+      }, 100);
+
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الطلب:', error);
+      toast({
+        title: "خطأ في تحديث الطلب",
+        description: error.message || "حدث خطأ غير متوقع أثناء التحديث",
+        variant: "destructive",
+        duration: 6000
+      });
+    }
+  };
   
   const handleConfirmProductSelection = (selectedItems) => {
     clearCart();
@@ -1257,6 +1417,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             isDeliveryPartnerSelected={isDeliveryPartnerSelected}
             customerData={customerData}
             loyaltyDiscount={loyaltyDiscount}
+            selectedCityId={selectedCityId}
+            selectedRegionId={selectedRegionId}
+            cities={cities}
+            regions={regions}
           />
           <OrderDetailsForm
             formData={formData}
