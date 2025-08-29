@@ -331,7 +331,17 @@ const AddProductPage = () => {
       });
     });
     setVariants(newVariants);
-  }, [selectedColors.length, sizeType, Object.keys(colorSizeTypes).length, sizes.length, productInfo.price, productInfo.costPrice]);
+  }, [
+    isEditMode, 
+    settings?.id, 
+    sizes.length, 
+    selectedColors.length, 
+    sizeType, 
+    Object.keys(colorSizeTypes).length, 
+    productInfo.name, 
+    productInfo.price, 
+    productInfo.costPrice
+  ]);
 
   // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
   useEffect(() => {
@@ -391,15 +401,27 @@ const AddProductPage = () => {
     if (sizes.length > 0 && selectedColors.length > 0) {
       generateVariantsForNewColors();
     }
-  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
+  }, [
+    isEditMode, 
+    settings?.id, 
+    sizes.length, 
+    selectedColors.length, 
+    sizeType, 
+    productInfo.name, 
+    productInfo.price, 
+    productInfo.costPrice
+  ]);
 
-  // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
+
+  // حفظ البيانات المؤقت - محسن بـ debounce آمن
   useEffect(() => {
-    if (!isEditMode && (productInfo.name?.trim() || selectedColors.length > 0)) {
-      const timeoutId = setTimeout(() => {
-        const dataToSave = {
+    if (isEditMode) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (productInfo.name?.trim() || selectedColors.length > 0) {
+        setTempProductData({
           productInfo,
-          generalImages: generalImages.map(img => img?.name || img), // حفظ أسماء الملفات فقط
+          generalImages,
           selectedCategories,
           selectedProductTypes,
           selectedSeasonsOccasions,
@@ -408,22 +430,24 @@ const AddProductPage = () => {
           sizeType,
           colorSizeTypes,
           variants,
-          colorImages: Object.keys(colorImages), // حفظ معرفات الألوان فقط
-          lastSaved: Date.now(),
-          savedAt: new Date().toISOString()
-        };
-        setTempProductData(dataToSave);
-        
-        // عرض مؤشر الحفظ
-        console.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
-      }, 2000); // حفظ بعد ثانيتين من عدم النشاط
+          colorImages
+        });
+      }
+    }, 3000);
 
-      return () => clearTimeout(timeoutId);
-    }
+    return () => clearTimeout(timeoutId);
   }, [
-    productInfo, generalImages, selectedCategories, selectedProductTypes,
-    selectedSeasonsOccasions, selectedDepartments, selectedColors, sizeType,
-    colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
+    isEditMode,
+    productInfo.name,
+    productInfo.price,
+    productInfo.costPrice,
+    selectedColors.length,
+    selectedCategories.length,
+    selectedProductTypes.length,
+    selectedSeasonsOccasions.length,
+    selectedDepartments.length,
+    variants.length,
+    sizeType
   ]);
 
   const handleSubmit = useCallback(async (e) => {
