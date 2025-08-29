@@ -137,10 +137,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // تحديد شريك التوصيل وتحميل البيانات اللازمة
         if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
           setActivePartner('alwaseet');
-          // تحميل المدن والمناطق للوسيط
-          if (isWaseetLoggedIn && waseetToken) {
-            loadCitiesAndRegions();
-          }
+          // سيتم تحميل المدن والمناطق تلقائياً عبر useEffect
         } else {
           setActivePartner('local');
         }
