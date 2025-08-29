@@ -61,7 +61,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
-    console.log('🚀 QuickOrderContent - AI/Edit Order Data received:', aiOrderData, { isEditMode });
+    console.log('🚀 QuickOrderContent - بيانات الطلب الذكي/التعديل المُستقبلة:', aiOrderData, { isEditMode });
     if (aiOrderData) {
       // Parse city and address intelligently
       const parseLocationData = (address, city) => {
@@ -107,7 +107,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // في وضع التعديل، استخدم البيانات الأصلية مباشرة
       if (isEditMode) {
-        console.log('🔧 Setting form data for edit mode:', aiOrderData);
+        console.log('🔧 ضبط بيانات النموذج لوضع التعديل:', aiOrderData);
         setFormData(prev => ({
           ...prev,
           name: aiOrderData.customer_name || '',
@@ -117,14 +117,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           region: aiOrderData.customer_province || '',
           address: aiOrderData.customer_address || '',
           notes: aiOrderData.notes || '',
-          price: aiOrderData.final_total || aiOrderData.total_amount || 0,
+          price: aiOrderData.total_amount || 0,
           delivery_fee: aiOrderData.delivery_fee || 0,
+          discount: aiOrderData.discount || 0,
+          size: aiOrderData.package_size || 'عادي',
+          type: aiOrderData.order_type || 'new',
+          promocode: aiOrderData.promocode || '',
           // ضمان عرض السعر الصحيح مع التوصيل
           total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0)
         }));
         
-        console.log('✅ Form data set for edit mode');
-        console.log('📍 Address data:', {
+        console.log('✅ تم ضبط بيانات النموذج لوضع التعديل');
+        console.log('📍 بيانات العنوان:', {
           city: aiOrderData.customer_city,
           province: aiOrderData.customer_province, 
           address: aiOrderData.customer_address
@@ -137,59 +141,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setActivePartner('local');
         }
         
-        // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
-        if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-          console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
-          clearCart();
-          
-          aiOrderData.items.forEach(item => {
-            if (item && item.product_id && item.variant_id) {
-              console.log('🔍 Loading real product for:', item);
-              
-              // البحث عن المنتج الحقيقي في البيانات الموحدة
-              const realProduct = allData?.products?.find(p => p.id === item.product_id);
-              const realVariant = allData?.product_variants?.find(v => v.id === item.variant_id);
-              
-              if (realProduct && realVariant) {
-                console.log('✅ Found real product and variant from unified data');
-                
-                // إضافة المنتج الحقيقي للسلة
-                addToCart(realProduct, realVariant, item.quantity || 1, false);
-              } else {
-                console.log('⚠️ Real product not found, using original data');
-                
-                // إنشاء كائنات مؤقتة مع البيانات الأصلية
-                const tempProduct = {
-                  id: item.product_id,
-                  name: item.productName || item.product_name || 'منتج',
-                  images: [item.image || '/placeholder.svg'],
-                  price: item.unit_price || item.price || 0,
-                  cost_price: item.costPrice || item.cost_price || 0
-                };
-                
-                const tempVariant = {
-                  id: item.variant_id,
-                  sku: item.sku || '',
-                  color: item.color || '',
-                  size: item.size || '',
-                  quantity: 999, // مخزون افتراضي
-                  reserved: 0,
-                  price: item.unit_price || item.price || 0,
-                  cost_price: item.costPrice || item.cost_price || 0,
-                  image: item.image || '/placeholder.svg',
-                  barcode: item.barcode || ''
-                };
-                
-                addToCart(tempProduct, tempVariant, item.quantity || 1, false);
-              }
-            }
-          });
-          console.log('✅ Cart loaded successfully for edit mode');
-        } else {
-          console.log('⚠️ No items found in aiOrderData for edit mode');
-        }
-        
-        return; // انتهاء وضع التعديل
+        return; // انتهاء وضع التعديل - سيتم تحميل المنتجات بعد ذلك
       }
       
       setFormData(prev => ({
@@ -295,7 +247,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         addToCart(product, variant, item.quantity || 1, false);
       }
     }
-  }, [aiOrderData, clearCart, addToCart, isEditMode, allData]);
+  }, [aiOrderData, clearCart, addToCart, isEditMode, allData, setActivePartner, setFormData]);
   
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
@@ -847,6 +799,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             <ProductSelectionDialog 
               open={productSelectOpen}
               onOpenChange={setProductSelectOpen}
+            />
+            
+            {/* مكون تحميل البيانات للتعديل */}
+            <EditOrderDataLoader 
+              aiOrderData={aiOrderData}
+              isEditMode={isEditMode}
+              onDataLoaded={() => console.log('✅ تم تحميل بيانات التعديل')}
             />
             
             {activePartner === 'alwaseet' && isWaseetLoggedIn && (

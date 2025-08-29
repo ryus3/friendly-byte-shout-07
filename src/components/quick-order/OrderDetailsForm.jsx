@@ -81,15 +81,15 @@ const OrderDetailsForm = ({
   return (
     <Card dir="rtl">
       <CardHeader>
-        <CardTitle className="text-right">تفاصيل الطلب</CardTitle>
-        <CardDescription className="text-right">إدارة المنتجات في السلة وتفاصيل الطلب النهائية.</CardDescription>
+        <CardTitle className="text-right">{isEditMode ? '✏️ تعديل تفاصيل الطلب' : 'تفاصيل الطلب'}</CardTitle>
+        <CardDescription className="text-right">{isEditMode ? 'يمكنك تعديل المنتجات والأسعار والملاحظات.' : 'إدارة المنتجات في السلة وتفاصيل الطلب النهائية.'}</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
         <div className="space-y-2 md:col-span-2">
           <Label>المنتجات</Label>
           <Button type="button" variant="outline" className="w-full" onClick={() => setProductSelectOpen(true)} disabled={!isDeliveryPartnerSelected || isSubmittingState}>
             <PlusCircle className="w-4 h-4 ml-2" />
-            اختر المنتجات ({cart.length})
+            {isEditMode ? `إدارة المنتجات (${cart.length})` : `اختر المنتجات (${cart.length})`}
           </Button>
           <div className="space-y-2 pt-4">
             {cart.map(item => (

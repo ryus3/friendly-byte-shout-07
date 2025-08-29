@@ -4,38 +4,45 @@ import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
+  console.log('🔍 EditOrderDialog - مُستقبل بيانات الطلب:', order);
+  
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = (order) => {
     if (!order) {
-      console.log('❌ No order data provided to EditOrderDialog');
+      console.log('❌ لا توجد بيانات طلب لـ EditOrderDialog');
       return null;
     }
     
-    console.log('🔍 EditOrderDialog - Raw order data received:', order);
-    console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
+    console.log('🔍 EditOrderDialog - بيانات الطلب الخام المُستقبلة:', order);
+    console.log('🔍 EditOrderDialog - عناصر الطلب المتاحة:', order.order_items || order.items);
     
     // تحويل المنتجات لصيغة cart items مع product_id و variant_id للتحميل الصحيح
-    const cartItems = (order.order_items || order.items || []).map(item => ({
-      id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
-      productId: item.product_id,
-      variantId: item.variant_id,
-      productName: item.productname || item.product_name || 'منتج',
-      product_name: item.productname || item.product_name || 'منتج',
-      size: item.size || '',
-      color: item.color || '',
-      price: item.unit_price || item.price || 0,
-      unit_price: item.unit_price || item.price || 0,
-      quantity: item.quantity || 1,
-      total: (item.unit_price || item.price || 0) * (item.quantity || 1),
-      image: item.image || '/placeholder.svg',
-      barcode: item.barcode || '',
-      sku: item.sku || '',
-      // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
-      product_id: item.product_id,
-      variant_id: item.variant_id
-    }));
+    const cartItems = (order.order_items || order.items || []).map(item => {
+      console.log('🛒 تحويل عنصر:', item);
+      return {
+        id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        productName: item.productname || item.product_name || 'منتج',
+        product_name: item.productname || item.product_name || 'منتج',
+        size: item.size || '',
+        color: item.color || '',
+        price: item.unit_price || item.price || 0,
+        unit_price: item.unit_price || item.price || 0,
+        quantity: item.quantity || 1,
+        total: (item.unit_price || item.price || 0) * (item.quantity || 1),
+        image: item.image || '/placeholder.svg',
+        barcode: item.barcode || '',
+        sku: item.sku || '',
+        // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        costPrice: item.cost_price || 0,
+        cost_price: item.cost_price || 0
+      };
+    });
 
-    console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
+    console.log('🛒 EditOrderDialog - عناصر السلة المُحولة:', cartItems);
 
     const editData = {
       // معلومات العميل - مع ضمان وجود جميع البيانات
@@ -50,11 +57,15 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       notes: order.notes || '',
       total_amount: order.total_amount || order.final_amount || 0,
       delivery_fee: order.delivery_fee || 0,
+      discount: order.discount || 0,
       // حساب الإجمالي مع رسوم التوصيل
       final_total: (order.total_amount || order.final_amount || 0) + (order.delivery_fee || 0),
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
+      order_type: order.order_type || 'new',
+      package_size: order.package_size || 'عادي',
+      promocode: order.promocode || '',
       
       // المنتجات - مع معرفات صحيحة للتحميل
       items: cartItems,
@@ -65,7 +76,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       originalOrder: order
     };
 
-    console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
+    console.log('📋 EditOrderDialog - بيانات التعديل النهائية المُحضرة:', editData);
     return editData;
   };
 
