@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -68,17 +68,20 @@ const MultiSelectCategorization = ({
     }
   }, [loading, categories, departments, productTypes, seasonsOccasions, selectedCategories, selectedDepartments, selectedProductTypes, selectedSeasonsOccasions]);
 
-  // دالة محسنة لعرض العناصر المحددة
-  const getSelectedDisplayItems = useCallback((selectedIds, items, label) => {
+  // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
+  const getSelectedDisplayItems = (selectedIds, items, label) => {
     if (!selectedIds || selectedIds.length === 0) return [];
     
     return selectedIds.map(id => {
       const item = items.find(i => i.id === id);
-      return item ? 
-        { id, name: item.name, found: true } : 
-        { id, name: `تحميل...`, found: false };
+      if (item) {
+        return { id, name: item.name, found: true };
+      } else {
+        // عرض ID مؤقت حتى يتم تحميل الاسم
+        return { id, name: `${label} (${id})`, found: false };
+      }
     });
-  }, []);
+  };
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -214,7 +217,6 @@ const MultiSelectCategorization = ({
             placeholder="اختر الأقسام..."
             onAddNew={() => setDepartmentDialogOpen(true)}
             addNewText="إضافة قسم جديد"
-            selectedDisplayItems={getSelectedDisplayItems(selectedDepartments, departments, 'قسم')}
           />
         </div>
 
@@ -231,7 +233,6 @@ const MultiSelectCategorization = ({
             placeholder="اختر التصنيفات..."
             onAddNew={() => setCategoryDialogOpen(true)}
             addNewText="إضافة تصنيف جديد"
-            selectedDisplayItems={getSelectedDisplayItems(selectedCategories, categories, 'تصنيف')}
           />
         </div>
 
@@ -248,7 +249,6 @@ const MultiSelectCategorization = ({
             placeholder="اختر أنواع المنتجات..."
             onAddNew={() => setProductTypeDialogOpen(true)}
             addNewText="إضافة نوع جديد"
-            selectedDisplayItems={getSelectedDisplayItems(selectedProductTypes, productTypes, 'نوع منتج')}
           />
         </div>
 
@@ -266,7 +266,6 @@ const MultiSelectCategorization = ({
             onAddNew={() => setSeasonOccasionDialogOpen(true)}
             addNewText="إضافة موسم/مناسبة جديدة"
             showType={true}
-            selectedDisplayItems={getSelectedDisplayItems(selectedSeasonsOccasions, seasonsOccasions, 'موسم/مناسبة')}
           />
         </div>
 
@@ -309,7 +308,7 @@ const MultiSelectCategorization = ({
 };
 
 // Reusable MultiSelect Dropdown Component
-const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAddNew, addNewText, showType = false, selectedDisplayItems = [] }) => {
+const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAddNew, addNewText, showType = false }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -331,22 +330,18 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             ) : (
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
-                const displayItem = selectedDisplayItems.find(d => d.id === itemId);
-                
-                if (!item && !displayItem) {
+                if (!item) {
+                  // عرض معرف مؤقت مع تصميم مميز
                   return (
-                    <Badge key={itemId} variant="outline" className="gap-1 bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
-                      <span className="text-xs">تحميل...</span>
+                    <Badge key={itemId} variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                      <span className="text-xs">ID: {itemId}</span>
                     </Badge>
                   );
                 }
-                
-                const name = item?.name || displayItem?.name || 'غير محدد';
-                
                 return (
-                  <Badge key={itemId} variant="secondary" className="gap-1">
-                    {name}
-                    {showType && item?.type && (
+                  <Badge key={item.id} variant="secondary" className="gap-1">
+                    {item.name}
+                    {showType && item.type && (
                       <span className="text-xs opacity-70">
                         ({item.type === 'season' ? 'موسم' : 'مناسبة'})
                       </span>
