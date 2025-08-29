@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
-  const convertOrderToEditData = (order) => {
+  const convertOrderToEditData = async (order) => {
     if (!order) {
       console.log('❌ No order data provided to EditOrderDialog');
       return null;
@@ -19,23 +19,52 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       id: `${item.product_id}-${item.variant_id || 'no-variant'}`,
       productId: item.product_id,
       variantId: item.variant_id,
-      productName: item.productname || item.product_name || 'منتج',
-      product_name: item.productname || item.product_name || 'منتج',
-      size: item.size || '',
-      color: item.color || '',
+      productName: item.productname || item.product_name || item.products?.name || 'منتج',
+      product_name: item.productname || item.product_name || item.products?.name || 'منتج',
+      size: item.product_variants?.sizes?.name || item.size || '',
+      color: item.product_variants?.colors?.name || item.color || '',
       price: item.unit_price || item.price || 0,
       unit_price: item.unit_price || item.price || 0,
       quantity: item.quantity || 1,
       total: (item.unit_price || item.price || 0) * (item.quantity || 1),
-      image: item.image || '/placeholder.svg',
+      image: item.product_variants?.images?.[0] || item.products?.images?.[0] || item.image || '/placeholder.svg',
       barcode: item.barcode || '',
-      sku: item.sku || '',
+      sku: item.sku || item.variant_id || '',
       // إضافة معرفات المنتج والمتغير للتحميل من النظام الموحد
       product_id: item.product_id,
       variant_id: item.variant_id
     }));
 
     console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
+
+    // تحويل اسماء المدن والمناطق إلى معرفات Al Waseet
+    let city_id = '';
+    let region_id = '';
+    
+    if (order.delivery_partner === 'alwaseet') {
+      try {
+        // تحويل اسم المدينة إلى معرف
+        const { getCities, getRegionsByCity } = await import('@/lib/alwaseet-api');
+        const { isLoggedIn, token } = await import('@/contexts/AlWaseetContext').then(m => m.useAlWaseet?.() || {});
+        
+        if (isLoggedIn && token) {
+          const cities = await getCities(token);
+          const cityMatch = cities.find(city => city.name === order.customer_city);
+          if (cityMatch) {
+            city_id = cityMatch.id;
+            
+            // تحويل اسم المنطقة إلى معرف
+            const regions = await getRegionsByCity(token, cityMatch.id);
+            const regionMatch = regions.find(region => region.name === order.customer_province);
+            if (regionMatch) {
+              region_id = regionMatch.id;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to convert city/region names to IDs:', error);
+      }
+    }
 
     const editData = {
       // معلومات العميل - مع ضمان وجود جميع البيانات
@@ -45,6 +74,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_city: order.customer_city || order.city || '',
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
+      
+      // معرفات Al Waseet للمدينة والمنطقة
+      city_id: city_id,
+      region_id: region_id,
       
       // تفاصيل الطلب - مع حساب صحيح للأسعار
       notes: order.notes || '',
@@ -76,7 +109,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     onOpenChange(false);
   };
 
-  const editData = convertOrderToEditData(order);
+  const [editData, setEditData] = useState(null);
+  
+  // تحويل البيانات بشكل غير متزامن
+  useEffect(() => {
+    const loadEditData = async () => {
+      if (order) {
+        const data = await convertOrderToEditData(order);
+        setEditData(data);
+      }
+    };
+    loadEditData();
+  }, [order]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

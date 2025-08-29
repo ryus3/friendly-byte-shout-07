@@ -3,7 +3,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
-import { getCities, getRegionsByCity, createAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
+import { getCities, getRegionsByCity, createAlWaseetOrder, editAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -114,7 +114,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           phone: aiOrderData.customer_phone || '',
           second_phone: aiOrderData.customer_phone2 || '',
           city: aiOrderData.customer_city || 'بغداد',
+          city_id: aiOrderData.city_id || '',  // معرف المدينة للوسيط
           region: aiOrderData.customer_province || '',
+          region_id: aiOrderData.region_id || '',  // معرف المنطقة للوسيط
           address: aiOrderData.customer_address || '',
           notes: aiOrderData.notes || '',
           price: aiOrderData.final_total || aiOrderData.total_amount || 0,
@@ -126,13 +128,19 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         console.log('✅ Form data set for edit mode');
         console.log('📍 Address data:', {
           city: aiOrderData.customer_city,
-          province: aiOrderData.customer_province, 
+          city_id: aiOrderData.city_id,
+          province: aiOrderData.customer_province,
+          region_id: aiOrderData.region_id,
           address: aiOrderData.customer_address
         });
         
-        // تحديد شريك التوصيل
+        // تحديد شريك التوصيل وتحميل البيانات اللازمة
         if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
           setActivePartner('alwaseet');
+          // تحميل المدن والمناطق للوسيط
+          if (isWaseetLoggedIn && waseetToken) {
+            loadCitiesAndRegions();
+          }
         } else {
           setActivePartner('local');
         }
@@ -849,55 +857,74 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // معالجة تحديث الطلب
   const handleUpdateOrder = async () => {
-    console.log('📝 QuickOrderContent - بدء تحديث الطلب:', originalOrder.id);
-    
-    const cartItems = cart.map(item => ({
-      product_id: item.productId,
-      variant_id: item.variantId,
-      quantity: item.quantity,
-      unit_price: item.price,
-      total_price: item.total,
-      productname: item.productName,
-      color: item.color,
-      size: item.size,
-      barcode: item.barcode,
-      image: item.image
-    }));
-
-    // حساب السعر النهائي مع تطبيق الخصم ورسوم التوصيل
-    const deliveryFeeAmount = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
-    const finalTotal = subtotal - discount + (applyLoyaltyDelivery ? 0 : deliveryFeeAmount);
-
-    const orderUpdates = {
-      customer_name: formData.name,
-      customer_phone: formData.phone,
-      customer_phone2: formData.second_phone,
-      customer_city: formData.city,
-      customer_province: formData.region,
-      customer_address: formData.address,
-      notes: formData.notes,
-      total_amount: finalTotal,
-      delivery_fee: applyLoyaltyDelivery ? 0 : deliveryFeeAmount,
-      items: cartItems
-    };
-
-    const result = await updateOrder(originalOrder.id, orderUpdates, cartItems, originalOrder.items);
-    
-    if (result.success) {
-      toast({
-        title: "✅ تم التحديث بنجاح",
-        description: "تم تحديث الطلب بنجاح",
-        variant: "default"
-      });
+    try {
+      console.log('🔧 Updating existing order:', originalOrder.id);
       
-      if (onOrderCreated) {
-        onOrderCreated(result.order);
+      const orderData = {
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_phone2: formData.second_phone || '',
+        customer_address: formData.address,
+        customer_city: formData.city,
+        customer_province: formData.region,
+        notes: formData.notes,
+        delivery_partner: activePartner === 'alwaseet' ? 'alwaseet' : 'محلي',
+        items: cart.map(item => ({
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.total
+        })),
+        total_amount: subtotal,
+        delivery_fee: deliveryFee,
+        final_amount: finalTotal,
+        discount: discount,
+        custom_discount: discount,
+        promo_code: formData.promocode
+      };
+
+      let updateResult;
+      
+      // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً
+      if (activePartner === 'alwaseet' && isWaseetLoggedIn && originalOrder?.tracking_number) {
+        const alwaseetData = {
+          qr_id: originalOrder.tracking_number, // مطلوب للتعديل
+          name: formData.name,
+          phone: formData.phone,
+          phone2: formData.second_phone || undefined,
+          city_id: formData.city_id,
+          region_id: formData.region_id,
+          address: formData.address,
+          details: formData.details,
+          quantity: formData.quantity,
+          price: formData.price,
+          size: formData.size,
+          notes: formData.notes,
+          replacement: formData.type === 'exchange' ? 1 : 0
+        };
+
+        console.log('🔧 Updating Al-Waseet order with data:', alwaseetData);
+        const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
+        console.log('✅ Al-Waseet order updated:', waseetResponse);
       }
-      
-      // مسح النموذج والسلة
-      resetForm();
-    } else {
-      throw new Error(result.error || 'فشل في تحديث الطلب');
+
+      // تحديث الطلب محلياً
+      updateResult = await updateOrder(originalOrder.id, orderData);
+      console.log('✅ Local order updated:', updateResult);
+
+      toast({
+        title: "تم تحديث الطلب بنجاح",
+        description: `رقم الطلب: ${updateResult.order_number}${updateResult.tracking_number ? ` - رقم التتبع: ${updateResult.tracking_number}` : ''}`,
+        variant: "default",
+      });
+
+      // استدعاء onOrderCreated (يعمل أيضاً للتحديث)
+      if (onOrderCreated) onOrderCreated(updateResult);
+
+    } catch (error) {
+      console.error('❌ Order update error:', error);
+      throw error;
     }
   };
 
@@ -1268,6 +1295,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           </motion.div>
         )}
       </PageWrapper>
+
+      {/* تحميل البيانات للتعديل */}
+      <EditOrderDataLoader 
+        aiOrderData={aiOrderData}
+        isEditMode={isEditMode}
+        onDataLoaded={() => console.log('✅ Edit data loaded successfully')}
+      />
 
       <DeliveryPartnerDialog open={deliveryPartnerDialogOpen} onOpenChange={setDeliveryPartnerDialogOpen} />
       <ProductSelectionDialog 

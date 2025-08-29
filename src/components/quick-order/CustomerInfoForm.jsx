@@ -49,12 +49,12 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
 
 
   return (
-    <Card>
+    <Card dir="rtl">
       <CardHeader>
-        <CardTitle>معلومات الزبون والشحن</CardTitle>
-        <CardDescription>الرجاء التأكد من صحة معلومات الزبون لضمان وصول الشحنة.</CardDescription>
+        <CardTitle className="text-right">معلومات الزبون والشحن</CardTitle>
+        <CardDescription className="text-right">الرجاء التأكد من صحة معلومات الزبون لضمان وصول الشحنة.</CardDescription>
       </CardHeader>
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
           <div className="relative">
@@ -249,8 +249,16 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           {partnerSpecificFields()}
         </fieldset>
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="address">اقرب نقطة دالة</Label>
-          <Input id="address" name="address" value={formData.address} onChange={handleChange} disabled={isSubmittingState} />
+          <Label htmlFor="address" className="text-right">اقرب نقطة دالة</Label>
+          <Input 
+            id="address" 
+            name="address" 
+            value={formData.address} 
+            onChange={handleChange} 
+            disabled={isSubmittingState}
+            className="text-right"
+            dir="rtl"
+          />
         </div>
       </CardContent>
     </Card>
