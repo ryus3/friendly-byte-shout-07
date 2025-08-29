@@ -88,18 +88,18 @@ export const createAlWaseetOrder = async (orderData, token) => {
 // Helper function to map local field names to Al-Waseet API field names
 const mapToAlWaseetFields = (orderData) => {
   return {
-    qr_id: orderData.tracking_number || orderData.qr_id,
-    client_name: orderData.name || orderData.client_name,
-    client_mobile: orderData.phone || orderData.client_mobile,
-    client_mobile2: orderData.phone2 || orderData.client_mobile2,
+    qr_id: orderData.tracking_number || orderData.qr_id || orderData.alwaseet_qr_id || orderData.order_number,
+    client_name: orderData.name || orderData.client_name || orderData.customer_name,
+    client_mobile: orderData.phone || orderData.client_mobile || orderData.customer_phone,
+    client_mobile2: orderData.phone2 || orderData.client_mobile2 || orderData.customer_phone2,
     city_id: orderData.city_id,
     region_id: orderData.region_id,
-    location: orderData.address || orderData.client_address || orderData.location,
-    type_name: orderData.details || orderData.type_name,
-    items_number: orderData.quantity || orderData.items_number,
-    price: orderData.price,
-    package_size: orderData.size || orderData.package_size,
-    merchant_notes: orderData.notes || orderData.merchant_notes,
+    location: orderData.address || orderData.client_address || orderData.location || orderData.customer_address,
+    type_name: orderData.details || orderData.type_name || 'منتجات متنوعة',
+    items_number: orderData.quantity || orderData.items_number || orderData.total_items || 1,
+    price: orderData.price || orderData.total_amount || orderData.final_total || 0,
+    package_size: orderData.size || orderData.package_size || 1,
+    merchant_notes: orderData.notes || orderData.merchant_notes || '',
     replacement: orderData.replacement || 0
   };
 };

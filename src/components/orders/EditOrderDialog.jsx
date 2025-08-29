@@ -6,8 +6,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   console.log('🔍 EditOrderDialog - مُستقبل بيانات الطلب:', order);
   
-  // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
-  const convertOrderToEditData = (order) => {
+// تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent مع تحميل المدن والمناطق كمعرفات
+  const convertOrderToEditData = async (order) => {
     if (!order) {
       console.log('❌ لا توجد بيانات طلب لـ EditOrderDialog');
       return null;
@@ -44,14 +44,33 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
     console.log('🛒 EditOrderDialog - عناصر السلة المُحولة:', cartItems);
 
+    // استخراج معرفات المدينة والمنطقة الأصلية من الطلب
+    let city_id = order.city_id || '';
+    let region_id = order.region_id || '';
+    
+    // إذا لم توجد المعرفات، محاولة العثور عليها من أسماء المدن والمناطق
+    if (!city_id && order.customer_city) {
+      console.log('🔍 البحث عن معرف المدينة لـ:', order.customer_city);
+      // سيتم العثور على المعرف في QuickOrderContent من خلال API الوسيط
+    }
+    
+    if (!region_id && order.customer_province) {
+      console.log('🔍 البحث عن معرف المنطقة لـ:', order.customer_province);
+      // سيتم العثور على المعرف في QuickOrderContent من خلال API الوسيط
+    }
+
     const editData = {
-      // معلومات العميل - مع ضمان وجود جميع البيانات
+      // معلومات العميل - مع ضمان وجود جميع البيانات والمعرفات
       customer_name: order.customer_name || '',
       customer_phone: order.customer_phone || '',
       customer_phone2: order.customer_phone2 || order.second_phone || '',
       customer_city: order.customer_city || order.city || '',
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
+      
+      // معرفات المدينة والمنطقة للوسيط
+      city_id: city_id,
+      region_id: region_id,
       
       // تفاصيل الطلب - مع حساب صحيح للأسعار
       notes: order.notes || '',
@@ -73,7 +92,11 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       // بيانات إضافية للتعديل
       editMode: true,
       orderId: order.id,
-      originalOrder: order
+      originalOrder: order,
+      
+      // بيانات خاصة بالوسيط
+      waseet_order_id: order.waseet_order_id || order.tracking_number,
+      alwaseet_qr_id: order.tracking_number || order.order_number
     };
 
     console.log('📋 EditOrderDialog - بيانات التعديل النهائية المُحضرة:', editData);
@@ -87,7 +110,21 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     onOpenChange(false);
   };
 
-  const editData = convertOrderToEditData(order);
+  const [editData, setEditData] = React.useState(null);
+  
+  // تحميل بيانات التعديل عند فتح الحوار
+  React.useEffect(() => {
+    const loadEditData = async () => {
+      if (order) {
+        const data = await convertOrderToEditData(order);
+        setEditData(data);
+      }
+    };
+    
+    if (open && order) {
+      loadEditData();
+    }
+  }, [open, order]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

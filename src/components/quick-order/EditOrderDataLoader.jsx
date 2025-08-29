@@ -16,7 +16,7 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
 
     // التأكد من توفر البيانات الموحدة
     if (!allData?.products || !allData?.product_variants) {
-      console.log('⚠️ EditOrderDataLoader - البيانات الموحدة غير متاحة بعد');
+      console.log('⚠️ EditOrderDataLoader - البيانات الموحدة غير متاحة بعد، محاولة التحميل لاحقاً...');
       return;
     }
 
@@ -45,18 +45,30 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
             const realVariant = allData.product_variants.find(v => v.id === item.variant_id);
 
             if (realProduct && realVariant) {
-              console.log('✅ تم العثور على المنتج والمتغير الحقيقي');
+              console.log('✅ تم العثور على المنتج والمتغير الحقيقي:', { realProduct, realVariant });
+              
+              // تحضير بيانات المتغير الصحيحة مع الألوان والأحجام
+              const variantWithDetails = {
+                ...realVariant,
+                color: realVariant.color || item.color || '',
+                size: realVariant.size || item.size || '',
+                quantity: realVariant.quantity || 999, // مخزون افتراضي
+                price: realVariant.price || item.unit_price || item.price || 0,
+                cost_price: realVariant.cost_price || item.costPrice || item.cost_price || 0,
+                image: realVariant.image || item.image || '/placeholder.svg',
+                barcode: realVariant.barcode || item.barcode || ''
+              };
               
               // إضافة المنتج الحقيقي للسلة
-              addToCart(realProduct, realVariant, item.quantity || 1, false);
+              addToCart(realProduct, variantWithDetails, item.quantity || 1, false);
               loadedCount++;
             } else {
-              console.log('⚠️ لم يتم العثور على المنتج، استخدام البيانات المؤقتة');
+              console.log('⚠️ لم يتم العثور على المنتج أو المتغير، استخدام البيانات المؤقتة');
               
               // إنشاء كائنات مؤقتة مع البيانات الأصلية
               const tempProduct = {
                 id: item.product_id,
-                name: item.productName || item.product_name || 'منتج',
+                name: item.productName || item.product_name || 'منتج مؤقت',
                 images: [item.image || '/placeholder.svg'],
                 price: item.unit_price || item.price || 0,
                 cost_price: item.costPrice || item.cost_price || 0
@@ -64,7 +76,7 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
 
               const tempVariant = {
                 id: item.variant_id,
-                sku: item.sku || '',
+                sku: item.sku || `temp-${Date.now()}`,
                 color: item.color || '',
                 size: item.size || '',
                 quantity: 999, // مخزون افتراضي
@@ -78,6 +90,33 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
               addToCart(tempProduct, tempVariant, item.quantity || 1, false);
               loadedCount++;
             }
+          } else {
+            console.log('⚠️ عنصر بدون معرفات صحيحة:', item);
+            
+            // محاولة إنشاء عنصر بمعرفات مؤقتة
+            const tempProduct = {
+              id: `temp-product-${Date.now()}-${Math.random()}`,
+              name: item.productName || item.product_name || 'منتج بدون معرف',
+              images: [item.image || '/placeholder.svg'],
+              price: item.unit_price || item.price || 0,
+              cost_price: item.costPrice || item.cost_price || 0
+            };
+
+            const tempVariant = {
+              id: `temp-variant-${Date.now()}-${Math.random()}`,
+              sku: item.sku || `temp-${Date.now()}`,
+              color: item.color || '',
+              size: item.size || '',
+              quantity: 999,
+              reserved: 0,
+              price: item.unit_price || item.price || 0,
+              cost_price: item.costPrice || item.cost_price || 0,
+              image: item.image || '/placeholder.svg',
+              barcode: item.barcode || ''
+            };
+
+            addToCart(tempProduct, tempVariant, item.quantity || 1, false);
+            loadedCount++;
           }
         }
 
@@ -93,7 +132,7 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
     };
 
     // تأخير قصير للسماح للنموذج بالتحديث أولاً
-    const timer = setTimeout(loadRealProducts, 100);
+    const timer = setTimeout(loadRealProducts, 500);
     
     return () => clearTimeout(timer);
   }, [isEditMode, aiOrderData, allData, addToCart, clearCart, onDataLoaded]);
