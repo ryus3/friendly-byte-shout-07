@@ -102,9 +102,11 @@ const OrderDetailsForm = ({
                 </div>
                 <div className="flex items-center gap-2">
                   <p>{item.total.toLocaleString()} د.ع</p>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
+                  {removeFromCart ? (
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             ))}
