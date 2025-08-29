@@ -128,9 +128,13 @@ const AddProductPage = () => {
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
   const allSizesForType = useMemo(() => {
+    // في وضع التعديل، نعرض المتغيرات الفعلية بدلاً من القياسات المتاحة
+    if (isEditMode) {
+      return [];
+    }
     const typeToFilter = sizeType || 'letter';
     return sizes.filter(s => s.type === typeToFilter);
-  }, [sizes, sizeType]);
+  }, [sizes, sizeType, isEditMode]);
 
   // جلب الأقسام
   useEffect(() => {
@@ -193,6 +197,7 @@ const AddProductPage = () => {
           // استخراج الألوان الفريدة
           const uniqueColors = [];
           const colorImages = {};
+          const extractedColorSizeTypes = {};
           
           editProductData.variants.forEach(variant => {
             if (variant.colors) {
@@ -209,11 +214,34 @@ const AddProductPage = () => {
               if (variant.images && variant.images.length > 0) {
                 colorImages[variant.colors.id] = variant.images[0];
               }
+
+              // استخراج أنواع القياسات لكل لون من البيانات الحقيقية
+              if (variant.sizes) {
+                const colorId = variant.colors.id;
+                const sizeType = variant.sizes.type || 'letter';
+                
+                if (!extractedColorSizeTypes[colorId]) {
+                  extractedColorSizeTypes[colorId] = [];
+                }
+                
+                if (!extractedColorSizeTypes[colorId].includes(sizeType)) {
+                  extractedColorSizeTypes[colorId].push(sizeType);
+                }
+              }
             }
           });
           
           setSelectedColors(uniqueColors);
           setColorImages(colorImages);
+          
+          // تحديد نوع القياس الافتراضي من أول متغير
+          if (editProductData.variants[0]?.sizes?.type) {
+            setSizeType(editProductData.variants[0].sizes.type);
+          }
+          
+          // تعيين أنواع القياسات المستخرجة
+          setColorSizeTypes(extractedColorSizeTypes);
+          console.log('🎨 أنواع القياسات المستخرجة:', extractedColorSizeTypes);
           
           // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
           const formattedVariants = editProductData.variants.map(variant => {
@@ -309,6 +337,62 @@ const AddProductPage = () => {
         generateVariants();
     }
   }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
+
+  // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
+  useEffect(() => {
+    if (!isEditMode) return;
+    
+    const generateVariantsForNewColors = () => {
+      // العثور على الألوان الجديدة التي لا توجد لها متغيرات
+      const existingColorIds = [...new Set(variants.map(v => v.colorId || v.color_id))];
+      const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
+      
+      if (newColors.length === 0) return;
+      
+      console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
+      
+      const newVariants = [];
+      newColors.forEach(color => {
+        // استخدام نوع القياس المحدد للون أو الافتراضي
+        const colorSizes = colorSizeTypes[color.id] || [sizeType];
+        
+        colorSizes.forEach(sizeTypeForColor => {
+          const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+          
+          sizesForThisType.forEach(size => {
+            const barcode = generateUniqueBarcode(
+              productInfo.name || 'منتج',
+              color.name,
+              size.name
+            );
+            
+            newVariants.push({
+              colorId: color.id,
+              sizeId: size.id,
+              color: color.name,
+              color_hex: color.hex_code,
+              size: size.name,
+              sizeType: sizeTypeForColor,
+              quantity: 0,
+              price: parseFloat(productInfo.price) || 0,
+              costPrice: parseFloat(productInfo.costPrice) || 0,
+              barcode: barcode,
+              hint: ''
+            });
+          });
+        });
+      });
+      
+      if (newVariants.length > 0) {
+        setVariants(prev => [...prev, ...newVariants]);
+        console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
+      }
+    };
+    
+    if (sizes.length > 0 && selectedColors.length > 0) {
+      generateVariantsForNewColors();
+    }
+  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
 
   // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {

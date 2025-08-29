@@ -27,16 +27,22 @@ const ProductVariantSelection = ({
   const handleCreateColor = async (newColorData) => {
     const result = await addColor(newColorData);
     if (result.success && result.data) {
-      setSelectedColors(prev => [...prev, result.data]);
+      const newColor = result.data;
+      setSelectedColors(prev => [...prev, newColor]);
+      // إضافة النوع الافتراضي للون الجديد تلقائياً
+      setColorSizeTypes(prev => ({
+        ...prev,
+        [newColor.id]: [sizeType]
+      }));
       return true; 
     }
     return false;
   };
 
-  const handleColorSizeTypeChange = (colorId, sizeType) => {
+  const handleColorSizeTypeChange = (colorId, newSizeType) => {
     setColorSizeTypes(prev => ({
       ...prev,
-      [colorId]: sizeType
+      [colorId]: [newSizeType]
     }));
   };
 
@@ -76,8 +82,19 @@ const ProductVariantSelection = ({
               const isSelected = selectedColors.some(c => c.id === color.id);
               if (isSelected) {
                 setSelectedColors(prev => prev.filter(c => c.id !== color.id));
+                // إزالة إعدادات القياس للون المحذوف
+                setColorSizeTypes(prev => {
+                  const updated = { ...prev };
+                  delete updated[color.id];
+                  return updated;
+                });
               } else {
                 setSelectedColors(prev => [...prev, color]);
+                // إضافة النوع الافتراضي للون الجديد تلقائياً
+                setColorSizeTypes(prev => ({
+                  ...prev,
+                  [color.id]: [sizeType]
+                }));
               }
             }}
             placeholder="اختر الألوان..."
