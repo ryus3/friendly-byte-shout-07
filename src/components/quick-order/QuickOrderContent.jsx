@@ -864,7 +864,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // معالجة إنشاء الطلب
   const handleCreateOrder = async () => {
-    const deliveryFeeAmount = settings?.deliveryFee || 5000;
+    try {
+      const deliveryFeeAmount = settings?.deliveryFee || 5000;
     const finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
     
     const orderData = {
