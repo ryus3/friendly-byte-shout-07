@@ -30,9 +30,10 @@ const OrderDetailsForm = ({
   applyLoyaltyDiscount = true,
   onToggleLoyaltyDiscount,
   applyLoyaltyDelivery = false,
-  onToggleLoyaltyDelivery
+  onToggleLoyaltyDelivery,
+  cart, // استقبال السلة كـ prop
+  removeFromCart // استقبال دالة الحذف كـ prop
 }) => {
-  const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
   
   // حساب رسوم التوصيل مع إعفاء الولاء

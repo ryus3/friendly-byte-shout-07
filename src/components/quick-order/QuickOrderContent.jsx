@@ -1288,6 +1288,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             }}
             applyLoyaltyDelivery={applyLoyaltyDelivery}
             onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
+            cart={cart}
+            removeFromCart={removeFromCart}
           />
         </fieldset>
 
