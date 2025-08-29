@@ -153,7 +153,7 @@ const AddProductPage = () => {
     fetchDepartments();
   }, []);
 
-  // تحميل بيانات المنتج في وضع التعديل
+  // تحميل بيانات المنتج في وضع التعديل مع معالجة محسنة للتصنيفات
   useEffect(() => {
     if (isEditMode && editProductData) {
       console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
@@ -178,18 +178,22 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات
-        if (editProductData.product_categories) {
-          setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
-        }
-        if (editProductData.product_product_types) {
-          setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
-        }
-        if (editProductData.product_seasons_occasions) {
-          setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
-        }
-        if (editProductData.product_departments) {
-          setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
+        // تحميل التصنيفات مع معالجة المنتجات بدون تصنيفات
+        const categoriesData = editProductData.product_categories || [];
+        const productTypesData = editProductData.product_product_types || [];
+        const seasonsData = editProductData.product_seasons_occasions || [];
+        const departmentsData = editProductData.product_departments || [];
+
+        // تحديد التصنيفات (أو مصفوفة فارغة إذا لم توجد)
+        setSelectedCategories(categoriesData.map(pc => pc.category_id));
+        setSelectedProductTypes(productTypesData.map(pt => pt.product_type_id));
+        setSelectedSeasonsOccasions(seasonsData.map(so => so.season_occasion_id));
+        setSelectedDepartments(departmentsData.map(pd => pd.department_id));
+
+        // إضافة معرف خاص للمنتجات بدون تصنيفات
+        if (categoriesData.length === 0 && productTypesData.length === 0 && 
+            seasonsData.length === 0 && departmentsData.length === 0) {
+          console.warn('⚠️ تحذير: المنتج "' + editProductData.name + '" لا يحتوي على أي تصنيفات');
         }
 
         // تحميل الألوان والمتغيرات
