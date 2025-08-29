@@ -28,7 +28,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const isEditMode = aiOrderData?.editMode || false;
   
   const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
-  const { cart, clearCart, addToCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
+  const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken, waseetUser, syncOrderByTracking } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -1288,6 +1288,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             }}
             applyLoyaltyDelivery={applyLoyaltyDelivery}
             onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
+            cart={cart}
+            removeFromCart={removeFromCart}
           />
         </fieldset>
 
