@@ -41,7 +41,14 @@ export const VariantsProvider = ({ children }) => {
   const ctxSeasons = superData.seasons;
 
   const fetchData = useCallback(async (table, setter) => {
-    const orderBy = table === 'sizes' ? 'display_order' : 'name';
+    // ترتيب مختلف حسب الجدول - الألوان تُرتب بتاريخ الإنشاء
+    let orderBy = 'name';
+    if (table === 'sizes') {
+      orderBy = 'display_order';
+    } else if (table === 'colors') {
+      orderBy = 'created_at';
+    }
+    
     const { data, error } = await supabase.from(table).select('*').order(orderBy);
     if (error) {
       console.error(`Error fetching ${table}:`, error);
@@ -117,6 +124,12 @@ export const VariantsProvider = ({ children }) => {
   };
 
   const updateVariantOrder = async (table, orderedItems) => {
+    // الألوان لا تحتوي على عمود display_order، لذا نتجاهل تحديث الترتيب لها
+    if (table === 'colors') {
+      console.log('تم تجاهل ترتيب الألوان - لا يوجد عمود display_order');
+      return;
+    }
+    
     const updates = orderedItems.map((item, index) => 
       supabase.from(table).update({ display_order: index }).eq('id', item.id)
     );

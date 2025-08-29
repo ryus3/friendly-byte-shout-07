@@ -52,12 +52,8 @@ const ColorsManager = () => {
   );
 
   const handleDragEnd = (event) => {
-    const { active, over } = event;
-    if (active.id !== over.id) {
-      const oldIndex = sortedColors.findIndex(c => c.id === active.id);
-      const newIndex = sortedColors.findIndex(c => c.id === over.id);
-      updateColorOrder(arrayMove(sortedColors, oldIndex, newIndex));
-    }
+    // تعطيل drag & drop للألوان مؤقتاً لأن جدول الألوان لا يحتوي على عمود display_order
+    console.log('تم تعطيل ترتيب الألوان مؤقتاً');
   };
 
   const handleAdd = () => {

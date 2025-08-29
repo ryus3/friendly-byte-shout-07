@@ -143,7 +143,8 @@ const DepartmentsManager = () => {
         </div>
         <Button onClick={handleAdd} className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
           <Plus className="h-4 w-4" />
-          إضافة قسم جديد
+          <span className="hidden sm:inline">إضافة قسم جديد</span>
+          <span className="sm:hidden">إضافة قسم</span>
         </Button>
       </div>
 
