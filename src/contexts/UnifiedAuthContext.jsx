@@ -92,6 +92,8 @@ export const UnifiedAuthProvider = ({ children }) => {
       return { 
         ...supabaseUser, 
         ...profile,
+        user_id: supabaseUser.id, // تأكد من وجود user_id
+        uuid: supabaseUser.id,    // إضافة uuid للتوافق
         roles,
         // توحيد المعرف: استخدم id من supabaseUser (وهو auth.users.id)
         id: supabaseUser.id,

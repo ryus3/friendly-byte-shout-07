@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
@@ -48,19 +49,79 @@ const AddProductPage = () => {
   const { addProduct, updateProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
   
-  const [productInfo, setProductInfo] = useState({
-    name: '', price: '', costPrice: '', description: '', profitAmount: '', profitPercentage: '',
+  // حفظ البيانات المؤقت
+  const [tempProductData, setTempProductData] = useLocalStorage('temp_product_data', null);
+  
+  const [productInfo, setProductInfo] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.productInfo || {
+        name: '', price: '', costPrice: '', description: '', profitAmount: '', profitPercentage: '',
+      };
+    }
+    return {
+      name: '', price: '', costPrice: '', description: '', profitAmount: '', profitPercentage: '',
+    };
   });
-  const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedProductTypes, setSelectedProductTypes] = useState([]);
-  const [selectedSeasonsOccasions, setSelectedSeasonsOccasions] = useState([]);
-  const [selectedDepartments, setSelectedDepartments] = useState(selectedDepartment ? [selectedDepartment] : []);
-  const [selectedColors, setSelectedColors] = useState([]);
-  const [sizeType, setSizeType] = useState('letter');
-  const [colorSizeTypes, setColorSizeTypes] = useState({});
-  const [variants, setVariants] = useState([]);
-  const [colorImages, setColorImages] = useState({});
+  const [generalImages, setGeneralImages] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.generalImages || Array(4).fill(null);
+    }
+    return Array(4).fill(null);
+  });
+  const [selectedCategories, setSelectedCategories] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.selectedCategories || [];
+    }
+    return [];
+  });
+  const [selectedProductTypes, setSelectedProductTypes] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.selectedProductTypes || [];
+    }
+    return [];
+  });
+  const [selectedSeasonsOccasions, setSelectedSeasonsOccasions] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.selectedSeasonsOccasions || [];
+    }
+    return [];
+  });
+  const [selectedDepartments, setSelectedDepartments] = useState(() => {
+    if (tempProductData && !isEditMode && tempProductData.selectedDepartments) {
+      return tempProductData.selectedDepartments;
+    }
+    return selectedDepartment ? [selectedDepartment] : [];
+  });
+  const [selectedColors, setSelectedColors] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.selectedColors || [];
+    }
+    return [];
+  });
+  const [sizeType, setSizeType] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.sizeType || 'letter';
+    }
+    return 'letter';
+  });
+  const [colorSizeTypes, setColorSizeTypes] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.colorSizeTypes || {};
+    }
+    return {};
+  });
+  const [variants, setVariants] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.variants || [];
+    }
+    return [];
+  });
+  const [colorImages, setColorImages] = useState(() => {
+    if (tempProductData && !isEditMode) {
+      return tempProductData.colorImages || {};
+    }
+    return {};
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [departments, setDepartments] = useState([]);
@@ -249,6 +310,31 @@ const AddProductPage = () => {
     }
   }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
 
+  // حفظ البيانات تلقائياً كلما تغيرت
+  useEffect(() => {
+    if (!isEditMode) {
+      const dataToSave = {
+        productInfo,
+        generalImages,
+        selectedCategories,
+        selectedProductTypes,
+        selectedSeasonsOccasions,
+        selectedDepartments,
+        selectedColors,
+        sizeType,
+        colorSizeTypes,
+        variants,
+        colorImages,
+        lastSaved: Date.now()
+      };
+      setTempProductData(dataToSave);
+    }
+  }, [
+    productInfo, generalImages, selectedCategories, selectedProductTypes,
+    selectedSeasonsOccasions, selectedDepartments, selectedColors, sizeType,
+    colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
+  ]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!productInfo.name || !productInfo.price) {
@@ -309,6 +395,9 @@ const AddProductPage = () => {
     }
 
     if (result.success) {
+      // حذف البيانات المؤقتة عند النجاح
+      setTempProductData(null);
+      
       toast({ 
         title: 'نجاح', 
         description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
