@@ -426,7 +426,7 @@ const AddProductPage = () => {
     colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
   ]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     if (!productInfo.name || !productInfo.price) {
         toast({ title: "خطأ", description: "يرجى إدخال اسم المنتج وسعره الأساسي.", variant: "destructive"});
@@ -539,7 +539,12 @@ const AddProductPage = () => {
     }
     setIsSubmitting(false);
     setUploadProgress(0);
-  };
+  }, [
+    productInfo, selectedColors, variants, selectedCategories, selectedProductTypes,
+    selectedSeasonsOccasions, selectedDepartments, generalImages, colorImages,
+    isEditMode, editProductData?.id, fromPurchases, updateProduct, addProduct,
+    navigate, setTempProductData
+  ]);
   
   const onDragEnd = useCallback((event) => {
     const { active, over } = event;
