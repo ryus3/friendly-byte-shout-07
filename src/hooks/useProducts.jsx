@@ -341,33 +341,14 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         
         console.log('✅ تم تحديث المنتج الأساسي بنجاح');
 
-        // 2. Update categorization relationships - فقط عند توفر بيانات جديدة
-        console.log('🔄 تحديث التصنيفات:', {
-          categories: productData.selectedCategories,
-          productTypes: productData.selectedProductTypes,
-          seasons: productData.selectedSeasonsOccasions,
-          departments: productData.selectedDepartments
-        });
-
-        // حذف العلاقات الموجودة فقط إذا كانت هناك بيانات جديدة لاستبدالها
-        if (productData.selectedCategories !== undefined ||
-            productData.selectedProductTypes !== undefined ||
-            productData.selectedSeasonsOccasions !== undefined ||
-            productData.selectedDepartments !== undefined) {
-          
-          await Promise.all([
-            productData.selectedCategories !== undefined ? 
-              supabase.from('product_categories').delete().eq('product_id', productId) : Promise.resolve(),
-            productData.selectedProductTypes !== undefined ?
-              supabase.from('product_product_types').delete().eq('product_id', productId) : Promise.resolve(),
-            productData.selectedSeasonsOccasions !== undefined ?
-              supabase.from('product_seasons_occasions').delete().eq('product_id', productId) : Promise.resolve(),
-            productData.selectedDepartments !== undefined ?
-              supabase.from('product_departments').delete().eq('product_id', productId) : Promise.resolve()
-          ]);
-
-          console.log('✅ تم حذف العلاقات القديمة بأمان');
-        }
+        // 2. Update categorization relationships
+        // Delete existing relationships
+        await Promise.all([
+          supabase.from('product_categories').delete().eq('product_id', productId),
+          supabase.from('product_product_types').delete().eq('product_id', productId),
+          supabase.from('product_seasons_occasions').delete().eq('product_id', productId),
+          supabase.from('product_departments').delete().eq('product_id', productId)
+        ]);
 
         // Insert new relationships
         if (productData.selectedCategories && productData.selectedCategories.length > 0) {

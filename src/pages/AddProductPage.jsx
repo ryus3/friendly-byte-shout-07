@@ -7,7 +7,7 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2, QrCode } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
@@ -128,13 +128,9 @@ const AddProductPage = () => {
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
   const allSizesForType = useMemo(() => {
-    // في وضع التعديل، نعرض المتغيرات الفعلية بدلاً من القياسات المتاحة
-    if (isEditMode) {
-      return [];
-    }
     const typeToFilter = sizeType || 'letter';
     return sizes.filter(s => s.type === typeToFilter);
-  }, [sizes, sizeType, isEditMode]);
+  }, [sizes, sizeType]);
 
   // جلب الأقسام
   useEffect(() => {
@@ -153,7 +149,7 @@ const AddProductPage = () => {
     fetchDepartments();
   }, []);
 
-  // تحميل بيانات المنتج في وضع التعديل مع معالجة محسنة للتصنيفات
+  // تحميل بيانات المنتج في وضع التعديل
   useEffect(() => {
     if (isEditMode && editProductData) {
       console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
@@ -178,22 +174,18 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات مع معالجة المنتجات بدون تصنيفات
-        const categoriesData = editProductData.product_categories || [];
-        const productTypesData = editProductData.product_product_types || [];
-        const seasonsData = editProductData.product_seasons_occasions || [];
-        const departmentsData = editProductData.product_departments || [];
-
-        // تحديد التصنيفات (أو مصفوفة فارغة إذا لم توجد)
-        setSelectedCategories(categoriesData.map(pc => pc.category_id));
-        setSelectedProductTypes(productTypesData.map(pt => pt.product_type_id));
-        setSelectedSeasonsOccasions(seasonsData.map(so => so.season_occasion_id));
-        setSelectedDepartments(departmentsData.map(pd => pd.department_id));
-
-        // إضافة معرف خاص للمنتجات بدون تصنيفات
-        if (categoriesData.length === 0 && productTypesData.length === 0 && 
-            seasonsData.length === 0 && departmentsData.length === 0) {
-          console.warn('⚠️ تحذير: المنتج "' + editProductData.name + '" لا يحتوي على أي تصنيفات');
+        // تحميل التصنيفات
+        if (editProductData.product_categories) {
+          setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
+        }
+        if (editProductData.product_product_types) {
+          setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
+        }
+        if (editProductData.product_seasons_occasions) {
+          setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
+        }
+        if (editProductData.product_departments) {
+          setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
         }
 
         // تحميل الألوان والمتغيرات
@@ -201,7 +193,6 @@ const AddProductPage = () => {
           // استخراج الألوان الفريدة
           const uniqueColors = [];
           const colorImages = {};
-          const extractedColorSizeTypes = {};
           
           editProductData.variants.forEach(variant => {
             if (variant.colors) {
@@ -218,34 +209,11 @@ const AddProductPage = () => {
               if (variant.images && variant.images.length > 0) {
                 colorImages[variant.colors.id] = variant.images[0];
               }
-
-              // استخراج أنواع القياسات لكل لون من البيانات الحقيقية
-              if (variant.sizes) {
-                const colorId = variant.colors.id;
-                const sizeType = variant.sizes.type || 'letter';
-                
-                if (!extractedColorSizeTypes[colorId]) {
-                  extractedColorSizeTypes[colorId] = [];
-                }
-                
-                if (!extractedColorSizeTypes[colorId].includes(sizeType)) {
-                  extractedColorSizeTypes[colorId].push(sizeType);
-                }
-              }
             }
           });
           
           setSelectedColors(uniqueColors);
           setColorImages(colorImages);
-          
-          // تحديد نوع القياس الافتراضي من أول متغير
-          if (editProductData.variants[0]?.sizes?.type) {
-            setSizeType(editProductData.variants[0].sizes.type);
-          }
-          
-          // تعيين أنواع القياسات المستخرجة
-          setColorSizeTypes(extractedColorSizeTypes);
-          console.log('🎨 أنواع القياسات المستخرجة:', extractedColorSizeTypes);
           
           // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
           const formattedVariants = editProductData.variants.map(variant => {
@@ -342,66 +310,6 @@ const AddProductPage = () => {
     }
   }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
 
-  // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
-  useEffect(() => {
-    if (!isEditMode) return;
-    
-    const generateVariantsForNewColors = () => {
-      setVariants(currentVariants => {
-        // العثور على الألوان الجديدة التي لا توجد لها متغيرات
-        const existingColorIds = [...new Set(currentVariants.map(v => v.colorId || v.color_id))];
-        const newColors = selectedColors.filter(color => !existingColorIds.includes(color.id));
-        
-        if (newColors.length === 0) return currentVariants;
-        
-        console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
-        
-        const newVariants = [];
-        newColors.forEach(color => {
-          // استخدام نوع القياس المحدد للون أو الافتراضي
-          const colorSizes = colorSizeTypes[color.id] || [sizeType];
-          
-          colorSizes.forEach(sizeTypeForColor => {
-            const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
-            
-            sizesForThisType.forEach(size => {
-              const barcode = generateUniqueBarcode(
-                productInfo.name || 'منتج',
-                color.name,
-                size.name
-              );
-              
-              newVariants.push({
-                colorId: color.id,
-                sizeId: size.id,
-                color: color.name,
-                color_hex: color.hex_code,
-                size: size.name,
-                sizeType: sizeTypeForColor,
-                quantity: 0,
-                price: parseFloat(productInfo.price) || 0,
-                costPrice: parseFloat(productInfo.costPrice) || 0,
-                barcode: barcode,
-                hint: ''
-              });
-            });
-          });
-        });
-        
-        if (newVariants.length > 0) {
-          console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
-          return [...currentVariants, ...newVariants];
-        }
-        
-        return currentVariants;
-      });
-    };
-    
-    if (sizes.length > 0 && selectedColors.length > 0) {
-      generateVariantsForNewColors();
-    }
-  }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode]);
-
   // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {
     if (!isEditMode && (productInfo.name?.trim() || selectedColors.length > 0)) {
@@ -430,10 +338,9 @@ const AddProductPage = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [
-    productInfo.name, productInfo.price, productInfo.costPrice, productInfo.description,
-    selectedCategories.length, selectedProductTypes.length, selectedSeasonsOccasions.length, 
-    selectedDepartments.length, selectedColors.length, sizeType, variants.length, 
-    Object.keys(colorImages).length, isEditMode, setTempProductData
+    productInfo, generalImages, selectedCategories, selectedProductTypes,
+    selectedSeasonsOccasions, selectedDepartments, selectedColors, sizeType,
+    colorSizeTypes, variants, colorImages, isEditMode, setTempProductData
   ]);
 
   const handleSubmit = async (e) => {
@@ -582,18 +489,7 @@ const AddProductPage = () => {
   }, []);
   
   const loading = inventoryLoading || variantsLoading;
-  
-  // إذا كان في حالة تحميل ولا يوجد إرسال، عرض شاشة التحميل
-  const shouldShowLoader = loading && !isSubmitting;
-
-  // عرض شاشة التحميل إذا لزم الأمر
-  if (shouldShowLoader) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <Loader />
-      </div>
-    );
-  }
+  if (loading && !isSubmitting) return <div className="h-full w-full flex items-center justify-center"><Loader /></div>;
 
   return (
     <>

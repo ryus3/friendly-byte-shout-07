@@ -1,63 +1,20 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Check, ChevronDown, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useFiltersData } from '@/hooks/useFiltersData';
-import { AddEditDepartmentDialog } from '@/components/manage-variants/AddEditDepartmentDialog';
-import { AddEditCategoryDialog } from '@/components/manage-variants/AddEditCategoryDialog';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
+import { Check, ChevronDown, Tag, Package, Calendar, Building2, Plus } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-
-// مكون منفصل لعرض العناصر المفقودة والبحث عنها
-const MissingItemBadge = ({ itemId }) => {
-  const [itemName, setItemName] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchItemName = async () => {
-      try {
-        setLoading(true);
-        
-        // البحث في جميع الجداول المختلفة
-        const searches = await Promise.all([
-          supabase.from('categories').select('name').eq('id', itemId).single(),
-          supabase.from('departments').select('name').eq('id', itemId).single(), 
-          supabase.from('product_types').select('name').eq('id', itemId).single(),
-          supabase.from('seasons_occasions').select('name').eq('id', itemId).single()
-        ]);
-
-        // العثور على النتيجة الصحيحة
-        const result = searches.find(s => s.data && !s.error);
-        if (result?.data?.name) {
-          setItemName(result.data.name);
-        }
-      } catch (error) {
-        console.error('خطأ في جلب اسم العنصر:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchItemName();
-  }, [itemId]);
-
-  if (loading) {
-    return (
-      <Badge variant="outline" className="gap-1 bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">
-        <span className="text-xs">جاري التحميل...</span>
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className="gap-1 bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
-      <span className="text-xs">{itemName || `غير معروف: ${itemId.slice(0, 8)}`}</span>
-    </Badge>
-  );
-};
+import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
+import AddEditDepartmentDialog from '@/components/manage-variants/AddEditDepartmentDialog';
+import AddEditCategoryDialog from '@/components/manage-variants/AddEditCategoryDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const MultiSelectCategorization = ({ 
   selectedCategories = [],
@@ -69,6 +26,7 @@ const MultiSelectCategorization = ({
   selectedDepartments = [],
   setSelectedDepartments
 }) => {
+  // استخدام النظام التوحيدي للمرشحات
   const {
     categories,
     departments,
@@ -83,6 +41,8 @@ const MultiSelectCategorization = ({
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [productTypeDialogOpen, setProductTypeDialogOpen] = useState(false);
   const [seasonOccasionDialogOpen, setSeasonOccasionDialogOpen] = useState(false);
+
+  // البيانات تأتي من النظام التوحيدي
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -128,6 +88,43 @@ const MultiSelectCategorization = ({
     });
   };
 
+  // Refresh data functions
+  // دوال التحديث تستخدم النظام التوحيدي
+  const refreshDepartments = () => {
+    refreshFiltersData();
+  };
+
+  const refreshCategories = () => {
+    refreshFiltersData();
+  };
+
+  const refreshProductTypes = () => {
+    refreshFiltersData();
+  };
+
+  const refreshSeasonsOccasions = () => {
+    refreshFiltersData();
+  };
+
+  // Handle new item creation
+  const handleDepartmentSuccess = async () => {
+    await refreshDepartments();
+    toast({
+      title: 'نجاح',
+      description: 'تم إضافة القسم بنجاح',
+      variant: 'success'
+    });
+  };
+
+  const handleCategorySuccess = async () => {
+    await refreshCategories();
+    toast({
+      title: 'نجاح', 
+      description: 'تم إضافة التصنيف بنجاح',
+      variant: 'success'
+    });
+  };
+
   if (loading) {
     return (
       <Card>
@@ -138,7 +135,6 @@ const MultiSelectCategorization = ({
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-muted rounded w-3/4"></div>
             <div className="h-4 bg-muted rounded w-1/2"></div>
-            <div className="text-xs text-muted-foreground mt-2">جاري تحميل بيانات التصنيفات...</div>
           </div>
         </CardContent>
       </Card>
@@ -148,13 +144,19 @@ const MultiSelectCategorization = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>تصنيف المنتج</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Tag className="h-5 w-5" />
+          تصنيف المنتج
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         
         {/* الأقسام */}
         <div className="space-y-3">
-          <label className="text-sm font-medium">الأقسام</label>
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            الأقسام
+          </Label>
           <MultiSelectDropdown
             items={departments}
             selectedItems={selectedDepartments}
@@ -167,7 +169,10 @@ const MultiSelectCategorization = ({
 
         {/* التصنيفات الرئيسية */}
         <div className="space-y-3">
-          <label className="text-sm font-medium">التصنيفات الرئيسية</label>
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            التصنيفات الرئيسية
+          </Label>
           <MultiSelectDropdown
             items={categories}
             selectedItems={selectedCategories}
@@ -180,7 +185,10 @@ const MultiSelectCategorization = ({
 
         {/* أنواع المنتجات */}
         <div className="space-y-3">
-          <label className="text-sm font-medium">أنواع المنتجات</label>
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            أنواع المنتجات
+          </Label>
           <MultiSelectDropdown
             items={productTypes}
             selectedItems={selectedProductTypes}
@@ -193,7 +201,10 @@ const MultiSelectCategorization = ({
 
         {/* المواسم والمناسبات */}
         <div className="space-y-3">
-          <label className="text-sm font-medium">المواسم والمناسبات</label>
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            المواسم والمناسبات
+          </Label>
           <MultiSelectDropdown
             items={seasonsOccasions}
             selectedItems={selectedSeasonsOccasions}
@@ -212,20 +223,14 @@ const MultiSelectCategorization = ({
         open={departmentDialogOpen}
         onOpenChange={setDepartmentDialogOpen}
         department={null}
-        onSuccess={() => {
-          refreshFiltersData();
-          setDepartmentDialogOpen(false);
-        }}
+        onSuccess={handleDepartmentSuccess}
       />
 
       <AddEditCategoryDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         category={null}
-        onSuccess={() => {
-          refreshFiltersData();
-          setCategoryDialogOpen(false);
-        }}
+        onSuccess={handleCategorySuccess}
       />
 
       {/* Simple Product Type Dialog */}
@@ -233,10 +238,7 @@ const MultiSelectCategorization = ({
         <ProductTypeDialog
           open={productTypeDialogOpen}
           onOpenChange={setProductTypeDialogOpen}
-          onSuccess={() => {
-            refreshFiltersData();
-            setProductTypeDialogOpen(false);
-          }}
+          onSuccess={refreshProductTypes}
         />
       )}
 
@@ -245,10 +247,7 @@ const MultiSelectCategorization = ({
         <SeasonOccasionDialog
           open={seasonOccasionDialogOpen}
           onOpenChange={setSeasonOccasionDialogOpen}
-          onSuccess={() => {
-            refreshFiltersData();
-            setSeasonOccasionDialogOpen(false);
-          }}
+          onSuccess={refreshSeasonsOccasions}
         />
       )}
     </Card>
@@ -278,9 +277,7 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             ) : (
               selectedItems.map((itemId) => {
                 const item = items.find(i => i.id === itemId);
-                if (!item) {
-                  return <MissingItemBadge key={itemId} itemId={itemId} />;
-                }
+                if (!item) return null;
                 return (
                   <Badge key={item.id} variant="secondary" className="gap-1">
                     {item.name}
@@ -321,36 +318,38 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             </CommandEmpty>
             <CommandGroup className="max-h-64 overflow-auto bg-background">
               {filteredItems.map((item) => (
-                <CommandItem
+                <div
                   key={item.id}
-                  onSelect={() => onToggle(item)}
-                  className="flex items-center gap-2"
+                  onClick={() => onToggle(item)}
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent/80 hover:text-accent-foreground transition-colors bg-background"
                 >
+                  <div className="flex items-center gap-2 flex-1">
+                    <span>{item.name}</span>
+                    {showType && item.type && (
+                      <Badge variant="outline" className="text-xs">
+                        {item.type === 'season' ? 'موسم' : 'مناسبة'}
+                      </Badge>
+                    )}
+                  </div>
                   <Check
                     className={cn(
                       "h-4 w-4",
                       selectedItems.includes(item.id) ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <span>{item.name}</span>
-                  {showType && item.type && (
-                    <Badge variant="outline" className="text-xs">
-                      {item.type === 'season' ? 'موسم' : 'مناسبة'}
-                    </Badge>
-                  )}
-                </CommandItem>
+                </div>
               ))}
               {filteredItems.length > 0 && (
-                <CommandItem
-                  onSelect={() => {
+                <div
+                  onClick={() => {
                     onAddNew();
                     setOpen(false);
                   }}
-                  className="flex items-center gap-2 border-t"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/80 border-t px-2 py-1.5 text-sm bg-background transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span>{addNewText}</span>
-                </CommandItem>
+                </div>
               )}
             </CommandGroup>
           </CommandList>
@@ -378,56 +377,64 @@ const ProductTypeDialog = ({ open, onOpenChange, onSuccess }) => {
       
       if (error) throw error;
       
+      toast({
+        title: 'نجاح',
+        description: 'تم إضافة نوع المنتج بنجاح',
+        variant: 'success'
+      });
+      
       setName('');
       setDescription('');
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error adding product type:', error);
+      toast({
+        title: 'خطأ',
+        description: error.message,
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-      <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
-        <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-          <h2 className="text-lg font-semibold">إضافة نوع منتج جديد</h2>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>إضافة نوع منتج جديد</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium">اسم نوع المنتج</label>
-            <input
-              type="text"
+            <Label htmlFor="name">اسم نوع المنتج</Label>
+            <Input
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="ادخل اسم نوع المنتج"
-              className="w-full mt-1 px-3 py-2 border rounded-md"
               required
             />
           </div>
           <div>
-            <label className="text-sm font-medium">الوصف (اختياري)</label>
-            <input
-              type="text"
+            <Label htmlFor="description">الوصف (اختياري)</Label>
+            <Input
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="ادخل وصف نوع المنتج"
-              className="w-full mt-1 px-3 py-2 border rounded-md"
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               إلغاء
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -453,68 +460,77 @@ const SeasonOccasionDialog = ({ open, onOpenChange, onSuccess }) => {
       
       if (error) throw error;
       
+      toast({
+        title: 'نجاح',
+        description: 'تم إضافة الموسم/المناسبة بنجاح',
+        variant: 'success'
+      });
+      
       setName('');
       setDescription('');
       setType('season');
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error adding season/occasion:', error);
+      toast({
+        title: 'خطأ',
+        description: error.message,
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
-      <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
-        <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-          <h2 className="text-lg font-semibold">إضافة موسم/مناسبة جديدة</h2>
-        </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>إضافة موسم/مناسبة جديدة</DialogTitle>
+        </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium">الاسم</label>
-            <input
-              type="text"
+            <Label htmlFor="name">الاسم</Label>
+            <Input
+              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="ادخل اسم الموسم أو المناسبة"
-              className="w-full mt-1 px-3 py-2 border rounded-md"
               required
             />
           </div>
           <div>
-            <label className="text-sm font-medium">النوع</label>
-            <select 
-              value={type} 
-              onChange={(e) => setType(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border rounded-md"
-            >
-              <option value="season">موسم</option>
-              <option value="occasion">مناسبة</option>
-            </select>
+            <Label htmlFor="type">النوع</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="season">موسم</SelectItem>
+                <SelectItem value="occasion">مناسبة</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <label className="text-sm font-medium">الوصف (اختياري)</label>
-            <input
-              type="text"
+            <Label htmlFor="description">الوصف (اختياري)</Label>
+            <Input
+              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="ادخل الوصف"
-              className="w-full mt-1 px-3 py-2 border rounded-md"
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               إلغاء
             </Button>
             <Button type="submit" disabled={loading}>
               {loading ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
