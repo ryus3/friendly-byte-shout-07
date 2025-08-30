@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, AlertTriangle, ShieldAlert, ArrowRight, X, Filter, TrendingDown, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -114,7 +115,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[70vh] sm:max-h-[70vh] overflow-hidden p-0">
+      <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col overflow-hidden p-0">
         <DialogHeader className="px-4 py-6 sm:px-6 border-b bg-gradient-to-r from-background to-muted/30">
           <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -149,95 +150,96 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="p-4 sm:p-6 space-y-6">
-          {/* Stats Cards - مع تدرجات زاهية ودوائر */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-blue-500/20 to-blue-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-                    onClick={() => setSelectedLevel('all')}>
-                <div className="absolute top-2 right-2 w-8 h-8 bg-blue-500/20 rounded-full"></div>
-                <div className="absolute bottom-1 left-1 w-4 h-4 bg-blue-400/30 rounded-full"></div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{lowStockProducts.length}</div>
-                <div className="text-xs text-blue-500/80">إجمالي</div>
-              </Card>
-            </motion.div>
-            
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-red-500/20 to-red-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-                    onClick={() => setSelectedLevel('critical')}>
-                <div className="absolute top-2 right-2 w-8 h-8 bg-red-500/20 rounded-full"></div>
-                <div className="absolute bottom-1 left-1 w-4 h-4 bg-red-400/30 rounded-full"></div>
-                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{criticalCount}</div>
-                <div className="text-xs text-red-500/80">حرج</div>
-              </Card>
-            </motion.div>
-            
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-amber-500/20 to-orange-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-                    onClick={() => setSelectedLevel('warning')}>
-                <div className="absolute top-2 right-2 w-8 h-8 bg-amber-500/20 rounded-full"></div>
-                <div className="absolute bottom-1 left-1 w-4 h-4 bg-orange-400/30 rounded-full"></div>
-                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{warningCount}</div>
-                <div className="text-xs text-amber-600/80">منخفض</div>
-              </Card>
-            </motion.div>
-            
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-green-500/20 to-emerald-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
-                    onClick={() => setSelectedLevel('low')}>
-                <div className="absolute top-2 right-2 w-8 h-8 bg-green-500/20 rounded-full"></div>
-                <div className="absolute bottom-1 left-1 w-4 h-4 bg-emerald-400/30 rounded-full"></div>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{lowCount}</div>
-                <div className="text-xs text-green-600/80">تحذير</div>
-              </Card>
-            </motion.div>
-          </div>
-
-          {/* Filter Pills */}
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'all', label: 'الكل', count: lowStockProducts.length, icon: Filter },
-              { key: 'critical', label: 'حرج', count: criticalCount, icon: ShieldAlert },
-              { key: 'warning', label: 'منخفض', count: warningCount, icon: AlertTriangle },
-              { key: 'low', label: 'تحذير', count: lowCount, icon: TrendingDown }
-            ].map(({ key, label, count, icon: Icon }) => (
-              <motion.div key={key} whileTap={{ scale: 0.95 }}>
-                <Button
-                  variant={selectedLevel === key ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedLevel(key)}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-xs font-medium transition-all",
-                    selectedLevel === key 
-                      ? "bg-primary text-primary-foreground shadow-lg" 
-                      : "hover:bg-muted/50"
-                  )}
-                >
-                  <Icon className="w-3 h-3 mr-1" />
-                  {label} ({count})
-                </Button>
+        <ScrollArea className="flex-1">
+          <div className="p-4 sm:p-6 space-y-6">
+            {/* Stats Cards - مع تدرجات زاهية ودوائر */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-blue-500/20 to-blue-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setSelectedLevel('all')}>
+                  <div className="absolute top-2 right-2 w-8 h-8 bg-blue-500/20 rounded-full"></div>
+                  <div className="absolute bottom-1 left-1 w-4 h-4 bg-blue-400/30 rounded-full"></div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{lowStockProducts.length}</div>
+                  <div className="text-xs text-blue-500/80">إجمالي</div>
+                </Card>
               </motion.div>
-            ))}
-          </div>
+              
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-red-500/20 to-red-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setSelectedLevel('critical')}>
+                  <div className="absolute top-2 right-2 w-8 h-8 bg-red-500/20 rounded-full"></div>
+                  <div className="absolute bottom-1 left-1 w-4 h-4 bg-red-400/30 rounded-full"></div>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">{criticalCount}</div>
+                  <div className="text-xs text-red-500/80">حرج</div>
+                </Card>
+              </motion.div>
+              
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-amber-500/20 to-orange-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setSelectedLevel('warning')}>
+                  <div className="absolute top-2 right-2 w-8 h-8 bg-amber-500/20 rounded-full"></div>
+                  <div className="absolute bottom-1 left-1 w-4 h-4 bg-orange-400/30 rounded-full"></div>
+                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{warningCount}</div>
+                  <div className="text-xs text-amber-600/80">منخفض</div>
+                </Card>
+              </motion.div>
+              
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-green-500/20 to-emerald-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setSelectedLevel('low')}>
+                  <div className="absolute top-2 right-2 w-8 h-8 bg-green-500/20 rounded-full"></div>
+                  <div className="absolute bottom-1 left-1 w-4 h-4 bg-emerald-400/30 rounded-full"></div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{lowCount}</div>
+                  <div className="text-xs text-green-600/80">تحذير</div>
+                </Card>
+              </motion.div>
+            </div>
 
-          {/* Products List */}
-          <div className="max-h-[35vh] sm:max-h-80 overflow-y-auto space-y-3">
+            {/* Filter Pills */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'all', label: 'الكل', count: lowStockProducts.length, icon: Filter },
+                { key: 'critical', label: 'حرج', count: criticalCount, icon: ShieldAlert },
+                { key: 'warning', label: 'منخفض', count: warningCount, icon: AlertTriangle },
+                { key: 'low', label: 'تحذير', count: lowCount, icon: TrendingDown }
+              ].map(({ key, label, count, icon: Icon }) => (
+                <motion.div key={key} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant={selectedLevel === key ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedLevel(key)}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-xs font-medium transition-all",
+                      selectedLevel === key 
+                        ? "bg-primary text-primary-foreground shadow-lg" 
+                        : "hover:bg-muted/50"
+                    )}
+                  >
+                    <Icon className="w-3 h-3 mr-1" />
+                    {label} ({count})
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Products List */}
+            <div className="space-y-3 pb-6">
             <AnimatePresence mode="popLayout">
               {filteredProducts.length === 0 ? (
                 <motion.div
@@ -354,11 +356,14 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                   );
                 })
               )}
-            </AnimatePresence>
+              </AnimatePresence>
+            </div>
           </div>
+        </ScrollArea>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-border/50">
+        {/* Action Buttons - Fixed at bottom */}
+        <div className="p-4 sm:p-6 pt-4 border-t border-border/50 bg-background/95 backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row gap-3">
             <motion.div className="flex-1" whileTap={{ scale: 0.98 }}>
               <Button 
                 variant="outline" 
