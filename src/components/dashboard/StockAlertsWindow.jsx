@@ -104,7 +104,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
   const lowCount = lowStockProducts.filter(v => getStockLevel(v.quantity, v.lowStockThreshold).style === 'low').length;
 
   const handleProductClick = (variant) => {
-    navigate(`/inventory?highlight=${variant.productId}`);
+    navigate(`/inventory?highlight=${variant.productId}&variant=${variant.variantId}&search=${encodeURIComponent(variant.productName)}&filter=low`);
     onOpenChange(false);
   };
 
@@ -231,7 +231,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                         : "hover:bg-muted/50"
                     )}
                   >
-                    <Icon className="w-3 h-3 mr-1" />
+                    <Icon className="w-3 h-3 ml-1" />
                     {label} ({count})
                   </Button>
                 </motion.div>
@@ -286,11 +286,12 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                         }}
                         onClick={() => handleProductClick(variant)}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
+                            {/* Header Section with Image and Basic Info */}
+                            <div className="flex items-start gap-4">
                               {/* Product Image */}
-                              <div className="w-14 h-14 rounded-xl overflow-hidden bg-background border-2 shadow-lg flex-shrink-0 group-hover:scale-105 transition-transform">
+                              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-background border-2 shadow-lg flex-shrink-0 group-hover:scale-105 transition-transform">
                                 {variant.productImage ? (
                                   <img 
                                     src={variant.productImage} 
@@ -299,54 +300,112 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                                   />
                                 ) : (
                                   <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                                    <Package className="w-6 h-6 text-muted-foreground" />
+                                    <Package className="w-8 h-8 text-muted-foreground" />
                                   </div>
                                 )}
                               </div>
                               
-                              {/* Product Info */}
+                              {/* Product Basic Info */}
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-foreground truncate text-sm sm:text-base">
+                                <h3 className="text-lg font-bold text-foreground mb-2 leading-tight">
                                   {variant.productName}
                                 </h3>
-                                <div className="flex items-center gap-2 mt-1">
+                                <div className="flex items-center gap-2">
                                   <Badge 
                                     variant="outline"
-                                    className="text-xs font-medium"
-                                    style={{ 
-                                      color: stockLevel.color,
-                                      borderColor: stockLevel.color
-                                    }}
+                                    className="text-xs font-semibold px-3 py-1"
                                   >
-                                    {stockLevel.level}
+                                    {variant.sku}
                                   </Badge>
-                                  <span className="text-xs text-muted-foreground hidden sm:inline">
-                                    {variant.size} • {variant.color}
-                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Stock Status Icon */}
+                              <div className="flex flex-col items-center gap-2">
+                                <div 
+                                  className="p-3 rounded-full"
+                                  style={{ backgroundColor: stockLevel.bgColor }}
+                                >
+                                  <StockIcon 
+                                    className="w-6 h-6"
+                                    style={{ color: stockLevel.color }}
+                                  />
+                                </div>
+                                <Badge 
+                                  variant="outline"
+                                  className="text-xs font-medium whitespace-nowrap"
+                                  style={{ 
+                                    color: stockLevel.color,
+                                    borderColor: stockLevel.color
+                                  }}
+                                >
+                                  {stockLevel.level}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            {/* Variant Details Section */}
+                            <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+                              <h4 className="text-sm font-semibold text-foreground">تفاصيل المتغير</h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="text-center">
+                                  <div className="text-xs text-muted-foreground mb-1">اللون</div>
+                                  <div className="flex items-center justify-center gap-2">
+                                    {variant.colorId && (
+                                      <div 
+                                        className="w-4 h-4 rounded-full border-2 border-background shadow-sm"
+                                        style={{ 
+                                          backgroundColor: variant.color_hex || '#ccc'
+                                        }}
+                                      />
+                                    )}
+                                    <span className="text-sm font-medium">{variant.color}</span>
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-xs text-muted-foreground mb-1">المقاس</div>
+                                  <span className="text-sm font-medium">{variant.size}</span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Stock Info */}
-                            <div className="flex items-center gap-3 flex-shrink-0">
-                              <div className="text-right">
-                                <div 
-                                  className="text-xl sm:text-2xl font-bold"
-                                  style={{ color: stockLevel.color }}
-                                >
-                                  {variant.quantity}
+                            {/* Stock Alert Details */}
+                            <div className="bg-background border-2 rounded-xl p-4 space-y-3"
+                                 style={{ borderColor: stockLevel.borderColor }}>
+                              <h4 className="text-sm font-semibold text-foreground">تفاصيل التنبيه</h4>
+                              <div className="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">الكمية الحالية</div>
+                                  <div 
+                                    className="text-2xl font-bold"
+                                    style={{ color: stockLevel.color }}
+                                  >
+                                    {variant.quantity}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  من {variant.lowStockThreshold}
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">العتبة المطلوبة</div>
+                                  <div className="text-lg font-semibold text-muted-foreground">
+                                    {variant.lowStockThreshold}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-muted-foreground mb-1">النسبة المتبقية</div>
+                                  <div className="text-lg font-semibold" style={{ color: stockLevel.color }}>
+                                    {Math.round((variant.quantity / Math.max(variant.lowStockThreshold, 1)) * 100)}%
+                                  </div>
                                 </div>
                               </div>
                               
-                              <div className="flex flex-col items-center gap-1">
-                                <StockIcon 
-                                  className="w-5 h-5 group-hover:scale-110 transition-transform"
-                                  style={{ color: stockLevel.color }}
-                                />
-                                <Eye className="w-3 h-3 text-muted-foreground opacity-60" />
+                              {/* Alert Reason */}
+                              <div className="text-center pt-2 border-t border-border/50">
+                                <div className="text-xs text-muted-foreground mb-1">سبب التنبيه</div>
+                                <div className="text-sm font-medium" style={{ color: stockLevel.color }}>
+                                  {variant.quantity === 0 ? "المخزون نافذ تماماً" :
+                                   variant.quantity < variant.lowStockThreshold ? 
+                                   `منخفض بـ ${variant.lowStockThreshold - variant.quantity} قطع من العتبة` :
+                                   "تحذير استباقي"}
+                                </div>
                               </div>
                             </div>
                           </div>
