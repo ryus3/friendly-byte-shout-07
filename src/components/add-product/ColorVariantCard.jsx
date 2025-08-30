@@ -15,11 +15,13 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
     console.log(`🔧 تحديث المتغير: ${colorId}-${sizeId}, ${field} = ${value}`);
     
     setVariants(prev => prev.map(v => {
-      // التحقق من جميع التطابقات الممكنة مع تحسين الـ IDs
-      const isMatching = (
-        (v.colorId === colorId || v.color_id === colorId) && 
-        (v.sizeId === sizeId || v.size_id === sizeId || v.sizeId === String(sizeId) || v.size_id === String(sizeId))
-      );
+      // استخدام المعيار الموحد: color_id و size_id حصرياً
+      const vColorId = String(v.color_id || '');
+      const vSizeId = String(v.size_id || '');
+      const targetColorId = String(colorId || '');
+      const targetSizeId = String(sizeId || '');
+      
+      const isMatching = vColorId === targetColorId && vSizeId === targetSizeId;
       
       if (isMatching) {
         const updated = { ...v, [field]: value };
@@ -31,7 +33,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   };
 
   const handleRemoveSizeFromColor = (sizeId) => {
-    setVariants(prev => prev.filter(v => !(v.colorId === color.id && v.sizeId === sizeId)));
+    setVariants(prev => prev.filter(v => !(v.color_id === color.id && v.size_id === sizeId)));
   };
 
   const getInitialImagePreview = (image) => {

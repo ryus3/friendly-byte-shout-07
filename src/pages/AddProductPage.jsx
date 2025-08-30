@@ -504,8 +504,10 @@ const AddProductPage = () => {
       productData.selectedProductTypes = selectedProductTypes || [];
       productData.selectedSeasonsOccasions = selectedSeasonsOccasions || [];
       productData.selectedDepartments = selectedDepartments || [];
-      // نرسل categoriesChanged = true فقط إذا تم تعديل التصنيفات فعلياً
-      productData.categoriesChanged = true;
+      // تحديد ما إذا كانت التصنيفات تغيرت فعلياً
+      const originalCategories = editProductData?.product_categories?.map(pc => pc.category_id).sort() || [];
+      const currentCategories = [...selectedCategories].sort();
+      productData.categoriesChanged = JSON.stringify(originalCategories) !== JSON.stringify(currentCategories);
       
       console.log('🏷️ تصنيفات التعديل:', {
         categories: selectedCategories?.length || 0,

@@ -363,7 +363,8 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         // تنفيذ تحديثات التصنيفات بشكل متوازي
         const categorizationPromises = [];
 
-        if (shouldUpdateCategories) {
+        // حماية من حذف التصنيفات إذا لم تتغير
+        if (shouldUpdateCategories && productData.categoriesChanged !== false) {
           const categoryPromise = async () => {
             await supabase.from('product_categories').delete().eq('product_id', productId);
             if (productData.selectedCategories?.length > 0) {
