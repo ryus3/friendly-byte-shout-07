@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Package, AlertTriangle, ShieldAlert, ArrowRight, X, Filter, TrendingDown, Eye, GripHorizontal } from 'lucide-react';
+import { Package, AlertTriangle, ShieldAlert, ArrowRight, X, Filter, TrendingDown, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '@/contexts/SuperProvider';
@@ -13,10 +13,6 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
   const navigate = useNavigate();
   const { products, settings } = useInventory(); // استخدام النظام الموحد
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [dragY, setDragY] = useState(0);
-  const dragRef = useRef(null);
-  const isDragging = useRef(false);
-  const startY = useRef(0);
   
   // حساب المنتجات المنخفضة باستخدام نفس منطق StockAlertsCard للبيانات الصحيحة
   const lowStockProducts = useMemo(() => {
@@ -116,79 +112,11 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
     onOpenChange(false);
   };
 
-  // Handle drag functionality
-  const handleDragStart = (e) => {
-    const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-    startY.current = clientY - dragY;
-    isDragging.current = true;
-    document.body.style.userSelect = 'none';
-  };
-
-  const handleDragMove = (e) => {
-    if (!isDragging.current) return;
-    e.preventDefault();
-    
-    const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-    const newY = clientY - startY.current;
-    
-    // Limit drag range - allow some upward movement and downward movement
-    const limitedY = Math.max(-100, Math.min(200, newY));
-    setDragY(limitedY);
-  };
-
-  const handleDragEnd = () => {
-    isDragging.current = false;
-    document.body.style.userSelect = '';
-    
-    // Snap back to position if not dragged far enough
-    if (Math.abs(dragY) < 50) {
-      setDragY(0);
-    }
-  };
-
-  React.useEffect(() => {
-    const handleMouseMove = (e) => handleDragMove(e);
-    const handleMouseUp = () => handleDragEnd();
-    const handleTouchMove = (e) => handleDragMove(e);
-    const handleTouchEnd = () => handleDragEnd();
-
-    if (isDragging.current) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
-    }
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [dragY]);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[85vh] sm:max-h-[85vh] overflow-hidden p-0 transition-transform duration-200"
-        style={{
-          transform: `translateY(${dragY}px)`,
-          willChange: 'transform'
-        }}
-        ref={dragRef}
-      >
-        <DialogHeader className="px-4 py-6 sm:px-6 border-b bg-gradient-to-r from-background to-muted/30 relative">
-          {/* Drag Handle */}
-          <div 
-            className="absolute top-2 left-1/2 transform -translate-x-1/2 cursor-grab active:cursor-grabbing z-10"
-            onMouseDown={handleDragStart}
-            onTouchStart={handleDragStart}
-          >
-            <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mb-2"></div>
-            <GripHorizontal className="w-6 h-6 text-muted-foreground/50 mx-auto" />
-          </div>
-          
-          <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-8">
+      <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[70vh] sm:max-h-[70vh] overflow-hidden p-0">
+        <DialogHeader className="px-4 py-6 sm:px-6 border-b bg-gradient-to-r from-background to-muted/30">
+          <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <motion.div 
                 className="p-3 rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 shadow-lg"
@@ -309,7 +237,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
           </div>
 
           {/* Products List */}
-          <div className="max-h-[50vh] sm:max-h-96 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+          <div className="max-h-[35vh] sm:max-h-80 overflow-y-auto space-y-3">
             <AnimatePresence mode="popLayout">
               {filteredProducts.length === 0 ? (
                 <motion.div
