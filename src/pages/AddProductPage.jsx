@@ -178,30 +178,18 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات - استخدام البيانات الحقيقية مباشرة
+        // تحميل التصنيفات - إبقاء IDs فقط للتوافق مع MultiSelectCategorization
         if (editProductData.product_categories) {
-          setSelectedCategories(editProductData.product_categories.map(pc => ({
-            id: pc.category_id,
-            name: pc.categories?.name || `تصنيف ${pc.category_id}`
-          })));
+          setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
         }
         if (editProductData.product_product_types) {
-          setSelectedProductTypes(editProductData.product_product_types.map(pt => ({
-            id: pt.product_type_id,
-            name: pt.product_types?.name || `نوع منتج ${pt.product_type_id}`
-          })));
+          setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
         }
         if (editProductData.product_seasons_occasions) {
-          setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => ({
-            id: so.season_occasion_id,
-            name: so.seasons_occasions?.name || `موسم/مناسبة ${so.season_occasion_id}`
-          })));
+          setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
         }
         if (editProductData.product_departments) {
-          setSelectedDepartments(editProductData.product_departments.map(pd => ({
-            id: pd.department_id,
-            name: pd.departments?.name || `قسم ${pd.department_id}`
-          })));
+          setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
         }
 
         // تحميل الألوان والمتغيرات
