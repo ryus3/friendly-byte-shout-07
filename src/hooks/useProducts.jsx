@@ -341,71 +341,93 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         
         console.log('✅ تم تحديث المنتج الأساسي بنجاح');
 
-        // 2. Update categorization relationships only if provided
-        // Check if categorizations are provided (not empty/undefined)
-        const shouldUpdateCategories = productData.selectedCategories !== undefined;
-        const shouldUpdateProductTypes = productData.selectedProductTypes !== undefined;
-        const shouldUpdateSeasonsOccasions = productData.selectedSeasonsOccasions !== undefined;
-        const shouldUpdateDepartments = productData.selectedDepartments !== undefined;
+        // 2. Update categorization relationships (متوازي)
+        // نتحقق من أن هذا تعديل فعلي وليس مجرد تحميل بيانات فارغة
+        const shouldUpdateCategories = productData.categoriesChanged === true && Array.isArray(productData.selectedCategories);
+        const shouldUpdateProductTypes = productData.categoriesChanged === true && Array.isArray(productData.selectedProductTypes);
+        const shouldUpdateSeasonsOccasions = productData.categoriesChanged === true && Array.isArray(productData.selectedSeasonsOccasions);
+        const shouldUpdateDepartments = productData.categoriesChanged === true && Array.isArray(productData.selectedDepartments);
 
         console.log('🏷️ تحديث التصنيفات:', {
           shouldUpdateCategories,
           shouldUpdateProductTypes,
           shouldUpdateSeasonsOccasions,
           shouldUpdateDepartments,
+          categoriesChanged: productData.categoriesChanged,
           categoriesCount: productData.selectedCategories?.length || 0,
           typesCount: productData.selectedProductTypes?.length || 0,
           seasonsCount: productData.selectedSeasonsOccasions?.length || 0,
           departmentsCount: productData.selectedDepartments?.length || 0
         });
 
-        // Only update categories if explicitly provided
+        // تنفيذ تحديثات التصنيفات بشكل متوازي
+        const categorizationPromises = [];
+
         if (shouldUpdateCategories) {
-          await supabase.from('product_categories').delete().eq('product_id', productId);
-          if (productData.selectedCategories?.length > 0) {
-            const categoryRelations = productData.selectedCategories.map(categoryId => ({
-              product_id: productId,
-              category_id: categoryId
-            }));
-            await supabase.from('product_categories').insert(categoryRelations);
-          }
+          const categoryPromise = async () => {
+            await supabase.from('product_categories').delete().eq('product_id', productId);
+            if (productData.selectedCategories?.length > 0) {
+              const categoryRelations = productData.selectedCategories.map(categoryId => ({
+                product_id: productId,
+                category_id: categoryId
+              }));
+              await supabase.from('product_categories').insert(categoryRelations);
+            }
+          };
+          categorizationPromises.push(categoryPromise());
         }
 
         if (shouldUpdateProductTypes) {
-          await supabase.from('product_product_types').delete().eq('product_id', productId);
-          if (productData.selectedProductTypes?.length > 0) {
-            const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
-              product_id: productId,
-              product_type_id: typeId
-            }));
-            await supabase.from('product_product_types').insert(productTypeRelations);
-          }
+          const productTypePromise = async () => {
+            await supabase.from('product_product_types').delete().eq('product_id', productId);
+            if (productData.selectedProductTypes?.length > 0) {
+              const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
+                product_id: productId,
+                product_type_id: typeId
+              }));
+              await supabase.from('product_product_types').insert(productTypeRelations);
+            }
+          };
+          categorizationPromises.push(productTypePromise());
         }
 
         if (shouldUpdateSeasonsOccasions) {
-          await supabase.from('product_seasons_occasions').delete().eq('product_id', productId);
-          if (productData.selectedSeasonsOccasions?.length > 0) {
-            const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
-              product_id: productId,
-              season_occasion_id: seasonId
-            }));
-            await supabase.from('product_seasons_occasions').insert(seasonRelations);
-          }
+          const seasonPromise = async () => {
+            await supabase.from('product_seasons_occasions').delete().eq('product_id', productId);
+            if (productData.selectedSeasonsOccasions?.length > 0) {
+              const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
+                product_id: productId,
+                season_occasion_id: seasonId
+              }));
+              await supabase.from('product_seasons_occasions').insert(seasonRelations);
+            }
+          };
+          categorizationPromises.push(seasonPromise());
         }
 
         if (shouldUpdateDepartments) {
-          await supabase.from('product_departments').delete().eq('product_id', productId);
-          if (productData.selectedDepartments?.length > 0) {
-            const departmentRelations = productData.selectedDepartments.map(deptId => ({
-              product_id: productId,
-              department_id: deptId
-            }));
-            await supabase.from('product_departments').insert(departmentRelations);
-          }
+          const departmentPromise = async () => {
+            await supabase.from('product_departments').delete().eq('product_id', productId);
+            if (productData.selectedDepartments?.length > 0) {
+              const departmentRelations = productData.selectedDepartments.map(deptId => ({
+                product_id: productId,
+                department_id: deptId
+              }));
+              await supabase.from('product_departments').insert(departmentRelations);
+            }
+          };
+          categorizationPromises.push(departmentPromise());
         }
 
-        // 3. Handle images upload
-            
+        // تنفيذ جميع تحديثات التصنيفات بشكل متوازي
+        if (categorizationPromises.length > 0) {
+          await Promise.all(categorizationPromises);
+          console.log('✅ تم تحديث جميع التصنيفات بنجاح');
+        }
+
+        // 3. Handle images upload (متوازي)
+        const imagePromises = [];
+        
         const generalImageFiles = imageFiles.general.filter(img => img && !(typeof img === 'string'));
         const existingImageUrls = imageFiles.general.filter(img => img && typeof img === 'string');
         let totalImagesToUpload = generalImageFiles.length;
@@ -425,27 +447,29 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         const progressCallback = () => {
             uploadedCount++;
             if (totalImagesToUpload > 0) {
-                setUploadProgress((uploadedCount / totalImagesToUpload) * 100);
+                setUploadProgress(50 + (uploadedCount / totalImagesToUpload) * 30);
             }
         };
 
-        let uploadedGeneralUrls = [];
+        // رفع الصور العامة بشكل متوازي
         if(generalImageFiles.length > 0) {
-            const uploadPromises = generalImageFiles.map(file => {
-                const path = `public/${productId}/general_${Date.now()}_${Math.random()}`;
-                const promise = uploadImage(file, 'product-images', path);
-                promise.then(progressCallback);
-                return promise;
+            const generalUploadPromise = Promise.all(
+                generalImageFiles.map(file => {
+                    const path = `public/${productId}/general_${Date.now()}_${Math.random()}`;
+                    const promise = uploadImage(file, 'product-images', path);
+                    promise.then(progressCallback);
+                    return promise;
+                })
+            ).then(uploadedUrls => {
+                const validUrls = uploadedUrls.filter(Boolean);
+                const finalGeneralImages = [...existingImageUrls, ...validUrls];
+                return supabase
+                    .from('products')
+                    .update({ images: finalGeneralImages })
+                    .eq('id', productId);
             });
-            uploadedGeneralUrls = (await Promise.all(uploadPromises)).filter(Boolean);
+            imagePromises.push(generalUploadPromise);
         }
-        
-        const finalGeneralImages = [...existingImageUrls, ...uploadedGeneralUrls];
-
-        await supabase
-            .from('products')
-            .update({ images: finalGeneralImages })
-            .eq('id', productId);
 
         const colorImageUploads = {};
         for (const colorId in colorImageFiles) {
