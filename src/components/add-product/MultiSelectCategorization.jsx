@@ -24,17 +24,39 @@ const MultiSelectCategorization = ({
   selectedSeasonsOccasions = [],
   setSelectedSeasonsOccasions,
   selectedDepartments = [],
-  setSelectedDepartments
+  setSelectedDepartments,
+  // بيانات جاهزة مع الأسماء (لحالة التعديل)
+  preloadedCategoriesData = null,
+  preloadedProductTypesData = null,
+  preloadedSeasonsOccasionsData = null,
+  preloadedDepartmentsData = null
 }) => {
   // استخدام النظام التوحيدي للمرشحات
   const {
-    categories,
-    departments,
-    productTypes,
-    seasonsOccasions,
+    categories: fetchedCategories,
+    departments: fetchedDepartments,
+    productTypes: fetchedProductTypes,
+    seasonsOccasions: fetchedSeasonsOccasions,
     loading,
     refreshFiltersData
   } = useFiltersData();
+
+  // دمج البيانات الجاهزة مع البيانات المحملة
+  const categories = preloadedCategoriesData ? 
+    [...preloadedCategoriesData, ...fetchedCategories.filter(c => !preloadedCategoriesData.find(p => p.id === c.id))] :
+    fetchedCategories;
+  
+  const departments = preloadedDepartmentsData ? 
+    [...preloadedDepartmentsData, ...fetchedDepartments.filter(d => !preloadedDepartmentsData.find(p => p.id === d.id))] :
+    fetchedDepartments;
+    
+  const productTypes = preloadedProductTypesData ? 
+    [...preloadedProductTypesData, ...fetchedProductTypes.filter(pt => !preloadedProductTypesData.find(p => p.id === pt.id))] :
+    fetchedProductTypes;
+    
+  const seasonsOccasions = preloadedSeasonsOccasionsData ? 
+    [...preloadedSeasonsOccasionsData, ...fetchedSeasonsOccasions.filter(so => !preloadedSeasonsOccasionsData.find(p => p.id === so.id))] :
+    fetchedSeasonsOccasions;
   
   // Dialog states
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -49,14 +71,14 @@ const MultiSelectCategorization = ({
   
   // التحقق من جاهزية البيانات للعرض
   useEffect(() => {
+    const hasPreloadedData = preloadedCategoriesData || preloadedDepartmentsData || preloadedProductTypesData || preloadedSeasonsOccasionsData;
     const hasBasicData = !loading && categories.length > 0 && departments.length > 0;
-    const hasAllData = hasBasicData && productTypes.length > 0 && seasonsOccasions.length > 0;
     
-    // إذا كانت البيانات الأساسية متوفرة، اعرضها فوراً
-    if (hasBasicData) {
+    // إذا كانت هناك بيانات محملة مسبقاً، اعرضها فوراً
+    if (hasPreloadedData || hasBasicData) {
       setDataReady(true);
     }
-  }, [loading, categories, departments, productTypes, seasonsOccasions]);
+  }, [loading, categories, departments, productTypes, seasonsOccasions, preloadedCategoriesData, preloadedDepartmentsData, preloadedProductTypesData, preloadedSeasonsOccasionsData]);
 
   // التحقق من وجود عناصر محددة وإظهارها حتى لو لم تكن الأسماء محملة
   const getSelectedDisplayItems = (selectedIds, items, label) => {

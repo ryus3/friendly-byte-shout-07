@@ -125,6 +125,13 @@ const AddProductPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [departments, setDepartments] = useState([]);
+  
+  // البيانات المحملة مسبقاً مع الأسماء
+  const [preloadedCategoriesData, setPreloadedCategoriesData] = useState(null);
+  const [preloadedProductTypesData, setPreloadedProductTypesData] = useState(null);
+  const [preloadedSeasonsOccasionsData, setPreloadedSeasonsOccasionsData] = useState(null);
+  const [preloadedDepartmentsData, setPreloadedDepartmentsData] = useState(null);
+  
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
   const allSizesForType = useMemo(() => {
@@ -178,18 +185,36 @@ const AddProductPage = () => {
           setGeneralImages(images);
         }
 
-        // تحميل التصنيفات - إبقاء IDs فقط للتوافق مع MultiSelectCategorization
+        // تحميل التصنيفات - استخراج البيانات مع الأسماء
         if (editProductData.product_categories) {
           setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
+          // حفظ بيانات التصنيفات مع الأسماء
+          setPreloadedCategoriesData(editProductData.product_categories.map(pc => ({
+            id: pc.category_id,
+            name: pc.categories?.name || `تصنيف ${pc.category_id}`
+          })));
         }
         if (editProductData.product_product_types) {
           setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
+          setPreloadedProductTypesData(editProductData.product_product_types.map(pt => ({
+            id: pt.product_type_id,
+            name: pt.product_types?.name || `نوع ${pt.product_type_id}`
+          })));
         }
         if (editProductData.product_seasons_occasions) {
           setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
+          setPreloadedSeasonsOccasionsData(editProductData.product_seasons_occasions.map(so => ({
+            id: so.season_occasion_id,
+            name: so.seasons_occasions?.name || `موسم ${so.season_occasion_id}`,
+            type: so.seasons_occasions?.type || 'season'
+          })));
         }
         if (editProductData.product_departments) {
           setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
+          setPreloadedDepartmentsData(editProductData.product_departments.map(pd => ({
+            id: pd.department_id,
+            name: pd.departments?.name || `قسم ${pd.department_id}`
+          })));
         }
 
         // تحميل الألوان والمتغيرات
@@ -709,7 +734,7 @@ const AddProductPage = () => {
                   onImageSelect={handleGeneralImageSelect}
                   onImageRemove={handleGeneralImageRemove}
                 />
-                <MultiSelectCategorization 
+                <MultiSelectCategorization
                   selectedCategories={selectedCategories}
                   setSelectedCategories={setSelectedCategories}
                   selectedProductTypes={selectedProductTypes}
@@ -718,6 +743,10 @@ const AddProductPage = () => {
                   setSelectedSeasonsOccasions={setSelectedSeasonsOccasions}
                   selectedDepartments={selectedDepartments}
                   setSelectedDepartments={setSelectedDepartments}
+                  preloadedCategoriesData={preloadedCategoriesData}
+                  preloadedProductTypesData={preloadedProductTypesData}
+                  preloadedSeasonsOccasionsData={preloadedSeasonsOccasionsData}
+                  preloadedDepartmentsData={preloadedDepartmentsData}
                 />
                 <ProductVariantSelection 
                   selectedColors={selectedColors}
