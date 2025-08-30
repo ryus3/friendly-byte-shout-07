@@ -24,7 +24,22 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
       const isMatching = vColorId === targetColorId && vSizeId === targetSizeId;
       
       if (isMatching) {
-        const updated = { ...v, [field]: value };
+        let updated = { ...v };
+        
+        // معالجة خاصة لحقل الكمية
+        if (field === 'quantity') {
+          // تحديث الكمية في المخزون والحقل المباشر
+          updated.quantity = value;
+          if (updated.inventory) {
+            updated.inventory = { ...updated.inventory, quantity: value };
+          } else {
+            updated.inventory = { quantity: value };
+          }
+        } else {
+          // تحديث الحقول الأخرى بشكل طبيعي
+          updated[field] = value;
+        }
+        
         console.log(`✅ تم تحديث المتغير - اللون: ${colorId}, القياس: ${sizeId}, ${field}: ${value}`, updated);
         return updated;
       }
