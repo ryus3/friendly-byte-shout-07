@@ -6,38 +6,52 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Package, AlertTriangle, ShieldAlert, ArrowRight, X, Filter, TrendingDown, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useSuper } from '@/contexts/SuperProvider';
+import { useInventory } from '@/contexts/SuperProvider';
 import { cn } from '@/lib/utils';
 
 const StockAlertsWindow = ({ open, onOpenChange }) => {
   const navigate = useNavigate();
-  const { inventory = [], products = [] } = useSuper();
+  const { products, settings } = useInventory(); // استخدام النظام الموحد
   const [selectedLevel, setSelectedLevel] = useState('all');
   
-  // حساب المنتجات المنخفضة باستخدام البيانات الحقيقية من SuperProvider
+  // حساب المنتجات المنخفضة باستخدام نفس منطق StockAlertsCard للبيانات الصحيحة
   const lowStockProducts = useMemo(() => {
-    return inventory.filter(item => {
-      const product = products.find(p => p.id === item.product_id);
-      if (!product) return false;
-      
-      const threshold = item.min_stock || 5;
-      return item.quantity <= threshold;
-    }).map(item => {
-      const product = products.find(p => p.id === item.product_id);
-      return {
-        id: item.id,
-        productId: item.product_id,
-        variantId: item.variant_id,
-        productName: product?.name || 'منتج غير معروف',
-        quantity: item.quantity || 0,
-        lowStockThreshold: item.min_stock || 5,
-        productImage: product?.image_url,
-        sku: product?.sku || item.id,
-        color: 'افتراضي',
-        size: 'افتراضي'
-      };
+    if (!products || !Array.isArray(products)) return [];
+    
+    const threshold = settings?.lowStockThreshold || 5;
+    const lowStockItems = [];
+    
+    products.forEach(product => {
+      if (product.variants && product.variants.length > 0) {
+        // البحث عن المتغيرات منخفضة المخزون (أكبر من 0 وأقل من أو يساوي العتبة)
+        const lowStockVariants = product.variants.filter(variant => {
+          const variantQuantity = variant.quantity || 0;
+          return variantQuantity > 0 && variantQuantity <= threshold;
+        });
+        
+        // إضافة كل متغير منخفض كعنصر منفصل للعرض التفصيلي
+        lowStockVariants.forEach(variant => {
+          lowStockItems.push({
+            id: variant.id,
+            productId: product.id,
+            variantId: variant.id,
+            productName: product.name,
+            quantity: variant.quantity || 0,
+            lowStockThreshold: threshold,
+            productImage: product.images?.[0], // الصورة الصحيحة من array
+            sku: variant.sku || product.sku || variant.id,
+            color: variant.color?.name || 'غير محدد',
+            size: variant.size?.name || 'غير محدد',
+            colorId: variant.color_id,
+            sizeId: variant.size_id
+          });
+        });
+      }
     });
-  }, [inventory, products]);
+    
+    // ترتيب حسب أقل كمية
+    return lowStockItems.sort((a, b) => a.quantity - b.quantity);
+  }, [products, settings?.lowStockThreshold]);
   
   const getStockLevel = (stock, minStock) => {
     if (stock === 0) return {
@@ -100,7 +114,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden p-0">
+      <DialogContent className="max-w-md sm:max-w-2xl lg:max-w-4xl max-h-[70vh] sm:max-h-[70vh] overflow-hidden p-0">
         <DialogHeader className="px-4 py-6 sm:px-6 border-b bg-gradient-to-r from-background to-muted/30">
           <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -112,7 +126,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                 <ShieldAlert className="w-6 h-6 text-primary" />
               </motion.div>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-primary bg-clip-text text-transparent">
                   تنبيهات المخزون
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
@@ -136,17 +150,19 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="p-4 sm:p-6 space-y-6">
-          {/* Stats Cards */}
+          {/* Stats Cards - مع تدرجات زاهية ودوائر */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
-              <Card className="p-3 text-center border-0 bg-gradient-to-br from-primary/10 to-primary/5 hover:shadow-md transition-all cursor-pointer"
+              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-blue-500/20 to-blue-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLevel('all')}>
-                <div className="text-2xl font-bold text-primary">{lowStockProducts.length}</div>
-                <div className="text-xs text-muted-foreground">إجمالي</div>
+                <div className="absolute top-2 right-2 w-8 h-8 bg-blue-500/20 rounded-full"></div>
+                <div className="absolute bottom-1 left-1 w-4 h-4 bg-blue-400/30 rounded-full"></div>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{lowStockProducts.length}</div>
+                <div className="text-xs text-blue-500/80">إجمالي</div>
               </Card>
             </motion.div>
             
@@ -155,10 +171,12 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <Card className="p-3 text-center border-0 bg-gradient-to-br from-destructive/10 to-destructive/5 hover:shadow-md transition-all cursor-pointer"
+              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-red-500/20 to-red-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLevel('critical')}>
-                <div className="text-2xl font-bold text-destructive">{criticalCount}</div>
-                <div className="text-xs text-muted-foreground">حرج</div>
+                <div className="absolute top-2 right-2 w-8 h-8 bg-red-500/20 rounded-full"></div>
+                <div className="absolute bottom-1 left-1 w-4 h-4 bg-red-400/30 rounded-full"></div>
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">{criticalCount}</div>
+                <div className="text-xs text-red-500/80">حرج</div>
               </Card>
             </motion.div>
             
@@ -167,10 +185,12 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <Card className="p-3 text-center border-0 bg-gradient-to-br from-warning/10 to-warning/5 hover:shadow-md transition-all cursor-pointer"
+              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-amber-500/20 to-orange-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLevel('warning')}>
-                <div className="text-2xl font-bold text-warning">{warningCount}</div>
-                <div className="text-xs text-muted-foreground">منخفض</div>
+                <div className="absolute top-2 right-2 w-8 h-8 bg-amber-500/20 rounded-full"></div>
+                <div className="absolute bottom-1 left-1 w-4 h-4 bg-orange-400/30 rounded-full"></div>
+                <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{warningCount}</div>
+                <div className="text-xs text-amber-600/80">منخفض</div>
               </Card>
             </motion.div>
             
@@ -179,10 +199,12 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <Card className="p-3 text-center border-0 bg-gradient-to-br from-accent/20 to-accent/10 hover:shadow-md transition-all cursor-pointer"
+              <Card className="relative p-4 text-center border-0 bg-gradient-to-br from-green-500/20 to-emerald-600/10 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
                     onClick={() => setSelectedLevel('low')}>
-                <div className="text-2xl font-bold text-accent-foreground">{lowCount}</div>
-                <div className="text-xs text-muted-foreground">تحذير</div>
+                <div className="absolute top-2 right-2 w-8 h-8 bg-green-500/20 rounded-full"></div>
+                <div className="absolute bottom-1 left-1 w-4 h-4 bg-emerald-400/30 rounded-full"></div>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{lowCount}</div>
+                <div className="text-xs text-green-600/80">تحذير</div>
               </Card>
             </motion.div>
           </div>
@@ -215,7 +237,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
           </div>
 
           {/* Products List */}
-          <div className="max-h-[50vh] sm:max-h-96 overflow-y-auto space-y-3">
+          <div className="max-h-[35vh] sm:max-h-80 overflow-y-auto space-y-3">
             <AnimatePresence mode="popLayout">
               {filteredProducts.length === 0 ? (
                 <motion.div
