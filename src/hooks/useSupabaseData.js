@@ -191,7 +191,7 @@ export const useProfits = (employeeId) => {
 };
 
 // Hook for notifications
-export const useSupabaseNotifications = (userId) => {
+export const useNotifications = (userId) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const { db } = useSupabase();

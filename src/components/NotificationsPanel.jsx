@@ -19,7 +19,8 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -338,7 +339,8 @@ const typeColorMap = {
 };
 
 const NotificationsPanel = () => {
-  const { notifications, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification } = useUnifiedNotifications();
+  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
+  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -348,8 +350,12 @@ const NotificationsPanel = () => {
     e.stopPropagation();
     
     // تحديد الإشعار كمقروء
-    if (!notification.read) {
-      markAsRead(notification.id);
+    if (!notification.is_read) {
+      if (notification.related_entity_type) {
+        markSystemAsRead(notification.id);
+      } else {
+        markAsRead(notification.id);
+      }
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
@@ -456,7 +462,7 @@ const NotificationsPanel = () => {
   const handleClearAll = (e) => {
     e.stopPropagation();
     // Clear all notifications
-    clearAllNotifications();
+    clearAll();
     toast({ title: "تم حذف جميع الإشعارات" });
   };
 
@@ -494,10 +500,37 @@ const NotificationsPanel = () => {
     const m = msg.match(/\b(\d{6,})\b/);
     return m ? m[1] : null;
   };
-  const allNotifications = notifications.filter(n => n.type !== 'welcome');
+  const merged = [
+    ...notifications.filter(n => n.type !== 'welcome'),
+    ...systemNotifications
+  ];
   
-  const sortedNotifications = allNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  const unreadFilteredCount = sortedNotifications.filter(n => !n.read).length;
+  const uniqueMap = new Map();
+  for (const n of merged) {
+    let uniqueKey = n.id;
+    
+    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id (مع تعويض عند غياب data)
+    if (n.type === 'alwaseet_status_change') {
+      const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message);
+      const sid = n.data?.state_id || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
+      if (tracking && sid) {
+        uniqueKey = `alwaseet_${tracking}_${sid}`;
+      } else if (tracking) {
+        uniqueKey = `alwaseet_${tracking}_${(n.message || '').slice(0, 32)}`;
+      }
+    }
+    
+    if (!uniqueKey) {
+      // إشعارات أخرى - منع التكرار بناءً على المحتوى
+      const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+      uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
+    }
+    
+    if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
+  }
+  
+  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (
     <>
@@ -547,7 +580,7 @@ const NotificationsPanel = () => {
               className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" 
               onClick={handleClearAll} 
               title="حذف الكل" 
-              disabled={sortedNotifications.length === 0}
+              disabled={allNotifications.length === 0}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -557,8 +590,8 @@ const NotificationsPanel = () => {
         <ScrollArea className="h-80 px-2">
           <div className="space-y-2 py-2">
             <AnimatePresence>
-              {sortedNotifications.length > 0 ? (
-                sortedNotifications.slice(0, 8).map(notification => {
+              {allNotifications.length > 0 ? (
+                allNotifications.slice(0, 8).map(notification => {
                   const notificationType = notification.type || 'default';
                   
                   // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
@@ -589,7 +622,7 @@ const NotificationsPanel = () => {
                           "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
                           colors.bg,
                           colors.border,
-                          (notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
+                          (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
                           "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
                         )}
                         onClick={(e) => handleNotificationClick(e, notification)}
@@ -602,7 +635,7 @@ const NotificationsPanel = () => {
                             <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
                               {notification.title}
                             </h3>
-                            {!notification.read && (
+                            {!(notification.is_read || notification.read) && (
                               <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
                             )}
                           </div>
@@ -614,7 +647,7 @@ const NotificationsPanel = () => {
                               <Clock className="w-2.5 h-2.5" />
                               {formatRelativeTime(notification.created_at)}
                             </p>
-                            {!notification.read && (
+                            {!(notification.is_read || notification.read) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 

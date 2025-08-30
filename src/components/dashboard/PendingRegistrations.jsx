@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { User, UserCheck, UserX, Settings, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import UnifiedEmployeePermissionsDialog from '../manage-employees/UnifiedEmployeePermissionsDialog';
@@ -153,7 +153,7 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 
 const PendingRegistrations = ({ onClose }) => {
   const { pendingRegistrations, updateUser, refetchAdminData } = useAuth();
-  const { createNotification } = useUnifiedNotifications();
+  const { addNotification } = useNotifications();
   // نستخدم toast مباشرة
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showUnifiedDialog, setShowUnifiedDialog] = useState(false);

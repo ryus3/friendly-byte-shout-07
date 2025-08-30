@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const StockMonitoringSystem = () => {
-  const { createNotification } = useUnifiedNotifications();
+  const { addNotification } = useNotifications();
   const { user, hasPermission } = usePermissions();
   const notificationHistory = useRef(new Set());
   const lastCheckTime = useRef(Date.now());
@@ -84,7 +84,7 @@ const StockMonitoringSystem = () => {
           // تحديد نوع الإشعار
           if (newData.quantity === 0 && oldData.quantity > 0) {
             // نفاد المخزون
-            createNotification({
+            addNotification({
               type: 'out_of_stock',
               title: 'نفاد المخزون',
               message: `المنتج "${productName}" ${variantDetails ? `(${variantDetails})` : ''} نفد من المخزون`,
@@ -101,7 +101,7 @@ const StockMonitoringSystem = () => {
           } else if (newData.quantity <= newData.min_stock && oldData.quantity > newData.min_stock && newData.quantity > 0) {
             // مخزون منخفض
             const severity = newData.quantity <= 2 ? 'critical' : 'warning';
-            createNotification({
+            addNotification({
               type: 'low_stock',
               title: severity === 'critical' ? 'تنبيه حرج: نفاد المخزون قريباً' : 'تنبيه: مخزون منخفض',
               message: `المنتج "${productName}" ${variantDetails ? `(${variantDetails})` : ''} متبقي ${newData.quantity} قطعة فقط`,
@@ -128,7 +128,7 @@ const StockMonitoringSystem = () => {
         supabase.removeChannel(stockChannel);
       }
     };
-  }, [user?.user_id, hasPermission, createNotification]);
+  }, [user?.user_id, hasPermission, addNotification]);
 
   return null;
 };

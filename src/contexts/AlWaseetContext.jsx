@@ -3,7 +3,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
-import { useUnifiedNotifications } from './UnifiedNotificationsContext';
+import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
@@ -17,11 +17,11 @@ export const AlWaseetProvider = ({ children }) => {
   // استخدام اختياري لنظام الإشعارات
   let createNotification = null;
   try {
-    const notificationsSystem = useUnifiedNotifications();
+    const notificationsSystem = useNotificationsSystem();
     createNotification = notificationsSystem.createNotification;
   } catch (error) {
-    // UnifiedNotificationsProvider غير متاح بعد
-    console.log('UnifiedNotifications not ready yet');
+    // NotificationsSystemProvider غير متاح بعد
+    console.log('NotificationsSystem not ready yet');
   }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
