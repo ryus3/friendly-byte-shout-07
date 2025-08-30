@@ -398,9 +398,10 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           if (productData.selectedDepartments?.length > 0) {
             const departmentRelations = productData.selectedDepartments.map(deptId => ({
               product_id: productId,
-            department_id: deptId
-          }));
-          await supabase.from('product_departments').insert(departmentRelations);
+              department_id: deptId
+            }));
+            await supabase.from('product_departments').insert(departmentRelations);
+          }
         }
 
         // 3. Handle images upload
