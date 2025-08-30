@@ -568,65 +568,79 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             
             console.log(`📊 التحديثات: ${variantsToUpdate.length}, الإدراجات: ${variantsToInsert.length}`);
             
-            // تحديث المتغيرات الموجودة مع المخزون
-            for (const variant of variantsToUpdate) {
-              // تحديث بيانات المتغير
-              const { error: variantUpdateError } = await supabase
-                .from('product_variants')
-                .update({
-                  price: variant.price,
-                  cost_price: variant.cost_price,
-                  profit_amount: variant.profit_amount,
-                  hint: variant.hint || '',
-                  images: variant.images
-                })
-                .eq('id', variant.id);
-                
-              if (variantUpdateError) {
-                console.error('❌ خطأ في تحديث المتغير:', variantUpdateError);
-                throw variantUpdateError;
-              }
-              
-              // تحديث المخزون - إزالة upsert واستخدام update/insert منفصلين
-              const { data: existingInventory } = await supabase
-                .from('inventory')
-                .select('id')
-                .eq('variant_id', variant.id)
-                .eq('product_id', productId)
-                .single();
-                
-              if (existingInventory) {
-                // تحديث المخزون الموجود
-                const { error: updateInventoryError } = await supabase
-                  .from('inventory')
+            // تحديث المتغيرات الموجودة مع المخزون - تحسين الأداء بالمعالجة المتوازية
+            const variantUpdatePromises = variantsToUpdate.map(async (variant) => {
+              try {
+                // تحديث بيانات المتغير
+                const { error: variantUpdateError } = await supabase
+                  .from('product_variants')
                   .update({
-                    quantity: variant.quantity,
-                    min_stock: 5,
-                    last_updated_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+                    price: variant.price,
+                    cost_price: variant.cost_price,
+                    profit_amount: variant.profit_amount,
+                    hint: variant.hint || '',
+                    images: variant.images
                   })
-                  .eq('id', existingInventory.id);
+                  .eq('id', variant.id);
                   
-                if (updateInventoryError) {
-                  console.error('❌ خطأ في تحديث المخزون:', updateInventoryError);
+                if (variantUpdateError) {
+                  console.error('❌ خطأ في تحديث المتغير:', variantUpdateError);
+                  throw variantUpdateError;
                 }
-              } else {
-                // إدراج مخزون جديد
-                const { error: insertInventoryError } = await supabase
+                
+                // تحديث المخزون
+                const { data: existingInventory } = await supabase
                   .from('inventory')
-                  .insert({
-                    variant_id: variant.id,
-                    product_id: productId,
-                    quantity: variant.quantity,
-                    min_stock: 5,
-                    last_updated_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
-                  });
+                  .select('id')
+                  .eq('variant_id', variant.id)
+                  .eq('product_id', productId)
+                  .maybeSingle();
                   
-                if (insertInventoryError) {
-                  console.error('❌ خطأ في إدراج المخزون:', insertInventoryError);
+                if (existingInventory) {
+                  // تحديث المخزون الموجود
+                  const { error: updateInventoryError } = await supabase
+                    .from('inventory')
+                    .update({
+                      quantity: variant.quantity,
+                      min_stock: 5,
+                      last_updated_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+                    })
+                    .eq('id', existingInventory.id);
+                    
+                  if (updateInventoryError) {
+                    console.error('❌ خطأ في تحديث المخزون:', updateInventoryError);
+                  }
+                } else {
+                  // إدراج مخزون جديد
+                  const { error: insertInventoryError } = await supabase
+                    .from('inventory')
+                    .insert({
+                      variant_id: variant.id,
+                      product_id: productId,
+                      quantity: variant.quantity,
+                      min_stock: 5,
+                      last_updated_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+                    });
+                    
+                  if (insertInventoryError) {
+                    console.error('❌ خطأ في إدراج المخزون:', insertInventoryError);
+                  }
                 }
+                
+                console.log(`✅ تم تحديث المتغير ${variant.id} بكمية ${variant.quantity}`);
+                return { success: true, id: variant.id };
+              } catch (error) {
+                console.error(`❌ فشل في تحديث المتغير ${variant.id}:`, error);
+                return { success: false, id: variant.id, error };
               }
-              
-              console.log(`✅ تم تحديث المتغير ${variant.id} بكمية ${variant.quantity}`);
+            });
+            
+            // تنفيذ جميع تحديثات المتغيرات بشكل متوازي
+            const variantUpdateResults = await Promise.all(variantUpdatePromises);
+            const failedUpdates = variantUpdateResults.filter(r => !r.success);
+            
+            if (failedUpdates.length > 0) {
+              console.warn(`⚠️ فشل في تحديث ${failedUpdates.length} متغير(ات)`);
             }
             
             // إدراج المتغيرات الجديدة مع المخزون

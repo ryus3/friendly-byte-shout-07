@@ -497,13 +497,22 @@ const AddProductPage = () => {
       isVisible: true,
     };
 
-    // إرسال التصنيفات الحالية دائماً في وضع التعديل
+    // إرسال التصنيفات الحالية دائماً في وضع التعديل - إصلاح مشكلة حذف التصنيفات
     if (isEditMode) {
-      productData.selectedCategories = selectedCategories;
-      productData.selectedProductTypes = selectedProductTypes;
-      productData.selectedSeasonsOccasions = selectedSeasonsOccasions;
-      productData.selectedDepartments = selectedDepartments;
-      productData.categoriesChanged = true; // flag للإشارة إلى أن التصنيفات يجب تحديثها
+      // في وضع التعديل، نرسل التصنيفات الحالية دائماً لحفظها
+      productData.selectedCategories = selectedCategories || [];
+      productData.selectedProductTypes = selectedProductTypes || [];
+      productData.selectedSeasonsOccasions = selectedSeasonsOccasions || [];
+      productData.selectedDepartments = selectedDepartments || [];
+      // نرسل categoriesChanged = true فقط إذا تم تعديل التصنيفات فعلياً
+      productData.categoriesChanged = true;
+      
+      console.log('🏷️ تصنيفات التعديل:', {
+        categories: selectedCategories?.length || 0,
+        types: selectedProductTypes?.length || 0,
+        seasons: selectedSeasonsOccasions?.length || 0,
+        departments: selectedDepartments?.length || 0
+      });
     } else {
       // للمنتجات الجديدة، أرسل التصنيفات مع قيمها
       productData.selectedCategories = selectedCategories || [];

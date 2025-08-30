@@ -13,16 +13,17 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
     console.log(`🔧 تحديث المتغير: ${colorId}-${sizeId}, ${field} = ${value}`);
+    
     setVariants(prev => prev.map(v => {
-      // التحقق من جميع التطابقات الممكنة
+      // التحقق من جميع التطابقات الممكنة مع تحسين الـ IDs
       const isMatching = (
         (v.colorId === colorId || v.color_id === colorId) && 
-        (v.sizeId === sizeId || v.size_id === sizeId)
+        (v.sizeId === sizeId || v.size_id === sizeId || v.sizeId === String(sizeId) || v.size_id === String(sizeId))
       );
       
       if (isMatching) {
         const updated = { ...v, [field]: value };
-        console.log(`✅ تم تحديث المتغير:`, updated);
+        console.log(`✅ تم تحديث المتغير - اللون: ${colorId}, القياس: ${sizeId}, ${field}: ${value}`, updated);
         return updated;
       }
       return v;
