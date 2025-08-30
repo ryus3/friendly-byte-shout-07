@@ -34,3 +34,4 @@ const UnifiedNotificationsPanel = (props) => {
 };
 
 export default UnifiedNotificationsPanel;
+export { UnifiedNotificationsPanel };

@@ -10,7 +10,6 @@ import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
-import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
@@ -146,7 +145,6 @@ function AppContent() {
       </Suspense>
       <Toaster />
       <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
-      {user && <NotificationsHandler />}
     </div>
   )
 }
