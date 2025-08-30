@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Barcode from 'react-barcode';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Trash2, Barcode as BarcodeIcon } from 'lucide-react';
+import { GripVertical, Trash2, Barcode as BarcodeIcon, Plus } from 'lucide-react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ImageUploader from '@/components/manage-products/ImageUploader';
+import AddSizesToColorDialog from './AddSizesToColorDialog';
 
 const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, profitAmount, handleImageSelect, handleImageRemove, initialImage, dragHandleProps, isEditMode = false, showInventoryData = false, productName = '' }) => {
+  const [addSizesDialogOpen, setAddSizesDialogOpen] = useState(false);
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
     console.log(`🔧 تحديث المتغير: ${colorId}-${sizeId}, ${field} = ${value}`);
@@ -49,6 +51,11 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
 
   const handleRemoveSizeFromColor = (sizeId) => {
     setVariants(prev => prev.filter(v => !(v.color_id === color.id && v.size_id === sizeId)));
+  };
+
+  const handleAddSizes = (newSizes) => {
+    console.log(`➕ إضافة قياسات جديدة للون ${color.name}:`, newSizes);
+    setVariants(prev => [...prev, ...newSizes]);
   };
 
   const getInitialImagePreview = (image) => {
@@ -437,28 +444,52 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                   });
                  })()}
                  
-                 {/* رسالة عدم وجود متغيرات */}
-                 {(() => {
-                   const relevantVariants = isEditMode && showInventoryData
-                     ? variants.filter(v => v.color_id === color.id || v.colorId === color.id)
-                     : (allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).filter(v => 
-                         allSizesForType.length > 0 ? true : v.colorId === color.id || v.color_id === color.id
-                       );
-                   
-                   if (relevantVariants.length === 0) {
-                     return (
-                       <div className="text-center py-8 text-muted-foreground">
-                         <p className="text-sm">🔍 لا توجد متغيرات لهذا اللون</p>
-                         <p className="text-xs">قم بإضافة قياسات من القسم أعلاه</p>
-                       </div>
-                     );
-                   }
-                   return null;
-                 })()}
+                  {/* زر إضافة قياسات جديدة - يظهر فقط في وضع التعديل */}
+                  {isEditMode && showInventoryData && (
+                    <div className="text-center py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAddSizesDialogOpen(true)}
+                        className="gap-2 border-dashed border-primary/50 text-primary hover:bg-primary/10"
+                      >
+                        <Plus className="w-4 h-4" />
+                        إضافة قياسات جديدة
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* رسالة عدم وجود متغيرات */}
+                  {(() => {
+                    const relevantVariants = isEditMode && showInventoryData
+                      ? variants.filter(v => v.color_id === color.id || v.colorId === color.id)
+                      : (allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).filter(v => 
+                          allSizesForType.length > 0 ? true : v.colorId === color.id || v.color_id === color.id
+                        );
+                    
+                    if (relevantVariants.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p className="text-sm">🔍 لا توجد متغيرات لهذا اللون</p>
+                          <p className="text-xs">قم بإضافة قياسات جديدة بالنقر على الزر أعلاه</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
             </div>
           </div>
         </div>
       </CardContent>
+
+      {/* Dialog إضافة قياسات جديدة */}
+      <AddSizesToColorDialog
+        open={addSizesDialogOpen}
+        onOpenChange={setAddSizesDialogOpen}
+        color={color}
+        existingVariants={variants}
+        onAddSizes={handleAddSizes}
+      />
     </Card>
   );
 };
