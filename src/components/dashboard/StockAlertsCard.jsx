@@ -6,14 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
-import StockAlertsWindow from './StockAlertsWindow';
+
 import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { products, settings, refetchProducts } = useInventory(); // المنتجات المفلترة تلقائياً
   const { canManageFinances, isAdmin } = usePermissions();
-  const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
+  
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   // الاستماع لأحداث التحديث
@@ -69,7 +69,7 @@ const StockAlertsCard = () => {
   const canManageStockSettings = canManageFinances || isAdmin;
 
   const handleViewAll = () => {
-    setAlertsWindowOpen(true);
+    navigate('/inventory');
   };
   
   const handleLowStockProductClick = (product) => {
@@ -175,12 +175,6 @@ const StockAlertsCard = () => {
           </div>
         )}
       </CardContent>
-      
-      <StockAlertsWindow 
-        open={alertsWindowOpen}
-        onOpenChange={setAlertsWindowOpen}
-        canManageSettings={canManageStockSettings}
-      />
     </Card>
   );
 };
