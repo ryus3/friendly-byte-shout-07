@@ -497,27 +497,29 @@ const AddProductPage = () => {
       isVisible: true,
     };
 
-    // Only include categorizations if they have values (for edit mode protection)
-    if (selectedCategories && selectedCategories.length > 0) {
+    // إرسال التصنيفات الحالية دائماً في وضع التعديل
+    if (isEditMode) {
       productData.selectedCategories = selectedCategories;
-    }
-    if (selectedProductTypes && selectedProductTypes.length > 0) {
       productData.selectedProductTypes = selectedProductTypes;
-    }
-    if (selectedSeasonsOccasions && selectedSeasonsOccasions.length > 0) {
       productData.selectedSeasonsOccasions = selectedSeasonsOccasions;
-    }
-    if (selectedDepartments && selectedDepartments.length > 0) {
       productData.selectedDepartments = selectedDepartments;
-    }
-
-    // Force include categorizations for new products
-    if (!isEditMode) {
+      productData.categoriesChanged = true; // flag للإشارة إلى أن التصنيفات يجب تحديثها
+    } else {
+      // للمنتجات الجديدة، أرسل التصنيفات مع قيمها
       productData.selectedCategories = selectedCategories || [];
       productData.selectedProductTypes = selectedProductTypes || [];
       productData.selectedSeasonsOccasions = selectedSeasonsOccasions || [];
       productData.selectedDepartments = selectedDepartments || [];
     }
+    
+    console.log('📦 إرسال التصنيفات:', {
+      categoriesCount: productData.selectedCategories?.length || 0,
+      typesCount: productData.selectedProductTypes?.length || 0,
+      seasonsCount: productData.selectedSeasonsOccasions?.length || 0,
+      departmentsCount: productData.selectedDepartments?.length || 0,
+      isEditMode,
+      categoriesChanged: productData.categoriesChanged
+    });
     
     console.log('📦 بيانات المنتج النهائية للحفظ:', productData);
     
