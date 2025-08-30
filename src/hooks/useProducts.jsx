@@ -341,43 +341,63 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         
         console.log('✅ تم تحديث المنتج الأساسي بنجاح');
 
-        // 2. Update categorization relationships
-        // Delete existing relationships
-        await Promise.all([
-          supabase.from('product_categories').delete().eq('product_id', productId),
-          supabase.from('product_product_types').delete().eq('product_id', productId),
-          supabase.from('product_seasons_occasions').delete().eq('product_id', productId),
-          supabase.from('product_departments').delete().eq('product_id', productId)
-        ]);
+        // 2. Update categorization relationships only if provided
+        // Check if categorizations are provided (not empty/undefined)
+        const shouldUpdateCategories = productData.selectedCategories !== undefined;
+        const shouldUpdateProductTypes = productData.selectedProductTypes !== undefined;
+        const shouldUpdateSeasonsOccasions = productData.selectedSeasonsOccasions !== undefined;
+        const shouldUpdateDepartments = productData.selectedDepartments !== undefined;
 
-        // Insert new relationships
-        if (productData.selectedCategories && productData.selectedCategories.length > 0) {
-          const categoryRelations = productData.selectedCategories.map(categoryId => ({
-            product_id: productId,
-            category_id: categoryId
-          }));
-          await supabase.from('product_categories').insert(categoryRelations);
+        console.log('🏷️ تحديث التصنيفات:', {
+          shouldUpdateCategories,
+          shouldUpdateProductTypes,
+          shouldUpdateSeasonsOccasions,
+          shouldUpdateDepartments,
+          categoriesCount: productData.selectedCategories?.length || 0,
+          typesCount: productData.selectedProductTypes?.length || 0,
+          seasonsCount: productData.selectedSeasonsOccasions?.length || 0,
+          departmentsCount: productData.selectedDepartments?.length || 0
+        });
+
+        // Only update categories if explicitly provided
+        if (shouldUpdateCategories) {
+          await supabase.from('product_categories').delete().eq('product_id', productId);
+          if (productData.selectedCategories?.length > 0) {
+            const categoryRelations = productData.selectedCategories.map(categoryId => ({
+              product_id: productId,
+              category_id: categoryId
+            }));
+            await supabase.from('product_categories').insert(categoryRelations);
+          }
         }
 
-        if (productData.selectedProductTypes && productData.selectedProductTypes.length > 0) {
-          const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
-            product_id: productId,
-            product_type_id: typeId
-          }));
-          await supabase.from('product_product_types').insert(productTypeRelations);
+        if (shouldUpdateProductTypes) {
+          await supabase.from('product_product_types').delete().eq('product_id', productId);
+          if (productData.selectedProductTypes?.length > 0) {
+            const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
+              product_id: productId,
+              product_type_id: typeId
+            }));
+            await supabase.from('product_product_types').insert(productTypeRelations);
+          }
         }
 
-        if (productData.selectedSeasonsOccasions && productData.selectedSeasonsOccasions.length > 0) {
-          const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
-            product_id: productId,
-            season_occasion_id: seasonId
-          }));
-          await supabase.from('product_seasons_occasions').insert(seasonRelations);
+        if (shouldUpdateSeasonsOccasions) {
+          await supabase.from('product_seasons_occasions').delete().eq('product_id', productId);
+          if (productData.selectedSeasonsOccasions?.length > 0) {
+            const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
+              product_id: productId,
+              season_occasion_id: seasonId
+            }));
+            await supabase.from('product_seasons_occasions').insert(seasonRelations);
+          }
         }
 
-        if (productData.selectedDepartments && productData.selectedDepartments.length > 0) {
-          const departmentRelations = productData.selectedDepartments.map(deptId => ({
-            product_id: productId,
+        if (shouldUpdateDepartments) {
+          await supabase.from('product_departments').delete().eq('product_id', productId);
+          if (productData.selectedDepartments?.length > 0) {
+            const departmentRelations = productData.selectedDepartments.map(deptId => ({
+              product_id: productId,
             department_id: deptId
           }));
           await supabase.from('product_departments').insert(departmentRelations);

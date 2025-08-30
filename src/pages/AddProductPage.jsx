@@ -488,10 +488,6 @@ const AddProductPage = () => {
       costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : null,
       profitAmount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
       profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : null,
-      selectedCategories,
-      selectedProductTypes,
-      selectedSeasonsOccasions,
-      selectedDepartments,
       variants: variants.map(v => ({
         ...v,
         quantity: parseInt(v.quantity) || 0,
@@ -500,6 +496,28 @@ const AddProductPage = () => {
       })),
       isVisible: true,
     };
+
+    // Only include categorizations if they have values (for edit mode protection)
+    if (selectedCategories && selectedCategories.length > 0) {
+      productData.selectedCategories = selectedCategories;
+    }
+    if (selectedProductTypes && selectedProductTypes.length > 0) {
+      productData.selectedProductTypes = selectedProductTypes;
+    }
+    if (selectedSeasonsOccasions && selectedSeasonsOccasions.length > 0) {
+      productData.selectedSeasonsOccasions = selectedSeasonsOccasions;
+    }
+    if (selectedDepartments && selectedDepartments.length > 0) {
+      productData.selectedDepartments = selectedDepartments;
+    }
+
+    // Force include categorizations for new products
+    if (!isEditMode) {
+      productData.selectedCategories = selectedCategories || [];
+      productData.selectedProductTypes = selectedProductTypes || [];
+      productData.selectedSeasonsOccasions = selectedSeasonsOccasions || [];
+      productData.selectedDepartments = selectedDepartments || [];
+    }
     
     console.log('📦 بيانات المنتج النهائية للحفظ:', productData);
     
