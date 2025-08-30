@@ -19,6 +19,8 @@ export const UnifiedNotificationsProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  console.log('🔔 UnifiedNotificationsProvider initialized with user:', user?.id);
+
   // Fetch notifications with deduplication
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;

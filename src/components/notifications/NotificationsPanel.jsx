@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     markAsRead,
     markAllAsRead,
     deleteNotification
-  } = useNotificationsSystem();
+  } = useUnifiedNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
 
