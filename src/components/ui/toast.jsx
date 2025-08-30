@@ -13,22 +13,25 @@ const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
 			'fixed top-0 z-[10000] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-auto sm:right-auto sm:top-4 sm:left-1/2 sm:-translate-x-1/2 sm:flex-col md:max-w-[420px]',
 			className,
 		)}
-		swipeDirection="up"
 		{...props}
 	/>
 ));
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-	'group relative pointer-events-auto flex w-full items-center space-x-4 overflow-hidden rounded-xl border p-4 pr-8 shadow-lg transition-all data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-top-full data-[state=closed]:slide-out-to-top-full',
+	'group relative pointer-events-auto flex w-full items-center space-x-4 overflow-hidden rounded-xl border p-4 pr-8 shadow-lg transition-all duration-300 data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-top-full data-[state=closed]:slide-out-to-top-full data-[swipe=end]:data-[swipe-direction=up]:slide-out-to-top-full data-[swipe=end]:data-[swipe-direction=right]:slide-out-to-right-full data-[swipe=end]:data-[swipe-direction=left]:slide-out-to-left-full',
 	{
 		variants: {
 			variant: {
-				default: 'bg-background/80 backdrop-blur-lg border-border text-foreground',
+				default: 'bg-background/90 backdrop-blur-lg border-border/50 text-foreground shadow-xl',
 				destructive:
-          'group destructive border-destructive/50 bg-destructive/80 text-destructive-foreground',
+          'group destructive border-red-500/50 bg-gradient-to-r from-red-500/90 to-red-600/90 text-white shadow-xl shadow-red-500/25 backdrop-blur-lg',
         success:
-          'group success border-green-500/50 bg-green-500/80 text-primary-foreground',
+          'group success border-green-500/50 bg-gradient-to-r from-green-500/90 to-green-600/90 text-white shadow-xl shadow-green-500/25 backdrop-blur-lg',
+        warning:
+          'group warning border-orange-500/50 bg-gradient-to-r from-orange-500/90 to-orange-600/90 text-white shadow-xl shadow-orange-500/25 backdrop-blur-lg',
+        info:
+          'group info border-blue-500/50 bg-gradient-to-r from-blue-500/90 to-blue-600/90 text-white shadow-xl shadow-blue-500/25 backdrop-blur-lg',
 			},
 		},
 		defaultVariants: {
@@ -42,7 +45,8 @@ const Toast = React.forwardRef(({ className, variant, ...props }, ref) => {
 		<ToastPrimitives.Root
 			ref={ref}
 			className={cn(toastVariants({ variant }), className)}
-			swipeDirection="up"
+			swipeDirection={["up", "right"]}
+			swipeThreshold={60}
 			{...props}
 		/>
 	);

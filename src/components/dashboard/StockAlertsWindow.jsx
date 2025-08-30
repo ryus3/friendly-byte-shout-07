@@ -1,394 +1,545 @@
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Package, AlertTriangle, ShieldAlert, ArrowRight, X, Filter, TrendingDown, Eye, Activity, AlertCircle, GripHorizontal } from 'lucide-react';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useNavigate } from 'react-router-dom';
-import { useInventory } from '@/contexts/SuperProvider';
-import { cn } from '@/lib/utils';
+import { useBottomSheet } from '@/hooks/useBottomSheet';
+import { 
+  AlertTriangle, 
+  TrendingDown, 
+  Package, 
+  AlertCircle,
+  X,
+  Eye,
+  ChevronDown,
+  Calendar,
+  ShoppingCart,
+  Barcode,
+  Activity,
+  DollarSign
+} from 'lucide-react';
 
 const StockAlertsWindow = ({ open, onOpenChange }) => {
-  const navigate = useNavigate();
   const { products, settings } = useInventory();
+  const navigate = useNavigate();
   const [selectedLevel, setSelectedLevel] = useState('all');
-  const [dragY, setDragY] = useState(0);
   
-  // حساب المنتجات المنخفضة باستخدام نفس منطق StockAlertsCard للبيانات الصحيحة
+  const bottomSheet = useBottomSheet(open, () => onOpenChange(false));
+
+  // حساب المنتجات منخفضة المخزون مع تفاصيل شاملة
   const lowStockProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
     
-    const threshold = settings?.lowStockThreshold || 5;
+    const threshold = settings?.lowStockThreshold || 10;
     const lowStockItems = [];
-    
+
     products.forEach(product => {
-      if (product.variants && product.variants.length > 0) {
-        // البحث عن المتغيرات منخفضة المخزون (أكبر من 0 وأقل من أو يساوي العتبة)
-        const lowStockVariants = product.variants.filter(variant => {
-          const variantQuantity = variant.quantity || 0;
-          return variantQuantity > 0 && variantQuantity <= threshold;
-        });
-        
-        // إضافة كل متغير منخفض كعنصر منفصل للعرض التفصيلي
-        lowStockVariants.forEach(variant => {
-          lowStockItems.push({
-            id: variant.id,
-            productId: product.id,
-            variantId: variant.id,
-            productName: product.name,
-            quantity: variant.quantity || 0,
-            lowStockThreshold: threshold,
-            productImage: product.images?.[0], // الصورة الصحيحة من array
-            sku: variant.sku || product.sku || variant.id,
-            color: variant.color?.name || 'غير محدد',
-            size: variant.size?.name || 'غير محدد',
-            colorId: variant.color_id,
-            sizeId: variant.size_id
-          });
+      if (product.variants && Array.isArray(product.variants)) {
+        product.variants.forEach(variant => {
+          const quantity = parseInt(variant.quantity) || 0;
+          if (quantity > 0 && quantity <= threshold) {
+            const lastUpdate = variant.updated_at || product.updated_at || new Date().toISOString();
+            const daysSinceUpdate = Math.floor((Date.now() - new Date(lastUpdate)) / (1000 * 60 * 60 * 24));
+            
+            lowStockItems.push({
+              id: `${product.id}-${variant.id}`,
+              productId: product.id,
+              variantId: variant.id,
+              name: product.name,
+              size: variant.size,
+              color: variant.color,
+              quantity: quantity,
+              minStock: threshold,
+              image: product.image,
+              category: product.category,
+              department: product.department,
+              sku: variant.sku || product.sku,
+              price: variant.price || product.price,
+              cost: variant.cost || product.cost,
+              supplier: product.supplier || 'غير محدد',
+              lastUpdate: lastUpdate,
+              daysSinceUpdate: daysSinceUpdate,
+              reorderPoint: Math.max(5, Math.floor(threshold * 0.5)),
+              estimatedValue: (variant.price || product.price || 0) * quantity,
+              status: quantity <= threshold * 0.25 ? 'critical' : 
+                     quantity <= threshold * 0.5 ? 'warning' : 'low'
+            });
+          }
         });
       }
     });
-    
-    // ترتيب حسب أقل كمية
-    return lowStockItems.sort((a, b) => a.quantity - b.quantity);
+
+    return lowStockItems.sort((a, b) => {
+      // ترتيب حسب الأولوية ثم الكمية
+      const priorityOrder = { critical: 3, warning: 2, low: 1 };
+      if (a.status !== b.status) {
+        return priorityOrder[b.status] - priorityOrder[a.status];
+      }
+      return a.quantity - b.quantity;
+    });
   }, [products, settings?.lowStockThreshold]);
-  
-  const getStockLevel = (stock, minStock) => {
-    if (stock === 0) return {
-      style: 'critical',
-      icon: ShieldAlert,
-      level: 'نفد',
-      color: 'hsl(var(--destructive))',
-      bgColor: 'hsl(var(--destructive) / 0.1)',
-      borderColor: 'hsl(var(--destructive) / 0.3)'
-    };
-    
-    const ratio = stock / Math.max(minStock, 1);
-    if (ratio <= 0.5) return {
-      style: 'critical',
-      icon: ShieldAlert,
-      level: 'حرج',
-      color: 'hsl(var(--destructive))',
-      bgColor: 'hsl(var(--destructive) / 0.1)', 
-      borderColor: 'hsl(var(--destructive) / 0.3)'
-    };
-    
-    if (ratio <= 1) return {
-      style: 'warning',
-      icon: AlertTriangle,
-      level: 'منخفض',
-      color: 'hsl(var(--warning))',
-      bgColor: 'hsl(var(--warning) / 0.1)',
-      borderColor: 'hsl(var(--warning) / 0.3)'
-    };
-    
-    return {
-      style: 'low',
-      icon: TrendingDown,
-      level: 'تحذير',
-      color: 'hsl(var(--primary))',
-      bgColor: 'hsl(var(--primary) / 0.1)',
-      borderColor: 'hsl(var(--primary) / 0.3)'
-    };
-  };
 
-  const filteredProducts = lowStockProducts.filter(variant => {
-    if (selectedLevel === 'all') return true;
-    const stockLevel = getStockLevel(variant.quantity, variant.lowStockThreshold);
-    return stockLevel.style === selectedLevel;
-  });
+  // تحديد مستوى المخزون مع تفاصيل أكثر
+  const getStockLevel = useCallback((stock, minStock) => {
+    const percentage = (stock / minStock) * 100;
+    
+    if (percentage <= 25) {
+      return { 
+        level: 'critical', 
+        label: 'حرج جداً',
+        style: 'bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white shadow-lg shadow-red-500/30 border-red-500',
+        cardStyle: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-lg shadow-red-500/10',
+        icon: AlertTriangle,
+        color: 'text-red-600',
+        bgColor: 'bg-red-50 border-red-200',
+        priority: 'عالية جداً',
+        action: 'طلب فوري'
+      };
+    } else if (percentage <= 50) {
+      return { 
+        level: 'warning', 
+        label: 'تحذيري',
+        style: 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 text-white shadow-lg shadow-orange-500/30 border-orange-500',
+        cardStyle: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-lg shadow-orange-500/10',
+        icon: AlertCircle,
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50 border-orange-200',
+        priority: 'عالية',
+        action: 'مراجعة قريبة'
+      };
+    } else {
+      return { 
+        level: 'low', 
+        label: 'منخفض',
+        style: 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-yellow-700 text-white shadow-lg shadow-yellow-500/30 border-yellow-500',
+        cardStyle: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-lg shadow-yellow-500/10',
+        icon: TrendingDown,
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-50 border-yellow-200',
+        priority: 'متوسطة',
+        action: 'مراقبة'
+      };
+    }
+  }, []);
 
-  const criticalCount = lowStockProducts.filter(v => getStockLevel(v.quantity, v.lowStockThreshold).style === 'critical').length;
-  const warningCount = lowStockProducts.filter(v => getStockLevel(v.quantity, v.lowStockThreshold).style === 'warning').length;
-  const lowCount = lowStockProducts.filter(v => getStockLevel(v.quantity, v.lowStockThreshold).style === 'low').length;
+  // فلترة المنتجات حسب المستوى المحدد
+  const filteredProducts = useMemo(() => {
+    if (selectedLevel === 'all') return lowStockProducts;
+    
+    return lowStockProducts.filter(product => {
+      const { level } = getStockLevel(product.quantity, product.minStock);
+      return level === selectedLevel;
+    });
+  }, [lowStockProducts, selectedLevel, getStockLevel]);
 
-  const handleProductClick = (variant) => {
-    navigate(`/inventory?highlight=${variant.productId}`);
+  // حساب الإحصائيات
+  const stats = useMemo(() => {
+    const total = lowStockProducts.length;
+    const critical = lowStockProducts.filter(p => {
+      const { level } = getStockLevel(p.quantity, p.minStock);
+      return level === 'critical';
+    }).length;
+    const warning = lowStockProducts.filter(p => {
+      const { level } = getStockLevel(p.quantity, p.minStock);
+      return level === 'warning';
+    }).length;
+    const low = lowStockProducts.filter(p => {
+      const { level } = getStockLevel(p.quantity, p.minStock);
+      return level === 'low';
+    }).length;
+
+    const totalValue = lowStockProducts.reduce((sum, p) => sum + (p.estimatedValue || 0), 0);
+
+    return { total, critical, warning, low, totalValue };
+  }, [lowStockProducts, getStockLevel]);
+
+  const handleProductClick = useCallback((variant) => {
+    navigate('/inventory', { 
+      state: { 
+        highlightProduct: variant.productId,
+        highlightVariant: variant.variantId 
+      } 
+    });
     onOpenChange(false);
-  };
+  }, [navigate, onOpenChange]);
 
-  const handleViewInventory = () => {
+  const handleViewInventory = useCallback(() => {
     navigate('/inventory');
     onOpenChange(false);
-  };
+  }, [navigate, onOpenChange]);
 
-  const handleDragEnd = (event, info) => {
-    const threshold = 100;
-    if (info.offset.y > threshold) {
-      onOpenChange(false);
-    }
-    setDragY(0);
-  };
+  if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl h-[95vh] p-0 bg-gradient-to-br from-background via-background to-muted/30 overflow-hidden">
-        <motion.div
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 200 }}
-          dragElastic={0.2}
-          onDrag={(event, info) => setDragY(info.offset.y)}
-          onDragEnd={handleDragEnd}
-          style={{ y: dragY }}
-          className="h-full flex flex-col"
-        >
-          {/* Drag Handle */}
-          <div className="w-full py-2 flex justify-center bg-gradient-to-r from-primary/5 to-destructive/5">
-            <motion.div 
-              className="w-12 h-1 bg-muted-foreground/30 rounded-full cursor-grab active:cursor-grabbing"
-              whileTap={{ scaleY: 2 }}
-            />
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-50 bg-black transition-opacity duration-300"
+        style={{ opacity: bottomSheet.backdropOpacity }}
+        onClick={() => onOpenChange(false)}
+      />
+      
+      {/* Bottom Sheet */}
+      <div
+        ref={bottomSheet.containerRef}
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col bg-background border-t border-border shadow-2xl transition-transform duration-300 ease-out"
+        style={{ 
+          transform: bottomSheet.transform,
+          height: '95vh',
+          maxHeight: '95vh',
+          willChange: 'transform'
+        }}
+        {...bottomSheet.handlers}
+      >
+        {/* Drag Handle */}
+        <div className="flex-shrink-0 flex justify-center py-3 bg-background border-b border-border/30">
+          <div 
+            className="w-12 h-1.5 bg-muted-foreground/30 rounded-full cursor-grab active:cursor-grabbing transition-colors hover:bg-muted-foreground/50"
+            {...bottomSheet.handlers}
+          />
+        </div>
+
+        {/* Header */}
+        <div className="flex-shrink-0 p-6 border-b border-border/50 bg-gradient-to-r from-background via-background/80 to-background">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-destructive/10 text-destructive">
+                <AlertTriangle className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  تنبيهات المخزون المنخفض
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {lowStockProducts.length} منتج يحتاج إلى إعادة تموين
+                </p>
+              </div>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          
-          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-primary/5 to-destructive/5 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="p-2 rounded-full bg-destructive/10"
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 2 }}
-                >
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                </motion.div>
+        </div>
+
+        {/* Stats Cards - Sticky */}
+        <div className="flex-shrink-0 p-4 border-b border-border/30 bg-background/90 backdrop-blur-md sticky top-0 z-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Total Card */}
+            <Card 
+              className={`relative overflow-hidden p-4 cursor-pointer transition-all duration-300 border-2 ${
+                selectedLevel === 'all' 
+                  ? 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30 border-blue-500 scale-105' 
+                  : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg shadow-blue-500/10 hover:scale-105'
+              }`}
+              onClick={() => setSelectedLevel('all')}
+            >
+              <div className="relative z-10 flex items-center justify-between">
                 <div>
-                  <DialogTitle className="text-xl font-bold text-right">
-                    تنبيهات المخزون
-                  </DialogTitle>
-                  <p className="text-sm text-muted-foreground text-right">
-                    {lowStockProducts.length} منتج يحتاج إلى إعادة تموين
+                  <p className={`text-sm font-medium ${selectedLevel === 'all' ? 'text-blue-100' : 'text-blue-600'}`}>
+                    إجمالي التنبيهات
+                  </p>
+                  <p className={`text-2xl font-bold ${selectedLevel === 'all' ? 'text-white' : 'text-blue-700'}`}>
+                    {stats.total}
                   </p>
                 </div>
+                <div className={`p-3 rounded-full ${selectedLevel === 'all' ? 'bg-white/20' : 'bg-blue-500/10'}`}>
+                  <Package className={`h-6 w-6 ${selectedLevel === 'all' ? 'text-white' : 'text-blue-600'}`} />
+                </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
+            </Card>
+
+            {/* Critical Card */}
+            <Card 
+              className={`relative overflow-hidden p-4 cursor-pointer transition-all duration-300 border-2 ${
+                selectedLevel === 'critical' 
+                  ? 'bg-gradient-to-br from-red-500 via-red-600 to-red-700 text-white shadow-lg shadow-red-500/30 border-red-500 scale-105' 
+                  : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg shadow-red-500/10 hover:scale-105'
+              }`}
+              onClick={() => setSelectedLevel('critical')}
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${selectedLevel === 'critical' ? 'text-red-100' : 'text-red-600'}`}>
+                    حرج جداً
+                  </p>
+                  <p className={`text-2xl font-bold ${selectedLevel === 'critical' ? 'text-white' : 'text-red-700'}`}>
+                    {stats.critical}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${selectedLevel === 'critical' ? 'bg-white/20' : 'bg-red-500/10'}`}>
+                  <AlertTriangle className={`h-6 w-6 ${selectedLevel === 'critical' ? 'text-white' : 'text-red-600'}`} />
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
+            </Card>
+
+            {/* Low Card */}
+            <Card 
+              className={`relative overflow-hidden p-4 cursor-pointer transition-all duration-300 border-2 ${
+                selectedLevel === 'low' 
+                  ? 'bg-gradient-to-br from-yellow-500 via-yellow-600 to-yellow-700 text-white shadow-lg shadow-yellow-500/30 border-yellow-500 scale-105' 
+                  : 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg shadow-yellow-500/10 hover:scale-105'
+              }`}
+              onClick={() => setSelectedLevel('low')}
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${selectedLevel === 'low' ? 'text-yellow-100' : 'text-yellow-600'}`}>
+                    منخفض
+                  </p>
+                  <p className={`text-2xl font-bold ${selectedLevel === 'low' ? 'text-white' : 'text-yellow-700'}`}>
+                    {stats.low}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${selectedLevel === 'low' ? 'bg-white/20' : 'bg-yellow-500/10'}`}>
+                  <TrendingDown className={`h-6 w-6 ${selectedLevel === 'low' ? 'text-white' : 'text-yellow-600'}`} />
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
+            </Card>
+
+            {/* Warning Card */}
+            <Card 
+              className={`relative overflow-hidden p-4 cursor-pointer transition-all duration-300 border-2 ${
+                selectedLevel === 'warning' 
+                  ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 text-white shadow-lg shadow-orange-500/30 border-orange-500 scale-105' 
+                  : 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 hover:shadow-lg shadow-orange-500/10 hover:scale-105'
+              }`}
+              onClick={() => setSelectedLevel('warning')}
+            >
+              <div className="relative z-10 flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${selectedLevel === 'warning' ? 'text-orange-100' : 'text-orange-600'}`}>
+                    تحذيري
+                  </p>
+                  <p className={`text-2xl font-bold ${selectedLevel === 'warning' ? 'text-white' : 'text-orange-700'}`}>
+                    {stats.warning}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-full ${selectedLevel === 'warning' ? 'bg-white/20' : 'bg-orange-500/10'}`}>
+                  <AlertCircle className={`h-6 w-6 ${selectedLevel === 'warning' ? 'text-white' : 'text-orange-600'}`} />
+                </div>
+              </div>
+              <div className="absolute top-0 right-0 w-20 h-20 bg-white/5 rounded-full -translate-y-10 translate-x-10"></div>
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-white/10 rounded-full translate-y-8 -translate-x-8"></div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Products List */}
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
+                    لا توجد تنبيهات مخزون
+                  </h3>
+                  <p className="text-muted-foreground">
+                    جميع المنتجات لديها مخزون كافٍ
+                  </p>
+                </div>
+              ) : (
+                filteredProducts.map((variant) => {
+                  const stockInfo = getStockLevel(variant.quantity, variant.minStock);
+                  const IconComponent = stockInfo.icon;
+                  
+                  return (
+                    <Card 
+                      key={variant.id}
+                      className={`p-5 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${stockInfo.cardStyle} min-h-[140px]`}
+                      onClick={() => handleProductClick(variant)}
+                    >
+                      <div className="flex items-start gap-4 h-full">
+                        {/* Priority Indicator */}
+                        <div className={`w-1 h-full rounded-full ${
+                          stockInfo.level === 'critical' ? 'bg-red-500' :
+                          stockInfo.level === 'warning' ? 'bg-orange-500' : 'bg-yellow-500'
+                        }`} />
+
+                        {/* Product Image */}
+                        <div className="flex-shrink-0">
+                          <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted border-2 border-white shadow-lg">
+                            {variant.image ? (
+                              <img 
+                                src={variant.image} 
+                                alt={variant.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
+                                <Package className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0 space-y-3">
+                          {/* Header */}
+                          <div className="flex items-start justify-between">
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-bold text-foreground text-lg line-clamp-1">
+                                {variant.name}
+                              </h3>
+                              <div className="flex items-center gap-3 mt-1">
+                                <Badge variant="outline" className="text-sm font-medium">
+                                  {variant.size} - {variant.color}
+                                </Badge>
+                                {variant.sku && (
+                                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <Barcode className="h-4 w-4" />
+                                    {variant.sku}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <Badge className={`${stockInfo.style} px-3 py-1 text-sm font-semibold`}>
+                              <IconComponent className="h-4 w-4 mr-1" />
+                              {stockInfo.label}
+                            </Badge>
+                          </div>
+
+                          {/* Stock Details Grid */}
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="space-y-2">
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">الكمية الحالية</span>
+                                <span className={`font-bold text-lg ${stockInfo.color}`}>
+                                  {variant.quantity}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">الحد الأدنى</span>
+                                <span className="font-semibold">{variant.minStock}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">القيمة المقدرة</span>
+                                <span className="font-bold flex items-center gap-1">
+                                  <DollarSign className="h-3 w-3" />
+                                  {variant.estimatedValue?.toLocaleString() || '0'}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">آخر تحديث</span>
+                                <span className="font-medium flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {variant.daysSinceUpdate} يوم
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">الأولوية</span>
+                                <span className={`font-bold ${stockInfo.color}`}>
+                                  {stockInfo.priority}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-muted-foreground text-xs">المورد</span>
+                                <span className="font-medium">{variant.supplier}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div>
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <span className="text-muted-foreground font-medium">مستوى المخزون</span>
+                              <span className={`${stockInfo.color} font-bold`}>
+                                {Math.round((variant.quantity / variant.minStock) * 100)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-muted rounded-full h-3 shadow-inner">
+                              <div 
+                                className={`h-3 rounded-full transition-all duration-500 shadow-sm ${
+                                  stockInfo.level === 'critical' ? 'bg-gradient-to-r from-red-500 to-red-600' :
+                                  stockInfo.level === 'warning' ? 'bg-gradient-to-r from-orange-500 to-orange-600' : 
+                                  'bg-gradient-to-r from-yellow-500 to-yellow-600'
+                                }`}
+                                style={{ 
+                                  width: `${Math.min(100, Math.max(8, (variant.quantity / variant.minStock) * 100))}%` 
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Action Section */}
+                          <div className={`p-3 rounded-lg ${stockInfo.bgColor} flex items-center justify-between`}>
+                            <div>
+                              <span className={`text-sm font-bold ${stockInfo.color} block`}>
+                                إجراء مطلوب: {stockInfo.action}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                يُنصح بإعادة الطلب عند الوصول إلى {variant.reorderPoint} قطعة
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="outline" className="h-8 text-xs px-3">
+                                <ShoppingCart className="h-3 w-3 mr-1" />
+                                طلب
+                              </Button>
+                              <Button size="sm" variant="outline" className="h-8 text-xs px-3">
+                                <Activity className="h-3 w-3 mr-1" />
+                                تفاصيل
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 p-4 border-t border-border/50 bg-background/90 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              إجمالي القيمة المعرضة للخطر: <span className="font-bold text-foreground">{stats.totalValue?.toLocaleString() || '0'} د.ع</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
                 onClick={() => onOpenChange(false)}
-                className="h-8 w-8 p-0 hover:bg-destructive/10"
+                className="px-6"
               >
-                <X className="h-4 w-4" />
+                إغلاق
+              </Button>
+              <Button
+                onClick={handleViewInventory}
+                className="px-6 bg-primary hover:bg-primary/90"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                عرض المخزون
               </Button>
             </div>
-          </DialogHeader>
-
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Stats Cards - Sticky */}
-          <div className="px-6 py-4 bg-background/95 backdrop-blur-sm border-b sticky top-0 z-10">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { 
-                  label: 'الإجمالي', 
-                  value: lowStockProducts.length, 
-                  gradient: 'from-blue-400 via-blue-500 to-blue-600',
-                  icon: Package,
-                  filter: 'all',
-                  shadow: 'shadow-blue-500/25'
-                },
-                { 
-                  label: 'حرج', 
-                  value: criticalCount, 
-                  gradient: 'from-red-400 via-red-500 to-red-600',
-                  icon: AlertCircle,
-                  filter: 'critical',
-                  shadow: 'shadow-red-500/25'
-                },
-                { 
-                  label: 'منخفض', 
-                  value: lowCount, 
-                  gradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
-                  icon: TrendingDown,
-                  filter: 'low',
-                  shadow: 'shadow-emerald-500/25'
-                },
-                { 
-                  label: 'تحذير', 
-                  value: warningCount, 
-                  gradient: 'from-purple-400 via-purple-500 to-purple-600',
-                  icon: Activity,
-                  filter: 'warning',
-                  shadow: 'shadow-purple-500/25'
-                }
-              ].map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.1 }}
-                  onClick={() => setSelectedLevel(stat.filter)}
-                  className={`
-                    relative overflow-hidden rounded-2xl bg-gradient-to-br ${stat.gradient} p-4 cursor-pointer
-                    shadow-xl ${stat.shadow} hover:shadow-2xl transition-all duration-300 transform hover:scale-105
-                    ${selectedLevel === stat.filter ? 'ring-4 ring-white/20 scale-105' : ''}
-                  `}
-                >
-                  {/* Multiple background circles for depth */}
-                  <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full" />
-                  <div className="absolute -top-4 -right-4 w-16 h-16 bg-white/15 rounded-full" />
-                  <div className="absolute -bottom-8 -left-8 w-28 h-28 bg-white/5 rounded-full" />
-                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-white/8 rounded-full" />
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-center justify-between">
-                      <div className="text-right flex-1">
-                        <p className="text-white/90 text-sm font-semibold mb-1">{stat.label}</p>
-                        <p className="text-white text-3xl font-bold leading-none">{stat.value}</p>
-                      </div>
-                      <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-3 ml-3">
-                        <stat.icon className="h-7 w-7 text-white drop-shadow-sm" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] hover:translate-x-[100%] transition-transform duration-700" />
-                </motion.div>
-              ))}
-            </div>
-          </div>
-
-          {/* Products List with ScrollArea */}
-          <div className="flex-1 px-6 pb-6 min-h-0">
-            <ScrollArea className="h-full">
-              <div className="space-y-3 pr-4">
-                <AnimatePresence mode="wait">
-                  {filteredProducts.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="text-center py-12 text-muted-foreground"
-                    >
-                      <Package className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg">لا توجد منتجات في هذه الفئة</p>
-                    </motion.div>
-                  ) : (
-                    filteredProducts.map((variant, index) => {
-                      const stockLevel = getStockLevel(variant.quantity, variant.lowStockThreshold);
-                      const StockIcon = stockLevel.icon;
-                      
-                      return (
-                        <motion.div
-                          key={variant.id}
-                          layout
-                          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                          transition={{ 
-                            delay: Math.min(index * 0.03, 0.3),
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 25
-                          }}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Card 
-                            className="cursor-pointer transition-all duration-300 hover:shadow-xl border-0 bg-gradient-to-r from-background to-muted/20 backdrop-blur-sm group"
-                            style={{
-                              borderLeft: `4px solid ${stockLevel.color}`,
-                              backgroundColor: stockLevel.bgColor
-                            }}
-                            onClick={() => handleProductClick(variant)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  {/* Product Image */}
-                                  <div className="w-14 h-14 rounded-xl overflow-hidden bg-background border-2 shadow-lg flex-shrink-0 group-hover:scale-105 transition-transform">
-                                    {variant.productImage ? (
-                                      <img 
-                                        src={variant.productImage} 
-                                        alt={variant.productName}
-                                        className="w-full h-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                                        <Package className="w-6 h-6 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                  </div>
-                                  
-                                  {/* Product Info */}
-                                  <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-foreground truncate text-sm sm:text-base">
-                                      {variant.productName}
-                                    </h3>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Badge 
-                                        variant="outline"
-                                        className="text-xs font-medium"
-                                        style={{ 
-                                          color: stockLevel.color,
-                                          borderColor: stockLevel.color
-                                        }}
-                                      >
-                                        {stockLevel.level}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground hidden sm:inline">
-                                        {variant.size} • {variant.color}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Stock Info */}
-                                <div className="flex items-center gap-3 flex-shrink-0">
-                                  <div className="text-right">
-                                    <div 
-                                      className="text-xl sm:text-2xl font-bold"
-                                      style={{ color: stockLevel.color }}
-                                    >
-                                      {variant.quantity}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      من {variant.lowStockThreshold}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="flex flex-col items-center gap-1">
-                                    <StockIcon 
-                                      className="w-5 h-5 group-hover:scale-110 transition-transform"
-                                      style={{ color: stockLevel.color }}
-                                    />
-                                    <Eye className="w-3 h-3 text-muted-foreground opacity-60" />
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </motion.div>
-                      );
-                    })
-                  )}
-                </AnimatePresence>
-              </div>
-            </ScrollArea>
           </div>
         </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-4 border-t bg-gradient-to-r from-muted/30 to-background flex-shrink-0">
-          <div className="flex gap-3 justify-end">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              className="text-sm"
-            >
-              إغلاق
-            </Button>
-            <Button 
-              onClick={handleViewInventory}
-              className="text-sm bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-            >
-              <Eye className="h-4 w-4 ml-2" />
-              عرض المخزون التفصيلي
-            </Button>
-          </div>
-        </div>
-        </motion.div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 };
 
