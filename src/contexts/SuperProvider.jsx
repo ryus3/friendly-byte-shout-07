@@ -7,8 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
@@ -83,8 +82,7 @@ const filterDataByEmployeeCode = (data, user) => {
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  const { addNotification } = useNotifications();
-  const { notifyLowStock } = useNotificationsSystem();
+  const { createNotification, notifyLowStock } = useUnifiedNotifications();
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
@@ -1701,8 +1699,8 @@ export const SuperProvider = ({ children }) => {
           console.log('✅ SuperProvider: تم الحذف بنجاح من قاعدة البيانات');
           
           // إضافة إشعار للحذف الناجح
-          if (addNotification) {
-            addNotification({
+          if (createNotification) {
+            createNotification({
               title: 'تم الحذف بنجاح',
               message: `تم حذف ${idsArray.length} منتج بنجاح`,
               type: 'success'

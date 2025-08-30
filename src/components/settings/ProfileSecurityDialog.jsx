@@ -28,14 +28,14 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useNotifications } from '@/contexts/NotificationsContext';
+import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
-  const { addNotification } = useNotifications();
+  const { createNotification } = useUnifiedNotifications();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -112,7 +112,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
         console.log('⚠️ تغيير بيانات حساسة - إرسال للمدير');
         
         // Send notification to admin for approval
-        addNotification({
+        createNotification({
           type: 'profile_change_request',
           title: 'طلب تغيير بيانات المستخدم',
           message: `الموظف ${user.full_name} يطلب تغيير ${usernameChanged ? 'اسم المستخدم' : ''}${usernameChanged && emailChanged ? ' و' : ''}${emailChanged ? 'البريد الإلكتروني' : ''}`,

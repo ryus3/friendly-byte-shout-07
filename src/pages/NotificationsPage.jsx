@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useNotifications } from '@/contexts/NotificationsContext';
+import { useUnifiedNotifications } from '@/contexts/UnifiedNotificationsContext';
 import { toast } from '@/components/ui/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -67,7 +67,7 @@ const iconMap = {
 };
 
 const NotificationsPage = () => {
-  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification, addNotification } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead, clearAllNotifications, deleteNotification, createNotification } = useUnifiedNotifications();
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -102,7 +102,7 @@ const NotificationsPage = () => {
     
     const randomTest = testTypes[Math.floor(Math.random() * testTypes.length)];
     
-    addNotification({
+    createNotification({
       ...randomTest,
       link: '#',
       auto_delete: false
@@ -213,7 +213,7 @@ const NotificationsPage = () => {
                   <span className="hidden sm:inline">تحديد الكل كمقروء</span>
                   <span className="sm:hidden">قراءة الكل</span>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
+                <Button variant="destructive" size="sm" onClick={clearAllNotifications} disabled={notifications.length === 0} className="text-xs sm:text-sm">
                   <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                   <span className="hidden sm:inline">حذف الكل</span>
                   <span className="sm:hidden">حذف</span>
