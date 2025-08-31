@@ -239,13 +239,15 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // معالجة السحب لإغلاق اللوحة
+  // معالجة السحب لإغلاق اللوحة في جميع الاتجاهات
   const handleTouchStart = (e) => {
     const touch = e.touches[0];
     setSwipeState({
       isDragging: true,
       startY: touch.clientY,
-      currentY: touch.clientY
+      startX: touch.clientX,
+      currentY: touch.clientY,
+      currentX: touch.clientX
     });
   };
 
@@ -253,37 +255,49 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     if (!swipeState.isDragging) return;
     
     const touch = e.touches[0];
-    const deltaY = touch.clientY - swipeState.startY;
-    const deltaX = Math.abs(touch.clientX - swipeState.startX || 0);
+    const deltaY = Math.abs(touch.clientY - swipeState.startY);
+    const deltaX = Math.abs(touch.clientX - swipeState.startX);
     
-    // السماح بالسحب في أي اتجاه مع عتبة معقولة
-    if (Math.abs(deltaY) > 30 || deltaX > 30) {
+    // عتبة منخفضة للسحب السريع في أي اتجاه
+    const threshold = 25;
+    if (deltaY > threshold || deltaX > threshold) {
       setIsOpen(false);
-      setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+      setSwipeState({ isDragging: false, startY: 0, currentY: 0, startX: 0, currentX: 0 });
+      return;
     }
     
-    setSwipeState(prev => ({ ...prev, currentY: touch.clientY }));
+    setSwipeState(prev => ({ 
+      ...prev, 
+      currentY: touch.clientY,
+      currentX: touch.clientX 
+    }));
   };
 
   const handleTouchEnd = () => {
     if (!swipeState.isDragging) return;
     
     const deltaY = Math.abs(swipeState.currentY - swipeState.startY);
+    const deltaX = Math.abs(swipeState.currentX - swipeState.startX);
     
-    // إغلاق اللوحة إذا كان السحب كافياً
-    if (deltaY > 50) {
+    // إغلاق اللوحة إذا كان السحب كافياً في أي اتجاه
+    if (deltaY > 30 || deltaX > 30) {
       setIsOpen(false);
     }
     
-    setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+    setSwipeState({ isDragging: false, startY: 0, currentY: 0, startX: 0, currentX: 0 });
   };
 
-  // معالجة السحب بالماوس أيضاً
+  // معالجة السحب بالماوس مع دعم جميع الاتجاهات
   const handleMouseDown = (e) => {
+    // منع السحب إذا كان الضغط على الأزرار أو النصوص
+    if (e.target.closest('button') || e.target.closest('a')) return;
+    
     setSwipeState({
       isDragging: true,
       startY: e.clientY,
-      currentY: e.clientY
+      startX: e.clientX,
+      currentY: e.clientY,
+      currentX: e.clientX
     });
   };
 
@@ -291,26 +305,34 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     if (!swipeState.isDragging) return;
     
     const deltaY = Math.abs(e.clientY - swipeState.startY);
-    const deltaX = Math.abs(e.clientX - swipeState.startX || 0);
+    const deltaX = Math.abs(e.clientX - swipeState.startX);
     
-    if (deltaY > 30 || deltaX > 30) {
+    // عتبة منخفضة للسحب السريع
+    const threshold = 25;
+    if (deltaY > threshold || deltaX > threshold) {
       setIsOpen(false);
-      setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+      setSwipeState({ isDragging: false, startY: 0, currentY: 0, startX: 0, currentX: 0 });
     }
     
-    setSwipeState(prev => ({ ...prev, currentY: e.clientY }));
+    setSwipeState(prev => ({ 
+      ...prev, 
+      currentY: e.clientY,
+      currentX: e.clientX 
+    }));
   };
 
   const handleMouseUp = () => {
     if (!swipeState.isDragging) return;
     
     const deltaY = Math.abs(swipeState.currentY - swipeState.startY);
+    const deltaX = Math.abs(swipeState.currentX - swipeState.startX);
     
-    if (deltaY > 50) {
+    // إذا كان السحب كافي في أي اتجاه
+    if (deltaY > 30 || deltaX > 30) {
       setIsOpen(false);
     }
     
-    setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+    setSwipeState({ isDragging: false, startY: 0, currentY: 0, startX: 0, currentX: 0 });
   };
 
   // إضافة event listeners للماوس

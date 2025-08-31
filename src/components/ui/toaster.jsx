@@ -83,7 +83,10 @@ export function Toaster() {
 	}
 
 	return (
-		<ToastProvider>
+		<ToastProvider 
+			swipeDirection="all"
+			swipeThreshold={25}
+		>
       {toasts.map(({ id, title, description, action, variant, dismiss, icon, ...props }) => {
         const Icon = iconMap[variant] || iconMap.default;
         return (
