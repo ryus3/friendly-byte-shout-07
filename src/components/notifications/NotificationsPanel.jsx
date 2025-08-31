@@ -423,7 +423,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                       <div
                         key={notification.id}
                         className={`p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
-                          !notification.read ? 'shadow-sm' : ''
+                          !notification.is_read ? 'shadow-sm' : ''
                         } ${displayData.colors.bg} ${displayData.colors.border}`}
                         onClick={() => handleNotificationClick(notification)}
                       >
@@ -434,12 +434,12 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                           
                           <div className="flex-1 min-w-0">
                             <h4 className={`text-sm font-medium ${
-                              !notification.read ? displayData.colors.text : 'text-muted-foreground'
+                              !notification.is_read ? displayData.colors.text : 'text-muted-foreground'
                             }`}>
                               {notification.title}
                             </h4>
                             <p className={`text-xs mt-1 line-clamp-2 ${
-                              !notification.read ? displayData.colors.text : 'text-muted-foreground'
+                              !notification.is_read ? displayData.colors.text : 'text-muted-foreground'
                             }`}>
                               {displayData.text}
                             </p>
@@ -452,7 +452,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                           </div>
                           
                           <div className="flex items-center gap-1">
-                            {!notification.read && (
+                            {!notification.is_read && (
                               <div className={`w-2 h-2 rounded-full ${displayData.colors.dot}`}></div>
                             )}
                             <Button
