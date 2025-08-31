@@ -19,7 +19,6 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
@@ -338,9 +337,8 @@ const typeColorMap = {
   },
 };
 
-const NotificationsPanel = () => {
-  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
-  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
+const NotificationsPanel = ({ allowedTypes = [], canViewAll = true, className = "" }) => {
+  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification, unreadCount } = useNotificationsSystem();
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -351,11 +349,7 @@ const NotificationsPanel = () => {
     
     // تحديد الإشعار كمقروء
     if (!notification.is_read) {
-      if (notification.related_entity_type) {
-        markSystemAsRead(notification.id);
-      } else {
-        markAsRead(notification.id);
-      }
+      markSystemAsRead(notification.id);
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
@@ -445,38 +439,25 @@ const NotificationsPanel = () => {
     setIsOpen(false);
   };
 
-  // تحديث: دعم كلا النظامين عند وضع الإشعار كمقروء من زر العين
   const handleMarkAsRead = (e, n) => {
     e.stopPropagation();
-    // اعتبره إشعار نظام إذا كان لديه أي من خصائص النظام المعروفة أو نوع من الأنواع النظامية
-    const isSystem =
-      typeof n.read === 'boolean' ||
-      !!n.related_entity_type ||
-      !!n.target_user_id ||
-      !!n.target_role ||
-      ['alwaseet_status_change','profit_settlement_request','employee_settlement_completed','profit_settlement','system','new_registration','new_order_employee','order_status_update','order_status_changed'].includes(n.type);
-
-    if (isSystem) {
-      markSystemAsRead(n.id);
-    } else {
-      markAsRead(n.id);
-    }
+    markSystemAsRead(n.id);
     toast({ title: "تم تحديد الإشعار كمقروء" });
   };
 
-  // تحديث: تحديد الكل كمقروء لكلا المصدرين
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
-    Promise.allSettled([markAllAsRead(), markAllSystemAsRead()]).then(() => {
+    markAllSystemAsRead().then(() => {
       toast({ title: "تم تحديد الكل كمقروء" });
     });
   };
 
   const handleClearAll = (e) => {
     e.stopPropagation();
-    // Clear all notifications
-    clearAll();
-    toast({ title: "تم حذف جميع الإشعارات" });
+    // For now, we'll just mark all as read since the system doesn't have a clear all function
+    markAllSystemAsRead().then(() => {
+      toast({ title: "تم تحديد الكل كمقروء" });
+    });
   };
 
   const formatRelativeTime = (dateString) => {
@@ -495,8 +476,7 @@ const NotificationsPanel = () => {
     }
   };
 
-  // تحسين دمج الإشعارات ومنع التكرار الذكي
-  // دوال مساعدة لاستخراج tracking/state عند غياب data
+  // دوال مساعدة لاستخراج state_id عند غياب data
   const parseAlwaseetStateIdFromMessage = (msg = '') => {
     const m = msg.match(/\b(تم التسليم|تم الإلغاء|لا يرد|تم الإرجاع|تم الاستلام)/);
     if (!m) return null;
@@ -509,40 +489,16 @@ const NotificationsPanel = () => {
       default: return null;
     }
   };
-  const parseTrackingFromMessage = (msg = '') => {
-    const m = msg.match(/\b(\d{6,})\b/);
-    return m ? m[1] : null;
-  };
-  const merged = [
-    ...notifications.filter(n => n.type !== 'welcome'),
-    ...systemNotifications
-  ];
-  
-  const uniqueMap = new Map();
-  for (const n of merged) {
-    let uniqueKey = n.id;
-    
-    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id (مع تعويض عند غياب data)
-    if (n.type === 'alwaseet_status_change') {
-      const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message);
-      const sid = n.data?.state_id || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
-      if (tracking && sid) {
-        uniqueKey = `alwaseet_${tracking}_${sid}`;
-      } else if (tracking) {
-        uniqueKey = `alwaseet_${tracking}_${(n.message || '').slice(0, 32)}`;
-      }
-    }
-    
-    if (!uniqueKey) {
-      // إشعارات أخرى - منع التكرار بناءً على المحتوى
-      const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
-      uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
-    }
-    
-    if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
-  }
-  
-  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  // Filter notifications based on allowedTypes if provided
+  const filteredNotifications = allowedTypes.length > 0 
+    ? systemNotifications.filter(n => {
+        if (!n.type) return true; // Include notifications without type
+        return allowedTypes.some(allowed => n.type.includes(allowed) || allowed.includes(n.type));
+      })
+    : systemNotifications;
+
+  // Sort notifications by creation date (deduplication is now handled at database level)
+  const allNotifications = filteredNotifications.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (
@@ -566,7 +522,7 @@ const NotificationsPanel = () => {
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
-          className="w-[min(92vw,24rem)] md:w-96 max-w-[calc(100vw-1rem)] glass-effect rounded-xl p-0 overflow-hidden z-[60]"
+          className={cn("w-80 max-w-[calc(100vw-2rem)] bg-background/95 backdrop-blur-md border border-border/50 shadow-xl rounded-xl p-0 overflow-hidden z-[60]", className)}
           align="end"
           sideOffset={8}
         >

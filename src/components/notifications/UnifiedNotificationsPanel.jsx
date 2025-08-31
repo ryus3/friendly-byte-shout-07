@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import NotificationsPanel from './NotificationsPanel';
+import NotificationsPanel from '../NotificationsPanel';
 
 /**
  * مكون موحد للإشعارات
