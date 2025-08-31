@@ -445,18 +445,31 @@ const NotificationsPanel = () => {
     setIsOpen(false);
   };
 
-  const handleMarkAsRead = (e, id) => {
+  // تحديث: دعم كلا النظامين عند وضع الإشعار كمقروء من زر العين
+  const handleMarkAsRead = (e, n) => {
     e.stopPropagation();
-    // Mark notification as read
-    markAsRead(id);
+    // اعتبره إشعار نظام إذا كان لديه أي من خصائص النظام المعروفة أو نوع من الأنواع النظامية
+    const isSystem =
+      typeof n.read === 'boolean' ||
+      !!n.related_entity_type ||
+      !!n.target_user_id ||
+      !!n.target_role ||
+      ['alwaseet_status_change','profit_settlement_request','employee_settlement_completed','profit_settlement','system','new_registration','new_order_employee','order_status_update','order_status_changed'].includes(n.type);
+
+    if (isSystem) {
+      markSystemAsRead(n.id);
+    } else {
+      markAsRead(n.id);
+    }
     toast({ title: "تم تحديد الإشعار كمقروء" });
   };
 
+  // تحديث: تحديد الكل كمقروء لكلا المصدرين
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
-    // Mark all notifications as read
-    markAllAsRead();
-    toast({ title: "تم تحديد الكل كمقروء" });
+    Promise.allSettled([markAllAsRead(), markAllSystemAsRead()]).then(() => {
+      toast({ title: "تم تحديد الكل كمقروء" });
+    });
   };
 
   const handleClearAll = (e) => {
@@ -534,156 +547,162 @@ const NotificationsPanel = () => {
 
   return (
     <>
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          {unreadFilteredCount > 0 && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 20 }}
-            >
-              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0">
-                {unreadFilteredCount}
-              </Badge>
-            </motion.div>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 md:w-96 glass-effect rounded-xl p-0 overflow-hidden" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-card/50 border-b border-border/50">
-          <span className="font-bold text-base gradient-text">الإشعارات</span>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors" 
-              onClick={() => navigate('/notifications')} 
-              title="عرض كل الإشعارات"
-            >
-              <Eye className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" 
-              onClick={handleMarkAllAsRead} 
-              title="تحديد الكل كمقروء" 
-              disabled={unreadFilteredCount === 0}
-            >
-              <Check className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" 
-              onClick={handleClearAll} 
-              title="حذف الكل" 
-              disabled={allNotifications.length === 0}
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator className="mx-0 bg-border/50" />
-        <ScrollArea className="h-80 px-2">
-          <div className="space-y-2 py-2">
-            <AnimatePresence>
-              {allNotifications.length > 0 ? (
-                allNotifications.slice(0, 8).map(notification => {
-                  const notificationType = notification.type || 'default';
-                  
-                  // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
-                  let colors;
-                  if (notificationType === 'alwaseet_status_change') {
-                    const sid = notification.data?.state_id || parseAlwaseetStateIdFromMessage(notification.message) || notification.data?.status_id;
-                    colors = getAlWaseetNotificationColors(sid);
-                  } else {
-                    colors = typeColorMap[notificationType] || typeColorMap.default;
-                  }
-                  
-                  const IconComponent = iconMap[notificationType] || iconMap.default;
-                  
-                  return (
-                    <motion.div
-                      key={notification.id}
-                      layout
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                      className="relative group"
-                    >
-                      {notificationType === 'ai_order' && (
-                        <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 rounded-r bg-gradient-to-b from-indigo-500 via-violet-500 to-blue-500 opacity-90" />
-                      )}
-                      <div 
-                        className={cn(
-                          "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
-                          colors.bg,
-                          colors.border,
-                          (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
-                          "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
-                        )}
-                        onClick={(e) => handleNotificationClick(e, notification)}
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="relative">
+            <Bell className="h-5 w-5" />
+            {unreadFilteredCount > 0 && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+              >
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0">
+                  {unreadFilteredCount}
+                </Badge>
+              </motion.div>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          className="w-[min(92vw,24rem)] md:w-96 max-w-[calc(100vw-1rem)] glass-effect rounded-xl p-0 overflow-hidden z-[60]"
+          align="end"
+          sideOffset={8}
+        >
+          <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-card/50 border-b border-border/50">
+            <span className="font-bold text-base gradient-text">الإشعارات</span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors" 
+                onClick={() => navigate('/notifications')} 
+                title="عرض كل الإشعارات"
+              >
+                <Eye className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" 
+                onClick={handleMarkAllAsRead} 
+                title="تحديد الكل كمقروء" 
+                disabled={unreadFilteredCount === 0}
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" 
+                onClick={handleClearAll} 
+                title="حذف الكل" 
+                disabled={allNotifications.length === 0}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="mx-0 bg-border/50" />
+          <ScrollArea className="h-80 px-2">
+            <div className="space-y-2 py-2">
+              <AnimatePresence>
+                {allNotifications.length > 0 ? (
+                  allNotifications.slice(0, 8).map(notification => {
+                    const notificationType = notification.type || 'default';
+                    
+                    // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
+                    let colors;
+                    if (notificationType === 'alwaseet_status_change') {
+                      const sid = notification.data?.state_id || parseAlwaseetStateIdFromMessage(notification.message) || notification.data?.status_id;
+                      colors = getAlWaseetNotificationColors(sid);
+                    } else {
+                      colors = typeColorMap[notificationType] || typeColorMap.default;
+                    }
+                    
+                    const IconComponent = iconMap[notificationType] || iconMap.default;
+                    
+                    return (
+                      <motion.div
+                        key={notification.id}
+                        layout
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                        className="relative group"
                       >
-                        <div className={cn("mt-1 flex-shrink-0", colors.icon)}>
-                          <IconComponent />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                              {notification.title}
-                            </h3>
-                            {!(notification.is_read || notification.read) && (
-                              <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
-                            )}
+                        {notificationType === 'ai_order' && (
+                          <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 rounded-r bg-gradient-to-b from-indigo-500 via-violet-500 to-blue-500 opacity-90" />
+                        )}
+                        <div 
+                          className={cn(
+                            "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
+                            colors.bg,
+                            colors.border,
+                            (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
+                            "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
+                          )}
+                          onClick={(e) => handleNotificationClick(e, notification)}
+                        >
+                          <div className={cn("mt-1 flex-shrink-0", colors.icon)}>
+                            <IconComponent />
                           </div>
-                          <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-1.5">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" />
-                              {formatRelativeTime(notification.created_at)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                                {notification.title}
+                              </h3>
+                              {!(notification.is_read || notification.read) && (
+                                <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-1.5">
+                              {notification.message}
                             </p>
-                            {!(notification.is_read || notification.read) && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
-                                title="وضع كمقروء"
-                                onClick={(e) => handleMarkAsRead(e, notification.id)}
-                              >
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                            )}
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" />
+                                {formatRelativeTime(notification.created_at)}
+                              </p>
+                              {!(notification.is_read || notification.read) && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+                                  title="وضع كمقروء"
+                                  onClick={(e) => handleMarkAsRead(e, notification)}
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  )
-                })
-              ) : (
-                <div className="text-center text-muted-foreground py-12 px-4">
-                  <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
-                  <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
-                  <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-        </ScrollArea>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <AnimatePresence>
-      {showPendingRegistrations && (
-        <PendingRegistrations onClose={() => setShowPendingRegistrations(false)} />
-      )}
-      {showAiOrdersManager && (
-        <AiOrdersManager onClose={() => setShowAiOrdersManager(false)} />
-      )}
-    </AnimatePresence>
+                      </motion.div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center text-muted-foreground py-12 px-4">
+                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
+                    <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
+                    <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+          </ScrollArea>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AnimatePresence>
+        {showPendingRegistrations && (
+          <PendingRegistrations onClose={() => setShowPendingRegistrations(false)} />
+        )}
+        {showAiOrdersManager && (
+          <AiOrdersManager onClose={() => setShowAiOrdersManager(false)} />
+        )}
+      </AnimatePresence>
     </>
   );
 };
