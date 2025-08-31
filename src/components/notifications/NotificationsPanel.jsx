@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -24,6 +24,8 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   } = useNotificationsSystem();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [swipeState, setSwipeState] = useState({ isDragging: false, startY: 0, currentY: 0 });
+  const panelRef = useRef(null);
 
   // فلترة الإشعارات حسب الأنواع المسموحة
   const filteredNotifications = notifications.filter(notification => {
@@ -237,6 +239,93 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
+  // معالجة السحب لإغلاق اللوحة
+  const handleTouchStart = (e) => {
+    const touch = e.touches[0];
+    setSwipeState({
+      isDragging: true,
+      startY: touch.clientY,
+      currentY: touch.clientY
+    });
+  };
+
+  const handleTouchMove = (e) => {
+    if (!swipeState.isDragging) return;
+    
+    const touch = e.touches[0];
+    const deltaY = touch.clientY - swipeState.startY;
+    const deltaX = Math.abs(touch.clientX - swipeState.startX || 0);
+    
+    // السماح بالسحب في أي اتجاه مع عتبة معقولة
+    if (Math.abs(deltaY) > 30 || deltaX > 30) {
+      setIsOpen(false);
+      setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+    }
+    
+    setSwipeState(prev => ({ ...prev, currentY: touch.clientY }));
+  };
+
+  const handleTouchEnd = () => {
+    if (!swipeState.isDragging) return;
+    
+    const deltaY = Math.abs(swipeState.currentY - swipeState.startY);
+    
+    // إغلاق اللوحة إذا كان السحب كافياً
+    if (deltaY > 50) {
+      setIsOpen(false);
+    }
+    
+    setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+  };
+
+  // معالجة السحب بالماوس أيضاً
+  const handleMouseDown = (e) => {
+    setSwipeState({
+      isDragging: true,
+      startY: e.clientY,
+      currentY: e.clientY
+    });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!swipeState.isDragging) return;
+    
+    const deltaY = Math.abs(e.clientY - swipeState.startY);
+    const deltaX = Math.abs(e.clientX - swipeState.startX || 0);
+    
+    if (deltaY > 30 || deltaX > 30) {
+      setIsOpen(false);
+      setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+    }
+    
+    setSwipeState(prev => ({ ...prev, currentY: e.clientY }));
+  };
+
+  const handleMouseUp = () => {
+    if (!swipeState.isDragging) return;
+    
+    const deltaY = Math.abs(swipeState.currentY - swipeState.startY);
+    
+    if (deltaY > 50) {
+      setIsOpen(false);
+    }
+    
+    setSwipeState({ isDragging: false, startY: 0, currentY: 0 });
+  };
+
+  // إضافة event listeners للماوس
+  useEffect(() => {
+    if (swipeState.isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [swipeState.isDragging]);
+
   return (
     <div className={`relative ${className}`}>
       {/* زر الإشعارات */}
@@ -259,7 +348,16 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
 
       {/* لوحة الإشعارات */}
       {isOpen && (
-        <Card className="absolute top-12 right-0 w-80 max-w-sm z-50 shadow-xl border border-border">
+        <Card 
+          ref={panelRef}
+          className={`absolute top-12 right-0 w-80 max-w-sm z-50 shadow-xl border border-border transition-all duration-200 ${
+            swipeState.isDragging ? 'opacity-80 scale-95' : ''
+          }`}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">

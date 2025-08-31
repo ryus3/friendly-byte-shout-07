@@ -13,14 +13,13 @@ const ToastViewport = React.forwardRef(({ className, ...props }, ref) => (
 			'fixed top-0 z-[10000] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-auto sm:right-auto sm:top-4 sm:left-1/2 sm:-translate-x-1/2 sm:flex-col md:max-w-[420px]',
 			className,
 		)}
-		swipeDirection="up"
 		{...props}
 	/>
 ));
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-	'group relative pointer-events-auto flex w-full items-center space-x-4 overflow-hidden rounded-xl border p-4 pr-8 shadow-lg transition-all data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-top-full data-[state=closed]:slide-out-to-top-full',
+	'group relative pointer-events-auto flex w-full items-center space-x-4 overflow-hidden rounded-xl border p-4 pr-8 shadow-lg transition-all data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:translate-y-[var(--radix-toast-swipe-move-y)] data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:translate-y-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=end]:translate-y-[var(--radix-toast-swipe-end-y)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-top-full data-[state=closed]:slide-out-to-top-full data-[swipe=end]:slide-out-to-left-full data-[swipe=end]:slide-out-to-right-full data-[swipe=end]:slide-out-to-bottom-full',
 	{
 		variants: {
 			variant: {
