@@ -572,4 +572,5 @@ superAPI.deleteDepartment = async (deptId) => {
   return true;
 };
 
+export { superAPI };
 export default superAPI;
