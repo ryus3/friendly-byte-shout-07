@@ -3622,6 +3622,10 @@ export type Database = {
         }
         Returns: string
       }
+      prune_notifications_retention: {
+        Args: { p_keep?: number }
+        Returns: number
+      }
       record_discount_usage: {
         Args: {
           p_customer_id: string
