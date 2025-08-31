@@ -145,30 +145,6 @@ class SuperAPI {
     console.log('🧹 تم حذف جميع البيانات المحفوظة');
   }
 
-  /**
-   * جلب الإشعارات مع فلترة حسب المستخدم
-   */
-  async getNotifications() {
-    return this.fetch('notifications', async () => {
-      console.log('🔔 جلب الإشعارات...');
-      
-      let query = supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      const { data, error } = await query;
-      
-      if (error) {
-        console.error('❌ خطأ في جلب الإشعارات:', error);
-        throw error;
-      }
-      
-      return data || [];
-    });
-  }
-
   // تقليل الاستهلاك: إبطال مجمّع لتفادي إعادة الجلب المتكرر
   debouncedInvalidateAll(delay = 800) {
     if (this._invalidateTimer) return;
@@ -572,5 +548,4 @@ superAPI.deleteDepartment = async (deptId) => {
   return true;
 };
 
-export { superAPI };
 export default superAPI;

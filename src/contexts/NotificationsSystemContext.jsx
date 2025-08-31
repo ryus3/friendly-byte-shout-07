@@ -3,7 +3,6 @@ import { useAuth } from './UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { superAPI } from '@/api/SuperAPI.js';
 
 const NotificationsSystemContext = createContext();
 
@@ -19,34 +18,24 @@ export const NotificationsSystemProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // جلب الإشعارات عبر SuperAPI مع فلترة دقيقة حسب الدور
+  // جلب الإشعارات من قاعدة البيانات
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
-
+    
     try {
-      const isAdmin = Array.isArray(user?.roles) && (user.roles.includes('super_admin') || user.roles.includes('admin'));
-      const rows = await superAPI.getNotifications();
-
-      const adminOnlyGlobalTypes = [
-        'profit_settlement_request',
-        'profit_settlement_completed',
-        'new_registration',
-        'order_status_update_admin',
-        'cash_correction',
-        'balance_correction',
-        'main_cash_correction'
-      ];
-
-      const data = (rows || []).filter((n) => {
-        if (n.user_id === user.id) return true; // إشعار خاص بالمستخدم
-        if (n.user_id === null) {
-          // إشعار عام: يراه المديرون دائماً، والموظفون فقط الأنواع غير الإدارية
-          return isAdmin ? true : !adminOnlyGlobalTypes.includes(n.type);
-        }
-        return false;
-      });
-
-      const formattedNotifications = data.map((n) => ({
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .or(`user_id.eq.${user.id},user_id.is.null`) // إشعارات للمستخدم أو عامة
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
+      
+      const formattedNotifications = data.map(n => ({
         id: n.id,
         title: n.title,
         message: n.message,
@@ -57,11 +46,12 @@ export const NotificationsSystemProvider = ({ children }) => {
         related_entity_id: n.data?.related_entity_id,
         created_at: n.created_at,
         read: n.is_read,
-        priority: n.priority || 'normal',
+        priority: n.priority || 'normal'
       }));
-
+      
       setNotifications(formattedNotifications);
-      setUnreadCount(formattedNotifications.filter((n) => !n.read).length);
+      setUnreadCount(formattedNotifications.filter(n => !n.read).length);
+      
     } catch (error) {
       console.error('Error in fetchNotifications:', error);
     }
@@ -81,7 +71,6 @@ export const NotificationsSystemProvider = ({ children }) => {
         table: 'notifications'
       }, (payload) => {
         console.log('New notification detected:', payload);
-        superAPI.invalidate('notifications');
         fetchNotifications(); // إعادة جلب فقط عند إضافة إشعار جديد
       })
       .on('postgres_changes', {
@@ -304,8 +293,10 @@ export const NotificationsSystemProvider = ({ children }) => {
         return;
       }
       
-      superAPI.invalidate('notifications');
-      fetchNotifications();
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error in markAsRead:', error);
     }
@@ -324,8 +315,8 @@ export const NotificationsSystemProvider = ({ children }) => {
         return;
       }
       
-      superAPI.invalidate('notifications');
-      fetchNotifications();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error in markAllAsRead:', error);
     }

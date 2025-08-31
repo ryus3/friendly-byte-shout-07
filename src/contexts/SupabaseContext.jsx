@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -386,9 +385,7 @@ export const SupabaseProvider = ({ children }) => {
           .from('notifications')
           .select('*')
           .or(`user_id.eq.${userId},user_id.is.null`)
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
-          .limit(100); // إرجاع آخر 100 إشعار فقط
+          .order('created_at', { ascending: false });
         if (error) throw error;
         return data;
       },
