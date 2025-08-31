@@ -9,12 +9,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bell, BellOff, Trash2, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * لوحة الإشعارات الأساسية
  */
 const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className = "" }) => {
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const {
     notifications,
     unreadCount,
@@ -33,107 +36,90 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     return allowedTypes.includes(notification.type);
   });
 
-  // دالة الحصول على ألوان إشعارات الوسيط حسب state_id
-  const getAlWaseetNotificationColors = (stateId) => {
-    console.log('🎨 تطبيق لون حسب state_id:', stateId);
-    
-    switch (String(stateId)) {
-      case '2': // تم الاستلام من قبل المندوب
-        return {
-          bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30',
-          border: 'border-r-blue-500',
-          text: 'text-blue-800 dark:text-blue-200',
-          icon: 'text-blue-600',
-          dot: 'bg-blue-500'
-        };
-      case '4': // تم التسليم بنجاح
-        return {
-          bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30',
-          border: 'border-r-green-500',
-          text: 'text-green-800 dark:text-green-200',
-          icon: 'text-green-600',
-          dot: 'bg-green-500'
-        };
-      case '17': // تم الإرجاع
-        return {
-          bg: 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30',
-          border: 'border-r-orange-500',
-          text: 'text-orange-800 dark:text-orange-200',
-          icon: 'text-orange-600',
-          dot: 'bg-orange-500'
-        };
-      case '25':
-      case '26': // العميل لا يرد
-        return {
-          bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
-          border: 'border-r-yellow-500',
-          text: 'text-yellow-800 dark:text-yellow-200',
-          icon: 'text-yellow-600',
-          dot: 'bg-yellow-500'
-        };
-      case '31':
-      case '32': // تم الإلغاء
-        return {
-          bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
-          border: 'border-r-red-500',
-          text: 'text-red-800 dark:text-red-200',
-          icon: 'text-red-600',
-          dot: 'bg-red-500'
-        };
-      default:
-        return {
+  // دالة موحدة للحصول على النص والألوان من مصدر واحد
+  const getUnifiedNotificationDisplay = (notification) => {
+    // للإشعارات من نوع alwaseet_status_change
+    if (notification.type === 'alwaseet_status_change') {
+      const stateId = notification.data?.state_id || notification.data?.delivery_status;
+      const trackingNumber = notification.data?.tracking_number || notification.data?.order_number || 'غير محدد';
+      
+      if (stateId) {
+        const statusConfig = getStatusConfig(stateId);
+        const StatusIcon = statusConfig.icon;
+        
+        // تحويل ألوان CSS إلى نمط الإشعارات
+        const colorClasses = statusConfig.color;
+        let colors = {
           bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
           border: 'border-r-gray-400',
           text: 'text-gray-800 dark:text-gray-200',
           icon: 'text-gray-600',
           dot: 'bg-gray-400'
         };
-    }
-  };
-
-  // أيقونات الإشعارات مع الألوان
-  const getNotificationIcon = (notification) => {
-    const iconProps = { className: "w-4 h-4" };
-    
-    // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
-    if (notification.type === 'alwaseet_status_change') {
-      // استخراج state_id من عدة مصادر
-      let stateId = notification.data?.state_id || 
-                   notification.data?.order_status || 
-                   notification.data?.new_status;
-      
-      console.log('🔍 استخراج state_id من الإشعار:', { 
-        stateId, 
-        data: notification.data, 
-        message: notification.message 
-      });
-      
-      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
-      if (!stateId && notification.message) {
-        // استخراج state_id من النص بناءً على نوع الرسالة
-        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-          stateId = '2';
-        } else if (notification.message.includes('تم التسليم بنجاح')) {
-          stateId = '4';
-        } else if (notification.message.includes('تم الإرجاع')) {
-          stateId = '17';
-        } else if (notification.message.includes('العميل لا يرد')) {
-          stateId = '25';
-        } else if (notification.message.includes('تم الإلغاء')) {
-          stateId = '31';
+        
+        // استخراج اللون الأساسي من التدرج
+        if (colorClasses.includes('green')) {
+          colors = {
+            bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30',
+            border: 'border-r-green-500',
+            text: 'text-green-800 dark:text-green-200',
+            icon: 'text-green-600',
+            dot: 'bg-green-500'
+          };
+        } else if (colorClasses.includes('blue')) {
+          colors = {
+            bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30',
+            border: 'border-r-blue-500',
+            text: 'text-blue-800 dark:text-blue-200',
+            icon: 'text-blue-600',
+            dot: 'bg-blue-500'
+          };
+        } else if (colorClasses.includes('orange') || colorClasses.includes('amber')) {
+          colors = {
+            bg: 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30',
+            border: 'border-r-orange-500',
+            text: 'text-orange-800 dark:text-orange-200',
+            icon: 'text-orange-600',
+            dot: 'bg-orange-500'
+          };
+        } else if (colorClasses.includes('yellow')) {
+          colors = {
+            bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
+            border: 'border-r-yellow-500',
+            text: 'text-yellow-800 dark:text-yellow-200',
+            icon: 'text-yellow-600',
+            dot: 'bg-yellow-500'
+          };
+        } else if (colorClasses.includes('red') || colorClasses.includes('rose')) {
+          colors = {
+            bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
+            border: 'border-r-red-500',
+            text: 'text-red-800 dark:text-red-200',
+            icon: 'text-red-600',
+            dot: 'bg-red-500'
+          };
         }
         
-        console.log('🔍 state_id المستخرج من النص:', stateId);
-      }
-      
-      if (stateId) {
-        const colors = getAlWaseetNotificationColors(stateId);
-        console.log('🎨 تطبيق أيقونة ملونة:', { stateId, colors });
-        return <Info {...iconProps} className={`w-4 h-4 ${colors.icon}`} />;
+        return {
+          text: `${statusConfig.text} ${trackingNumber}`,
+          icon: <StatusIcon className={`w-4 h-4 ${colors.icon}`} />,
+          colors
+        };
       }
     }
     
-    // الأيقونات العادية للأنواع الأخرى
+    // للأنواع الأخرى، استخدم النظام القديم
+    return {
+      text: notification.message,
+      icon: getStandardNotificationIcon(notification),
+      colors: getStandardNotificationColors(notification)
+    };
+  };
+
+  // الأيقونات العادية للأنواع الأخرى
+  const getStandardNotificationIcon = (notification) => {
+    const iconProps = { className: "w-4 h-4" };
+    
     switch (notification.type) {
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
@@ -146,47 +132,8 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان الإشعار الكاملة
-  const getNotificationStyles = (notification) => {
-    // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
-    if (notification.type === 'alwaseet_status_change') {
-      // استخراج state_id من عدة مصادر
-      let stateId = notification.data?.state_id || 
-                   notification.data?.order_status || 
-                   notification.data?.new_status;
-      
-      console.log('🔍 استخراج state_id من الإشعار للألوان:', { 
-        stateId, 
-        data: notification.data, 
-        message: notification.message 
-      });
-      
-      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
-      if (!stateId && notification.message) {
-        // استخراج state_id من النص بناءً على نوع الرسالة
-        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-          stateId = '2';
-        } else if (notification.message.includes('تم التسليم بنجاح')) {
-          stateId = '4';
-        } else if (notification.message.includes('تم الإرجاع')) {
-          stateId = '17';
-        } else if (notification.message.includes('العميل لا يرد')) {
-          stateId = '25';
-        } else if (notification.message.includes('تم الإلغاء')) {
-          stateId = '31';
-        }
-        
-        console.log('🔍 state_id المستخرج من النص للألوان:', stateId);
-      }
-      
-      if (stateId) {
-        const colors = getAlWaseetNotificationColors(stateId);
-        console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, colors, message: notification.message });
-        return colors;
-      }
-    }
-    
-    // الألوان العادية للأنواع الأخرى
+  // ألوان عادية للأنواع الأخرى
+  const getStandardNotificationColors = (notification) => {
     switch (notification.priority) {
       case 'high':
         return {
@@ -212,6 +159,55 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-gray-600',
           dot: 'bg-gray-400'
         };
+    }
+  };
+
+  // التنقل الذكي عند النقر على الإشعار
+  const handleNotificationClick = async (notification) => {
+    // وضع علامة كمقروء
+    await handleMarkAsRead(notification.id);
+    
+    // إغلاق لوحة الإشعارات
+    setIsOpen(false);
+    
+    // التنقل حسب نوع الإشعار
+    switch (notification.type) {
+      case 'alwaseet_status_change':
+        // الانتقال لصفحة متابعة الطلبات مع تمرير معرف الطلب
+        const orderId = notification.data?.order_id;
+        if (orderId) {
+          navigate(`/orders?highlight=${orderId}`);
+        }
+        break;
+        
+      case 'low_stock':
+        // الانتقال لصفحة المخزون مع فلترة المنتج
+        const productId = notification.data?.product_id;
+        if (productId) {
+          navigate(`/inventory?filter=${productId}`);
+        } else {
+          navigate('/inventory');
+        }
+        break;
+        
+      case 'new_order':
+        // الانتقال لصفحة الطلبات
+        navigate('/orders');
+        break;
+        
+      case 'profit_settlement':
+        // الانتقال لصفحة الأرباح
+        navigate('/profits');
+        break;
+        
+      case 'employee_registration':
+        // الانتقال لصفحة إدارة الموظفين
+        navigate('/manage-employees');
+        break;
+        
+      default:
+        // للأنواع الأخرى، الانتقال للوحة التحكم
+        navigate('/');
     }
   };
 
@@ -421,31 +417,31 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
               ) : (
                 <div className="space-y-1">
                   {filteredNotifications.map((notification) => {
-                    const styles = getNotificationStyles(notification);
+                    const displayData = getUnifiedNotificationDisplay(notification);
                     
                     return (
                       <div
                         key={notification.id}
                         className={`p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
                           !notification.read ? 'shadow-sm' : ''
-                        } ${styles.bg} ${styles.border}`}
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        } ${displayData.colors.bg} ${displayData.colors.border}`}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0 mt-1">
-                            {getNotificationIcon(notification)}
+                            {displayData.icon}
                           </div>
                           
                           <div className="flex-1 min-w-0">
                             <h4 className={`text-sm font-medium ${
-                              !notification.read ? styles.text : 'text-muted-foreground'
+                              !notification.read ? displayData.colors.text : 'text-muted-foreground'
                             }`}>
                               {notification.title}
                             </h4>
                             <p className={`text-xs mt-1 line-clamp-2 ${
-                              !notification.read ? styles.text : 'text-muted-foreground'
+                              !notification.read ? displayData.colors.text : 'text-muted-foreground'
                             }`}>
-                              {notification.message}
+                              {displayData.text}
                             </p>
                             <p className="text-xs text-muted-foreground mt-2">
                               {formatDistanceToNow(new Date(notification.created_at), {
@@ -457,7 +453,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                           
                           <div className="flex items-center gap-1">
                             {!notification.read && (
-                              <div className={`w-2 h-2 rounded-full ${styles.dot}`}></div>
+                              <div className={`w-2 h-2 rounded-full ${displayData.colors.dot}`}></div>
                             )}
                             <Button
                               variant="ghost"
