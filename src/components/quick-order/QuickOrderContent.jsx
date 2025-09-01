@@ -169,7 +169,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
            console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
            clearCart();
            
-           aiOrderData.items.forEach((item, index) => {
+           (aiOrderData.items || []).filter(item => item != null).forEach((item, index) => {
              if (item && item.product_id && item.variant_id) {
                console.log(`🔍 Loading real product ${index + 1}:`, item);
                

@@ -87,15 +87,15 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
 
   const handleProductSelectConfirm = (selectedItems) => {
     clearCart();
-    selectedItems.forEach(item => {
+    (selectedItems || []).filter(item => item != null).forEach(item => {
       const product = products.find(p => p.id === item.productId);
-      const variant = product.variants.find(v => v.id === item.variantId);
+      const variant = product?.variants?.find(v => v.id === item.variantId);
       if (product && variant) {
-        addToCart(product, variant, item.quantity, false);
+        addToCart(product, variant, item?.quantity || 1, false);
       }
     });
     setIsProductSelectorOpen(false);
-    toast({ title: "تم تحديث السلة", description: `تمت إضافة ${selectedItems.length} أنواع من المنتجات.`, variant: 'success' });
+    toast({ title: "تم تحديث السلة", description: `تمت إضافة ${selectedItems?.length || 0} أنواع من المنتجات.`, variant: 'success' });
   };
 
   return (

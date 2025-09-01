@@ -180,10 +180,12 @@ export const SuperProvider = ({ children }) => {
       const shouldReserveStock = ['pending', 'shipped', 'delivery', 'returned'].includes(order.status);
       
       if (shouldReserveStock && order.order_items) {
-        order.order_items.forEach(item => {
+        // تصفية العناصر null/undefined قبل المعالجة
+        const validItems = (order.order_items || []).filter(item => item != null);
+        validItems.forEach(item => {
           if (item.variant_id) {
             const currentReserved = reservationMap.get(item.variant_id) || 0;
-            reservationMap.set(item.variant_id, currentReserved + (item.quantity || 0));
+            reservationMap.set(item.variant_id, currentReserved + (item?.quantity || 0));
           }
         });
       }
