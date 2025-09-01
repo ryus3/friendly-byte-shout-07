@@ -501,8 +501,35 @@ const NotificationsPanel = () => {
     return m ? m[1] : null;
   };
   const merged = [
-    ...notifications.filter(n => n.type !== 'welcome'),
-    ...systemNotifications
+    ...notifications.filter(n => {
+      // فلترة الإشعارات القديمة وإزالة إشعارات الوسيط غير المهمة
+      if (n.type === 'welcome') return false;
+      
+      if (n.type === 'alwaseet_status_change') {
+        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
+        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
+        
+        // السماح فقط بالحالات المهمة
+        if (!statusCode || !importantCodes.includes(String(statusCode))) {
+          return false;
+        }
+      }
+      
+      return true;
+    }),
+    ...systemNotifications.filter(n => {
+      // تطبيق نفس الفلترة لإشعارات النظام
+      if (n.type === 'alwaseet_status_change') {
+        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
+        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
+        
+        if (!statusCode || !importantCodes.includes(String(statusCode))) {
+          return false;
+        }
+      }
+      
+      return true;
+    })
   ];
   
   const uniqueMap = new Map();

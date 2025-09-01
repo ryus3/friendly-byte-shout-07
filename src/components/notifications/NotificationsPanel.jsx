@@ -27,10 +27,25 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   const [swipeState, setSwipeState] = useState({ isDragging: false, startY: 0, currentY: 0 });
   const panelRef = useRef(null);
 
-  // فلترة الإشعارات حسب الأنواع المسموحة
+  // فلترة الإشعارات حسب الأنواع المسموحة وإخفاء إشعارات الوسيط غير المهمة
   const filteredNotifications = notifications.filter(notification => {
-    if (allowedTypes.length === 0) return true;
-    return allowedTypes.includes(notification.type);
+    // فلترة حسب النوع المسموح به
+    if (allowedTypes.length > 0 && !allowedTypes.includes(notification.type)) {
+      return false;
+    }
+    
+    // للإشعارات من نوع الوسيط، السماح فقط بالحالات المهمة
+    if (notification.type === 'alwaseet_status_change') {
+      const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
+      const statusCode = notification.data?.state_id || notification.data?.delivery_status;
+      
+      // إذا لم يكن لدينا كود حالة، أو الكود ليس من الأكواد المهمة، لا نعرض الإشعار
+      if (!statusCode || !importantCodes.includes(String(statusCode))) {
+        return false;
+      }
+    }
+    
+    return true;
   });
 
   // دالة الحصول على ألوان إشعارات الوسيط حسب state_id
