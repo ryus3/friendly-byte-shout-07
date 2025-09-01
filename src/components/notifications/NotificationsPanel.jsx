@@ -51,9 +51,13 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   // دالة الحصول على ألوان إشعارات الوسيط حسب state_id
   const getAlWaseetNotificationColors = (stateId) => {
     console.log('🎨 تطبيق لون حسب state_id:', stateId);
-    
-    switch (String(stateId)) {
-      case '2': // تم الاستلام من قبل المندوب
+    const s = String(stateId);
+    switch (s) {
+      // تقدم التوصيل
+      case '3': // قيد التوصيل
+      case '14': // إعادة الإرسال
+      case '24': // تغيير المحافظة
+      case '42': // تغيير المندوب
         return {
           bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30',
           border: 'border-r-blue-500',
@@ -61,7 +65,18 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-blue-600',
           dot: 'bg-blue-500'
         };
-      case '4': // تم التسليم بنجاح
+
+      case '2': // تم الاستلام من قبل المندوب (الشحن)
+        return {
+          bg: 'bg-gradient-to-r from-sky-50 to-sky-100 dark:from-sky-950/30 dark:to-sky-900/30',
+          border: 'border-r-sky-500',
+          text: 'text-sky-800 dark:text-sky-200',
+          icon: 'text-sky-600',
+          dot: 'bg-sky-500'
+        };
+
+      // مكتمل/تسليم
+      case '4': // تم التسليم للزبون
         return {
           bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30',
           border: 'border-r-green-500',
@@ -69,7 +84,21 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-green-600',
           dot: 'bg-green-500'
         };
-      case '17': // تم الإرجاع
+
+      // إرجاع مكتمل
+      case '17': // تم الإرجاع للتاجر
+        return {
+          bg: 'bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30',
+          border: 'border-r-emerald-500',
+          text: 'text-emerald-800 dark:text-emerald-200',
+          icon: 'text-emerald-600',
+          dot: 'bg-emerald-500'
+        };
+
+      // إرجاع قيد المعالجة
+      case '16': // قيد الإرجاع
+      case '15': // إرجاع إلى التاجر
+      case '19': // إرجاع بعد الاستلام
         return {
           bg: 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30',
           border: 'border-r-orange-500',
@@ -77,8 +106,45 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-orange-600',
           dot: 'bg-orange-500'
         };
+
+      // تبديل/تعديلات خاصة
+      case '18': // تغيير سعر
+        return {
+          bg: 'bg-gradient-to-r from-purple-50 to-pink-100 dark:from-purple-950/30 dark:to-pink-900/30',
+          border: 'border-r-purple-500',
+          text: 'text-purple-800 dark:text-purple-200',
+          icon: 'text-purple-600',
+          dot: 'bg-purple-500'
+        };
+      case '20': // تبديل بعد التوصيل
+      case '21': // تسليم + استرجاع
+        return {
+          bg: 'bg-gradient-to-r from-teal-50 to-cyan-100 dark:from-teal-950/30 dark:to-cyan-900/30',
+          border: 'border-r-teal-500',
+          text: 'text-teal-800 dark:text-teal-200',
+          icon: 'text-teal-600',
+          dot: 'bg-teal-500'
+        };
+
+      // في الفرز/المكاتب
+      case '22': // إلى الفرز
+      case '44': // إخراج للفرز
+      case '5': // فرز بغداد
+      case '6': // في مكتب
+      case '7': // بالطريق للمكتب
+        return {
+          bg: 'bg-gradient-to-r from-slate-50 to-gray-100 dark:from-slate-950/30 dark:to-gray-900/30',
+          border: 'border-r-slate-500',
+          text: 'text-slate-800 dark:text-slate-200',
+          icon: 'text-slate-600',
+          dot: 'bg-slate-500'
+        };
+
+      // مشكلات اتصال/لا يرد/مؤجل
       case '25':
-      case '26': // العميل لا يرد
+      case '26':
+      case '29':
+      case '30':
         return {
           bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
           border: 'border-r-yellow-500',
@@ -86,8 +152,11 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-yellow-600',
           dot: 'bg-yellow-500'
         };
+
+      // إلغاء/رفض/لم يطلب
       case '31':
-      case '32': // تم الإلغاء
+      case '32':
+      case '39':
         return {
           bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
           border: 'border-r-red-500',
@@ -95,6 +164,78 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           icon: 'text-red-600',
           dot: 'bg-red-500'
         };
+
+      // حالات رمادية/حظر/مغلق/مفصول
+      case '27':
+      case '28':
+      case '33':
+      case '40':
+        return {
+          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
+          border: 'border-r-gray-500',
+          text: 'text-gray-800 dark:text-gray-200',
+          icon: 'text-gray-600',
+          dot: 'bg-gray-500'
+        };
+
+      // متنوعة إضافية
+      case '23': // إلى مخزن الإرجاعات
+        return {
+          bg: 'bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-950/30 dark:to-orange-900/30',
+          border: 'border-r-amber-500',
+          text: 'text-amber-800 dark:text-amber-200',
+          icon: 'text-amber-600',
+          dot: 'bg-amber-500'
+        };
+      case '34': // طلب مكرر
+        return {
+          bg: 'bg-gradient-to-r from-orange-50 to-rose-100 dark:from-orange-950/30 dark:to-rose-900/30',
+          border: 'border-r-orange-500',
+          text: 'text-orange-800 dark:text-orange-200',
+          icon: 'text-orange-600',
+          dot: 'bg-orange-500'
+        };
+      case '35': // مستلم مسبقا
+        return {
+          bg: 'bg-gradient-to-r from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/30',
+          border: 'border-r-green-600',
+          text: 'text-green-800 dark:text-green-200',
+          icon: 'text-green-600',
+          dot: 'bg-green-600'
+        };
+      case '36': // الرقم غير معرف
+        return {
+          bg: 'bg-gradient-to-r from-purple-50 to-indigo-100 dark:from-purple-950/30 dark:to-indigo-900/30',
+          border: 'border-r-purple-500',
+          text: 'text-purple-800 dark:text-purple-200',
+          icon: 'text-purple-600',
+          dot: 'bg-purple-500'
+        };
+      case '37': // خارج الخدمة
+        return {
+          bg: 'bg-gradient-to-r from-rose-50 to-red-100 dark:from-rose-950/30 dark:to-red-900/30',
+          border: 'border-r-rose-500',
+          text: 'text-rose-800 dark:text-rose-200',
+          icon: 'text-rose-600',
+          dot: 'bg-rose-500'
+        };
+      case '38': // عنوان غير دقيق
+        return {
+          bg: 'bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-950/30 dark:to-orange-900/30',
+          border: 'border-r-amber-500',
+          text: 'text-amber-800 dark:text-amber-200',
+          icon: 'text-amber-600',
+          dot: 'bg-amber-500'
+        };
+      case '41': // لا يمكن الاتصال
+        return {
+          bg: 'bg-gradient-to-r from-rose-50 to-red-100 dark:from-rose-950/30 dark:to-red-900/30',
+          border: 'border-r-rose-500',
+          text: 'text-rose-800 dark:text-rose-200',
+          icon: 'text-rose-600',
+          dot: 'bg-rose-500'
+        };
+
       default:
         return {
           bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
