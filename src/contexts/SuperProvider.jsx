@@ -142,12 +142,12 @@ export const SuperProvider = ({ children }) => {
     
     // دعم الطلبات الجديدة بدون order_items
     const items = Array.isArray(o.order_items)
-      ? o.order_items.map(oi => ({
-          quantity: oi.quantity || 1,
-          price: oi.price ?? oi.unit_price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-          cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
-          productname: oi.products?.name,
-          product_name: oi.products?.name,
+      ? o.order_items.filter(oi => oi != null && typeof oi === 'object').map(oi => ({
+          quantity: Number(oi?.quantity) || 1,
+          price: oi?.price ?? oi?.unit_price ?? oi?.selling_price ?? oi?.product_variants?.price ?? 0,
+          cost_price: oi?.cost_price ?? oi?.product_variants?.cost_price ?? 0,
+          productname: oi?.products?.name,
+          product_name: oi?.products?.name,
           sku: oi.product_variants?.id || oi.variant_id,
           product_variants: oi.product_variants
         }))
@@ -175,17 +175,17 @@ export const SuperProvider = ({ children }) => {
     const reservationMap = new Map();
 
     // حساب الحجز من الطلبات النشطة
-    data.orders.forEach(order => {
+    (data.orders || []).filter(order => order != null).forEach(order => {
       // الطلبات التي تحجز المخزون
-      const shouldReserveStock = ['pending', 'shipped', 'delivery', 'returned'].includes(order.status);
+      const shouldReserveStock = ['pending', 'shipped', 'delivery', 'returned'].includes(order?.status);
       
-      if (shouldReserveStock && order.order_items) {
+      if (shouldReserveStock && order?.order_items) {
         // تصفية العناصر null/undefined قبل المعالجة
-        const validItems = (order.order_items || []).filter(item => item != null);
+        const validItems = (order.order_items || []).filter(item => item != null && typeof item === 'object');
         validItems.forEach(item => {
-          if (item.variant_id) {
+          if (item?.variant_id) {
             const currentReserved = reservationMap.get(item.variant_id) || 0;
-            reservationMap.set(item.variant_id, currentReserved + (item?.quantity || 0));
+            reservationMap.set(item.variant_id, currentReserved + (Number(item?.quantity) || 0));
           }
         });
       }
@@ -310,11 +310,11 @@ export const SuperProvider = ({ children }) => {
         
         if (!settingsError && settingsData?.length) {
           console.log('🔧 SuperProvider: تم جلب الإعدادات من قاعدة البيانات:', settingsData);
-          settingsData.forEach(setting => {
+          (settingsData || []).filter(setting => setting != null && typeof setting === 'object').forEach(setting => {
             try {
               // محاولة تحويل القيمة إلى رقم إذا كانت رقمية
-              const numValue = Number(setting.value);
-              if (!isNaN(numValue) && setting.value !== '') {
+              const numValue = Number(setting?.value);
+              if (!isNaN(numValue) && setting?.value !== '') {
                 settingsObject[setting.key] = numValue;
               } else {
                 // محاولة تحويل JSON إذا كان كذلك
@@ -1101,7 +1101,7 @@ export const SuperProvider = ({ children }) => {
       if (isAiOrder) {
         // تحديث فوري محلياً + حماية دائمة + localStorage
         console.log('🤖 حذف طلبات AI - حماية دائمة');
-        orderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
+        (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedAiOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
           localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
@@ -1127,7 +1127,7 @@ export const SuperProvider = ({ children }) => {
         }
         
         // إشعارات Real-time فورية
-        orderIds.forEach(id => {
+        (orderIds || []).filter(id => id != null).forEach(id => {
           try { 
             window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id, confirmed: true } })); 
           } catch {}
@@ -1178,7 +1178,7 @@ export const SuperProvider = ({ children }) => {
         
         // STEP 2: تحديث فوري محلياً + حماية دائمة + localStorage
         console.log('📦 حذف طلبات عادية - حماية دائمة');
-        orderIds.forEach(id => permanentlyDeletedOrders.add(id));
+        (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
           localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
@@ -1206,7 +1206,7 @@ export const SuperProvider = ({ children }) => {
         }
         
         // إشعارات Real-time فورية
-        orderIds.forEach(id => {
+        (orderIds || []).filter(id => id != null).forEach(id => {
           try { 
             window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: true } })); 
           } catch {}
