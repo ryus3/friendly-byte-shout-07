@@ -146,18 +146,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setActivePartner('alwaseet');
           
           // في وضع التعديل، تحديد المدينة والمنطقة من المعرفات الأصلية
-          if (aiOrderData.editMode && aiOrderData.city_id && aiOrderData.region_id) {
+          if (aiOrderData.city_id) {
+            console.log('🔧 Setting city ID for edit mode:', aiOrderData.city_id);
             setSelectedCityId(aiOrderData.city_id);
+          }
+          if (aiOrderData.region_id) {
+            console.log('🔧 Setting region ID for edit mode:', aiOrderData.region_id);
             setSelectedRegionId(aiOrderData.region_id);
-            // تحديث formData أيضاً لضمان التزامن
-            setFormData(prev => ({
-              ...prev,
-              city_id: aiOrderData.city_id,
-              region_id: aiOrderData.region_id
-            }));
-            console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
-              city_id: aiOrderData.city_id,
-              region_id: aiOrderData.region_id
+          }
+          
+          console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
+            city_id: aiOrderData.city_id,
+            region_id: aiOrderData.region_id
             });
           }
         } else {
@@ -998,6 +998,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_address: formData.address,
         customer_city: formData.city,
         customer_province: formData.region,
+        city_id: formData.city_id,
+        region_id: formData.region_id,
         notes: formData.notes,
         delivery_partner: activePartner === 'alwaseet' ? 'alwaseet' : 'محلي',
          items: cart.filter(item => item && item.quantity).map(item => ({

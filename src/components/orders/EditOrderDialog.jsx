@@ -89,6 +89,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
       
+      // معرفات المدينة والمنطقة للوسيط (مع الحفاظ على القيم الأصلية)
+      city_id: order.city_id || city_id || '',
+      region_id: order.region_id || region_id || '',
+      
       // معرفات Al Waseet للمدينة والمنطقة (الأصلية)
       city_id: city_id || order.city_id || '',
       region_id: region_id || order.region_id || '',

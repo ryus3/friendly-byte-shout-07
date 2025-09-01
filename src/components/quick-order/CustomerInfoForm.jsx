@@ -247,7 +247,7 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Input id="second_phone" name="second_phone" value={formData.second_phone} onChange={handleChange} disabled={isSubmittingState} />
         </div>
         <fieldset disabled={!isDeliveryPartnerSelected || isSubmittingState} className="contents">
-          {partnerSpecificFields(selectedCityId, selectedRegionId, cities, regions, formData)}
+          {partnerSpecificFields(formData.city_id || selectedCityId, formData.region_id || selectedRegionId, cities, regions, formData)}
         </fieldset>
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor="address" className="text-right">اقرب نقطة دالة</Label>
