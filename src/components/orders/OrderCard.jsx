@@ -127,8 +127,8 @@ const OrderCard = ({
     if (!order.items || order.items.length === 0) return null;
     
     // تصفية العناصر null/undefined وحساب المجموع بأمان
-    const validItems = order.items.filter(item => item != null);
-    const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
+    const validItems = (order.items || []).filter(item => item != null && typeof item === 'object');
+    const totalItems = validItems.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
     
     if (validItems.length === 1) {
       // منتج واحد - اعرض الاسم والعدد واللون والقياس

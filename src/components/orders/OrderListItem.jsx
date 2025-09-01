@@ -205,8 +205,8 @@ const OrderListItem = ({
               if (items.length === 0) return 'لا توجد منتجات';
               
               // تصفية العناصر null/undefined وحساب المجموع بأمان
-              const validItems = items.filter(item => item != null);
-              const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
+              const validItems = (items || []).filter(item => item != null && typeof item === 'object');
+              const totalItems = validItems.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
               
               if (validItems.length === 1) {
                 const item = validItems[0];
@@ -380,8 +380,8 @@ const OrderListItem = ({
               if (items.length === 0) return 'لا توجد منتجات';
               
               // تصفية العناصر null/undefined وحساب المجموع بأمان
-              const validItems = items.filter(item => item != null);
-              const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
+              const validItems = (items || []).filter(item => item != null && typeof item === 'object');
+              const totalItems = validItems.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
               
               if (validItems.length === 1) {
                 const item = validItems[0];
