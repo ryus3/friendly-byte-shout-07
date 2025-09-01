@@ -3225,6 +3225,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      auto_cleanup_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       auto_select_monthly_city_discount: {
         Args: Record<PropertyKey, never>
         Returns: undefined
