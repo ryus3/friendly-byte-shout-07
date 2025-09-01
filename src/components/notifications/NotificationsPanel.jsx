@@ -169,17 +169,17 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           dot: 'bg-red-500'
         };
 
-      // حالات رمادية/حظر/مغلق/مفصول
+      // حالات خاصة/حظر/مغلق/مفصول
       case '27':
       case '28':
       case '33':
       case '40':
         return {
-          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
-          border: 'border-r-gray-500',
-          text: 'text-gray-800 dark:text-gray-200',
-          icon: 'text-gray-600',
-          dot: 'bg-gray-500'
+          bg: 'bg-gradient-to-r from-indigo-50 to-violet-100 dark:from-indigo-950/30 dark:to-violet-900/30',
+          border: 'border-r-indigo-500',
+          text: 'text-indigo-800 dark:text-indigo-200',
+          icon: 'text-indigo-600',
+          dot: 'bg-indigo-500'
         };
 
       // متنوعة إضافية
@@ -242,11 +242,11 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
 
       default:
         return {
-          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
-          border: 'border-r-gray-400',
-          text: 'text-gray-800 dark:text-gray-200',
-          icon: 'text-gray-600',
-          dot: 'bg-gray-400'
+          bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30',
+          border: 'border-r-sky-500',
+          text: 'text-sky-800 dark:text-sky-200',
+          icon: 'text-sky-600',
+          dot: 'bg-sky-500'
         };
     }
   };
@@ -283,7 +283,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
       case 'ai':
         return <Info {...iconProps} className="w-4 h-4 text-purple-500" />;
       case 'system':
-        return <Info {...iconProps} className="w-4 h-4 text-gray-500" />;
+        return <Info {...iconProps} className="w-4 h-4 text-violet-500" />;
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
       case 'warning':
@@ -349,11 +349,11 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
         };
       case 'system':
         return {
-          bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
-          border: 'border-r-gray-500',
-          text: 'text-gray-800 dark:text-gray-200',
-          icon: 'text-gray-600',
-          dot: 'bg-gray-500'
+          bg: 'bg-gradient-to-r from-violet-50 to-indigo-100 dark:from-violet-950/30 dark:to-indigo-900/30',
+          border: 'border-r-violet-500',
+          text: 'text-violet-800 dark:text-violet-200',
+          icon: 'text-violet-600',
+          dot: 'bg-violet-500'
         };
       default:
         // الألوان حسب الأولوية
@@ -376,11 +376,11 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
             };
           default:
             return {
-              bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
-              border: 'border-r-gray-400',
-              text: 'text-gray-800 dark:text-gray-200',
-              icon: 'text-gray-600',
-              dot: 'bg-gray-400'
+              bg: 'bg-gradient-to-r from-teal-50 to-cyan-100 dark:from-teal-950/30 dark:to-cyan-900/30',
+              border: 'border-r-teal-500',
+              text: 'text-teal-800 dark:text-teal-200',
+              icon: 'text-teal-600',
+              dot: 'bg-teal-500'
             };
         }
     }
