@@ -89,11 +89,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
       
-      // معرفات المدينة والمنطقة للوسيط (مع الحفاظ على القيم الأصلية)
-      city_id: order.city_id || city_id || '',
-      region_id: order.region_id || region_id || '',
-      
-      // معرفات Al Waseet للمدينة والمنطقة (الأصلية)
+      // معرفات المدينة والمنطقة للوسيط
       city_id: city_id || order.city_id || '',
       region_id: region_id || order.region_id || '',
       
@@ -162,9 +158,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         <div className="relative h-full flex flex-col">
           <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right">
-              ✏️ تعديل الطلب - {order?.order_number || order?.tracking_number}
+              ✏️ تعديل الطلب - {order?.delivery_partner_order_id || order?.tracking_number || order?.order_number}
               <div className="text-sm text-muted-foreground font-normal mt-1">
-                تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('ar-SA') : ''}
+                تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('en-GB') : ''}
                 {order?.customer_name && ` • العميل: ${order.customer_name}`}
               </div>
             </DialogTitle>

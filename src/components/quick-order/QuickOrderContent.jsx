@@ -149,17 +149,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           if (aiOrderData.city_id) {
             console.log('🔧 Setting city ID for edit mode:', aiOrderData.city_id);
             setSelectedCityId(aiOrderData.city_id);
+            // تحديث formData مباشرة لضمان ظهور القيمة في dropdown
+            setFormData(prev => ({ ...prev, city_id: aiOrderData.city_id }));
           }
           if (aiOrderData.region_id) {
             console.log('🔧 Setting region ID for edit mode:', aiOrderData.region_id);
             setSelectedRegionId(aiOrderData.region_id);
+            // تحديث formData مباشرة لضمان ظهور القيمة في dropdown
+            setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
           }
           
           console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
             city_id: aiOrderData.city_id,
             region_id: aiOrderData.region_id
-            });
-          }
+          });
         } else {
           setActivePartner('local');
         }

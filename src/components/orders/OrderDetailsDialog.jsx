@@ -60,7 +60,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     if (!dateString) return 'لا يوجد تاريخ';
     const date = parseISO(dateString);
     if (!isValid(date)) return 'تاريخ غير صالح';
-    return format(date, 'd MMMM yyyy, h:mm a', { locale: ar });
+    return format(date, 'd/M/yyyy, h:mm a');
   };
   
   const handleUpdateStatus = () => {
@@ -167,7 +167,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               <div>
                 <div>
                   <h3 className="text-lg font-bold text-foreground break-all">
-                    #{order.tracking_number || order.order_number}
+                    #{order.delivery_partner_order_id || order.tracking_number || order.order_number}
                   </h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     {order.delivery_partner !== 'محلي' && order.tracking_number && !order.tracking_number.startsWith('RYUS-') ? (
