@@ -237,6 +237,10 @@ module.exports = {
             transform: 'scale(1.2) rotate(180deg)',
             opacity: '0.6'
           }
+        },
+        'scroll-text': {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' }
         }
       },
       animation: {
@@ -259,6 +263,7 @@ module.exports = {
         "syncSpin": "syncSpin 1s linear infinite",
         "wiggle": "wiggle 0.5s ease-in-out",
         "magneticField": "magneticField 3s ease-in-out infinite",
+        "scroll-text": "scroll-text 6s linear infinite",
       },
     },
   },
