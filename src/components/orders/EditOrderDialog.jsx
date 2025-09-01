@@ -163,7 +163,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
                 {order?.created_at ? (() => {
                   const date = new Date(order.created_at);
                   const dateStr = date.toLocaleDateString('en-GB');
-                  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
+                  const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
                   return `${dateStr} - ${timeStr}`;
                 })() : ''}
               </div>

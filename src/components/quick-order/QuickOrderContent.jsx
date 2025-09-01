@@ -129,7 +129,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           price: aiOrderData.final_total || aiOrderData.total_amount || 0,
           delivery_fee: aiOrderData.delivery_fee || 0,
           // ضمان عرض السعر الصحيح مع التوصيل
-          total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0)
+          total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0),
+          
+          // إضافة البيانات الأصلية للعرض
+          originalCity: aiOrderData.customer_city || '',
+          originalRegion: aiOrderData.customer_province || ''
         }));
         
         console.log('✅ Form data set for edit mode');
@@ -1457,8 +1461,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const effectiveRegionId = selectedRegionId || formData.region_id || '';
       
       // عرض النص الأصلي للمدينة والمنطقة في حالة التعديل
-      const originalCityText = formData.customer_city || '';
-      const originalRegionText = formData.customer_province || '';
+      const originalCityText = formData.originalCity || formData.customer_city || '';
+      const originalRegionText = formData.originalRegion || formData.customer_province || '';
       
       console.log('🏙️ Partner fields - Values for display:', {
         effectiveCityId,
