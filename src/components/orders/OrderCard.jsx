@@ -126,16 +126,18 @@ const OrderCard = ({
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
-    const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    // تصفية العناصر null/undefined وحساب المجموع بأمان
+    const validItems = order.items.filter(item => item != null);
+    const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
     
-    if (order.items.length === 1) {
+    if (validItems.length === 1) {
       // منتج واحد - اعرض الاسم والعدد واللون والقياس
-      const item = order.items[0];
-      const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
+      const item = validItems[0];
+      const productName = item?.productname || item?.product_name || item?.producttype || item?.product_type || 'منتج';
       
       // جمع معلومات اللون والقياس
-      const colorInfo = item.product_variants?.colors?.name || item.color || '';
-      const sizeInfo = item.product_variants?.sizes?.name || item.size || '';
+      const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
+      const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
       // عرض اللون والقياس معاً إذا كانوا موجودين
       const parts = [sizeInfo, colorInfo].filter(Boolean);
       const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
@@ -145,13 +147,13 @@ const OrderCard = ({
         displayText: productName,
         variantInfo: variantInfo || null,
         colorInfo: colorInfo,
-        colorHex: item.product_variants?.colors?.hex_code || item.color_hex,
-        quantity: item.quantity || 1,
+        colorHex: item?.product_variants?.colors?.hex_code || item?.color_hex,
+        quantity: item?.quantity || 1,
         isSingle: true
       };
     } else {
       // عدة منتجات - اعرض ملخص
-      const firstProductType = order.items[0]?.producttype || order.items[0]?.product_type || 'منتج';
+      const firstProductType = validItems[0]?.producttype || validItems[0]?.product_type || 'منتج';
       return { 
         totalItems, 
         displayText: `${totalItems} قطعة - ${firstProductType}`,
@@ -177,8 +179,9 @@ const OrderCard = ({
       return profitRecord.employee_profit;
     }
     
-    // حساب من items إذا لم يوجد في profits
-    return order.items.reduce((sum, item) => {
+    // حساب من items إذا لم يوجد في profits - مع تصفية العناصر null/undefined
+    const validItems = order.items.filter(item => item != null);
+    return validItems.reduce((sum, item) => {
       return sum + (calculateProfit(item, order.created_by) || 0);
     }, 0);
   }, [calculateProfit, order, profits]);
