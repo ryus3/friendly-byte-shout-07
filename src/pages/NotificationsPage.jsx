@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp, Truck } from 'lucide-react'; // Truck icon added
+import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -155,39 +155,6 @@ const NotificationsPage = () => {
               {soundEnabled ? <Volume2 className="w-3 h-3 md:w-4 md:h-4" /> : <VolumeX className="w-3 h-3 md:w-4 md:h-4" />}
               <span className="hidden sm:inline">الصوت {soundEnabled ? 'مفعل' : 'معطل'}</span>
               <span className="sm:hidden">{soundEnabled ? '🔊' : '🔇'}</span>
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleTestNotification}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
-            >
-              <Bell className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">إشعار تجريبي</span>
-              <span className="sm:hidden">تجريبي</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                addNotification({
-                  type: 'alwaseet_status_change',
-                  title: 'تحديث حالة الوسيط',
-                  message: 'تم تحديث حالة الطلب عبر الوسيط',
-                  icon: 'Info',
-                  color: 'blue',
-                  data: {
-                    state_id: '25',
-                    tracking_number: '98713588',
-                    status_text: 'العميل لا يرد — نص طويل لاختبار التمرير داخل مساحة محدودة جدًا دون زيادة الارتفاع إطلاقًا.'
-                  }
-                });
-              }}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
-            >
-              <Truck className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">إشعار وسيط تجريبي</span>
-              <span className="sm:hidden">وسيط</span>
             </Button>
           </div>
         </div>
