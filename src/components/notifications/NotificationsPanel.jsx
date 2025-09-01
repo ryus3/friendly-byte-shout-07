@@ -436,10 +436,29 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
   };
 
   const handleDeleteNotification = async (notificationId) => {
+    console.log('محاولة حذف الإشعار:', notificationId);
     try {
-      await deleteNotification(notificationId);
+      const result = await deleteNotification(notificationId);
+      console.log('نتيجة الحذف:', result);
+      
+      // إزالة الإشعار من القائمة المحلية أيضاً
+      if (contextNotifications?.some(n => n.id === notificationId)) {
+        contextNotifications = contextNotifications.filter(n => n.id !== notificationId);
+        console.log('تم إزالة الإشعار من contextNotifications');
+      }
+      if (systemNotifications?.some(n => n.id === notificationId)) {
+        systemNotifications = systemNotifications.filter(n => n.id !== notificationId);
+        console.log('تم إزالة الإشعار من systemNotifications');
+      }
+      
+      // إعادة تحميل الإشعارات للتأكد من التحديث
+      if (refreshNotifications) {
+        setTimeout(() => refreshNotifications(), 500);
+      }
+      
     } catch (error) {
-      console.error('Error deleting notification:', error);
+      console.error('فشل في حذف الإشعار:', error);
+      console.error('تفاصيل الخطأ:', error.message);
     }
   };
 
