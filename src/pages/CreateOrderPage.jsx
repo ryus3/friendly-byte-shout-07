@@ -74,8 +74,10 @@ const CreateOrderPage = () => {
   }, [formData.city_id, isWaseetLoggedIn, waseetToken]);
   
   useEffect(() => {
-    const detailsText = cart.map(p => `${p.productName} (${p.color}, ${p.size}) x${p.quantity}`).join(' | ');
-    const quantityCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    // تصفية العناصر null/undefined وحساب البيانات بأمان
+    const validCart = cart.filter(item => item != null);
+    const detailsText = validCart.map(p => `${p?.productName} (${p?.color}, ${p?.size}) x${p?.quantity || 1}`).join(' | ');
+    const quantityCount = validCart.reduce((sum, item) => sum + (item?.quantity || 1), 0);
     setFormData(prev => ({...prev, details: detailsText, quantity: quantityCount > 0 ? quantityCount : 1}));
   }, [cart]);
 
@@ -122,10 +124,11 @@ const CreateOrderPage = () => {
         
         // ثانياً: ربط الطلب مع الوسيط
         try {
+          const validCart = cart.filter(item => item != null);
           const alWaseetPayload = { 
             ...formData,
-            details: cart.map(item => `${item.productName} (${item.color}, ${item.size}) ×${item.quantity}`).join(' | '),
-            quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+            details: validCart.map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
+            quantity: validCart.reduce((sum, item) => sum + (item?.quantity || 1), 0),
             price: total + (50000), // إضافة رسوم التوصيل المقدرة
           };
           

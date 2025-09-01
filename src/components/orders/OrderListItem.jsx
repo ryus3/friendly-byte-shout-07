@@ -204,10 +204,12 @@ const OrderListItem = ({
               const items = order.items || order.order_items || [];
               if (items.length === 0) return 'لا توجد منتجات';
               
-              const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              // تصفية العناصر null/undefined وحساب المجموع بأمان
+              const validItems = items.filter(item => item != null);
+              const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
               
-              if (items.length === 1) {
-                const item = items[0];
+              if (validItems.length === 1) {
+                const item = validItems[0];
                 const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
                 return `${productName} (${item.quantity || 1})`;
               } else {
@@ -377,10 +379,12 @@ const OrderListItem = ({
               const items = order.items || order.order_items || [];
               if (items.length === 0) return 'لا توجد منتجات';
               
-              const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              // تصفية العناصر null/undefined وحساب المجموع بأمان
+              const validItems = items.filter(item => item != null);
+              const totalItems = validItems.reduce((sum, item) => sum + (item?.quantity || 1), 0);
               
-              if (items.length === 1) {
-                const item = items[0];
+              if (validItems.length === 1) {
+                const item = validItems[0];
                 const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
                 return `${productName} (${item.quantity || 1})`;
               } else {
