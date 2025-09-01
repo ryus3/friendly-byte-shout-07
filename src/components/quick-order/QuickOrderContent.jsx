@@ -133,7 +133,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           // إضافة البيانات الأصلية للعرض
           originalCity: aiOrderData.customer_city || '',
-          originalRegion: aiOrderData.customer_province || ''
+          originalRegion: aiOrderData.customer_province || '',
+          
+          // إصلاح نوع الطلب الافتراضي
+          type: 'new'
         }));
         
         console.log('✅ Form data set for edit mode');

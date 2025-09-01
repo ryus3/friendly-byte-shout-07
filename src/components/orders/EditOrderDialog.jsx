@@ -18,6 +18,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     
     console.log('🔍 EditOrderDialog - Raw order data received:', order);
     console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
+    console.log('🔍 EditOrderDialog - Address data:', {
+      customer_city: order.customer_city,
+      customer_province: order.customer_province,
+      city: order.city,
+      region: order.region,
+      province: order.province
+    });
     
     // تحويل المنتجات لصيغة cart items مع product_id و variant_id للتحميل الصحيح
     const cartItems = (order.order_items || order.items || []).map(item => ({
