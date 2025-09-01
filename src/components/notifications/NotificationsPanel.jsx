@@ -9,6 +9,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bell, BellOff, Trash2, CheckCircle, AlertCircle, Info, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import ScrollingText from '@/components/ui/scrolling-text';
+import { ALWASEET_STATUS_DEFINITIONS, getStatusConfig } from '@/lib/alwaseet-statuses';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * لوحة الإشعارات الأساسية
@@ -23,6 +26,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     deleteNotification
   } = useNotificationsSystem();
 
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [swipeState, setSwipeState] = useState({ isDragging: false, startY: 0, currentY: 0 });
   const panelRef = useRef(null);
@@ -398,37 +402,58 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // معالجة النقر على الإشعار - تنقل ذكي وعلامة كمقروء
-  const handleNotificationClick = async (notification) => {
+  // إنشاء النص الذكي للإشعار مع الحالة الحقيقية
+  const getNotificationDisplayText = (notification) => {
+    if (notification.type === 'alwaseet_status_change') {
+      const stateId = notification.data?.state_id || notification.data?.delivery_status;
+      const trackingNumber = notification.data?.tracking_number;
+      
+      if (stateId && trackingNumber) {
+        const statusConfig = getStatusConfig(stateId);
+        return `${trackingNumber} - ${statusConfig.text}`;
+      }
+    }
+    return notification.message;
+  };
+
+  // معالجة النقر على الإشعار - تنقل ذكي وعلامة كمقروء بنقرة واحدة
+  const handleNotificationClick = async (notification, e) => {
+    // منع التكرار والنقرات المضاعفة
+    e.preventDefault();
+    e.stopPropagation();
+    
     try {
       // علامة كمقروء
       await markAsRead(notification.id);
       
-      // تنقل ذكي حسب نوع الإشعار
+      // إغلاق اللوحة فوراً
+      setIsOpen(false);
+      
+      // تنقل ذكي حسب نوع الإشعار مع إصلاح الرابط لمتابعة الطلبات
       if (notification.type === 'alwaseet_status_change') {
         const trackingNumber = notification.data?.tracking_number;
         if (trackingNumber) {
-          // الانتقال لصفحة الطلبات مع فلترة برقم التتبع
-          window.location.href = `/orders?search=${trackingNumber}`;
+          // الانتقال لصفحة متابعة الطلبات مع فلترة برقم التتبع
+          navigate(`/my-orders?search=${trackingNumber}`);
         } else {
-          window.location.href = '/orders';
+          navigate('/my-orders');
         }
       } else if (notification.type === 'order_status_update') {
         const orderNumber = notification.data?.order_number;
         if (orderNumber) {
-          window.location.href = `/orders?search=${orderNumber}`;
+          navigate(`/my-orders?search=${orderNumber}`);
         } else {
-          window.location.href = '/orders';
+          navigate('/my-orders');
         }
       } else if (notification.type === 'low_stock' || notification.type === 'stock') {
-        window.location.href = '/inventory';
+        navigate('/inventory');
       } else if (notification.type === 'profit_settlement' || notification.type === 'financial') {
-        window.location.href = '/profits';
+        navigate('/profits');
       } else if (notification.type === 'ai_order' || notification.type === 'ai') {
-        window.location.href = '/dashboard';
+        navigate('/dashboard');
       } else {
         // الافتراضي للأنواع الأخرى
-        window.location.href = '/dashboard';
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
@@ -643,61 +668,73 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {filteredNotifications.map((notification) => {
-                    const styles = getNotificationStyles(notification);
-                    
-                    return (
-                      <div
-                        key={notification.id}
-                        className={`p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
-                          !notification.read ? 'shadow-sm' : ''
-                        } ${styles.bg} ${styles.border}`}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 mt-1">
-                            {getNotificationIcon(notification)}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`text-sm font-medium ${
-                              !notification.read ? styles.text : 'text-muted-foreground'
-                            }`}>
-                              {notification.title}
-                            </h4>
-                            <p className={`text-xs mt-1 line-clamp-2 ${
-                              !notification.read ? styles.text : 'text-muted-foreground'
-                            }`}>
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {formatDistanceToNow(new Date(notification.created_at), {
-                                addSuffix: true,
-                                locale: ar
-                              })}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center gap-1">
-                            {!notification.read && (
-                              <div className={`w-2 h-2 rounded-full ${styles.dot}`}></div>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteNotification(notification.id);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                   {filteredNotifications.map((notification) => {
+                     const styles = getNotificationStyles(notification);
+                     const displayText = getNotificationDisplayText(notification);
+                     
+                     return (
+                       <div
+                         key={notification.id}
+                         className={`group p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
+                           !notification.read ? 'shadow-sm' : ''
+                         } ${styles.bg} ${styles.border}`}
+                         onClick={(e) => handleNotificationClick(notification, e)}
+                       >
+                         <div className="flex items-start gap-3">
+                           <div className="flex-shrink-0 mt-1">
+                             {getNotificationIcon(notification)}
+                           </div>
+                           
+                           <div className="flex-1 min-w-0">
+                             <h4 className={`text-sm font-medium ${
+                               !notification.read ? styles.text : 'text-muted-foreground'
+                             }`}>
+                               {notification.title}
+                             </h4>
+                             
+                             {/* النص مع التمرير للنصوص الطويلة */}
+                             <div className={`text-xs mt-1 ${
+                               !notification.read ? styles.text : 'text-muted-foreground'
+                             }`}>
+                               {displayText.length > 40 ? (
+                                 <ScrollingText 
+                                   text={displayText}
+                                   className="max-w-full h-4"
+                                 />
+                               ) : (
+                                 <p className="line-clamp-2">{displayText}</p>
+                               )}
+                             </div>
+                             
+                             <p className="text-xs text-muted-foreground mt-2">
+                               {formatDistanceToNow(new Date(notification.created_at), {
+                                 addSuffix: true,
+                                 locale: ar
+                               })}
+                             </p>
+                           </div>
+                           
+                           <div className="flex items-center gap-1">
+                             {!notification.read && (
+                               <div className={`w-2 h-2 rounded-full ${styles.dot}`}></div>
+                             )}
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={(e) => {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 handleDeleteNotification(notification.id);
+                               }}
+                               className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                             >
+                               <Trash2 className="w-3 h-3" />
+                             </Button>
+                           </div>
+                         </div>
+                       </div>
+                     );
+                   })}
                 </div>
               )}
             </ScrollArea>
