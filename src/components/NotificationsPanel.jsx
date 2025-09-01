@@ -31,106 +31,117 @@ import { getStatusConfig } from '@/lib/alwaseet-statuses';
 const getAlWaseetNotificationColors = (stateId) => {
   if (!stateId) {
     return {
-      bg: 'bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-900/10 dark:to-slate-800/10',
-      border: 'border-r-4 border-slate-300 dark:border-slate-600',
-      text: 'text-foreground',
-      icon: 'text-slate-600 dark:text-slate-400',
-      dot: 'bg-slate-500'
+      bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30',
+      border: 'border-r-4 border-sky-400 dark:border-sky-500',
+      text: 'text-sky-900 dark:text-sky-100',
+      icon: 'text-sky-600 dark:text-sky-400',
+      dot: 'bg-sky-500'
     };
   }
 
-  // تحديد الألوان حسب state_id بدقة
+  // تحديد الألوان الحيوية حسب state_id - ألوان جميلة وحيوية
   switch (String(stateId)) {
-    case '2': // استلام المندوب - أزرق
+    case '2': // استلام المندوب - فيروزي حيوي
       return {
-        bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20',
-        border: 'border-r-4 border-blue-400 dark:border-blue-500',
-        text: 'text-blue-900 dark:text-blue-100',
-        icon: 'text-blue-600 dark:text-blue-400',
-        dot: 'bg-blue-500'
+        bg: 'bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-950/30 dark:to-teal-900/30',
+        border: 'border-r-4 border-teal-500 dark:border-teal-400',
+        text: 'text-teal-900 dark:text-teal-100',
+        icon: 'text-teal-600 dark:text-teal-400',
+        dot: 'bg-teal-500'
       };
-    case '4': // تم التسليم - أخضر
+    case '4': // تم التسليم - أخضر زمردي
       return {
-        bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20',
-        border: 'border-r-4 border-green-400 dark:border-green-500',
-        text: 'text-green-900 dark:text-green-100',
-        icon: 'text-green-600 dark:text-green-400',
-        dot: 'bg-green-500'
+        bg: 'bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30',
+        border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+        text: 'text-emerald-900 dark:text-emerald-100',
+        icon: 'text-emerald-600 dark:text-emerald-400',
+        dot: 'bg-emerald-500'
       };
-    case '17': // إرجاع - رمادي
+    case '17': // إرجاع - بنفسجي رائع
       return {
-        bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/20 dark:to-gray-800/20',
-        border: 'border-r-4 border-gray-400 dark:border-gray-500',
-        text: 'text-gray-900 dark:text-gray-100',
-        icon: 'text-gray-600 dark:text-gray-400',
-        dot: 'bg-gray-500'
+        bg: 'bg-gradient-to-r from-violet-50 to-violet-100 dark:from-violet-950/30 dark:to-violet-900/30',
+        border: 'border-r-4 border-violet-500 dark:border-violet-400',
+        text: 'text-violet-900 dark:text-violet-100',
+        icon: 'text-violet-600 dark:text-violet-400',
+        dot: 'bg-violet-500'
       };
     case '25':
-    case '26': // لا يرد - أصفر/برتقالي
+    case '26': // لا يرد - ذهبي حيوي
       return {
-        bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/20 dark:to-orange-800/20',
-        border: 'border-r-4 border-yellow-400 dark:border-yellow-500',
-        text: 'text-yellow-900 dark:text-yellow-100',
-        icon: 'text-yellow-600 dark:text-yellow-400',
-        dot: 'bg-yellow-500'
+        bg: 'bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/30',
+        border: 'border-r-4 border-amber-500 dark:border-amber-400',
+        text: 'text-amber-900 dark:text-amber-100',
+        icon: 'text-amber-600 dark:text-amber-400',
+        dot: 'bg-amber-500'
+      };
+    case '27':
+    case '28':
+    case '33':
+    case '40': // حالات خاصة - بنفسجي نيلي مميز
+      return {
+        bg: 'bg-gradient-to-r from-indigo-50 to-violet-100 dark:from-indigo-950/30 dark:to-violet-900/30',
+        border: 'border-r-4 border-indigo-500 dark:border-indigo-400',
+        text: 'text-indigo-900 dark:text-indigo-100',
+        icon: 'text-indigo-600 dark:text-indigo-400',
+        dot: 'bg-indigo-500'
       };
     case '31':
-    case '32': // إلغاء/رفض - أحمر
+    case '32': // إلغاء/رفض - أحمر وردي
       return {
-        bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20',
-        border: 'border-r-4 border-red-400 dark:border-red-500',
-        text: 'text-red-900 dark:text-red-100',
-        icon: 'text-red-600 dark:text-red-400',
-        dot: 'bg-red-500'
+        bg: 'bg-gradient-to-r from-rose-50 to-red-100 dark:from-rose-950/30 dark:to-red-900/30',
+        border: 'border-r-4 border-rose-500 dark:border-rose-400',
+        text: 'text-rose-900 dark:text-rose-100',
+        icon: 'text-rose-600 dark:text-rose-400',
+        dot: 'bg-rose-500'
       };
     default:
-      // استخدام النظام القديم للحالات الأخرى
+      // استخدام النظام المحسن للحالات الأخرى
       const statusConfig = getStatusConfig(Number(stateId));
-      const color = statusConfig.color || 'blue';
+      const color = statusConfig.color || 'sky';
       
       switch (color) {
         case 'green':
           return {
-            bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/10 dark:to-green-800/10',
-            border: 'border-r-4 border-green-500 dark:border-green-400',
-            text: 'text-foreground',
-            icon: 'text-green-600 dark:text-green-400',
-            dot: 'bg-green-500'
+            bg: 'bg-gradient-to-r from-emerald-50 to-green-100 dark:from-emerald-950/30 dark:to-green-900/30',
+            border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+            text: 'text-emerald-900 dark:text-emerald-100',
+            icon: 'text-emerald-600 dark:text-emerald-400',
+            dot: 'bg-emerald-500'
           };
         case 'red':
           return {
-            bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/10 dark:to-red-800/10',
-            border: 'border-r-4 border-red-500 dark:border-red-400',
-            text: 'text-foreground',
-            icon: 'text-red-600 dark:text-red-400',
-            dot: 'bg-red-500'
+            bg: 'bg-gradient-to-r from-rose-50 to-red-100 dark:from-rose-950/30 dark:to-red-900/30',
+            border: 'border-r-4 border-rose-500 dark:border-rose-400',
+            text: 'text-rose-900 dark:text-rose-100',
+            icon: 'text-rose-600 dark:text-rose-400',
+            dot: 'bg-rose-500'
           };
         case 'yellow':
         case 'orange':
           return {
-            bg: 'bg-gradient-to-r from-yellow-50 to-orange-100 dark:from-yellow-900/10 dark:to-orange-800/10',
-            border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
-            text: 'text-foreground',
-            icon: 'text-yellow-600 dark:text-yellow-400',
-            dot: 'bg-yellow-500'
+            bg: 'bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-950/30 dark:to-orange-900/30',
+            border: 'border-r-4 border-amber-500 dark:border-amber-400',
+            text: 'text-amber-900 dark:text-amber-100',
+            icon: 'text-amber-600 dark:text-amber-400',
+            dot: 'bg-amber-500'
           };
         case 'gray':
         case 'grey':
           return {
-            bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-900/10 dark:to-gray-800/10',
-            border: 'border-r-4 border-gray-500 dark:border-gray-400',
-            text: 'text-foreground',
-            icon: 'text-gray-600 dark:text-gray-400',
-            dot: 'bg-gray-500'
+            bg: 'bg-gradient-to-r from-violet-50 to-purple-100 dark:from-violet-950/30 dark:to-purple-900/30',
+            border: 'border-r-4 border-violet-500 dark:border-violet-400',
+            text: 'text-violet-900 dark:text-violet-100',
+            icon: 'text-violet-600 dark:text-violet-400',
+            dot: 'bg-violet-500'
           };
         case 'blue':
         default:
           return {
-            bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/10 dark:to-blue-800/10',
-            border: 'border-r-4 border-blue-500 dark:border-blue-400',
-            text: 'text-foreground',
-            icon: 'text-blue-600 dark:text-blue-400',
-            dot: 'bg-blue-500'
+            bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30',
+            border: 'border-r-4 border-sky-500 dark:border-sky-400',
+            text: 'text-sky-900 dark:text-sky-100',
+            icon: 'text-sky-600 dark:text-sky-400',
+            dot: 'bg-sky-500'
           };
       }
   }
@@ -196,6 +207,15 @@ const ProfitIcon = () => (
   </svg>
 );
 
+// أيقونة خصومات المدن
+const CityDiscountIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" className="fill-orange-100 stroke-orange-500" strokeWidth="1.5"/>
+    <circle cx="12" cy="12" r="3" className="fill-orange-400"/>
+    <text x="12" y="15" textAnchor="middle" className="fill-orange-700 text-[6px] font-bold">%</text>
+  </svg>
+);
+
 const iconMap = {
   // أيقونات حسب النوع
   low_stock: StockWarningIcon,
@@ -209,6 +229,9 @@ const iconMap = {
   profit_settlement: ProfitIcon,
   profit_settlement_request: ProfitSettlementIcon,
   employee_settlement_completed: ProfitSettlementIcon,
+  city_discount_selected: CityDiscountIcon,
+  city_discounts: CityDiscountIcon,
+  alwaseet_status_change: OrderIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
@@ -260,18 +283,32 @@ const typeColorMap = {
     dot: 'bg-blue-500'
   },
   alwaseet_status_change: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-blue-500 dark:border-blue-400',
-    text: 'text-foreground', 
-    icon: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500'
+    bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30', 
+    border: 'border-r-4 border-sky-500 dark:border-sky-400',
+    text: 'text-sky-900 dark:text-sky-100', 
+    icon: 'text-sky-600 dark:text-sky-400',
+    dot: 'bg-sky-500'
   },
   order_status_changed: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-blue-500 dark:border-blue-400',
-    text: 'text-foreground', 
-    icon: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500'
+    bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30', 
+    border: 'border-r-4 border-sky-500 dark:border-sky-400',
+    text: 'text-sky-900 dark:text-sky-100', 
+    icon: 'text-sky-600 dark:text-sky-400',
+    dot: 'bg-sky-500'
+  },
+  city_discount_selected: {
+    bg: 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/30',
+    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    text: 'text-orange-900 dark:text-orange-100',
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
+  },
+  city_discounts: {
+    bg: 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/30',
+    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    text: 'text-orange-900 dark:text-orange-100',
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
   },
   new_order: { 
     bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
@@ -288,10 +325,10 @@ const typeColorMap = {
     dot: 'bg-yellow-500'
   },
   ai_order: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-transparent',
-    text: 'text-foreground', 
-    icon: 'text-indigo-600 dark:text-indigo-400',
+    bg: 'bg-gradient-to-r from-violet-50 to-purple-100 dark:from-violet-950/30 dark:to-purple-900/30', 
+    border: 'border-r-4 border-violet-500 dark:border-violet-400',
+    text: 'text-violet-900 dark:text-violet-100', 
+    icon: 'text-violet-600 dark:text-violet-400',
     dot: 'bg-violet-500'
   },
   new_registration: { 
@@ -323,18 +360,18 @@ const typeColorMap = {
     dot: 'bg-green-500'
   },
   system: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
-    text: 'text-foreground', 
-    icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    bg: 'bg-gradient-to-r from-indigo-50 to-blue-100 dark:from-indigo-950/30 dark:to-blue-900/30', 
+    border: 'border-r-4 border-indigo-500 dark:border-indigo-400',
+    text: 'text-indigo-900 dark:text-indigo-100', 
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    dot: 'bg-indigo-500'
   },
   default: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
-    text: 'text-foreground', 
-    icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30', 
+    border: 'border-r-4 border-sky-500 dark:border-sky-400',
+    text: 'text-sky-900 dark:text-sky-100', 
+    icon: 'text-sky-600 dark:text-sky-400',
+    dot: 'bg-sky-500'
   },
 };
 
@@ -360,14 +397,17 @@ const NotificationsPanel = () => {
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
     if (notification.type === 'alwaseet_status_change') {
-      // إشعارات الوسيط - انتقال لصفحة متابعة الطلبات مع فلترة برقم التتبع
+      // إشعارات الوسيط - انتقال لصفحة طلباتي مع فلترة برقم التتبع
       const data = notification.data || {};
       const trackingNumber = data.tracking_number || '';
       if (trackingNumber) {
-        navigate(`/employee-follow-up?search=${encodeURIComponent(trackingNumber)}&highlight=alwaseet`);
+        navigate(`/my-orders?search=${encodeURIComponent(trackingNumber)}&highlight=alwaseet`);
       } else {
-        navigate('/employee-follow-up?filter=alwaseet');
+        navigate('/my-orders?filter=alwaseet');
       }
+    } else if (notification.type === 'city_discount_selected' || notification.type === 'city_discounts') {
+      // إشعارات خصومات المدن - انتقال لصفحة العملاء مع تبويب خصومات المدن
+      navigate('/customers?tab=city-discounts');
     } else if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'ai_order') {
