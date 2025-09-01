@@ -282,6 +282,9 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
       case 'ai_order':
       case 'ai':
         return <Info {...iconProps} className="w-4 h-4 text-purple-500" />;
+      case 'city_discount_selected':
+      case 'city_discounts':
+        return <Gift {...iconProps} className="w-4 h-4 text-orange-500" />;
       case 'system':
         return <Info {...iconProps} className="w-4 h-4 text-violet-500" />;
       case 'success':
@@ -346,6 +349,15 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
           text: 'text-purple-800 dark:text-purple-200',
           icon: 'text-purple-600',
           dot: 'bg-purple-500'
+        };
+      case 'city_discount_selected':
+      case 'city_discounts':
+        return {
+          bg: 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/30',
+          border: 'border-r-orange-500',
+          text: 'text-orange-800 dark:text-orange-200',
+          icon: 'text-orange-600',
+          dot: 'bg-orange-500'
         };
       case 'system':
         return {

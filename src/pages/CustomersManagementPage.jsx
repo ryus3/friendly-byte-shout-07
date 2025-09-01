@@ -481,31 +481,51 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     URL.revokeObjectURL(url);
   };
 
+  // معالجة تبديل التبويب من URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'city-discounts') {
+      setActiveTab('city-discounts');
+    }
+  }, []);
+
   useEffect(() => {
     const fetchCityDiscountsData = async () => {
       try {
         const month = new Date().getMonth() + 1;
         const year = new Date().getFullYear();
 
-        const { data: discounts } = await supabase
+        console.log('تحميل بيانات خصومات المدن:', { month, year });
+
+        const { data: discounts, error: discountsError } = await supabase
           .from('city_random_discounts')
           .select('*')
           .eq('discount_month', month)
           .eq('discount_year', year);
 
-        const { data: benefits } = await supabase
+        const { data: benefits, error: benefitsError } = await supabase
           .from('city_monthly_benefits')
           .select('*')
           .eq('month', month)
           .eq('year', year);
 
-        const { data: cities } = await supabase
+        const { data: cities, error: citiesError } = await supabase
           .from('city_order_stats')
           .select('*')
           .eq('month', month)
           .eq('year', year)
           .order('total_amount', { ascending: false })
           .limit(5);
+
+        console.log('نتائج بيانات خصومات المدن:', {
+          discounts,
+          discountsError,
+          benefits,
+          benefitsError,
+          cities,
+          citiesError
+        });
 
         setCityDiscountsData({
           cityDiscounts: discounts || [],
@@ -891,11 +911,11 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                 </Button>
                 
                 <Button
-                  onClick={() => setActiveTab('discounts')}
-                  variant={activeTab === 'discounts' ? 'default' : 'ghost'}
+                  onClick={() => setActiveTab('city-discounts')}
+                  variant={activeTab === 'city-discounts' ? 'default' : 'ghost'}
                   className={`flex-1 h-10 sm:h-12 px-2 sm:px-4 rounded-lg text-xs sm:text-sm transition-all duration-300 ${
-                    activeTab === 'discounts' 
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg' 
+                    activeTab === 'city-discounts' 
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg' 
                       : 'hover:bg-gray-200 dark:hover:bg-gray-700'
                   }`}
                 >
@@ -933,9 +953,9 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                   </motion.div>
                 )}
 
-                {activeTab === 'discounts' && (
+                {activeTab === 'city-discounts' && (
                   <motion.div
-                    key="discounts"
+                    key="city-discounts"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
