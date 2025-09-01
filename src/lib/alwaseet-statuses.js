@@ -53,7 +53,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
     canDelete: false,
     canEdit: false,
     releasesStock: false,
-    color: 'bg-gradient-to-r from-orange-500 to-amber-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40',
+    color: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40',
     description: 'تم الشحن - لا يمكن الحذف أو التعديل'
   },
   '3': {
