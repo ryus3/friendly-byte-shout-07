@@ -435,11 +435,11 @@ const NotificationsPanel = () => {
         const orderMatch = notification.message.match(/ORD\d+/) || notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
         orderNumber = orderMatch ? (orderMatch[0] || orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
       }
-      // افتح صفحة متابعة الطلبات مع تمرير رقم الطلب وتظليل السجل
+      // افتح صفحة الطلبات مع تمرير رقم الطلب وتظليل السجل
       const query = new URLSearchParams();
       if (orderNumber) query.set('order', orderNumber);
       if (orderId) query.set('highlight', orderId);
-      navigate(`/employee-follow-up?${query.toString()}`);
+      navigate(`/my-orders?${query.toString()}`);
       // اطلب تحديثاً فورياً احتياطياً
       window.dispatchEvent(new CustomEvent('orderCreated', { detail: { id: orderId, orderNumber } }));
     } else if (notification.type === 'order_completed') {
