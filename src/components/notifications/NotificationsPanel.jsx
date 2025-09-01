@@ -106,50 +106,39 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // أيقونات الإشعارات مع الألوان
+  // أيقونات الإشعارات حسب النوع
   const getNotificationIcon = (notification) => {
     const iconProps = { className: "w-4 h-4" };
     
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      // استخراج state_id من عدة مصادر
       let stateId = notification.data?.state_id || 
+                   notification.data?.delivery_status ||
                    notification.data?.order_status || 
                    notification.data?.new_status;
       
-      console.log('🔍 استخراج state_id من الإشعار:', { 
-        stateId, 
-        data: notification.data, 
-        message: notification.message 
-      });
-      
-      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
-      if (!stateId && notification.message) {
-        // استخراج state_id من النص بناءً على نوع الرسالة
-        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-          stateId = '2';
-        } else if (notification.message.includes('تم التسليم بنجاح')) {
-          stateId = '4';
-        } else if (notification.message.includes('تم الإرجاع')) {
-          stateId = '17';
-        } else if (notification.message.includes('العميل لا يرد')) {
-          stateId = '25';
-        } else if (notification.message.includes('تم الإلغاء')) {
-          stateId = '31';
-        }
-        
-        console.log('🔍 state_id المستخرج من النص:', stateId);
-      }
-      
       if (stateId) {
         const colors = getAlWaseetNotificationColors(stateId);
-        console.log('🎨 تطبيق أيقونة ملونة:', { stateId, colors });
         return <Info {...iconProps} className={`w-4 h-4 ${colors.icon}`} />;
       }
     }
     
-    // الأيقونات العادية للأنواع الأخرى
+    // أيقونات حسب نوع الإشعار
     switch (notification.type) {
+      case 'order_status_update':
+      case 'orders':
+        return <CheckCircle {...iconProps} className="w-4 h-4 text-blue-500" />;
+      case 'low_stock':
+      case 'stock':
+        return <AlertCircle {...iconProps} className="w-4 h-4 text-orange-500" />;
+      case 'profit_settlement':
+      case 'financial':
+        return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
+      case 'ai_order':
+      case 'ai':
+        return <Info {...iconProps} className="w-4 h-4 text-purple-500" />;
+      case 'system':
+        return <Info {...iconProps} className="w-4 h-4 text-gray-500" />;
       case 'success':
         return <CheckCircle {...iconProps} className="w-4 h-4 text-green-500" />;
       case 'warning':
@@ -161,72 +150,94 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
-  // ألوان الإشعار الكاملة
+  // ألوان الإشعار الكاملة حسب النوع والفئة
   const getNotificationStyles = (notification) => {
     // للإشعارات من نوع alwaseet_status_change، استخدم الألوان المخصصة
     if (notification.type === 'alwaseet_status_change') {
-      // استخراج state_id من عدة مصادر
       let stateId = notification.data?.state_id || 
+                   notification.data?.delivery_status ||
                    notification.data?.order_status || 
                    notification.data?.new_status;
       
-      console.log('🔍 استخراج state_id من الإشعار للألوان:', { 
-        stateId, 
-        data: notification.data, 
-        message: notification.message 
-      });
-      
-      // إذا لم توجد، جرب استخراج state_id من النص (للإشعارات القديمة)
-      if (!stateId && notification.message) {
-        // استخراج state_id من النص بناءً على نوع الرسالة
-        if (notification.message.includes('تم الاستلام من قبل المندوب')) {
-          stateId = '2';
-        } else if (notification.message.includes('تم التسليم بنجاح')) {
-          stateId = '4';
-        } else if (notification.message.includes('تم الإرجاع')) {
-          stateId = '17';
-        } else if (notification.message.includes('العميل لا يرد')) {
-          stateId = '25';
-        } else if (notification.message.includes('تم الإلغاء')) {
-          stateId = '31';
-        }
-        
-        console.log('🔍 state_id المستخرج من النص للألوان:', stateId);
-      }
-      
       if (stateId) {
-        const colors = getAlWaseetNotificationColors(stateId);
-        console.log('🎨 تطبيق ألوان الوسيط للإشعار:', { stateId, colors, message: notification.message });
-        return colors;
+        return getAlWaseetNotificationColors(stateId);
       }
     }
     
-    // الألوان العادية للأنواع الأخرى
-    switch (notification.priority) {
-      case 'high':
+    // ألوان حسب نوع الإشعار
+    switch (notification.type) {
+      case 'order_status_update':
+      case 'orders':
         return {
-          bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
-          border: 'border-r-red-500',
-          text: 'text-red-800 dark:text-red-200',
-          icon: 'text-red-600',
-          dot: 'bg-red-500'
+          bg: 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30',
+          border: 'border-r-blue-500',
+          text: 'text-blue-800 dark:text-blue-200',
+          icon: 'text-blue-600',
+          dot: 'bg-blue-500'
         };
-      case 'medium':
+      case 'low_stock':
+      case 'stock':
         return {
-          bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
-          border: 'border-r-yellow-500',
-          text: 'text-yellow-800 dark:text-yellow-200',
-          icon: 'text-yellow-600',
-          dot: 'bg-yellow-500'
+          bg: 'bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/30 dark:to-orange-900/30',
+          border: 'border-r-orange-500',
+          text: 'text-orange-800 dark:text-orange-200',
+          icon: 'text-orange-600',
+          dot: 'bg-orange-500'
         };
-      default:
+      case 'profit_settlement':
+      case 'financial':
+        return {
+          bg: 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30',
+          border: 'border-r-green-500',
+          text: 'text-green-800 dark:text-green-200',
+          icon: 'text-green-600',
+          dot: 'bg-green-500'
+        };
+      case 'ai_order':
+      case 'ai':
+        return {
+          bg: 'bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/30',
+          border: 'border-r-purple-500',
+          text: 'text-purple-800 dark:text-purple-200',
+          icon: 'text-purple-600',
+          dot: 'bg-purple-500'
+        };
+      case 'system':
         return {
           bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
-          border: 'border-r-gray-400',
+          border: 'border-r-gray-500',
           text: 'text-gray-800 dark:text-gray-200',
           icon: 'text-gray-600',
-          dot: 'bg-gray-400'
+          dot: 'bg-gray-500'
         };
+      default:
+        // الألوان حسب الأولوية
+        switch (notification.priority) {
+          case 'high':
+            return {
+              bg: 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/30',
+              border: 'border-r-red-500',
+              text: 'text-red-800 dark:text-red-200',
+              icon: 'text-red-600',
+              dot: 'bg-red-500'
+            };
+          case 'medium':
+            return {
+              bg: 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/30',
+              border: 'border-r-yellow-500',
+              text: 'text-yellow-800 dark:text-yellow-200',
+              icon: 'text-yellow-600',
+              dot: 'bg-yellow-500'
+            };
+          default:
+            return {
+              bg: 'bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/30',
+              border: 'border-r-gray-400',
+              text: 'text-gray-800 dark:text-gray-200',
+              icon: 'text-gray-600',
+              dot: 'bg-gray-400'
+            };
+        }
     }
   };
 

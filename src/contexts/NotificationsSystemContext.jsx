@@ -324,13 +324,35 @@ export const NotificationsSystemProvider = ({ children }) => {
 
   // حذف إشعار
   const deleteNotification = useCallback(async (notificationId) => {
-    setNotifications(prev => {
-      const notification = prev.find(n => n.id === notificationId);
-      if (notification && !notification.read) {
-        setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+    try {
+      // حذف من قاعدة البيانات أولاً
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+      
+      if (error) {
+        console.error('Error deleting notification from database:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ أثناء حذف الإشعار",
+          variant: "destructive",
+        });
+        return;
       }
-      return prev.filter(n => n.id !== notificationId);
-    });
+      
+      // تحديث الحالة المحلية
+      setNotifications(prev => {
+        const notification = prev.find(n => n.id === notificationId);
+        if (notification && !notification.read) {
+          setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+        }
+        return prev.filter(n => n.id !== notificationId);
+      });
+      
+    } catch (error) {
+      console.error('Error in deleteNotification:', error);
+    }
   }, []);
 
   // فلترة الإشعارات حسب المستخدم
