@@ -94,15 +94,15 @@ const mapToAlWaseetFields = (orderData) => {
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
     client_mobile: orderData.customer_phone || orderData.phone || orderData.client_mobile || '',
     client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
-    city_id: orderData.customer_city_id || orderData.city_id || 0,
-    region_id: orderData.customer_region_id || orderData.region_id || 0,
+    city_id: parseInt(orderData.customer_city_id || orderData.city_id || 0),
+    region_id: parseInt(orderData.customer_region_id || orderData.region_id || 0),
     location: orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '',
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
-    items_number: orderData.quantity || orderData.items_number || 1,
-    price: orderData.price || orderData.final_total || orderData.total_amount || 0,
-    package_size: orderData.package_size_id || orderData.size || orderData.package_size || 1,
+    items_number: parseInt(orderData.quantity || orderData.items_number || 1),
+    price: parseInt(orderData.price || orderData.final_total || orderData.total_amount || 0),
+    package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
     merchant_notes: orderData.notes || orderData.merchant_notes || '',
-    replacement: orderData.replacement || 0
+    replacement: parseInt(orderData.replacement || 0)
   };
   
   console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
@@ -116,6 +116,12 @@ const mapToAlWaseetFields = (orderData) => {
   }
   if (!mapped.client_mobile) {
     console.warn('⚠️ Missing customer phone in order data');
+  }
+  if (mapped.city_id === 0) {
+    console.warn('⚠️ Missing or invalid city_id in order data');
+  }
+  if (mapped.region_id === 0) {
+    console.warn('⚠️ Missing or invalid region_id in order data');
   }
   
   return mapped;

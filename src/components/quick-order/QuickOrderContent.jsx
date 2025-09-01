@@ -1046,7 +1046,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           notes: formData.notes,
           replacement: 0,
           // إضافة تفاصيل المنتجات
-          items: cartItems
+          items: cartItems,
+          // ضمان إرسال معرفات المدينة والمنطقة الصحيحة
+          city_id: parseInt(selectedCityId || formData.customer_city_id || formData.city_id || 0),
+          region_id: parseInt(selectedRegionId || formData.customer_region_id || formData.region_id || 0)
         };
 
         console.log('🔧 Updating Al-Waseet order with data:', alwaseetData);
@@ -1443,13 +1446,35 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             </>
           );
       }
+      
+      // للوسيط - استخدام القيم الأصلية في حالة التعديل
+      const effectiveCityId = selectedCityId || formData.customer_city_id || formData.city_id || '';
+      const effectiveRegionId = selectedRegionId || formData.customer_region_id || formData.region_id || '';
+      
+      console.log('🏙️ Partner fields - Effective values:', {
+        effectiveCityId,
+        effectiveRegionId,
+        selectedCityId,
+        selectedRegionId,
+        formDataCityId: formData.city_id,
+        formDataRegionId: formData.region_id,
+        editMode: aiOrderData?.editMode
+      });
+      
       return (
         <>
             <div className="space-y-2">
               <Label>المدينة</Label>
                <SearchableSelectFixed
-                 value={selectedCityId || formData.city_id}
-                 onValueChange={(v) => handleSelectChange('city_id', v)}
+                 value={effectiveCityId}
+                 onValueChange={(v) => {
+                   console.log('🏙️ City selection changed:', v);
+                   setSelectedCityId(v);
+                   handleSelectChange('city_id', v);
+                   // مسح المنطقة عند تغيير المدينة
+                   setSelectedRegionId('');
+                   handleSelectChange('region_id', '');
+                 }}
                  options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
                  placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
                  searchPlaceholder="بحث في المدن..."
@@ -1462,14 +1487,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             <div className="space-y-2">
               <Label>المنطقة او القضاء</Label>
                <SearchableSelectFixed
-                 value={selectedRegionId || formData.region_id}
-                 onValueChange={(v) => handleSelectChange('region_id', v)}
+                 value={effectiveRegionId}
+                 onValueChange={(v) => {
+                   console.log('🌍 Region selection changed:', v);
+                   setSelectedRegionId(v);
+                   handleSelectChange('region_id', v);
+                 }}
                  options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
-                 placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
+                 placeholder={loadingRegions ? 'تحميل...' : (effectiveCityId ? 'اختر منطقة' : 'اختر المدينة أولاً')}
                  searchPlaceholder="بحث في المناطق..."
                  emptyText="لا توجد منطقة بهذا الاسم"
                  className={errors.region_id ? "border-red-500" : ""}
-                 disabled={!selectedCityId && !formData.city_id || loadingRegions || dataFetchError}
+                 disabled={!effectiveCityId || loadingRegions || dataFetchError}
                />
               {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
             </div>
