@@ -87,21 +87,38 @@ export const createAlWaseetOrder = async (orderData, token) => {
 
 // Helper function to map local field names to Al-Waseet API field names
 const mapToAlWaseetFields = (orderData) => {
-  return {
-    qr_id: orderData.tracking_number || orderData.qr_id,
-    client_name: orderData.name || orderData.client_name,
-    client_mobile: orderData.phone || orderData.client_mobile,
-    client_mobile2: orderData.phone2 || orderData.client_mobile2,
-    city_id: orderData.city_id,
-    region_id: orderData.region_id,
-    location: orderData.address || orderData.client_address || orderData.location,
-    type_name: orderData.details || orderData.type_name,
-    items_number: orderData.quantity || orderData.items_number,
-    price: orderData.price,
-    package_size: orderData.size || orderData.package_size,
-    merchant_notes: orderData.notes || orderData.merchant_notes,
+  console.log('🔍 mapToAlWaseetFields - Input data:', orderData);
+  
+  const mapped = {
+    qr_id: orderData.tracking_number || orderData.qr_id || orderData.delivery_partner_order_id,
+    client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
+    client_mobile: orderData.customer_phone || orderData.phone || orderData.client_mobile || '',
+    client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
+    city_id: orderData.customer_city_id || orderData.city_id || 0,
+    region_id: orderData.customer_region_id || orderData.region_id || 0,
+    location: orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '',
+    type_name: orderData.details || orderData.type_name || 'طلب عادي',
+    items_number: orderData.quantity || orderData.items_number || 1,
+    price: orderData.price || orderData.final_total || orderData.total_amount || 0,
+    package_size: orderData.package_size_id || orderData.size || orderData.package_size || 1,
+    merchant_notes: orderData.notes || orderData.merchant_notes || '',
     replacement: orderData.replacement || 0
   };
+  
+  console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
+  
+  // التحقق من البيانات المطلوبة
+  if (!mapped.qr_id) {
+    console.error('❌ Missing qr_id/tracking_number in order data');
+  }
+  if (!mapped.client_name) {
+    console.warn('⚠️ Missing customer name in order data');
+  }
+  if (!mapped.client_mobile) {
+    console.warn('⚠️ Missing customer phone in order data');
+  }
+  
+  return mapped;
 };
 
 export const editAlWaseetOrder = async (orderData, token) => {

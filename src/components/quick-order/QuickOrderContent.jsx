@@ -1281,47 +1281,84 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       await updateOrder(aiOrderData.orderId, updateData);
 
       // إذا كان شريك الوسيط متصل وهناك معرف طلب خارجي، قم بتحديث الطلب
-      if (isWaseetLoggedIn && activePartner === 'alwaseet' && aiOrderData.delivery_partner_order_id) {
+      const trackingNumber = aiOrderData.tracking_number || aiOrderData.delivery_partner_order_id || aiOrderData.originalOrder?.tracking_number;
+      
+      console.log('🔍 Checking AlWaseet update conditions:', {
+        isWaseetLoggedIn,
+        activePartner,
+        trackingNumber,
+        delivery_partner: aiOrderData.originalOrder?.delivery_partner
+      });
+      
+      if (isWaseetLoggedIn && activePartner === 'alwaseet' && trackingNumber) {
         const editData = {
-          order_id: aiOrderData.delivery_partner_order_id,
+          tracking_number: trackingNumber,
+          qr_id: trackingNumber, // نفس القيمة للتأكد
+          delivery_partner_order_id: trackingNumber,
           customer_name: updateData.customer_name,
           customer_phone: updateData.customer_phone,
-          customer_phone2: updateData.customer_phone2,
+          customer_phone2: updateData.customer_phone2 || '',
           customer_city_id: formData.city_id,
           customer_region_id: formData.region_id,
           customer_address: updateData.customer_address,
-          package_size_id: formData.size,
+          package_size_id: formData.size || 1,
           notes: updateData.notes,
-          price: newFinalTotal
+          price: newFinalTotal,
+          final_total: newFinalTotal,
+          total_amount: newSubtotal,
+          delivery_fee: deliveryFee,
+          items_number: cart.length,
+          details: `طلب محدث - ${cart.length} عنصر`
         };
+        
+        console.log('📤 AlWaseet edit data prepared:', editData);
 
-        console.log('🔄 تحديث الطلب في الوسيط...', editData);
+        console.log('🔄 محاولة تحديث الطلب في الوسيط...');
         
         try {
+          // التحقق من البيانات المطلوبة قبل الإرسال
+          if (!editData.qr_id || !editData.customer_name || !editData.customer_phone) {
+            throw new Error('بيانات مفقودة: يجب توفر رقم التتبع واسم العميل ورقم الهاتف');
+          }
+          
+          console.log('📤 إرسال بيانات التحديث إلى الوسيط:', editData);
           const editResponse = await editAlWaseetOrder(editData, waseetToken);
+          
+          console.log('📥 استجابة الوسيط:', editResponse);
+          
           if (editResponse?.success) {
             console.log('✅ تم تحديث الطلب في الوسيط بنجاح');
             toast({
               title: "✅ تم التحديث بنجاح",
-              description: "تم تحديث الطلب في شركة التوصيل بنجاح",
+              description: `تم تحديث الطلب ${trackingNumber} في شركة التوصيل بنجاح`,
               className: "bg-green-50 border-green-200 text-green-800",
+              duration: 4000
             });
           } else {
-            console.error('❌ فشل تحديث الطلب في الوسيط:', editResponse);
+            const errorMsg = editResponse?.error || editResponse?.message || 'فشل غير محدد';
+            console.error('❌ فشل تحديث الطلب في الوسيط:', errorMsg);
             toast({
               title: "⚠️ تحذير",
-              description: "تم تحديث الطلب محلياً لكن فشل التحديث في شركة التوصيل",
+              description: `تم تحديث الطلب محلياً لكن فشل في الوسيط: ${errorMsg}`,
               variant: "destructive",
+              duration: 6000
             });
           }
         } catch (error) {
           console.error('❌ خطأ في تحديث الطلب في الوسيط:', error);
           toast({
             title: "⚠️ تحذير", 
-            description: "تم تحديث الطلب محلياً لكن حدث خطأ في الاتصال مع شركة التوصيل",
+            description: `تم تحديث الطلب محلياً لكن حدث خطأ: ${error.message}`,
             variant: "destructive",
+            duration: 6000
           });
         }
+      } else {
+        console.log('ℹ️ تخطي تحديث الوسيط:', {
+          reason: !isWaseetLoggedIn ? 'غير متصل بالوسيط' : 
+                  activePartner !== 'alwaseet' ? 'الشريك ليس الوسيط' : 
+                  !trackingNumber ? 'لا يوجد رقم تتبع' : 'سبب غير معروف'
+        });
       }
 
       // إشعار بنجاح التحديث

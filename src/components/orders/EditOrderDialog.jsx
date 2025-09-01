@@ -111,8 +111,17 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       orderId: order.id,
       originalOrder: order,
       
-      // بيانات Al Waseet الأصلية
-      delivery_partner_order_id: order.delivery_partner_order_id || ''
+      // بيانات Al Waseet الأصلية - مع ضمان وجود رقم التتبع
+      delivery_partner_order_id: order.delivery_partner_order_id || order.tracking_number || order.qr_id || '',
+      
+      // إضافة logging مفصل لتتبع البيانات
+      _debug: {
+        original_tracking: order.tracking_number,
+        original_delivery_id: order.delivery_partner_order_id,
+        original_partner: order.delivery_partner,
+        converted_city_id: city_id,
+        converted_region_id: region_id
+      }
     };
 
     console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
