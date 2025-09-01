@@ -135,7 +135,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           originalCity: aiOrderData.customer_city || '',
           originalRegion: aiOrderData.customer_province || '',
           
-          // إصلاح نوع الطلب الافتراضي
+          // إصلاح نوع الطلب الافتراضي - ضمان تطبيقه
           type: 'new'
         }));
         
@@ -147,6 +147,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           region_id: aiOrderData.region_id,
           address: aiOrderData.customer_address
         });
+        
+        // إضافة useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي
+        setTimeout(() => {
+          setFormData(prev => ({
+            ...prev,
+            type: 'new'
+          }));
+        }, 100);
         
         // تحديد شريك التوصيل وتحميل البيانات اللازمة
         if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
@@ -331,6 +339,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
     }
   }, [aiOrderData, clearCart, addToCart, isEditMode]);
+
+  // useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي في وضع التعديل
+  useEffect(() => {
+    if (aiOrderData?.editMode && formData.type !== 'new') {
+      console.log('🔧 Forcing order type to "new" in edit mode');
+      setFormData(prev => ({
+        ...prev,
+        type: 'new'
+      }));
+    }
+  }, [aiOrderData?.editMode, formData.type]);
   
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
