@@ -257,6 +257,43 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
     }
   };
 
+  // معالجة النقر على الإشعار - تنقل ذكي وعلامة كمقروء
+  const handleNotificationClick = async (notification) => {
+    try {
+      // علامة كمقروء
+      await markAsRead(notification.id);
+      
+      // تنقل ذكي حسب نوع الإشعار
+      if (notification.type === 'alwaseet_status_change') {
+        const trackingNumber = notification.data?.tracking_number;
+        if (trackingNumber) {
+          // الانتقال لصفحة الطلبات مع فلترة برقم التتبع
+          window.location.href = `/orders?search=${trackingNumber}`;
+        } else {
+          window.location.href = '/orders';
+        }
+      } else if (notification.type === 'order_status_update') {
+        const orderNumber = notification.data?.order_number;
+        if (orderNumber) {
+          window.location.href = `/orders?search=${orderNumber}`;
+        } else {
+          window.location.href = '/orders';
+        }
+      } else if (notification.type === 'low_stock' || notification.type === 'stock') {
+        window.location.href = '/inventory';
+      } else if (notification.type === 'profit_settlement' || notification.type === 'financial') {
+        window.location.href = '/profits';
+      } else if (notification.type === 'ai_order' || notification.type === 'ai') {
+        window.location.href = '/dashboard';
+      } else {
+        // الافتراضي للأنواع الأخرى
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      console.error('Error handling notification click:', error);
+    }
+  };
+
   const handleDeleteNotification = async (notificationId) => {
     try {
       await deleteNotification(notificationId);
@@ -455,7 +492,7 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                         className={`p-4 border-r-4 cursor-pointer hover:opacity-80 transition-all duration-200 ${
                           !notification.read ? 'shadow-sm' : ''
                         } ${styles.bg} ${styles.border}`}
-                        onClick={() => handleMarkAsRead(notification.id)}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0 mt-1">

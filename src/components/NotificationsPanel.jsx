@@ -359,7 +359,16 @@ const NotificationsPanel = () => {
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
-    if (notification.type === 'new_registration') {
+    if (notification.type === 'alwaseet_status_change') {
+      // إشعارات الوسيط - انتقال لصفحة متابعة الطلبات مع فلترة برقم التتبع
+      const data = notification.data || {};
+      const trackingNumber = data.tracking_number || '';
+      if (trackingNumber) {
+        navigate(`/employee-follow-up?search=${encodeURIComponent(trackingNumber)}&highlight=alwaseet`);
+      } else {
+        navigate('/employee-follow-up?filter=alwaseet');
+      }
+    } else if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'ai_order') {
       // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم مع تحديد الطلب

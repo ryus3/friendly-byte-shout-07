@@ -46,7 +46,8 @@ export const NotificationsSystemProvider = ({ children }) => {
         related_entity_id: n.data?.related_entity_id,
         created_at: n.created_at,
         read: n.is_read,
-        priority: n.priority || 'normal'
+        priority: n.priority || 'normal',
+        data: n.data || {}
       }));
       
       setNotifications(formattedNotifications);
