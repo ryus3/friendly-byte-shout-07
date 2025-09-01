@@ -39,8 +39,8 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             second_phone: customerInfo.second_phone || '',
             address: customerInfo.address,
             notes: customerInfo.notes || '',
-            details: cart.map(item => `${item.productName} (${item.color}, ${item.size}) ×${item.quantity}`).join(' | '),
-            quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+            details: (cart || []).filter(item => item != null).map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
+            quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
             price: finalAmount + (settings?.delivery_fee || 50000), // إضافة رسوم التوصيل
             size: 'عادي',
             type: 'new',

@@ -9,7 +9,9 @@ const FloatingCartButton = ({ onOpenCart }) => {
   const [itemCount, setItemCount] = useState(0);
 
   useEffect(() => {
-    setItemCount(cart.reduce((sum, item) => sum + item.quantity, 0));
+    // تصفية العناصر null/undefined وحساب العدد بأمان
+    const validCart = (cart || []).filter(item => item != null);
+    setItemCount(validCart.reduce((sum, item) => sum + (item?.quantity || 0), 0));
   }, [cart]);
 
   if (itemCount === 0) return null;

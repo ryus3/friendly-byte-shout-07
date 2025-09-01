@@ -799,9 +799,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
-    const safeCart = Array.isArray(cart) ? cart : [];
-    const quantityCount = safeCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const cartSubtotal = safeCart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity) || 0), 0);
+    const safeCart = Array.isArray(cart) ? cart.filter(item => item != null) : [];
+    const quantityCount = safeCart.reduce((sum, item) => sum + (item?.quantity || 1), 0);
+    const cartSubtotal = safeCart.reduce((sum, item) => sum + (item?.total || ((item?.price || 0) * (item?.quantity || 1)) || 0), 0);
     
     // حساب رسوم التوصيل بناءً على نوع الشريك
     let calculatedDeliveryFee = 0;
@@ -1019,7 +1019,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           details: cartItems.map(item => 
             `${item.product_name} (${item.color}, ${item.size}) × ${item.quantity} = ${item.price} د.ع`
           ).join('\n'),
-          quantity: cart.reduce((sum, item) => sum + item.quantity, 0),
+          quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
           price: finalTotal,
           size: selectedPackageSize || 'عادي',
           notes: formData.notes,
