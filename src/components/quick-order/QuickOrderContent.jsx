@@ -674,7 +674,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // تحديث السلة بالمنتجات
       if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
         clearCart();
-        aiOrderData.items.forEach(item => {
+        aiOrderData.items.filter(item => item != null && typeof item === 'object').forEach(item => {
           addToCart(item);
         });
       }
@@ -1388,10 +1388,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   const handleConfirmProductSelection = (selectedItems) => {
     clearCart();
-    selectedItems.forEach(item => {
+    (selectedItems || []).filter(item => item != null && typeof item === 'object').forEach(item => {
         const product = { id: item.productId, name: item.productName, images: [item.image] };
         const variant = { id: item.variantId, sku: item.sku, color: item.color, size: item.size, price: item.price, cost_price: item.costPrice, quantity: item.stock, reserved: item.reserved, image: item.image };
-        addToCart(product, variant, item.quantity, false);
+        addToCart(product, variant, Number(item?.quantity) || 1, false);
     });
     setProductSelectOpen(false);
     toast({ title: "تم تحديث السلة", description: `تم إضافة ${selectedItems.length} منتج.`, variant: "success" });
