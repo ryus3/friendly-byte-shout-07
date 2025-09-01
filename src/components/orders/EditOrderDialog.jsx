@@ -89,7 +89,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_province: order.customer_province || order.region || order.province || '',
       customer_address: order.customer_address || order.address || '',
       
-      // معرفات المدينة والمنطقة للوسيط
+      // معرفات المدينة والمنطقة للوسيط (ضمان عدم التكرار)
       city_id: city_id || order.city_id || '',
       region_id: region_id || order.region_id || '',
       
@@ -160,8 +160,13 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent text-right">
               ✏️ تعديل الطلب - {order?.delivery_partner_order_id || order?.tracking_number || order?.order_number}
               <div className="text-sm text-muted-foreground font-normal mt-1">
-                تاريخ الإنشاء: {order?.created_at ? new Date(order.created_at).toLocaleDateString('en-GB') : ''}
-                {order?.customer_name && ` • العميل: ${order.customer_name}`}
+                {order?.created_at ? (() => {
+                  const date = new Date(order.created_at);
+                  const dateStr = date.toLocaleDateString('en-GB');
+                  const timeStr = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                  return `${dateStr} - ${timeStr}`;
+                })() : ''}
+                {order?.customer_name && ` • ${order.customer_name}`}
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -169,30 +174,21 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           <ScrollArea className="flex-1 p-0">
             <div className="p-6" dir="rtl">
               {editData ? (
-                <>
-                  {/* مكون تحميل البيانات المحسن للتعديل */}
-                  <UnifiedEditOrderLoader
-                    aiOrderData={editData}
-                    isEditMode={true}
-                    onDataLoaded={() => console.log('✅ تم تحميل البيانات للتعديل')}
-                  />
-                  
-                  {/* واجهة التعديل الكاملة */}
-                  <QuickOrderContent
-                    isDialog={true}
-                    aiOrderData={editData}
-                    onOrderCreated={handleOrderUpdated}
-                    key={`edit-${order?.id}`} // لإعادة تحميل المكون عند تغيير الطلب
-                  />
-                </>
+                <QuickOrderContent
+                  isDialog={true}
+                  aiOrderData={editData}
+                  onOrderCreated={handleOrderUpdated}
+                  key={`edit-${order?.id}-${order?.customer_city}-${order?.customer_province}`}
+                />
               ) : (
                 <div className="flex items-center justify-center h-64">
-                  <div className="text-center">
-                    <h3 className="text-lg font-semibold text-muted-foreground">
-                      خطأ في تحميل بيانات الطلب
+                  <div className="text-center animate-pulse">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-primary/20 to-accent/20"></div>
+                    <h3 className="text-lg font-semibold text-foreground">
+                      🔄 جاري تحميل بيانات الطلب...
                     </h3>
                     <p className="text-sm text-muted-foreground mt-2">
-                      لم يتم العثور على بيانات الطلب المطلوب تعديله
+                      الرجاء الانتظار حتى يتم تحضير البيانات للتعديل
                     </p>
                   </div>
                 </div>

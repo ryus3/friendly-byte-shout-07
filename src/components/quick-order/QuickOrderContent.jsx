@@ -1453,12 +1453,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
       
       // للوسيط - استخدام القيم الأصلية في حالة التعديل
-      const effectiveCityId = selectedCityId || formData.customer_city_id || formData.city_id || '';
-      const effectiveRegionId = selectedRegionId || formData.customer_region_id || formData.region_id || '';
+      const effectiveCityId = selectedCityId || formData.city_id || '';
+      const effectiveRegionId = selectedRegionId || formData.region_id || '';
       
-      console.log('🏙️ Partner fields - Effective values:', {
+      // عرض النص الأصلي للمدينة والمنطقة في حالة التعديل
+      const originalCityText = formData.customer_city || '';
+      const originalRegionText = formData.customer_province || '';
+      
+      console.log('🏙️ Partner fields - Values for display:', {
         effectiveCityId,
         effectiveRegionId,
+        originalCityText,
+        originalRegionText,
         selectedCityId,
         selectedRegionId,
         formDataCityId: formData.city_id,
@@ -1470,6 +1476,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         <>
             <div className="space-y-2">
               <Label>المدينة</Label>
+              {originalCityText && aiOrderData?.editMode && (
+                <div className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 rounded border mb-2">
+                  المدينة الأصلية: <span className="font-semibold">{originalCityText}</span>
+                </div>
+              )}
                <SearchableSelectFixed
                  value={effectiveCityId}
                  onValueChange={(v) => {
@@ -1491,6 +1502,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             </div>
             <div className="space-y-2">
               <Label>المنطقة او القضاء</Label>
+              {originalRegionText && aiOrderData?.editMode && (
+                <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded border mb-2">
+                  المنطقة الأصلية: <span className="font-semibold">{originalRegionText}</span>
+                </div>
+              )}
                <SearchableSelectFixed
                  value={effectiveRegionId}
                  onValueChange={(v) => {
