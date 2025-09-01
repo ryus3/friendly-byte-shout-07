@@ -26,9 +26,12 @@ const ScrollingText = ({ text, className = "" }) => {
     <div ref={containerRef} className={`overflow-hidden ${className}`}>
       <div 
         ref={textRef}
-        className="animate-scroll whitespace-nowrap"
+        className="whitespace-nowrap animate-scroll-text"
         style={{
-          animation: 'scroll-text 6s linear infinite'
+          animationDuration: '8s',
+          animationTimingFunction: 'linear',
+          animationIterationCount: 'infinite',
+          animationDelay: '1s'
         }}
       >
         {text}

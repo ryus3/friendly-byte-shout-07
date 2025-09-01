@@ -316,9 +316,11 @@ const OrderCard = ({
                   <span className="font-bold ml-1">{statusConfig.label}</span>
                 </Button>
               ) : (
-                <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
+                <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300 px-3 py-2 rounded-lg min-h-[40px] max-h-[40px]`}>
                   <StatusIcon className="h-4 w-4 flex-shrink-0" />
-                  <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
+                  <div className="min-w-0 flex-1 max-w-[140px]">
+                    <ScrollingText text={statusConfig.label} className="font-bold text-sm" />
+                  </div>
                 </div>
               )}
               
