@@ -674,8 +674,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // تحديث السلة بالمنتجات
       if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
         clearCart();
-        aiOrderData.items.filter(item => item != null && typeof item === 'object').forEach(item => {
-          addToCart(item);
+        aiOrderData.items.filter(item => item != null && typeof item === 'object' && item.productId && item.variantId).forEach(item => {
+          try {
+            // تحويل item إلى product و variant منفصلين
+            const product = {
+              id: item.productId,
+              name: item.productName || item.product_name || 'منتج',
+              images: [item.image || '/placeholder.svg']
+            };
+            const variant = {
+              id: item.variantId,
+              sku: item.sku || item.variantId,
+              color: item.color || 'افتراضي',
+              size: item.size || 'افتراضي',
+              price: Number(item.price) || Number(item.unit_price) || 0,
+              cost_price: Number(item.costPrice) || Number(item.cost_price) || 0,
+              quantity: Number(item.stock) || 999,
+              reserved: Number(item.reserved) || 0,
+              image: item.image || '/placeholder.svg'
+            };
+            addToCart(product, variant, Number(item?.quantity) || 1, false, true);
+          } catch (error) {
+            console.error('❌ خطأ في إضافة منتج للسلة:', error, item);
+          }
         });
       }
 

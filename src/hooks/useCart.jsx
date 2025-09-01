@@ -6,51 +6,67 @@ export const useCart = (isEditMode = false) => {
   const [cart, setCart] = useState([]);
 
   const addToCart = useCallback((product, variant, quantity, showToast = true, skipStockCheck = false) => {
-    const totalStock = Math.max(0, variant.quantity || 0);
-    const reservedStock = Math.max(0, variant.reserved || 0);
+    // التحقق من صحة البيانات المدخلة أولاً
+    if (!product || !variant || typeof product !== 'object' || typeof variant !== 'object') {
+      console.error('❌ addToCart: بيانات غير صالحة:', { product, variant });
+      return false;
+    }
+
+    const safeQuantity = Number(quantity) || 1;
+    const totalStock = Math.max(0, Number(variant?.quantity) || 0);
+    const reservedStock = Math.max(0, Number(variant?.reserved) || 0);
     const availableStock = Math.max(0, totalStock - reservedStock);
 
     // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
-    if (!isEditMode && !skipStockCheck && quantity > availableStock) {
+    if (!isEditMode && !skipStockCheck && safeQuantity > availableStock) {
       toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة هذا المنتج. الكمية المتاحة للبيع: ${availableStock}`, variant: "destructive" });
       return false;
     }
 
     const cartItem = {
-      id: `${product.id}-${variant.id || variant.sku}`,
-      productId: product.id,
-      variantId: variant.id, // استخدام variant.id كـ UUID
-      sku: variant.sku,
-      productName: product.name,
-      image: variant.image || product.images?.[0] || null,
-      color: variant.color,
-      size: variant.size,
-      quantity,
-      price: variant.price || product.price,
-      costPrice: variant.cost_price || product.cost_price,
-      stock: variant.quantity,
-      reserved: variant.reserved || 0,
-      total: (variant.price || product.price) * quantity
+      id: `${product?.id || 'temp'}-${variant?.id || variant?.sku || 'no-variant'}`,
+      productId: product?.id || 'temp-product',
+      variantId: variant?.id || variant?.sku || 'temp-variant',
+      sku: variant?.sku || variant?.id || 'temp-sku',
+      productName: product?.name || 'منتج',
+      image: variant?.image || product?.images?.[0] || '/placeholder.svg',
+      color: variant?.color || variant?.colors?.name || 'افتراضي',
+      size: variant?.size || variant?.sizes?.name || 'افتراضي',
+      quantity: safeQuantity,
+      price: Number(variant?.price) || Number(product?.price) || 0,
+      costPrice: Number(variant?.cost_price) || Number(product?.cost_price) || 0,
+      stock: Number(variant?.quantity) || 999,
+      reserved: Number(variant?.reserved) || 0,
+      total: (Number(variant?.price) || Number(product?.price) || 0) * safeQuantity
     };
     
     setCart(prev => {
-      const existingItem = prev.find(item => item.id === cartItem.id);
+      const filteredPrev = (prev || []).filter(item => item != null);
+      const existingItem = filteredPrev.find(item => item?.id === cartItem.id);
       if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity;
-        const availableStockForExisting = (existingItem.stock || 0) - (existingItem.reserved || 0);
+        const newQuantity = Number(existingItem?.quantity || 0) + safeQuantity;
+        const availableStockForExisting = Math.max(0, Number(existingItem?.stock || 0) - Number(existingItem?.reserved || 0));
         
         // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
         if (!isEditMode && !skipStockCheck && newQuantity > availableStockForExisting) {
           toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة المزيد. الكمية المتاحة للبيع: ${availableStockForExisting}`, variant: "destructive" });
-          return prev;
+          return filteredPrev;
         }
-        return prev.map(item => item.id === cartItem.id ? { ...item, quantity: newQuantity, total: item.price * newQuantity } : item);
+        return filteredPrev.map(item => item?.id === cartItem.id ? { 
+          ...item, 
+          quantity: newQuantity, 
+          total: (Number(item?.price) || 0) * newQuantity 
+        } : item);
       }
-      return [...prev, cartItem];
+      return [...filteredPrev, cartItem];
     });
     
     if (showToast) {
-      toast({ title: "تمت الإضافة إلى السلة", description: `${product.name} (${variant.size}, ${variant.color})`, variant: 'success' });
+      toast({ 
+        title: "تمت الإضافة إلى السلة", 
+        description: `${product?.name || 'منتج'} (${variant?.size || variant?.sizes?.name || 'افتراضي'}, ${variant?.color || variant?.colors?.name || 'افتراضي'})`, 
+        variant: 'success' 
+      });
     }
     return true;
   }, []);
@@ -107,22 +123,27 @@ export const useCart = (isEditMode = false) => {
   }, [addToCart]);
 
   const removeFromCart = useCallback((itemId) => {
-    setCart(prev => prev.filter(item => item.id !== itemId));
+    setCart(prev => (prev || []).filter(item => item != null && item?.id !== itemId));
   }, []);
 
   const updateCartItemQuantity = useCallback((itemId, newQuantity, skipStockCheck = false) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === itemId) {
-        const totalStock = Math.max(0, item.stock || 0);
-        const reservedStock = Math.max(0, item.reserved || 0);
+    const safeNewQuantity = Number(newQuantity) || 0;
+    setCart(prev => (prev || []).filter(item => item != null).map(item => {
+      if (item?.id === itemId) {
+        const totalStock = Math.max(0, Number(item?.stock) || 0);
+        const reservedStock = Math.max(0, Number(item?.reserved) || 0);
         const availableStock = Math.max(0, totalStock - reservedStock);
         
         // تجاهل فحص المخزون في وضع التعديل أو عند طلب تجاهل الفحص
-        if (!isEditMode && !skipStockCheck && newQuantity > availableStock) {
+        if (!isEditMode && !skipStockCheck && safeNewQuantity > availableStock) {
           toast({ title: "الكمية غير متوفرة", description: `المخزون المتاح للبيع: ${availableStock}`, variant: "destructive" });
-          return { ...item, quantity: Math.max(0, availableStock), total: item.price * Math.max(0, availableStock) };
+          return { ...item, quantity: Math.max(0, availableStock), total: (Number(item?.price) || 0) * Math.max(0, availableStock) };
         }
-        return newQuantity <= 0 ? null : { ...item, quantity: newQuantity, total: item.price * newQuantity };
+        return safeNewQuantity <= 0 ? null : { 
+          ...item, 
+          quantity: safeNewQuantity, 
+          total: (Number(item?.price) || 0) * safeNewQuantity 
+        };
       }
       return item;
     }).filter(Boolean));
