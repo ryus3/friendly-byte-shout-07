@@ -180,10 +180,10 @@ const UnifiedNotificationsDisplay = ({
   
   // معالجة الإشعارات لعرض صحيح
   const processedNotifications = useMemo(() => {
-    return notifications.map(processNotificationDisplay);
+    return (notifications || []).map(processNotificationDisplay);
   }, [notifications]);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = (notifications || []).filter(n => !n.is_read).length;
 
   // عرض مكثف للقائمة المنسدلة
   if (isDropdown) {
@@ -307,7 +307,7 @@ const UnifiedNotificationsDisplay = ({
               variant="destructive" 
               size="sm" 
               onClick={onClearAll} 
-              disabled={notifications.length === 0}
+              disabled={(notifications || []).length === 0}
               className="text-xs sm:text-sm"
             >
               <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
