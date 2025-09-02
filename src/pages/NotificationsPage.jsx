@@ -15,6 +15,7 @@ import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
+import ScrollingText from '@/components/ui/scrolling-text';
 
 // أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
@@ -278,9 +279,22 @@ const NotificationsPage = () => {
                                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
                                 )}
                               </div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
+                              {notification.message.length > 80 ? (
+                                <ScrollingText 
+                                  text={notification.message} 
+                                  maxWidth="300px" 
+                                  className="text-xs md:text-sm text-muted-foreground mb-2"
+                                />
+                              ) : (
+                                <p className="text-xs md:text-sm text-muted-foreground mb-2">
+                                  {notification.message}
+                                </p>
+                              )}
                               <p className="text-xs text-muted-foreground/70">
-                                {formatRelativeTime(notification.created_at)}
+                                {formatRelativeTime(notification.updated_at || notification.created_at)}
+                                {notification.updated_at && notification.updated_at !== notification.created_at && (
+                                  <span className="text-primary/70 mr-1">(محدث)</span>
+                                )}
                               </p>
                             </div>
                           </div>

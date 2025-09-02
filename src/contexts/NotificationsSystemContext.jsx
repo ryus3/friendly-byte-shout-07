@@ -43,8 +43,9 @@ export const NotificationsSystemProvider = ({ children }) => {
         target_user_id: n.user_id,
         target_role: n.data?.target_role,
         related_entity_type: n.data?.related_entity_type,
-        related_entity_id: n.data?.related_entity_id,
+        related_entity_id: n.related_entity_id || n.data?.related_entity_id,
         created_at: n.created_at,
+        updated_at: n.updated_at,
         read: n.is_read,
         priority: n.priority || 'normal',
         data: n.data || {}
@@ -124,10 +125,12 @@ export const NotificationsSystemProvider = ({ children }) => {
           message: notification.message,
           type: notification.type,
           user_id: notification.target_user_id,
+          related_entity_id: notification.related_entity_id,
           data: {
             target_role: notification.target_role,
             related_entity_type: notification.related_entity_type,
-            related_entity_id: notification.related_entity_id
+            related_entity_id: notification.related_entity_id,
+            ...data.data
           },
           priority: notification.priority
         }]);
@@ -142,6 +145,71 @@ export const NotificationsSystemProvider = ({ children }) => {
       return null;
     }
   }, []);
+
+  // تحديث أو إنشاء إشعار للطلب (إشعار واحد ذكي لكل طلب)
+  const updateOrCreateOrderNotification = useCallback(async (trackingNumber, message, data = {}) => {
+    if (!trackingNumber || !message) return null;
+    
+    try {
+      // البحث عن إشعار موجود للطلب
+      const existingNotification = notifications.find(n => 
+        n.related_entity_id === trackingNumber && 
+        n.type === 'alwaseet_status_change'
+      );
+      
+      if (existingNotification) {
+        // تحديث الإشعار الموجود
+        const { error } = await supabase
+          .from('notifications')
+          .update({ 
+            message, 
+            is_read: false, 
+            updated_at: new Date().toISOString(),
+            data: { ...existingNotification.data, ...data }
+          })
+          .eq('id', existingNotification.id);
+        
+        if (error) {
+          console.error('Error updating notification:', error);
+          return null;
+        }
+        
+        // تحديث الحالة المحلية
+        setNotifications(prev => prev.map(n => 
+          n.id === existingNotification.id 
+            ? { 
+                ...n, 
+                message, 
+                read: false, 
+                data: { ...n.data, ...data },
+                updated_at: new Date().toISOString()
+              } 
+            : n
+        ));
+        
+        // زيادة عدد غير المقروءة إذا كان الإشعار مقروءاً سابقاً
+        if (existingNotification.read) {
+          setUnreadCount(prev => prev + 1);
+        }
+        
+        console.log('✅ تم تحديث إشعار الطلب الموجود:', trackingNumber);
+        return existingNotification;
+      } else {
+        // إنشاء إشعار جديد
+        return await createNotification({
+          type: 'alwaseet_status_change',
+          title: 'تحديث حالة الطلب',
+          message,
+          priority: 'medium',
+          related_entity_id: trackingNumber,
+          data
+        });
+      }
+    } catch (error) {
+      console.error('Error in updateOrCreateOrderNotification:', error);
+      return null;
+    }
+  }, [notifications, createNotification]);
 
   // إشعارات الطلبات
   const notifyOrderCreated = useCallback(async (order, createdBy) => {
@@ -369,6 +437,7 @@ export const NotificationsSystemProvider = ({ children }) => {
     notifications: userNotifications,
     unreadCount,
     createNotification,
+    updateOrCreateOrderNotification,
     notifyOrderCreated,
     notifyOrderStatusChanged,
     notifySettlementRequested,

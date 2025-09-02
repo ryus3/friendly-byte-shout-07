@@ -15,10 +15,10 @@ export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
   
   // استخدام اختياري لنظام الإشعارات
-  let createNotification = null;
+  let updateOrCreateOrderNotification = null;
   try {
     const notificationsSystem = useNotificationsSystem();
-    createNotification = notificationsSystem.createNotification;
+    updateOrCreateOrderNotification = notificationsSystem.updateOrCreateOrderNotification;
   } catch (error) {
     // NotificationsSystemProvider غير متاح بعد
     console.log('NotificationsSystem not ready yet');
@@ -40,11 +40,11 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي
+  // دالة ذكية لإرسال إشعار واحد متحدث لكل طلب
   const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
-    if (!createNotification || !trackingNumber || !stateId) return;
+    if (!updateOrCreateOrderNotification || !trackingNumber || !stateId) return;
     
-    console.log('🔔 محاولة إرسال إشعار:', { trackingNumber, stateId, statusText });
+    console.log('🔔 تحديث إشعار الطلب الذكي:', { trackingNumber, stateId, statusText });
     
     // الحالات المهمة التي تستحق إشعارات
     const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
@@ -97,33 +97,27 @@ export const AlWaseetProvider = ({ children }) => {
         priority = statusConfig.priority || 'medium';
     }
     
-    console.log('✅ إرسال إشعار الوسيط:', {
+    console.log('✅ تحديث إشعار الطلب الذكي:', {
       trackingNumber, 
       stateId, 
       message, 
       priority 
     });
     
-    // إرسال الإشعار مع البيانات المطلوبة والتأكد من وجود state_id
+    // تحديث أو إنشاء الإشعار الذكي للطلب
     try {
       const notificationData = {
-        type: 'alwaseet_status_change',
-        title: 'تحديث حالة الطلب',
-        message: message,
-        priority: priority,
-        data: {
-          state_id: String(stateId), // التأكد من وجود state_id هنا
-          tracking_number: trackingNumber,
-          status_text: statusText,
-          timestamp: new Date().toISOString(),
-          // إضافة البيانات للتوافق مع الإشعارات القديمة
-          order_id: trackingNumber,
-          order_number: trackingNumber
-        }
+        state_id: String(stateId),
+        tracking_number: trackingNumber,
+        status_text: statusText,
+        timestamp: new Date().toISOString(),
+        order_id: trackingNumber,
+        order_number: trackingNumber,
+        priority
       };
       
-      console.log('📤 بيانات الإشعار المرسلة:', notificationData);
-      createNotification(notificationData);
+      console.log('📤 بيانات الإشعار الذكي:', notificationData);
+      updateOrCreateOrderNotification(trackingNumber, message, notificationData);
       
       // تحديث آخر حالة مرسلة
       setLastNotificationStatus(prev => ({
@@ -131,12 +125,12 @@ export const AlWaseetProvider = ({ children }) => {
         [trackingKey]: String(stateId)
       }));
       
-      console.log('🎯 تم إرسال إشعار الوسيط بنجاح');
+      console.log('🎯 تم تحديث إشعار الطلب الذكي بنجاح');
       
     } catch (error) {
-      console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
+      console.error('❌ خطأ في تحديث إشعار الطلب الذكي:', error);
     }
-  }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
+  }, [updateOrCreateOrderNotification, lastNotificationStatus, setLastNotificationStatus]);
 
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
