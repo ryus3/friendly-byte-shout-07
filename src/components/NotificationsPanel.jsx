@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+import { useSuper } from '@/contexts/SuperProvider';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -380,6 +381,7 @@ const typeColorMap = {
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
   const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
+  const { orders } = useSuper(); // النظام الموحد للطلبات
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -717,36 +719,51 @@ const NotificationsPanel = () => {
                               <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
                             )}
                           </div>
-                          <div className="text-xs text-foreground/80 line-clamp-1 mb-1.5">
+                          <div className="text-xs text-foreground font-medium line-clamp-1 mb-1.5">
                             {(() => {
-                              // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام نفس منطق صفحة الطلبات
-                              if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                const data = notification.data || {};
-                                const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
-                                const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
-                                
-                                if (trackingNumber && stateId) {
-                                  // الحصول على النص الصحيح للحالة من state_id
-                                  const statusConfig = getStatusConfig(Number(stateId));
-                                  const correctDeliveryStatus = statusConfig.text || data.delivery_status;
-                                  
-                                  // إنشاء كائن طلب مؤقت لاستخدام منطق صفحة الطلبات
-                                  const tempOrder = {
-                                    tracking_number: trackingNumber,
-                                    delivery_partner: 'الوسيط',
-                                    delivery_status: correctDeliveryStatus,
-                                    status: data.status,
-                                    state_id: stateId
-                                  };
-                                  
-                                  const statusInfo = getStatusForComponent(tempOrder);
-                                  const displayText = `${trackingNumber} ${statusInfo.label}`;
-                                  
-                                  return displayText.length > 35 ? (
-                                    <ScrollingText text={displayText} className="w-full" />
-                                  ) : displayText;
-                                }
-                              }
+                               // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
+                               if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                 const data = notification.data || {};
+                                 const orderId = data.order_id;
+                                 
+                                 // البحث عن الطلب الفعلي من النظام الموحد
+                                 if (orderId && orders && orders.length > 0) {
+                                   const foundOrder = orders.find(order => order.id === orderId);
+                                   if (foundOrder) {
+                                     // استخدام نفس منطق صفحة الطلبات
+                                     const statusInfo = getStatusForComponent(foundOrder);
+                                     const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
+                                     
+                                     return displayText.length > 35 ? (
+                                       <ScrollingText text={displayText} className="w-full" />
+                                     ) : displayText;
+                                   }
+                                 }
+                                 
+                                 // البديل للإشعارات القديمة بدون order_id
+                                 const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+                                 const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
+                                 
+                                 if (trackingNumber && stateId) {
+                                   const statusConfig = getStatusConfig(Number(stateId));
+                                   const correctDeliveryStatus = statusConfig.text || data.delivery_status;
+                                   
+                                   const tempOrder = {
+                                     tracking_number: trackingNumber,
+                                     delivery_partner: 'الوسيط',
+                                     delivery_status: correctDeliveryStatus,
+                                     status: data.status,
+                                     state_id: stateId
+                                   };
+                                   
+                                   const statusInfo = getStatusForComponent(tempOrder);
+                                   const displayText = `${trackingNumber} ${statusInfo.label}`;
+                                   
+                                   return displayText.length > 35 ? (
+                                     <ScrollingText text={displayText} className="w-full" />
+                                   ) : displayText;
+                                 }
+                               }
                               
                               // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
                               const message = notification.message || '';
