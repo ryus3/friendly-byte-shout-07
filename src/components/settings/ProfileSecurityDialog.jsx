@@ -28,14 +28,14 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useNotifications } from '@/contexts/NotificationsContext';
+import { useSuper } from '@/contexts/SuperProvider'; // النظام الموحد
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
-  const { addNotification } = useNotifications();
+  const { addNotification } = useSuper(); // النظام الموحد
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);

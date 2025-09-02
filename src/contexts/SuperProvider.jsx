@@ -7,8 +7,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+// تم دمج أنظمة الإشعارات في النظام الموحد - لا حاجة للاستيراد المنفصل
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
@@ -83,8 +82,7 @@ const filterDataByEmployeeCode = (data, user) => {
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  const { addNotification } = useNotifications();
-  const { notifyLowStock, notifications: systemNotifications, markAsRead: markAsReadSystem, markAllAsRead: markAllAsReadSystem, clearAll: clearAllSystem, deleteNotification: deleteNotificationSystem } = useNotificationsSystem();
+  // تم دمج أنظمة الإشعارات - سيتم إدارتها داخلياً في SuperProvider
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
