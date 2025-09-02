@@ -28,7 +28,7 @@ const ScrollingText = ({ text, className = "" }) => {
         ref={textRef}
         className="animate-scroll whitespace-nowrap"
         style={{
-          animation: 'scroll-text 6s linear infinite'
+          animation: 'scroll-text 8s linear infinite'
         }}
       >
         {text}

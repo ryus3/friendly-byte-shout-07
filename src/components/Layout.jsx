@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
 import { useTheme } from '@/contexts/ThemeContext.jsx';
-import NotificationsPanel from '@/components/NotificationsPanel.jsx';
+import UnifiedNotificationsPanel from '@/components/notifications/UnifiedNotificationsPanel.jsx';
 import BottomNav from '@/components/BottomNav.jsx';
 import { useAiChat } from '@/contexts/AiChatContext.jsx';
 import AiChatDialog from '@/components/ai/AiChatDialog.jsx';
@@ -309,7 +309,7 @@ const Layout = ({ children }) => {
               <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />
               </Button>
-              <NotificationsPanel />
+              <UnifiedNotificationsPanel />
             </div>
           </div>
         </header>
