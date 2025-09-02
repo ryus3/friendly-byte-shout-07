@@ -249,34 +249,34 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // استخدام نظام الألوان من index.css مع تحسينات للتناسق
+  // ألوان أكثر إشراقاً قليلاً مع الحفاظ على التصميم
   low_stock: { 
-    bg: 'bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-amber-500 dark:border-amber-400',
+    bg: 'bg-amber-100/90 dark:bg-amber-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-amber-600 dark:border-amber-300',
     text: 'text-foreground', 
-    icon: 'text-amber-600 dark:text-amber-400',
-    dot: 'bg-amber-500'
+    icon: 'text-amber-700 dark:text-amber-300',
+    dot: 'bg-amber-600'
   },
   stock_warning: { 
-    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    bg: 'bg-orange-100/90 dark:bg-orange-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-orange-600 dark:border-orange-300',
     text: 'text-foreground', 
-    icon: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-500'
+    icon: 'text-orange-700 dark:text-orange-300',
+    dot: 'bg-orange-600'
   },
   out_of_stock: { 
-    bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-red-500 dark:border-red-400',
+    bg: 'bg-red-100/90 dark:bg-red-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-red-600 dark:border-red-300',
     text: 'text-foreground', 
-    icon: 'text-red-600 dark:text-red-400',
-    dot: 'bg-red-500'
+    icon: 'text-red-700 dark:text-red-300',
+    dot: 'bg-red-600'
   },
   order_completed: { 
-    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-green-500 dark:border-green-400',
+    bg: 'bg-green-100/90 dark:bg-green-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-600 dark:border-green-300',
     text: 'text-foreground', 
-    icon: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500'
+    icon: 'text-green-700 dark:text-green-300',
+    dot: 'bg-green-600'
   },
   order_shipped: { 
     bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
