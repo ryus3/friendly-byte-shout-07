@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -67,7 +67,7 @@ const iconMap = {
 };
 
 const NotificationsPage = () => {
-  const { notifications, markAsRead, markAllAsRead, deleteNotification, createNotification } = useNotificationsSystem();
+  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification, addNotification } = useNotifications();
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -85,12 +85,12 @@ const NotificationsPage = () => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || 
-                         (filter === 'unread' && !notification.read) ||
-                         (filter === 'read' && notification.read);
+                         (filter === 'unread' && !notification.is_read) ||
+                         (filter === 'read' && notification.is_read);
     return matchesSearch && matchesFilter;
   });
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const handleTestNotification = () => {
     const testTypes = [
@@ -102,9 +102,10 @@ const NotificationsPage = () => {
     
     const randomTest = testTypes[Math.floor(Math.random() * testTypes.length)];
     
-    createNotification({
+    addNotification({
       ...randomTest,
-      target_role: 'all'
+      link: '#',
+      auto_delete: false
     });
 
     if (soundEnabled) {
@@ -212,7 +213,7 @@ const NotificationsPage = () => {
                   <span className="hidden sm:inline">تحديد الكل كمقروء</span>
                   <span className="sm:hidden">قراءة الكل</span>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => {}} disabled={notifications.length === 0} className="text-xs sm:text-sm">
+                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
                   <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
                   <span className="hidden sm:inline">حذف الكل</span>
                   <span className="sm:hidden">حذف</span>
@@ -259,7 +260,7 @@ const NotificationsPage = () => {
                         className={cn(
                           "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
                           "bg-card/80 backdrop-blur-sm border-border shadow-sm",
-                          notification.read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
+                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">
@@ -268,25 +269,23 @@ const NotificationsPage = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className={cn(
-                                  "font-semibold text-sm md:text-base min-w-0 w-full",
-                                  !notification.read && "text-primary"
+                                  "font-semibold text-sm md:text-base truncate",
+                                  !notification.is_read && "text-primary"
                                 )}>
-                                  <div className="min-w-0 w-full">
-                                    {notification.title}
-                                  </div>
+                                  {notification.title}
                                 </h3>
-                                {!notification.read && (
+                                {!notification.is_read && (
                                   <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
                                 )}
                               </div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2 min-w-0 w-full">{notification.message}</p>
+                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
                               <p className="text-xs text-muted-foreground/70">
                                 {formatRelativeTime(notification.created_at)}
                               </p>
                             </div>
                           </div>
                           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
-                            {!notification.read && (
+                            {!notification.is_read && (
                               <Button
                                 variant="ghost"
                                 size="icon"
