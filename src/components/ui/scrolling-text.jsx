@@ -16,19 +16,20 @@ const ScrollingText = ({ text, className = "" }) => {
 
   if (!shouldScroll) {
     return (
-      <span ref={containerRef} className={className}>
+      <div ref={containerRef} className={`${className}`}>
         <span ref={textRef}>{text}</span>
-      </span>
+      </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
+    <div ref={containerRef} className={`overflow-hidden relative ${className}`}>
       <div 
         ref={textRef}
-        className="animate-scroll whitespace-nowrap"
+        className="animate-scroll whitespace-nowrap inline-block"
         style={{
-          animation: 'scroll-text 6s linear infinite'
+          animation: 'scroll-text 8s linear infinite',
+          animationDelay: '1s'
         }}
       >
         {text}

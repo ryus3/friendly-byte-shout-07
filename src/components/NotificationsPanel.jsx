@@ -400,14 +400,14 @@ const NotificationsPanel = () => {
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
-    if (notification.type === 'alwaseet_status_change') {
-      // إشعارات الوسيط - انتقال لصفحة طلباتي مع فلترة برقم التتبع
+    if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update') {
+      // إشعارات الطلبات - انتقال لصفحة طلباتي مع فلترة برقم التتبع
       const data = notification.data || {};
       const trackingNumber = data.tracking_number || '';
       if (trackingNumber) {
-        navigate(`/my-orders?search=${encodeURIComponent(trackingNumber)}&highlight=alwaseet`);
+        navigate(`/my-orders?search=${encodeURIComponent(trackingNumber)}&highlight=order`);
       } else {
-        navigate('/my-orders?filter=alwaseet');
+        navigate('/my-orders');
       }
     } else if (notification.type === 'city_discount_selected' || notification.type === 'city_discounts') {
       // إشعارات خصومات المدن - انتقال لصفحة العملاء مع تبويب خصومات المدن
@@ -674,11 +674,84 @@ const NotificationsPanel = () => {
                 allNotifications.slice(0, 8).map(notification => {
                   const notificationType = notification.type || 'default';
                   
-                  // استخدام ألوان الوسيط إذا كان الإشعار من نوع alwaseet_status_change
+// استخدام ألوان الحالات الموحدة للطلبات
                   let colors;
-                  if (notificationType === 'alwaseet_status_change') {
-                    const sid = notification.data?.state_id || parseAlwaseetStateIdFromMessage(notification.message) || notification.data?.status_id;
-                    colors = getAlWaseetNotificationColors(sid);
+                  if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                    // للطلبات، استخدام ألوان الحالات من order-status-translator
+                    const data = notification.data || {};
+                    const orderId = data.order_id;
+                    
+                    if (orderId && orders && orders.length > 0) {
+                      const foundOrder = orders.find(order => order.id === orderId);
+                      if (foundOrder) {
+                        const statusInfo = getStatusForComponent(foundOrder);
+                        // استخراج ألوان من الـ status color class
+                        const statusClass = statusInfo.color || '';
+                        
+                        // تحويل ألوان الحالات إلى ألوان الإشعارات
+                        if (statusClass.includes('emerald') || statusClass.includes('green')) {
+                          colors = {
+                            bg: 'bg-gradient-to-r from-emerald-50 to-green-100 dark:from-emerald-950/30 dark:to-green-900/30',
+                            border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+                            text: 'text-emerald-900 dark:text-emerald-100',
+                            icon: 'text-emerald-600 dark:text-emerald-400',
+                            dot: 'bg-emerald-500'
+                          };
+                        } else if (statusClass.includes('red') || statusClass.includes('rose')) {
+                          colors = {
+                            bg: 'bg-gradient-to-r from-rose-50 to-red-100 dark:from-rose-950/30 dark:to-red-900/30',
+                            border: 'border-r-4 border-rose-500 dark:border-rose-400',
+                            text: 'text-rose-900 dark:text-rose-100',
+                            icon: 'text-rose-600 dark:text-rose-400',
+                            dot: 'bg-rose-500'
+                          };
+                        } else if (statusClass.includes('violet') || statusClass.includes('purple')) {
+                          colors = {
+                            bg: 'bg-gradient-to-r from-violet-50 to-purple-100 dark:from-violet-950/30 dark:to-purple-900/30',
+                            border: 'border-r-4 border-violet-500 dark:border-violet-400',
+                            text: 'text-violet-900 dark:text-violet-100',
+                            icon: 'text-violet-600 dark:text-violet-400',
+                            dot: 'bg-violet-500'
+                          };
+                        } else if (statusClass.includes('orange') || statusClass.includes('amber')) {
+                          colors = {
+                            bg: 'bg-gradient-to-r from-orange-50 to-amber-100 dark:from-orange-950/30 dark:to-amber-900/30',
+                            border: 'border-r-4 border-orange-500 dark:border-orange-400',
+                            text: 'text-orange-900 dark:text-orange-100',
+                            icon: 'text-orange-600 dark:text-orange-400',
+                            dot: 'bg-orange-500'
+                          };
+                        } else if (statusClass.includes('yellow')) {
+                          colors = {
+                            bg: 'bg-gradient-to-r from-yellow-50 to-amber-100 dark:from-yellow-950/30 dark:to-amber-900/30',
+                            border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+                            text: 'text-yellow-900 dark:text-yellow-100',
+                            icon: 'text-yellow-600 dark:text-yellow-400',
+                            dot: 'bg-yellow-500'
+                          };
+                        } else {
+                          // افتراضي للطلبات - أزرق
+                          colors = {
+                            bg: 'bg-gradient-to-r from-blue-50 to-cyan-100 dark:from-blue-950/30 dark:to-cyan-900/30',
+                            border: 'border-r-4 border-blue-500 dark:border-blue-400',
+                            text: 'text-blue-900 dark:text-blue-100',
+                            icon: 'text-blue-600 dark:text-blue-400',
+                            dot: 'bg-blue-500'
+                          };
+                        }
+                      } else {
+                        // طلب غير موجود، استخدام الألوان الافتراضية
+                        colors = typeColorMap[notificationType] || typeColorMap.default;
+                      }
+                    } else {
+                      // fallback للإشعارات القديمة - استخدام ألوان الوسيط إذا كانت متوفرة
+                      if (notificationType === 'alwaseet_status_change') {
+                        const sid = notification.data?.state_id || parseAlwaseetStateIdFromMessage(notification.message) || notification.data?.status_id;
+                        colors = getAlWaseetNotificationColors(sid);
+                      } else {
+                        colors = typeColorMap[notificationType] || typeColorMap.default;
+                      }
+                    }
                   } else {
                     colors = typeColorMap[notificationType] || typeColorMap.default;
                   }
@@ -711,13 +784,28 @@ const NotificationsPanel = () => {
                           <IconComponent />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                              {notification.title}
-                            </h3>
-                            {!(notification.is_read || notification.read) && (
-                              <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
-                            )}
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
+                                {(() => {
+                                  // تحديد عنوان موحد للإشعارات
+                                  if (notificationType === 'alwaseet_status_change') {
+                                    return 'تحديث حالة الوسيط';
+                                  } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                    return 'تحديث حالة الطلب';
+                                  } else {
+                                    return notification.title;
+                                  }
+                                })()}
+                              </h3>
+                              {!(notification.is_read || notification.read) && (
+                                <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatRelativeTime(notification.created_at)}
+                            </p>
                           </div>
                           <div className="text-xs text-foreground font-medium line-clamp-1 mb-1.5">
                             {(() => {
@@ -772,11 +860,7 @@ const NotificationsPanel = () => {
                               ) : message;
                             })()}
                           </div>
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" />
-                              {formatRelativeTime(notification.created_at)}
-                            </p>
+                          <div className="flex items-center justify-end">
                             {!(notification.is_read || notification.read) && (
                               <Button 
                                 variant="ghost" 
