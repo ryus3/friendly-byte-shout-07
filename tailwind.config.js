@@ -240,16 +240,16 @@ module.exports = {
         },
         'scroll-text': {
           '0%': {
-            transform: 'translateX(100%)'
+            transform: 'translateX(0%)'
           },
           '10%': {
-            transform: 'translateX(100%)'
+            transform: 'translateX(0%)'
           },
           '90%': {
-            transform: 'translateX(-100%)'
+            transform: 'translateX(calc(-100% + 150px))'
           },
           '100%': {
-            transform: 'translateX(-100%)'
+            transform: 'translateX(calc(-100% + 150px))'
           }
         }
       },
@@ -273,7 +273,7 @@ module.exports = {
         "syncSpin": "syncSpin 1s linear infinite",
         "wiggle": "wiggle 0.5s ease-in-out",
         "magneticField": "magneticField 3s ease-in-out infinite",
-        "scroll-text": "scroll-text 8s linear infinite",
+        "scroll-text": "scroll-text 6s ease-in-out infinite",
       },
     },
   },
