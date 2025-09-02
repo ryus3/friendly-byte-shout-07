@@ -625,6 +625,19 @@ const NotificationsPanel = () => {
     if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
   }
   
+  // دالة للحصول على وقت العرض الصحيح (آخر تحديث أو الإنشاء)
+  const getNotificationDisplayTime = (notification) => {
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = notification.updated_at ? new Date(notification.updated_at) : null;
+    
+    // إذا كان هناك updated_at وهو أحدث من created_at، استخدمه
+    if (updatedTime && updatedTime > createdTime) {
+      return updatedTime;
+    }
+    
+    return createdTime;
+  };
+
   // ترتيب الإشعارات بناءً على وقت العرض المحدث وحالة القراءة
   const allNotifications = Array.from(uniqueMap.values())
     .map(notification => ({
@@ -640,19 +653,6 @@ const NotificationsPanel = () => {
       // ثم بالوقت المحدث
       return b.displayTime.getTime() - a.displayTime.getTime();
     });
-
-  // دالة للحصول على وقت العرض الصحيح (آخر تحديث أو الإنشاء)
-  const getNotificationDisplayTime = (notification) => {
-    const createdTime = new Date(notification.created_at);
-    const updatedTime = notification.updated_at ? new Date(notification.updated_at) : null;
-    
-    // إذا كان هناك updated_at وهو أحدث من created_at، استخدمه
-    if (updatedTime && updatedTime > createdTime) {
-      return updatedTime;
-    }
-    
-    return createdTime;
-  };
   const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (
