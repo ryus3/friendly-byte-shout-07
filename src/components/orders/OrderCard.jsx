@@ -318,7 +318,9 @@ const OrderCard = ({
               ) : (
                 <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
                   <StatusIcon className="h-4 w-4 flex-shrink-0" />
-                  <ScrollingText text={statusConfig.label} className="font-bold min-w-0 flex-1" />
+                  <div className="min-w-0 flex-1">
+                    <ScrollingText text={statusConfig.label} className="font-bold" maxWidth="140px" />
+                  </div>
                 </div>
               )}
               

@@ -1,6 +1,6 @@
 import React, { useLayoutEffect, useRef, useState, useCallback } from 'react';
 
-const ScrollingText = ({ text, className = "" }) => {
+const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
   const textRef = useRef(null);
   const containerRef = useRef(null);
   const [shouldScroll, setShouldScroll] = useState(false);
@@ -11,8 +11,8 @@ const ScrollingText = ({ text, className = "" }) => {
       setTimeout(() => {
         const textWidth = textRef.current?.scrollWidth || 0;
         const containerWidth = containerRef.current?.clientWidth || 0;
-        setShouldScroll(textWidth > containerWidth + 10); // هامش صغير
-      }, 50);
+        setShouldScroll(textWidth > containerWidth + 5); // هامش أصغر
+      }, 100);
     }
   }, []);
 
@@ -23,24 +23,38 @@ const ScrollingText = ({ text, className = "" }) => {
     const handleResize = () => checkScrollNeed();
     window.addEventListener('resize', handleResize);
     
-    return () => window.removeEventListener('resize', handleResize);
+    // مراقبة التغييرات في حجم النص
+    let resizeObserver;
+    if (textRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        checkScrollNeed();
+      });
+      resizeObserver.observe(textRef.current);
+    }
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, [text, checkScrollNeed]);
 
   if (!shouldScroll) {
     return (
-      <div ref={containerRef} className={`${className}`} style={{ maxWidth: '200px' }}>
+      <div ref={containerRef} className={`${className}`} style={{ maxWidth, minHeight: '20px' }}>
         <span ref={textRef} className="whitespace-nowrap">{text}</span>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={`overflow-hidden relative ${className}`} style={{ maxWidth: '200px' }}>
+    <div ref={containerRef} className={`overflow-hidden relative ${className}`} style={{ maxWidth, minHeight: '20px' }}>
       <div 
         ref={textRef}
-        className="animate-scroll-text whitespace-nowrap inline-block"
+        className="animate-scroll-text whitespace-nowrap absolute top-0 right-0"
         style={{
-          animationDelay: '1s'
+          animationDelay: '0.5s'
         }}
       >
         {text}
