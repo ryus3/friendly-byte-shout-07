@@ -28,6 +28,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { supabase } from '@/integrations/supabase/client';
 
 // دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
 const getAlWaseetNotificationColors = (stateId) => {
@@ -387,30 +388,77 @@ const NotificationsPanel = () => {
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
   const navigate = useNavigate();
 
-  // دالة موحدة لتنسيق نص الإشعار بناءً على نوعه
+  // دالة محسنة لاستخراج رقم التتبع الفعلي من بيانات الطلب
+  const getActualTrackingNumber = async (notification) => {
+    try {
+      if (notification.type === 'order_status_changed' && notification.order_id) {
+        const { data: order } = await supabase
+          .from('orders')
+          .select('tracking_number, order_number, delivery_partner')
+          .eq('id', notification.order_id)
+          .single();
+        
+        return order?.tracking_number || order?.order_number;
+      }
+      
+      if (notification.type === 'alwaseet_status_change') {
+        const data = notification.data || {};
+        return data.tracking_number || parseTrackingFromMessage(notification.message);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching tracking number:', error);
+      return null;
+    }
+  };
+
+  // دالة موحدة محسنة لتنسيق نص الإشعار
   const formatNotificationText = (notification) => {
     if (notification.type === 'alwaseet_status_change') {
-      // استخراج رقم التتبع ونص الحالة من الرسالة
       const data = notification.data || {};
       const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
       const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
       
       if (trackingNumber && stateId) {
         const statusConfig = getStatusConfig(Number(stateId));
-        const statusText = statusConfig.name || 'تحديث الحالة';
+        const statusText = statusConfig?.name || 'تحديث الحالة';
         return `${trackingNumber} ${statusText}`;
       }
       
-      return notification.message.replace(/رقم التتبع:\s*/, '').replace(/\s*الحالة:\s*/, ' ');
+      // محاولة استخراج أفضل عرض من النص
+      const cleanMessage = notification.message
+        .replace(/رقم التتبع:\s*/g, '')
+        .replace(/\s*الحالة:\s*/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return cleanMessage;
     }
     
-    if (notification.type === 'order_status_changed' && notification.order_data) {
-      // استخدام النظام الموحد لحالات الطلبات
-      const order = notification.order_data;
-      const trackingNumber = order.tracking_number || order.order_number || 'غير محدد';
-      const statusConfig = getStatusForComponent(order);
+    if (notification.type === 'order_status_changed') {
+      // محاولة الحصول على البيانات من notification.data أولاً
+      const data = notification.data || {};
+      const orderData = notification.order_data || data;
       
-      return `${trackingNumber} ${statusConfig.label}`;
+      if (orderData) {
+        const trackingNumber = orderData.tracking_number || orderData.order_number;
+        const statusConfig = getStatusForComponent(orderData);
+        
+        if (trackingNumber) {
+          return `${trackingNumber} ${statusConfig.label}`;
+        }
+      }
+      
+      // استخراج من الرسالة كحل احتياطي
+      const message = notification.message || '';
+      const trackingMatch = message.match(/(\d{8,})/);
+      const statusMatch = message.match(/الحالة:\s*(.+?)(?:\s|$)/);
+      
+      if (trackingMatch && statusMatch) {
+        return `${trackingMatch[1]} ${statusMatch[1]}`;
+      }
+      
+      return message.replace(/رقم الطلب:\s*/, '').replace(/\s*الحالة:\s*/, ' ');
     }
     
     return notification.message || notification.title || 'إشعار جديد';
@@ -740,48 +788,40 @@ const NotificationsPanel = () => {
                           <IconComponent />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex-1 min-w-0">
-                              {formatNotificationText(notification).length > 35 ? (
-                                <ScrollingText 
-                                  text={formatNotificationText(notification)}
-                                  className={cn("text-sm font-medium", 
-                                    !notification.read && !notification.is_read ? 
-                                      colors.text : 
-                                      colors.readText || 'text-foreground/90'
-                                  )}
-                                />
-                              ) : (
-                                <span className={cn("text-sm font-medium", 
-                                  !notification.read && !notification.is_read ? 
-                                    colors.text : 
-                                    colors.readText || 'text-foreground/90'
-                                )}>
-                                  {formatNotificationText(notification)}
-                                </span>
-                              )}
-                            </div>
-                            {!notification.read && !notification.is_read && (
-                              <div className={cn("w-2 h-2 rounded-full", colors.dot)} />
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {formatRelativeTime(notification.created_at)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-5 w-5 p-0 opacity-60 hover:opacity-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // معاينة سريعة
-                              }}
-                            >
-                              <Eye className="h-3 w-3" />
-                            </Button>
-                          </div>
+                           <div className="flex items-center justify-between mb-1">
+                             <div className="flex-1 min-w-0 mr-2">
+                               <ScrollingText 
+                                 text={formatNotificationText(notification)}
+                                 className={cn("text-sm font-medium whitespace-nowrap", 
+                                   !notification.read && !notification.is_read ? 
+                                     colors.text : 
+                                     colors.readText || 'text-foreground/90'
+                                 )}
+                               />
+                             </div>
+                             <div className="flex items-center gap-2 flex-shrink-0">
+                               <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                 <Clock className="w-3 h-3" />
+                                 {formatRelativeTime(notification.created_at)}
+                               </span>
+                               {!notification.read && !notification.is_read && (
+                                 <>
+                                   <div className={cn("w-2 h-2 rounded-full", colors.dot)} />
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     className="h-5 w-5 p-0 opacity-60 hover:opacity-100"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       // معاينة سريعة للإشعارات غير المقروءة فقط
+                                     }}
+                                   >
+                                     <Eye className="h-3 w-3" />
+                                   </Button>
+                                 </>
+                               )}
+                             </div>
+                           </div>
                         </div>
                       </div>
                     </motion.div>
