@@ -78,7 +78,7 @@ const NotificationsPage = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const filteredNotifications = notifications.filter(notification => {
+  const filteredNotifications = (notifications || []).filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || 
@@ -87,7 +87,7 @@ const NotificationsPage = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = (notifications || []).filter(n => !n.is_read).length;
 
   const handleTestNotification = () => {
     const testTypes = [
@@ -162,7 +162,7 @@ const NotificationsPage = () => {
               <CardTitle className="text-sm md:text-lg">إجمالي الإشعارات</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-primary">{notifications.length}</div>
+              <div className="text-xl md:text-2xl font-bold text-primary">{(notifications || []).length}</div>
             </CardContent>
           </Card>
 
@@ -180,7 +180,7 @@ const NotificationsPage = () => {
               <CardTitle className="text-sm md:text-lg">مقروءة</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-green-600">{notifications.length - unreadCount}</div>
+              <div className="text-xl md:text-2xl font-bold text-green-600">{(notifications || []).length - unreadCount}</div>
             </CardContent>
           </Card>
 
@@ -208,7 +208,7 @@ const NotificationsPage = () => {
                 <Button variant="outline" size="sm" onClick={markAllNotificationsAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
                   تحديد الكل كمقروء
                 </Button>
-                <Button variant="destructive" size="sm" onClick={clearAllNotifications} disabled={notifications.length === 0} className="text-xs sm:text-sm">
+                <Button variant="destructive" size="sm" onClick={clearAllNotifications} disabled={(notifications || []).length === 0} className="text-xs sm:text-sm">
                   حذف الكل
                 </Button>
               </div>
