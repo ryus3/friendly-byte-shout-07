@@ -7,28 +7,44 @@ const ScrollingText = ({ text, className = "" }) => {
   const [shouldScroll, setShouldScroll] = useState(false);
 
   useEffect(() => {
-    if (textRef.current && containerRef.current) {
-      const textWidth = textRef.current.scrollWidth;
-      const containerWidth = containerRef.current.clientWidth;
-      setShouldScroll(textWidth > containerWidth);
+    const checkOverflow = () => {
+      if (textRef.current && containerRef.current) {
+        const textWidth = textRef.current.scrollWidth;
+        const containerWidth = containerRef.current.clientWidth;
+        setShouldScroll(textWidth > containerWidth);
+      }
+    };
+
+    checkOverflow();
+    
+    // إعادة فحص عند تغيير النص أو حجم النافذة
+    const resizeObserver = new ResizeObserver(checkOverflow);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, [text]);
 
   if (!shouldScroll) {
     return (
-      <span ref={containerRef} className={className}>
-        <span ref={textRef}>{text}</span>
-      </span>
+      <div ref={containerRef} className={`${className} min-w-0`}>
+        <span ref={textRef} className="truncate">{text}</span>
+      </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={`overflow-hidden ${className}`}>
+    <div ref={containerRef} className={`overflow-hidden ${className} min-w-0`}>
       <div 
         ref={textRef}
-        className="animate-scroll whitespace-nowrap"
+        className="whitespace-nowrap will-change-transform"
         style={{
-          animation: 'scroll-text 6s linear infinite'
+          animation: 'scroll-text 8s linear infinite'
         }}
       >
         {text}
