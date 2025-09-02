@@ -274,7 +274,7 @@ export const translateOrderStatus = (status, deliveryStatus = null, isLocalOrder
 /**
  * الحصول على تكوين حالة محددة
  */
-export const getStatusConfig = (status) => {
+const getStatusConfig = (status) => {
   if (!status) {
     return getDefaultConfig('غير محدد');
   }
@@ -383,6 +383,5 @@ export const getStatusForComponent = (order, componentType = 'default') => {
 export default {
   translateOrderStatus,
   getStatusForComponent,
-  getStatusConfigFromAlWaseet,
-  getStatusConfig
+  getStatusConfigFromAlWaseet
 };

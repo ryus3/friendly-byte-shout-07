@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, Volume2, VolumeX, Search, Settings } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,9 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useSuper } from '@/contexts/SuperProvider';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast';
-import UnifiedNotificationsDisplay from '@/components/notifications/UnifiedNotificationsDisplay';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { ar } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 
 // أيقونات نظيفة بدون رموز مزعجة
@@ -64,21 +67,21 @@ const iconMap = {
 };
 
 const NotificationsPage = () => {
-  const { 
-    notifications, 
-    markNotificationAsRead, 
-    markAllNotificationsAsRead, 
-    clearAllNotifications, 
-    deleteNotification, 
-    addNotification 
-  } = useSuper();
-  
+  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification, addNotification } = useNotifications();
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const filteredNotifications = (notifications || []).filter(notification => {
+  const formatRelativeTime = (dateString) => {
+    try {
+      return formatDistanceToNowStrict(new Date(dateString), { addSuffix: true, locale: ar });
+    } catch (error) {
+      return 'منذ فترة';
+    }
+  };
+
+  const filteredNotifications = notifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || 
@@ -87,7 +90,7 @@ const NotificationsPage = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const unreadCount = (notifications || []).filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const handleTestNotification = () => {
     const testTypes = [
@@ -162,7 +165,7 @@ const NotificationsPage = () => {
               <CardTitle className="text-sm md:text-lg">إجمالي الإشعارات</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-primary">{(notifications || []).length}</div>
+              <div className="text-xl md:text-2xl font-bold text-primary">{notifications.length}</div>
             </CardContent>
           </Card>
 
@@ -180,7 +183,7 @@ const NotificationsPage = () => {
               <CardTitle className="text-sm md:text-lg">مقروءة</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-green-600">{(notifications || []).length - unreadCount}</div>
+              <div className="text-xl md:text-2xl font-bold text-green-600">{notifications.length - unreadCount}</div>
             </CardContent>
           </Card>
 
@@ -205,11 +208,15 @@ const NotificationsPage = () => {
                 <CardDescription>إدارة وعرض جميع الإشعارات</CardDescription>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllNotificationsAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
-                  تحديد الكل كمقروء
+                <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">تحديد الكل كمقروء</span>
+                  <span className="sm:hidden">قراءة الكل</span>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={clearAllNotifications} disabled={(notifications || []).length === 0} className="text-xs sm:text-sm">
-                  حذف الكل
+                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
+                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">حذف الكل</span>
+                  <span className="sm:hidden">حذف</span>
                 </Button>
               </div>
             </div>
@@ -240,14 +247,79 @@ const NotificationsPage = () => {
             <Separator />
 
             <ScrollArea className="h-[60vh] md:h-96">
-              <UnifiedNotificationsDisplay
-                notifications={filteredNotifications}
-                onMarkAsRead={markNotificationAsRead}
-                onDelete={deleteNotification}
-                onMarkAllAsRead={markAllNotificationsAsRead}
-                onClearAll={clearAllNotifications}
-                isDropdown={false}
-              />
+              <AnimatePresence>
+                {filteredNotifications.length > 0 ? (
+                  <div className="space-y-3">
+                    {filteredNotifications.map((notification) => (
+                      <motion.div
+                        key={notification.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className={cn(
+                          "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
+                          "bg-card/80 backdrop-blur-sm border-border shadow-sm",
+                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className={cn(
+                                  "font-semibold text-sm md:text-base truncate",
+                                  !notification.is_read && "text-primary"
+                                )}>
+                                  {notification.title}
+                                </h3>
+                                {!notification.is_read && (
+                                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                                )}
+                              </div>
+                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
+                              <p className="text-xs text-muted-foreground/70">
+                                {formatRelativeTime(notification.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
+                            {!notification.is_read && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => markAsRead(notification.id)}
+                                title="تحديد كمقروء"
+                                className="h-8 w-8 sm:h-10 sm:w-10"
+                              >
+                                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteNotification(notification.id)}
+                              title="حذف الإشعار"
+                              className="text-destructive hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
+                            >
+                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-semibold mb-2">لا توجد إشعارات</h3>
+                    <p className="text-muted-foreground">
+                      {searchTerm || filter !== 'all' ? 'لا توجد إشعارات تطابق المعايير المحددة' : 'لم يتم العثور على أي إشعارات'}
+                    </p>
+                  </div>
+                )}
+              </AnimatePresence>
             </ScrollArea>
           </CardContent>
         </Card>

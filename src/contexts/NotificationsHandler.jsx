@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
-import { useSuper } from './SuperProvider'; // النظام الموحد
+import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
-  const { addNotification } = useSuper(); // النظام الموحد
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     // التحقق من الشروط الأساسية

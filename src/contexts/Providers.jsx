@@ -2,7 +2,8 @@ import React from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext.jsx';
 import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
-// تم دمج أنظمة الإشعارات في SuperProvider - لا حاجة للمزودات المنفصلة
+import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
+import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 import { SuperProvider } from '@/contexts/SuperProvider.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
@@ -13,17 +14,21 @@ export const AppProviders = ({ children }) => {
     <SupabaseProvider>
       <ThemeProvider>
         <UnifiedAuthProvider>
-          <AlWaseetProvider>
-            <AiChatProvider>
-              <ProfitsProvider>
-                <SuperProvider>
-                  <VariantsProvider>
+          <NotificationsSystemProvider>
+            <AlWaseetProvider>
+              <NotificationsProvider>
+                <AiChatProvider>
+                  <ProfitsProvider>
+                    <SuperProvider>
+                      <VariantsProvider>
                         {children}
-                  </VariantsProvider>
-                </SuperProvider>
-              </ProfitsProvider>
-            </AiChatProvider>
-          </AlWaseetProvider>
+                      </VariantsProvider>
+                    </SuperProvider>
+                  </ProfitsProvider>
+                </AiChatProvider>
+              </NotificationsProvider>
+            </AlWaseetProvider>
+          </NotificationsSystemProvider>
         </UnifiedAuthProvider>
       </ThemeProvider>
     </SupabaseProvider>

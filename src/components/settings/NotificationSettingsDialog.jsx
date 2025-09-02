@@ -121,7 +121,7 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {(notificationCategories || []).filter(Boolean).map((category, index) => (
+          {notificationCategories.filter(Boolean).map((category, index) => (
             <Card key={index} className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">

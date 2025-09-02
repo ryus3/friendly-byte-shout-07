@@ -1,21 +1,34 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Bell, Volume2, VolumeX, X, UserPlus, Package, Clock, Eye, Check, Trash2 } from 'lucide-react';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ar } from 'date-fns/locale';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { toast } from '@/components/ui/use-toast';
+import React, { useState } from 'react';
+import { 
+  Bell, Package, CheckCircle, AlertTriangle, Trash2, Check, Eye, UserPlus, Bot,
+  ShoppingCart, TrendingDown, Star, Gift, Clock, CreditCard, Truck, 
+  MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target, MoreHorizontal
+} from 'lucide-react';
+import ScrollingText from '@/components/ui/scrolling-text';
 import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useSuper } from '@/contexts/SuperProvider';
-import { getStatusConfig, getStatusForComponent } from '@/lib/order-status-translator';
-import ScrollingText from '@/components/ui/scrolling-text';
-import UnifiedNotificationsDisplay from '@/components/notifications/UnifiedNotificationsDisplay';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
+import { formatDistanceToNowStrict } from 'date-fns';
+import { ar } from 'date-fns/locale';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 // دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
 const getAlWaseetNotificationColors = (stateId) => {
@@ -366,14 +379,8 @@ const typeColorMap = {
 };
 
 const NotificationsPanel = () => {
-  // تم التوحيد: نستخدم الآن النظام الموحد من SuperProvider فقط
-  const { 
-    notifications, 
-    markNotificationAsRead, 
-    markAllNotificationsAsRead, 
-    clearAllNotifications, 
-    deleteNotification 
-  } = useSuper();
+  const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
+  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
   const { orders } = useSuper(); // النظام الموحد للطلبات
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
@@ -383,9 +390,13 @@ const NotificationsPanel = () => {
   const handleNotificationClick = (e, notification) => {
     e.stopPropagation();
     
-    // تحديد الإشعار كمقروء - النظام الموحد
+    // تحديد الإشعار كمقروء
     if (!notification.is_read) {
-      markNotificationAsRead(notification.id);
+      if (notification.related_entity_type) {
+        markSystemAsRead(notification.id);
+      } else {
+        markAsRead(notification.id);
+      }
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
@@ -489,22 +500,22 @@ const NotificationsPanel = () => {
 
   const handleMarkAsRead = (e, id) => {
     e.stopPropagation();
-    // Mark notification as read - النظام الموحد
-    markNotificationAsRead(id);
+    // Mark notification as read
+    markAsRead(id);
     toast({ title: "تم تحديد الإشعار كمقروء" });
   };
 
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
-    // Mark all notifications as read - النظام الموحد
-    markAllNotificationsAsRead();
+    // Mark all notifications as read
+    markAllAsRead();
     toast({ title: "تم تحديد الكل كمقروء" });
   };
 
   const handleClearAll = (e) => {
     e.stopPropagation();
-    // Clear all notifications - النظام الموحد
-    clearAllNotifications();
+    // Clear all notifications
+    clearAll();
     toast({ title: "تم حذف جميع الإشعارات" });
   };
 
@@ -542,25 +553,40 @@ const NotificationsPanel = () => {
     const m = msg.match(/\b(\d{6,})\b/);
     return m ? m[1] : null;
   };
-  const filtered = (notifications || []).filter(n => {
-    // فلترة الإشعارات القديمة وإزالة إشعارات الوسيط غير المهمة - النظام الموحد
-    if (n.type === 'welcome') return false;
-    
-    if (n.type === 'alwaseet_status_change') {
-      const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
-      const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
+  const merged = [
+    ...notifications.filter(n => {
+      // فلترة الإشعارات القديمة وإزالة إشعارات الوسيط غير المهمة
+      if (n.type === 'welcome') return false;
       
-      // السماح فقط بالحالات المهمة
-      if (!statusCode || !importantCodes.includes(String(statusCode))) {
-        return false;
+      if (n.type === 'alwaseet_status_change') {
+        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
+        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
+        
+        // السماح فقط بالحالات المهمة
+        if (!statusCode || !importantCodes.includes(String(statusCode))) {
+          return false;
+        }
       }
-    }
-    
-    return true;
-  });
+      
+      return true;
+    }),
+    ...systemNotifications.filter(n => {
+      // تطبيق نفس الفلترة لإشعارات النظام
+      if (n.type === 'alwaseet_status_change') {
+        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
+        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
+        
+        if (!statusCode || !importantCodes.includes(String(statusCode))) {
+          return false;
+        }
+      }
+      
+      return true;
+    })
+  ];
   
   const uniqueMap = new Map();
-  for (const n of filtered) {
+  for (const n of merged) {
     let uniqueKey = n.id;
     
     // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id (مع تعويض عند غياب data)

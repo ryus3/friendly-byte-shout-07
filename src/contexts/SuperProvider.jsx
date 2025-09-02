@@ -7,7 +7,8 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
-// تم دمج أنظمة الإشعارات في النظام الموحد - لا حاجة للاستيراد المنفصل
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
@@ -82,7 +83,8 @@ const filterDataByEmployeeCode = (data, user) => {
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  // تم دمج أنظمة الإشعارات - سيتم إدارتها داخلياً في SuperProvider
+  const { addNotification } = useNotifications();
+  const { notifyLowStock } = useNotificationsSystem();
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
@@ -1617,132 +1619,6 @@ export const SuperProvider = ({ children }) => {
     }
   }, [user, fetchAllData]);
 
-  // وظائف الإشعارات المدمجة
-  const addNotification = useCallback(async (notification) => {
-    try {
-      const newNotification = {
-        ...notification,
-        id: Date.now() + Math.random(),
-        created_at: new Date().toISOString(),
-        is_read: false,
-        user_id: user?.id
-      };
-      
-      setNotifications(prev => [newNotification, ...prev]);
-      
-      // محاولة حفظ في قاعدة البيانات
-      try {
-        await supabase.from('notifications').insert([newNotification]);
-      } catch (dbError) {
-        console.warn('⚠️ فشل حفظ الإشعار في قاعدة البيانات:', dbError);
-      }
-      
-      return newNotification;
-    } catch (error) {
-      console.error('❌ خطأ في إضافة الإشعار:', error);
-      return null;
-    }
-  }, [user?.id]);
-
-  const markNotificationAsRead = useCallback(async (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-    } catch (error) {
-      console.warn('⚠️ فشل تحديث الإشعار في قاعدة البيانات:', error);
-    }
-  }, []);
-
-  const markAllNotificationsAsRead = useCallback(async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user?.id);
-    } catch (error) {
-      console.warn('⚠️ فشل تحديث الإشعارات في قاعدة البيانات:', error);
-    }
-  }, [user?.id]);
-
-  const clearAllNotifications = useCallback(async () => {
-    setNotifications([]);
-    try {
-      await supabase.from('notifications').delete().eq('user_id', user?.id);
-    } catch (error) {
-      console.warn('⚠️ فشل حذف الإشعارات من قاعدة البيانات:', error);
-    }
-  }, [user?.id]);
-
-  const deleteNotification = useCallback(async (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    try {
-      await supabase.from('notifications').delete().eq('id', id);
-    } catch (error) {
-      console.warn('⚠️ فشل حذف الإشعار من قاعدة البيانات:', error);
-    }
-  }, []);
-
-  // وظائف الإشعارات المدمجة
-  const addNotification = useCallback(async (notification) => {
-    try {
-      const newNotification = {
-        ...notification,
-        id: Date.now() + Math.random(),
-        created_at: new Date().toISOString(),
-        is_read: false,
-        user_id: user?.id
-      };
-      
-      setNotifications(prev => [newNotification, ...prev]);
-      
-      // محاولة حفظ في قاعدة البيانات
-      try {
-        await supabase.from('notifications').insert([newNotification]);
-      } catch (dbError) {
-        console.warn('⚠️ فشل حفظ الإشعار في قاعدة البيانات:', dbError);
-      }
-      
-      return newNotification;
-    } catch (error) {
-      console.error('❌ خطأ في إضافة الإشعار:', error);
-      return null;
-    }
-  }, [user?.id]);
-
-  const markNotificationAsRead = useCallback(async (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-    } catch (error) {
-      console.warn('⚠️ فشل تحديث الإشعار في قاعدة البيانات:', error);
-    }
-  }, []);
-
-  const markAllNotificationsAsRead = useCallback(async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    try {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user?.id);
-    } catch (error) {
-      console.warn('⚠️ فشل تحديث الإشعارات في قاعدة البيانات:', error);
-    }
-  }, [user?.id]);
-
-  const clearAllNotifications = useCallback(async () => {
-    setNotifications([]);
-    try {
-      await supabase.from('notifications').delete().eq('user_id', user?.id);
-    } catch (error) {
-      console.warn('⚠️ فشل حذف الإشعارات من قاعدة البيانات:', error);
-    }
-  }, [user?.id]);
-
-  const deleteNotification = useCallback(async (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    try {
-      await supabase.from('notifications').delete().eq('id', id);
-    } catch (error) {
-      console.warn('⚠️ فشل حذف الإشعار من قاعدة البيانات:', error);
-    }
-  }, []);
-
   // القيم المرجعة - نفس بنية InventoryContext بالضبط مع قيم آمنة
   const contextValue = {
     // البيانات الأساسية - مع قيم افتراضية آمنة
@@ -1755,15 +1631,6 @@ export const SuperProvider = ({ children }) => {
     profits: allData.profits || [],
     settlementInvoices: settlementInvoices || [],
     aiOrders: allData.aiOrders || [],
-    
-    // نظام الإشعارات الموحد
-    notifications: notifications || [],
-    addNotification,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
-    clearAllNotifications,
-    deleteNotification,
-    
     settings: allData.settings || { 
       deliveryFee: 5000, 
       lowStockThreshold: 5, 

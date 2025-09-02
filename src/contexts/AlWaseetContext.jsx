@@ -3,7 +3,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
-import { useSuper } from './SuperProvider'; // النظام الموحد
+import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
@@ -14,14 +14,14 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
   
-  // استخدام النظام الموحد للإشعارات
+  // استخدام اختياري لنظام الإشعارات
   let createNotification = null;
   try {
-    const superProvider = useSuper();
-    createNotification = superProvider.addNotification;
+    const notificationsSystem = useNotificationsSystem();
+    createNotification = notificationsSystem.createNotification;
   } catch (error) {
-    // SuperProvider غير متاح بعد
-    console.log('SuperProvider not ready yet');
+    // NotificationsSystemProvider غير متاح بعد
+    console.log('NotificationsSystem not ready yet');
   }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
@@ -108,14 +108,14 @@ export const AlWaseetProvider = ({ children }) => {
       priority 
     });
     
-    // البحث عن الإشعار الموجود باستخدام related_entity_id بدلاً من order_number
+    // البحث عن الإشعار الموجود وتحديثه أو إنشاء جديد
     try {
-      // البحث عن الإشعار الموجود باستخدام related_entity_id
+      // البحث عن الإشعار الموجود
       const { data: existingNotifications, error: searchError } = await supabase
         .from('notifications')
         .select('id')
         .eq('type', 'order_status_update')
-        .eq('related_entity_id', trackingNumber)
+        .eq('data->>order_number', trackingNumber)
         .limit(1);
         
       if (searchError) {
@@ -155,8 +155,7 @@ export const AlWaseetProvider = ({ children }) => {
           title: 'تحديث حالة الطلب',
           message: message,
           priority: priority,
-          data: notificationData,
-          related_entity_id: trackingNumber
+          data: notificationData
         };
         
         console.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
