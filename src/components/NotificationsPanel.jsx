@@ -542,7 +542,7 @@ const NotificationsPanel = () => {
     const m = msg.match(/\b(\d{6,})\b/);
     return m ? m[1] : null;
   };
-  const filtered = notifications.filter(n => {
+  const filtered = (notifications || []).filter(n => {
     // فلترة الإشعارات القديمة وإزالة إشعارات الوسيط غير المهمة - النظام الموحد
     if (n.type === 'welcome') return false;
     
