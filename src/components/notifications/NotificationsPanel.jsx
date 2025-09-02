@@ -463,8 +463,6 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
         navigate('/profits');
       } else if (notification.type === 'ai_order' || notification.type === 'ai') {
         navigate('/dashboard');
-      } else if (notification.type === 'city_discount_selected' || notification.type === 'city_discounts') {
-        navigate('/customers-management?tab=city-discounts');
       } else {
         // الافتراضي للأنواع الأخرى
         navigate('/dashboard');
@@ -707,16 +705,16 @@ const NotificationsPanel = ({ allowedTypes = [], canViewAll = false, className =
                              </h4>
                              
                              {/* النص مع التمرير للنصوص الطويلة */}
-                              <div className={`text-xs mt-1 ${
-                                !notification.read ? styles.text : 'text-foreground/80'
-                              }`}>
-                               {displayText.length > 35 ? (
+                             <div className={`text-xs mt-1 ${
+                               !notification.read ? styles.text : 'text-muted-foreground'
+                             }`}>
+                               {displayText.length > 40 ? (
                                  <ScrollingText 
                                    text={displayText}
                                    className="max-w-full h-4"
                                  />
                                ) : (
-                                 <p className="line-clamp-1">{displayText}</p>
+                                 <p className="line-clamp-2">{displayText}</p>
                                )}
                              </div>
                              
