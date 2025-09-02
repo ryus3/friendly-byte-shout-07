@@ -802,12 +802,12 @@ const NotificationsPanel = () => {
                                 <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
                               )}
                             </div>
-                             <p className="text-[10px] text-gray-600 dark:text-gray-400 flex items-center gap-1 flex-shrink-0 mr-2">
-                               <Clock className="w-2.5 h-2.5" />
-                               {formatRelativeTime(notification.created_at)}
-                             </p>
+                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatRelativeTime(notification.created_at)}
+                            </p>
                           </div>
-                          <div className="text-xs text-gray-700 dark:text-gray-300 font-medium line-clamp-1 mb-1.5">
+                          <div className="text-xs text-foreground font-medium line-clamp-1 mb-1.5">
                             {(() => {
                                // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
                                if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
