@@ -4,6 +4,7 @@ import {
   ShoppingCart, TrendingDown, Star, Gift, Clock, CreditCard, Truck, 
   MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target, MoreHorizontal
 } from 'lucide-react';
+import ScrollingText from '@/components/ui/scrolling-text';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu,
@@ -407,7 +408,7 @@ const NotificationsPanel = () => {
       }
     } else if (notification.type === 'city_discount_selected' || notification.type === 'city_discounts') {
       // إشعارات خصومات المدن - انتقال لصفحة العملاء مع تبويب خصومات المدن
-      navigate('/customers?tab=city-discounts');
+      navigate('/customers-management?tab=city-discounts');
     } else if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'ai_order') {
@@ -715,9 +716,32 @@ const NotificationsPanel = () => {
                               <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
                             )}
                           </div>
-                          <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-1.5">
-                            {notification.message}
-                          </p>
+                          <div className="text-xs text-foreground/80 line-clamp-1 mb-1.5">
+                            {(() => {
+                              // تنسيق خاص لرسائل الوسيط - عرض رقم التتبع والحالة فقط
+                              if (notificationType === 'alwaseet_status_change') {
+                                const data = notification.data || {};
+                                const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+                                const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
+                                
+                                if (trackingNumber && stateId) {
+                                  const statusConfig = getStatusConfig(Number(stateId));
+                                  const statusText = statusConfig.name || 'تحديث الحالة';
+                                  const displayText = `${trackingNumber} ${statusText}`;
+                                  
+                                  return displayText.length > 35 ? (
+                                    <ScrollingText text={displayText} className="w-full" />
+                                  ) : displayText;
+                                }
+                              }
+                              
+                              // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
+                              const message = notification.message || '';
+                              return message.length > 35 ? (
+                                <ScrollingText text={message} className="w-full" />
+                              ) : message;
+                            })()}
+                          </div>
                           <div className="flex items-center justify-between">
                             <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
                               <Clock className="w-2.5 h-2.5" />
