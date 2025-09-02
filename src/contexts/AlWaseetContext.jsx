@@ -40,14 +40,14 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي
-  const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
+  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع تحديث الإشعارات الموجودة
+  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText) => {
     if (!createNotification || !trackingNumber || !stateId) return;
     
     console.log('🔔 محاولة إرسال إشعار:', { trackingNumber, stateId, statusText });
     
     // الحالات المهمة التي تستحق إشعارات
-    const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
+    const importantStates = ['2', '4', '13', '17', '25', '26', '31', '32'];
     if (!importantStates.includes(String(stateId))) {
       console.log('⏭️ تجاهل state_id غير مهم:', stateId);
       return;
@@ -65,7 +65,7 @@ export const AlWaseetProvider = ({ children }) => {
     
     const statusConfig = getStatusConfig(Number(stateId));
     
-    // تحسين النص حسب state_id مع تنسيق موحد
+    // تحسين النص حسب state_id مع استخدام النص الصحيح من alwaseet-statuses
     let message = '';
     let priority = 'medium';
     
@@ -77,6 +77,10 @@ export const AlWaseetProvider = ({ children }) => {
       case '4':
         message = `${trackingNumber} تم التسليم بنجاح`;
         priority = 'high';
+        break;
+      case '13':
+        message = `${trackingNumber} في مخزن مرتجع بغداد`;
+        priority = 'medium';
         break;
       case '17':
         message = `${trackingNumber} تم الإرجاع`;
@@ -97,33 +101,67 @@ export const AlWaseetProvider = ({ children }) => {
         priority = statusConfig.priority || 'medium';
     }
     
-    console.log('✅ إرسال إشعار الوسيط:', {
+    console.log('✅ تحديث إشعار الوسيط:', {
       trackingNumber, 
       stateId, 
       message, 
       priority 
     });
     
-    // إرسال الإشعار مع البيانات المطلوبة والتأكد من وجود state_id
+    // البحث عن الإشعار الموجود وتحديثه أو إنشاء جديد
     try {
+      // البحث عن الإشعار الموجود
+      const { data: existingNotifications, error: searchError } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('type', 'order_status_update')
+        .eq('data->>order_number', trackingNumber)
+        .limit(1);
+        
+      if (searchError) {
+        console.error('❌ خطأ في البحث عن الإشعار الموجود:', searchError);
+      }
+      
       const notificationData = {
-        type: 'alwaseet_status_change',
-        title: 'تحديث حالة الطلب',
-        message: message,
-        priority: priority,
-        data: {
-          state_id: String(stateId), // التأكد من وجود state_id هنا
-          tracking_number: trackingNumber,
-          status_text: statusText,
-          timestamp: new Date().toISOString(),
-          // إضافة البيانات للتوافق مع الإشعارات القديمة
-          order_id: trackingNumber,
-          order_number: trackingNumber
-        }
+        state_id: String(stateId),
+        tracking_number: trackingNumber,
+        status_text: statusConfig.text || statusText,
+        timestamp: new Date().toISOString(),
+        order_id: trackingNumber,
+        order_number: trackingNumber
       };
       
-      console.log('📤 بيانات الإشعار المرسلة:', notificationData);
-      createNotification(notificationData);
+      if (existingNotifications && existingNotifications.length > 0) {
+        // تحديث الإشعار الموجود
+        const { error: updateError } = await supabase
+          .from('notifications')
+          .update({
+            message: message,
+            data: notificationData,
+            is_read: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingNotifications[0].id);
+          
+        if (updateError) {
+          console.error('❌ خطأ في تحديث الإشعار:', updateError);
+        } else {
+          console.log('🔄 تم تحديث الإشعار الموجود بنجاح');
+        }
+      } else {
+        // إنشاء إشعار جديد
+        const newNotificationData = {
+          type: 'order_status_update',
+          title: 'تحديث حالة الطلب',
+          message: message,
+          priority: priority,
+          data: notificationData
+        };
+        
+        console.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
+        await createNotification(newNotificationData);
+        console.log('🆕 تم إنشاء إشعار جديد');
+      }
       
       // تحديث آخر حالة مرسلة
       setLastNotificationStatus(prev => ({
@@ -131,10 +169,10 @@ export const AlWaseetProvider = ({ children }) => {
         [trackingKey]: String(stateId)
       }));
       
-      console.log('🎯 تم إرسال إشعار الوسيط بنجاح');
+      console.log('🎯 تم تحديث إشعار الوسيط بنجاح');
       
     } catch (error) {
-      console.error('❌ خطأ في إرسال إشعار الوسيط:', error);
+      console.error('❌ خطأ في معالجة إشعار الوسيط:', error);
     }
   }, [createNotification, lastNotificationStatus, setLastNotificationStatus]);
 

@@ -42,7 +42,7 @@ const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
 
   if (!shouldScroll) {
     return (
-      <div ref={containerRef} className={`${className}`} style={{ maxWidth }}>
+      <div ref={containerRef} className={className} style={{ maxWidth }}>
         <span ref={textRef} className="whitespace-nowrap">{text}</span>
       </div>
     );

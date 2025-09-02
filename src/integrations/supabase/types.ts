@@ -1500,8 +1500,10 @@ export type Database = {
           is_read: boolean
           message: string
           priority: string | null
+          related_entity_id: string | null
           title: string
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1512,8 +1514,10 @@ export type Database = {
           is_read?: boolean
           message: string
           priority?: string | null
+          related_entity_id?: string | null
           title: string
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1524,8 +1528,10 @@ export type Database = {
           is_read?: boolean
           message?: string
           priority?: string | null
+          related_entity_id?: string | null
           title?: string
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
