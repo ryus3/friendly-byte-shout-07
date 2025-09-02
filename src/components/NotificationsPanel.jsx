@@ -716,35 +716,30 @@ const NotificationsPanel = () => {
                               <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
                             )}
                           </div>
-                          <div className="text-xs text-foreground/85 mb-1.5 min-w-0">
+                          <div className="text-xs text-foreground/80 line-clamp-1 mb-1.5">
                             {(() => {
                               // تنسيق خاص لرسائل الوسيط - عرض رقم التتبع والحالة فقط
                               if (notificationType === 'alwaseet_status_change') {
                                 const data = notification.data || {};
-                                let trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
-                                let stateId = data.state_id || data.status_id || parseAlwaseetStateIdFromMessage(notification.message);
-                                
-                                // إذا لم نجد رقم التتبع، نبحث في العنوان أيضاً
-                                if (!trackingNumber && notification.title) {
-                                  trackingNumber = parseTrackingFromMessage(notification.title);
-                                }
+                                const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+                                const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
                                 
                                 if (trackingNumber && stateId) {
                                   const statusConfig = getStatusConfig(Number(stateId));
-                                  const statusText = statusConfig?.name || statusConfig?.text || 'تحديث الحالة';
+                                  const statusText = statusConfig.name || 'تحديث الحالة';
                                   const displayText = `${trackingNumber} ${statusText}`;
                                   
-                                  return displayText.length > 30 ? (
+                                  return displayText.length > 35 ? (
                                     <ScrollingText text={displayText} className="w-full" />
-                                  ) : <span className="block truncate">{displayText}</span>;
+                                  ) : displayText;
                                 }
                               }
                               
                               // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
                               const message = notification.message || '';
-                              return message.length > 30 ? (
+                              return message.length > 35 ? (
                                 <ScrollingText text={message} className="w-full" />
-                              ) : <span className="block truncate">{message}</span>;
+                              ) : message;
                             })()}
                           </div>
                           <div className="flex items-center justify-between">
