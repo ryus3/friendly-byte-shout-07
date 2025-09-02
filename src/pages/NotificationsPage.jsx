@@ -15,33 +15,34 @@ import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
+import ScrollingText from '@/components/ui/scrolling-text';
 
-// أيقونات نظيفة بدون رموز مزعجة
+// أيقونات محسنة بنفس تصميم NotificationsPanel
 const StockWarningIcon = () => (
   <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-50 stroke-orange-500" strokeWidth="1.5"/>
-    <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-600" strokeWidth="2" strokeLinecap="round"/>
+    <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-100 dark:fill-orange-900/20 stroke-orange-600 dark:stroke-orange-300" strokeWidth="1.5"/>
+    <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-700 dark:stroke-orange-300" strokeWidth="2" strokeLinecap="round"/>
   </svg>
 );
 
 const OrderSuccessIcon = () => (
   <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="9" className="fill-green-50 stroke-green-500" strokeWidth="1.5"/>
-    <path d="M9 12l2 2 4-4" className="stroke-green-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="12" cy="12" r="9" className="fill-green-100 dark:fill-green-900/20 stroke-green-600 dark:stroke-green-300" strokeWidth="1.5"/>
+    <path d="M9 12l2 2 4-4" className="stroke-green-700 dark:stroke-green-300" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
 const UserRegistrationIcon = () => (
   <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="8" r="3" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
-    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
+    <circle cx="12" cy="8" r="3" className="fill-purple-100 dark:fill-purple-900/20 stroke-purple-600 dark:stroke-purple-300" strokeWidth="1.5"/>
+    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-100 dark:fill-purple-900/20 stroke-purple-600 dark:stroke-purple-300" strokeWidth="1.5"/>
   </svg>
 );
 
 const OrderIcon = () => (
   <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
-    <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-50 stroke-blue-500" strokeWidth="1.5"/>
-    <circle cx="9" cy="9" r="2" className="fill-blue-200"/>
+    <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-100 dark:fill-blue-900/20 stroke-blue-600 dark:stroke-blue-300" strokeWidth="1.5"/>
+    <circle cx="9" cy="9" r="2" className="fill-blue-200 dark:fill-blue-700"/>
   </svg>
 );
 
@@ -51,9 +52,63 @@ const SystemIcon = () => (
   </svg>
 );
 
+// نظام ألوان موحد مع NotificationsPanel
+const typeColorMap = {
+  low_stock: { 
+    bg: 'bg-amber-100/90 dark:bg-amber-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-amber-600 dark:border-amber-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-amber-700 dark:text-amber-300',
+    dot: 'bg-amber-600'
+  },
+  stock_warning: { 
+    bg: 'bg-orange-100/90 dark:bg-orange-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-orange-600 dark:border-orange-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-orange-700 dark:text-orange-300',
+    dot: 'bg-orange-600'
+  },
+  out_of_stock: { 
+    bg: 'bg-red-100/90 dark:bg-red-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-red-600 dark:border-red-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-red-700 dark:text-red-300',
+    dot: 'bg-red-600'
+  },
+  order_completed: { 
+    bg: 'bg-green-100/90 dark:bg-green-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-600 dark:border-green-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-green-700 dark:text-green-300',
+    dot: 'bg-green-600'
+  },
+  new_order: { 
+    bg: 'bg-blue-100/90 dark:bg-blue-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-blue-600 dark:border-blue-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-blue-700 dark:text-blue-300',
+    dot: 'bg-blue-600'
+  },
+  new_registration: { 
+    bg: 'bg-purple-100/90 dark:bg-purple-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-purple-600 dark:border-purple-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-purple-700 dark:text-purple-300',
+    dot: 'bg-purple-600'
+  },
+  system: { 
+    bg: 'bg-slate-100/90 dark:bg-slate-900/20 backdrop-blur-sm', 
+    border: 'border-r-4 border-slate-600 dark:border-slate-300',
+    text: 'text-gray-900 dark:text-white', 
+    icon: 'text-slate-700 dark:text-slate-300',
+    dot: 'bg-slate-600'
+  }
+};
+
 const iconMap = {
   low_stock: <StockWarningIcon />,
   stock_warning: <StockWarningIcon />,
+  out_of_stock: <StockWarningIcon />,
   order_completed: <OrderSuccessIcon />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
@@ -259,26 +314,40 @@ const NotificationsPage = () => {
                         exit={{ opacity: 0, x: -20 }}
                         className={cn(
                           "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
-                          "bg-card/80 backdrop-blur-sm border-border shadow-sm",
-                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
+                          typeColorMap[notification.type]?.bg || "bg-card/80 backdrop-blur-sm",
+                          typeColorMap[notification.type]?.border || "border-border",
+                          notification.is_read ? "opacity-75" : "shadow-md"
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3 flex-1">
-                            <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
+                            <div className={cn(
+                              "mt-1 flex-shrink-0",
+                              typeColorMap[notification.type]?.icon || "text-primary"
+                            )}>
+                              {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
+                            </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <h3 className={cn(
-                                  "font-semibold text-sm md:text-base truncate",
-                                  !notification.is_read && "text-primary"
-                                )}>
-                                  {notification.title}
-                                </h3>
+                                <ScrollingText 
+                                  text={notification.title}
+                                  className={cn(
+                                    "font-semibold text-sm md:text-base",
+                                    typeColorMap[notification.type]?.text || "text-gray-800 dark:text-gray-100",
+                                    !notification.is_read && "text-primary"
+                                  )}
+                                />
                                 {!notification.is_read && (
-                                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                                  <div className={cn(
+                                    "w-2 h-2 rounded-full animate-pulse flex-shrink-0",
+                                    typeColorMap[notification.type]?.dot || "bg-primary"
+                                  )} />
                                 )}
                               </div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
+                              <ScrollingText 
+                                text={notification.message}
+                                className="text-xs md:text-sm text-gray-600 dark:text-gray-300 mb-2"
+                              />
                               <p className="text-xs text-muted-foreground/70">
                                 {formatRelativeTime(notification.created_at)}
                               </p>

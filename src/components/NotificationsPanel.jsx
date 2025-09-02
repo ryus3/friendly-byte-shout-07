@@ -253,28 +253,28 @@ const typeColorMap = {
   low_stock: { 
     bg: 'bg-amber-100/90 dark:bg-amber-900/20 backdrop-blur-sm', 
     border: 'border-r-4 border-amber-600 dark:border-amber-300',
-    text: 'text-foreground', 
+  text: 'text-gray-900 dark:text-white',
     icon: 'text-amber-700 dark:text-amber-300',
     dot: 'bg-amber-600'
   },
   stock_warning: { 
     bg: 'bg-orange-100/90 dark:bg-orange-900/20 backdrop-blur-sm', 
     border: 'border-r-4 border-orange-600 dark:border-orange-300',
-    text: 'text-foreground', 
+    text: 'text-gray-900 dark:text-white',
     icon: 'text-orange-700 dark:text-orange-300',
     dot: 'bg-orange-600'
   },
   out_of_stock: { 
     bg: 'bg-red-100/90 dark:bg-red-900/20 backdrop-blur-sm', 
     border: 'border-r-4 border-red-600 dark:border-red-300',
-    text: 'text-foreground', 
+    text: 'text-gray-900 dark:text-white',
     icon: 'text-red-700 dark:text-red-300',
     dot: 'bg-red-600'
   },
   order_completed: { 
     bg: 'bg-green-100/90 dark:bg-green-900/20 backdrop-blur-sm', 
     border: 'border-r-4 border-green-600 dark:border-green-300',
-    text: 'text-foreground', 
+    text: 'text-gray-900 dark:text-white',
     icon: 'text-green-700 dark:text-green-300',
     dot: 'bg-green-600'
   },
