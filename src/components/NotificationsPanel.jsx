@@ -26,6 +26,7 @@ import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
 // دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
@@ -259,6 +260,7 @@ const typeColorMap = {
     bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
     border: 'border-r-4 border-orange-500 dark:border-orange-400',
     text: 'text-foreground', 
+    readText: 'text-foreground/90',
     icon: 'text-orange-600 dark:text-orange-400',
     dot: 'bg-orange-500'
   },
@@ -266,6 +268,7 @@ const typeColorMap = {
     bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
     border: 'border-r-4 border-red-500 dark:border-red-400',
     text: 'text-foreground', 
+    readText: 'text-foreground/90',
     icon: 'text-red-600 dark:text-red-400',
     dot: 'bg-red-500'
   },
@@ -708,56 +711,47 @@ const NotificationsPanel = () => {
                           <IconComponent />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                              {notification.title}
-                            </h3>
-                            {!(notification.is_read || notification.read) && (
-                              <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex-1 min-w-0">
+                              {formatNotificationText(notification).length > 35 ? (
+                                <ScrollingText 
+                                  text={formatNotificationText(notification)}
+                                  className={cn("text-sm font-medium", 
+                                    !notification.read && !notification.is_read ? 
+                                      colors.text : 
+                                      colors.readText || 'text-foreground/90'
+                                  )}
+                                />
+                              ) : (
+                                <span className={cn("text-sm font-medium", 
+                                  !notification.read && !notification.is_read ? 
+                                    colors.text : 
+                                    colors.readText || 'text-foreground/90'
+                                )}>
+                                  {formatNotificationText(notification)}
+                                </span>
+                              )}
+                            </div>
+                            {!notification.read && !notification.is_read && (
+                              <div className={cn("w-2 h-2 rounded-full", colors.dot)} />
                             )}
-                          </div>
-                          <div className="text-xs text-foreground/80 line-clamp-1 mb-1.5">
-                            {(() => {
-                              // تنسيق خاص لرسائل الوسيط - عرض رقم التتبع والحالة فقط
-                              if (notificationType === 'alwaseet_status_change') {
-                                const data = notification.data || {};
-                                const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
-                                const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
-                                
-                                if (trackingNumber && stateId) {
-                                  const statusConfig = getStatusConfig(Number(stateId));
-                                  const statusText = statusConfig.name || 'تحديث الحالة';
-                                  const displayText = `${trackingNumber} ${statusText}`;
-                                  
-                                  return displayText.length > 35 ? (
-                                    <ScrollingText text={displayText} className="w-full" />
-                                  ) : displayText;
-                                }
-                              }
-                              
-                              // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
-                              const message = notification.message || '';
-                              return message.length > 35 ? (
-                                <ScrollingText text={message} className="w-full" />
-                              ) : message;
-                            })()}
                           </div>
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
-                              <Clock className="w-2.5 h-2.5" />
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
                               {formatRelativeTime(notification.created_at)}
-                            </p>
-                            {!(notification.is_read || notification.read) && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-6 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
-                                title="وضع كمقروء"
-                                onClick={(e) => handleMarkAsRead(e, notification.id)}
-                              >
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                            )}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 opacity-60 hover:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // معاينة سريعة
+                              }}
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
                       </div>
