@@ -159,6 +159,88 @@ export const NotificationsSystemProvider = ({ children }) => {
     }
   }, [createNotification, hasPermission]);
 
+  // إنشاء أو تحديث إشعار حالة الطلب
+  const updateOrCreateOrderNotification = useCallback(async (orderId, trackingNumber, status, statusText) => {
+    try {
+      console.log('🔍 البحث عن إشعار موجود:', { orderId, trackingNumber, status });
+      
+      // البحث عن إشعار موجود في قاعدة البيانات
+      const { data: existingNotifications, error: searchError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'order_status_update')
+        .or(`data->>related_entity_id.eq.${orderId},data->>tracking_number.eq.${trackingNumber},data->>order_number.eq.${trackingNumber}`)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (searchError) {
+        console.error('خطأ في البحث عن الإشعارات:', searchError);
+        return;
+      }
+
+      const message = `${trackingNumber} ${statusText}`;
+
+      if (existingNotifications && existingNotifications.length > 0) {
+        // تحديث الإشعار الموجود
+        const existingNotification = existingNotifications[0];
+        console.log('📝 تحديث إشعار موجود:', existingNotification.id);
+        
+        const { error: updateError } = await supabase
+          .from('notifications')
+          .update({
+            message: message,
+            updated_at: new Date().toISOString(),
+            is_read: false, // جعل الإشعار غير مقروء عند التحديث
+            data: {
+              ...existingNotification.data,
+              related_entity_id: orderId,
+              tracking_number: trackingNumber,
+              order_number: trackingNumber,
+              delivery_status: status,
+              status_text: statusText,
+              updated_at: new Date().toISOString()
+            }
+          })
+          .eq('id', existingNotification.id);
+
+        if (updateError) {
+          console.error('خطأ في تحديث الإشعار:', updateError);
+        } else {
+          console.log('✅ تم تحديث الإشعار بنجاح');
+        }
+      } else {
+        // إنشاء إشعار جديد
+        console.log('➕ إنشاء إشعار جديد');
+        
+        const { error: insertError } = await supabase
+          .from('notifications')
+          .insert([{
+            title: 'تحديث حالة الطلب',
+            message: message,
+            type: 'order_status_update',
+            user_id: null, // إشعار عام
+            data: {
+              related_entity_id: orderId,
+              tracking_number: trackingNumber,
+              order_number: trackingNumber,
+              delivery_status: status,
+              status_text: statusText,
+              created_at: new Date().toISOString()
+            },
+            priority: 'medium'
+          }]);
+
+        if (insertError) {
+          console.error('خطأ في إنشاء الإشعار:', insertError);
+        } else {
+          console.log('✅ تم إنشاء إشعار جديد');
+        }
+      }
+    } catch (error) {
+      console.error('خطأ في updateOrCreateOrderNotification:', error);
+    }
+  }, []);
+
   // تم إلغاء دالة notifyOrderStatusChanged - الإشعارات تأتي الآن من database trigger فقط
   const notifyOrderStatusChanged = useCallback(() => {
     // تم إلغاء هذه الدالة لمنع الإشعارات المكررة
@@ -371,6 +453,7 @@ export const NotificationsSystemProvider = ({ children }) => {
     createNotification,
     notifyOrderCreated,
     notifyOrderStatusChanged,
+    updateOrCreateOrderNotification,
     notifySettlementRequested,
     notifySettlementApproved,
     notifySettlementRejected,

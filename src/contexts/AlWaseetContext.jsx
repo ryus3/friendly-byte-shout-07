@@ -40,11 +40,9 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي
-  const createOrderStatusNotification = useCallback((trackingNumber, stateId, statusText) => {
-    if (!createNotification || !trackingNumber || !stateId) return;
-    
-    console.log('🔔 محاولة إرسال إشعار:', { trackingNumber, stateId, statusText });
+  // دالة محسنة لإرسال إشعارات تغيير حالة الطلبات مع منع التكرار الذكي  
+  const createOrderStatusNotification = useCallback(async (orderId, trackingNumber, stateId, statusText) => {
+    console.log('🔔 محاولة إرسال إشعار:', { orderId, trackingNumber, stateId, statusText });
     
     // الحالات المهمة التي تستحق إشعارات
     const importantStates = ['2', '4', '17', '25', '26', '31', '32'];
@@ -98,32 +96,41 @@ export const AlWaseetProvider = ({ children }) => {
     }
     
     console.log('✅ إرسال إشعار الوسيط:', {
+      orderId,
       trackingNumber, 
       stateId, 
       message, 
       priority 
     });
     
-    // إرسال الإشعار مع البيانات المطلوبة والتأكد من وجود state_id
+    // استخدام النظام الموحد للإشعارات مع دعم updateOrCreateOrderNotification
     try {
-      const notificationData = {
-        type: 'alwaseet_status_change',
-        title: 'تحديث حالة الطلب',
-        message: message,
-        priority: priority,
-        data: {
-          state_id: String(stateId), // التأكد من وجود state_id هنا
-          tracking_number: trackingNumber,
-          status_text: statusText,
-          timestamp: new Date().toISOString(),
-          // إضافة البيانات للتوافق مع الإشعارات القديمة
-          order_id: trackingNumber,
-          order_number: trackingNumber
+      // محاولة استخدام النظام الموحد
+      if (createNotification && createNotification.updateOrCreateOrderNotification) {
+        await createNotification.updateOrCreateOrderNotification(orderId, trackingNumber, String(stateId), statusText);
+      } else {
+        // احتياطي: إرسال إشعار عادي
+        const notificationData = {
+          type: 'order_status_update', // النوع الصحيح الموجود في قاعدة البيانات
+          title: 'تحديث حالة الطلب',
+          message: message,
+          priority: priority,
+          data: {
+            related_entity_id: orderId,
+            state_id: String(stateId),
+            tracking_number: trackingNumber,
+            order_number: trackingNumber,
+            delivery_status: String(stateId),
+            status_text: statusText,
+            timestamp: new Date().toISOString()
+          }
+        };
+        
+        console.log('📤 بيانات الإشعار المرسلة (احتياطي):', notificationData);
+        if (createNotification) {
+          createNotification(notificationData);
         }
-      };
-      
-      console.log('📤 بيانات الإشعار المرسلة:', notificationData);
-      createNotification(notificationData);
+      }
       
       // تحديث آخر حالة مرسلة
       setLastNotificationStatus(prev => ({
