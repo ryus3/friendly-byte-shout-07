@@ -153,8 +153,11 @@ export const NotificationsSystemProvider = ({ children }) => {
     try {
       // البحث عن إشعار موجود للطلب
       const existingNotification = notifications.find(n => 
-        n.related_entity_id === trackingNumber && 
-        n.type === 'alwaseet_status_change'
+        n.type === 'alwaseet_status_change' && (
+          n.related_entity_id === trackingNumber ||
+          n.data?.tracking_number === trackingNumber ||
+          n.data?.order_number === trackingNumber
+        )
       );
       
       if (existingNotification) {

@@ -282,7 +282,7 @@ const NotificationsPage = () => {
                               {notification.message.length > 80 ? (
                                 <ScrollingText 
                                   text={notification.message} 
-                                  maxWidth="300px" 
+                                  className="min-w-0 w-full"
                                   className="text-xs md:text-sm text-muted-foreground mb-2"
                                 />
                               ) : (
