@@ -84,7 +84,7 @@ export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { addNotification } = useNotifications();
-  const { notifyLowStock } = useNotificationsSystem();
+  const { notifyLowStock, notifications: systemNotifications, markAsRead: markAsReadSystem, markAllAsRead: markAllAsReadSystem, clearAll: clearAllSystem, deleteNotification: deleteNotificationSystem } = useNotificationsSystem();
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();

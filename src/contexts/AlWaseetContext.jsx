@@ -108,14 +108,14 @@ export const AlWaseetProvider = ({ children }) => {
       priority 
     });
     
-    // البحث عن الإشعار الموجود وتحديثه أو إنشاء جديد
+    // البحث عن الإشعار الموجود باستخدام related_entity_id بدلاً من order_number
     try {
-      // البحث عن الإشعار الموجود
+      // البحث عن الإشعار الموجود باستخدام related_entity_id
       const { data: existingNotifications, error: searchError } = await supabase
         .from('notifications')
         .select('id')
         .eq('type', 'order_status_update')
-        .eq('data->>order_number', trackingNumber)
+        .eq('related_entity_id', trackingNumber)
         .limit(1);
         
       if (searchError) {
@@ -155,7 +155,8 @@ export const AlWaseetProvider = ({ children }) => {
           title: 'تحديث حالة الطلب',
           message: message,
           priority: priority,
-          data: notificationData
+          data: notificationData,
+          related_entity_id: trackingNumber
         };
         
         console.log('📤 بيانات الإشعار الجديدة:', newNotificationData);

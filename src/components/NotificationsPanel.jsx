@@ -1,34 +1,14 @@
-import React, { useState } from 'react';
-import { 
-  Bell, Package, CheckCircle, AlertTriangle, Trash2, Check, Eye, UserPlus, Bot,
-  ShoppingCart, TrendingDown, Star, Gift, Clock, CreditCard, Truck, 
-  MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target, MoreHorizontal
-} from 'lucide-react';
-import ScrollingText from '@/components/ui/scrolling-text';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Bell, Volume2, VolumeX, X, UserPlus, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import { AnimatePresence, motion } from 'framer-motion';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useSuper } from '@/contexts/SuperProvider';
+import UnifiedNotificationsDisplay from '@/components/notifications/UnifiedNotificationsDisplay';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { ar } from 'date-fns/locale';
-import { getStatusConfig } from '@/lib/alwaseet-statuses';
-import { getStatusForComponent } from '@/lib/order-status-translator';
 
 // دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
 const getAlWaseetNotificationColors = (stateId) => {
