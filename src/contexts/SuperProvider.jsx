@@ -1636,14 +1636,7 @@ export const SuperProvider = ({ children }) => {
       } catch (dbError) {
         console.warn('⚠️ فشل حفظ الإشعار في قاعدة البيانات:', dbError);
       }
-    
-    // نظام الإشعارات الموحد
-    notifications: notifications || [],
-    addNotification,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
-    clearAllNotifications,
-    deleteNotification,
+      
       return newNotification;
     } catch (error) {
       console.error('❌ خطأ في إضافة الإشعار:', error);
