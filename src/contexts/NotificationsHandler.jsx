@@ -55,22 +55,6 @@ const NotificationsHandler = () => {
           // جلب اسم المستخدم صاحب الطلب
           const getUserName = async () => {
             try {
-              // حذف الإشعارات القديمة لنفس الطلب أولاً
-              if (payload.new.order_number) {
-                const { data: existingNotifications } = await supabase
-                  .from('notifications')
-                  .select('id')
-                  .eq('type', 'new_order')
-                  .like('message', `%${payload.new.order_number}%`);
-                
-                if (existingNotifications?.length > 0) {
-                  await supabase
-                    .from('notifications')
-                    .delete()
-                    .in('id', existingNotifications.map(n => n.id));
-                }
-              }
-
               const { data: userData } = await supabase
                 .from('profiles')
                 .select('full_name')
@@ -89,7 +73,7 @@ const NotificationsHandler = () => {
                 user_id: null, // Admin only
               });
             } catch (error) {
-              console.error('Error handling order notification:', error);
+              console.error('Error fetching user name:', error);
               addNotification({
                 type: 'new_order',
                 title: 'طلب جديد',
@@ -115,22 +99,6 @@ const NotificationsHandler = () => {
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
         async (payload) => {
           try {
-            // حذف الإشعارات القديمة لطلبات AI المشابهة
-            if (payload.new?.id) {
-              const { data: existingNotifications } = await supabase
-                .from('notifications')
-                .select('id')
-                .eq('type', 'new_ai_order')
-                .contains('data', { ai_order_id: payload.new.id });
-              
-              if (existingNotifications?.length > 0) {
-                await supabase
-                  .from('notifications')
-                  .delete()
-                  .in('id', existingNotifications.map(n => n.id));
-              }
-            }
-
             // محاولة جلب اسم الموظف
             let employeeName = 'موظف';
             if (payload.new?.created_by) {
