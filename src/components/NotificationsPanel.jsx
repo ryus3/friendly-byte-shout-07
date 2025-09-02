@@ -786,18 +786,21 @@ const NotificationsPanel = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
-                                {(() => {
-                                  // تحديد عنوان موحد للإشعارات
-                                  if (notificationType === 'alwaseet_status_change') {
-                                    return 'تحديث حالة الوسيط';
-                                  } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                    return 'تحديث حالة الطلب';
-                                  } else {
-                                    return notification.title;
-                                  }
-                                })()}
-                              </h3>
+                               <h3 className="font-semibold text-sm leading-tight text-gray-900 dark:text-gray-100">
+                                 <ScrollingText 
+                                   text={(() => {
+                                     // تحديد عنوان موحد للإشعارات
+                                     if (notificationType === 'alwaseet_status_change') {
+                                       return 'تحديث حالة الوسيط';
+                                     } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                       return 'تحديث حالة الطلب';
+                                     } else {
+                                       return notification.title;
+                                     }
+                                   })()} 
+                                   maxWidth="200px"
+                                 />
+                               </h3>
                               {!(notification.is_read || notification.read) && (
                                 <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
                               )}
@@ -853,11 +856,11 @@ const NotificationsPanel = () => {
                                  }
                                }
                               
-                              // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
-                              const message = notification.message || '';
-                              return message.length > 35 ? (
-                                <ScrollingText text={message} className="w-full" />
-                              ) : message;
+                               // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
+                               const message = notification.message || '';
+                               return message.length > 35 ? (
+                                 <ScrollingText text={message} maxWidth="200px" className="text-gray-950 dark:text-gray-50" />
+                               ) : <span className="text-gray-950 dark:text-gray-50">{message}</span>;
                             })()}
                           </div>
                           <div className="flex items-center justify-end">
