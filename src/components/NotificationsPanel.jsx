@@ -726,11 +726,15 @@ const NotificationsPanel = () => {
                                 const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
                                 
                                 if (trackingNumber && stateId) {
+                                  // الحصول على النص الصحيح للحالة من state_id
+                                  const statusConfig = getStatusConfig(Number(stateId));
+                                  const correctDeliveryStatus = statusConfig.text || data.delivery_status;
+                                  
                                   // إنشاء كائن طلب مؤقت لاستخدام منطق صفحة الطلبات
                                   const tempOrder = {
                                     tracking_number: trackingNumber,
                                     delivery_partner: 'الوسيط',
-                                    delivery_status: data.delivery_status,
+                                    delivery_status: correctDeliveryStatus,
                                     status: data.status,
                                     state_id: stateId
                                   };
