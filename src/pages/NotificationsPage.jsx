@@ -73,12 +73,28 @@ const NotificationsPage = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const formatRelativeTime = (dateString) => {
+  const formatRelativeTime = (dateString, updatedAt = null) => {
     try {
-      return formatDistanceToNowStrict(new Date(dateString), { addSuffix: true, locale: ar });
+      // استخدام آخر تحديث أو وقت الإنشاء (الأحدث)
+      const createTime = new Date(dateString);
+      const updateTime = updatedAt ? new Date(updatedAt) : null;
+      const displayTime = updateTime && updateTime > createTime ? updateTime : createTime;
+      
+      return formatDistanceToNowStrict(displayTime, { addSuffix: true, locale: ar });
     } catch (error) {
       return 'منذ فترة';
     }
+  };
+
+  // دالة للتحقق من كون الإشعار محدث مؤخراً
+  const isNotificationUpdated = (notification) => {
+    if (!notification.updated_at) return false;
+    
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = new Date(notification.updated_at);
+    
+    // إذا كان الفرق أكثر من دقيقة، يعتبر محدث
+    return updatedTime.getTime() - createdTime.getTime() > 60000;
   };
 
   const filteredNotifications = notifications.filter(notification => {
@@ -267,21 +283,28 @@ const NotificationsPage = () => {
                           <div className="flex items-start gap-3 flex-1">
                             <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className={cn(
-                                  "font-semibold text-sm md:text-base truncate",
-                                  !notification.is_read && "text-primary"
-                                )}>
-                                  {notification.title}
-                                </h3>
-                                {!notification.is_read && (
-                                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
-                                )}
-                              </div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
-                              <p className="text-xs text-muted-foreground/70">
-                                {formatRelativeTime(notification.created_at)}
-                              </p>
+                               <div className="flex items-center gap-2 mb-1">
+                                 <h3 className={cn(
+                                   "font-semibold text-sm md:text-base truncate",
+                                   !notification.is_read && "text-primary"
+                                 )}>
+                                   {notification.title}
+                                 </h3>
+                                 <div className="flex items-center gap-1">
+                                   {isNotificationUpdated(notification) && (
+                                     <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                       محدث
+                                     </Badge>
+                                   )}
+                                   {!notification.is_read && (
+                                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                                   )}
+                                 </div>
+                               </div>
+                               <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
+                               <p className="text-xs text-muted-foreground/70">
+                                 {formatRelativeTime(notification.created_at, notification.updated_at)}
+                               </p>
                             </div>
                           </div>
                           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">

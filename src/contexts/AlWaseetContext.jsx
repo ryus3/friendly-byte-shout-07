@@ -132,13 +132,14 @@ export const AlWaseetProvider = ({ children }) => {
       };
       
       if (existingNotifications && existingNotifications.length > 0) {
-        // تحديث الإشعار الموجود
+        // تحديث الإشعار الموجود مع تحديث created_at ليظهر كإشعار جديد
         const { error: updateError } = await supabase
           .from('notifications')
           .update({
             message: message,
             data: notificationData,
             is_read: false,
+            created_at: new Date().toISOString(), // تحديث وقت الإنشاء ليصبح الإشعار في المقدمة
             updated_at: new Date().toISOString()
           })
           .eq('id', existingNotifications[0].id);

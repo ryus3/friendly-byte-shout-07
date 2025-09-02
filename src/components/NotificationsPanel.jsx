@@ -519,10 +519,15 @@ const NotificationsPanel = () => {
     toast({ title: "تم حذف جميع الإشعارات" });
   };
 
-  const formatRelativeTime = (dateString) => {
+  const formatRelativeTime = (dateString, updatedAt = null) => {
     try {
+      // استخدام آخر تحديث أو وقت الإنشاء (الأحدث)
+      const createTime = new Date(dateString);
+      const updateTime = updatedAt ? new Date(updatedAt) : null;
+      const displayTime = updateTime && updateTime > createTime ? updateTime : createTime;
+      
       // Make time shorter
-      const time = formatDistanceToNowStrict(new Date(dateString), { addSuffix: false, locale: ar });
+      const time = formatDistanceToNowStrict(displayTime, { addSuffix: false, locale: ar });
       return time
         .replace(/دقيقة|دقائق/, 'د')
         .replace(/ساعة|ساعات/, 'س')
@@ -533,6 +538,17 @@ const NotificationsPanel = () => {
     } catch (error) {
       return 'منذ فترة';
     }
+  };
+
+  // دالة للتحقق من كون الإشعار محدث مؤخراً
+  const isNotificationUpdated = (notification) => {
+    if (!notification.updated_at) return false;
+    
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = new Date(notification.updated_at);
+    
+    // إذا كان الفرق أكثر من دقيقة، يعتبر محدث
+    return updatedTime.getTime() - createdTime.getTime() > 60000;
   };
 
   // تحسين دمج الإشعارات ومنع التكرار الذكي
@@ -609,7 +625,34 @@ const NotificationsPanel = () => {
     if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
   }
   
-  const allNotifications = Array.from(uniqueMap.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  // ترتيب الإشعارات بناءً على وقت العرض المحدث وحالة القراءة
+  const allNotifications = Array.from(uniqueMap.values())
+    .map(notification => ({
+      ...notification,
+      displayTime: getNotificationDisplayTime(notification),
+      isUpdated: isNotificationUpdated(notification)
+    }))
+    .sort((a, b) => {
+      // الإشعارات غير المقروءة أولاً
+      if ((a.is_read || a.read) !== (b.is_read || b.read)) {
+        return (a.is_read || a.read) ? 1 : -1;
+      }
+      // ثم بالوقت المحدث
+      return b.displayTime.getTime() - a.displayTime.getTime();
+    });
+
+  // دالة للحصول على وقت العرض الصحيح (آخر تحديث أو الإنشاء)
+  const getNotificationDisplayTime = (notification) => {
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = notification.updated_at ? new Date(notification.updated_at) : null;
+    
+    // إذا كان هناك updated_at وهو أحدث من created_at، استخدمه
+    if (updatedTime && updatedTime > createdTime) {
+      return updatedTime;
+    }
+    
+    return createdTime;
+  };
   const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (
@@ -785,27 +828,34 @@ const NotificationsPanel = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
-                                {(() => {
-                                  // تحديد عنوان موحد للإشعارات
-                                  if (notificationType === 'alwaseet_status_change') {
-                                    return 'تحديث حالة الوسيط';
-                                  } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                    return 'تحديث حالة الطلب';
-                                  } else {
-                                    return notification.title;
-                                  }
-                                })()}
-                              </h3>
-                              {!(notification.is_read || notification.read) && (
-                                <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
-                              <Clock className="w-2.5 h-2.5" />
-                              {formatRelativeTime(notification.created_at)}
-                            </p>
+                             <div className="flex items-center gap-2 flex-1 min-w-0">
+                               <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
+                                 {(() => {
+                                   // تحديد عنوان موحد للإشعارات
+                                   if (notificationType === 'alwaseet_status_change') {
+                                     return 'تحديث حالة الوسيط';
+                                   } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                     return 'تحديث حالة الطلب';
+                                   } else {
+                                     return notification.title;
+                                   }
+                                 })()}
+                               </h3>
+                               <div className="flex items-center gap-1">
+                                 {notification.isUpdated && (
+                                   <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                     محدث
+                                   </Badge>
+                                 )}
+                                 {!(notification.is_read || notification.read) && (
+                                   <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
+                                 )}
+                               </div>
+                             </div>
+                             <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
+                               <Clock className="w-2.5 h-2.5" />
+                               {formatRelativeTime(notification.created_at, notification.updated_at)}
+                             </p>
                           </div>
                           <div className="text-xs text-foreground font-medium line-clamp-1 mb-1.5">
                             {(() => {
