@@ -27,6 +27,7 @@ import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 // دالة محسنة للحصول على ألوان إشعارات الوسيط حسب state_id
 const getAlWaseetNotificationColors = (stateId) => {
@@ -718,16 +719,24 @@ const NotificationsPanel = () => {
                           </div>
                           <div className="text-xs text-foreground/80 line-clamp-1 mb-1.5">
                             {(() => {
-                              // تنسيق خاص لرسائل الوسيط - عرض رقم التتبع والحالة فقط
-                              if (notificationType === 'alwaseet_status_change') {
+                              // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام نفس منطق صفحة الطلبات
+                              if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
                                 const data = notification.data || {};
                                 const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
                                 const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
                                 
                                 if (trackingNumber && stateId) {
-                                  const statusConfig = getStatusConfig(Number(stateId));
-                                  const statusText = statusConfig.text || 'تحديث الحالة';
-                                  const displayText = `${trackingNumber} ${statusText}`;
+                                  // إنشاء كائن طلب مؤقت لاستخدام منطق صفحة الطلبات
+                                  const tempOrder = {
+                                    tracking_number: trackingNumber,
+                                    delivery_partner: 'الوسيط',
+                                    delivery_status: data.delivery_status,
+                                    status: data.status,
+                                    state_id: stateId
+                                  };
+                                  
+                                  const statusInfo = getStatusForComponent(tempOrder);
+                                  const displayText = `${trackingNumber} ${statusInfo.label}`;
                                   
                                   return displayText.length > 35 ? (
                                     <ScrollingText text={displayText} className="w-full" />
