@@ -3,7 +3,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
-import { useNotificationsSystem } from './NotificationsSystemContext';
+import { useSuper } from './SuperProvider'; // النظام الموحد
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 
@@ -14,14 +14,14 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
   
-  // استخدام اختياري لنظام الإشعارات
+  // استخدام النظام الموحد للإشعارات
   let createNotification = null;
   try {
-    const notificationsSystem = useNotificationsSystem();
-    createNotification = notificationsSystem.createNotification;
+    const superProvider = useSuper();
+    createNotification = superProvider.addNotification;
   } catch (error) {
-    // NotificationsSystemProvider غير متاح بعد
-    console.log('NotificationsSystem not ready yet');
+    // SuperProvider غير متاح بعد
+    console.log('SuperProvider not ready yet');
   }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState(null);
