@@ -387,6 +387,35 @@ const NotificationsPanel = () => {
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
   const navigate = useNavigate();
 
+  // دالة موحدة لتنسيق نص الإشعار بناءً على نوعه
+  const formatNotificationText = (notification) => {
+    if (notification.type === 'alwaseet_status_change') {
+      // استخراج رقم التتبع ونص الحالة من الرسالة
+      const data = notification.data || {};
+      const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+      const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
+      
+      if (trackingNumber && stateId) {
+        const statusConfig = getStatusConfig(Number(stateId));
+        const statusText = statusConfig.name || 'تحديث الحالة';
+        return `${trackingNumber} ${statusText}`;
+      }
+      
+      return notification.message.replace(/رقم التتبع:\s*/, '').replace(/\s*الحالة:\s*/, ' ');
+    }
+    
+    if (notification.type === 'order_status_changed' && notification.order_data) {
+      // استخدام النظام الموحد لحالات الطلبات
+      const order = notification.order_data;
+      const trackingNumber = order.tracking_number || order.order_number || 'غير محدد';
+      const statusConfig = getStatusForComponent(order);
+      
+      return `${trackingNumber} ${statusConfig.label}`;
+    }
+    
+    return notification.message || notification.title || 'إشعار جديد';
+  };
+
   const handleNotificationClick = (e, notification) => {
     e.stopPropagation();
     
