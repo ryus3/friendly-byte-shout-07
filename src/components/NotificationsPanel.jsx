@@ -726,7 +726,7 @@ const NotificationsPanel = () => {
                                 
                                 if (trackingNumber && stateId) {
                                   const statusConfig = getStatusConfig(Number(stateId));
-                                  const statusText = statusConfig.name || 'تحديث الحالة';
+                                  const statusText = statusConfig.text || 'تحديث الحالة';
                                   const displayText = `${trackingNumber} ${statusText}`;
                                   
                                   return displayText.length > 35 ? (
