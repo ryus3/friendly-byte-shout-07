@@ -240,12 +240,12 @@ module.exports = {
         },
         'scroll-text': {
           '0%': {
-            transform: 'translateX(0%)'
+            transform: 'translateX(100%)'
           },
-          '15%': {
-            transform: 'translateX(0%)'
+          '10%': {
+            transform: 'translateX(100%)'
           },
-          '85%': {
+          '90%': {
             transform: 'translateX(-100%)'
           },
           '100%': {
