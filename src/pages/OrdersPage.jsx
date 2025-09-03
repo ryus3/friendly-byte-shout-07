@@ -33,7 +33,7 @@ import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 
 const OrdersPage = () => {
-  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useSuper();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts, refreshOrders } = useSuper();
   const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
@@ -245,17 +245,32 @@ const OrdersPage = () => {
       }
     };
 
+    // مستمع لتحديثات الطلبات من QuickOrderContent
+    const handleOrderUpdated = (event) => {
+      const { id: orderId, updates, timestamp } = event.detail || {};
+      if (orderId && updates) {
+        console.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, updates, timestamp });
+        // تحديث فوري للواجهة عن طريق استدعاء refreshOrders
+        if (refreshOrders) {
+          console.log('🔄 OrdersPage: تنشيط تحديث البيانات');
+          refreshOrders();
+        }
+      }
+    };
+
     // تسجيل المستمعات
     window.addEventListener('orderDeleted', handleOrderDeleted);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
     window.addEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
     window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+    window.addEventListener('orderUpdated', handleOrderUpdated);
 
     return () => {
       window.removeEventListener('orderDeleted', handleOrderDeleted);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
       window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
     };
   }, []);
 

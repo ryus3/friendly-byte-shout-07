@@ -1324,11 +1324,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
       console.log('✅ Local order updated:', updateResult);
 
+      // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
+      if (window.superProviderUpdate) {
+        console.log('🔄 تحديث SuperProvider للتزامن:', { orderId: originalOrder.id, updates: completeOrderData });
+        window.superProviderUpdate(originalOrder.id, completeOrderData);
+      }
+
+      // إرسال حدث لتحديث كل الصفحات المفتوحة
+      window.dispatchEvent(new CustomEvent('orderUpdated', { 
+        detail: { 
+          id: originalOrder.id, 
+          updates: completeOrderData,
+          order: updateResult.order,
+          timestamp: new Date().toISOString()
+        } 
+      }));
+
       // عرض رسالة نجاح مع رقم الطلب الصحيح
       console.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
       toast({
         title: "تم تحديث الطلب بنجاح",
-        description: `رقم الطلب: ${updateResult.order?.order_number || updateResult.order?.tracking_number || 'غير محدد'}${updateResult.order?.tracking_number ? ` - رقم التتبع: ${updateResult.order?.tracking_number}` : ''}`,
+        description: `رقم الطلب: ${updateResult.order?.order_number || updateResult.order?.tracking_number || originalOrder.order_number || originalOrder.tracking_number || 'غير محدد'}`,
         variant: "default",
       });
 

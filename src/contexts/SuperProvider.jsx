@@ -1073,11 +1073,14 @@ export const SuperProvider = ({ children }) => {
   // تحديث طلب - نفس الواجهة القديمة مع تحديث فوري محلي
   const updateOrder = useCallback(async (orderId, updates) => {
     try {
+      console.log('🔄 SuperProvider updateOrder:', { orderId, updates });
+      
       // تحديث فوري محلياً أولاً لتحسين الإحساس باللحظية
       setAllData(prev => ({
         ...prev,
-        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updates } : o),
+        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updates, updated_at: new Date().toISOString() } : o),
       }));
+      
       // إرسال حدث متصفح فوري
       window.dispatchEvent(new CustomEvent('orderUpdated', { detail: { id: orderId, updates } }));
 
@@ -1089,12 +1092,21 @@ export const SuperProvider = ({ children }) => {
         orders: (prev.orders || []).map(o => o.id === orderId ? normalizeOrder(updatedOrder) : o),
       }));
 
+      console.log('✅ SuperProvider updateOrder نجح:', { orderId, success: true });
       return { success: true, data: updatedOrder };
     } catch (error) {
-      console.error('Error in updateOrder:', error);
+      console.error('Error in SuperProvider updateOrder:', error);
       return { success: false, error: error.message };
     }
   }, []);
+
+  // تعرض دالة التحديث للمكونات الخارجية
+  useEffect(() => {
+    window.superProviderUpdate = updateOrder;
+    return () => {
+      delete window.superProviderUpdate;
+    };
+  }, [updateOrder]);
 
   // حذف طلبات فوري مضمون 100% - بدون timeout ضار
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
