@@ -312,6 +312,41 @@ export const useAlWaseetInvoices = () => {
     }
   }, []);
 
+  // Sync a specific invoice by ID
+  const syncInvoiceById = useCallback(async (externalId) => {
+    if (!isLoggedIn || !token) {
+      console.warn('Cannot sync invoice: authentication or access required');
+      return { success: false, error: 'Authentication required' };
+    }
+
+    try {
+      console.log(`Starting sync for invoice ${externalId}...`);
+      
+      // Fetch the specific invoice from Al-Waseet
+      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+      const targetInvoice = allInvoices.find(inv => inv.id === externalId);
+      
+      if (!targetInvoice) {
+        console.warn(`Invoice ${externalId} not found in Al-Waseet`);
+        return { success: false, error: 'Invoice not found' };
+      }
+
+      // Fetch orders for this invoice
+      const invoiceOrdersResponse = await AlWaseetAPI.getInvoiceOrders(token, externalId);
+      const invoiceOrders = invoiceOrdersResponse?.orders || [];
+      
+      // Sync to database
+      const result = await syncAlwaseetInvoiceData(targetInvoice, invoiceOrders);
+      console.log(`Synced invoice ${externalId}:`, result);
+      
+      return { success: true, data: result };
+      
+    } catch (error) {
+      console.error(`Error syncing invoice ${externalId}:`, error);
+      return { success: false, error: error.message };
+    }
+  }, [isLoggedIn, token, syncAlwaseetInvoiceData]);
+
   // Check cooldown and sync received invoices automatically
   const syncReceivedInvoicesAutomatically = useCallback(async () => {
     try {
@@ -402,6 +437,7 @@ export const useAlWaseetInvoices = () => {
     setSelectedInvoice,
     setInvoiceOrders,
     syncReceivedInvoicesAutomatically,
-    syncAlwaseetInvoiceData
+    syncAlwaseetInvoiceData,
+    syncInvoiceById
   };
 };
