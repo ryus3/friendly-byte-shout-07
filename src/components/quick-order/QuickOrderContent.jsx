@@ -700,10 +700,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         // جلب المناطق أولاً ثم تطبيق region_id
         if (aiOrderData.region_id && waseetToken) {
-          setTimeout(() => {
-            setSelectedRegionId(String(aiOrderData.region_id));
-            console.log('🗺️ تطبيق region_id مؤخر للتأكد من تحميل المناطق:', aiOrderData.region_id);
-          }, 200);
+          setSelectedRegionId(String(aiOrderData.region_id));
+          console.log('🗺️ ✅ الحل الجذري - تطبيق region_id فوراً مثل المدينة:', aiOrderData.region_id);
         }
       } else if (aiOrderData.region_id) {
         setSelectedRegionId(String(aiOrderData.region_id));
