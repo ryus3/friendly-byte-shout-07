@@ -1340,11 +1340,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         } 
       }));
 
-      // عرض رسالة نجاح مع رقم الطلب الصحيح
+      // عرض رسالة نجاح مع رقم التتبع الصحيح
       console.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
+      const trackingNumber = updateResult.order?.tracking_number || originalOrder.tracking_number || updateResult.order?.order_number || originalOrder.order_number || 'غير محدد';
       toast({
         title: "تم تحديث الطلب بنجاح",
-        description: `رقم الطلب: ${updateResult.order?.order_number || updateResult.order?.tracking_number || originalOrder.order_number || originalOrder.tracking_number || 'غير محدد'}`,
+        description: `رقم التتبع: ${trackingNumber}`,
         variant: "default",
       });
 
