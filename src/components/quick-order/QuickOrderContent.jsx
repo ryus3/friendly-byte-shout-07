@@ -1140,8 +1140,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         console.log('✅ Al-Waseet order updated:', waseetResponse);
       }
 
-      // تحديث الطلب محلياً
-      updateResult = await updateOrder(originalOrder.id, orderData);
+      // تحديث الطلب محلياً مع تمرير المنتجات الجديدة والقديمة
+      console.log('🔄 Updating order with cart:', cart, 'original items:', originalOrder.items);
+      updateResult = await updateOrder(originalOrder.id, orderData, cart, originalOrder.items);
       console.log('✅ Local order updated:', updateResult);
 
       toast({

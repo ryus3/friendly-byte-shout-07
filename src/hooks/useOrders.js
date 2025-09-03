@@ -47,50 +47,67 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // تحديث المنتجات إذا تم تمريرها
-      if (newProducts && Array.isArray(newProducts)) {
-        // حذف المنتجات القديمة
-        const { error: deleteError } = await supabase
+      if (newProducts && Array.isArray(newProducts) && newProducts.length > 0) {
+        console.log('🔄 تحديث منتجات الطلب - عدد المنتجات الجديدة:', newProducts.length);
+        
+        // تحضير المنتجات الجديدة للإدخال
+        const orderItemsToInsert = newProducts.map(item => ({
+          order_id: orderId,
+          product_id: item.product_id,
+          variant_id: item.variant_id || null,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || 0,
+          total_price: item.total_price || 0
+        }));
+
+        // إضافة المنتجات الجديدة أولاً
+        const { error: insertError } = await supabase
           .from('order_items')
-          .delete()
-          .eq('order_id', orderId);
+          .insert(orderItemsToInsert);
+
+        if (insertError) {
+          console.error('❌ خطأ في إضافة المنتجات الجديدة:', insertError);
+          throw new Error(`فشل في إضافة المنتجات الجديدة: ${insertError.message}`);
+        }
+
+        console.log('✅ تم إضافة المنتجات الجديدة بنجاح');
+
+        // الآن حذف المنتجات القديمة بعد نجاح إضافة الجديدة
+        // نحذف كل المنتجات القديمة للطلب أولاً ثم نضيف الجديدة
+        // لذلك سنحذف بناءً على originalItems إذا كانت متوفرة
+        let deleteQuery = supabase.from('order_items').delete().eq('order_id', orderId);
+        
+        // إذا كانت لدينا المنتجات الأصلية، نحذفها بناءً على معرفاتها
+        if (originalItems && Array.isArray(originalItems) && originalItems.length > 0) {
+          const originalItemIds = originalItems.map(item => item.id).filter(id => id);
+          if (originalItemIds.length > 0) {
+            deleteQuery = deleteQuery.in('id', originalItemIds);
+          }
+        }
+
+        const { error: deleteError } = await deleteQuery;
 
         if (deleteError) {
-          console.error('خطأ في حذف المنتجات القديمة:', deleteError);
+          console.error('❌ خطأ في حذف المنتجات القديمة:', deleteError);
+          // لا نرمي خطأ هنا لأن المنتجات الجديدة تم إضافتها بنجاح
+          console.warn('تم إضافة المنتجات الجديدة لكن فشل حذف القديمة');
+        } else {
+          console.log('✅ تم حذف المنتجات القديمة بنجاح');
         }
+      }
 
-        // إضافة المنتجات الجديدة
-        if (newProducts.length > 0) {
-          const orderItemsToInsert = newProducts.map(item => ({
-            order_id: orderId,
-            product_id: item.product_id,
-            variant_id: item.variant_id || null,
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || 0,
-            total_price: item.total_price || 0
-          }));
-
-          const { error: insertError } = await supabase
-            .from('order_items')
-            .insert(orderItemsToInsert);
-
-          if (insertError) {
-            console.error('خطأ في إضافة المنتجات الجديدة:', insertError);
+      // تحديث المخزون
+      if (onStockUpdate && newProducts && Array.isArray(newProducts)) {
+        // استرداد المخزون للمنتجات القديمة
+        if (originalItems && Array.isArray(originalItems)) {
+          for (const item of originalItems) {
+            await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'add');
           }
         }
 
-        // تحديث المخزون
-        if (onStockUpdate) {
-          // استرداد المخزون للمنتجات القديمة
-          if (originalItems && Array.isArray(originalItems)) {
-            for (const item of originalItems) {
-              await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'add');
-            }
-          }
-
-          // خصم المخزون للمنتجات الجديدة
-          for (const item of newProducts) {
-            await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'subtract');
-          }
+        // خصم المخزون للمنتجات الجديدة
+        for (const item of newProducts) {
+          await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'subtract');
         }
       }
 
