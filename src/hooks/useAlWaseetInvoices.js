@@ -293,10 +293,22 @@ export const useAlWaseetInvoices = () => {
     });
   }, []);
 
-  // Auto-fetch invoices when token is available
+  // Auto-sync and fetch invoices when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices();
+      (async () => {
+        try {
+          // Trigger backend sync to persist invoices and mark orders automatically
+          await supabase.functions.invoke('alwaseet-sync-invoices', {
+            body: { token }
+          });
+        } catch (e) {
+          console.warn('Failed to sync AlWaseet invoices:', e?.error || e?.message || e);
+        } finally {
+          // Always fetch for UI after attempting sync
+          fetchInvoices();
+        }
+      })();
     }
   }, [token, isLoggedIn, activePartner, fetchInvoices]);
 
