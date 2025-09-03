@@ -698,13 +698,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setSelectedCityId(String(aiOrderData.city_id));
         console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', aiOrderData.city_id);
         
-        // جلب المناطق أولاً ثم تطبيق region_id
-        if (aiOrderData.region_id && waseetToken) {
+        // تطبيق region_id فوراً مثل المدينة تماماً - بدون شروط إضافية
+        if (aiOrderData.region_id) {
           setSelectedRegionId(String(aiOrderData.region_id));
           console.log('🗺️ ✅ الحل الجذري - تطبيق region_id فوراً مثل المدينة:', aiOrderData.region_id);
         }
-      } else if (aiOrderData.region_id) {
-        setSelectedRegionId(String(aiOrderData.region_id));
         console.log('🗺️ تم تحديد المنطقة من بيانات التعديل (بدون مدينة):', aiOrderData.region_id);
       }
 
@@ -844,8 +842,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setLoadingRegions(true);
         setRegions([]);
         
-        // في وضع التعديل، احتفظ بـ region_id الأصلي
-        const preservedRegionId = isEditMode && selectedRegionId ? selectedRegionId : '';
+        // في وضع التعديل، احتفظ بـ region_id الأصلي مع استخدام formData كـ fallback
+        const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         console.log('🗺️ جلب المناطق - حفظ region_id:', { preservedRegionId, isEditMode, selectedRegionId });
         
         // مسح region_id مؤقتاً فقط للطلبات الجديدة
