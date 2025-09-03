@@ -1584,6 +1584,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   value={effectiveRegionId}
                   onValueChange={(v) => {
                     console.log('🌍 الحل الجذري - تغيير المنطقة:', v);
+                    setSelectedRegionId(v); // ✅ إضافة هذا السطر مثل المدينة تماماً
                     handleSelectChange('region_id', v);
                   }}
                  options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
