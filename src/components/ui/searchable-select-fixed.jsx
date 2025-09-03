@@ -178,11 +178,13 @@ const SearchableSelectFixed = ({
         maxWidth: '400px',
         pointerEvents: 'auto',
         backgroundColor: 'hsl(var(--background)) !important',
-        borderColor: 'hsl(var(--border))',
-        zIndex: 9999999,
-        position: 'relative',
-        transform: 'translate3d(0, 0, 0)',
-        willChange: 'transform'
+        borderColor: 'hsl(var(--border)) !important',
+        zIndex: '999999999 !important',
+        position: 'fixed !important',
+        isolation: 'isolate',
+        transform: 'translate3d(0, 0, 0) !important',
+        willChange: 'transform',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important'
       }}
     >
       {/* Search Input */}
@@ -320,16 +322,17 @@ const SearchableSelectFixed = ({
         isInDialog ? (
           // Inside Dialog: Use fixed positioning with ultra-high z-index
           <div 
-            className="fixed z-[9999999]"
+            className="fixed"
             style={{
               direction: 'rtl',
               position: 'fixed !important',
-              zIndex: 9999999,
+              zIndex: '999999999 !important',
               left: buttonRef.current?.getBoundingClientRect().left || 0,
               top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
               width: buttonRef.current?.getBoundingClientRect().width || 'auto',
-              transform: 'translate3d(0, 0, 0)',
-              willChange: 'transform'
+              transform: 'translate3d(0, 0, 0) !important',
+              willChange: 'transform',
+              isolation: 'isolate'
             }}
           >
             {renderDropdownContent()}
@@ -338,16 +341,17 @@ const SearchableSelectFixed = ({
           // Outside Dialog: Use portal with ultra-high z-index
           createPortal(
             <div 
-              className="fixed z-[9999999]"
+              className="fixed"
               style={{ 
                 direction: 'rtl',
                 left: buttonRef.current?.getBoundingClientRect().left || 0,
                 top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
                 width: buttonRef.current?.getBoundingClientRect().width || 'auto',
-                zIndex: 9999999,
+                zIndex: '999999999 !important',
                 position: 'fixed !important',
-                transform: 'translate3d(0, 0, 0)',
-                willChange: 'transform'
+                transform: 'translate3d(0, 0, 0) !important',
+                willChange: 'transform',
+                isolation: 'isolate'
               }}
             >
               {renderDropdownContent()}

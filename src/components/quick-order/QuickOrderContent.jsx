@@ -1356,7 +1356,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }));
         });
         
-        // تحديث فوري إضافي بعد تأخير قصير
+        // تحديث فوري إضافي بعد تأخير طويل لضمان الانعكاس الكامل
+        setTimeout(() => {
+          console.log('🔄 QuickOrderContent: تحديث فوري إضافي مع إعادة إرسال الأحداث');
+          events.forEach(eventName => {
+            window.dispatchEvent(new CustomEvent(eventName, { 
+              detail: { 
+                id: originalOrder.id,
+                orderId: originalOrder.id,
+                order: updateResult.order || originalOrder,
+                updates: completeOrderData,
+                source: 'QuickOrderContent-Retry',
+                timestamp: new Date().toISOString(),
+                isRetry: true
+              } 
+            }));
+          });
+        }, 2000);
+        
+        // محاولة ثالثة للتأكد الكامل
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('forceOrdersRefresh', { 
             detail: { 
