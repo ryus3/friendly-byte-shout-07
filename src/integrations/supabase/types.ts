@@ -1649,8 +1649,6 @@ export type Database = {
       }
       orders: {
         Row: {
-          alwaseet_city_id: number | null
-          alwaseet_region_id: number | null
           assigned_to: string | null
           cash_source_id: string | null
           created_at: string
@@ -1690,8 +1688,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          alwaseet_city_id?: number | null
-          alwaseet_region_id?: number | null
           assigned_to?: string | null
           cash_source_id?: string | null
           created_at?: string
@@ -1731,8 +1727,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          alwaseet_city_id?: number | null
-          alwaseet_region_id?: number | null
           assigned_to?: string | null
           cash_source_id?: string | null
           created_at?: string

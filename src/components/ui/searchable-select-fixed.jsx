@@ -36,9 +36,7 @@ const SearchableSelectFixed = ({
     return String(optionValue) === String(value);
   });
 
-  // إضافة fallback للقيمة الموجودة بدون options - الحل الجذري النهائي
-  const displayText = selectedOption?.label || selectedOption?.name || 
-    (value && !selectedOption && options.length === 0 ? `القيمة: ${value}` : placeholder);
+  const displayText = selectedOption?.label || selectedOption?.name || placeholder;
   
   // Detect touch device and dialog presence
   useEffect(() => {

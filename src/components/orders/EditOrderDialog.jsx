@@ -49,25 +49,26 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
     console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
 
-    // تحويل معرفات/أسماء المدن والمناطق إلى معرفات Al Waseet مع أفضلية القيم المخزنة
-    let city_id = order?.alwaseet_city_id ? String(order.alwaseet_city_id) : '';
-    let region_id = order?.alwaseet_region_id ? String(order.alwaseet_region_id) : '';
+    // تحويل أسماء المدن والمناطق إلى معرفات Al Waseet
+    let city_id = '';
+    let region_id = '';
     
-    if (!city_id && order?.city_id) city_id = String(order.city_id);
-    if (!region_id && order?.region_id) region_id = String(order.region_id);
-    
-    if (!city_id && order.delivery_partner === 'alwaseet' && isLoggedIn && token) {
+    if (order.delivery_partner === 'alwaseet' && isLoggedIn && token) {
       try {
-        console.log('🔄 محاولة تحويل الأسماء إلى معرفات Al Waseet لعدم توفر قيم مخزنة...');
+        console.log('🔄 تحويل أسماء المدن والمناطق إلى معرفات Al Waseet...');
+        
         const cities = await getCities(token);
         const cityMatch = cities.find(city => city.name === order.customer_city);
+        
         if (cityMatch) {
-          city_id = String(cityMatch.id);
+          city_id = cityMatch.id;
           console.log(`✅ تم العثور على المدينة: ${order.customer_city} → ID: ${city_id}`);
+          
           const regions = await getRegionsByCity(token, cityMatch.id);
           const regionMatch = regions.find(region => region.name === order.customer_province);
+          
           if (regionMatch) {
-            region_id = String(regionMatch.id);
+            region_id = regionMatch.id;
             console.log(`✅ تم العثور على المنطقة: ${order.customer_province} → ID: ${region_id}`);
           } else {
             console.warn(`⚠️ لم يتم العثور على المنطقة: ${order.customer_province}`);
@@ -76,7 +77,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
           console.warn(`⚠️ لم يتم العثور على المدينة: ${order.customer_city}`);
         }
       } catch (error) {
-        console.warn('⚠️ فشل تحويل أسماء المدينة/المنطقة إلى معرفات:', error);
+        console.warn('⚠️ Failed to convert city/region names to IDs:', error);
       }
     }
 
