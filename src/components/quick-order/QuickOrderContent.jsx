@@ -1027,8 +1027,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_address: formData.address,
         customer_city: formData.city,
         customer_province: formData.region,
-        city_id: formData.city_id,
-        region_id: formData.region_id,
+        // حفظ معرفات الوسيط محلياً
+        alwaseet_city_id: parseInt((selectedCityId || formData.city_id || 0), 10) || null,
+        alwaseet_region_id: parseInt((selectedRegionId || formData.region_id || 0), 10) || null,
         notes: formData.notes,
         delivery_partner: activePartner === 'alwaseet' ? 'alwaseet' : 'محلي',
          items: cart.filter(item => item && item.quantity).map(item => ({

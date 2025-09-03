@@ -30,6 +30,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           customer_city: updates.customer_city,
           customer_province: updates.customer_province,
           customer_address: updates.customer_address,
+          // تخزين معرفات الوسيط عند توفرها
+          alwaseet_city_id: updates.alwaseet_city_id ?? null,
+          alwaseet_region_id: updates.alwaseet_region_id ?? null,
           notes: updates.notes,
           total_amount: updates.total_amount,
           delivery_fee: updates.delivery_fee,
