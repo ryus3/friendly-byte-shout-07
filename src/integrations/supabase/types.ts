@@ -3729,10 +3729,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      sync_alwaseet_invoice_data: {
-        Args: { p_invoice_data: Json; p_orders_data: Json }
-        Returns: Json
-      }
       update_cash_source_balance: {
         Args: {
           p_amount: number
