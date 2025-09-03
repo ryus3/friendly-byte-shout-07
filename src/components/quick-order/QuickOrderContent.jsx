@@ -1267,13 +1267,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         phone: normalizedPhone, // استخدام الرقم المطبع
         address: `${formData.address}, ${region}, ${city}`,
         city: city, 
+        province: region, // ✅ الحل الجذري - حفظ المنطقة
         notes: formData.notes,
       };
       
       // معلومات شريك التوصيل
       const deliveryData = {
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-        delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0)
+        delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0),
+        // ✅ الحل الجذري - حفظ معرفات الوسيط
+        alwaseet_city_id: formData.city_id || null,
+        alwaseet_region_id: formData.region_id || null,
       };
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
