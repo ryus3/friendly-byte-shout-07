@@ -33,13 +33,15 @@ const AlWaseetInvoicesTab = () => {
     fetchInvoices, 
     receiveInvoice,
     getInvoiceStats,
-    applyCustomDateRangeFilter
+    applyCustomDateRangeFilter,
+    syncAllRecentInvoices
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   
   // Time filter state with localStorage
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
@@ -94,6 +96,24 @@ const AlWaseetInvoicesTab = () => {
   
   const handleCustomDateRangeChange = (dateRange) => {
     setCustomDateRange(dateRange);
+  };
+
+  const handleSyncAll = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncAllRecentInvoices();
+      if (result.success) {
+        console.log('Bulk sync completed:', result.data);
+        // Refresh invoices after sync
+        await fetchInvoices(timeFilter);
+      } else {
+        console.error('Bulk sync failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error during bulk sync:', error);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // Show message if not logged in to Al-Waseet
@@ -297,14 +317,25 @@ const AlWaseetInvoicesTab = () => {
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <Button 
-              onClick={handleRefresh} 
-              disabled={loading}
-              size="sm"
-            >
-              تحديث
-              <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleRefresh} 
+                disabled={loading || syncing}
+                size="sm"
+              >
+                تحديث
+                <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button 
+                onClick={handleSyncAll} 
+                disabled={loading || syncing}
+                variant="outline"
+                size="sm"
+              >
+                {syncing ? 'جاري المزامنة...' : 'مزامنة الكل'}
+                <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
             <span className="text-right">فواتير شركة التوصيل</span>
           </CardTitle>
         </CardHeader>

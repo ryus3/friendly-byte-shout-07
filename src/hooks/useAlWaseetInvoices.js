@@ -427,6 +427,55 @@ export const useAlWaseetInvoices = () => {
     }
   }, [token, syncAlwaseetInvoiceData, fetchInvoices]);
 
+  // Add bulk sync functionality for manual trigger
+  const syncAllRecentInvoices = useCallback(async () => {
+    if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false, error: 'Not logged in' };
+    
+    try {
+      console.log('Starting bulk sync of all recent invoices...');
+      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+      
+      // Save all invoices to database
+      const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+        p_invoices: invoicesData || []
+      });
+      
+      if (upsertErr) throw new Error(upsertErr.message);
+      
+      // Sync recent invoices (last 3 months) with their orders
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      const recentInvoices = (invoicesData || [])
+        .filter(inv => new Date(inv.updated_at) > threeMonthsAgo)
+        .slice(0, 50); // Limit to 50 recent invoices
+      
+      let syncedCount = 0;
+      for (const invoice of recentInvoices) {
+        try {
+          const result = await syncInvoiceById(invoice.id);
+          if (result.success) {
+            syncedCount++;
+          }
+        } catch (error) {
+          console.warn(`Failed to sync invoice ${invoice.id}:`, error);
+        }
+      }
+      
+      return { 
+        success: true, 
+        data: { 
+          totalInvoices: invoicesData?.length || 0,
+          syncedInvoices: syncedCount,
+          dbSaved: upsertRes?.processed || 0
+        }
+      };
+    } catch (error) {
+      console.error('Bulk sync failed:', error);
+      return { success: false, error: error.message };
+    }
+  }, [isLoggedIn, activePartner, token, syncInvoiceById]);
+
   // Auto-fetch invoices and sync received ones when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
@@ -450,6 +499,7 @@ export const useAlWaseetInvoices = () => {
     setInvoiceOrders,
     syncReceivedInvoicesAutomatically,
     syncAlwaseetInvoiceData,
-    syncInvoiceById
+    syncInvoiceById,
+    syncAllRecentInvoices
   };
 };

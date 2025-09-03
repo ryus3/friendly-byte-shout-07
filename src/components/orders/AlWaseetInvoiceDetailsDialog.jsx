@@ -48,7 +48,7 @@ const AlWaseetInvoiceDetailsDialog = ({
     if (isOpen && invoice?.id) {
       fetchInvoiceOrders(invoice.id);
       loadLinkedOrders();
-      // Auto-sync invoice data to database
+      // Auto-sync invoice data to database when opening details
       handleSyncInvoice(true);
     }
   }, [isOpen, invoice?.id, fetchInvoiceOrders]);

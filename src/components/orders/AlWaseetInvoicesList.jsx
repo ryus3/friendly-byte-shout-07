@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, Package, DollarSign, Calendar } from 'lucide-react';
+import { Eye, CheckCircle, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
 
 const AlWaseetInvoicesList = ({ 
   invoices, 
@@ -59,13 +60,56 @@ const AlWaseetInvoicesList = ({
 };
 
 const InvoiceCard = ({ invoice, onView, onReceive }) => {
+  const [dbStatus, setDbStatus] = useState('checking'); // 'checking', 'saved', 'not_saved'
+  const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
+  
   const isReceived = invoice.status === 'تم الاستلام من قبل التاجر';
   const amount = parseFloat(invoice.merchant_price) || 0;
   const ordersCount = parseInt(invoice.delivered_orders_count) || 0;
   
+  // Check if invoice is saved in database
+  useEffect(() => {
+    const checkDbStatus = async () => {
+      try {
+        const { data: dbInvoice, error } = await supabase
+          .from('delivery_invoices')
+          .select('id, (delivery_invoice_orders(count))')
+          .eq('external_id', invoice.id)
+          .eq('partner', 'alwaseet')
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.warn('Error checking invoice status:', error);
+          setDbStatus('not_saved');
+        } else if (dbInvoice) {
+          setDbStatus('saved');
+          setLinkedOrdersCount(dbInvoice.delivery_invoice_orders?.[0]?.count || 0);
+        } else {
+          setDbStatus('not_saved');
+        }
+      } catch (e) {
+        console.warn('Error checking invoice DB status:', e);
+        setDbStatus('not_saved');
+      }
+    };
+
+    checkDbStatus();
+  }, [invoice.id]);
+  
   const getStatusVariant = (status) => {
     if (status === 'تم الاستلام من قبل التاجر') return 'success';
     return 'secondary';
+  };
+
+  const getDbStatusIcon = () => {
+    switch (dbStatus) {
+      case 'saved':
+        return <Database className="h-3 w-3 text-green-600" title="محفوظ في النظام" />;
+      case 'not_saved':
+        return <WifiOff className="h-3 w-3 text-orange-500" title="عرض مباشر فقط" />;
+      default:
+        return <Wifi className="h-3 w-3 text-gray-400 animate-pulse" title="جاري التحقق..." />;
+    }
   };
 
   return (
@@ -74,10 +118,20 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
         <div className="space-y-3">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg text-left">فاتورة #{invoice.id}</h3>
-            <Badge variant={getStatusVariant(invoice.status)}>
-              {isReceived ? 'مُستلمة' : 'معلقة'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-lg text-left">فاتورة #{invoice.id}</h3>
+              {getDbStatusIcon()}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={getStatusVariant(invoice.status)}>
+                {isReceived ? 'مُستلمة' : 'معلقة'}
+              </Badge>
+              {dbStatus === 'saved' && linkedOrdersCount > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {linkedOrdersCount} مربوط
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Amount */}
