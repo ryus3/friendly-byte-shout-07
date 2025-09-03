@@ -965,9 +965,6 @@ export const SuperProvider = ({ children }) => {
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: baseOrder.notes,
         created_by: user?.user_id || user?.id,
-        // ✅ الحل الجذري - حفظ معرفات الوسيط
-        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || null,
-        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || null,
       };
 
       // إنشاء الطلب
