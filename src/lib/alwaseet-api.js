@@ -24,6 +24,29 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams) => {
       throw new Error('لم يتم استلام رد من الخادم.');
     }
     
+    // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
+    if (endpoint === 'edit-order') {
+      console.log('📋 تحليل استجابة edit-order:', { 
+        errNum: data.errNum, 
+        status: data.status, 
+        msg: data.msg,
+        fullResponse: data 
+      });
+      
+      // فحص رسالة النجاح أو الأكواد المعتادة
+      const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
+      const isSuccessCode = data.errNum === "S000" && data.status;
+      
+      if (!isSuccessMessage && !isSuccessCode) {
+        console.error('❌ فشل تحديث الطلب:', data);
+        throw new Error(data.msg || 'فشل تحديث الطلب في شركة التوصيل.');
+      }
+      
+      console.log('✅ نجح تحديث الطلب في Al-Waseet');
+      return data.data || data;
+    }
+    
+    // المعالجة العادية للـ endpoints الأخرى
     if (data.errNum !== "S000" || !data.status) {
       throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
     }
