@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -29,6 +29,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
+  
+  // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
+  const regionCache = useRef(new Map());
   
   // حماية من البيانات غير الصحيحة في cart
   console.log('🛒 QuickOrderContent - Cart state debug:', { cart: Array.isArray(cart) ? cart.length : 'not array', aiOrderData: !!aiOrderData });
@@ -690,14 +693,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         type: 'update'
       }));
 
-      // تحديد المدينة والمنطقة إذا كانت متوفرة
+      // تحديد المدينة والمنطقة إذا كانت متوفرة - مع تأخير للتأكد من التطبيق
       if (aiOrderData.city_id) {
         setSelectedCityId(String(aiOrderData.city_id));
         console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', aiOrderData.city_id);
-      }
-      if (aiOrderData.region_id) {
+        
+        // جلب المناطق أولاً ثم تطبيق region_id
+        if (aiOrderData.region_id && waseetToken) {
+          setTimeout(() => {
+            setSelectedRegionId(String(aiOrderData.region_id));
+            console.log('🗺️ تطبيق region_id مؤخر للتأكد من تحميل المناطق:', aiOrderData.region_id);
+          }, 200);
+        }
+      } else if (aiOrderData.region_id) {
         setSelectedRegionId(String(aiOrderData.region_id));
-        console.log('🗺️ تم تحديد المنطقة من بيانات التعديل:', aiOrderData.region_id);
+        console.log('🗺️ تم تحديد المنطقة من بيانات التعديل (بدون مدينة):', aiOrderData.region_id);
       }
 
       // تحديث السلة بالمنتجات
@@ -835,17 +845,58 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const fetchRegionsData = async () => {
         setLoadingRegions(true);
         setRegions([]);
-        setFormData(prev => ({ ...prev, region_id: '' }));
+        
+        // في وضع التعديل، احتفظ بـ region_id الأصلي
+        const preservedRegionId = isEditMode && selectedRegionId ? selectedRegionId : '';
+        console.log('🗺️ جلب المناطق - حفظ region_id:', { preservedRegionId, isEditMode, selectedRegionId });
+        
+        // مسح region_id مؤقتاً فقط للطلبات الجديدة
+        if (!isEditMode) {
+          setFormData(prev => ({ ...prev, region_id: '' }));
+        }
+        
         try {
-            const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
-            const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
-            setRegions(safeRegions);
-        } catch (error) { toast({ title: "خطأ", description: "فشل تحميل المناطق.", variant: "destructive" }); }
+            // تحقق من الذاكرة التخزينية أولاً
+            const cacheKey = `regions_${formData.city_id}`;
+            const cachedRegions = regionCache.current.get(cacheKey);
+            
+            if (cachedRegions) {
+              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', formData.city_id);
+              setRegions(cachedRegions);
+              
+              // تطبيق region_id المحفوظ في وضع التعديل
+              if (isEditMode && preservedRegionId) {
+                setTimeout(() => {
+                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
+                  console.log('✅ تم تطبيق region_id المحفوظ:', preservedRegionId);
+                }, 100);
+              }
+            } else {
+              console.log('🌐 جلب المناطق من API للمدينة:', formData.city_id);
+              const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
+              const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
+              
+              // حفظ في الذاكرة التخزينية
+              regionCache.current.set(cacheKey, safeRegions);
+              setRegions(safeRegions);
+              
+              // تطبيق region_id المحفوظ في وضع التعديل
+              if (isEditMode && preservedRegionId) {
+                setTimeout(() => {
+                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
+                  console.log('✅ تم تطبيق region_id المحفوظ بعد جلب API:', preservedRegionId);
+                }, 100);
+              }
+            }
+        } catch (error) { 
+          console.error('❌ خطأ في جلب المناطق:', error);
+          toast({ title: "خطأ", description: "فشل تحميل المناطق.", variant: "destructive" }); 
+        }
         finally { setLoadingRegions(false); }
       };
       fetchRegionsData();
     }
-  }, [formData.city_id, activePartner, waseetToken]);
+  }, [formData.city_id, activePartner, waseetToken, isEditMode, selectedRegionId]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
