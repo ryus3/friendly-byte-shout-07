@@ -841,16 +841,11 @@ const NotificationsPanel = () => {
                                    }
                                  })()}
                                </h3>
-                               <div className="flex items-center gap-1">
-                                 {notification.isUpdated && (
-                                   <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                     محدث
-                                   </Badge>
-                                 )}
-                                 {!(notification.is_read || notification.read) && (
-                                   <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
-                                 )}
-                               </div>
+                                <div className="flex items-center gap-1">
+                                  {!(notification.is_read || notification.read) && (
+                                    <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
+                                  )}
+                                </div>
                              </div>
                              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
                                <Clock className="w-2.5 h-2.5" />

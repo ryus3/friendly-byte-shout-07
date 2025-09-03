@@ -290,16 +290,11 @@ const NotificationsPage = () => {
                                  )}>
                                    {notification.title}
                                  </h3>
-                                 <div className="flex items-center gap-1">
-                                   {isNotificationUpdated(notification) && (
-                                     <Badge variant="secondary" className="text-xs px-1 py-0 h-4 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                       محدث
-                                     </Badge>
-                                   )}
-                                   {!notification.is_read && (
-                                     <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
-                                   )}
-                                 </div>
+                                  <div className="flex items-center gap-1">
+                                    {!notification.is_read && (
+                                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                                    )}
+                                  </div>
                                </div>
                                <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
                                <p className="text-xs text-muted-foreground/70">

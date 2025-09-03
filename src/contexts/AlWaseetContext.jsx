@@ -110,12 +110,12 @@ export const AlWaseetProvider = ({ children }) => {
     
     // البحث عن الإشعار الموجود وتحديثه أو إنشاء جديد
     try {
-      // البحث عن الإشعار الموجود
+      // البحث المحسن عن الإشعار الموجود باستخدام عدة معايير
       const { data: existingNotifications, error: searchError } = await supabase
         .from('notifications')
         .select('id')
         .eq('type', 'order_status_update')
-        .eq('data->>order_number', trackingNumber)
+        .or(`data->>'order_number'.eq.${trackingNumber},data->>'tracking_number'.eq.${trackingNumber},message.like.%${trackingNumber}%`)
         .limit(1);
         
       if (searchError) {
