@@ -550,9 +550,40 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [isResetting, setIsResetting] = useState(false);
   const [preservedRegionId, setPreservedRegionId] = useState('');
 
-  // مرجع للقيم الفعّالة
-  const effectiveCityId = selectedCityId || formData.city_id;
-  const effectiveRegionId = selectedRegionId || formData.region_id;
+  // استخدام قيم فعالة للمدينة والمنطقة - إصلاح شامل للتحكم في القيم
+  const effectiveCityId = useMemo(() => {
+    if (activePartner === 'alwaseet') {
+      // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
+      if (isEditMode) {
+        const editCityId = selectedCityId || formData.city_id;
+        console.log('🏙️ effectiveCityId في وضع التعديل:', {
+          selectedCityId,
+          formDataCityId: formData.city_id,
+          result: editCityId
+        });
+        return editCityId;
+      }
+      return formData.city_id;
+    }
+    return null;
+  }, [selectedCityId, formData.city_id, activePartner, isEditMode]);
+
+  const effectiveRegionId = useMemo(() => {
+    if (activePartner === 'alwaseet') {
+      // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
+      if (isEditMode) {
+        const editRegionId = selectedRegionId || formData.region_id;
+        console.log('🗺️ effectiveRegionId في وضع التعديل:', {
+          selectedRegionId,
+          formDataRegionId: formData.region_id,
+          result: editRegionId
+        });
+        return editRegionId;
+      }
+      return formData.region_id;
+    }
+    return null;
+  }, [selectedRegionId, formData.region_id, activePartner, isEditMode]);
 
   // تم دمج جلب البيانات مع الاستدعاء الأول في السطر 24
 
@@ -891,17 +922,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // مرجع لتتبع آخر مدينة محددة
   const prevCityIdRef = useRef(formData.city_id);
 
+  // إصلاح شامل لجلب المناطق - الاعتماد على selectedCityId في وضع التعديل
   useEffect(() => {
-    if (formData.city_id && activePartner === 'alwaseet' && waseetToken) {
+    // في وضع التعديل، استخدم selectedCityId؛ في وضع الإنشاء، استخدم formData.city_id
+    const cityIdForRegions = isEditMode ? selectedCityId : formData.city_id;
+    
+    if (cityIdForRegions && activePartner === 'alwaseet' && waseetToken) {
       const fetchRegionsData = async () => {
         setLoadingRegions(true);
         setRegions([]);
         
-        // في وضع التعديل، احتفظ بـ region_id الأصلي مع استخدام formData كـ fallback
+        // في وضع التعديل، احتفظ بـ region_id الأصلي
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
-        console.log('🗺️ جلب المناطق - حفظ region_id:', { preservedRegionId, isEditMode, selectedRegionId });
+        console.log('🗺️ جلب المناطق - التحكم الجديد:', { 
+          cityIdForRegions, 
+          isEditMode, 
+          selectedCityId,
+          formDataCityId: formData.city_id,
+          preservedRegionId 
+        });
         
-         // مسح region_id مؤقتاً فقط عند تغيير المدينة حقاً (وليس في وضع التعديل)
+         // مسح region_id فقط عند تغيير المدينة في وضع الإنشاء
          if (!isEditMode && prevCityIdRef.current !== formData.city_id) {
            setFormData(prev => ({ ...prev, region_id: '' }));
            setSelectedRegionId('');
@@ -909,33 +950,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
          }
         
         try {
-            // إضافة logging مفصل لتتبع city_id المرسل مع fallback
-            const cityIdToUse = formData.city_id || selectedCityId;
-            console.log('🔍 تفاصيل جلب المناطق:', {
-              formDataCityId: formData.city_id,
-              selectedCityId: selectedCityId,
-              cityIdToUse: cityIdToUse,
-              cityIdType: typeof cityIdToUse,
-              isEditMode: isEditMode,
-              preservedRegionId: preservedRegionId
-            });
+            console.log('🔍 إصلاح - جلب المناطق للمدينة:', cityIdForRegions);
             
-            // التحقق من صحة city_id مع fallback
-            if (!cityIdToUse || cityIdToUse === '') {
+            // التحقق من صحة city_id
+            if (!cityIdForRegions || cityIdForRegions === '') {
               console.warn('⚠️ city_id فارغ، لا يمكن جلب المناطق');
               return;
             }
             
-            // في وضع التعديل، استخدم cityIdToUse بدلاً من formData.city_id فقط
-            const finalCityId = isEditMode ? cityIdToUse : formData.city_id;
-            console.log('🎯 استخدام city_id النهائي لجلب المناطق:', finalCityId);
-            
-            // تحقق من الذاكرة التخزينية أولاً باستخدام finalCityId
-            const cacheKey = `regions_${finalCityId}`;
+            // تحقق من الذاكرة التخزينية أولاً
+            const cacheKey = `regions_${cityIdForRegions}`;
             const cachedRegions = regionCache.current.get(cacheKey);
             
             if (cachedRegions) {
-              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', finalCityId);
+              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', cityIdForRegions);
               setRegions(cachedRegions);
               
               // تطبيق region_id المحفوظ في وضع التعديل
@@ -947,11 +975,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }, 150);
               }
             } else {
-              console.log('🌐 جلب المناطق من API للمدينة:', finalCityId);
-              const regionsData = await getRegionsByCity(waseetToken, finalCityId);
+              console.log('🌐 جلب المناطق من API للمدينة:', cityIdForRegions);
+              const regionsData = await getRegionsByCity(waseetToken, cityIdForRegions);
               
               console.log('📡 استجابة API المناطق:', {
-                requestedCityId: finalCityId,
+                requestedCityId: cityIdForRegions,
                 regionsCount: Array.isArray(regionsData) ? regionsData.length : Object.keys(regionsData || {}).length,
                 firstRegion: Array.isArray(regionsData) ? regionsData[0] : Object.values(regionsData || {})[0]
               });
@@ -959,11 +987,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               // التحقق من أن المناطق تنتمي للمدينة الصحيحة
               if (Array.isArray(regionsData) && regionsData.length > 0) {
                 const firstRegion = regionsData[0];
-                if (firstRegion.city_id && String(firstRegion.city_id) !== String(finalCityId)) {
+                if (firstRegion.city_id && String(firstRegion.city_id) !== String(cityIdForRegions)) {
                   console.error('❌ خطأ: المناطق المُستلمة تنتمي لمدينة مختلفة!', {
-                    requestedCityId: finalCityId,
+                    requestedCityId: cityIdForRegions,
                     receivedCityId: firstRegion.city_id
                   });
+                  toast({
+                    title: "خطأ في البيانات",
+                    description: "تم استلام مناطق لمدينة خاطئة من الخادم",
+                    variant: "destructive"
+                  });
+                  return;
                 }
               }
               
@@ -993,7 +1027,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       fetchRegionsData();
     }
-  }, [formData.city_id, activePartner, waseetToken, isEditMode]);
+  }, [cityIdForRegions, selectedCityId, formData.city_id, activePartner, waseetToken, isEditMode]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
@@ -1197,7 +1231,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
       let updateResult;
       
-      // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً
+      // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً مع تحسينات
       if (activePartner === 'alwaseet' && isWaseetLoggedIn && originalOrder?.tracking_number) {
         // تحضير المنتجات للوسيط بالتنسيق الصحيح
          const cartItems = cart.filter(item => item && item.quantity).map(item => ({
@@ -1209,13 +1243,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
            note: ''
          }));
 
+        // التأكد من صحة معرفات المدينة والمنطقة قبل الإرسال
+        const validCityId = parseInt(effectiveCityId || selectedCityId || formData.city_id || 0);
+        const validRegionId = parseInt(effectiveRegionId || selectedRegionId || formData.region_id || 0);
+        
+        if (!validCityId || !validRegionId) {
+          throw new Error('معرفات المدينة والمنطقة مطلوبة لتحديث طلب الوسيط');
+        }
+
         const alwaseetData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
           name: formData.name,
           phone: formData.phone,
           phone2: formData.second_phone || undefined,
-          city_id: selectedCityId || formData.city_id,
-          region_id: selectedRegionId || formData.region_id,
+          city_id: validCityId,
+          region_id: validRegionId,
           address: formData.address,
           details: cartItems.map(item => 
             `${item.product_name} (${item.color}, ${item.size}) × ${item.quantity} = ${item.price} د.ع`
@@ -1226,15 +1268,34 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           notes: formData.notes,
           replacement: 0,
           // إضافة تفاصيل المنتجات
-          items: cartItems,
-          // ضمان إرسال معرفات المدينة والمنطقة الصحيحة
-          city_id: parseInt(selectedCityId || formData.customer_city_id || formData.city_id || 0),
-          region_id: parseInt(selectedRegionId || formData.customer_region_id || formData.region_id || 0)
+          items: cartItems
         };
 
-        console.log('🔧 Updating Al-Waseet order with data:', alwaseetData);
-        const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
-        console.log('✅ Al-Waseet order updated:', waseetResponse);
+        console.log('🔧 تحديث طلب الوسيط مع البيانات المحسنة:', {
+          qr_id: alwaseetData.qr_id,
+          city_id: alwaseetData.city_id,
+          region_id: alwaseetData.region_id,
+          dataKeys: Object.keys(alwaseetData)
+        });
+        
+        try {
+          const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
+          
+          // التحقق من نجاح الاستجابة
+          if (!waseetResponse || waseetResponse.error) {
+            throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + (waseetResponse?.error || 'استجابة غير صحيحة'));
+          }
+          
+          console.log('✅ تم تحديث طلب الوسيط بنجاح:', waseetResponse);
+        } catch (waseetError) {
+          console.error('❌ خطأ في تحديث طلب الوسيط:', waseetError);
+          // عدم إيقاف العملية - متابعة التحديث المحلي مع تحذير
+          toast({
+            title: "تحذير",
+            description: "تم تحديث الطلب محلياً لكن فشل تحديثه في شركة التوصيل",
+            variant: "destructive"
+          });
+        }
       }
 
       // تحديث الطلب محلياً - تمرير المنتجات والعناصر الأصلية بشكل منفصل
@@ -1247,6 +1308,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         description: `رقم الطلب: ${updateResult.order_number}${updateResult.tracking_number ? ` - رقم التتبع: ${updateResult.tracking_number}` : ''}`,
         variant: "default",
       });
+
+      // إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث الناجح
+      if (!isDialog) {
+        setTimeout(() => {
+          // إعادة تعيين معرفات المدينة والمنطقة للقيم الافتراضية
+          const baghdadCity = cities.find(city => 
+            city.name?.toLowerCase().includes('بغداد') || 
+            city.name?.toLowerCase().includes('baghdad')
+          );
+          if (baghdadCity) {
+            setSelectedCityId(String(baghdadCity.id));
+            setSelectedRegionId('');
+            setFormData(prev => ({
+              ...prev,
+              city_id: String(baghdadCity.id),
+              region_id: '',
+              city: '',
+              region: ''
+            }));
+            console.log('🔄 تم إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث');
+          }
+        }, 1000);
+      }
 
       // استدعاء onOrderCreated (يعمل أيضاً للتحديث)
       if (onOrderCreated) onOrderCreated(updateResult);
