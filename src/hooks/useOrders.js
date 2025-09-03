@@ -47,35 +47,41 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // تحديث المنتجات إذا تم تمريرها
-      if (newProducts && Array.isArray(newProducts)) {
-        // حذف المنتجات القديمة
+      if (newProducts && Array.isArray(newProducts) && newProducts.length > 0) {
+        console.log('🔄 تحديث المنتجات - عدد المنتجات الجديدة:', newProducts.length);
+        
+        // إضافة المنتجات الجديدة أولاً
+        const orderItemsToInsert = newProducts.map(item => ({
+          order_id: orderId,
+          product_id: item.product_id,
+          variant_id: item.variant_id || null,
+          quantity: item.quantity || 1,
+          unit_price: item.unit_price || item.price || 0,
+          total_price: item.total_price || ((item.unit_price || item.price || 0) * (item.quantity || 1))
+        }));
+
+        const { error: insertError } = await supabase
+          .from('order_items')
+          .insert(orderItemsToInsert);
+
+        if (insertError) {
+          console.error('❌ خطأ في إضافة المنتجات الجديدة:', insertError);
+          throw new Error(`فشل في إضافة المنتجات الجديدة: ${insertError.message}`);
+        }
+
+        console.log('✅ تم إضافة المنتجات الجديدة بنجاح');
+
+        // حذف المنتجات القديمة بعد نجاح إضافة الجديدة
         const { error: deleteError } = await supabase
           .from('order_items')
           .delete()
-          .eq('order_id', orderId);
+          .eq('order_id', orderId)
+          .not('id', 'in', `(${orderItemsToInsert.map((_, i) => `'${orderItemsToInsert[i].order_id}'`).join(',')})`);
 
         if (deleteError) {
-          console.error('خطأ في حذف المنتجات القديمة:', deleteError);
-        }
-
-        // إضافة المنتجات الجديدة
-        if (newProducts.length > 0) {
-          const orderItemsToInsert = newProducts.map(item => ({
-            order_id: orderId,
-            product_id: item.product_id,
-            variant_id: item.variant_id || null,
-            quantity: item.quantity || 1,
-            unit_price: item.unit_price || 0,
-            total_price: item.total_price || 0
-          }));
-
-          const { error: insertError } = await supabase
-            .from('order_items')
-            .insert(orderItemsToInsert);
-
-          if (insertError) {
-            console.error('خطأ في إضافة المنتجات الجديدة:', insertError);
-          }
+          console.error('⚠️ تحذير: خطأ في حذف المنتجات القديمة:', deleteError);
+        } else {
+          console.log('✅ تم حذف المنتجات القديمة بنجاح');
         }
 
         // تحديث المخزون

@@ -172,9 +172,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }
           if (aiOrderData.region_id) {
             console.log('🔧 Setting region ID for edit mode:', aiOrderData.region_id);
-            setSelectedRegionId(aiOrderData.region_id);
-            // تحديث formData مباشرة لضمان ظهور القيمة في dropdown
-            setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
+            // تأخير تحديد المنطقة لضمان تحميل البيانات أولاً
+            setTimeout(() => {
+              setSelectedRegionId(aiOrderData.region_id);
+              setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
+              console.log('✅ تم تحديد المنطقة في وضع التعديل:', aiOrderData.region_id);
+            }, 500);
           }
           
           console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
@@ -853,12 +856,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         console.log('🗺️ جلب المناطق - حفظ region_id:', { preservedRegionId, isEditMode, selectedRegionId });
         
-        // مسح region_id مؤقتاً فقط عند تغيير المدينة حقاً
-        if (!isEditMode && prevCityIdRef.current !== formData.city_id) {
-          setFormData(prev => ({ ...prev, region_id: '' }));
-          setSelectedRegionId('');
-          prevCityIdRef.current = formData.city_id;
-        }
+         // مسح region_id مؤقتاً فقط عند تغيير المدينة حقاً (وليس في وضع التعديل)
+         if (!isEditMode && prevCityIdRef.current !== formData.city_id) {
+           setFormData(prev => ({ ...prev, region_id: '' }));
+           setSelectedRegionId('');
+           prevCityIdRef.current = formData.city_id;
+         }
         
         try {
             // تحقق من الذاكرة التخزينية أولاً
@@ -885,8 +888,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               regionCache.current.set(cacheKey, safeRegions);
               setRegions(safeRegions);
               
-              // الحل الجذري: لا حاجة لإعادة تطبيق region_id لأننا لم نمسحه أساساً  
-              console.log('✅ تم جلب المناطق من API مع الحفاظ على region_id الأصلي:', formData.region_id);
+               // في وضع التعديل، تأكد من أن المنطقة المحددة تظهر في dropdown
+               if (isEditMode && preservedRegionId) {
+                 // تأخير بسيط لضمان أن البيانات محملة في dropdown
+                 setTimeout(() => {
+                   setSelectedRegionId(preservedRegionId);
+                   setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
+                   console.log('✅ تم استعادة المنطقة في وضع التعديل:', preservedRegionId);
+                 }, 200);
+               }
+               
+               console.log('✅ تم جلب المناطق من API:', safeRegions.length, 'منطقة');
             }
         } catch (error) { 
           console.error('❌ خطأ في جلب المناطق:', error);
@@ -1140,8 +1152,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         console.log('✅ Al-Waseet order updated:', waseetResponse);
       }
 
-      // تحديث الطلب محلياً
-      updateResult = await updateOrder(originalOrder.id, orderData);
+      // تحديث الطلب محلياً - تمرير المنتجات والعناصر الأصلية بشكل منفصل
+      const { items, ...orderDataWithoutItems } = orderData;
+      updateResult = await updateOrder(originalOrder.id, orderDataWithoutItems, cart, originalOrder.items);
       console.log('✅ Local order updated:', updateResult);
 
       toast({
