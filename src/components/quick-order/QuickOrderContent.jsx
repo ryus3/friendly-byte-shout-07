@@ -1230,8 +1230,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
               client_mobile: normalizedPhone, // استخدام الرقم المطبع
               client_mobile2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
-              city_id: formData.city_id, 
-              region_id: formData.region_id, 
+              city_id: selectedCityId || formData.city_id, 
+              region_id: selectedRegionId || formData.region_id,
               location: formData.address,
               type_name: formData.details, 
               items_number: formData.quantity,
@@ -1276,8 +1276,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
         delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0),
         // ✅ الحل الجذري - حفظ معرفات الوسيط
-        alwaseet_city_id: formData.city_id || null,
-        alwaseet_region_id: formData.region_id || null,
+          alwaseet_city_id: selectedCityId || formData.city_id || null,
+          alwaseet_region_id: selectedRegionId || formData.region_id || null,
       };
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
