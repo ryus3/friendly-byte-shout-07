@@ -100,7 +100,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
       }
 
-      // تحديث حالة الطلبات المحلية
+      // تحديث حالة الطلبات المحلية مع تفاصيل أكثر
       console.log('🔄 تحديث الحالة المحلية للطلب:', { orderId, updates, newProducts });
       setOrders(prevOrders => {
         const updatedOrders = prevOrders.map(order => 
@@ -109,11 +109,29 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
                 ...order, 
                 ...updates, 
                 items: newProducts || order.items,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
+                // إضافة معرفات الوسيط إذا كانت متوفرة
+                alwaseet_city_id: updates.alwaseet_city_id || order.alwaseet_city_id,
+                alwaseet_region_id: updates.alwaseet_region_id || order.alwaseet_region_id
               }
             : order
         );
-        console.log('✅ تم تحديث الحالة المحلية بنجاح');
+        console.log('✅ تم تحديث الحالة المحلية بنجاح:', {
+          updatedOrderId: orderId,
+          updatedOrder: updatedOrders.find(o => o.id === orderId)
+        });
+        
+        // إرسال حدث للتأكد من تحديث كل المكونات
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('localOrderUpdated', { 
+            detail: { 
+              orderId, 
+              order: updatedOrders.find(o => o.id === orderId),
+              timestamp: new Date().toISOString()
+            } 
+          }));
+        }, 100);
+        
         return updatedOrders;
       });
 

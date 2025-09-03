@@ -176,7 +176,10 @@ const SearchableSelectFixed = ({
         direction: 'rtl',
         minWidth: '200px',
         maxWidth: '400px',
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        backgroundColor: 'hsl(var(--background))',
+        borderColor: 'hsl(var(--border))',
+        zIndex: 99999
       }}
     >
       {/* Search Input */}
@@ -312,25 +315,29 @@ const SearchableSelectFixed = ({
       {/* Dropdown - Smart Portal Strategy */}
       {open && (
         isInDialog ? (
-          // Inside Dialog: Use absolute positioning within dialog
+          // Inside Dialog: Use absolute positioning with enhanced z-index for regions
           <div 
-            className="absolute z-[9999] mt-1 w-full"
+            className="absolute z-[99999] mt-1 w-full"
             style={{
-              direction: 'rtl'
+              direction: 'rtl',
+              position: 'absolute',
+              zIndex: 99999
             }}
           >
             {renderDropdownContent()}
           </div>
         ) : (
-          // Outside Dialog: Use portal with fixed positioning
+          // Outside Dialog: Use portal with enhanced z-index
           createPortal(
             <div 
-              className="fixed z-[99999]"
+              className="fixed z-[999999]"
               style={{ 
                 direction: 'rtl',
                 left: buttonRef.current?.getBoundingClientRect().left || 0,
                 top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
-                width: buttonRef.current?.getBoundingClientRect().width || 'auto'
+                width: buttonRef.current?.getBoundingClientRect().width || 'auto',
+                zIndex: 999999,
+                position: 'fixed'
               }}
             >
               {renderDropdownContent()}

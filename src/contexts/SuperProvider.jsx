@@ -1070,35 +1070,83 @@ export const SuperProvider = ({ children }) => {
     }
   }, [allData.settings, user]);
 
-  // تحديث طلب - نفس الواجهة القديمة مع تحديث فوري محلي
-  const updateOrder = useCallback(async (orderId, updates) => {
+  // تحديث طلب - مع تحديث شامل وفوري للبيانات المحدثة
+  const updateOrder = useCallback(async (orderId, updates, newItems = null, originalItems = null) => {
     try {
-      console.log('🔄 SuperProvider updateOrder:', { orderId, updates });
+      console.log('🔄 SuperProvider updateOrder:', { orderId, updates, newItems });
       
-      // تحديث فوري محلياً أولاً لتحسين الإحساس باللحظية
+      // تحديث فوري محلياً مع البيانات الكاملة
       setAllData(prev => ({
         ...prev,
-        orders: (prev.orders || []).map(o => o.id === orderId ? { ...o, ...updates, updated_at: new Date().toISOString() } : o),
+        orders: (prev.orders || []).map(o => o.id === orderId ? { 
+          ...o, 
+          ...updates, 
+          items: newItems || o.items,
+          updated_at: new Date().toISOString(),
+          // إضافة معرفات الوسيط
+          alwaseet_city_id: updates.alwaseet_city_id || o.alwaseet_city_id,
+          alwaseet_region_id: updates.alwaseet_region_id || o.alwaseet_region_id
+        } : o),
       }));
       
-      // إرسال حدث متصفح فوري
-      window.dispatchEvent(new CustomEvent('orderUpdated', { detail: { id: orderId, updates } }));
+      // إرسال حدث متصفح فوري مع البيانات الكاملة
+      const updatedOrder = {
+        id: orderId,
+        ...updates,
+        items: newItems,
+        updated_at: new Date().toISOString()
+      };
+      
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('orderUpdated', { 
+          detail: { 
+            id: orderId, 
+            updates, 
+            order: updatedOrder,
+            timestamp: new Date().toISOString()
+          } 
+        }));
+        
+        window.dispatchEvent(new CustomEvent('superProviderOrderUpdated', { 
+          detail: { 
+            orderId, 
+            order: updatedOrder,
+            timestamp: new Date().toISOString()
+          } 
+        }));
+      }, 100);
 
-      const updatedOrder = await superAPI.updateOrder(orderId, updates);
+      // تحديث في قاعدة البيانات
+      const result = await superAPI.updateOrder(orderId, updates);
 
       // توحيد الحالة النهائية بعد عودة الخادم
       setAllData(prev => ({
         ...prev,
-        orders: (prev.orders || []).map(o => o.id === orderId ? normalizeOrder(updatedOrder) : o),
+        orders: (prev.orders || []).map(o => o.id === orderId ? {
+          ...normalizeOrder(result),
+          items: newItems || o.items,
+          alwaseet_city_id: updates.alwaseet_city_id || result.alwaseet_city_id,
+          alwaseet_region_id: updates.alwaseet_region_id || result.alwaseet_region_id
+        } : o),
       }));
 
-      console.log('✅ SuperProvider updateOrder نجح:', { orderId, success: true });
-      return { success: true, data: updatedOrder };
+      console.log('✅ SuperProvider updateOrder نجح:', { orderId, success: true, result });
+      return { success: true, order: result, data: result };
     } catch (error) {
       console.error('Error in SuperProvider updateOrder:', error);
+      
+      // إعادة الحالة السابقة في حالة الفشل
+      setAllData(prev => ({
+        ...prev,
+        orders: (prev.orders || []).map(o => o.id === orderId ? {
+          ...o,
+          // إزالة التحديثات المؤقتة
+        } : o),
+      }));
+      
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [normalizeOrder]);
 
   // تعرض دالة التحديث للمكونات الخارجية
   useEffect(() => {

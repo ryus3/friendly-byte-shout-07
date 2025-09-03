@@ -1330,15 +1330,28 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         window.superProviderUpdate(originalOrder.id, completeOrderData);
       }
 
-      // إرسال حدث لتحديث كل الصفحات المفتوحة
-      window.dispatchEvent(new CustomEvent('orderUpdated', { 
-        detail: { 
-          id: originalOrder.id, 
-          updates: completeOrderData,
-          order: updateResult.order,
-          timestamp: new Date().toISOString()
-        } 
-      }));
+      // إرسال أحداث متعددة لضمان تحديث كل المكونات
+      setTimeout(() => {
+        // حدث للطلب المحدث
+        window.dispatchEvent(new CustomEvent('orderUpdated', { 
+          detail: { 
+            id: originalOrder.id, 
+            updates: completeOrderData,
+            order: updateResult.order,
+            timestamp: new Date().toISOString()
+          } 
+        }));
+        
+        // حدث لإعادة تحميل البيانات
+        window.dispatchEvent(new CustomEvent('refreshOrdersData', {
+          detail: { source: 'quickOrderUpdate', timestamp: new Date().toISOString() }
+        }));
+        
+        // حدث لتحديث الحالة العامة
+        window.dispatchEvent(new CustomEvent('dataStateChanged', {
+          detail: { type: 'orderUpdate', orderId: originalOrder.id }
+        }));
+      }, 200);
 
       // عرض رسالة نجاح مع رقم التتبع الصحيح
       console.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
