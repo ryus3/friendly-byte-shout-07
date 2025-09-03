@@ -29,8 +29,7 @@ import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 const AlWaseetInvoiceDetailsDialog = ({ 
   isOpen, 
   onClose, 
-  invoice,
-  onReceiveInvoice 
+  invoice
 }) => {
   const { 
     invoiceOrders, 
@@ -93,15 +92,6 @@ const AlWaseetInvoiceDetailsDialog = ({
     }
   };
 
-  const handleReceive = async () => {
-    const success = await onReceiveInvoice(invoice.id);
-    if (success) {
-      // Update local state
-      invoice.status = 'تم الاستلام من قبل التاجر';
-      // Sync to database
-      handleSyncInvoice(true);
-    }
-  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -156,27 +146,6 @@ const AlWaseetInvoiceDetailsDialog = ({
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                   </div>
 
-                  <div className="space-y-2">
-                    {!isReceived && (
-                      <Button 
-                        onClick={handleReceive}
-                        className="w-full"
-                        disabled={loading}
-                      >
-                        تأكيد الاستلام
-                        <CheckCircle className="h-4 w-4 ml-2" />
-                      </Button>
-                    )}
-                    <Button 
-                      onClick={() => handleSyncInvoice(false)}
-                      variant="outline"
-                      className="w-full"
-                      disabled={syncing || loading}
-                    >
-                      {syncing ? 'جاري المزامنة...' : 'مزامنة مع النظام'}
-                      <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>

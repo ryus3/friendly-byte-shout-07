@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
+import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,6 @@ import { supabase } from '@/integrations/supabase/client';
 const AlWaseetInvoicesList = ({ 
   invoices, 
   onViewInvoice, 
-  onReceiveInvoice, 
   loading 
 }) => {
   if (loading) {
@@ -52,14 +51,13 @@ const AlWaseetInvoicesList = ({
           key={invoice.id}
           invoice={invoice}
           onView={() => onViewInvoice(invoice)}
-          onReceive={() => onReceiveInvoice(invoice.id)}
         />
       ))}
     </div>
   );
 };
 
-const InvoiceCard = ({ invoice, onView, onReceive }) => {
+const InvoiceCard = ({ invoice, onView }) => {
   const [dbStatus, setDbStatus] = useState('checking'); // 'checking', 'saved', 'not_saved'
   const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
   
@@ -173,17 +171,6 @@ const InvoiceCard = ({ invoice, onView, onReceive }) => {
               <Eye className="h-4 w-4 ml-2" />
             </Button>
             
-            {!isReceived && (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={onReceive}
-                className="flex-1"
-              >
-                تأكيد الاستلام
-                <CheckCircle className="h-4 w-4 ml-2" />
-              </Button>
-            )}
           </div>
         </div>
       </CardContent>

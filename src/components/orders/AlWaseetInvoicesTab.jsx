@@ -31,17 +31,15 @@ const AlWaseetInvoicesTab = () => {
     invoices, 
     loading, 
     fetchInvoices, 
-    receiveInvoice,
     getInvoiceStats,
     applyCustomDateRangeFilter,
-    syncAllRecentInvoices
+    syncLastTwoInvoices
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   
   // Time filter state with localStorage
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
@@ -78,12 +76,10 @@ const AlWaseetInvoicesTab = () => {
     setDetailsDialogOpen(true);
   };
 
-  const handleReceiveInvoice = async (invoiceId) => {
-    return await receiveInvoice(invoiceId);
-  };
 
   const handleRefresh = async () => {
     await fetchInvoices(timeFilter);
+    await syncLastTwoInvoices();
   };
   
   const handleTimeFilterChange = async (newFilter) => {
@@ -98,23 +94,6 @@ const AlWaseetInvoicesTab = () => {
     setCustomDateRange(dateRange);
   };
 
-  const handleSyncAll = async () => {
-    setSyncing(true);
-    try {
-      const result = await syncAllRecentInvoices();
-      if (result.success) {
-        console.log('Bulk sync completed:', result.data);
-        // Refresh invoices after sync
-        await fetchInvoices(timeFilter);
-      } else {
-        console.error('Bulk sync failed:', result.error);
-      }
-    } catch (error) {
-      console.error('Error during bulk sync:', error);
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   // Show message if not logged in to Al-Waseet
   if (!isLoggedIn || activePartner !== 'alwaseet') {
@@ -320,20 +299,11 @@ const AlWaseetInvoicesTab = () => {
             <div className="flex gap-2">
               <Button 
                 onClick={handleRefresh} 
-                disabled={loading || syncing}
+                disabled={loading}
                 size="sm"
               >
                 تحديث
                 <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button 
-                onClick={handleSyncAll} 
-                disabled={loading || syncing}
-                variant="outline"
-                size="sm"
-              >
-                {syncing ? 'جاري المزامنة...' : 'مزامنة الكل'}
-                <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <span className="text-right">فواتير شركة التوصيل</span>
@@ -410,7 +380,6 @@ const AlWaseetInvoicesTab = () => {
           <AlWaseetInvoicesList
             invoices={filteredInvoices}
             onViewInvoice={handleViewInvoice}
-            onReceiveInvoice={handleReceiveInvoice}
             loading={loading}
           />
         </CardContent>
@@ -421,7 +390,6 @@ const AlWaseetInvoicesTab = () => {
         isOpen={detailsDialogOpen}
         onClose={() => setDetailsDialogOpen(false)}
         invoice={selectedInvoice}
-        onReceiveInvoice={handleReceiveInvoice}
       />
     </div>
   );

@@ -832,6 +832,7 @@ export type Database = {
           id: string
           invoice_id: string
           order_id: string | null
+          owner_user_id: string | null
           raw: Json
           status: string | null
           updated_at: string
@@ -843,6 +844,7 @@ export type Database = {
           id?: string
           invoice_id: string
           order_id?: string | null
+          owner_user_id?: string | null
           raw?: Json
           status?: string | null
           updated_at?: string
@@ -854,6 +856,7 @@ export type Database = {
           id?: string
           invoice_id?: string
           order_id?: string | null
+          owner_user_id?: string | null
           raw?: Json
           status?: string | null
           updated_at?: string
@@ -946,6 +949,7 @@ export type Database = {
           merchant_id: string | null
           orders_count: number | null
           orders_last_synced_at: string | null
+          owner_user_id: string | null
           partner: string
           raw: Json
           received: boolean
@@ -966,6 +970,7 @@ export type Database = {
           merchant_id?: string | null
           orders_count?: number | null
           orders_last_synced_at?: string | null
+          owner_user_id?: string | null
           partner?: string
           raw?: Json
           received?: boolean
@@ -986,6 +991,7 @@ export type Database = {
           merchant_id?: string | null
           orders_count?: number | null
           orders_last_synced_at?: string | null
+          owner_user_id?: string | null
           partner?: string
           raw?: Json
           received?: boolean

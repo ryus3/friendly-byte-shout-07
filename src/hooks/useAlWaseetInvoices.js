@@ -500,6 +500,7 @@ export const useAlWaseetInvoices = () => {
     syncReceivedInvoicesAutomatically,
     syncAlwaseetInvoiceData,
     syncInvoiceById,
-    syncAllRecentInvoices
+    syncAllRecentInvoices,
+    syncLastTwoInvoices
   };
 };
