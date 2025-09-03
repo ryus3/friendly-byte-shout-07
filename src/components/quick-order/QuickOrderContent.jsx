@@ -1580,11 +1580,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   value={effectiveRegionId}
                   onValueChange={(v) => {
                     console.log('🌍 الحل الجذري - تغيير المنطقة:', v);
+                    console.log('🔍 Region dropdown debug:', {
+                      effectiveRegionId,
+                      regionsLength: regions.length,
+                      selectedOption: regions.find(r => String(r.id) === String(effectiveRegionId)),
+                      formDataRegionId: formData.region_id,
+                      newValue: v
+                    });
                     setSelectedRegionId(v); // ✅ إضافة هذا السطر مثل المدينة تماماً
                     handleSelectChange('region_id', v);
                   }}
                  options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
-                 placeholder={loadingRegions ? 'تحميل...' : (effectiveCityId ? 'اختر منطقة' : 'اختر المدينة أولاً')}
+                 placeholder={loadingRegions ? 'تحميل المناطق...' : 
+                   (regions.length === 0 && formData.region_id ? `المنطقة: ${formData.region_id}` : 
+                   (effectiveCityId ? 'اختر منطقة' : 'اختر المدينة أولاً'))}
                  searchPlaceholder="بحث في المناطق..."
                  emptyText="لا توجد منطقة بهذا الاسم"
                  className={errors.region_id ? "border-red-500" : ""}
