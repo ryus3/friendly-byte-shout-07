@@ -6,6 +6,9 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
+const LAST_SYNC_COOLDOWN_KEY = 'alwaseet_last_sync_timestamp';
+const SYNC_COOLDOWN_MINUTES = 10;
+
 export const useAlWaseetInvoices = () => {
   const { token, isLoggedIn, activePartner } = useAlWaseet();
   const { user } = useAuth();
@@ -293,12 +296,97 @@ export const useAlWaseetInvoices = () => {
     });
   }, []);
 
-  // Auto-fetch invoices when token is available
+  // Advanced sync function using the new database structure
+  const syncAlwaseetInvoiceData = useCallback(async (invoiceData, ordersData) => {
+    try {
+      const { data, error } = await supabase.rpc('sync_alwaseet_invoice_data', {
+        p_invoice_data: invoiceData,
+        p_orders_data: ordersData
+      });
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error syncing invoice data:', error);
+      throw error;
+    }
+  }, []);
+
+  // Check cooldown and sync received invoices automatically
+  const syncReceivedInvoicesAutomatically = useCallback(async () => {
+    try {
+      // Check cooldown
+      const lastSyncStr = localStorage.getItem(LAST_SYNC_COOLDOWN_KEY);
+      if (lastSyncStr) {
+        const lastSync = new Date(lastSyncStr);
+        const now = new Date();
+        const diffMinutes = (now - lastSync) / (1000 * 60);
+        
+        if (diffMinutes < SYNC_COOLDOWN_MINUTES) {
+          console.log(`Sync cooldown active. ${SYNC_COOLDOWN_MINUTES - Math.floor(diffMinutes)} minutes remaining`);
+          return;
+        }
+      }
+
+      // Fetch latest invoices (limit to 5 most recent)
+      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+      if (!allInvoices?.length) return;
+
+      const recentInvoices = allInvoices
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+        .slice(0, 5);
+
+      let syncedCount = 0;
+      let updatedOrders = 0;
+
+      for (const invoice of recentInvoices) {
+        try {
+          // Only process invoices that are marked as received
+          const isReceived = invoice.status?.includes('تم الاستلام من قبل التاجر');
+          if (!isReceived) continue;
+
+          // Fetch orders for this invoice
+          const invoiceOrders = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
+          if (!invoiceOrders?.orders?.length) continue;
+
+          // Sync using the new database function
+          const syncResult = await syncAlwaseetInvoiceData(invoice, invoiceOrders.orders);
+          if (syncResult?.success) {
+            syncedCount++;
+            updatedOrders += syncResult.linked_orders || 0;
+          }
+        } catch (error) {
+          console.error(`Error syncing invoice ${invoice.id}:`, error);
+        }
+      }
+
+      // Update cooldown timestamp
+      localStorage.setItem(LAST_SYNC_COOLDOWN_KEY, new Date().toISOString());
+
+      // Show notification if any updates were made
+      if (syncedCount > 0) {
+        toast({
+          title: "تمت مزامنة الفواتير المستلمة",
+          description: `تم تحديث ${updatedOrders} طلب من ${syncedCount} فاتورة مستلمة`,
+          variant: "success"
+        });
+
+        // Refresh the invoices list
+        fetchInvoices();
+      }
+
+    } catch (error) {
+      console.error('Error in automatic sync:', error);
+    }
+  }, [token, syncAlwaseetInvoiceData, fetchInvoices]);
+
+  // Auto-fetch invoices and sync received ones when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
       fetchInvoices();
+      syncReceivedInvoicesAutomatically();
     }
-  }, [token, isLoggedIn, activePartner, fetchInvoices]);
+  }, [token, isLoggedIn, activePartner, fetchInvoices, syncReceivedInvoicesAutomatically]);
 
   return {
     invoices,
@@ -312,6 +400,8 @@ export const useAlWaseetInvoices = () => {
     getInvoiceStats,
     applyCustomDateRangeFilter,
     setSelectedInvoice,
-    setInvoiceOrders
+    setInvoiceOrders,
+    syncReceivedInvoicesAutomatically,
+    syncAlwaseetInvoiceData
   };
 };
