@@ -1249,6 +1249,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           throw new Error('معرفات المدينة والمنطقة مطلوبة لتحديث طلب الوسيط');
         }
 
+        // تكوين اسم نوع البضاعة بالتفصيل: اسم المنتج + الحجم + اللون (بدون العدد أو السعر)
+        const typeName = cartItems.map(item => {
+          const name = item.product_name || 'منتج';
+          const sizePart = item.size ? ` ${item.size}` : '';
+          const colorPart = item.color ? ` . ${item.color}` : '';
+          return `${name}${sizePart}${colorPart}`.trim();
+        }).join(' + ');
+
         const alwaseetData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
           client_name: formData.name,
@@ -1257,7 +1265,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           city_id: validCityId,
           region_id: validRegionId,
           location: formData.address,
-          type_name: "ملابس وإكسسوارات",
+          type_name: typeName,
           items_number: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
           price: finalTotal,
           package_size: parseInt(selectedPackageSize) || 1,

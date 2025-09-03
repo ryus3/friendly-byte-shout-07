@@ -174,22 +174,13 @@ export const editAlWaseetOrder = async (orderData, token) => {
   
   console.log('📥 استجابة تحديث Al Waseet:', response);
   
-  if (response && response.errNum === "S000") {
-    console.log('✅ تم تحديث الطلب في Al Waseet بنجاح');
-    return { 
-      success: true, 
-      data: response.data,
-      message: 'تم تحديث الطلب في شركة التوصيل بنجاح'
-    };
-  } else {
-    console.error('❌ فشل تحديث الطلب في Al Waseet:', response);
-    return { 
-      success: false, 
-      error: response?.msg || 'فشل تحديث الطلب في شركة التوصيل'
-    };
-  }
+  // نجاح الوصول إلى هنا يعني أن handleApiCall تحقق من النجاح ولم يرمِ خطأ
+  return {
+    success: true,
+    data: response,
+    message: 'تم تحديث الطلب في شركة التوصيل بنجاح'
+  };
 };
-
 export const getMerchantOrders = async (token) => {
   return handleApiCall('merchant-orders', 'GET', token, null, { token });
 };
