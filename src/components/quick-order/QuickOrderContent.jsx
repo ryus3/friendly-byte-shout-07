@@ -1585,13 +1585,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   المنطقة الأصلية: <span className="font-semibold">{originalRegionText}</span>
                 </div>
               )}
-               <SearchableSelectFixed
-                 value={effectiveRegionId}
-                 onValueChange={(v) => {
-                   console.log('🌍 Region selection changed:', v);
-                   setSelectedRegionId(v);
-                   handleSelectChange('region_id', v);
-                 }}
+                <SearchableSelectFixed
+                  value={effectiveRegionId}
+                  onValueChange={(v) => {
+                    console.log('🌍 الحل الجذري - تغيير المنطقة:', v);
+                    handleSelectChange('region_id', v);
+                  }}
                  options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
                  placeholder={loadingRegions ? 'تحميل...' : (effectiveCityId ? 'اختر منطقة' : 'اختر المدينة أولاً')}
                  searchPlaceholder="بحث في المناطق..."
