@@ -13,6 +13,7 @@ export const useAlWaseetInvoices = () => {
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
+  const [autoSyncLoading, setAutoSyncLoading] = useState(false);
 
   // Fetch all merchant invoices
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {
@@ -293,16 +294,130 @@ export const useAlWaseetInvoices = () => {
     });
   }, []);
 
-  // Auto-fetch invoices when token is available
+  // Automatic sync for received invoices
+  const autoSyncReceivedInvoices = useCallback(async () => {
+    if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
+
+    // Rate limiting guard - only sync once every 10 minutes
+    const lastSyncKey = 'alwaseet-auto-sync-last-time';
+    const lastSyncTime = localStorage.getItem(lastSyncKey);
+    const now = Date.now();
+    const tenMinutes = 10 * 60 * 1000;
+    
+    if (lastSyncTime && (now - parseInt(lastSyncTime)) < tenMinutes) {
+      console.log('🔄 تخطي المزامنة التلقائية - لم تمر 10 دقائق بعد');
+      return;
+    }
+
+    setAutoSyncLoading(true);
+    try {
+      // Get current invoices and filter only received ones
+      const currentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+      const receivedInvoices = (currentInvoices || []).filter(inv => 
+        inv.status === 'تم الاستلام من قبل التاجر'
+      );
+
+      if (receivedInvoices.length === 0) {
+        console.log('📄 لا توجد فواتير مستلمة للمزامنة');
+        return;
+      }
+
+      console.log(`🔄 بدء المزامنة التلقائية لـ ${receivedInvoices.length} فاتورة مستلمة`);
+
+      // Check which received invoices need syncing (not already in local DB)
+      const { data: existingInvoices, error: checkError } = await supabase
+        .from('delivery_invoices')
+        .select('external_id, received')
+        .eq('partner', 'alwaseet')
+        .in('external_id', receivedInvoices.map(inv => inv.id));
+
+      if (checkError) {
+        console.error('❌ خطأ في فحص الفواتير الموجودة:', checkError);
+        return;
+      }
+
+      // Find invoices that need syncing (not in DB or not marked as received)
+      const existingMap = new Map((existingInvoices || []).map(inv => [inv.external_id, inv.received]));
+      const invoicesToSync = receivedInvoices.filter(inv => 
+        !existingMap.has(inv.id) || !existingMap.get(inv.id)
+      );
+
+      if (invoicesToSync.length === 0) {
+        console.log('✅ جميع الفواتير المستلمة متزامنة بالفعل');
+        localStorage.setItem(lastSyncKey, now.toString());
+        return;
+      }
+
+      console.log(`🔄 مزامنة ${invoicesToSync.length} فاتورة جديدة أو غير متزامنة`);
+
+      // Limit to 3 invoices per sync to avoid rate limits and overload
+      const limitedInvoices = invoicesToSync.slice(0, 3);
+      let syncedCount = 0;
+
+      for (const invoice of limitedInvoices) {
+        try {
+          // Get invoice orders
+          const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
+          const orders = invoiceData?.orders || [];
+
+          if (orders.length > 0) {
+            // Sync using existing database function
+            const { data: syncResult, error: syncError } = await supabase.rpc(
+              'sync_alwaseet_invoice_data',
+              {
+                p_invoice_data: invoice,
+                p_orders_data: orders
+              }
+            );
+
+            if (syncError) {
+              console.error(`❌ خطأ في مزامنة الفاتورة ${invoice.id}:`, syncError);
+            } else {
+              syncedCount++;
+              console.log(`✅ تمت مزامنة الفاتورة ${invoice.id} - ${orders.length} طلب`);
+            }
+          }
+
+          // Small delay between API calls to be respectful
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (error) {
+          console.error(`❌ خطأ في معالجة الفاتورة ${invoice.id}:`, error);
+        }
+      }
+
+      if (syncedCount > 0) {
+        console.log(`✅ تمت المزامنة التلقائية بنجاح - ${syncedCount} فاتورة`);
+        toast({
+          title: 'مزامنة تلقائية',
+          description: `تم تحديث ${syncedCount} فاتورة وتعليم الطلبات المُسلمة كمستلمة الفاتورة`,
+          variant: 'success'
+        });
+      }
+
+      // Update last sync time
+      localStorage.setItem(lastSyncKey, now.toString());
+
+    } catch (error) {
+      console.error('❌ خطأ في المزامنة التلقائية:', error);
+    } finally {
+      setAutoSyncLoading(false);
+    }
+  }, [token, isLoggedIn, activePartner]);
+
+  // Auto-fetch invoices when token is available and trigger sync
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices();
+      fetchInvoices().then(() => {
+        // Auto-sync after fetching invoices
+        autoSyncReceivedInvoices();
+      });
     }
-  }, [token, isLoggedIn, activePartner, fetchInvoices]);
+  }, [token, isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
   return {
     invoices,
     loading,
+    autoSyncLoading,
     selectedInvoice,
     invoiceOrders,
     fetchInvoices,
@@ -311,6 +426,7 @@ export const useAlWaseetInvoices = () => {
     linkInvoiceWithLocalOrders,
     getInvoiceStats,
     applyCustomDateRangeFilter,
+    autoSyncReceivedInvoices,
     setSelectedInvoice,
     setInvoiceOrders
   };

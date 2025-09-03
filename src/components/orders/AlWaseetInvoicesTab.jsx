@@ -30,10 +30,12 @@ const AlWaseetInvoicesTab = () => {
   const { 
     invoices, 
     loading, 
+    autoSyncLoading,
     fetchInvoices, 
     receiveInvoice,
     getInvoiceStats,
-    applyCustomDateRangeFilter
+    applyCustomDateRangeFilter,
+    autoSyncReceivedInvoices
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -297,14 +299,22 @@ const AlWaseetInvoicesTab = () => {
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <Button 
-              onClick={handleRefresh} 
-              disabled={loading}
-              size="sm"
-            >
-              تحديث
-              <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={handleRefresh} 
+                disabled={loading || autoSyncLoading}
+                size="sm"
+              >
+                تحديث
+                <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+              {autoSyncLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>مزامنة تلقائية...</span>
+                </div>
+              )}
+            </div>
             <span className="text-right">فواتير شركة التوصيل</span>
           </CardTitle>
         </CardHeader>
