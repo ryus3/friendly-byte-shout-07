@@ -880,13 +880,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               regionCache.current.set(cacheKey, safeRegions);
               setRegions(safeRegions);
               
-              // تطبيق region_id المحفوظ في وضع التعديل
-              if (isEditMode && preservedRegionId) {
-                setTimeout(() => {
-                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                  console.log('✅ تم تطبيق region_id المحفوظ بعد جلب API:', preservedRegionId);
-                }, 100);
-              }
+              // الحل الجذري: لا حاجة لإعادة تطبيق region_id لأننا لم نمسحه أساساً  
+              console.log('✅ تم جلب المناطق من API مع الحفاظ على region_id الأصلي:', formData.region_id);
             }
         } catch (error) { 
           console.error('❌ خطأ في جلب المناطق:', error);
