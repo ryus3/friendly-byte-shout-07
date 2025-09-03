@@ -50,7 +50,20 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       if (newProducts && Array.isArray(newProducts) && newProducts.length > 0) {
         console.log('🔄 تحديث المنتجات - عدد المنتجات الجديدة:', newProducts.length);
         
-        // إضافة المنتجات الجديدة أولاً
+        // حذف المنتجات القديمة أولاً
+        const { error: deleteError } = await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', orderId);
+
+        if (deleteError) {
+          console.error('❌ خطأ في حذف المنتجات القديمة:', deleteError);
+          throw new Error(`فشل في حذف المنتجات القديمة: ${deleteError.message}`);
+        }
+
+        console.log('✅ تم حذف المنتجات القديمة بنجاح');
+        
+        // إضافة المنتجات الجديدة
         const orderItemsToInsert = newProducts.map(item => ({
           order_id: orderId,
           product_id: item.product_id,
@@ -70,19 +83,6 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
 
         console.log('✅ تم إضافة المنتجات الجديدة بنجاح');
-
-        // حذف المنتجات القديمة بعد نجاح إضافة الجديدة
-        const { error: deleteError } = await supabase
-          .from('order_items')
-          .delete()
-          .eq('order_id', orderId)
-          .not('id', 'in', `(${orderItemsToInsert.map((_, i) => `'${orderItemsToInsert[i].order_id}'`).join(',')})`);
-
-        if (deleteError) {
-          console.error('⚠️ تحذير: خطأ في حذف المنتجات القديمة:', deleteError);
-        } else {
-          console.log('✅ تم حذف المنتجات القديمة بنجاح');
-        }
 
         // تحديث المخزون
         if (onStockUpdate) {

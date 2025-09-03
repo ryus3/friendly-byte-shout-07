@@ -1253,22 +1253,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
         const alwaseetData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
-          name: formData.name,
-          phone: formData.phone,
-          phone2: formData.second_phone || undefined,
+          client_name: formData.name,
+          client_mobile: formData.phone,
+          client_mobile2: formData.second_phone || undefined,
           city_id: validCityId,
           region_id: validRegionId,
-          address: formData.address,
-          details: cartItems.map(item => 
+          location: formData.address,
+          type_name: cartItems.map(item => 
             `${item.product_name} (${item.color}, ${item.size}) × ${item.quantity} = ${item.price} د.ع`
           ).join('\n'),
-          quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
+          items_number: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
           price: finalTotal,
-          size: selectedPackageSize || 'عادي',
-          notes: formData.notes,
-          replacement: 0,
-          // إضافة تفاصيل المنتجات
-          items: cartItems
+          package_size: parseInt(selectedPackageSize) || 1,
+          merchant_notes: formData.notes,
+          replacement: 0
         };
 
         console.log('🔧 تحديث طلب الوسيط مع البيانات المحسنة:', {
@@ -1281,20 +1279,30 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         try {
           const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
           
-          // التحقق من نجاح الاستجابة
-          if (!waseetResponse || waseetResponse.error) {
-            throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + (waseetResponse?.error || 'استجابة غير صحيحة'));
+          console.log('🔧 استجابة تحديث الوسيط:', waseetResponse);
+          
+          // التحقق من نجاح الاستجابة - checking for both status and success indicators
+          if (!waseetResponse || 
+              waseetResponse.error || 
+              waseetResponse.status === false || 
+              (waseetResponse.status !== true && !waseetResponse.success)) {
+            throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + 
+              (waseetResponse?.msg || waseetResponse?.error || 'استجابة غير صحيحة'));
           }
           
           console.log('✅ تم تحديث طلب الوسيط بنجاح:', waseetResponse);
         } catch (waseetError) {
           console.error('❌ خطأ في تحديث طلب الوسيط:', waseetError);
-          // عدم إيقاف العملية - متابعة التحديث المحلي مع تحذير
+          
+          // إظهار رسالة خطأ واضحة للمستخدم
           toast({
-            title: "تحذير",
-            description: "تم تحديث الطلب محلياً لكن فشل تحديثه في شركة التوصيل",
+            title: "خطأ في تحديث الطلب",
+            description: `فشل تحديث الطلب في شركة التوصيل: ${waseetError.message}`,
             variant: "destructive"
           });
+          
+          // توقف العملية - لا نحدث محلياً إذا فشل التحديث في الوسيط
+          return;
         }
       }
 
