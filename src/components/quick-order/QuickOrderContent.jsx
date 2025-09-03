@@ -543,6 +543,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [selectedRegionId, setSelectedRegionId] = useState('');
   const [selectedPackageSize, setSelectedPackageSize] = useState('عادي');
 
+  // مرجع للقيم الفعّالة
+  const effectiveCityId = selectedCityId || formData.city_id;
+  const effectiveRegionId = selectedRegionId || formData.region_id;
+
   // تم دمج جلب البيانات مع الاستدعاء الأول في السطر 24
 
   // إضافة useEffect لضمان تعيين القيمة الافتراضية لحجم الطلب
@@ -836,6 +840,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [activePartner, waseetToken, isWaseetLoggedIn, isDeliveryPartnerSelected]);
 
+  // مرجع لتتبع آخر مدينة محددة
+  const prevCityIdRef = useRef(formData.city_id);
+
   useEffect(() => {
     if (formData.city_id && activePartner === 'alwaseet' && waseetToken) {
       const fetchRegionsData = async () => {
@@ -846,9 +853,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         console.log('🗺️ جلب المناطق - حفظ region_id:', { preservedRegionId, isEditMode, selectedRegionId });
         
-        // مسح region_id مؤقتاً فقط للطلبات الجديدة
-        if (!isEditMode) {
+        // مسح region_id مؤقتاً فقط عند تغيير المدينة حقاً
+        if (!isEditMode && prevCityIdRef.current !== formData.city_id) {
           setFormData(prev => ({ ...prev, region_id: '' }));
+          setSelectedRegionId('');
+          prevCityIdRef.current = formData.city_id;
         }
         
         try {
@@ -887,7 +896,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       fetchRegionsData();
     }
-  }, [formData.city_id, activePartner, waseetToken, isEditMode, selectedRegionId]);
+  }, [formData.city_id, activePartner, waseetToken, isEditMode]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
@@ -970,8 +979,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (!formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
       if (!formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
     } else if (activePartner === 'alwaseet') {
-      if (!formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
-      if (!formData.region_id && !selectedRegionId) newErrors.region_id = 'الرجاء اختيار المنطقة.';
+      if (!effectiveCityId) newErrors.city_id = 'الرجاء اختيار المدينة.';
+      if (!effectiveRegionId) newErrors.region_id = 'الرجاء اختيار المنطقة.';
     }
     const safeCartForValidation = Array.isArray(cart) ? cart : [];
     if (safeCartForValidation.length === 0) {
@@ -1230,8 +1239,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
               client_mobile: normalizedPhone, // استخدام الرقم المطبع
               client_mobile2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
-              city_id: selectedCityId || formData.city_id, 
-              region_id: selectedRegionId || formData.region_id,
+              city_id: effectiveCityId, 
+              region_id: effectiveRegionId,
               location: formData.address,
               type_name: formData.details, 
               items_number: formData.quantity,
@@ -1240,7 +1249,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               merchant_notes: formData.notes,
               replacement: formData.type === 'exchange' ? 1 : 0
            };
-          const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+           console.log('🔍 Diagnostic check before Al-Waseet order creation:', {
+             city_id: effectiveCityId,
+             region_id: effectiveRegionId,
+             formData_city_id: formData.city_id,
+             formData_region_id: formData.region_id,
+             selectedCityId,
+             selectedRegionId
+           });
+           const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
           
           if (!alWaseetResponse || !alWaseetResponse.qr_id) {
             throw new Error("لم يتم استلام رقم التتبع من شركة التوصيل.");
@@ -1276,8 +1293,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
         delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0),
         // ✅ الحل الجذري - حفظ معرفات الوسيط
-          alwaseet_city_id: selectedCityId || formData.city_id || null,
-          alwaseet_region_id: selectedRegionId || formData.region_id || null,
+        alwaseet_city_id: effectiveCityId || null,
+        alwaseet_region_id: effectiveRegionId || null,
       };
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
