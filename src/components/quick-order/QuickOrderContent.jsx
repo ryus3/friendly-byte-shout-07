@@ -1285,13 +1285,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           console.log('🔧 استجابة تحديث الوسيط:', waseetResponse);
           
-          // التحقق من نجاح الاستجابة - checking for both status and success indicators
-          if (!waseetResponse || 
-              waseetResponse.error || 
-              waseetResponse.status === false || 
-              (waseetResponse.status !== true && !waseetResponse.success)) {
+          // التحقق من نجاح الاستجابة بناءً على success flag
+          if (!waseetResponse || !waseetResponse.success) {
             throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + 
-              (waseetResponse?.msg || waseetResponse?.error || 'استجابة غير صحيحة'));
+              (waseetResponse?.error || waseetResponse?.message || 'استجابة غير صحيحة'));
           }
           
           console.log('✅ تم تحديث طلب الوسيط بنجاح:', waseetResponse);
