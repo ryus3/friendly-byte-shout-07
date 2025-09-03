@@ -545,6 +545,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [selectedCityId, setSelectedCityId] = useState('');
   const [selectedRegionId, setSelectedRegionId] = useState('');
   const [selectedPackageSize, setSelectedPackageSize] = useState('عادي');
+  
+  // حالات إضافية لإصلاح المشاكل
+  const [isResetting, setIsResetting] = useState(false);
+  const [preservedRegionId, setPreservedRegionId] = useState('');
 
   // مرجع للقيم الفعّالة
   const effectiveCityId = selectedCityId || formData.city_id;
@@ -602,6 +606,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const finalTotal = useMemo(() => total + deliveryFee, [total, deliveryFee]);
   
   const resetForm = useCallback(() => {
+    // تفعيل حالة المسح
+    setIsResetting(true);
+    
     // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
     const emptyFormData = {
       name: '', 
@@ -632,16 +639,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setApplyLoyaltyDelivery(false);
     setCustomerData(null);
     setErrors({});
+    setSelectedCityId('');
+    setSelectedRegionId('');
+    setPreservedRegionId('');
     
     // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
     setFormData(emptyFormData);
     setNameTouched(false);
+    
+    // إنهاء حالة المسح بعد فترة قصيرة
+    setTimeout(() => {
+      setIsResetting(false);
+    }, 200);
     
     console.log('✅ مسح النموذج - تم بنجاح');
   }, [clearCart, activePartner]);
 
   // إصلاح جذري: إعادة تعيين المدينة الافتراضية بعد resetForm
   useEffect(() => {
+    // منع التدخل إذا كان في وضع التعديل أو أثناء عملية المسح
+    if (isEditMode || isResetting) return;
+    
     // فقط لشركة الوسيط عندما يكون city_id فارغ أو null والمدن متوفرة
     if (activePartner === 'alwaseet' && (!formData.city_id || formData.city_id === '') && cities.length > 0) {
       const baghdadCity = cities.find(city => 
@@ -651,12 +669,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const defaultCity = baghdadCity || cities[0];
       
       console.log('🔄 إعادة تعيين المدينة الافتراضية بعد مسح النموذج:', defaultCity.name);
-      setFormData(prev => ({
-        ...prev,
-        city_id: String(defaultCity.id)
-      }));
+      
+      // تأخير قصير لضمان اكتمال عملية resetForm
+      setTimeout(() => {
+        setFormData(prev => ({
+          ...prev,
+          city_id: String(defaultCity.id)
+        }));
+        setSelectedCityId(String(defaultCity.id));
+      }, 100);
     }
-  }, [formData.city_id, cities, activePartner]);
+  }, [formData.city_id, cities, activePartner, isEditMode, isResetting]);
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
@@ -700,17 +723,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         type: 'update'
       }));
 
-      // تحديد المدينة والمنطقة إذا كانت متوفرة - مع تأخير للتأكد من التطبيق
+      // تحديد المدينة والمنطقة إذا كانت متوفرة - مع تأكيد إضافي للمناطق
       if (aiOrderData.city_id) {
         setSelectedCityId(String(aiOrderData.city_id));
         console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', aiOrderData.city_id);
         
-        // تطبيق region_id فوراً مثل المدينة تماماً - بدون شروط إضافية
+        // حفظ region_id للاستخدام لاحقاً عند تحميل المناطق
         if (aiOrderData.region_id) {
           setSelectedRegionId(String(aiOrderData.region_id));
-          console.log('🗺️ ✅ الحل الجذري - تطبيق region_id فوراً مثل المدينة:', aiOrderData.region_id);
+          setPreservedRegionId(String(aiOrderData.region_id));
+          console.log('🗺️ ✅ حفظ region_id للتطبيق عند تحميل المناطق:', aiOrderData.region_id);
+          
+          // تأخير إضافي لضمان تطبيق القيم على الـ dropdowns
+          setTimeout(() => {
+            setFormData(prev => ({
+              ...prev,
+              region_id: String(aiOrderData.region_id)
+            }));
+            console.log('🗺️ تطبيق region_id على النموذج مع تأخير:', aiOrderData.region_id);
+          }, 500);
         }
-        console.log('🗺️ تم تحديد المنطقة من بيانات التعديل (بدون مدينة):', aiOrderData.region_id);
       }
 
       // تحديث السلة بالمنتجات
@@ -864,6 +896,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
          }
         
         try {
+            // إضافة logging مفصل لتتبع city_id المرسل
+            console.log('🔍 تفاصيل جلب المناطق:', {
+              cityId: formData.city_id,
+              cityIdType: typeof formData.city_id,
+              isEditMode: isEditMode,
+              preservedRegionId: preservedRegionId
+            });
+            
+            // التحقق من صحة city_id
+            if (!formData.city_id || formData.city_id === '') {
+              console.warn('⚠️ city_id فارغ، لا يمكن جلب المناطق');
+              return;
+            }
+            
             // تحقق من الذاكرة التخزينية أولاً
             const cacheKey = `regions_${formData.city_id}`;
             const cachedRegions = regionCache.current.get(cacheKey);
@@ -875,13 +921,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               // تطبيق region_id المحفوظ في وضع التعديل
               if (isEditMode && preservedRegionId) {
                 setTimeout(() => {
+                  setSelectedRegionId(preservedRegionId);
                   setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                  console.log('✅ تم تطبيق region_id المحفوظ:', preservedRegionId);
-                }, 100);
+                  console.log('✅ تم تطبيق region_id المحفوظ من cache:', preservedRegionId);
+                }, 150);
               }
             } else {
               console.log('🌐 جلب المناطق من API للمدينة:', formData.city_id);
               const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
+              
+              console.log('📡 استجابة API المناطق:', {
+                cityId: formData.city_id,
+                regionsCount: Array.isArray(regionsData) ? regionsData.length : Object.keys(regionsData || {}).length,
+                firstRegion: Array.isArray(regionsData) ? regionsData[0] : Object.values(regionsData || {})[0]
+              });
+              
               const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
               
               // حفظ في الذاكرة التخزينية
@@ -890,12 +944,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               
                // في وضع التعديل، تأكد من أن المنطقة المحددة تظهر في dropdown
                if (isEditMode && preservedRegionId) {
-                 // تأخير بسيط لضمان أن البيانات محملة في dropdown
+                 // تأخير أطول لضمان أن البيانات محملة في dropdown
                  setTimeout(() => {
                    setSelectedRegionId(preservedRegionId);
                    setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                   console.log('✅ تم استعادة المنطقة في وضع التعديل:', preservedRegionId);
-                 }, 200);
+                   console.log('✅ تم استعادة المنطقة في وضع التعديل من API:', preservedRegionId);
+                 }, 300);
                }
                
                console.log('✅ تم جلب المناطق من API:', safeRegions.length, 'منطقة');
