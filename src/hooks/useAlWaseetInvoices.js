@@ -22,37 +22,59 @@ export const useAlWaseetInvoices = () => {
 
     setLoading(true);
     try {
-      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
-      
+      // Fetch invoices from local Supabase (synced via Edge Function)
+      const { data, error } = await supabase
+        .from('delivery_invoices')
+        .select('external_id, amount, orders_count, issued_at, received, received_at, status, raw, updated_at, partner')
+        .eq('partner', 'alwaseet')
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped = (data || []).map((inv) => {
+        const ts = inv.received_at || inv.issued_at || inv.updated_at;
+        return {
+          id: inv.external_id,
+          merchant_price: inv.amount,
+          delivered_orders_count: inv.orders_count,
+          updated_at: ts,
+          status: inv.received ? 'تم الاستلام من قبل التاجر' : (inv.status || inv.raw?.status || 'قيد المعالجة'),
+          raw: inv.raw,
+        };
+      });
+
       // Apply time filtering
-      const filteredAndSortedInvoices = (invoicesData || [])
-        .filter(invoice => {
+      const filteredAndSortedInvoices = (mapped || [])
+        .filter((invoice) => {
           if (timeFilter === 'all') return true;
-          
-          const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-          const now = new Date();
-          
+
+          const invoiceDate = new Date(invoice.updated_at);
           switch (timeFilter) {
-            case 'week':
+            case 'week': {
               const weekAgo = new Date();
               weekAgo.setDate(weekAgo.getDate() - 7);
               return invoiceDate >= weekAgo;
-            case 'month':
+            }
+            case 'month': {
               const monthAgo = new Date();
               monthAgo.setMonth(monthAgo.getMonth() - 1);
               return invoiceDate >= monthAgo;
-            case '3months':
+            }
+            case '3months': {
               const threeMonthsAgo = new Date();
               threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
               return invoiceDate >= threeMonthsAgo;
-            case '6months':
+            }
+            case '6months': {
               const sixMonthsAgo = new Date();
               sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
               return invoiceDate >= sixMonthsAgo;
-            case 'year':
+            }
+            case 'year': {
               const yearAgo = new Date();
               yearAgo.setFullYear(yearAgo.getFullYear() - 1);
               return invoiceDate >= yearAgo;
+            }
             case 'custom':
               return invoice; // Handle custom range in the component
             default:
@@ -60,19 +82,16 @@ export const useAlWaseetInvoices = () => {
           }
         })
         .sort((a, b) => {
-          // First sort by status - pending invoices first
           const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
           const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
-          
           if (aIsPending && !bIsPending) return -1;
           if (!aIsPending && bIsPending) return 1;
-          
-          // Then sort by date - newest first
-          const aDate = new Date(a.updated_at || a.created_at);
-          const bDate = new Date(b.updated_at || b.created_at);
+
+          const aDate = new Date(a.updated_at);
+          const bDate = new Date(b.updated_at);
           return bDate - aDate;
         });
-      
+
       setInvoices(filteredAndSortedInvoices);
       return filteredAndSortedInvoices;
     } catch (error) {
@@ -80,7 +99,7 @@ export const useAlWaseetInvoices = () => {
       toast({
         title: 'خطأ في جلب الفواتير',
         description: error.message,
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return [];
     } finally {
@@ -293,19 +312,22 @@ export const useAlWaseetInvoices = () => {
     });
   }, []);
 
-  // Auto-sync and fetch invoices when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
       (async () => {
         try {
-          // Trigger backend sync to persist invoices and mark orders automatically
-          await supabase.functions.invoke('alwaseet-sync-invoices', {
-            body: { token }
-          });
+          const lastSyncAt = Number(localStorage.getItem('alwaseetLastSyncAt') || '0');
+          const tenMinutes = 10 * 60 * 1000;
+          if (!lastSyncAt || Date.now() - lastSyncAt > tenMinutes) {
+            await supabase.functions.invoke('alwaseet-sync-invoices', {
+              body: { token },
+            });
+            localStorage.setItem('alwaseetLastSyncAt', String(Date.now()));
+          }
         } catch (e) {
           console.warn('Failed to sync AlWaseet invoices:', e?.error || e?.message || e);
         } finally {
-          // Always fetch for UI after attempting sync
+          // Always fetch UI from local DB
           fetchInvoices();
         }
       })();
