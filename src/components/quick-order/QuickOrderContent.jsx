@@ -971,7 +971,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (!formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
     } else if (activePartner === 'alwaseet') {
       if (!formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
-      if (!formData.region_id) newErrors.region_id = 'الرجاء اختيار المنطقة.';
+      if (!formData.region_id && !selectedRegionId) newErrors.region_id = 'الرجاء اختيار المنطقة.';
     }
     const safeCartForValidation = Array.isArray(cart) ? cart : [];
     if (safeCartForValidation.length === 0) {
