@@ -138,6 +138,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "applied_customer_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       cash_movements: {
@@ -308,6 +315,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_benefit_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -859,6 +873,51 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+        ]
+      }
+      delivery_invoice_status_history: {
+        Row: {
+          changed_at: string
+          id: string
+          invoice_id: string
+          new_status: string | null
+          new_status_normalized: string | null
+          old_status: string | null
+          old_status_normalized: string | null
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          invoice_id: string
+          new_status?: string | null
+          new_status_normalized?: string | null
+          old_status?: string | null
+          old_status_normalized?: string | null
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          invoice_id?: string
+          new_status?: string | null
+          new_status_normalized?: string | null
+          old_status?: string | null
+          old_status_normalized?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_invoice_status_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_invoices: {
@@ -873,7 +932,9 @@ export type Database = {
           raw: Json
           received: boolean
           received_at: string | null
+          received_flag: boolean
           status: string | null
+          status_normalized: string | null
           updated_at: string
         }
         Insert: {
@@ -887,7 +948,9 @@ export type Database = {
           raw?: Json
           received?: boolean
           received_at?: string | null
+          received_flag?: boolean
           status?: string | null
+          status_normalized?: string | null
           updated_at?: string
         }
         Update: {
@@ -901,7 +964,9 @@ export type Database = {
           raw?: Json
           received?: boolean
           received_at?: string | null
+          received_flag?: boolean
           status?: string | null
+          status_normalized?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1358,6 +1423,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loyalty_points_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       loyalty_rewards_used: {
@@ -1402,6 +1474,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_used_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -1488,6 +1567,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_discount_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -1590,6 +1676,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
         ]
       }
       order_items: {
@@ -1630,6 +1723,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
           },
           {
             foreignKeyName: "order_items_product_id_fkey"
@@ -2331,6 +2431,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
           },
         ]
       }
@@ -3194,7 +3301,28 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      orders_invoice_receipt_v: {
+        Row: {
+          delivery_partner_order_id: string | null
+          invoice_external_id: string | null
+          invoice_id: string | null
+          order_id: string | null
+          order_number: string | null
+          partner: string | null
+          received_at: string | null
+          received_flag: boolean | null
+          tracking_number: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_purchase_cost_record: {
@@ -3728,6 +3856,10 @@ export type Database = {
           p_variant_id: string
         }
         Returns: boolean
+      }
+      sync_alwaseet_invoice_data: {
+        Args: { p_invoice_data: Json; p_orders_data: Json }
+        Returns: Json
       }
       update_cash_source_balance: {
         Args: {
