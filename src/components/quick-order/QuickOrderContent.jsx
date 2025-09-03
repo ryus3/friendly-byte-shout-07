@@ -1027,7 +1027,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       fetchRegionsData();
     }
-  }, [cityIdForRegions, selectedCityId, formData.city_id, activePartner, waseetToken, isEditMode]);
+  }, [selectedCityId, formData.city_id, activePartner, waseetToken, isEditMode]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
