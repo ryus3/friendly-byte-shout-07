@@ -101,13 +101,21 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // تحديث حالة الطلبات المحلية
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
+      console.log('🔄 تحديث الحالة المحلية للطلب:', { orderId, updates, newProducts });
+      setOrders(prevOrders => {
+        const updatedOrders = prevOrders.map(order => 
           order.id === orderId 
-            ? { ...order, ...updates, items: newProducts || order.items }
+            ? { 
+                ...order, 
+                ...updates, 
+                items: newProducts || order.items,
+                updated_at: new Date().toISOString()
+              }
             : order
-        )
-      );
+        );
+        console.log('✅ تم تحديث الحالة المحلية بنجاح');
+        return updatedOrders;
+      });
 
       // إضافة إشعار
       if (addNotification) {
@@ -117,6 +125,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         );
       }
 
+      console.log('✅ useOrders - اكتمل تحديث الطلب بنجاح:', { orderId, success: true });
       return { success: true, order: updatedOrder };
     } catch (error) {
       console.error('Error in updateOrder:', error);
