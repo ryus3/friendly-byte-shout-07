@@ -704,6 +704,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     if (aiOrderData && aiOrderData.editMode) {
       console.log('📋 تحميل بيانات التعديل من aiOrderData:', aiOrderData);
+      console.log('🔍 تفاصيل city_id في aiOrderData:', {
+        city_id: aiOrderData.city_id,
+        city_id_type: typeof aiOrderData.city_id,
+        customer_city: aiOrderData.customer_city,
+        region_id: aiOrderData.region_id
+      });
+      
+      // التحقق من صحة city_id - الأولوية للـ city_id الصحيح
+      const correctCityId = aiOrderData.city_id ? String(aiOrderData.city_id) : null;
       
       // تحديث النموذج ببيانات الطلب الأصلي
       setFormData(prev => ({
@@ -713,8 +722,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         second_phone: aiOrderData.customer_phone2 || '',
         city: aiOrderData.customer_city || '',
         region: aiOrderData.customer_province || '',
-        city_id: aiOrderData.city_id || null,
-        region_id: aiOrderData.region_id || null,
+        city_id: correctCityId,
+        region_id: aiOrderData.region_id ? String(aiOrderData.region_id) : null,
         address: aiOrderData.customer_address || '',
         notes: aiOrderData.notes || '',
         details: aiOrderData.notes || '',
@@ -723,24 +732,28 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         type: 'update'
       }));
 
+      console.log('🏙️ ✅ تحديث formData.city_id إلى:', correctCityId);
+
       // تحديد المدينة والمنطقة إذا كانت متوفرة - مع تأكيد إضافي للمناطق
-      if (aiOrderData.city_id) {
-        setSelectedCityId(String(aiOrderData.city_id));
-        console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', aiOrderData.city_id);
+      if (correctCityId) {
+        setSelectedCityId(correctCityId);
+        console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', correctCityId);
         
         // حفظ region_id للاستخدام لاحقاً عند تحميل المناطق
         if (aiOrderData.region_id) {
-          setSelectedRegionId(String(aiOrderData.region_id));
-          setPreservedRegionId(String(aiOrderData.region_id));
-          console.log('🗺️ ✅ حفظ region_id للتطبيق عند تحميل المناطق:', aiOrderData.region_id);
+          const correctRegionId = String(aiOrderData.region_id);
+          setSelectedRegionId(correctRegionId);
+          setPreservedRegionId(correctRegionId);
+          console.log('🗺️ ✅ حفظ region_id للتطبيق عند تحميل المناطق:', correctRegionId);
           
           // تأخير إضافي لضمان تطبيق القيم على الـ dropdowns
           setTimeout(() => {
             setFormData(prev => ({
               ...prev,
-              region_id: String(aiOrderData.region_id)
+              city_id: correctCityId, // تأكيد city_id مرة أخرى
+              region_id: correctRegionId
             }));
-            console.log('🗺️ تطبيق region_id على النموذج مع تأخير:', aiOrderData.region_id);
+            console.log('🗺️ تطبيق القيم على النموذج مع تأخير - city_id:', correctCityId, 'region_id:', correctRegionId);
           }, 500);
         }
       }
@@ -896,26 +909,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
          }
         
         try {
-            // إضافة logging مفصل لتتبع city_id المرسل
+            // إضافة logging مفصل لتتبع city_id المرسل مع fallback
+            const cityIdToUse = formData.city_id || selectedCityId;
             console.log('🔍 تفاصيل جلب المناطق:', {
-              cityId: formData.city_id,
-              cityIdType: typeof formData.city_id,
+              formDataCityId: formData.city_id,
+              selectedCityId: selectedCityId,
+              cityIdToUse: cityIdToUse,
+              cityIdType: typeof cityIdToUse,
               isEditMode: isEditMode,
               preservedRegionId: preservedRegionId
             });
             
-            // التحقق من صحة city_id
-            if (!formData.city_id || formData.city_id === '') {
+            // التحقق من صحة city_id مع fallback
+            if (!cityIdToUse || cityIdToUse === '') {
               console.warn('⚠️ city_id فارغ، لا يمكن جلب المناطق');
               return;
             }
             
-            // تحقق من الذاكرة التخزينية أولاً
-            const cacheKey = `regions_${formData.city_id}`;
+            // في وضع التعديل، استخدم cityIdToUse بدلاً من formData.city_id فقط
+            const finalCityId = isEditMode ? cityIdToUse : formData.city_id;
+            console.log('🎯 استخدام city_id النهائي لجلب المناطق:', finalCityId);
+            
+            // تحقق من الذاكرة التخزينية أولاً باستخدام finalCityId
+            const cacheKey = `regions_${finalCityId}`;
             const cachedRegions = regionCache.current.get(cacheKey);
             
             if (cachedRegions) {
-              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', formData.city_id);
+              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', finalCityId);
               setRegions(cachedRegions);
               
               // تطبيق region_id المحفوظ في وضع التعديل
@@ -927,14 +947,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }, 150);
               }
             } else {
-              console.log('🌐 جلب المناطق من API للمدينة:', formData.city_id);
-              const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
+              console.log('🌐 جلب المناطق من API للمدينة:', finalCityId);
+              const regionsData = await getRegionsByCity(waseetToken, finalCityId);
               
               console.log('📡 استجابة API المناطق:', {
-                cityId: formData.city_id,
+                requestedCityId: finalCityId,
                 regionsCount: Array.isArray(regionsData) ? regionsData.length : Object.keys(regionsData || {}).length,
                 firstRegion: Array.isArray(regionsData) ? regionsData[0] : Object.values(regionsData || {})[0]
               });
+              
+              // التحقق من أن المناطق تنتمي للمدينة الصحيحة
+              if (Array.isArray(regionsData) && regionsData.length > 0) {
+                const firstRegion = regionsData[0];
+                if (firstRegion.city_id && String(firstRegion.city_id) !== String(finalCityId)) {
+                  console.error('❌ خطأ: المناطق المُستلمة تنتمي لمدينة مختلفة!', {
+                    requestedCityId: finalCityId,
+                    receivedCityId: firstRegion.city_id
+                  });
+                }
+              }
               
               const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
               
