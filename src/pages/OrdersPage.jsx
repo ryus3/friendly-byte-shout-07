@@ -245,66 +245,32 @@ const OrdersPage = () => {
       }
     };
 
-    // مستمع لتحديثات الطلبات - الحل النهائي لضمان التحديث الفوري
+    // مستمع لتحديثات الطلبات من QuickOrderContent
     const handleOrderUpdated = (event) => {
-      const { id: orderId, order: updatedOrder, updates, timestamp, source } = event.detail || {};
-      if (orderId) {
-        console.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, source, timestamp });
-        
-        // تحديث فوري مع تأخير أطول لضمان الحفظ في قاعدة البيانات - الحل النهائي
-        setTimeout(() => {
-          if (refreshOrders) {
-            console.log('🔄 OrdersPage: تنشيط تحديث البيانات مع تأخير طويل');
-            refreshOrders();
-          }
-        }, 1500);
-        
-        // تحديث مباشر للحالة المحلية إذا كان لدينا البيانات المحدثة
-        if (updatedOrder && allData?.orders) {
-          console.log('⚡ OrdersPage: تحديث مباشر للحالة المحلية');
-          const updatedOrders = allData.orders.map(order => 
-            order.id === orderId ? { ...order, ...updates, ...updatedOrder } : order
-          );
-          // تحديث محلي مباشر (يحتاج للتطبيق عبر SuperProvider)
+      const { id: orderId, updates, timestamp } = event.detail || {};
+      if (orderId && updates) {
+        console.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, updates, timestamp });
+        // تحديث فوري للواجهة عن طريق استدعاء refreshOrders
+        if (refreshOrders) {
+          console.log('🔄 OrdersPage: تنشيط تحديث البيانات');
+          refreshOrders();
         }
       }
     };
 
-    // مستمع إضافي لأحداث تحديث البيانات - تحديث فوري
-    const handleDataRefresh = (event) => {
-      console.log('🔄 OrdersPage: استلام طلب تحديث البيانات العام');
-      if (refreshOrders) {
-        // محاولة فورية أولى
-        refreshOrders();
-        // محاولة ثانية مع تأخير للتأكد
-        setTimeout(() => {
-          console.log('🔄 OrdersPage: إعادة محاولة تحديث البيانات');
-          refreshOrders();
-        }, 1000);
-      }
-    };
-
-    // تسجيل المستمعات مع إضافة المستمعات الجديدة
-    const events = [
-      ['orderDeleted', handleOrderDeleted],
-      ['aiOrderDeleted', handleAiOrderDeleted],
-      ['orderDeletedConfirmed', handleOrderDeletedConfirmed],
-      ['aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed],
-      ['orderUpdated', handleOrderUpdated],
-      ['localOrderUpdated', handleOrderUpdated],
-      ['orderDataRefreshed', handleDataRefresh],
-      ['superProviderOrderUpdated', handleOrderUpdated],
-      ['refreshOrdersData', handleDataRefresh]
-    ];
-
-    events.forEach(([eventName, handler]) => {
-      window.addEventListener(eventName, handler);
-    });
+    // تسجيل المستمعات
+    window.addEventListener('orderDeleted', handleOrderDeleted);
+    window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    window.addEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+    window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+    window.addEventListener('orderUpdated', handleOrderUpdated);
 
     return () => {
-      events.forEach(([eventName, handler]) => {
-        window.removeEventListener(eventName, handler);
-      });
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
+      window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+      window.removeEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
+      window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
+      window.removeEventListener('orderUpdated', handleOrderUpdated);
     };
   }, []);
 

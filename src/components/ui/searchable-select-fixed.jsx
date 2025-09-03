@@ -177,14 +177,9 @@ const SearchableSelectFixed = ({
         minWidth: '200px',
         maxWidth: '400px',
         pointerEvents: 'auto',
-        backgroundColor: 'hsl(var(--background)) !important',
-        borderColor: 'hsl(var(--border)) !important',
-        zIndex: '999999999 !important',
-        position: 'fixed !important',
-        isolation: 'isolate',
-        transform: 'translate3d(0, 0, 0) !important',
-        willChange: 'transform',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.3) !important'
+        backgroundColor: 'hsl(var(--background))',
+        borderColor: 'hsl(var(--border))',
+        zIndex: 99999
       }}
     >
       {/* Search Input */}
@@ -317,41 +312,32 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Dropdown - Ultra High Z-Index Strategy */}
+      {/* Dropdown - Smart Portal Strategy */}
       {open && (
         isInDialog ? (
-          // Inside Dialog: Use fixed positioning with ultra-high z-index
+          // Inside Dialog: Use absolute positioning with enhanced z-index for regions
           <div 
-            className="fixed"
+            className="absolute z-[99999] mt-1 w-full"
             style={{
               direction: 'rtl',
-              position: 'fixed !important',
-              zIndex: '999999999 !important',
-              left: buttonRef.current?.getBoundingClientRect().left || 0,
-              top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
-              width: buttonRef.current?.getBoundingClientRect().width || 'auto',
-              transform: 'translate3d(0, 0, 0) !important',
-              willChange: 'transform',
-              isolation: 'isolate'
+              position: 'absolute',
+              zIndex: 99999
             }}
           >
             {renderDropdownContent()}
           </div>
         ) : (
-          // Outside Dialog: Use portal with ultra-high z-index
+          // Outside Dialog: Use portal with enhanced z-index
           createPortal(
             <div 
-              className="fixed"
+              className="fixed z-[999999]"
               style={{ 
                 direction: 'rtl',
                 left: buttonRef.current?.getBoundingClientRect().left || 0,
                 top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
                 width: buttonRef.current?.getBoundingClientRect().width || 'auto',
-                zIndex: '999999999 !important',
-                position: 'fixed !important',
-                transform: 'translate3d(0, 0, 0) !important',
-                willChange: 'transform',
-                isolation: 'isolate'
+                zIndex: 999999,
+                position: 'fixed'
               }}
             >
               {renderDropdownContent()}
