@@ -27,6 +27,18 @@ export const useAlWaseetInvoices = () => {
     try {
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
+      // Persist invoices to DB (bulk upsert via RPC)
+      try {
+        const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+          p_invoices: invoicesData || []
+        });
+        if (upsertErr) {
+          console.warn('upsert_alwaseet_invoice_list error:', upsertErr.message);
+        }
+      } catch (e) {
+        console.warn('Failed to upsert invoices list:', e?.message || e);
+      }
+      
       // Apply time filtering
       const filteredAndSortedInvoices = (invoicesData || [])
         .filter(invoice => {
