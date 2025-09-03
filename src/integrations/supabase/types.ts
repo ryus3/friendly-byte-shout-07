@@ -867,6 +867,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices_needing_sync"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_invoice_orders_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
@@ -918,6 +925,13 @@ export type Database = {
             referencedRelation: "delivery_invoices"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_invoice_status_history_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices_needing_sync"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_invoices: {
@@ -927,7 +941,11 @@ export type Database = {
           external_id: string
           id: string
           issued_at: string | null
+          last_api_updated_at: string | null
+          last_synced_at: string | null
+          merchant_id: string | null
           orders_count: number | null
+          orders_last_synced_at: string | null
           partner: string
           raw: Json
           received: boolean
@@ -943,7 +961,11 @@ export type Database = {
           external_id: string
           id?: string
           issued_at?: string | null
+          last_api_updated_at?: string | null
+          last_synced_at?: string | null
+          merchant_id?: string | null
           orders_count?: number | null
+          orders_last_synced_at?: string | null
           partner?: string
           raw?: Json
           received?: boolean
@@ -959,7 +981,11 @@ export type Database = {
           external_id?: string
           id?: string
           issued_at?: string | null
+          last_api_updated_at?: string | null
+          last_synced_at?: string | null
+          merchant_id?: string | null
           orders_count?: number | null
+          orders_last_synced_at?: string | null
           partner?: string
           raw?: Json
           received?: boolean
@@ -3301,6 +3327,39 @@ export type Database = {
       }
     }
     Views: {
+      delivery_invoices_needing_sync: {
+        Row: {
+          external_id: string | null
+          id: string | null
+          last_api_updated_at: string | null
+          orders_last_synced_at: string | null
+          partner: string | null
+          received: boolean | null
+          status: string | null
+          status_normalized: string | null
+        }
+        Insert: {
+          external_id?: string | null
+          id?: string | null
+          last_api_updated_at?: string | null
+          orders_last_synced_at?: string | null
+          partner?: string | null
+          received?: boolean | null
+          status?: string | null
+          status_normalized?: string | null
+        }
+        Update: {
+          external_id?: string | null
+          id?: string | null
+          last_api_updated_at?: string | null
+          orders_last_synced_at?: string | null
+          partner?: string | null
+          received?: boolean | null
+          status?: string | null
+          status_normalized?: string | null
+        }
+        Relationships: []
+      }
       orders_invoice_receipt_v: {
         Row: {
           delivery_partner_order_id: string | null
@@ -3319,6 +3378,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_invoice_orders_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices_needing_sync"
             referencedColumns: ["id"]
           },
         ]
@@ -3734,6 +3800,10 @@ export type Database = {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }
         Returns: undefined
       }
+      mark_invoice_orders_synced: {
+        Args: { p_external_id: string; p_partner?: string }
+        Returns: boolean
+      }
       migrate_existing_customers_to_phone_loyalty: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -3930,6 +4000,10 @@ export type Database = {
           p_sku: string
         }
         Returns: undefined
+      }
+      upsert_alwaseet_invoice_list: {
+        Args: { p_invoices: Json }
+        Returns: Json
       }
       username_exists: {
         Args: { p_username: string }
