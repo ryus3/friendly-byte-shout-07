@@ -100,8 +100,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
       }
 
-      // تحديث حالة الطلبات المحلية مع تفاصيل أكثر
-      console.log('🔄 تحديث الحالة المحلية للطلب:', { orderId, updates, newProducts });
+      // تحديث حالة الطلبات المحلية مع تفاصيل أكثر - الحل النهائي
+      console.log('🔄 useOrders - تحديث الحالة المحلية:', { orderId, updates, newProducts });
       setOrders(prevOrders => {
         const updatedOrders = prevOrders.map(order => 
           order.id === orderId 
@@ -109,6 +109,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
                 ...order, 
                 ...updates, 
                 items: newProducts || order.items,
+                order_items: newProducts || order.order_items || order.items,
                 updated_at: new Date().toISOString(),
                 // إضافة معرفات الوسيط إذا كانت متوفرة
                 alwaseet_city_id: updates.alwaseet_city_id || order.alwaseet_city_id,
@@ -116,21 +117,35 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
               }
             : order
         );
-        console.log('✅ تم تحديث الحالة المحلية بنجاح:', {
-          updatedOrderId: orderId,
-          updatedOrder: updatedOrders.find(o => o.id === orderId)
+        
+        const updatedOrder = updatedOrders.find(o => o.id === orderId);
+        console.log('✅ useOrders - تم تحديث الحالة المحلية:', {
+          orderId,
+          beforeUpdate: prevOrders.find(o => o.id === orderId)?.customer_name,
+          afterUpdate: updatedOrder?.customer_name,
+          timestamp: new Date().toISOString()
         });
         
-        // إرسال حدث للتأكد من تحديث كل المكونات
+        // إرسال أحداث متعددة لضمان التحديث الفوري
         setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('localOrderUpdated', { 
-            detail: { 
-              orderId, 
-              order: updatedOrders.find(o => o.id === orderId),
-              timestamp: new Date().toISOString()
-            } 
-          }));
-        }, 100);
+          const events = [
+            'localOrderUpdated',
+            'orderDataRefreshed', 
+            'superProviderOrderUpdated',
+            'refreshOrdersData'
+          ];
+          
+          events.forEach(eventName => {
+            window.dispatchEvent(new CustomEvent(eventName, { 
+              detail: { 
+                orderId, 
+                order: updatedOrder,
+                source: 'useOrders',
+                timestamp: new Date().toISOString()
+              } 
+            }));
+          });
+        }, 50);
         
         return updatedOrders;
       });

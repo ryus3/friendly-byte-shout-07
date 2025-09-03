@@ -1330,24 +1330,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         window.superProviderUpdate(originalOrder.id, completeOrderData);
       }
 
-      // إرسال أحداث متعددة لضمان تحديث كل المكونات
+      // إرسال أحداث التحديث الشامل - الحل النهائي
+      const events = [
+        'orderUpdated',
+        'localOrderUpdated', 
+        'superProviderOrderUpdated',
+        'refreshOrdersData',
+        'dataStateChanged',
+        'orderDataRefreshed'
+      ];
+      
+      console.log('📢 QuickOrderContent: إرسال أحداث التحديث للطلب:', originalOrder.id);
+      
       setTimeout(() => {
-        // حدث للطلب المحدث
-        window.dispatchEvent(new CustomEvent('orderUpdated', { 
-          detail: { 
-            id: originalOrder.id, 
-            updates: completeOrderData,
-            order: updateResult.order,
-            timestamp: new Date().toISOString()
-          } 
-        }));
+        events.forEach(eventName => {
+          window.dispatchEvent(new CustomEvent(eventName, { 
+            detail: { 
+              id: originalOrder.id,
+              orderId: originalOrder.id,
+              order: updateResult.order || originalOrder,
+              updates: completeOrderData,
+              source: 'QuickOrderContent',
+              timestamp: new Date().toISOString()
+            } 
+          }));
+        });
         
-        // حدث لإعادة تحميل البيانات
-        window.dispatchEvent(new CustomEvent('refreshOrdersData', {
-          detail: { source: 'quickOrderUpdate', timestamp: new Date().toISOString() }
-        }));
-        
-        // حدث لتحديث الحالة العامة
+        // تحديث فوري إضافي بعد تأخير قصير
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('forceOrdersRefresh', { 
+            detail: { 
+              orderId: originalOrder.id,
+              reason: 'delayed_sync_after_edit'
+            } 
+          }));
+        }, 800);
         window.dispatchEvent(new CustomEvent('dataStateChanged', {
           detail: { type: 'orderUpdate', orderId: originalOrder.id }
         }));
