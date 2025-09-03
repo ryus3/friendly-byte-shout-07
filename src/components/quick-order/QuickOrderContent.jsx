@@ -628,11 +628,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
      return result;
    }, [cart]);
   const deliveryFee = useMemo(() => {
-    if (activePartner === 'local') {
-      return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
-    }
-    return 0; // لشركات التوصيل الخارجية لا توجد رسوم إضافية
-  }, [activePartner, applyLoyaltyDelivery, settings]);
+    // رسوم التوصيل دائماً تُحسب في إجمالي السعر المرسل لشركات التوصيل
+    return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
+  }, [applyLoyaltyDelivery, settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
   const finalTotal = useMemo(() => total + deliveryFee, [total, deliveryFee]);
   
@@ -1259,9 +1257,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           city_id: validCityId,
           region_id: validRegionId,
           location: formData.address,
-          type_name: cartItems.map(item => 
-            `${item.product_name} (${item.color}, ${item.size}) × ${item.quantity} = ${item.price} د.ع`
-          ).join('\n'),
+          type_name: "ملابس وإكسسوارات",
           items_number: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
           price: finalTotal,
           package_size: parseInt(selectedPackageSize) || 1,
@@ -1306,9 +1302,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         }
       }
 
-      // تحديث الطلب محلياً - تمرير المنتجات والعناصر الأصلية بشكل منفصل
+      // تحديث الطلب محلياً - تمرير جميع البيانات المحدثة
       const { items, ...orderDataWithoutItems } = orderData;
-      updateResult = await updateOrder(originalOrder.id, orderDataWithoutItems, cart, originalOrder.items);
+      // إضافة البيانات المحدثة من النموذج
+      const completeOrderData = {
+        ...orderDataWithoutItems,
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_phone2: formData.second_phone,
+        customer_city: formData.city,
+        customer_province: formData.region,
+        customer_address: formData.address,
+        notes: formData.notes,
+        details: formData.details
+      };
+      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
       console.log('✅ Local order updated:', updateResult);
 
       toast({

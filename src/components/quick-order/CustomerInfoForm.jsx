@@ -15,13 +15,6 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
   const [wasCleared, setWasCleared] = useState(false);
   const nameInputRef = useRef(null);
   
-  // اختيار بغداد تلقائياً إذا لم تكن المدينة محددة
-  useEffect(() => {
-    if (formData.address && formData.address.length > 3 && (!formData.city || formData.city === '')) {
-      // اختيار بغداد كمدينة افتراضية
-      handleSelectChange('city', 'بغداد');
-    }
-  }, [formData.address, handleSelectChange]);
 
   // استخدام خطاف تنبيه العميل المحسن
   const { insight: customerInsight } = useDuplicateCustomerAlert(formData.phone);
