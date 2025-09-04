@@ -378,20 +378,11 @@ const OrderCard = ({
                         </Badge>
                       </div>
 
-                       {/* شارة استلام الفاتورة للطلبات الخارجية */}
-                       {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
-                         <div className="flex justify-end w-full">
-                           <Badge variant="default" className="text-xs font-bold bg-emerald-500 text-white px-3 py-1.5 rounded-full border border-emerald-400 shadow-sm">
-                             مستلم الفاتورة
-                           </Badge>
-                         </div>
-                       )}
-
-                      {/* شارة رقم فاتورة الوسيط */}
+                      {/* شارة رقم فاتورة الوسيط - مصغرة */}
                       {order.delivery_partner_invoice_id && (
-                        <div className="flex justify-end w-full">
-                          <Badge variant="outline" className="text-xs font-bold bg-blue-50 text-blue-700 border-blue-200 px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" />
+                        <div className="flex justify-start w-full">
+                          <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200 px-2 py-1 rounded-full shadow-sm flex items-center gap-1 h-fit">
+                            <CreditCard className="h-2.5 w-2.5" />
                             فاتورة: {order.delivery_partner_invoice_id}
                           </Badge>
                         </div>
