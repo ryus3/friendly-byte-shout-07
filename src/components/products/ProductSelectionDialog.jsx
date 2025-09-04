@@ -192,8 +192,6 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 h-12 text-base"
-                autoFocus={false}
-                autoComplete="off"
               />
             </div>
           </div>
