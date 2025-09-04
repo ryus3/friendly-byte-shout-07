@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, CheckCircle, Trash2, Volume2, VolumeX, Settings, Sparkles, BarChart3, Layers, Clock, Eye } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Settings, Sparkles, BarChart3, Layers, Zap, Clock, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -354,29 +355,31 @@ const NotificationsPage = () => {
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
             <div className="relative z-10 p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 rounded-2xl bg-gradient-to-r from-primary/20 to-secondary/20">
-                  <Bell className="w-6 h-6 text-primary" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-primary/20 to-secondary/20">
+                    <Bell className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground">قائمة الإشعارات</h2>
+                    <p className="text-muted-foreground">جميع الإشعارات والتنبيهات الخاصة بك</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground">قائمة الإشعارات</h2>
-                  <p className="text-muted-foreground">جميع الإشعارات والتنبيهات الخاصة بك</p>
-                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestNotification}
+                  className="gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 hover:from-primary/20 hover:to-secondary/20 border-primary/20 hover:border-primary/40 transition-all duration-300"
+                >
+                  <Zap className="w-4 h-4" />
+                  إشعار تجريبي
+                </Button>
               </div>
-                <SelectTrigger className="w-full sm:w-40 md:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع الإشعارات</SelectItem>
-                  <SelectItem value="unread">غير مقروءة</SelectItem>
-                  <SelectItem value="read">مقروءة</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
-            <Separator />
+              <Separator className="mb-6" />
 
-              <ScrollArea className="h-[70vh] p-4">
+              <ScrollArea className="h-[65vh]">
                 <AnimatePresence>
                   {filteredNotifications.length > 0 ? (
                     <div className="space-y-4">
