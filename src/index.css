@@ -471,6 +471,42 @@
     margin-bottom: 0.5rem;
   }
   
+  /* Enhanced Notification Cards for both themes */
+  .notification-item-enhanced {
+    @apply backdrop-blur-md transition-all duration-300;
+  }
+  
+  .notification-unread {
+    @apply bg-gradient-to-r from-primary/12 via-primary/10 to-primary/8
+           dark:from-primary/10 dark:via-primary/8 dark:to-primary/6
+           border-primary/40 dark:border-primary/30
+           shadow-lg shadow-primary/20 dark:shadow-md dark:shadow-primary/15;
+  }
+  
+  .notification-read {
+    @apply bg-gradient-to-r from-background/95 via-background/90 to-background/85
+           dark:from-background/85 dark:via-background/80 dark:to-background/75
+           border-border/60 dark:border-border/50
+           backdrop-blur-sm;
+  }
+
+  /* Action Buttons - Enhanced for both themes */
+  .notification-action-btn-primary {
+    @apply bg-primary/15 text-primary border-primary/40 
+           hover:bg-primary/25 hover:border-primary/50
+           dark:bg-primary/10 dark:text-primary dark:border-primary/30
+           dark:hover:bg-primary/20 dark:hover:border-primary/40
+           transition-all duration-300;
+  }
+  
+  .notification-action-btn-danger {
+    @apply bg-red-100 text-red-700 border-red-300 
+           hover:bg-red-200 hover:border-red-400
+           dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/30
+           dark:hover:bg-red-500/25 dark:hover:border-red-500/40
+           transition-all duration-300;
+  }
+
   /* تحريك دائرة التقدم للمزامنة */
   @keyframes progress-countdown {
     from {

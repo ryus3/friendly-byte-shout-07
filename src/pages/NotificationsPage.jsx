@@ -259,7 +259,7 @@ const NotificationsPage = () => {
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 via-blue-600 via-cyan-500 via-teal-500 to-emerald-500 bg-clip-text text-transparent animate-pulse">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold cosmic-gradient-text">
               إدارة الإشعارات
             </h1>
             <p className="text-muted-foreground text-sm md:text-base lg:text-lg">تحكم شامل وإدارة احترافية لجميع الإشعارات</p>
@@ -340,7 +340,7 @@ const NotificationsPage = () => {
                     <Bell className="relative w-6 h-6 lg:w-8 lg:h-8 text-purple-300" />
                   </div>
                   <div className="text-center lg:text-right">
-                    <h3 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 via-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent mb-2 animate-pulse">
+                    <h3 className="text-xl lg:text-2xl font-bold rainbow-gradient-text mb-2">
                       إحصائيات الإشعارات
                     </h3>
                     <p className="text-muted-foreground text-sm lg:text-base">نظرة شاملة على جميع الإشعارات</p>
@@ -360,13 +360,13 @@ const NotificationsPage = () => {
                   <Separator orientation="vertical" className="h-8 lg:h-12 bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden sm:block" />
                   
                   <div className="text-center min-w-[80px]">
-                    <div className="relative text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent animate-pulse">
-                      {unreadCount}
-                      {/* تأثير التوهج للأرقام غير المقروءة */}
-                      {unreadCount > 0 && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent opacity-30 blur-md animate-ping"></div>
-                      )}
-                    </div>
+                     <div className="relative text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
+                       {unreadCount}
+                       {/* تأثير التوهج للأرقام غير المقروءة */}
+                       {unreadCount > 0 && (
+                         <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent opacity-30 blur-md"></div>
+                       )}
+                     </div>
                     <div className="text-xs lg:text-sm text-muted-foreground font-medium mt-1">غير مقروءة</div>
                   </div>
                   
@@ -539,7 +539,7 @@ const NotificationsPage = () => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => markAsRead(notification.id)}
-                                  className="gap-1.5 glass-effect bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-300/40 hover:border-green-400/60 text-green-700 hover:text-green-800 hover:shadow-lg hover:shadow-green-500/25 transition-all duration-300 text-xs sm:text-sm w-full sm:w-auto"
+                                  className="notification-action-btn-primary gap-1.5 text-xs sm:text-sm w-full sm:w-auto h-7 px-2"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
                                   <span className="hidden sm:inline">قراءة</span>
@@ -549,7 +549,7 @@ const NotificationsPage = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => deleteNotification(notification.id)}
-                                className="gap-1.5 glass-effect bg-gradient-to-r from-red-500/10 to-pink-500/10 border-red-300/40 hover:border-red-400/60 text-red-700 hover:text-red-800 hover:shadow-lg hover:shadow-red-500/25 transition-all duration-300 text-xs sm:text-sm w-full sm:w-auto"
+                                className="notification-action-btn-danger gap-1.5 text-xs sm:text-sm w-full sm:w-auto h-7 px-2"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                                 <span className="hidden sm:inline">حذف</span>
