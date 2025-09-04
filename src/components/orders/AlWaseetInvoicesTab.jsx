@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,6 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
-import { useLocation } from 'react-router-dom';
 
 const AlWaseetInvoicesTab = () => {
   const { isLoggedIn, activePartner } = useAlWaseet();
@@ -33,7 +32,8 @@ const AlWaseetInvoicesTab = () => {
     loading, 
     fetchInvoices, 
     getInvoiceStats,
-    applyCustomDateRangeFilter
+    applyCustomDateRangeFilter,
+    syncLastTwoInvoices
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,25 +44,7 @@ const AlWaseetInvoicesTab = () => {
   // Time filter state with localStorage
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
   const [customDateRange, setCustomDateRange] = useState(null);
-  const location = useLocation();
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search || window.location.search);
-    const from = params.get('from');
-    const to = params.get('to');
-    if (from && to) {
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      if (!isNaN(fromDate) && !isNaN(toDate)) {
-        setTimeFilter('custom');
-        setCustomDateRange({ from: fromDate, to: toDate });
-        fetchInvoices('custom');
-        return;
-      }
-    }
-    // Fallback to current filter
-    fetchInvoices(timeFilter);
-  }, [location.search]);
   // Filter invoices based on search, status, and time
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
@@ -97,6 +79,7 @@ const AlWaseetInvoicesTab = () => {
 
   const handleRefresh = async () => {
     await fetchInvoices(timeFilter);
+    await syncLastTwoInvoices();
   };
   
   const handleTimeFilterChange = async (newFilter) => {
