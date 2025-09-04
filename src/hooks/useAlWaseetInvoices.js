@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
@@ -15,6 +15,7 @@ export const useAlWaseetInvoices = () => {
   const [loading, setLoading] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
+  const isSyncingRef = useRef(false);
 
   // جلب الفواتير من قاعدة البيانات المحلية أولاً
   const fetchInvoicesFromDB = useCallback(async () => {
@@ -85,13 +86,14 @@ export const useAlWaseetInvoices = () => {
     }
 
     // منع المزامنة المتوازية
-    if (loading) {
+    if (isSyncingRef.current) {
       console.log('📋 مزامنة جارية بالفعل - تخطي');
       return localInvoices;
     }
 
     // الخطوة 2: مزامنة في الخلفية (اختيارية)
     setLoading(true);
+    isSyncingRef.current = true;
     try {
       console.log('🔄 بدء مزامنة API في الخلفية...');
       
@@ -229,8 +231,9 @@ export const useAlWaseetInvoices = () => {
       return localInvoices;
     } finally {
       setLoading(false);
+      isSyncingRef.current = false;
     }
-  }, [token, isLoggedIn, activePartner, loading, fetchInvoicesFromDB]);
+  }, [token, isLoggedIn, activePartner, fetchInvoicesFromDB]);
 
   // دالة مبسطة للتوافق مع الواجهة الحالية
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {

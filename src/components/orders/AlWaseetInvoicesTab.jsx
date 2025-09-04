@@ -32,8 +32,7 @@ const AlWaseetInvoicesTab = () => {
     loading, 
     fetchInvoices, 
     getInvoiceStats,
-    applyCustomDateRangeFilter,
-    syncLastTwoInvoices
+    applyCustomDateRangeFilter
   } = useAlWaseetInvoices();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,7 +78,6 @@ const AlWaseetInvoicesTab = () => {
 
   const handleRefresh = async () => {
     await fetchInvoices(timeFilter);
-    await syncLastTwoInvoices();
   };
   
   const handleTimeFilterChange = async (newFilter) => {
