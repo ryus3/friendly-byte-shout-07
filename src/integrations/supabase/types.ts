@@ -3563,6 +3563,10 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: undefined
       }
+      fix_corrupted_invoice_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fix_existing_purchase_shipping: {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
@@ -4018,6 +4022,10 @@ export type Database = {
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
+      }
+      validate_invoice_data_integrity: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       validate_promo_code: {
         Args: { promo_code_param: string }
