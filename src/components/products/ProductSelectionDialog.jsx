@@ -10,20 +10,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 
 const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
+  // تجميع المتغيرات حسب اللون
+  const variantsByColor = variants.reduce((acc, variant) => {
+    if (!acc[variant.color]) {
+      acc[variant.color] = [];
+    }
+    acc[variant.color].push(variant);
+    return acc;
+  }, {});
+
   return (
-    <div className="flex flex-wrap gap-2 my-2">
-      {variants.map(variant => (
-        <Button
-          key={variant.id}
-          size="sm"
-          variant={selectedVariantId === variant.id ? 'default' : 'outline'}
-          onClick={() => onSelect(variant)}
-          disabled={variant.quantity === 0}
-          className="relative"
-        >
-          {variant.size} - {variant.color}
-          {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
-        </Button>
+    <div className="space-y-3 my-2">
+      {Object.entries(variantsByColor).map(([color, colorVariants]) => (
+        <div key={color} className="space-y-2">
+          {/* عنوان اللون */}
+          <div className="flex items-center gap-2">
+            <div 
+              className="w-4 h-4 rounded-full border-2 border-gray-300" 
+              style={{ backgroundColor: color.toLowerCase() === 'أبيض' ? '#ffffff' : color.toLowerCase() === 'أسود' ? '#000000' : color.toLowerCase() === 'أحمر' ? '#ef4444' : color.toLowerCase() === 'أزرق' ? '#3b82f6' : color.toLowerCase() === 'أخضر' ? '#10b981' : color.toLowerCase() === 'أصفر' ? '#f59e0b' : color.toLowerCase() === 'بني' ? '#a3a3a3' : '#6b7280' }}
+            />
+            <span className="text-sm font-semibold text-muted-foreground">{color}</span>
+          </div>
+          {/* قياسات هذا اللون */}
+          <div className="flex flex-wrap gap-2 mr-6">
+            {colorVariants.map(variant => (
+              <Button
+                key={variant.id}
+                size="sm"
+                variant={selectedVariantId === variant.id ? 'default' : 'outline'}
+                onClick={() => onSelect(variant)}
+                disabled={variant.quantity === 0}
+                className="relative"
+              >
+                {variant.size}
+                {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
+              </Button>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -194,8 +218,6 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
                 className="pl-10 h-12 text-base"
                 autoFocus={false}
                 autoComplete="off"
-                tabIndex={-1}
-                onFocus={(e) => e.target.blur()}
               />
             </div>
           </div>
