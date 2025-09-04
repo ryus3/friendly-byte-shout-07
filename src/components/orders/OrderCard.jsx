@@ -363,12 +363,12 @@ const OrderCard = ({
                   </div>
                    {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (
-                     <div className="flex items-center gap-2 justify-start">
-                       <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                         <User className="h-3 w-3 inline-block mr-1" />
-                         {order.created_by_name}
-                       </span>
-                     </div>
+                      <div className="flex items-center gap-2 justify-start">
+                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                          <User className="h-3 w-3 inline-block mr-1" />
+                          {order.created_by_name}
+                        </span>
+                      </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
                       <div className="flex justify-start w-full">
@@ -381,8 +381,8 @@ const OrderCard = ({
                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
                       {order.delivery_partner_invoice_id && (
                         <div className="flex justify-start w-full">
-                          <Badge variant="outline" className="text-[10px] font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full flex items-center gap-1 h-fit">
-                            <CreditCard className="h-2.5 w-2.5" />
+                          <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1 rounded-full flex items-center gap-1 h-fit">
+                            <CreditCard className="h-3 w-3" />
                             فاتورة: {order.delivery_partner_invoice_id}
                           </Badge>
                         </div>
