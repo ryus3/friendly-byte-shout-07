@@ -97,7 +97,50 @@ const NotificationsPage = () => {
     return updatedTime.getTime() - createdTime.getTime() > 60000;
   };
 
-  const filteredNotifications = notifications.filter(notification => {
+  // دمج الإشعارات ومنع التكرار (نفس منطق NotificationsPanel)
+  const uniqueMap = new Map();
+  notifications.forEach(n => {
+    let uniqueKey = n.id;
+    
+    // إشعارات الوسيط - دمج محسن لمنع التكرار
+    if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
+      const orderId = n.data?.order_id;
+      const sid = n.data?.state_id || n.data?.delivery_status;
+      
+      if (orderId && sid) {
+        uniqueKey = `status_change_${orderId}_${sid}`;
+      } else if (n.data?.tracking_number && sid) {
+        uniqueKey = `status_change_${n.data.tracking_number}_${sid}`;
+      }
+    }
+    
+    // دمج الإشعارات - إعطاء الأولوية للأحدث أو المخصص للمستخدم
+    const existing = uniqueMap.get(uniqueKey);
+    if (!existing) {
+      uniqueMap.set(uniqueKey, n);
+    } else {
+      // إعطاء الأولوية للإشعار المخصص للمستخدم إذا وجد
+      const currentIsUserSpecific = n.user_id;
+      const existingIsUserSpecific = existing.user_id;
+      
+      if (currentIsUserSpecific && !existingIsUserSpecific) {
+        uniqueMap.set(uniqueKey, n);
+      } else if (!currentIsUserSpecific && existingIsUserSpecific) {
+        // الاحتفاظ بالموجود
+      } else {
+        // إعطاء الأولوية للأحدث
+        const currentTime = new Date(n.updated_at || n.created_at);
+        const existingTime = new Date(existing.updated_at || existing.created_at);
+        if (currentTime > existingTime) {
+          uniqueMap.set(uniqueKey, n);
+        }
+      }
+    }
+  });
+
+  const uniqueNotifications = Array.from(uniqueMap.values());
+
+  const filteredNotifications = uniqueNotifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || 
@@ -106,7 +149,7 @@ const NotificationsPage = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = uniqueNotifications.filter(n => !n.is_read).length;
 
   const handleTestNotification = () => {
     const testTypes = [

@@ -605,24 +605,50 @@ const NotificationsPanel = () => {
   for (const n of merged) {
     let uniqueKey = n.id;
     
-    // إشعارات الوسيط - منع التكرار بناءً على tracking_number و state_id (مع تعويض عند غياب data)
-    if (n.type === 'alwaseet_status_change') {
-      const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message);
-      const sid = n.data?.state_id || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
-      if (tracking && sid) {
-        uniqueKey = `alwaseet_${tracking}_${sid}`;
+    // إشعارات الوسيط - دمج محسن لمنع التكرار
+    if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
+      const tracking = n.data?.tracking_number || n.data?.order_number || parseTrackingFromMessage(n.message);
+      const orderId = n.data?.order_id;
+      const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
+      
+      if (orderId && sid) {
+        // استخدام order_id + state_id للدمج الدقيق
+        uniqueKey = `status_change_${orderId}_${sid}`;
+      } else if (tracking && sid) {
+        uniqueKey = `status_change_${tracking}_${sid}`;
       } else if (tracking) {
-        uniqueKey = `alwaseet_${tracking}_${(n.message || '').slice(0, 32)}`;
+        uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
       }
     }
     
-    if (!uniqueKey) {
+    if (!uniqueKey || uniqueKey === n.id) {
       // إشعارات أخرى - منع التكرار بناءً على المحتوى
       const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
       uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
     }
     
-    if (!uniqueMap.has(uniqueKey)) uniqueMap.set(uniqueKey, n);
+    // دمج الإشعارات - إعطاء الأولوية للأحدث أو المخصص للمستخدم
+    const existing = uniqueMap.get(uniqueKey);
+    if (!existing) {
+      uniqueMap.set(uniqueKey, n);
+    } else {
+      // إعطاء الأولوية للإشعار المخصص للمستخدم إذا وجد
+      const currentIsUserSpecific = n.target_user_id || n.user_id;
+      const existingIsUserSpecific = existing.target_user_id || existing.user_id;
+      
+      if (currentIsUserSpecific && !existingIsUserSpecific) {
+        uniqueMap.set(uniqueKey, n);
+      } else if (!currentIsUserSpecific && existingIsUserSpecific) {
+        // الاحتفاظ بالموجود
+      } else {
+        // إعطاء الأولوية للأحدث
+        const currentTime = new Date(n.updated_at || n.created_at);
+        const existingTime = new Date(existing.updated_at || existing.created_at);
+        if (currentTime > existingTime) {
+          uniqueMap.set(uniqueKey, n);
+        }
+      }
+    }
   }
   
   // دالة للحصول على وقت العرض الصحيح (آخر تحديث أو الإنشاء)
