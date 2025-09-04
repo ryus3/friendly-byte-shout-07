@@ -476,13 +476,46 @@ export const useAlWaseetInvoices = () => {
     }
   }, [isLoggedIn, activePartner, token, syncInvoiceById]);
 
-  // Auto-fetch invoices and sync received ones when token is available
+  // Sync ONLY last two invoices (fetch their orders and upsert) - automatic and lightweight
+  const syncLastTwoInvoices = useCallback(async () => {
+    if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false };
+    try {
+      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+      if (!allInvoices?.length) return { success: true, processed: 0 };
+
+      // Sort by most recently updated and take last two invoices
+      const lastTwo = [...allInvoices]
+        .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+        .slice(0, 2);
+
+      let processed = 0;
+      for (const inv of lastTwo) {
+        try {
+          const resp = await AlWaseetAPI.getInvoiceOrders(token, inv.id);
+          const orders = resp?.orders || [];
+          const result = await syncAlwaseetInvoiceData(inv, orders);
+          if (result?.success) processed += 1;
+        } catch (e) {
+          console.warn('Failed syncing invoice', inv?.id, e?.message || e);
+        }
+      }
+
+      // refresh list after syncing
+      await fetchInvoices();
+      return { success: true, processed };
+    } catch (e) {
+      console.warn('syncLastTwoInvoices failed:', e?.message || e);
+      return { success: false, error: e?.message };
+    }
+  }, [isLoggedIn, activePartner, token, fetchInvoices, syncAlwaseetInvoiceData]);
+
+  // Auto-fetch invoices then sync only last two when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
       fetchInvoices();
-      syncReceivedInvoicesAutomatically();
+      syncLastTwoInvoices();
     }
-  }, [token, isLoggedIn, activePartner, fetchInvoices, syncReceivedInvoicesAutomatically]);
+  }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices]);
 
   return {
     invoices,
