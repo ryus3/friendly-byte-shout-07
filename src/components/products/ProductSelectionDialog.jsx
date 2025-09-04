@@ -194,6 +194,8 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
                 className="pl-10 h-12 text-base"
                 autoFocus={false}
                 autoComplete="off"
+                tabIndex={-1}
+                onFocus={(e) => e.target.blur()}
               />
             </div>
           </div>
