@@ -38,6 +38,7 @@ export const useAlWaseetInvoices = () => {
           )
         `)
         .eq('partner', 'alwaseet')
+.order('issued_at', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) {
