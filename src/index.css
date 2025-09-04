@@ -20,6 +20,60 @@
   }
 }
 
+/* انيميشنز التأثيرات المبهرة */
+@keyframes holographic-shift {
+  0%, 100% { 
+    background-position: 0% 50%; 
+    filter: hue-rotate(0deg);
+  }
+  25% { 
+    background-position: 100% 50%; 
+    filter: hue-rotate(90deg);
+  }
+  50% { 
+    background-position: 50% 100%; 
+    filter: hue-rotate(180deg);
+  }
+  75% { 
+    background-position: 0% 100%; 
+    filter: hue-rotate(270deg);
+  }
+}
+
+@keyframes rainbow-shift {
+  0%, 100% { 
+    background-position: 0% 50%; 
+    filter: brightness(1);
+  }
+  25% { 
+    background-position: 100% 50%; 
+    filter: brightness(1.2);
+  }
+  50% { 
+    background-position: 50% 100%; 
+    filter: brightness(1.4);
+  }
+  75% { 
+    background-position: 0% 100%; 
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes cosmic-flow {
+  0%, 100% { 
+    background-position: 0% 0%;
+    opacity: 0.8;
+  }
+  33% { 
+    background-position: 100% 100%;
+    opacity: 1;
+  }
+  66% { 
+    background-position: 50% 50%;
+    opacity: 0.9;
+  }
+}
+
 .animate-scroll {
   animation: scroll-text 3s linear infinite;
   will-change: transform;
@@ -174,6 +228,59 @@
   
   .gradient-secondary {
     @apply bg-gradient-to-r from-secondary to-muted text-secondary-foreground;
+  }
+
+  /* تأثيرات هولوجرافية مبهرة للإشعارات */
+  .holographic-gradient {
+    background: linear-gradient(
+      45deg,
+      #667eea 0%,
+      #764ba2 25%,
+      #f093fb 50%,
+      #f5576c 75%,
+      #4facfe 100%
+    );
+    background-size: 400% 400%;
+    animation: holographic-shift 3s ease-in-out infinite;
+  }
+  
+  .neon-glow {
+    box-shadow: 
+      0 0 20px rgba(139, 92, 246, 0.3),
+      0 0 40px rgba(139, 92, 246, 0.2),
+      0 0 80px rgba(139, 92, 246, 0.1);
+  }
+  
+  .rainbow-text {
+    background: linear-gradient(
+      45deg,
+      #ff0000,
+      #ff7700,
+      #ffdd00,
+      #00ff00,
+      #0099ff,
+      #6600ff,
+      #ff0066
+    );
+    background-size: 400% 400%;
+    animation: rainbow-shift 2s ease-in-out infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .cosmic-gradient {
+    background: linear-gradient(
+      135deg,
+      #667eea 0%,
+      #764ba2 20%,
+      #f093fb 40%,
+      #f5576c 60%,
+      #4facfe 80%,
+      #00f2fe 100%
+    );
+    background-size: 300% 300%;
+    animation: cosmic-flow 4s ease-in-out infinite;
   }
 
   .product-card {
