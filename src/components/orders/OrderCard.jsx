@@ -374,7 +374,7 @@ const OrderCard = ({
                       <div className="flex justify-start w-full">
                         <Badge className={`${deliveryBadgeColor} px-3 py-1.5 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
                           <Building className="h-3 w-3" />
-                          {order.delivery_partner === 'alwaseet' ? 'ALWASEET' : order.delivery_partner}
+                          {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}
                         </Badge>
                       </div>
 
