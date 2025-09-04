@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 
 const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
-  // تجميع المتغيرات حسب اللون
+  // تجميع المتغيرات حسب اللون مع ترتيب الألوان
   const variantsByColor = variants.reduce((acc, variant) => {
     if (!acc[variant.color]) {
       acc[variant.color] = [];
@@ -19,36 +19,74 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
     return acc;
   }, {});
 
+  // ترتيب الألوان بحسب الأولوية
+  const colorPriority = { 'أبيض': 1, 'أسود': 2 };
+  const sortedColors = Object.keys(variantsByColor).sort((a, b) => {
+    const priorityA = colorPriority[a] || 999;
+    const priorityB = colorPriority[b] || 999;
+    if (priorityA !== priorityB) return priorityA - priorityB;
+    return a.localeCompare(b, 'ar');
+  });
+
+  // ترتيب القياسات داخل كل لون
+  const sizePriority = { 'XS': 1, 'S': 2, 'M': 3, 'L': 4, 'XL': 5, 'XXL': 6 };
+  const sortVariantsBySize = (variants) => {
+    return variants.sort((a, b) => {
+      const priorityA = sizePriority[a.size] || 999;
+      const priorityB = sizePriority[b.size] || 999;
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.size.localeCompare(b.size, 'ar');
+    });
+  };
+
   return (
-    <div className="space-y-3 my-2">
-      {Object.entries(variantsByColor).map(([color, colorVariants]) => (
-        <div key={color} className="space-y-2">
-          {/* عنوان اللون */}
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-4 h-4 rounded-full border-2 border-gray-300" 
-              style={{ backgroundColor: color.toLowerCase() === 'أبيض' ? '#ffffff' : color.toLowerCase() === 'أسود' ? '#000000' : color.toLowerCase() === 'أحمر' ? '#ef4444' : color.toLowerCase() === 'أزرق' ? '#3b82f6' : color.toLowerCase() === 'أخضر' ? '#10b981' : color.toLowerCase() === 'أصفر' ? '#f59e0b' : color.toLowerCase() === 'بني' ? '#a3a3a3' : '#6b7280' }}
-            />
-            <span className="text-sm font-semibold text-muted-foreground">{color}</span>
+    <div className="space-y-4 my-3">
+      {sortedColors.map(color => {
+        const colorVariants = sortVariantsBySize(variantsByColor[color]);
+        return (
+          <div key={color} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+            {/* عنوان اللون */}
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-5 h-5 rounded-full border-2 border-border shadow-sm" 
+                style={{ 
+                  backgroundColor: color.toLowerCase() === 'أبيض' ? '#ffffff' : 
+                                 color.toLowerCase() === 'أسود' ? '#000000' : 
+                                 color.toLowerCase() === 'أحمر' ? '#ef4444' : 
+                                 color.toLowerCase() === 'أزرق' ? '#3b82f6' : 
+                                 color.toLowerCase() === 'أخضر' ? '#10b981' : 
+                                 color.toLowerCase() === 'أصفر' ? '#f59e0b' : 
+                                 color.toLowerCase() === 'بني' ? '#a78bfa' : '#6b7280',
+                  border: color.toLowerCase() === 'أبيض' ? '2px solid #e5e7eb' : 'none'
+                }}
+              />
+              <span className="text-sm font-bold text-foreground">{color}</span>
+              <span className="text-xs text-muted-foreground">({colorVariants.length} قياس)</span>
+            </div>
+            {/* قياسات هذا اللون */}
+            <div className="flex flex-wrap gap-2 mr-8">
+              {colorVariants.map(variant => (
+                <Button
+                  key={variant.id}
+                  size="sm"
+                  variant={selectedVariantId === variant.id ? 'default' : 'outline'}
+                  onClick={() => onSelect(variant)}
+                  disabled={variant.quantity === 0}
+                  className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
+                >
+                  {variant.size}
+                  {variant.quantity === 0 && (
+                    <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-destructive border-2 border-background animate-pulse"></span>
+                  )}
+                  <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
+                    {variant.quantity}
+                  </span>
+                </Button>
+              ))}
+            </div>
           </div>
-          {/* قياسات هذا اللون */}
-          <div className="flex flex-wrap gap-2 mr-6">
-            {colorVariants.map(variant => (
-              <Button
-                key={variant.id}
-                size="sm"
-                variant={selectedVariantId === variant.id ? 'default' : 'outline'}
-                onClick={() => onSelect(variant)}
-                disabled={variant.quantity === 0}
-                className="relative"
-              >
-                {variant.size}
-                {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
-              </Button>
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -137,12 +175,22 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
   const { filterProductsByPermissions } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
+  const [isSearchReadOnly, setIsSearchReadOnly] = useState(true);
+  const searchInputRef = useRef(null);
 
   useEffect(() => {
     if (open) {
       setSelectedItems(initialCart);
+      setIsSearchReadOnly(true); // إعادة تعيين حالة البحث عند فتح النافذة
     }
   }, [open, initialCart]);
+
+  const handleSearchClick = () => {
+    setIsSearchReadOnly(false);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+  };
 
   // تطبيق فلترة الصلاحيات أولاً
   const permissionFilteredProducts = useMemo(() => {
@@ -212,10 +260,13 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="ابحث عن منتج..."
+                ref={searchInputRef}
+                placeholder={isSearchReadOnly ? "انقر هنا للبحث عن منتج..." : "ابحث عن منتج..."}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-12 text-base"
+                onClick={handleSearchClick}
+                readOnly={isSearchReadOnly}
+                className="pl-10 h-12 text-base cursor-pointer"
                 autoFocus={false}
                 autoComplete="off"
               />
@@ -228,7 +279,7 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
             {/* Products List - Takes priority on mobile */}
             <div className="flex-1 lg:flex-[2] flex flex-col min-h-0">
               <h3 className="font-semibold text-base mb-3 lg:hidden">المنتجات المتاحة</h3>
-              <ScrollArea className="flex-1 border rounded-lg">
+              <ScrollArea className="flex-1 border rounded-lg max-h-[70vh] lg:max-h-none">
                 <div className="p-3 space-y-3">
                   {filteredProducts.length > 0 ? (
                     filteredProducts.map(p => <ProductItem key={p.id} product={p} onSelect={handleSelectProduct} />)
