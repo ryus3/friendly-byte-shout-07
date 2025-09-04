@@ -3517,6 +3517,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_duplicate_notifications: {
+        Args: { p_days_back?: number }
+        Returns: Json
+      }
       cleanup_old_backups: {
         Args: Record<PropertyKey, never>
         Returns: undefined
