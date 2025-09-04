@@ -364,10 +364,10 @@ const OrderCard = ({
                    {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (
                       <div className="flex items-center gap-2 justify-start">
-                        <Badge className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm min-w-[100px] flex items-center justify-center gap-1">
-                          <User className="h-3 w-3" />
+                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                          <User className="h-3 w-3 inline-block mr-1" />
                           {order.created_by_name}
-                        </Badge>
+                        </span>
                       </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
