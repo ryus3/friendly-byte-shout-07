@@ -176,7 +176,7 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] w-[95vw] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-7xl h-[98vh] w-[95vw] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="p-4 pb-0 flex-shrink-0 border-b">
           <DialogTitle className="text-lg font-bold">اختر المنتجات</DialogTitle>
           <DialogDescription className="text-sm">ابحث واختر المنتجات لإضافتها إلى الطلب.</DialogDescription>
@@ -194,8 +194,6 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
                 className="pl-10 h-12 text-base"
                 autoFocus={false}
                 autoComplete="off"
-                tabIndex={-1}
-                onFocus={(e) => e.target.blur()}
               />
             </div>
           </div>
