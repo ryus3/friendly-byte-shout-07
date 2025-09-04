@@ -257,170 +257,178 @@ const NotificationsPage = () => {
       </Helmet>
 
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">إدارة الإشعارات</h1>
-            <p className="text-muted-foreground text-sm md:text-base">إدارة وعرض جميع الإشعارات</p>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              إدارة الإشعارات
+            </h1>
+            <p className="text-muted-foreground text-lg">تحكم شامل وإدارة احترافية لجميع الإشعارات</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Badge variant="secondary" className="px-2 md:px-3 py-1 text-xs md:text-sm">
-              {unreadCount} غير مقروء
-            </Badge>
+          <div className="flex flex-wrap items-center gap-3">
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={() => setIsSettingsOpen(true)}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
+              className="gap-2 glass-effect border-primary/20 hover:border-primary/40 text-primary hover:text-primary"
             >
-              <Settings className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">إعدادات الإشعارات</span>
-              <span className="sm:hidden">إعدادات</span>
+              <Settings className="w-5 h-5" />
+              إعدادات الإشعارات
             </Button>
             <Button
               variant={soundEnabled ? "default" : "outline"}
-              size="sm"
+              size="lg"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
+              className="gap-2 glass-effect"
             >
-              {soundEnabled ? <Volume2 className="w-3 h-3 md:w-4 md:h-4" /> : <VolumeX className="w-3 h-3 md:w-4 md:h-4" />}
-              <span className="hidden sm:inline">الصوت {soundEnabled ? 'مفعل' : 'معطل'}</span>
-              <span className="sm:hidden">{soundEnabled ? '🔊' : '🔇'}</span>
+              {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              الصوت {soundEnabled ? 'مفعل' : 'معطل'}
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={handleCleanupOldNotifications}
-              className="gap-1 md:gap-2 text-xs md:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+              className="gap-2 glass-effect border-blue-200 hover:border-blue-300 text-blue-600 hover:text-blue-700"
             >
-              <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">تنظيف تلقائي</span>
-              <span className="sm:hidden">تنظيف</span>
+              <Trash2 className="w-5 h-5" />
+              تنظيف تلقائي
+            </Button>
+            <Button
+              variant="destructive"
+              size="lg"
+              onClick={clearAll}
+              disabled={notifications.length === 0}
+              className="gap-2 glass-effect"
+            >
+              <Trash2 className="w-5 h-5" />
+              حذف الكل
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+              className="gap-2 glass-effect bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+            >
+              <CheckCircle className="w-5 h-5" />
+              قراءة الكل
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <Card className="glass-effect">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">إجمالي الإشعارات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-primary">{notifications.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">غير مقروءة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-amber-600">{unreadCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect col-span-2 md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">مقروءة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-green-600">{notifications.length - unreadCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect col-span-2 md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">الحالة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs md:text-sm text-primary font-medium">النظام يعمل بكفاءة</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="glass-effect">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  قائمة الإشعارات
-                </CardTitle>
-                <CardDescription>إدارة وعرض جميع الإشعارات</CardDescription>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="glass-effect bg-gradient-to-r from-background/80 via-background/90 to-background/80 backdrop-blur-xl border-primary/20 shadow-2xl shadow-primary/10">
+            <CardContent className="p-8">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                <div className="flex items-center gap-6">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 backdrop-blur-sm">
+                    <Bell className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-center lg:text-right">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+                      إحصائيات الإشعارات
+                    </h3>
+                    <p className="text-muted-foreground">نظرة شاملة على جميع الإشعارات</p>
+                  </div>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-8">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      {notifications.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-medium">إجمالي الإشعارات</div>
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
+                  
+                  <div className="text-center">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
+                      {unreadCount}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-medium">غير مقروءة</div>
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-12 bg-gradient-to-b from-transparent via-border to-transparent" />
+                  
+                  <div className="text-center">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">
+                      {notifications.length - unreadCount}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-medium">مقروءة</div>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  <span className="hidden sm:inline">تحديد الكل كمقروء</span>
-                  <span className="sm:hidden">قراءة الكل</span>
-                </Button>
-                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  <span className="hidden sm:inline">حذف الكل</span>
-                  <span className="sm:hidden">حذف</span>
-                </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <Card className="glass-effect bg-gradient-to-b from-background/80 to-background/90 backdrop-blur-xl border-primary/20 shadow-2xl shadow-primary/5">
+          <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/5 to-accent/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+                  <Bell className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    قائمة الإشعارات
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground">جميع الإشعارات في مكان واحد</CardDescription>
+                </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="البحث في الإشعارات..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10 text-sm"
-                />
-              </div>
-              <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-full sm:w-40 md:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع الإشعارات</SelectItem>
-                  <SelectItem value="unread">غير مقروءة</SelectItem>
-                  <SelectItem value="read">مقروءة</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Separator />
-
-            <ScrollArea className="h-[60vh] md:h-96">
+          <CardContent className="p-6">
+            <ScrollArea className="h-[65vh]">
               <AnimatePresence>
                 {filteredNotifications.length > 0 ? (
                   <div className="space-y-3">
                     {filteredNotifications.map((notification) => (
-                      <motion.div
-                        key={notification.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className={cn(
-                          "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
-                          "bg-card/80 backdrop-blur-sm border-border shadow-sm",
-                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
+                       <motion.div
+                         key={notification.id}
+                         layout
+                         initial={{ opacity: 0, y: 20 }}
+                         animate={{ opacity: 1, y: 0 }}
+                         exit={{ opacity: 0, x: -20 }}
+                         transition={{ duration: 0.3 }}
+                         className={cn(
+                           "p-6 rounded-2xl border transition-all duration-300 hover:shadow-xl group",
+                           "glass-effect bg-gradient-to-br from-background/80 to-background/90 backdrop-blur-xl",
+                           "hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary/10",
+                           notification.is_read 
+                             ? "border-border/50 shadow-sm" 
+                             : "border-primary/30 shadow-lg shadow-primary/5 bg-gradient-to-br from-primary/5 via-background/90 to-accent/5"
+                         )}
+                       >
+                         <div className="flex items-start justify-between gap-6">
+                           <div className="flex items-start gap-4 flex-1">
+                             <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-sm border border-primary/20 group-hover:shadow-md transition-all duration-300">
+                               {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
+                             </div>
                             <div className="flex-1 min-w-0">
-                               <div className="flex items-center gap-2 mb-1">
-                                 <h3 className={cn(
-                                   "font-semibold text-sm md:text-base truncate",
-                                   !notification.is_read && "text-primary"
-                                 )}>
-                                   {notification.title}
-                                 </h3>
-                                  <div className="flex items-center gap-1">
-                                    {!notification.is_read && (
-                                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
-                                    )}
-                                  </div>
-                               </div>
-                                <div className="text-xs md:text-sm text-foreground font-medium line-clamp-2 mb-2">
+                                <div className="flex items-center gap-3 mb-3">
+                                  <h3 className={cn(
+                                    "font-bold text-lg truncate",
+                                    !notification.is_read 
+                                      ? "bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" 
+                                      : "text-foreground"
+                                  )}>
+                                    {notification.title}
+                                  </h3>
+                                   <div className="flex items-center gap-2">
+                                     {!notification.is_read && (
+                                       <div className="relative">
+                                         <div className="w-3 h-3 rounded-full bg-gradient-to-r from-primary to-accent animate-pulse" />
+                                         <div className="absolute inset-0 w-3 h-3 rounded-full bg-gradient-to-r from-primary to-accent animate-ping opacity-30" />
+                                       </div>
+                                     )}
+                                   </div>
+                                </div>
+                                <div className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
                                   {(() => {
                                     // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
                                     if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
@@ -473,45 +481,56 @@ const NotificationsPage = () => {
                                    ) : message;
                                   })()}
                                 </div>
-                               <p className="text-xs text-muted-foreground/70">
-                                 {formatRelativeTime(notification.created_at, notification.updated_at)}
-                               </p>
+                                <div className="flex items-center gap-2 mt-3">
+                                  <Clock className="w-4 h-4 text-primary/60" />
+                                  <p className="text-sm text-muted-foreground font-medium">
+                                    {formatRelativeTime(notification.created_at, notification.updated_at)}
+                                  </p>
+                                </div>
                             </div>
                           </div>
-                          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
-                            {!notification.is_read && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => markAsRead(notification.id)}
-                                title="تحديد كمقروء"
-                                className="h-8 w-8 sm:h-10 sm:w-10"
-                              >
-                                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteNotification(notification.id)}
-                              title="حذف الإشعار"
-                              className="text-destructive hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
-                            >
-                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
-                          </div>
+                           <div className="flex items-center gap-2 flex-shrink-0">
+                             {!notification.is_read && (
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => markAsRead(notification.id)}
+                                 className="gap-2 glass-effect border-primary/20 hover:border-primary/40 text-primary hover:text-primary"
+                               >
+                                 <Eye className="w-4 h-4" />
+                                 قراءة
+                               </Button>
+                             )}
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => deleteNotification(notification.id)}
+                               className="gap-2 glass-effect border-destructive/20 hover:border-destructive/40 text-destructive hover:text-destructive"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                               حذف
+                             </Button>
+                           </div>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">لا توجد إشعارات</h3>
-                    <p className="text-muted-foreground">
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center py-16"
+                  >
+                    <div className="p-6 rounded-3xl bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-sm border border-primary/20 inline-block mb-6">
+                      <Bell className="w-16 h-16 text-primary/60" />
+                    </div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-3">
+                      لا توجد إشعارات
+                    </h3>
+                    <p className="text-muted-foreground text-lg max-w-md mx-auto">
                       {searchTerm || filter !== 'all' ? 'لا توجد إشعارات تطابق المعايير المحددة' : 'لم يتم العثور على أي إشعارات'}
                     </p>
-                  </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
             </ScrollArea>
