@@ -378,14 +378,14 @@ const OrderCard = ({
                        </Badge>
                      </div>
 
-                     {/* شارة استلام الفاتورة للطلبات الخارجية */}
-                     {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
-                       <div className="flex justify-end w-full">
-                         <Badge variant="default" className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full">
-                           مستلم الفاتورة ✓
-                         </Badge>
-                       </div>
-                     )}
+                      {/* شارة استلام الفاتورة للطلبات الخارجية */}
+                      {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
+                        <div className="flex justify-end w-full">
+                          <Badge variant="default" className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-full">
+                            مستلم الفاتورة ✓
+                          </Badge>
+                        </div>
+                      )}
 
                      {/* شارة رقم فاتورة الوسيط */}
                      {order.delivery_partner_invoice_id && (
@@ -545,16 +545,6 @@ const OrderCard = ({
             <div className="flex justify-center pt-2 gap-2">
               {additionalButtons}
               
-              {/* Invoice Check Button for AlWaseet orders */}
-              {order.delivery_partner?.toLowerCase() === 'alwaseet' && 
-               order.tracking_number && 
-               !order.receipt_received && (
-                <InvoiceCheckButton 
-                  orderId={order.id}
-                  trackingNumber={order.tracking_number}
-                  onSuccess={() => window.location.reload()}
-                />
-              )}
             </div>
           </div>
         </CardContent>
