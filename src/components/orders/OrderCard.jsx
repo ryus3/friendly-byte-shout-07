@@ -371,30 +371,31 @@ const OrderCard = ({
                      </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
-                     <div className="flex justify-start w-full">
-                       <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
-                         <Building className="h-3 w-3" />
-                         {order.delivery_partner}
-                       </Badge>
-                     </div>
+                      <div className="flex justify-start w-full">
+                        <Badge className={`${deliveryBadgeColor} px-3 py-1.5 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
+                          <Building className="h-3 w-3" />
+                          {order.delivery_partner === 'alwaseet' ? 'ALWASEET' : order.delivery_partner}
+                        </Badge>
+                      </div>
 
-                      {/* شارة استلام الفاتورة للطلبات الخارجية */}
-                      {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
+                       {/* شارة استلام الفاتورة للطلبات الخارجية */}
+                       {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
+                         <div className="flex justify-end w-full">
+                           <Badge variant="default" className="text-xs font-bold bg-emerald-500 text-white px-3 py-1.5 rounded-full border border-emerald-400 shadow-sm">
+                             مستلم الفاتورة
+                           </Badge>
+                         </div>
+                       )}
+
+                      {/* شارة رقم فاتورة الوسيط */}
+                      {order.delivery_partner_invoice_id && (
                         <div className="flex justify-end w-full">
-                          <Badge variant="default" className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-full">
-                            مستلم الفاتورة ✓
+                          <Badge variant="outline" className="text-xs font-bold bg-blue-50 text-blue-700 border-blue-200 px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1">
+                            <CreditCard className="h-3 w-3" />
+                            فاتورة: {order.delivery_partner_invoice_id}
                           </Badge>
                         </div>
                       )}
-
-                     {/* شارة رقم فاتورة الوسيط */}
-                     {order.delivery_partner_invoice_id && (
-                       <div className="flex justify-end w-full">
-                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 px-2 py-0.5 rounded-full">
-                           فاتورة: {order.delivery_partner_invoice_id}
-                         </Badge>
-                       </div>
-                     )}
                    </div>
                 </div>
                 
