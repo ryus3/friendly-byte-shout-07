@@ -372,8 +372,8 @@ const OrderCard = ({
                    )}
                    <div className="flex flex-col gap-1 items-start">
                       <div className="flex justify-start w-full">
-                        <Badge className={`${deliveryBadgeColor} px-2 py-1 text-[10px] rounded-full font-semibold tracking-wide w-fit shadow-sm flex items-center gap-1`}>
-                          <Building className="h-2.5 w-2.5" />
+                        <Badge className={`${deliveryBadgeColor} px-3 py-1.5 text-xs rounded-full font-bold w-fit shadow-sm flex items-center gap-1`}>
+                          <Building className="h-3 w-3" />
                           {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}
                         </Badge>
                       </div>
@@ -381,8 +381,8 @@ const OrderCard = ({
                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
                       {order.delivery_partner_invoice_id && (
                         <div className="flex justify-start w-full">
-                          <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 text-[9px] rounded-full font-bold shadow-sm flex items-center gap-1 h-fit">
-                            <CreditCard className="h-2 w-2" />
+                          <Badge variant="outline" className="text-[10px] font-bold bg-blue-50 text-blue-700 border-blue-200 px-2 py-1 rounded-full shadow-sm flex items-center gap-1 h-fit">
+                            <CreditCard className="h-2.5 w-2.5" />
                             فاتورة: {order.delivery_partner_invoice_id}
                           </Badge>
                         </div>
