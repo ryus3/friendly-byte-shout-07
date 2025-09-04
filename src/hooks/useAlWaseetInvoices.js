@@ -517,6 +517,15 @@ export const useAlWaseetInvoices = () => {
     }
   }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices]);
 
+  // Clear invoices state when logged out or switched away from AlWaseet
+  useEffect(() => {
+    if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
+      setInvoices([]);
+      setSelectedInvoice(null);
+      setInvoiceOrders([]);
+    }
+  }, [token, isLoggedIn, activePartner]);
+
   return {
     invoices,
     loading,
