@@ -150,6 +150,32 @@ const AlWaseetInvoiceDetailsDialog = ({
               </CardContent>
             </Card>
 
+            {/* Linked Local Orders - Show First */}
+            <Card dir="rtl">
+              <CardHeader>
+                <CardTitle className="text-right">الطلبات المحلية المرتبطة</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {loadingLinked ? (
+                  <div className="space-y-2">
+                    {[...Array(2)].map((_, i) => (
+                      <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
+                    ))}
+                  </div>
+                ) : linkedOrders.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    لا توجد طلبات محلية مرتبطة بهذه الفاتورة
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {linkedOrders.map((order) => (
+                      <LocalOrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Al-Waseet Orders */}
             <Card dir="rtl">
               <CardHeader>
@@ -170,32 +196,6 @@ const AlWaseetInvoiceDetailsDialog = ({
                   <div className="space-y-3">
                     {invoiceOrders.map((order) => (
                       <WaseetOrderCard key={order.id} order={order} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Linked Local Orders */}
-            <Card dir="rtl">
-              <CardHeader>
-                <CardTitle className="text-right">الطلبات المحلية المرتبطة</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingLinked ? (
-                  <div className="space-y-2">
-                    {[...Array(2)].map((_, i) => (
-                      <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
-                    ))}
-                  </div>
-                ) : linkedOrders.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    لا توجد طلبات محلية مرتبطة بهذه الفاتورة
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {linkedOrders.map((order) => (
-                      <LocalOrderCard key={order.id} order={order} />
                     ))}
                   </div>
                 )}

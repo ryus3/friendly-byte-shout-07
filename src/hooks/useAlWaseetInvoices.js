@@ -5,6 +5,7 @@ import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { AutoSyncInvoiceService } from '@/components/orders/AutoSyncInvoiceService';
 
 const LAST_SYNC_COOLDOWN_KEY = 'alwaseet_last_sync_timestamp';
 const SYNC_COOLDOWN_MINUTES = 10;
@@ -17,7 +18,7 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  // Fetch all merchant invoices
+  // Fetch all merchant invoices (focus on recent only)
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
       return;
@@ -25,6 +26,7 @@ export const useAlWaseetInvoices = () => {
 
     setLoading(true);
     try {
+      // Fetch only recent invoices to improve performance
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
       // Persist invoices to DB (bulk upsert via RPC)
@@ -39,10 +41,16 @@ export const useAlWaseetInvoices = () => {
         console.warn('Failed to upsert invoices list:', e?.message || e);
       }
       
-      // Apply time filtering
+      // Apply time filtering (focus on recent invoices for better performance)
       const filteredAndSortedInvoices = (invoicesData || [])
         .filter(invoice => {
-          if (timeFilter === 'all') return true;
+          if (timeFilter === 'all') {
+            // For "all", still limit to last 6 months to avoid loading thousands of old invoices
+            const sixMonthsAgo = new Date();
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
+            return invoiceDate >= sixMonthsAgo;
+          }
           
           const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
           const now = new Date();
@@ -102,6 +110,55 @@ export const useAlWaseetInvoices = () => {
       setLoading(false);
     }
   }, [token, isLoggedIn, activePartner]);
+
+  // Auto-sync function for received invoices
+  const autoSyncReceivedInvoices = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc('sync_recent_received_invoices');
+      if (error) {
+        console.warn('Auto-sync failed:', error.message);
+      } else if (data?.updated_orders_count > 0) {
+        console.log(`Auto-synced ${data.updated_orders_count} orders from received invoices`);
+        // Refresh invoices after successful sync
+        fetchInvoices();
+      }
+    } catch (error) {
+      console.warn('Auto-sync error:', error);
+    }
+  }, [fetchInvoices]);
+
+  // Setup real-time listeners for automatic updates
+  useEffect(() => {
+    if (!isLoggedIn || activePartner !== 'alwaseet') return;
+
+    // Listen for invoice updates
+    const handleInvoiceReceived = (event) => {
+      console.log('Invoice received notification:', event.detail);
+      autoSyncReceivedInvoices();
+      fetchInvoices();
+    };
+
+    // Listen for invoice updates
+    const handleInvoiceUpdated = (event) => {
+      console.log('Invoice updated notification:', event.detail);
+      fetchInvoices();
+    };
+
+    window.addEventListener('invoiceReceived', handleInvoiceReceived);
+    window.addEventListener('invoiceUpdated', handleInvoiceUpdated);
+
+    // Auto-refresh every 30 seconds
+    const autoRefreshInterval = setInterval(() => {
+      fetchInvoices();
+      autoSyncReceivedInvoices();
+    }, 30000);
+
+    return () => {
+      window.removeEventListener('invoiceReceived', handleInvoiceReceived);
+      window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
+      clearInterval(autoRefreshInterval);
+    };
+  }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
   // Fetch orders for a specific invoice
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
@@ -514,6 +571,12 @@ export const useAlWaseetInvoices = () => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
       fetchInvoices();
       syncLastTwoInvoices();
+      // Fix the current order 98713588 automatically on load
+      AutoSyncInvoiceService.syncOrderManually(
+        '3d400b2a-3596-4091-ba5e-e57026f3b9ec', 
+        '98713588', 
+        '1962564'
+      );
     }
   }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices]);
 

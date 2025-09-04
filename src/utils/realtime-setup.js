@@ -68,6 +68,27 @@ export const setupRealtime = () => {
     })
     .subscribe();
 
+  // تشغيل الإشعارات الفورية للفواتير مع debouncing
+  const invoicesChannel = supabase
+    .channel('invoices-realtime')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'delivery_invoices'
+    }, (payload) => {
+      const type = payload.eventType;
+      if (type === 'INSERT') {
+        debouncedDispatch('invoiceCreated', payload.new, 150);
+      } else if (type === 'UPDATE') {
+        debouncedDispatch('invoiceUpdated', payload.new, 200);
+        // تشغيل sync للفواتير المستلمة تلقائياً
+        if (payload.new.received === true && payload.old?.received !== true) {
+          debouncedDispatch('invoiceReceived', payload.new, 100);
+        }
+      }
+    })
+    .subscribe();
+
   return () => {
     // تنظيف جميع الـ timers المعلقة
     debounceTimers.forEach(timer => clearTimeout(timer));
@@ -76,5 +97,6 @@ export const setupRealtime = () => {
     supabase.removeChannel(ordersChannel);
     supabase.removeChannel(aiOrdersChannel);
     supabase.removeChannel(notificationsChannel);
+    supabase.removeChannel(invoicesChannel);
   };
 };
