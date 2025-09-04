@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useSuper } from '@/contexts/SuperProvider';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -213,6 +214,42 @@ const NotificationsPage = () => {
     });
   };
 
+  // دالة تنظيف الإشعارات التلقائي
+  const handleCleanupOldNotifications = async () => {
+    try {
+      const { data, error } = await supabase.rpc('daily_notifications_cleanup');
+      
+      if (error) {
+        console.error('خطأ في تنظيف الإشعارات:', error);
+        toast({
+          title: "خطأ في التنظيف",
+          description: "حدث خطأ أثناء تنظيف الإشعارات القديمة",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // إعادة تحميل الإشعارات
+      if (window.refreshNotifications) {
+        window.refreshNotifications(true);
+      }
+
+      toast({
+        title: "تم التنظيف بنجاح",
+        description: data?.message || `تم حذف ${data?.total_deleted || 0} إشعار قديم`,
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error('خطأ غير متوقع في التنظيف:', error);
+      toast({
+        title: "خطأ في النظام",
+        description: "حدث خطأ غير متوقع أثناء التنظيف",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <>
       <Helmet>
@@ -248,6 +285,16 @@ const NotificationsPage = () => {
               {soundEnabled ? <Volume2 className="w-3 h-3 md:w-4 md:h-4" /> : <VolumeX className="w-3 h-3 md:w-4 md:h-4" />}
               <span className="hidden sm:inline">الصوت {soundEnabled ? 'مفعل' : 'معطل'}</span>
               <span className="sm:hidden">{soundEnabled ? '🔊' : '🔇'}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCleanupOldNotifications}
+              className="gap-1 md:gap-2 text-xs md:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+            >
+              <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">تنظيف تلقائي</span>
+              <span className="sm:hidden">تنظيف</span>
             </Button>
           </div>
         </div>
