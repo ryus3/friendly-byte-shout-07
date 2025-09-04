@@ -381,9 +381,10 @@ const OrderCard = ({
                       {/* شارة استلام الفاتورة للطلبات الخارجية */}
                       {!isLocalOrder && order.delivery_partner === 'alwaseet' && order.receipt_received && (
                         <div className="flex justify-end w-full">
-                          <Badge variant="default" className="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-full">
+                          <span className="text-xs font-bold text-emerald-700 bg-gradient-to-r from-emerald-100/80 to-emerald-200/80 px-3 py-1.5 rounded-full border border-emerald-300/50 shadow-sm backdrop-blur-sm">
+                            <CheckCircle className="h-3 w-3 inline-block mr-1" />
                             مستلم الفاتورة ✓
-                          </Badge>
+                          </span>
                         </div>
                       )}
 
