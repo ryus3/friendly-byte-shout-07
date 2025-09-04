@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp, Clock } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Volume2, VolumeX, Settings, Sparkles, BarChart3, Layers, Clock, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,8 +70,6 @@ const iconMap = {
 const NotificationsPage = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification, addNotification } = useNotifications();
   const { orders } = useSuper(); // النظام الموحد للطلبات
-  const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -175,14 +169,7 @@ const NotificationsPage = () => {
 
   const uniqueNotifications = Array.from(uniqueMap.values());
 
-  const filteredNotifications = uniqueNotifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filter === 'all' || 
-                         (filter === 'unread' && !notification.is_read) ||
-                         (filter === 'read' && notification.is_read);
-    return matchesSearch && matchesFilter;
-  });
+  const filteredNotifications = uniqueNotifications;
 
   const unreadCount = uniqueNotifications.filter(n => !n.is_read).length;
 
@@ -256,123 +243,126 @@ const NotificationsPage = () => {
         <title>إدارة الإشعارات - نظام إدارة المتجر</title>
       </Helmet>
 
-      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold gradient-text">إدارة الإشعارات</h1>
-            <p className="text-muted-foreground text-sm md:text-base">إدارة وعرض جميع الإشعارات</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <Badge variant="secondary" className="px-2 md:px-3 py-1 text-xs md:text-sm">
-              {unreadCount} غير مقروء
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSettingsOpen(true)}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
-            >
-              <Settings className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">إعدادات الإشعارات</span>
-              <span className="sm:hidden">إعدادات</span>
-            </Button>
-            <Button
-              variant={soundEnabled ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="gap-1 md:gap-2 text-xs md:text-sm"
-            >
-              {soundEnabled ? <Volume2 className="w-3 h-3 md:w-4 md:h-4" /> : <VolumeX className="w-3 h-3 md:w-4 md:h-4" />}
-              <span className="hidden sm:inline">الصوت {soundEnabled ? 'مفعل' : 'معطل'}</span>
-              <span className="sm:hidden">{soundEnabled ? '🔊' : '🔇'}</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCleanupOldNotifications}
-              className="gap-1 md:gap-2 text-xs md:text-sm text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-            >
-              <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">تنظيف تلقائي</span>
-              <span className="sm:hidden">تنظيف</span>
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
-          <Card className="glass-effect">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">إجمالي الإشعارات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-primary">{notifications.length}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">غير مقروءة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-amber-600">{unreadCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect col-span-2 md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">مقروءة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xl md:text-2xl font-bold text-green-600">{notifications.length - unreadCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-effect col-span-2 md:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm md:text-lg">الحالة</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-xs md:text-sm text-primary font-medium">النظام يعمل بكفاءة</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="glass-effect">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="w-5 h-5" />
-                  قائمة الإشعارات
-                </CardTitle>
-                <CardDescription>إدارة وعرض جميع الإشعارات</CardDescription>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+        <div className="container mx-auto p-4 md:p-6 space-y-6">
+          {/* Header Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 p-8 backdrop-blur-sm border border-primary/20"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-60" />
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-2">
+                <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent flex items-center gap-4">
+                  <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+                  إدارة الإشعارات
+                </h1>
+                <p className="text-muted-foreground text-lg">مركز التحكم الشامل في جميع الإشعارات والتنبيهات</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  <span className="hidden sm:inline">تحديد الكل كمقروء</span>
-                  <span className="sm:hidden">قراءة الكل</span>
-                </Button>
-                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
-                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
-                  <span className="hidden sm:inline">حذف الكل</span>
-                  <span className="sm:hidden">حذف</span>
-                </Button>
+              
+              {/* Statistics Bar */}
+              <div className="flex items-center gap-6 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-muted-foreground">الإجمالي:</span>
+                  <span className="text-lg font-bold text-primary">{notifications.length}</span>
+                </div>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-amber-500" />
+                  <span className="text-sm text-muted-foreground">غير مقروءة:</span>
+                  <span className="text-lg font-bold text-amber-600">{unreadCount}</span>
+                </div>
+                <div className="w-px h-6 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-sm text-muted-foreground">مقروءة:</span>
+                  <span className="text-lg font-bold text-green-600">{notifications.length - unreadCount}</span>
+                </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="البحث في الإشعارات..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10 text-sm"
-                />
+          </motion.div>
+
+          {/* Action Buttons Bar */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex justify-between items-center bg-white/50 dark:bg-gray-900/50 backdrop-blur-md rounded-2xl p-4 border border-white/20"
+          >
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSettingsOpen(true)}
+                className="gap-2 bg-white/80 hover:bg-white border-primary/20 hover:border-primary/40 transition-all duration-300"
+              >
+                <Settings className="w-4 h-4" />
+                إعدادات الإشعارات
+              </Button>
+              <Button
+                variant={soundEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="gap-2 transition-all duration-300"
+              >
+                {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                الصوت {soundEnabled ? 'مفعل' : 'معطل'}
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={markAllAsRead} 
+                disabled={unreadCount === 0}
+                className="gap-2 bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300 text-green-700 hover:text-green-800 transition-all duration-300"
+              >
+                <CheckCircle className="w-4 h-4" />
+                قراءة الكل
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearAll} 
+                disabled={notifications.length === 0}
+                className="gap-2 bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300 text-red-700 hover:text-red-800 transition-all duration-300"
+              >
+                <Trash2 className="w-4 h-4" />
+                حذف الكل
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCleanupOldNotifications}
+                className="gap-2 bg-blue-50 hover:bg-blue-100 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300"
+              >
+                <Layers className="w-4 h-4" />
+                تنظيف تلقائي
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Main Notifications Area */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="relative overflow-hidden rounded-3xl bg-white/60 dark:bg-gray-900/60 backdrop-blur-md border border-white/20 shadow-2xl"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+            <div className="relative z-10 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-primary/20 to-secondary/20">
+                  <Bell className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">قائمة الإشعارات</h2>
+                  <p className="text-muted-foreground">جميع الإشعارات والتنبيهات الخاصة بك</p>
+                </div>
               </div>
-              <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="w-full sm:w-40 md:w-48">
                   <SelectValue />
                 </SelectTrigger>
@@ -386,138 +376,178 @@ const NotificationsPage = () => {
 
             <Separator />
 
-            <ScrollArea className="h-[60vh] md:h-96">
-              <AnimatePresence>
-                {filteredNotifications.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredNotifications.map((notification) => (
-                      <motion.div
-                        key={notification.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
-                        className={cn(
-                          "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
-                          "bg-card/80 backdrop-blur-sm border-border shadow-sm",
-                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md bg-primary/5"
-                        )}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
-                            <div className="flex-1 min-w-0">
-                               <div className="flex items-center gap-2 mb-1">
-                                 <h3 className={cn(
-                                   "font-semibold text-sm md:text-base truncate",
-                                   !notification.is_read && "text-primary"
-                                 )}>
-                                   {notification.title}
-                                 </h3>
-                                  <div className="flex items-center gap-1">
+              <ScrollArea className="h-[70vh] p-4">
+                <AnimatePresence>
+                  {filteredNotifications.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredNotifications.map((notification, index) => (
+                        <motion.div
+                          key={notification.id}
+                          layout
+                          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                          transition={{ delay: index * 0.05 }}
+                          className={cn(
+                            "group relative overflow-hidden rounded-2xl border transition-all duration-300 hover:scale-[1.02]",
+                            "bg-gradient-to-r from-white/80 to-white/60 dark:from-gray-800/80 dark:to-gray-800/60",
+                            "backdrop-blur-md border-white/30 shadow-lg hover:shadow-2xl",
+                            notification.is_read 
+                              ? "opacity-70 hover:opacity-100" 
+                              : "border-primary/30 shadow-primary/10 bg-gradient-to-r from-primary/5 to-secondary/5"
+                          )}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-50" />
+                          <div className="relative z-10 p-5">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-4 flex-1">
+                                <div className="relative">
+                                  <div className={cn(
+                                    "p-3 rounded-xl transition-all duration-300",
+                                    notification.is_read 
+                                      ? "bg-gray-100 dark:bg-gray-700" 
+                                      : "bg-gradient-to-r from-primary/20 to-secondary/20 shadow-lg"
+                                  )}>
+                                    {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
+                                  </div>
+                                  {!notification.is_read && (
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-gradient-to-r from-primary to-secondary animate-pulse shadow-lg" />
+                                  )}
+                                </div>
+                                
+                                <div className="flex-1 min-w-0 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <h3 className={cn(
+                                      "font-bold text-base md:text-lg leading-tight",
+                                      !notification.is_read && "bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+                                    )}>
+                                      {notification.title}
+                                    </h3>
                                     {!notification.is_read && (
-                                      <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                                      <span className="px-2 py-1 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-xs font-semibold animate-pulse">
+                                        جديد
+                                      </span>
                                     )}
                                   </div>
-                               </div>
-                                <div className="text-xs md:text-sm text-foreground font-medium line-clamp-2 mb-2">
-                                  {(() => {
-                                    // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
-                                    if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
-                                      const data = notification.data || {};
-                                      const orderId = data.order_id;
-                                      
-                                      // البحث عن الطلب الفعلي من النظام الموحد
-                                      if (orderId && orders && orders.length > 0) {
-                                        const foundOrder = orders.find(order => order.id === orderId);
-                                        if (foundOrder) {
-                                          // استخدام نفس منطق صفحة الطلبات
-                                          const statusInfo = getStatusForComponent(foundOrder);
-                                          const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
+                                  
+                                  <div className="text-sm md:text-base text-foreground/80 font-medium leading-relaxed">
+                                    {(() => {
+                                      // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
+                                      if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
+                                        const data = notification.data || {};
+                                        const orderId = data.order_id;
+                                        
+                                        // البحث عن الطلب الفعلي من النظام الموحد
+                                        if (orderId && orders && orders.length > 0) {
+                                          const foundOrder = orders.find(order => order.id === orderId);
+                                          if (foundOrder) {
+                                            // استخدام نفس منطق صفحة الطلبات
+                                            const statusInfo = getStatusForComponent(foundOrder);
+                                            const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
+                                            
+                                            return displayText.length > 50 ? (
+                                              <ScrollingText text={displayText} className="w-full" />
+                                            ) : displayText;
+                                          }
+                                        }
+                                        
+                                        // البديل للإشعارات القديمة بدون order_id
+                                        const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+                                        const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
+                                        
+                                        if (trackingNumber && stateId) {
+                                          const statusConfig = getStatusConfig(Number(stateId));
+                                          const correctDeliveryStatus = statusConfig.text || data.delivery_status;
                                           
-                                          return displayText.length > 35 ? (
+                                          const tempOrder = {
+                                            tracking_number: trackingNumber,
+                                            delivery_partner: 'الوسيط',
+                                            delivery_status: correctDeliveryStatus,
+                                            status: data.status,
+                                            state_id: stateId
+                                          };
+                                          
+                                          const statusInfo = getStatusForComponent(tempOrder);
+                                          const displayText = `${trackingNumber} ${statusInfo.label}`;
+                                          
+                                          return displayText.length > 50 ? (
                                             <ScrollingText text={displayText} className="w-full" />
                                           ) : displayText;
                                         }
                                       }
-                                      
-                                      // البديل للإشعارات القديمة بدون order_id
-                                      const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
-                                      const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
-                                      
-                                      if (trackingNumber && stateId) {
-                                        const statusConfig = getStatusConfig(Number(stateId));
-                                        const correctDeliveryStatus = statusConfig.text || data.delivery_status;
-                                        
-                                        const tempOrder = {
-                                          tracking_number: trackingNumber,
-                                          delivery_partner: 'الوسيط',
-                                          delivery_status: correctDeliveryStatus,
-                                          status: data.status,
-                                          state_id: stateId
-                                        };
-                                        
-                                        const statusInfo = getStatusForComponent(tempOrder);
-                                        const displayText = `${trackingNumber} ${statusInfo.label}`;
-                                        
-                                        return displayText.length > 35 ? (
-                                          <ScrollingText text={displayText} className="w-full" />
-                                        ) : displayText;
-                                      }
-                                    }
-                                   
-                                   // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
-                                   const message = notification.message || '';
-                                   return message.length > 35 ? (
-                                     <ScrollingText text={message} className="w-full" />
-                                   ) : message;
-                                  })()}
+                                     
+                                     // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
+                                     const message = notification.message || '';
+                                     return message.length > 50 ? (
+                                       <ScrollingText text={message} className="w-full" />
+                                     ) : message;
+                                    })()}
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{formatRelativeTime(notification.created_at, notification.updated_at)}</span>
+                                    {isNotificationUpdated(notification) && (
+                                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-semibold">
+                                        محدث
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                               <p className="text-xs text-muted-foreground/70">
-                                 {formatRelativeTime(notification.created_at, notification.updated_at)}
-                               </p>
+                              </div>
+                              
+                              <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                {!notification.is_read && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => markAsRead(notification.id)}
+                                    className="gap-2 bg-green-50 hover:bg-green-100 border-green-200 hover:border-green-300 text-green-700 hover:text-green-800 transition-all duration-300"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span className="hidden sm:inline">قراءة</span>
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deleteNotification(notification.id)}
+                                  className="gap-2 bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300 text-red-700 hover:text-red-800 transition-all duration-300"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span className="hidden sm:inline">حذف</span>
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
-                            {!notification.is_read && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => markAsRead(notification.id)}
-                                title="تحديد كمقروء"
-                                className="h-8 w-8 sm:h-10 sm:w-10"
-                              >
-                                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteNotification(notification.id)}
-                              title="حذف الإشعار"
-                              className="text-destructive hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
-                            >
-                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                            </Button>
-                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-16"
+                    >
+                      <div className="relative mb-6">
+                        <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 flex items-center justify-center">
+                          <Bell className="w-12 h-12 text-primary opacity-50" />
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <Bell className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="text-lg font-semibold mb-2">لا توجد إشعارات</h3>
-                    <p className="text-muted-foreground">
-                      {searchTerm || filter !== 'all' ? 'لا توجد إشعارات تطابق المعايير المحددة' : 'لم يتم العثور على أي إشعارات'}
-                    </p>
-                  </div>
-                )}
-              </AnimatePresence>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      </div>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 animate-ping" />
+                      </div>
+                      <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                        لا توجد إشعارات
+                      </h3>
+                      <p className="text-muted-foreground text-lg">
+                        ستظهر هنا جميع الإشعارات والتنبيهات الجديدة
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </ScrollArea>
+            </div>
+          </motion.div>
+        </div>
 
       <NotificationSettingsDialog 
         open={isSettingsOpen} 
