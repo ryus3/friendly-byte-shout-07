@@ -145,42 +145,40 @@ const totalStock = useMemo(() => product?.variants?.reduce((sum, v) => sum + (v.
           </div>
           
           <div>
-            <h4 className="font-semibold mb-2">1. اختر اللون:</h4>
-            <div className="flex flex-wrap gap-2">
-              {availableColors.map(color => (
-                <Button
-                  key={color.name}
-                  variant={selectedColor?.name === color.name ? 'default' : 'outline'}
-                  onClick={() => handleColorSelect(color)}
-                  className="flex items-center gap-2"
-                >
-                  <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.hex }}></span>
-                  {color.name}
-                </Button>
-              ))}
+            <h4 className="font-semibold mb-2">اختر اللون والقياس:</h4>
+            <div className="space-y-3">
+              {availableColors.map(color => {
+                const sizesForColor = (product.variants || []).filter(v => v.color === color.name);
+                return (
+                  <div key={color.name} className="border rounded-lg p-3 bg-background/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.hex }}></span>
+                      <span className="font-medium">{color.name}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sizesForColor.map(variant => (
+                        <Button
+                          key={variant.id}
+                          variant={selectedColor?.name === color.name && selectedSize === variant.size ? 'default' : 'outline'}
+                          onClick={() => {
+                            handleColorSelect(color);
+                            handleSizeSelect(variant.size);
+                          }}
+                          disabled={variant.quantity === 0}
+                          className="relative"
+                          size="sm"
+                        >
+                          {variant.size}
+                          {variant.quantity > 0 && <Badge variant="secondary" className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs">{variant.quantity}</Badge>}
+                          {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          {selectedColor && (
-            <div>
-              <h4 className="font-semibold mb-2">2. اختر القياس:</h4>
-              <div className="flex flex-wrap gap-2">
-                {availableSizesForColor.map(variant => (
-                  <Button
-                    key={variant.id}
-                    variant={selectedSize === variant.size ? 'default' : 'outline'}
-                    onClick={() => handleSizeSelect(variant.size)}
-                    disabled={variant.quantity === 0}
-                    className="relative"
-                  >
-                    {variant.size}
-                    {variant.quantity > 0 && <Badge variant="secondary" className="absolute -top-2 -right-2 px-1.5 py-0.5 text-xs">{variant.quantity}</Badge>}
-                    {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {selectedVariant && (
             <div>
