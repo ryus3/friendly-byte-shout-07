@@ -569,16 +569,20 @@ export const useAlWaseetInvoices = () => {
    // Auto-fetch invoices then sync when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices();
-      syncLastTwoInvoices();
-      // Auto-sync received invoices on tab opening
-      autoSyncReceivedInvoices();
-      // Fix the current order 98713588 automatically on load
-      AutoSyncInvoiceService.syncOrderManually(
-        '3d400b2a-3596-4091-ba5e-e57026f3b9ec', 
-        '98713588', 
-        '1962564'
-      );
+      const initializeInvoices = async () => {
+        // Fetch and upsert invoices
+        await fetchInvoices();
+        
+        // Sync last two invoices with their orders
+        await syncLastTwoInvoices();
+        
+        // Auto-sync received invoices
+        await autoSyncReceivedInvoices();
+        
+        console.log('✅ Invoice tab initialization complete');
+      };
+      
+      initializeInvoices();
     }
   }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices, autoSyncReceivedInvoices]);
 

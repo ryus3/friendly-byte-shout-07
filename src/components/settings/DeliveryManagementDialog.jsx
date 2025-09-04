@@ -63,12 +63,9 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       if (type === 'fast') {
         result = await fastSyncPendingOrders(true);
         
-        // Auto-sync invoices after order sync
-        const { data: invoiceSyncRes, error: invoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
-        
         toast({
           title: "مزامنة سريعة مكتملة",
-          description: `تم تحديث ${result.updated} طلب من أصل ${result.checked}. ${invoiceSyncRes?.updated_orders_count ? `وتحديث ${invoiceSyncRes.updated_orders_count} طلب من الفواتير` : ''}`,
+          description: `تم تحديث ${result.updated} طلب من أصل ${result.checked}`,
         });
       } else if (type === 'full') {
         result = await syncAndApplyOrders();

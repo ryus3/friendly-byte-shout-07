@@ -9,6 +9,13 @@ import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
+import { useGlobalInvoiceSync } from '@/hooks/useGlobalInvoiceSync';
+
+// Global invoice sync component
+const GlobalInvoiceSync = () => {
+  useGlobalInvoiceSync();
+  return null;
+};
 export const AppProviders = ({ children }) => {
   return (
     <SupabaseProvider>
@@ -21,6 +28,7 @@ export const AppProviders = ({ children }) => {
                   <ProfitsProvider>
                     <SuperProvider>
                       <VariantsProvider>
+                        <GlobalInvoiceSync />
                         {children}
                       </VariantsProvider>
                     </SuperProvider>

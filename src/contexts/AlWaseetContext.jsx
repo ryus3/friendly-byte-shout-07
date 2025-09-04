@@ -669,6 +669,16 @@ export const AlWaseetProvider = ({ children }) => {
 
     setLoading(true);
     try {
+      // Auto-sync invoices first
+      try {
+        const { data: invoiceSyncRes, error: invoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
+        if (invoiceSyncRes?.updated_orders_count > 0) {
+          console.log(`✅ مزامنة الفواتير: تم تحديث ${invoiceSyncRes.updated_orders_count} طلب`);
+        }
+      } catch (invoiceError) {
+        console.warn('⚠️ خطأ في مزامنة الفواتير:', invoiceError);
+      }
+      
       // تأكد من تحميل خريطة الحالات
       let statusMap = orderStatusesMap;
       if (statusMap.size === 0) {
@@ -934,6 +944,16 @@ export const AlWaseetProvider = ({ children }) => {
             duration: 5000
           });
         }
+      }
+
+      // Final invoice sync after order updates
+      try {
+        const { data: finalInvoiceSyncRes } = await supabase.rpc('sync_recent_received_invoices');
+        if (finalInvoiceSyncRes?.updated_orders_count > 0) {
+          console.log(`✅ مزامنة فواتير نهائية: تم تحديث ${finalInvoiceSyncRes.updated_orders_count} طلب إضافي`);
+        }
+      } catch (finalInvoiceError) {
+        console.warn('⚠️ خطأ في المزامنة النهائية للفواتير:', finalInvoiceError);
       }
 
       return { updated, checked, statusChanges: statusChanges.length };
