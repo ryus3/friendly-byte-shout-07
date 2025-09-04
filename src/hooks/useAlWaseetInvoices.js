@@ -24,6 +24,12 @@ export const useAlWaseetInvoices = () => {
       return;
     }
 
+    // منع المزامنة المتوازية
+    if (loading) {
+      console.log('📋 مزامنة جارية بالفعل - تخطي');
+      return;
+    }
+
     setLoading(true);
     try {
       console.log('📥 بدء المزامنة التلقائية الشاملة للفواتير...');
@@ -39,7 +45,7 @@ export const useAlWaseetInvoices = () => {
 
       console.log(`✅ تم جلب ${invoicesData.length} فاتورة من الوسيط`);
       
-      // الخطوة 2: حفظ قائمة الفواتير أولاً
+      // الخطوة 2: حفظ قائمة الفواتير أولاً - دائماً أظهر الفواتير حتى لو فشل البعض
       try {
         const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
           p_invoices: invoicesData
@@ -53,13 +59,34 @@ export const useAlWaseetInvoices = () => {
         console.warn('فشل في حفظ الفواتير:', e?.message || e);
       }
 
-      // الخطوة 3: جلب طلبات كل فاتورة وربطها تلقائياً
+      // الخطوة 3: تحديد الفواتير التي تحتاج مزامنة طلبات (تقليل العبء)
+      const invoicesToSync = invoicesData.filter(invoice => {
+        const updatedAt = new Date(invoice.updated_at);
+        const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        const isRecent = updatedAt > threeDaysAgo;
+        const isReceived = invoice.status === 'تم الاستلام من قبل التاجر';
+        
+        return isRecent || isReceived;
+      });
+
+      console.log(`📋 سيتم مزامنة ${invoicesToSync.length} فاتورة من أصل ${invoicesData.length}`);
+
+      // الخطوة 4: مزامنة طلبات الفواتير المحددة مع التعامل الذكي مع rate limit
       let processedCount = 0;
       let linkedOrdersTotal = 0;
+      let failedInvoices = 0;
       
-      for (const invoice of invoicesData) {
+      for (let i = 0; i < invoicesToSync.length; i++) {
+        const invoice = invoicesToSync[i];
+        
         try {
-          console.log(`🔄 معالجة الفاتورة ${invoice.id}...`);
+          console.log(`🔄 معالجة الفاتورة ${invoice.id} (${i + 1}/${invoicesToSync.length})...`);
+          
+          // تأخير متدرج بين الطلبات لتجنب rate limit
+          if (i > 0) {
+            const delay = Math.min(500 + (failedInvoices * 500), 2000); // تزيد التأخير مع الأخطاء
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
           
           // جلب طلبات هذه الفاتورة من API الوسيط
           const invoiceOrdersResponse = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
@@ -73,6 +100,7 @@ export const useAlWaseetInvoices = () => {
             
             if (syncError) {
               console.error(`❌ فشل في ربط الفاتورة ${invoice.id}:`, syncError.message);
+              failedInvoices++;
             } else if (syncResult && syncResult.success) {
               console.log(`✅ تم ربط الفاتورة ${invoice.id} مع ${syncResult.linked_orders} طلب من ${syncResult.total_orders}`);
               processedCount++;
@@ -80,19 +108,24 @@ export const useAlWaseetInvoices = () => {
             }
           } else {
             console.log(`ℹ️ الفاتورة ${invoice.id} لا تحتوي على طلبات`);
+            processedCount++; // تعتبر معالجة ناجحة حتى لو لم تحتو على طلبات
           }
-          
-          // تأخير قصير لتجنب rate limiting
-          await new Promise(resolve => setTimeout(resolve, 200));
           
         } catch (error) {
           console.error(`❌ خطأ في معالجة الفاتورة ${invoice.id}:`, error.message);
+          failedInvoices++;
+          
+          // إذا كان rate limit، توقف أطول
+          if (error.message.includes('rate limit') || error.message.includes('429')) {
+            console.log('⏸️ توقف مؤقت بسبب rate limit...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
         }
       }
 
       console.log(`🎯 المزامنة التلقائية مكتملة: تم معالجة ${processedCount} فاتورة من ${invoicesData.length} وربط ${linkedOrdersTotal} طلب`);
       
-      // الخطوة 4: ترتيب وعرض الفواتير (الأحدث أولاً، المعلقة أولاً)
+      // الخطوة 5: ترتيب وعرض الفواتير (الأحدث أولاً، المعلقة أولاً)
       const sortedInvoices = [...invoicesData].sort((a, b) => {
         // ترتيب أولاً حسب الحالة - الفواتير المعلقة أولاً
         const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
@@ -109,12 +142,16 @@ export const useAlWaseetInvoices = () => {
       
       setInvoices(sortedInvoices);
       
-      // إشعار المستخدم بالنتائج
-      if (processedCount > 0) {
+      // الخطوة 6: إشعار المستخدم بالنتائج مع تفاصيل الأخطاء
+      if (processedCount > 0 || failedInvoices > 0) {
+        const successMessage = processedCount > 0 ? `تم ربط ${linkedOrdersTotal} طلب من ${processedCount} فاتورة` : '';
+        const errorMessage = failedInvoices > 0 ? `, فشل في ${failedInvoices} فاتورة` : '';
+        const finalMessage = successMessage + errorMessage;
+        
         toast({
-          title: 'تمت المزامنة التلقائية',
-          description: `تم ربط ${linkedOrdersTotal} طلب من ${processedCount} فاتورة`,
-          variant: 'success'
+          title: failedInvoices > 0 ? 'مزامنة جزئية' : 'تمت المزامنة بنجاح',
+          description: finalMessage || 'تم عرض جميع الفواتير',
+          variant: failedInvoices > 0 ? 'default' : 'success'
         });
       }
       
@@ -132,7 +169,7 @@ export const useAlWaseetInvoices = () => {
     } finally {
       setLoading(false);
     }
-  }, [token, isLoggedIn, activePartner]);
+  }, [token, isLoggedIn, activePartner, loading]);
 
   // دالة مبسطة للتوافق مع الواجهة الحالية
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {
