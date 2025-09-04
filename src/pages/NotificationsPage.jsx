@@ -545,6 +545,7 @@ const NotificationsPage = () => {
                         ستظهر هنا جميع الإشعارات والتنبيهات الجديدة
                       </p>
                     </motion.div>
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </ScrollArea>
@@ -552,11 +553,11 @@ const NotificationsPage = () => {
           </motion.div>
         </div>
 
-      <NotificationSettingsDialog 
-        open={isSettingsOpen} 
-        onOpenChange={setIsSettingsOpen} 
-      />
-    </>
+        <NotificationSettingsDialog 
+          open={isSettingsOpen} 
+          onOpenChange={setIsSettingsOpen} 
+        />
+      </>
   );
 };
 
