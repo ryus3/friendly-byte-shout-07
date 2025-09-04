@@ -1806,9 +1806,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   المدينة الأصلية: <span className="font-semibold">{originalCityText}</span>
                 </div>
               )}
-               <SearchableSelectFixed
-                 value={effectiveCityId}
-                 onValueChange={(v) => {
+                <SearchableSelectFixed
+                  value={formData.city_id}
+                  onValueChange={(v) => {
                    console.log('🏙️ City selection changed:', v);
                    setSelectedCityId(v);
                    handleSelectChange('city_id', v);
@@ -1832,9 +1832,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   المنطقة الأصلية: <span className="font-semibold">{originalRegionText}</span>
                 </div>
               )}
-                <SearchableSelectFixed
-                  value={effectiveRegionId}
-                  onValueChange={(v) => {
+                 <SearchableSelectFixed
+                   value={formData.region_id}
+                   onValueChange={(v) => {
                     console.log('🌍 الحل الجذري - تغيير المنطقة:', v);
                     console.log('🔍 Region dropdown debug:', {
                       effectiveRegionId,
