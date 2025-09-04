@@ -17,35 +17,96 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  // نظام المزامنة التلقائية الشامل - جلب جميع الفواتير مع طلباتها وربطها
+  // جلب الفواتير من قاعدة البيانات المحلية أولاً
+  const fetchInvoicesFromDB = useCallback(async () => {
+    try {
+      const { data: dbInvoices, error } = await supabase
+        .from('delivery_invoices')
+        .select(`
+          *,
+          delivery_invoice_orders (
+            *,
+            orders!inner (
+              id,
+              order_number,
+              customer_name,
+              customer_phone,
+              total_amount,
+              status,
+              tracking_number
+            )
+          )
+        `)
+        .eq('partner', 'alwaseet')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('خطأ في جلب الفواتير من قاعدة البيانات:', error);
+        return [];
+      }
+
+      // تحويل البيانات لتتوافق مع تنسيق API الوسيط
+      const formattedInvoices = (dbInvoices || []).map(invoice => ({
+        id: invoice.external_id,
+        merchant_price: invoice.amount || 0,
+        delivered_orders_count: invoice.orders_count || 0,
+        status: invoice.received ? 'تم الاستلام من قبل التاجر' : (invoice.status || 'قيد المعالجة'),
+        updated_at: invoice.last_api_updated_at || invoice.updated_at || invoice.created_at,
+        created_at: invoice.created_at,
+        // إضافة بيانات إضافية للواجهة
+        db_invoice_id: invoice.id,
+        linked_orders_count: invoice.delivery_invoice_orders?.length || 0,
+        is_from_db: true
+      }));
+
+      console.log(`📋 تم جلب ${formattedInvoices.length} فاتورة من قاعدة البيانات المحلية`);
+      return formattedInvoices;
+    } catch (error) {
+      console.error('خطأ غير متوقع في جلب الفواتير من قاعدة البيانات:', error);
+      return [];
+    }
+  }, []);
+
+  // نظام المزامنة التلقائية الشامل - جلب من قاعدة البيانات أولاً ثم API
   const fetchAllInvoicesWithOrders = useCallback(async () => {
+    // الخطوة 1: جلب البيانات المحلية أولاً لعرض فوري
+    console.log('📥 جلب الفواتير من قاعدة البيانات المحلية...');
+    const localInvoices = await fetchInvoicesFromDB();
+    
+    // عرض البيانات المحلية فوراً
+    if (localInvoices.length > 0) {
+      setInvoices(localInvoices);
+      console.log(`✅ تم عرض ${localInvoices.length} فاتورة من قاعدة البيانات المحلية`);
+    }
+
+    // التحقق من إمكانية المزامنة مع API
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
-      console.log('❌ لا يمكن جلب الفواتير - لا يوجد token أو غير مسجل دخول');
-      return;
+      console.log('❌ لا يمكن مزامنة API - لا يوجد token أو غير مسجل دخول');
+      return localInvoices;
     }
 
     // منع المزامنة المتوازية
     if (loading) {
       console.log('📋 مزامنة جارية بالفعل - تخطي');
-      return;
+      return localInvoices;
     }
 
+    // الخطوة 2: مزامنة في الخلفية (اختيارية)
     setLoading(true);
     try {
-      console.log('📥 بدء المزامنة التلقائية الشاملة للفواتير...');
+      console.log('🔄 بدء مزامنة API في الخلفية...');
       
-      // الخطوة 1: جلب جميع الفواتير من API الوسيط
+      // جلب جميع الفواتير من API الوسيط
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
       if (!invoicesData || invoicesData.length === 0) {
-        console.log('⚠️ لا توجد فواتير أو استجابة فارغة');
-        setInvoices([]);
-        return;
+        console.log('⚠️ لا توجد فواتير في API أو استجابة فارغة - الاعتماد على البيانات المحلية');
+        return localInvoices;
       }
 
-      console.log(`✅ تم جلب ${invoicesData.length} فاتورة من الوسيط`);
+      console.log(`✅ تم جلب ${invoicesData.length} فاتورة من API الوسيط`);
       
-      // الخطوة 2: حفظ قائمة الفواتير أولاً - دائماً أظهر الفواتير حتى لو فشل البعض
+      // الخطوة 3: حفظ قائمة الفواتير المحدثة
       try {
         const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
           p_invoices: invoicesData
@@ -71,7 +132,23 @@ export const useAlWaseetInvoices = () => {
 
       console.log(`📋 سيتم مزامنة ${invoicesToSync.length} فاتورة من أصل ${invoicesData.length}`);
 
-      // الخطوة 4: مزامنة طلبات الفواتير المحددة مع التعامل الذكي مع rate limit
+      // الخطوة 4: دمج البيانات المحدثة مع البيانات المحلية وعرضها
+      const mergedInvoices = [...invoicesData].sort((a, b) => {
+        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+        
+        if (aIsPending && !bIsPending) return -1;
+        if (!aIsPending && bIsPending) return 1;
+        
+        const aDate = new Date(a.updated_at || a.created_at);
+        const bDate = new Date(b.updated_at || b.created_at);
+        return bDate - aDate;
+      });
+      
+      setInvoices(mergedInvoices);
+      console.log(`✅ تم تحديث عرض ${mergedInvoices.length} فاتورة`);
+
+      // الخطوة 5: مزامنة طلبات الفواتير المحددة مع التعامل الذكي مع rate limit
       let processedCount = 0;
       let linkedOrdersTotal = 0;
       let failedInvoices = 0;
@@ -123,53 +200,38 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      console.log(`🎯 المزامنة التلقائية مكتملة: تم معالجة ${processedCount} فاتورة من ${invoicesData.length} وربط ${linkedOrdersTotal} طلب`);
+      console.log(`🎯 مزامنة الخلفية مكتملة: تم معالجة ${processedCount} فاتورة من ${invoicesData.length} وربط ${linkedOrdersTotal} طلب`);
       
-      // الخطوة 5: ترتيب وعرض الفواتير (الأحدث أولاً، المعلقة أولاً)
-      const sortedInvoices = [...invoicesData].sort((a, b) => {
-        // ترتيب أولاً حسب الحالة - الفواتير المعلقة أولاً
-        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
-        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
-        
-        if (aIsPending && !bIsPending) return -1;
-        if (!aIsPending && bIsPending) return 1;
-        
-        // ثم ترتيب حسب التاريخ - الأحدث أولاً
-        const aDate = new Date(a.updated_at || a.created_at);
-        const bDate = new Date(b.updated_at || b.created_at);
-        return bDate - aDate;
-      });
-      
-      setInvoices(sortedInvoices);
-      
-      // الخطوة 6: إشعار المستخدم بالنتائج مع تفاصيل الأخطاء
+      // إشعار المستخدم بنتائج المزامنة (فقط إذا كانت هناك تحديثات مهمة)
       if (processedCount > 0 || failedInvoices > 0) {
-        const successMessage = processedCount > 0 ? `تم ربط ${linkedOrdersTotal} طلب من ${processedCount} فاتورة` : '';
+        const successMessage = processedCount > 0 ? `تم ربط ${linkedOrdersTotal} طلب جديد` : '';
         const errorMessage = failedInvoices > 0 ? `, فشل في ${failedInvoices} فاتورة` : '';
         const finalMessage = successMessage + errorMessage;
         
-        toast({
-          title: failedInvoices > 0 ? 'مزامنة جزئية' : 'تمت المزامنة بنجاح',
-          description: finalMessage || 'تم عرض جميع الفواتير',
-          variant: failedInvoices > 0 ? 'default' : 'success'
-        });
+        if (finalMessage) {
+          toast({
+            title: failedInvoices > 0 ? 'مزامنة جزئية' : 'تم تحديث البيانات',
+            description: finalMessage,
+            variant: failedInvoices > 0 ? 'default' : 'success'
+          });
+        }
       }
       
-      return sortedInvoices;
+      return mergedInvoices;
       
     } catch (error) {
-      console.error('❌ خطأ في المزامنة التلقائية:', error);
-      toast({
-        title: 'خطأ في المزامنة التلقائية',
-        description: error.message,
-        variant: 'destructive'
-      });
-      setInvoices([]);
-      return [];
+      console.error('⚠️ خطأ في مزامنة API (سيتم الاعتماد على البيانات المحلية):', error);
+      
+      // لا نظهر رسالة خطأ للمستخدم - البيانات المحلية موجودة
+      if (error.message.includes('rate limit') || error.message.includes('429')) {
+        console.log('⏸️ تأجيل المزامنة بسبب rate limit');
+      }
+      
+      return localInvoices;
     } finally {
       setLoading(false);
     }
-  }, [token, isLoggedIn, activePartner, loading]);
+  }, [token, isLoggedIn, activePartner, loading, fetchInvoicesFromDB]);
 
   // دالة مبسطة للتوافق مع الواجهة الحالية
   const fetchInvoices = useCallback(async (timeFilter = 'week') => {
