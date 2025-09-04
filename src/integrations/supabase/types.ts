@@ -3545,6 +3545,10 @@ export type Database = {
         Args: { p_variant_id: string }
         Returns: number
       }
+      daily_notifications_cleanup: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       delete_ai_order_safe: {
         Args: { p_order_id: string }
         Returns: Json
