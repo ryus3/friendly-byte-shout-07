@@ -381,7 +381,7 @@ const OrderCard = ({
                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
                       {order.delivery_partner_invoice_id && (
                         <div className="flex justify-start w-full">
-                          <Badge variant="outline" className="text-[10px] font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1.5 rounded-full flex items-center gap-1 h-fit whitespace-nowrap">
+                          <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1.5 rounded-full flex items-center gap-1 h-fit whitespace-nowrap">
                             <CreditCard className="h-3 w-3" />
                             #{order.delivery_partner_invoice_id}
                           </Badge>
