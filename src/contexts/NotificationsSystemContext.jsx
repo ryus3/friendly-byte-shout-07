@@ -159,12 +159,8 @@ export const NotificationsSystemProvider = ({ children }) => {
     }
   }, [createNotification, hasPermission]);
 
-  // تم إلغاء دالة notifyOrderStatusChanged - الإشعارات تأتي الآن من database trigger فقط
-  const notifyOrderStatusChanged = useCallback(() => {
-    // تم إلغاء هذه الدالة لمنع الإشعارات المكررة
-    // الإشعارات تأتي الآن من database trigger عند تغيير delivery_status
-    console.log('تم إلغاء إرسال الإشعارات من هنا - التريغر يتولى الأمر');
-  }, []);
+  // تم إلغاء دالة notifyOrderStatusChanged نهائياً لمنع التكرار
+  // جميع إشعارات تغيير حالة الطلبات تأتي الآن من database trigger فقط
 
   // إشعارات التحاسب
   const notifySettlementRequested = useCallback(async (request, employee) => {
@@ -370,7 +366,6 @@ export const NotificationsSystemProvider = ({ children }) => {
     unreadCount,
     createNotification,
     notifyOrderCreated,
-    notifyOrderStatusChanged,
     notifySettlementRequested,
     notifySettlementApproved,
     notifySettlementRejected,
