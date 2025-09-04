@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
@@ -36,6 +37,7 @@ const getStatusInfo = (order) => {
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
   const [newStatus, setNewStatus] = useState(order?.status);
   const [syncing, setSyncing] = useState(false);
+  const [checkingInvoice, setCheckingInvoice] = useState(false);
   const { syncOrderByTracking, syncOrderByQR, activePartner, isLoggedIn } = useAlWaseet();
 
   React.useEffect(() => {
@@ -141,6 +143,64 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
       });
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleCheckInvoiceStatus = async () => {
+    if (!order?.tracking_number) {
+      toast({
+        title: "خطأ",
+        description: "لا يوجد رقم تتبع للطلب",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCheckingInvoice(true);
+    try {
+      console.log("🔍 Checking invoice status for order:", order.tracking_number);
+      
+      // Call the retroactive linking function first
+      const { data: linkResult, error: linkError } = await supabase.rpc('retroactive_link_orders_by_qr');
+      
+      if (linkError) {
+        console.error("Error linking orders:", linkError);
+      } else {
+        console.log("✅ Link result:", linkResult);
+      }
+      
+      // Call the sync recent invoices function
+      const { data: syncResult, error: syncError } = await supabase.rpc('sync_recent_received_invoices');
+      
+      if (syncError) {
+        console.error("Error syncing invoices:", syncError);
+        toast({
+          title: "خطأ في المزامنة",
+          description: "حدث خطأ أثناء فحص الفواتير",
+          variant: "destructive",
+        });
+      } else {
+        console.log("✅ Sync result:", syncResult);
+        toast({
+          title: "تم فحص الفواتير",
+          description: `تم تحديث ${syncResult.updated_orders_count || 0} طلب`,
+        });
+        
+        // Refresh the page after successful sync
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      }
+      
+    } catch (error) {
+      console.error("Error checking invoice status:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء فحص حالة الفاتورة",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingInvoice(false);
     }
   };
 

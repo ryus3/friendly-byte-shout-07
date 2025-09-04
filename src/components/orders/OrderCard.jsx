@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { InvoiceCheckButton } from './InvoiceCheckButton';
 import { 
   Edit2, 
   Trash2, 
@@ -541,11 +542,20 @@ const OrderCard = ({
 
 
             {/* Additional Buttons */}
-            {additionalButtons && (
-              <div className="flex justify-center pt-2">
-                {additionalButtons}
-              </div>
-            )}
+            <div className="flex justify-center pt-2 gap-2">
+              {additionalButtons}
+              
+              {/* Invoice Check Button for AlWaseet orders */}
+              {order.delivery_partner?.toLowerCase() === 'alwaseet' && 
+               order.tracking_number && 
+               !order.receipt_received && (
+                <InvoiceCheckButton 
+                  orderId={order.id}
+                  trackingNumber={order.tracking_number}
+                  onSuccess={() => window.location.reload()}
+                />
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

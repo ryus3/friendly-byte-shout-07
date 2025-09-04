@@ -3937,6 +3937,10 @@ export type Database = {
         Args: { p_invoice_data: Json; p_orders_data: Json }
         Returns: Json
       }
+      sync_recent_received_invoices: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       update_cash_source_balance: {
         Args: {
           p_amount: number
