@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,12 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { toast } from '@/components/ui/use-toast';
+import { useSuper } from '@/contexts/SuperProvider';
+import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
+import ScrollingText from '@/components/ui/scrolling-text';
+import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { getStatusForComponent } from '@/lib/order-status-translator';
 
 // أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
@@ -68,6 +72,7 @@ const iconMap = {
 
 const NotificationsPage = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification, addNotification } = useNotifications();
+  const { orders } = useSuper(); // النظام الموحد للطلبات
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -97,6 +102,25 @@ const NotificationsPage = () => {
     return updatedTime.getTime() - createdTime.getTime() > 60000;
   };
 
+  // دوال مساعدة لاستخراج tracking/state عند غياب data (نفس منطق NotificationsPanel)
+  const parseAlwaseetStateIdFromMessage = (msg = '') => {
+    const m = msg.match(/\b(تم التسليم|تم الإلغاء|لا يرد|تم الإرجاع|تم الاستلام)/);
+    if (!m) return null;
+    switch (m[1]) {
+      case 'تم الاستلام': return '2';
+      case 'تم التسليم': return '4';
+      case 'تم الإرجاع': return '17';
+      case 'لا يرد': return '26';
+      case 'تم الإلغاء': return '31';
+      default: return null;
+    }
+  };
+  
+  const parseTrackingFromMessage = (msg = '') => {
+    const m = msg.match(/\b(\d{6,})\b/);
+    return m ? m[1] : null;
+  };
+
   // دمج الإشعارات ومنع التكرار (نفس منطق NotificationsPanel)
   const uniqueMap = new Map();
   notifications.forEach(n => {
@@ -104,14 +128,24 @@ const NotificationsPage = () => {
     
     // إشعارات الوسيط - دمج محسن لمنع التكرار
     if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
+      const tracking = n.data?.tracking_number || n.data?.order_number || parseTrackingFromMessage(n.message);
       const orderId = n.data?.order_id;
-      const sid = n.data?.state_id || n.data?.delivery_status;
+      const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
       if (orderId && sid) {
+        // استخدام order_id + state_id للدمج الدقيق
         uniqueKey = `status_change_${orderId}_${sid}`;
-      } else if (n.data?.tracking_number && sid) {
-        uniqueKey = `status_change_${n.data.tracking_number}_${sid}`;
+      } else if (tracking && sid) {
+        uniqueKey = `status_change_${tracking}_${sid}`;
+      } else if (tracking) {
+        uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
       }
+    }
+    
+    if (!uniqueKey || uniqueKey === n.id) {
+      // إشعارات أخرى - منع التكرار بناءً على المحتوى
+      const normalize = (s) => (s || '').toString().toLowerCase().replace(/\s+/g, ' ').trim();
+      uniqueKey = n.id || `${n.type}|${normalize(n.title)}|${normalize(n.message)}`;
     }
     
     // دمج الإشعارات - إعطاء الأولوية للأحدث أو المخصص للمستخدم
@@ -120,8 +154,8 @@ const NotificationsPage = () => {
       uniqueMap.set(uniqueKey, n);
     } else {
       // إعطاء الأولوية للإشعار المخصص للمستخدم إذا وجد
-      const currentIsUserSpecific = n.user_id;
-      const existingIsUserSpecific = existing.user_id;
+      const currentIsUserSpecific = n.target_user_id || n.user_id;
+      const existingIsUserSpecific = existing.target_user_id || existing.user_id;
       
       if (currentIsUserSpecific && !existingIsUserSpecific) {
         uniqueMap.set(uniqueKey, n);
@@ -339,7 +373,59 @@ const NotificationsPage = () => {
                                     )}
                                   </div>
                                </div>
-                               <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
+                                <div className="text-xs md:text-sm text-foreground font-medium line-clamp-2 mb-2">
+                                  {(() => {
+                                    // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
+                                    if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
+                                      const data = notification.data || {};
+                                      const orderId = data.order_id;
+                                      
+                                      // البحث عن الطلب الفعلي من النظام الموحد
+                                      if (orderId && orders && orders.length > 0) {
+                                        const foundOrder = orders.find(order => order.id === orderId);
+                                        if (foundOrder) {
+                                          // استخدام نفس منطق صفحة الطلبات
+                                          const statusInfo = getStatusForComponent(foundOrder);
+                                          const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
+                                          
+                                          return displayText.length > 35 ? (
+                                            <ScrollingText text={displayText} className="w-full" />
+                                          ) : displayText;
+                                        }
+                                      }
+                                      
+                                      // البديل للإشعارات القديمة بدون order_id
+                                      const trackingNumber = data.tracking_number || parseTrackingFromMessage(notification.message);
+                                      const stateId = data.state_id || parseAlwaseetStateIdFromMessage(notification.message);
+                                      
+                                      if (trackingNumber && stateId) {
+                                        const statusConfig = getStatusConfig(Number(stateId));
+                                        const correctDeliveryStatus = statusConfig.text || data.delivery_status;
+                                        
+                                        const tempOrder = {
+                                          tracking_number: trackingNumber,
+                                          delivery_partner: 'الوسيط',
+                                          delivery_status: correctDeliveryStatus,
+                                          status: data.status,
+                                          state_id: stateId
+                                        };
+                                        
+                                        const statusInfo = getStatusForComponent(tempOrder);
+                                        const displayText = `${trackingNumber} ${statusInfo.label}`;
+                                        
+                                        return displayText.length > 35 ? (
+                                          <ScrollingText text={displayText} className="w-full" />
+                                        ) : displayText;
+                                      }
+                                    }
+                                   
+                                   // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
+                                   const message = notification.message || '';
+                                   return message.length > 35 ? (
+                                     <ScrollingText text={message} className="w-full" />
+                                   ) : message;
+                                  })()}
+                                </div>
                                <p className="text-xs text-muted-foreground/70">
                                  {formatRelativeTime(notification.created_at, notification.updated_at)}
                                </p>
