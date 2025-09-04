@@ -17,91 +17,167 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  // Fetch all merchant invoices
-  const fetchInvoices = useCallback(async (timeFilter = 'week') => {
+  // نظام المزامنة التلقائية الشامل - جلب جميع الفواتير مع طلباتها وربطها
+  const fetchAllInvoicesWithOrders = useCallback(async () => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
+      console.log('❌ لا يمكن جلب الفواتير - لا يوجد token أو غير مسجل دخول');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📥 بدء المزامنة التلقائية الشاملة للفواتير...');
+      
+      // الخطوة 1: جلب جميع الفواتير من API الوسيط
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // Persist invoices to DB (bulk upsert via RPC)
+      if (!invoicesData || invoicesData.length === 0) {
+        console.log('⚠️ لا توجد فواتير أو استجابة فارغة');
+        setInvoices([]);
+        return;
+      }
+
+      console.log(`✅ تم جلب ${invoicesData.length} فاتورة من الوسيط`);
+      
+      // الخطوة 2: حفظ قائمة الفواتير أولاً
       try {
         const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-          p_invoices: invoicesData || []
+          p_invoices: invoicesData
         });
         if (upsertErr) {
-          console.warn('upsert_alwaseet_invoice_list error:', upsertErr.message);
+          console.warn('خطأ في حفظ الفواتير:', upsertErr.message);
+        } else {
+          console.log(`💾 تم حفظ ${upsertRes?.processed || invoicesData.length} فاتورة في قاعدة البيانات`);
         }
       } catch (e) {
-        console.warn('Failed to upsert invoices list:', e?.message || e);
+        console.warn('فشل في حفظ الفواتير:', e?.message || e);
+      }
+
+      // الخطوة 3: جلب طلبات كل فاتورة وربطها تلقائياً
+      let processedCount = 0;
+      let linkedOrdersTotal = 0;
+      
+      for (const invoice of invoicesData) {
+        try {
+          console.log(`🔄 معالجة الفاتورة ${invoice.id}...`);
+          
+          // جلب طلبات هذه الفاتورة من API الوسيط
+          const invoiceOrdersResponse = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
+          
+          if (invoiceOrdersResponse && invoiceOrdersResponse.orders && invoiceOrdersResponse.orders.length > 0) {
+            // مزامنة الفاتورة مع طلباتها باستخدام الدالة المُصلحة
+            const { data: syncResult, error: syncError } = await supabase.rpc('sync_alwaseet_invoice_data', {
+              p_invoice_data: invoice,
+              p_orders_data: invoiceOrdersResponse.orders
+            });
+            
+            if (syncError) {
+              console.error(`❌ فشل في ربط الفاتورة ${invoice.id}:`, syncError.message);
+            } else if (syncResult && syncResult.success) {
+              console.log(`✅ تم ربط الفاتورة ${invoice.id} مع ${syncResult.linked_orders} طلب من ${syncResult.total_orders}`);
+              processedCount++;
+              linkedOrdersTotal += syncResult.linked_orders || 0;
+            }
+          } else {
+            console.log(`ℹ️ الفاتورة ${invoice.id} لا تحتوي على طلبات`);
+          }
+          
+          // تأخير قصير لتجنب rate limiting
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          console.error(`❌ خطأ في معالجة الفاتورة ${invoice.id}:`, error.message);
+        }
+      }
+
+      console.log(`🎯 المزامنة التلقائية مكتملة: تم معالجة ${processedCount} فاتورة من ${invoicesData.length} وربط ${linkedOrdersTotal} طلب`);
+      
+      // الخطوة 4: ترتيب وعرض الفواتير (الأحدث أولاً، المعلقة أولاً)
+      const sortedInvoices = [...invoicesData].sort((a, b) => {
+        // ترتيب أولاً حسب الحالة - الفواتير المعلقة أولاً
+        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+        
+        if (aIsPending && !bIsPending) return -1;
+        if (!aIsPending && bIsPending) return 1;
+        
+        // ثم ترتيب حسب التاريخ - الأحدث أولاً
+        const aDate = new Date(a.updated_at || a.created_at);
+        const bDate = new Date(b.updated_at || b.created_at);
+        return bDate - aDate;
+      });
+      
+      setInvoices(sortedInvoices);
+      
+      // إشعار المستخدم بالنتائج
+      if (processedCount > 0) {
+        toast({
+          title: 'تمت المزامنة التلقائية',
+          description: `تم ربط ${linkedOrdersTotal} طلب من ${processedCount} فاتورة`,
+          variant: 'success'
+        });
       }
       
-      // Apply time filtering
-      const filteredAndSortedInvoices = (invoicesData || [])
-        .filter(invoice => {
-          if (timeFilter === 'all') return true;
-          
-          const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-          const now = new Date();
-          
-          switch (timeFilter) {
-            case 'week':
-              const weekAgo = new Date();
-              weekAgo.setDate(weekAgo.getDate() - 7);
-              return invoiceDate >= weekAgo;
-            case 'month':
-              const monthAgo = new Date();
-              monthAgo.setMonth(monthAgo.getMonth() - 1);
-              return invoiceDate >= monthAgo;
-            case '3months':
-              const threeMonthsAgo = new Date();
-              threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-              return invoiceDate >= threeMonthsAgo;
-            case '6months':
-              const sixMonthsAgo = new Date();
-              sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-              return invoiceDate >= sixMonthsAgo;
-            case 'year':
-              const yearAgo = new Date();
-              yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-              return invoiceDate >= yearAgo;
-            case 'custom':
-              return invoice; // Handle custom range in the component
-            default:
-              return true;
-          }
-        })
-        .sort((a, b) => {
-          // First sort by status - pending invoices first
-          const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
-          const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
-          
-          if (aIsPending && !bIsPending) return -1;
-          if (!aIsPending && bIsPending) return 1;
-          
-          // Then sort by date - newest first
-          const aDate = new Date(a.updated_at || a.created_at);
-          const bDate = new Date(b.updated_at || b.created_at);
-          return bDate - aDate;
-        });
+      return sortedInvoices;
       
-      setInvoices(filteredAndSortedInvoices);
-      return filteredAndSortedInvoices;
     } catch (error) {
-      console.error('Error fetching invoices:', error);
+      console.error('❌ خطأ في المزامنة التلقائية:', error);
       toast({
-        title: 'خطأ في جلب الفواتير',
+        title: 'خطأ في المزامنة التلقائية',
         description: error.message,
         variant: 'destructive'
       });
+      setInvoices([]);
       return [];
     } finally {
       setLoading(false);
     }
   }, [token, isLoggedIn, activePartner]);
+
+  // دالة مبسطة للتوافق مع الواجهة الحالية
+  const fetchInvoices = useCallback(async (timeFilter = 'week') => {
+    const allInvoices = await fetchAllInvoicesWithOrders();
+    
+    if (!allInvoices || allInvoices.length === 0) return [];
+    
+    // تطبيق التصفية الزمنية
+    if (timeFilter === 'all') return allInvoices;
+    
+    const filteredInvoices = allInvoices.filter(invoice => {
+      const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
+      const now = new Date();
+      
+      switch (timeFilter) {
+        case 'week':
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return invoiceDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date();
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          return invoiceDate >= monthAgo;
+        case '3months':
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          return invoiceDate >= threeMonthsAgo;
+        case '6months':
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          return invoiceDate >= sixMonthsAgo;
+        case 'year':
+          const yearAgo = new Date();
+          yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+          return invoiceDate >= yearAgo;
+        case 'custom':
+          return invoice; // Handle custom range in the component
+        default:
+          return true;
+      }
+    });
+    
+    setInvoices(filteredInvoices);
+    return filteredInvoices;
+  }, [fetchAllInvoicesWithOrders]);
 
   // Fetch orders for a specific invoice
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
