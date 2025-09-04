@@ -19,9 +19,36 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
     return acc;
   }, {});
 
-  // ترتيب الألوان بحسب الأولوية
-  const colorPriority = { 'أبيض': 1, 'أسود': 2 };
-  const sortedColors = Object.keys(variantsByColor).sort((a, b) => {
+  // خريطة الألوان الشاملة مع الأكواد الصحيحة
+  const colorMap = {
+    'اسود': '#000000',
+    'ابيض': '#ffffff',
+    'جوزي': '#8B4513',
+    'ماروني': '#800000',
+    'ازرق': '#0066cc',
+    'اخضر': '#10b981',
+    'سمائي': '#87ceeb',
+    'نيلي': '#000080',
+    'وردي': '#ffc0cb',
+    'ليموني': '#ffff00',
+    'فستقي': '#93c47d',
+    'افتراضي': '#6b7280',
+    'غير محدد': '#6b7280'
+  };
+
+  // ترتيب الألوان حسب الأولوية
+  const colorPriority = { 
+    'ابيض': 1, 'اسود': 2, 'ازرق': 3, 'اخضر': 4, 'جوزي': 5, 'ماروني': 6, 
+    'وردي': 7, 'سمائي': 8, 'نيلي': 9, 'ليموني': 10, 'فستقي': 11, 'افتراضي': 12, 'غير محدد': 13 
+  };
+  
+  // فلترة الألوان التي لها قياسات متوفرة فقط (quantity > 0)
+  const availableColors = Object.keys(variantsByColor).filter(color => {
+    const availableVariants = variantsByColor[color].filter(variant => variant.quantity > 0);
+    return availableVariants.length > 0;
+  });
+  
+  const sortedColors = availableColors.sort((a, b) => {
     const priorityA = colorPriority[a] || 999;
     const priorityB = colorPriority[b] || 999;
     if (priorityA !== priorityB) return priorityA - priorityB;
@@ -42,7 +69,12 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
   return (
     <div className="space-y-4 my-3">
       {sortedColors.map(color => {
-        const colorVariants = sortVariantsBySize(variantsByColor[color]);
+        // فلترة القياسات المتوفرة فقط (quantity > 0)
+        const availableVariants = variantsByColor[color].filter(variant => variant.quantity > 0);
+        const colorVariants = sortVariantsBySize(availableVariants);
+        
+        // تخطي الألوان التي لا تحتوي على قياسات متوفرة
+        if (colorVariants.length === 0) return null;
         return (
           <div key={color} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
             {/* عنوان اللون */}
@@ -50,18 +82,12 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
               <div 
                 className="w-5 h-5 rounded-full border-2 border-border shadow-sm" 
                 style={{ 
-                  backgroundColor: color.toLowerCase() === 'أبيض' ? '#ffffff' : 
-                                 color.toLowerCase() === 'أسود' ? '#000000' : 
-                                 color.toLowerCase() === 'أحمر' ? '#ef4444' : 
-                                 color.toLowerCase() === 'أزرق' ? '#3b82f6' : 
-                                 color.toLowerCase() === 'أخضر' ? '#10b981' : 
-                                 color.toLowerCase() === 'أصفر' ? '#f59e0b' : 
-                                 color.toLowerCase() === 'بني' ? '#a78bfa' : '#6b7280',
-                  border: color.toLowerCase() === 'أبيض' ? '2px solid #e5e7eb' : 'none'
+                  backgroundColor: colorMap[color] || '#6b7280',
+                  border: color === 'ابيض' ? '2px solid #e5e7eb' : 'none'
                 }}
               />
               <span className="text-sm font-bold text-foreground">{color}</span>
-              <span className="text-xs text-muted-foreground">({colorVariants.length} قياس)</span>
+              <span className="text-xs text-muted-foreground">({colorVariants.length} قياس متوفر)</span>
             </div>
             {/* قياسات هذا اللون */}
             <div className="flex flex-wrap gap-2 mr-8">
@@ -75,9 +101,6 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
                   className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
                 >
                   {variant.size}
-                  {variant.quantity === 0 && (
-                    <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-destructive border-2 border-background animate-pulse"></span>
-                  )}
                   <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
                     {variant.quantity}
                   </span>
