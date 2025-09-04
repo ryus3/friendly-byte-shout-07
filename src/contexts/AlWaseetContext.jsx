@@ -1670,6 +1670,19 @@ export const AlWaseetProvider = ({ children }) => {
         await fastSyncPendingOrders();
         console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
         await performDeletionPassAfterStatusSync();
+        
+        // Sync received invoices automatically after order sync
+        console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
+        try {
+          const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
+          if (syncErr) {
+            console.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
+          } else if (syncRes?.updated_orders_count > 0) {
+            console.log(`✅ تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
+          }
+        } catch (e) {
+          console.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);
+        }
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
