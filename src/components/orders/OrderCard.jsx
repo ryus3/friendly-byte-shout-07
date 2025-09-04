@@ -378,15 +378,25 @@ const OrderCard = ({
                         </Badge>
                       </div>
 
-                      {/* شارة رقم فاتورة الوسيط - مصغرة */}
-                      {order.delivery_partner_invoice_id && (
-                        <div className="flex justify-start w-full">
-                          <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1.5 rounded-full min-w-[100px] flex items-center justify-center gap-1 h-fit whitespace-nowrap">
-                            <CreditCard className="h-3 w-3" />
-                            #{order.delivery_partner_invoice_id}
-                          </Badge>
-                        </div>
-                      )}
+                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
+                       {order.delivery_partner_invoice_id && (
+                         <div className="flex justify-start w-full">
+                           <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1.5 rounded-full min-w-[100px] flex items-center justify-center gap-1 h-fit whitespace-nowrap">
+                             <CreditCard className="h-3 w-3" />
+                             #{order.delivery_partner_invoice_id}
+                           </Badge>
+                         </div>
+                       )}
+
+                       {/* شارة المدير العام */}
+                       {order.created_by === '91484496-b887-44f7-9e5d-be9db5567604' && (
+                         <div className="flex justify-start w-full">
+                           <Badge className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 text-white border-red-300/50 shadow-lg shadow-red-400/40 px-3 py-1.5 text-xs font-bold rounded-full min-w-[100px] flex items-center justify-center gap-1">
+                             <User className="h-3 w-3" />
+                             المدير العام
+                           </Badge>
+                         </div>
+                       )}
                    </div>
                 </div>
                 
