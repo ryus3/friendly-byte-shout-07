@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
@@ -120,7 +119,7 @@ export const useAlWaseetInvoices = () => {
         console.warn('فشل في حفظ الفواتير:', e?.message || e);
       }
 
-      // الخطوة 3: تحديد الفواتير التي تحتاج مزامنة طلبات (تقليل العبء)
+      // تحديد الفواتير التي تحتاج مزامنة طلبات (تقليل العبء)
       const invoicesToSync = invoicesData.filter(invoice => {
         const updatedAt = new Date(invoice.updated_at);
         const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
@@ -483,223 +482,113 @@ export const useAlWaseetInvoices = () => {
     });
   }, []);
 
-  // Advanced sync function using the new database structure
-  const syncAlwaseetInvoiceData = useCallback(async (invoiceData, ordersData) => {
+  const syncAlwaseetInvoiceData = useCallback(async (invoice, orders) => {
     try {
       const { data, error } = await supabase.rpc('sync_alwaseet_invoice_data', {
-        p_invoice_data: invoiceData,
-        p_orders_data: ordersData
+        p_invoice_data: invoice,
+        p_orders_data: orders
       });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error syncing invoice data:', error);
+        toast({
+          title: 'Error syncing invoice data',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return false;
+      }
+
+      console.log('Invoice data synced successfully:', data);
+      return true;
     } catch (error) {
       console.error('Error syncing invoice data:', error);
-      throw error;
+      toast({
+        title: 'Error syncing invoice data',
+        description: error.message,
+        variant: 'destructive'
+      });
+      return false;
     }
   }, []);
 
-  // Sync a specific invoice by ID
-  const syncInvoiceById = useCallback(async (externalId) => {
-    if (!isLoggedIn || !token) {
-      console.warn('Cannot sync invoice: authentication or access required');
-      return { success: false, error: 'Authentication required' };
-    }
+  const syncInvoiceById = useCallback(async (invoiceId) => {
+    if (!token || !invoiceId) return;
 
+    setLoading(true);
     try {
-      console.log(`Starting sync for invoice ${externalId}...`);
-      
-      // Fetch the specific invoice from Al-Waseet
-      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      const targetInvoice = allInvoices.find(inv => inv.id === externalId);
-      
-      if (!targetInvoice) {
-        console.warn(`Invoice ${externalId} not found in Al-Waseet`);
-        return { success: false, error: 'Invoice not found' };
-      }
-
-      // Fetch orders for this invoice
-      const invoiceOrdersResponse = await AlWaseetAPI.getInvoiceOrders(token, externalId);
-      const invoiceOrders = invoiceOrdersResponse?.orders || [];
-      
-      // Sync to database
-      const result = await syncAlwaseetInvoiceData(targetInvoice, invoiceOrders);
-      console.log(`Synced invoice ${externalId}:`, result);
-      
-      return { success: true, data: result };
-      
-    } catch (error) {
-      console.error(`Error syncing invoice ${externalId}:`, error);
-      return { success: false, error: error.message };
-    }
-  }, [isLoggedIn, token, syncAlwaseetInvoiceData]);
-
-  // Check cooldown and sync received invoices automatically
-  const syncReceivedInvoicesAutomatically = useCallback(async () => {
-    try {
-      // Check cooldown
-      const lastSyncStr = localStorage.getItem(LAST_SYNC_COOLDOWN_KEY);
-      if (lastSyncStr) {
-        const lastSync = new Date(lastSyncStr);
-        const now = new Date();
-        const diffMinutes = (now - lastSync) / (1000 * 60);
-        
-        if (diffMinutes < SYNC_COOLDOWN_MINUTES) {
-          console.log(`Sync cooldown active. ${SYNC_COOLDOWN_MINUTES - Math.floor(diffMinutes)} minutes remaining`);
-          return;
-        }
-      }
-
-      // Fetch latest invoices (limit to 5 most recent)
-      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      if (!allInvoices?.length) return;
-
-      const recentInvoices = allInvoices
-        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
-        .slice(0, 5);
-
-      let syncedCount = 0;
-      let updatedOrders = 0;
-
-      for (const invoice of recentInvoices) {
-        try {
-          // Only process invoices that are marked as received
-          const isReceived = invoice.status?.includes('تم الاستلام من قبل التاجر');
-          if (!isReceived) continue;
-
-          // Fetch orders for this invoice
-          const invoiceOrders = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
-          if (!invoiceOrders?.orders?.length) continue;
-
-          // Sync using the new database function
-          const syncResult = await syncAlwaseetInvoiceData(invoice, invoiceOrders.orders);
-          if (syncResult?.success) {
-            syncedCount++;
-            updatedOrders += syncResult.linked_orders || 0;
-          }
-        } catch (error) {
-          console.error(`Error syncing invoice ${invoice.id}:`, error);
-        }
-      }
-
-      // Update cooldown timestamp
-      localStorage.setItem(LAST_SYNC_COOLDOWN_KEY, new Date().toISOString());
-
-      // Show notification if any updates were made
-      if (syncedCount > 0) {
+      const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+      if (invoiceData?.orders) {
+        await syncAlwaseetInvoiceData(invoiceData.invoice[0], invoiceData.orders);
         toast({
-          title: "تمت مزامنة الفواتير المستلمة",
-          description: `تم تحديث ${updatedOrders} طلب من ${syncedCount} فاتورة مستلمة`,
-          variant: "success"
+          title: 'Invoice synced successfully',
+          variant: 'success'
         });
-
-        // Refresh the invoices list
-        fetchInvoices();
       }
-
     } catch (error) {
-      console.error('Error in automatic sync:', error);
-    }
-  }, [token, syncAlwaseetInvoiceData, fetchInvoices]);
-
-  // Add bulk sync functionality for manual trigger
-  const syncAllRecentInvoices = useCallback(async () => {
-    if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false, error: 'Not logged in' };
-    
-    try {
-      console.log('Starting bulk sync of all recent invoices...');
-      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
-      
-      // Save all invoices to database
-      const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-        p_invoices: invoicesData || []
+      console.error('Error syncing invoice:', error);
+      toast({
+        title: 'Error syncing invoice',
+        description: error.message,
+        variant: 'destructive'
       });
-      
-      if (upsertErr) throw new Error(upsertErr.message);
-      
-      // Sync recent invoices (last 3 months) with their orders
-      const threeMonthsAgo = new Date();
-      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-      
-      const recentInvoices = (invoicesData || [])
-        .filter(inv => new Date(inv.updated_at) > threeMonthsAgo)
-        .slice(0, 50); // Limit to 50 recent invoices
-      
-      let syncedCount = 0;
-      for (const invoice of recentInvoices) {
-        try {
-          const result = await syncInvoiceById(invoice.id);
-          if (result.success) {
-            syncedCount++;
-          }
-        } catch (error) {
-          console.warn(`Failed to sync invoice ${invoice.id}:`, error);
-        }
-      }
-      
-      return { 
-        success: true, 
-        data: { 
-          totalInvoices: invoicesData?.length || 0,
-          syncedInvoices: syncedCount,
-          dbSaved: upsertRes?.processed || 0
-        }
-      };
-    } catch (error) {
-      console.error('Bulk sync failed:', error);
-      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
-  }, [isLoggedIn, activePartner, token, syncInvoiceById]);
+  }, [token, syncAlwaseetInvoiceData]);
 
-  // Sync ONLY last two invoices (fetch their orders and upsert) - automatic and lightweight
-  const syncLastTwoInvoices = useCallback(async () => {
-    if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false };
+  const syncAllRecentInvoices = useCallback(async () => {
+    if (!token) return;
+
+    setLoading(true);
     try {
-      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      if (!allInvoices?.length) return { success: true, processed: 0 };
-
-      // Sort by most recently updated and take last two invoices
-      const lastTwo = [...allInvoices]
-        .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
-        .slice(0, 2);
-
-      let processed = 0;
-      for (const inv of lastTwo) {
-        try {
-          const resp = await AlWaseetAPI.getInvoiceOrders(token, inv.id);
-          const orders = resp?.orders || [];
-          const result = await syncAlwaseetInvoiceData(inv, orders);
-          if (result?.success) processed += 1;
-        } catch (e) {
-          console.warn('Failed syncing invoice', inv?.id, e?.message || e);
+      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+      if (invoicesData) {
+        for (const invoice of invoicesData) {
+          const invoiceOrders = await AlWaseetAPI.getInvoiceOrders(token, invoice.id);
+          if (invoiceOrders?.orders) {
+            await syncAlwaseetInvoiceData(invoice, invoiceOrders.orders);
+          }
         }
+        toast({
+          title: 'All recent invoices synced successfully',
+          variant: 'success'
+        });
       }
-
-      // refresh list after syncing
-      await fetchInvoices();
-      return { success: true, processed };
-    } catch (e) {
-      console.warn('syncLastTwoInvoices failed:', e?.message || e);
-      return { success: false, error: e?.message };
+    } catch (error) {
+      console.error('Error syncing all recent invoices:', error);
+      toast({
+        title: 'Error syncing all recent invoices',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
-  }, [isLoggedIn, activePartner, token, fetchInvoices, syncAlwaseetInvoiceData]);
+  }, [token, syncAlwaseetInvoiceData]);
 
-  // Auto-fetch invoices then sync only last two when token is available
+  // Initial load - جلب البيانات المحلية أولاً
   useEffect(() => {
-    if (token && isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices();
-      syncLastTwoInvoices();
-    }
-  }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices]);
+    // جلب البيانات المحلية دائماً
+    fetchInvoicesFromDB().then(localInvoices => {
+      if (localInvoices.length > 0) {
+        setInvoices(localInvoices);
+      }
+    });
 
-  // Clear invoices state when logged out or switched away from AlWaseet
-  useEffect(() => {
-    if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
-      setInvoices([]);
-      setSelectedInvoice(null);
-      setInvoiceOrders([]);
+    // مزامنة API إذا كان المستخدم مسجل دخول
+    if (isLoggedIn && activePartner === 'alwaseet') {
+      fetchAllInvoicesWithOrders();
     }
-  }, [token, isLoggedIn, activePartner]);
+  }, [isLoggedIn, activePartner, fetchAllInvoicesWithOrders, fetchInvoicesFromDB]);
+
+  // Clear data when authentication changes
+  useEffect(() => {
+    if (!isLoggedIn || activePartner !== 'alwaseet') {
+      // لا نمسح البيانات المحلية - فقط نوقف المزامنة
+      console.log('🔌 تم إيقاف مزامنة API - الاعتماد على البيانات المحلية');
+    }
+  }, [isLoggedIn, activePartner]);
 
   return {
     invoices,
@@ -712,12 +601,9 @@ export const useAlWaseetInvoices = () => {
     linkInvoiceWithLocalOrders,
     getInvoiceStats,
     applyCustomDateRangeFilter,
-    setSelectedInvoice,
-    setInvoiceOrders,
-    syncReceivedInvoicesAutomatically,
+    fetchAllInvoicesWithOrders,
     syncAlwaseetInvoiceData,
     syncInvoiceById,
     syncAllRecentInvoices,
-    syncLastTwoInvoices
   };
 };
