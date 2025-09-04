@@ -566,11 +566,13 @@ export const useAlWaseetInvoices = () => {
     }
   }, [isLoggedIn, activePartner, token, fetchInvoices, syncAlwaseetInvoiceData]);
 
-  // Auto-fetch invoices then sync only last two when token is available
+   // Auto-fetch invoices then sync when token is available
   useEffect(() => {
     if (token && isLoggedIn && activePartner === 'alwaseet') {
       fetchInvoices();
       syncLastTwoInvoices();
+      // Auto-sync received invoices on tab opening
+      autoSyncReceivedInvoices();
       // Fix the current order 98713588 automatically on load
       AutoSyncInvoiceService.syncOrderManually(
         '3d400b2a-3596-4091-ba5e-e57026f3b9ec', 
@@ -578,7 +580,7 @@ export const useAlWaseetInvoices = () => {
         '1962564'
       );
     }
-  }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices]);
+  }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices, autoSyncReceivedInvoices]);
 
   // Clear invoices state when logged out or switched away from AlWaseet
   useEffect(() => {

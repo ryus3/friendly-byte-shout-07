@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const { 
@@ -61,9 +62,13 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       let result;
       if (type === 'fast') {
         result = await fastSyncPendingOrders(true);
+        
+        // Auto-sync invoices after order sync
+        const { data: invoiceSyncRes, error: invoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
+        
         toast({
           title: "مزامنة سريعة مكتملة",
-          description: `تم تحديث ${result.updated} طلب من أصل ${result.checked}`,
+          description: `تم تحديث ${result.updated} طلب من أصل ${result.checked}. ${invoiceSyncRes?.updated_orders_count ? `وتحديث ${invoiceSyncRes.updated_orders_count} طلب من الفواتير` : ''}`,
         });
       } else if (type === 'full') {
         result = await syncAndApplyOrders();
