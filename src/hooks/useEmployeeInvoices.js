@@ -73,14 +73,8 @@ export const useEmployeeInvoices = (employeeId) => {
       await smartSync();
     }
 
-    // Smart caching - use DB data, sync when needed
-    const now = Date.now();
-    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
-    
-    if (!forceRefresh && lastSync && (now - lastSync) < CACHE_DURATION) {
-      console.log('🔄 استخدام البيانات المحفوظة محلياً');
-      return;
-    }
+    // Always fetch from database to ensure latest data
+    console.log('🔍 Force fetch from database for latest invoice data');
 
     setLoading(true);
     try {
@@ -190,7 +184,14 @@ export const useEmployeeInvoices = (employeeId) => {
           });
         }
 
-        setInvoices(filteredInvoices);
+        // Sort invoices by date for correct display order
+        const sortedInvoices = filteredInvoices.sort((a, b) => {
+          const dateA = new Date(a.issued_at || a.last_api_updated_at || a.created_at || 0);
+          const dateB = new Date(b.issued_at || b.last_api_updated_at || b.created_at || 0);
+          return dateB - dateA; // Newest first
+        });
+
+        setInvoices(sortedInvoices);
         setLastSync(now);
       }
     } catch (err) {
