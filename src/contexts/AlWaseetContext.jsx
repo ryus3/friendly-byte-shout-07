@@ -6,6 +6,9 @@ import { useAuth } from './UnifiedAuthContext';
 import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
+import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
+import { displaySecuritySummary } from '@/utils/securityLogger';
 
 const AlWaseetContext = createContext();
 
@@ -13,6 +16,19 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
+  
+  // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
+  const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
+  
+  // إنشاء فلتر أمان إضافي لطلبات الوسيط
+  const secureOrderFilter = createSecureOrderFilter(user);
+  
+  // تسجيل نجاح تطبيق نظام الأمان (مرة واحدة فقط)
+  React.useEffect(() => {
+    if (user && userUUID) {
+      displaySecuritySummary();
+    }
+  }, [user, userUUID]);
   
   // استخدام اختياري لنظام الإشعارات
   let createNotification = null;
@@ -409,11 +425,13 @@ export const AlWaseetProvider = ({ children }) => {
         }
       });
       
-      // 2) جلب جميع الطلبات المحلية للوسيط
+      // 2) جلب جميع الطلبات المحلية للوسيط مع تأمين فصل الحسابات
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
         .select('id, tracking_number, delivery_partner_order_id, status, delivery_status')
         .eq('delivery_partner', 'alwaseet')
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .limit(1000);
         
       if (localErr) {
@@ -534,12 +552,14 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return { linked: 0 };
     try {
       console.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
-      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id
+      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id مع تأمين فصل الحسابات  
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: localOrders, error: localErr } = await supabase
         .from('orders')
         .select('id, tracking_number')
         .eq('delivery_partner', 'alwaseet')
         .is('delivery_partner_order_id', null)
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .limit(500);
       if (localErr) {
         console.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
@@ -595,15 +615,24 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log(`🗑️ handleAutoDeleteOrder: بدء حذف الطلب ${orderId} من ${source}`);
       
-      // 1. جلب تفاصيل الطلب قبل الحذف
+      // 1. جلب تفاصيل الطلب قبل الحذف مع التحقق من الملكية
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: orderToDelete, error: fetchError } = await supabase
         .from('orders')
         .select('*, order_items(*)')
         .eq('id', orderId)
+        .match(userFilter) // 🔒 تأمين: التحقق من ملكية الطلب قبل الحذف
         .single();
         
       if (fetchError || !orderToDelete) {
         console.error('❌ فشل في جلب الطلب للحذف:', fetchError);
+        return false;
+      }
+      
+      // 🔒 تأمين نهائي: التحقق من ملكية الطلب قبل الحذف الفعلي
+      if (!verifyOrderOwnership(orderToDelete, user)) {
+        logSecurityWarning('final_delete_attempt', orderId, user);
+        console.error('🚫 منع الحذف: الطلب غير مملوك للمستخدم الحالي');
         return false;
       }
       
@@ -679,13 +708,15 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا)
+      // 1) اجلب الطلبات المعلقة لدينا مع تأمين فصل الحسابات
       const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
         .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .in('status', targetStatuses)
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .limit(200);
 
       if (pendingErr) {
@@ -1257,6 +1288,19 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
+    // 🔒 تأمين متقدم: التحقق من ملكية الطلب قبل السماح بالحذف
+    if (!verifyOrderOwnership(order, user)) {
+      logSecurityWarning('auto_delete_attempt', order?.id, user);
+      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
+      return false;
+    }
+    
+    // 🔒 تأمين: التحقق من ملكية الطلب قبل السماح بالحذف
+    if (!canViewData(order?.created_by)) {
+      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
+      return false;
+    }
+    
     // التحقق من وجود رقم تتبع
     if (!order?.tracking_number && !order?.qr_id) {
       return false;
@@ -1428,11 +1472,13 @@ export const AlWaseetProvider = ({ children }) => {
       if (!waseetOrder) {
         console.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
         
-        // التحقق من إمكانية الحذف التلقائي
+        // التحقق من إمكانية الحذف التلقائي مع تأمين فصل الحسابات
+        const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم  
         const { data: localOrder, error: localErr } = await supabase
           .from('orders')
           .select('*, order_items(*)')
           .eq('tracking_number', trackingNumber)
+          .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
           .maybeSingle();
 
         if (!localErr && localOrder && canAutoDeleteOrder(localOrder)) {
@@ -1461,11 +1507,13 @@ export const AlWaseetProvider = ({ children }) => {
           return 'pending';
         })();
 
-      // جلب الطلب المحلي لفحص الحاجة للتحديث
+      // جلب الطلب المحلي لفحص الحاجة للتحديث مع تأمين فصل الحسابات
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: existingOrder } = await supabase
         .from('orders')
         .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
         .eq('tracking_number', trackingNumber)
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .single();
 
       const updates = {
@@ -1741,13 +1789,15 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log('🔧 بدء الإصلاح الصامت للطلبات المشكوك فيها...');
       
-      // اجلب الطلبات المشكوك فيها (pending/delivered/returned من آخر 30 يوم)
+      // اجلب الطلبات المشكوك فيها مع تأمين فصل الحسابات
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: problematicOrders, error } = await supabase
         .from('orders')
         .select('id, status, tracking_number, delivery_partner_order_id, qr_id, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .in('status', ['pending', 'delivered', 'returned'])
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .limit(100);
       
       if (error || !problematicOrders?.length) return;
@@ -1829,13 +1879,15 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
-      // جلب الطلبات المحلية المرشحة للحذف - نفس الشروط المستخدمة في syncOrderByQR
+      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
+      const userFilter = getOrdersQuery(); // فلتر آمن حسب المستخدم
       const { data: localOrders, error } = await supabase
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
         .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
+        .match(userFilter) // 🔒 تأمين: فقط طلبات المستخدم الحالي
         .limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
         
       if (error) {
