@@ -42,31 +42,46 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
   const [customDateRange, setCustomDateRange] = useState(null);
 
-  // فلترة الفواتير مع دعم الفترة المخصصة
+  // فلترة الفواتير المحسنة مع دعم البيانات الجديدة
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
     
-    // تطبيق فلترة التاريخ المخصص
-    if (timeFilter === 'custom' && customDateRange) {
+    // تطبيق فلترة التاريخ حسب النوع
+    const now = new Date();
+    const startDate = (() => {
+      switch (timeFilter) {
+        case 'week': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        case 'month': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        case '3months': return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        case '6months': return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        case 'year': return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        case 'custom': return customDateRange?.from ? new Date(customDateRange.from) : null;
+        default: return null; // 'all'
+      }
+    })();
+    
+    if (startDate) {
+      const endDate = timeFilter === 'custom' && customDateRange?.to 
+        ? new Date(customDateRange.to) 
+        : now;
+      
       filtered = filtered.filter(invoice => {
         const invoiceDate = new Date(invoice.issued_at || invoice.created_at);
-        const fromDate = new Date(customDateRange.from);
-        const toDate = customDateRange.to ? new Date(customDateRange.to) : new Date();
-        
-        return invoiceDate >= fromDate && invoiceDate <= toDate;
+        return invoiceDate >= startDate && invoiceDate <= endDate;
       });
     }
     
-    // فلترة البحث والحالة
+    // فلترة البحث والحالة المحسنة
     return filtered.filter(invoice => {
-      const matchesSearch = 
+      const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
-        invoice.amount?.toString().includes(searchTerm);
+        invoice.amount?.toString().includes(searchTerm) ||
+        invoice.id?.toString().includes(searchTerm);
       
       const matchesStatus = 
         statusFilter === 'all' || 
-        (statusFilter === 'received' && invoice.received === true) ||
-        (statusFilter === 'pending' && invoice.received !== true);
+        (statusFilter === 'received' && (invoice.received === true || invoice.received_flag === true)) ||
+        (statusFilter === 'pending' && !invoice.received && !invoice.received_flag);
       
       return matchesSearch && matchesStatus;
     });
@@ -370,7 +385,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
             )}
           </div>
 
-          {/* قائمة الفواتير مع رسالة عند عدم وجود بيانات */}
+          {/* قائمة الفواتير المحسنة */}
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <RefreshCw className="h-8 w-8 animate-spin text-primary" />
