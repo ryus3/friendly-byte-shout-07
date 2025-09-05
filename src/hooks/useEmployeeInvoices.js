@@ -56,7 +56,7 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // جلب الفواتير من النظام الموحد فقط (قاعدة البيانات)
+  // جلب الفواتير من قاعدة البيانات الموحدة (نظام واحد للجميع)
   const fetchInvoices = async (forceRefresh = false, triggerSync = false) => {
     if (!employeeId) {
       setInvoices([]);
@@ -85,9 +85,9 @@ export const useEmployeeInvoices = (employeeId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 جلب فواتير من النظام الموحد للموظف:', employeeId);
+      console.log('🔍 جلب فواتير من قاعدة البيانات الموحدة للموظف:', employeeId);
       
-      // النظام الموحد: جلب من قاعدة البيانات فقط
+      // النظام الموحد: جميع المستخدمين يجلبون من قاعدة البيانات
       let query = supabase
         .from('delivery_invoices')
         .select(`
@@ -101,6 +101,7 @@ export const useEmployeeInvoices = (employeeId) => {
           received_at,
           status,
           status_normalized,
+          received_flag,
           owner_user_id,
           created_at,
           updated_at,
@@ -138,6 +139,7 @@ export const useEmployeeInvoices = (employeeId) => {
         setInvoices([]);
       } else {
         console.log('✅ النظام الموحد: تم جلب', employeeInvoices?.length || 0, 'فاتورة');
+        console.log('📊 عينة من البيانات:', employeeInvoices?.slice(0, 2));
         
         // معالجة البيانات وحساب العداد الصحيح للطلبات
         const processedInvoices = (employeeInvoices || []).map(invoice => {
@@ -149,13 +151,30 @@ export const useEmployeeInvoices = (employeeId) => {
             )
           ) || [];
           
+          // التأكد من أن الحالة تعتمد على قاعدة البيانات وليس API
+          const isReceived = invoice.received || invoice.received_flag || false;
+          const displayStatus = invoice.status || 'غير محدد';
+          
           return {
             ...invoice,
             linked_orders_count: linkedOrders.length,
             linked_orders: linkedOrders,
-            orders_count: linkedOrders.length || invoice.orders_count || 0
+            orders_count: linkedOrders.length || invoice.orders_count || 0,
+            // ضمان الاعتماد على بيانات قاعدة البيانات
+            display_status: displayStatus,
+            is_received: isReceived,
+            formatted_amount: (invoice.amount || 0).toLocaleString('ar-IQ'),
+            display_date: invoice.issued_at ? new Date(invoice.issued_at).toLocaleDateString('ar-IQ') : 'غير محدد'
           };
         });
+
+        console.log('🔍 مراجعة عينة فاتورة:', processedInvoices[0] ? {
+          id: processedInvoices[0].external_id,
+          status: processedInvoices[0].status,
+          received: processedInvoices[0].received,
+          received_flag: processedInvoices[0].received_flag,
+          is_received: processedInvoices[0].is_received
+        } : 'لا توجد فواتير');
 
         setInvoices(processedInvoices);
         setLastSync(now);

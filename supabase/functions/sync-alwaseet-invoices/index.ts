@@ -88,7 +88,7 @@ serve(async (req) => {
           continue;
         }
 
-        // 4. حفظ الفواتير مع تنظيف تلقائي + مزامنة تفاصيل كل فاتورة
+        // 4. حفظ الفواتير مع تنظيف تلقائي للاحتفاظ بـ10 فواتير فقط
         const { data: upsertResult, error: upsertError } = await supabase
           .rpc('upsert_alwaseet_invoice_list_with_strict_cleanup', {
             p_invoices: invoiceData.data,
@@ -111,13 +111,14 @@ serve(async (req) => {
         totalSynced += syncedCount;
         totalProcessed++;
 
-        // مزامنة تفاصيل كل فاتورة (قائمة الطلبات) مع قاعدة البيانات
+        // 5. مزامنة تفاصيل كل فاتورة (قائمة الطلبات) مع قاعدة البيانات الموحدة
         const token = Deno.env.get('ALWASEET_TOKEN');
         if (!token) {
           console.warn('⚠️ مفقود متغير ALWASEET_TOKEN - سيتم حفظ الفواتير بدون تفاصيل الطلبات');
         } else {
           for (const inv of invoiceData.data) {
             try {
+              // جلب تفاصيل الطلبات لكل فاتورة
               const { data: invoiceOrdersResp, error: ordersErr } = await supabase.functions.invoke('alwaseet-proxy', {
                 body: {
                   endpoint: 'get_merchant_invoice_orders',
@@ -139,6 +140,7 @@ serve(async (req) => {
                   : inv;
                 const ordersData = invoiceOrdersResp.data.orders || [];
 
+                // حفظ الفاتورة مع طلباتها في قاعدة البيانات الموحدة
                 const { error: syncErr } = await supabase.rpc('sync_alwaseet_invoice_data', {
                   p_invoice_data: invData,
                   p_orders_data: ordersData
@@ -146,6 +148,8 @@ serve(async (req) => {
 
                 if (syncErr) {
                   console.warn(`⚠️ خطأ في حفظ تفاصيل الفاتورة ${inv.id}:`, syncErr.message);
+                } else {
+                  console.log(`✅ تم مزامنة تفاصيل الفاتورة ${inv.id} مع ${ordersData.length} طلب`);
                 }
               }
             } catch (e) {
