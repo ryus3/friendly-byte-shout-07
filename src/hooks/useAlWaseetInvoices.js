@@ -127,9 +127,13 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoices]);
 
-  // Setup real-time listeners for automatic updates (remove frequent polling)
+  // Setup automatic initial fetch on tab load
   useEffect(() => {
     if (!isLoggedIn || activePartner !== 'alwaseet') return;
+
+    // تحميل فوري عند دخول التبويب
+    console.log('🚀 تحميل تلقائي للفواتير عند دخول التبويب');
+    fetchInvoices('month'); // جلب فواتير الشهر الماضي تلقائياً
 
     // Listen for invoice updates via custom events only
     const handleInvoiceReceived = (event) => {
@@ -145,9 +149,6 @@ export const useAlWaseetInvoices = () => {
 
     window.addEventListener('invoiceReceived', handleInvoiceReceived);
     window.addEventListener('invoiceUpdated', handleInvoiceUpdated);
-
-    // Remove the frequent auto-refresh interval
-    // Manual sync will be triggered by user actions or scheduled sync
 
     return () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);

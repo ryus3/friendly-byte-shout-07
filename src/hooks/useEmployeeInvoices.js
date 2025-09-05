@@ -186,11 +186,12 @@ export const useEmployeeInvoices = (employeeId) => {
     if (employeeId && employeeId !== 'all') {
       console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
       
-      // تحميل فوري للمديرين
+      // تحميل فوري للمديرين مع ضمان المزامنة
       if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
+        console.log('👑 تشغيل مزامنة فورية للمدير');
         fetchInvoices(true, true); // تحميل مع مزامنة فورية للمدير
       } else {
-        // تحميل عادي للموظفين
+        // تحميل عادي للموظفين مع مزامنة 
         fetchInvoices(false, true);
       }
     }

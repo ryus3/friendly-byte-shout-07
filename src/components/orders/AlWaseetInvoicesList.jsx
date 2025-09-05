@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -136,9 +136,13 @@ const InvoiceCard = ({ invoice, onView }) => {
               {getDbStatusIcon()}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                {isReceived ? 'مستلمة' : 'معلقة'}
-              </span>
+              <Badge variant={getStatusVariant(invoice.status)} className={`${
+                isReceived 
+                  ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+              }`}>
+                {isReceived ? 'مُستلمة' : 'معلقة'}
+              </Badge>
             </div>
           </div>
 

@@ -115,42 +115,46 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     setCustomDateRange(dateRange);
   };
 
-  // Real-time subscription for automatic invoice updates
+  // Real-time subscription محسن مع cooldown لتجنب التحميل المكرر
   useEffect(() => {
     if (!employeeId || employeeId === 'all') return;
 
+    let cooldownTimer = null;
+    let lastUpdateTime = 0;
+    const COOLDOWN_MS = 2000; // 2 seconds cooldown
+
+    const debouncedRefetch = () => {
+      const now = Date.now();
+      if (now - lastUpdateTime < COOLDOWN_MS) {
+        if (cooldownTimer) clearTimeout(cooldownTimer);
+        cooldownTimer = setTimeout(() => {
+          refetch();
+          lastUpdateTime = Date.now();
+        }, COOLDOWN_MS);
+      } else {
+        refetch();
+        lastUpdateTime = now;
+      }
+    };
+
     const channel = supabase
-      .channel('employee-invoices-realtime')
+      .channel(`employee-invoices-realtime-${employeeId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'delivery_invoices',
-          filter: `owner_user_id=eq.${employeeId}`
+          table: 'delivery_invoices'
         },
         (payload) => {
-          console.log('📡 Real-time invoice update:', payload);
-          // Refresh invoices when changes detected
-          refetch();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'delivery_invoice_orders'
-        },
-        (payload) => {
-          console.log('📡 Real-time invoice orders update:', payload);
-          // Refresh when invoice orders change
-          refetch();
+          console.log('📡 Real-time invoice update:', payload.eventType);
+          debouncedRefetch();
         }
       )
       .subscribe();
 
     return () => {
+      if (cooldownTimer) clearTimeout(cooldownTimer);
       supabase.removeChannel(channel);
     };
   }, [employeeId, refetch]);
