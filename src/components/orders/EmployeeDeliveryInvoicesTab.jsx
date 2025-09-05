@@ -39,7 +39,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
   const [customDateRange, setCustomDateRange] = useState(null);
 
-  // جلب فواتير شركة التوصيل للموظف المحدد
+  // جلب فواتير شركة التوصيل للموظف المحدد تلقائياً
   React.useEffect(() => {
     const fetchEmployeeInvoices = async () => {
       if (!employeeId || employeeId === 'all') {
@@ -49,18 +49,25 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
 
       setLoading(true);
       try {
-        // جلب فواتير الموظف مع فلترة زمنية محسنة
+        console.log('🔍 جلب فواتير الموظف:', employeeId);
+        
+        // استعلام محسن للفواتير الحقيقية
         let query = supabase
           .from('delivery_invoices')
-          .select('*')
+          .select(`
+            *,
+            delivery_invoice_orders!inner(
+              id,
+              order_id,
+              external_order_id
+            )
+          `)
           .eq('partner', 'alwaseet');
 
-        // فلترة بناءً على owner_user_id أو الفواتير غير المحددة للمدير
+        // فلترة دقيقة للموظف
         if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
-          // للمدير: عرض فواتيره الشخصية فقط أو الفواتير غير المحددة
           query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
         } else {
-          // للموظفين: فواتيرهم فقط
           query = query.eq('owner_user_id', employeeId);
         }
 
@@ -87,9 +94,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
               break;
           }
           
-          if (timeFilter !== 'all') {
-            query = query.gte('issued_at', filterDate.toISOString());
-          }
+          query = query.gte('issued_at', filterDate.toISOString());
         }
 
         const { data: employeeInvoices, error } = await query
@@ -99,16 +104,18 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
           console.error('خطأ في جلب فواتير الموظف:', error);
           setInvoices([]);
         } else {
+          console.log('✅ تم جلب الفواتير:', employeeInvoices?.length || 0);
           setInvoices(employeeInvoices || []);
         }
       } catch (err) {
-        console.error('خطأ غير متوقع:', err);
+        console.error('خطأ غير متوقع في جلب الفواتير:', err);
         setInvoices([]);
       } finally {
         setLoading(false);
       }
     };
 
+    // تحميل تلقائي فوري
     fetchEmployeeInvoices();
   }, [employeeId, timeFilter]);
 
@@ -375,9 +382,17 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                 onClick={handleRefresh} 
                 disabled={loading}
                 size="sm"
+                variant="outline"
+                className="px-3 py-2 h-9"
               >
-                تحديث
-                <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 ml-2" />
+                    تحديث
+                  </>
+                )}
               </Button>
             </div>
             <span className="text-right">فواتير شركة التوصيل للموظف</span>
@@ -448,12 +463,29 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
             )}
           </div>
 
-          {/* قائمة الفواتير */}
-          <AlWaseetInvoicesList
-            invoices={filteredInvoices}
-            loading={loading}
-            onViewInvoice={handleViewInvoice}
-          />
+          {/* قائمة الفواتير مع رسالة عند عدم وجود بيانات */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <span className="mr-3 text-muted-foreground">جاري تحميل الفواتير...</span>
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">لا توجد فواتير</h3>
+                <p className="text-muted-foreground">
+                  لم يتم العثور على فواتير لهذا الموظف في الفترة المحددة
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <AlWaseetInvoicesList
+              invoices={filteredInvoices}
+              loading={false}
+              onViewInvoice={handleViewInvoice}
+            />
+          )}
         </CardContent>
       </Card>
 
