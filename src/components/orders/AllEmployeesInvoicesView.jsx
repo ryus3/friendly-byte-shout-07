@@ -5,9 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { motion } from 'framer-motion';
-import { RefreshCw, Search, Package, DollarSign, FileText, Clock, Users, Calendar, Filter } from 'lucide-react';
+import { RefreshCw, Search, Package, DollarSign, FileText, Clock, Users } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { startOfDay, startOfWeek, startOfMonth, subMonths, subYears, isAfter } from 'date-fns';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
@@ -21,24 +20,20 @@ const AllEmployeesInvoicesView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all');
-  const [periodFilter, setPeriodFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [lastSync, setLastSync] = useState(null);
-
-  // المدير الرئيسي - استبعاد كامل
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   // جلب جميع فواتير الموظفين
   const fetchAllEmployeesInvoices = async (forceSync = false) => {
     setLoading(true);
     try {
-      // جلب الموظفين النشطين - استبعاد المدير بقوة
+      // جلب الموظفين النشطين
       const { data: employeesData, error: empError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
-        .neq('user_id', ADMIN_ID); // استبعاد المدير كلياً
+        .neq('user_id', '91484496-b887-44f7-9e5d-be9db5567604'); // استبعاد المدير
 
       if (empError) {
         console.error('خطأ في جلب الموظفين:', empError);
@@ -62,33 +57,28 @@ const AllEmployeesInvoicesView = () => {
         }
       }
 
-      // جلب جميع الفواتير من قاعدة البيانات - استبعاد فواتير المدير بقوة
+      // جلب جميع الفواتير من قاعدة البيانات
       const { data: invoicesData, error: invError } = await supabase
         .from('delivery_invoices')
         .select('*')
         .eq('partner', 'alwaseet')
-        .neq('owner_user_id', ADMIN_ID) // استبعاد فواتير المدير
-        .is('owner_user_id', null)
-        .or(`owner_user_id.neq.${ADMIN_ID}`)
         .order('issued_at', { ascending: false })
-        .limit(100); // زيادة الحد لفترات أطول
+        .limit(50); // آخر 50 فاتورة
 
       if (invError) {
         console.error('خطأ في جلب الفواتير:', invError);
         return;
       }
 
-      // ربط الفواتير بالموظفين - فلترة إضافية لاستبعاد المدير
-      const invoicesWithEmployees = (invoicesData || [])
-        .filter(invoice => invoice.owner_user_id !== ADMIN_ID) // فلترة إضافية
-        .map(invoice => {
-          const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
-          return {
-            ...invoice,
-            employee_name: employee?.full_name || employee?.username || 'غير محدد',
-            employee_code: employee?.employee_code || null
-          };
-        });
+      // ربط الفواتير بالموظفين
+      const invoicesWithEmployees = (invoicesData || []).map(invoice => {
+        const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
+        return {
+          ...invoice,
+          employee_name: employee?.full_name || employee?.username || 'غير محدد',
+          employee_code: employee?.employee_code || null
+        };
+      });
 
       setAllInvoices(invoicesWithEmployees);
       setLastSync(new Date().toISOString());
@@ -105,12 +95,9 @@ const AllEmployeesInvoicesView = () => {
     fetchAllEmployeesInvoices(true); // مع مزامنة فورية
   }, []);
 
-  // فلترة الفواتير مع استبعاد المدير والفترة الزمنية
+  // فلترة الفواتير
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // استبعاد فواتير المدير بقوة
-      if (invoice.owner_user_id === ADMIN_ID) return false;
-      
       const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -125,35 +112,9 @@ const AllEmployeesInvoicesView = () => {
         employeeFilter === 'all' || 
         invoice.owner_user_id === employeeFilter;
       
-      // فلتر الفترة الزمنية
-      const matchesPeriod = (() => {
-        if (periodFilter === 'all') return true;
-        if (!invoice.issued_at) return false;
-        
-        const invoiceDate = new Date(invoice.issued_at);
-        const now = new Date();
-        
-        switch (periodFilter) {
-          case 'today':
-            return isAfter(invoiceDate, startOfDay(now));
-          case 'week':
-            return isAfter(invoiceDate, startOfWeek(now, { weekStartsOn: 6 })); // الأسبوع يبدأ السبت
-          case 'month':
-            return isAfter(invoiceDate, startOfMonth(now));
-          case '3months':
-            return isAfter(invoiceDate, subMonths(now, 3));
-          case '6months':
-            return isAfter(invoiceDate, subMonths(now, 6));
-          case 'year':
-            return isAfter(invoiceDate, subYears(now, 1));
-          default:
-            return true;
-        }
-      })();
-      
-      return matchesSearch && matchesStatus && matchesEmployee && matchesPeriod;
+      return matchesSearch && matchesStatus && matchesEmployee;
     });
-  }, [allInvoices, searchTerm, statusFilter, employeeFilter, periodFilter]);
+  }, [allInvoices, searchTerm, statusFilter, employeeFilter]);
 
   // حساب الإحصائيات
   const stats = useMemo(() => {
@@ -292,26 +253,25 @@ const AllEmployeesInvoicesView = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* شريط الفلاتر - مصفوفة في سطر واحد */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* شريط الفلاتر */}
+          <div className="flex flex-wrap gap-4">
             {/* البحث */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="البحث برقم الفاتورة أو اسم الموظف..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex-1 min-w-[200px]">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="البحث برقم الفاتورة أو اسم الموظف..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
             {/* فلتر الحالة */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="جميع الحالات" />
-                </div>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="الحالة" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">جميع الحالات</SelectItem>
@@ -322,11 +282,8 @@ const AllEmployeesInvoicesView = () => {
 
             {/* فلتر الموظف */}
             <Select value={employeeFilter} onValueChange={setEmployeeFilter}>
-              <SelectTrigger className="w-full">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="جميع الموظفين" />
-                </div>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="الموظف" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">جميع الموظفين</SelectItem>
@@ -335,25 +292,6 @@ const AllEmployeesInvoicesView = () => {
                     {emp.full_name || emp.username} {emp.employee_code && `(${emp.employee_code})`}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            {/* فلتر الفترة الزمنية */}
-            <Select value={periodFilter} onValueChange={setPeriodFilter}>
-              <SelectTrigger className="w-full">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="جميع الفترات" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الفترات</SelectItem>
-                <SelectItem value="today">اليوم</SelectItem>
-                <SelectItem value="week">هذا الأسبوع</SelectItem>
-                <SelectItem value="month">هذا الشهر</SelectItem>
-                <SelectItem value="3months">آخر 3 أشهر</SelectItem>
-                <SelectItem value="6months">آخر 6 أشهر</SelectItem>
-                <SelectItem value="year">هذه السنة</SelectItem>
               </SelectContent>
             </Select>
           </div>
