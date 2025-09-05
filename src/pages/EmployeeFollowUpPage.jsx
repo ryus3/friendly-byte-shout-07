@@ -92,10 +92,10 @@ const EmployeeFollowUpPage = () => {
     isOrdersLoaded: !!orders
   });
   
-  // إعداد محسن لـ URL parameters - تحسين أداء وتجنب التحميل المتكرر
+  // إعداد محسن لـ URL parameters - منع التحميل المتكرر
   useEffect(() => {
-    // تشغيل المعالجة فقط إذا كانت البيانات متاحة وليس هناك تحميل
-    if (loading || !orders || !allUsers) return;
+    // تشغيل المعالجة فقط مرة واحدة عند توفر البيانات
+    if (loading || !orders || !allUsers || orders.length === 0) return;
     
     console.log('🔄 URL Parameters:', { 
       highlightFromUrl, 

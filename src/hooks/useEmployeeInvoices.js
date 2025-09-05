@@ -19,21 +19,34 @@ export const useEmployeeInvoices = (employeeId) => {
     dailyTime: '09:00'
   });
   
-  // Smart sync function - checks API when needed, fallback to DB
+  // Smart sync function محسن للمدير لرؤية فواتير جديدة
   const smartSync = async () => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
     
     try {
-      // Sync only if needed (no frequent polling)
+      console.log('🔄 مزامنة ذكية لفواتير الموظف:', employeeId);
+      
+      // جلب أحدث الفواتير من API
       const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // Persist to database
+      // حفظ الفواتير في قاعدة البيانات مع owner_user_id صحيح
       if (recentInvoices?.length > 0) {
-        await supabase.rpc('upsert_alwaseet_invoice_list', {
+        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list', {
           p_invoices: recentInvoices
         });
-        console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
-        setLastAutoSync(Date.now());
+        
+        if (error) {
+          console.warn('خطأ في upsert_alwaseet_invoice_list:', error.message);
+        } else {
+          console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
+          setLastAutoSync(Date.now());
+          
+          // للمدير: تشغيل مزامنة إضافية لضمان الربط الصحيح
+          if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
+            console.log('👑 مزامنة إضافية للمدير');
+            await supabase.rpc('sync_user_scoped_received_invoices');
+          }
+        }
       }
     } catch (error) {
       console.warn('⚠️ Smart sync failed:', error.message);
@@ -103,10 +116,12 @@ export const useEmployeeInvoices = (employeeId) => {
         .order('issued_at', { ascending: false })
         .limit(50); // أحدث 50 فاتورة
 
-      // المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط
+      // المدير يرى جميع الفواتير بدون قيود على owner_user_id
       if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
+        // للموظفين: فلترة بـ owner_user_id أو الفواتير القديمة
         query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
       }
+      // للمدير: لا توجد فلترة إضافية - يرى جميع الفواتير
 
       const { data: employeeInvoices, error } = await query;
 
@@ -140,14 +155,19 @@ export const useEmployeeInvoices = (employeeId) => {
         if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
           filteredInvoices = processedInvoices.filter(invoice => 
             invoice.owner_user_id === employeeId ||
+            invoice.owner_user_id === null ||  // الفواتير القديمة بدون مالك
             (invoice.delivery_invoice_orders && 
              invoice.delivery_invoice_orders.some(dio => 
                dio.orders && dio.orders.created_by === employeeId
              ))
           );
         } else {
-          // المدير يرى جميع الفواتير - لا حاجة لفلترة
-          console.log('👤 المدير يرى جميع الفواتير:', processedInvoices.length);
+          // المدير يرى جميع الفواتير بما في ذلك الجديدة
+          filteredInvoices = processedInvoices;
+          console.log('👑 المدير يرى جميع الفواتير:', processedInvoices.length, {
+            withOwner: processedInvoices.filter(inv => inv.owner_user_id).length,
+            withoutOwner: processedInvoices.filter(inv => !inv.owner_user_id).length
+          });
         }
 
         setInvoices(filteredInvoices);

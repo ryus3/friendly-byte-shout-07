@@ -164,15 +164,28 @@ export const useAlWaseetInvoices = () => {
       let invoiceData = null;
       let dataSource = 'database';
 
-      // محاولة API أولاً إذا كان التوكن متاحاً
-      if (token) {
+      // محاولة API أولاً إذا كان التوكن متاحاً - أولوية للبيانات الحية
+      if (token && isLoggedIn) {
         try {
           invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
           dataSource = 'api';
-          console.log('✅ جلب طلبات الفاتورة من API:', invoiceData?.orders?.length || 0);
+          console.log('✅ جلب طلبات الفاتورة من API مباشرة:', invoiceData?.orders?.length || 0);
+          
+          // تسجيل البيانات للمقارنة
+          if (invoiceData?.orders?.length > 0) {
+            console.log('📊 بيانات الطلبات من API:', {
+              orders: invoiceData.orders.map(o => ({
+                id: o.id,
+                client_name: o.client_name,
+                price: o.price
+              }))
+            });
+          }
         } catch (apiError) {
           console.warn('⚠️ فشل الوصول للAPI، التبديل لقاعدة البيانات:', apiError.message);
         }
+      } else {
+        console.log('⚠️ لا يوجد token أو لست مسجل دخول، استخدام قاعدة البيانات مباشرة');
       }
 
       // البديل المحسن من قاعدة البيانات
@@ -218,11 +231,11 @@ export const useAlWaseetInvoices = () => {
             console.warn('خطأ في جلب الطلبات من قاعدة البيانات:', dbError);
           }
 
-          // إنشاء الطلبات من raw data أو المحلية
+          // إنشاء الطلبات من raw data بشكل محسن
           const orders = [];
           
           if (dbOrders && dbOrders.length > 0) {
-            // عرض الطلبات المتاحة
+            // عرض الطلبات المرتبطة والطلبات من raw data
             orders.push(...dbOrders.map(dio => {
               const rawData = dio.raw || {};
               return {
@@ -234,24 +247,44 @@ export const useAlWaseetInvoices = () => {
                 delivery_price: rawData.delivery_price || 0,
                 local_order: dio.orders,
                 source: dio.orders ? 'linked' : 'raw',
+                tracking_number: dio.orders?.tracking_number,
+                order_number: dio.orders?.order_number,
+                order_status: dio.orders?.status,
                 ...rawData
               };
             }));
+            
+            console.log('📋 طلبات الفاتورة من قاعدة البيانات:', {
+              total: orders.length,
+              linked: orders.filter(o => o.local_order).length,
+              fromRaw: orders.filter(o => !o.local_order).length
+            });
           } else if (invoiceRecord?.raw) {
-            // كبديل أخير، حاول استخراج الطلبات من raw data للفاتورة نفسها
+            // كبديل، استخراج الطلبات من raw data للفاتورة
             const invoiceRawData = invoiceRecord.raw;
+            
+            // محاولة multiple sources للطلبات
+            let rawOrders = [];
             if (invoiceRawData.orders && Array.isArray(invoiceRawData.orders)) {
-              orders.push(...invoiceRawData.orders.map(order => ({
-                id: order.id || `raw-order-${Math.random()}`,
-                client_name: order.client_name || 'غير محدد',
-                client_mobile: order.client_mobile || '',
-                city_name: order.city_name || 'غير محدد',
-                price: order.price || 0,
-                delivery_price: order.delivery_price || 0,
-                source: 'invoice_raw',
-                ...order
-              })));
+              rawOrders = invoiceRawData.orders;
+            } else if (invoiceRawData.data && Array.isArray(invoiceRawData.data)) {
+              rawOrders = invoiceRawData.data;
+            } else if (invoiceRawData.delivered_orders && Array.isArray(invoiceRawData.delivered_orders)) {
+              rawOrders = invoiceRawData.delivered_orders;
             }
+            
+            orders.push(...rawOrders.map(order => ({
+              id: order.id || `raw-order-${Math.random()}`,
+              client_name: order.client_name || order.customer_name || 'غير محدد',
+              client_mobile: order.client_mobile || order.phone || '',
+              city_name: order.city_name || order.city || 'غير محدد',
+              price: order.price || order.amount || 0,
+              delivery_price: order.delivery_price || order.delivery_fee || 0,
+              source: 'invoice_raw',
+              ...order
+            })));
+            
+            console.log('📄 طلبات من raw data للفاتورة:', orders.length);
           }
 
           invoiceData = { orders };

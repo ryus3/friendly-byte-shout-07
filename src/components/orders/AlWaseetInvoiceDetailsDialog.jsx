@@ -132,20 +132,30 @@ const AlWaseetInvoiceDetailsDialog = ({
               </CardHeader>
               <CardContent dir="rtl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="flex items-center justify-end gap-2">
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
-                      <p className="font-semibold">{amount.toLocaleString()} د.ع</p>
-                    </div>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  
+                   <div className="flex items-center justify-end gap-2">
+                     <div className="text-right">
+                       <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
+                       <p className="font-semibold">{amount.toLocaleString()} د.ع</p>
+                     </div>
+                     <DollarSign className="h-4 w-4 text-muted-foreground" />
+                   </div>
+                   
                    <div className="flex items-center justify-end gap-2">
                      <div className="text-right">
                        <p className="text-sm text-muted-foreground">عدد الطلبات</p>
                        <p className="font-semibold">{invoiceOrders.length || ordersCount}</p>
                      </div>
                      <Package className="h-4 w-4 text-muted-foreground" />
+                   </div>
+                   
+                   <div className="flex items-center justify-end gap-2">
+                     <div className="text-right">
+                       <p className="text-sm text-muted-foreground">مصدر البيانات</p>
+                       <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="text-xs">
+                         {dataSource === 'api' ? 'مباشر' : 'محفوظ'}
+                       </Badge>
+                     </div>
+                     <Database className="h-4 w-4 text-muted-foreground" />
                    </div>
                 </div>
               </CardContent>
