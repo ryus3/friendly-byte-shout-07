@@ -9,8 +9,6 @@ import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
 import { displaySecuritySummary } from '@/utils/securityLogger';
-import { useEmployeeDeliveryAccounts } from '@/hooks/useEmployeeDeliveryAccounts';
-import { getMerchantOrdersWithProperToken, requiresOwnerToken, canAutoDeleteOrder as canAutoDeleteOrderHelper, logSyncOperation } from './AlWaseetHelpers';
 
 const AlWaseetContext = createContext();
 
@@ -22,14 +20,55 @@ export const AlWaseetProvider = ({ children }) => {
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
   
-  // نظام حسابات التوصيل المنفصلة
-  const { 
-    getEmployeeToken, 
-    getCurrentUserToken, 
-    hasActiveAccount,
-    canAccessAccount,
-    isCurrentUserConnected 
-  } = useEmployeeDeliveryAccounts();
+  // دالة للحصول على توكن المستخدم من النظام الأصلي
+  const getTokenForUser = useCallback(async (userId) => {
+    if (!userId) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('delivery_partner_tokens')
+        .select('token, expires_at')
+        .eq('user_id', userId)
+        .eq('partner_name', 'alwaseet')
+        .maybeSingle();
+      
+      if (error || !data) return null;
+      
+      // التحقق من صلاحية التوكن
+      if (new Date(data.expires_at) <= new Date()) {
+        return null;
+      }
+      
+      return data.token;
+    } catch (error) {
+      console.error('خطأ في الحصول على توكن المستخدم:', error);
+      return null;
+    }
+  }, []);
+  
+  // دالة للتحقق من ملكية الطلب
+  const isOrderOwner = useCallback((order, currentUser) => {
+    if (!order || !currentUser) return false;
+    return order.created_by === currentUser.id;
+  }, []);
+  
+  // دالة للتحقق من إمكانية حذف الطلب
+  const canAutoDeleteOrder = useCallback((order, currentUser) => {
+    if (!order || !currentUser) return false;
+    
+    // المدير يمكنه حذف أي طلب
+    if (currentUser.email === 'ryusbrand@gmail.com' || currentUser.id === '91484496-b887-44f7-9e5d-be9db5567604') {
+      return true;
+    }
+    
+    // الموظف يمكنه حذف طلباته فقط وشروط معينة
+    if (!isOrderOwner(order, currentUser)) return false;
+    
+    // لا يحذف الطلبات المستلمة أو المكتملة
+    if (order.receipt_received || order.status === 'completed') return false;
+    
+    return true;
+  }, [isOrderOwner]);
   
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
   const scopeOrdersQuery = useCallback((query) => {
@@ -1475,9 +1514,10 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
-      // جلب طلبات الوسيط باستخدام التوكن المناسب
-      const userToken = getCurrentUserToken() || token;
-      const waseetOrders = await getMerchantOrdersWithProperToken(userToken);
+      // جلب طلبات الوسيط باستخدام التوكن الحالي
+      const userToken = token;
+      const waseetOrdersResult = await getMerchantOrders();
+      const waseetOrders = waseetOrdersResult.success ? waseetOrdersResult.data : [];
       const norm = (v) => String(v ?? '').trim();
       const tn = norm(trackingNumber);
       let waseetOrder = waseetOrders.find(order => (
@@ -1506,7 +1546,7 @@ export const AlWaseetProvider = ({ children }) => {
             .eq('tracking_number', trackingNumber)
         ).maybeSingle();
 
-        if (!localErr && localOrder && canAutoDeleteOrderHelper(localOrder, user)) {
+        if (!localErr && localOrder && canAutoDeleteOrder(localOrder)) {
           console.log(`🗑️ حذف تلقائي للطلب ${trackingNumber} - محذوف من الوسيط`);
           return await performAutoDelete(localOrder);
         }
@@ -1589,17 +1629,23 @@ export const AlWaseetProvider = ({ children }) => {
   // للتوافق مع الإصدار السابق
   const syncOrders = syncAndApplyOrders;
 
-  const getMerchantOrders = useCallback(async () => {
-    if (token) {
+  const getMerchantOrders = useCallback(async (userId = null) => {
+    // إذا تم تمرير userId، استخدم توكن ذلك المستخدم
+    let requestToken = token;
+    if (userId && userId !== user?.id) {
+      requestToken = await getTokenForUser(userId);
+    }
+    
+    if (requestToken) {
       try {
-        const orders = await AlWaseetAPI.getMerchantOrders(token);
+        const orders = await AlWaseetAPI.getMerchantOrders(requestToken);
         return { success: true, data: orders };
       } catch (error) {
         return { success: false, message: error.message };
       }
     }
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
-  }, [token]);
+  }, [token, user, getTokenForUser]);
 
   const getOrderStatuses = useCallback(async () => {
     if (token) {
@@ -1669,14 +1715,13 @@ export const AlWaseetProvider = ({ children }) => {
 
   const createOrder = useCallback(async (orderData) => {
     // استخدام توكن المستخدم الحالي لإنشاء الطلب
-    const userToken = getCurrentUserToken() || token;
+    const userToken = token; // استخدام التوكن الأصلي
     
     if (userToken) {
       try {
         const result = await AlWaseetAPI.createAlWaseetOrder(orderData, userToken);
 
-        // NEW: إذا أعاد الوسيط معرف الطلب، خزنه في طلبنا المحلي المطابق لـ tracking_number
-        // ⚠️ CRITICAL FIX: استخدام scopeOrdersQuery لضمان فصل الحسابات
+        // حفظ معرف الطلب من الوسيط في الطلب المحلي
         if (result && result.id && orderData?.tracking_number) {
           const { error: upErr } = await scopeOrdersQuery(
             supabase
@@ -1684,7 +1729,7 @@ export const AlWaseetProvider = ({ children }) => {
               .update({
                 delivery_partner_order_id: String(result.id),
                 delivery_partner: 'alwaseet',
-                delivery_account_code: orderData.account_code || getCurrentUserToken()?.account_code,
+                delivery_account_code: orderData.account_code || waseetUser?.username,
                 updated_at: new Date().toISOString(),
               })
               .eq('tracking_number', String(orderData.tracking_number))
@@ -1693,7 +1738,7 @@ export const AlWaseetProvider = ({ children }) => {
           if (upErr) {
             console.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
           } else {
-            console.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي مع فصل الحسابات:', result.id);
+            console.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي:', result.id);
           }
         }
 
@@ -1703,7 +1748,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
-  }, [token, getCurrentUserToken, scopeOrdersQuery]);
+  }, [token, waseetUser, scopeOrdersQuery]);
 
   const editOrder = useCallback(async (orderData) => {
     if (token) {
@@ -1833,9 +1878,9 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (error || !problematicOrders?.length) return;
       
-      // اجلب طلبات الوسيط باستخدام التوكن المناسب
-      const userToken = getCurrentUserToken() || token;
-      const waseetOrders = await getMerchantOrdersWithProperToken(userToken);
+      // اجلب طلبات الوسيط
+      const waseetOrdersResult = await getMerchantOrders();
+      const waseetOrders = waseetOrdersResult.success ? waseetOrdersResult.data : [];
       
       // بناء خرائط للبحث السريع
       const byWaseetId = new Map();
@@ -2018,11 +2063,10 @@ export const AlWaseetProvider = ({ children }) => {
     login,
     logout,
     activePartner,
-    // إضافة دوال الحسابات المنفصلة
-    getEmployeeToken,
-    getCurrentUserToken,
-    hasActiveAccount,
-    isCurrentUserConnected,
+    // دوال النظام الأصلي المحسن
+    getTokenForUser,
+    isOrderOwner,
+    canAutoDeleteOrder,
     setActivePartner,
     deliveryPartners,
     syncOrders,

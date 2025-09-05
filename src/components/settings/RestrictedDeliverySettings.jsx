@@ -4,15 +4,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Lock, Shield, Settings, Plus } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useEmployeeDeliveryAccounts } from '@/hooks/useEmployeeDeliveryAccounts';
 import DeliveryManagementDialog from './DeliveryManagementDialog';
-import EmployeeDeliveryAccountSetup from './EmployeeDeliveryAccountSetup';
 
 const RestrictedDeliverySettings = () => {
   const { canAccessDeliveryPartners, isAdmin, user } = usePermissions();
-  const { hasActiveAccount, currentUserAccount, isCurrentUserConnected } = useEmployeeDeliveryAccounts();
   const [isOpen, setIsOpen] = React.useState(false);
-  const [isSetupOpen, setIsSetupOpen] = React.useState(false);
 
   if (!canAccessDeliveryPartners && !isAdmin) {
     return (
@@ -63,55 +59,10 @@ const RestrictedDeliverySettings = () => {
         </CardContent>
       </Card>
 
-      {/* إعداد حساب التوصيل الشخصي */}
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-blue-600" />
-            حسابي في شركة التوصيل
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              قم بربط حسابك الشخصي في شركة التوصيل لمزامنة طلباتك
-            </p>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                {isCurrentUserConnected ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="success">متصل</Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {currentUserAccount?.account_code}
-                    </span>
-                  </div>
-                ) : (
-                  <Badge variant="secondary">غير متصل</Badge>
-                )}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSetupOpen(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                {isCurrentUserConnected ? 'تعديل' : 'إعداد'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <DeliveryManagementDialog 
         open={isOpen} 
         onOpenChange={setIsOpen} 
-      />
-      
-      <EmployeeDeliveryAccountSetup
-        open={isSetupOpen}
-        onOpenChange={setIsSetupOpen}
       />
     </>
   );
