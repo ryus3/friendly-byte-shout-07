@@ -88,7 +88,7 @@ serve(async (req) => {
           continue;
         }
 
-        // 4. حفظ الفواتير مع تنظيف تلقائي
+        // 4. حفظ الفواتير مع تنظيف تلقائي + مزامنة تفاصيل كل فاتورة
         const { data: upsertResult, error: upsertError } = await supabase
           .rpc('upsert_alwaseet_invoice_list_with_strict_cleanup', {
             p_invoices: invoiceData.data,
@@ -110,6 +110,49 @@ serve(async (req) => {
         const syncedCount = upsertResult?.processed || 0;
         totalSynced += syncedCount;
         totalProcessed++;
+
+        // مزامنة تفاصيل كل فاتورة (قائمة الطلبات) مع قاعدة البيانات
+        const token = Deno.env.get('ALWASEET_TOKEN');
+        if (!token) {
+          console.warn('⚠️ مفقود متغير ALWASEET_TOKEN - سيتم حفظ الفواتير بدون تفاصيل الطلبات');
+        } else {
+          for (const inv of invoiceData.data) {
+            try {
+              const { data: invoiceOrdersResp, error: ordersErr } = await supabase.functions.invoke('alwaseet-proxy', {
+                body: {
+                  endpoint: 'get_merchant_invoice_orders',
+                  method: 'GET',
+                  token,
+                  payload: null,
+                  queryParams: { token, id: inv.id }
+                }
+              });
+
+              if (ordersErr) {
+                console.warn(`⚠️ تعذر جلب طلبات الفاتورة ${inv.id}:`, ordersErr.message);
+                continue;
+              }
+
+              if (invoiceOrdersResp?.data) {
+                const invData = Array.isArray(invoiceOrdersResp.data.invoice) && invoiceOrdersResp.data.invoice.length > 0
+                  ? invoiceOrdersResp.data.invoice[0]
+                  : inv;
+                const ordersData = invoiceOrdersResp.data.orders || [];
+
+                const { error: syncErr } = await supabase.rpc('sync_alwaseet_invoice_data', {
+                  p_invoice_data: invData,
+                  p_orders_data: ordersData
+                });
+
+                if (syncErr) {
+                  console.warn(`⚠️ خطأ في حفظ تفاصيل الفاتورة ${inv.id}:`, syncErr.message);
+                }
+              }
+            } catch (e) {
+              console.warn(`⚠️ استثناء أثناء مزامنة تفاصيل الفاتورة ${inv.id}:`, e.message);
+            }
+          }
+        }
 
         results.push({
           employee_id: employee.user_id,
@@ -133,36 +176,7 @@ serve(async (req) => {
       }
     }
 
-    // 5. إضافة مزامنة مستهدفة للفاتورة المفقودة 1849184 (ضمان)
-    try {
-      console.log('🎯 محاولة مزامنة مستهدفة للفاتورة المفقودة 1849184...');
-      
-      // البحث عن الفاتورة في قاعدة البيانات
-      const { data: existingInvoice } = await supabase
-        .from('delivery_invoices')
-        .select('id')
-        .eq('external_id', '1849184')
-        .eq('partner', 'alwaseet')
-        .single();
-
-      if (!existingInvoice) {
-        // محاولة مزامنة مستهدفة - الفاتورة مفقودة
-        console.log('⚠️ الفاتورة 1849184 مفقودة - محاولة مزامنة مستهدفة...');
-        
-        // تجربة جلب الفاتورة المستهدفة من API إذا كان هناك endpoint مخصص
-        // أو إضافة تسجيل لمزامنة لاحقة
-        await supabase
-          .rpc('sync_missing_invoice_targeted', {
-            p_invoice_id: '1849184',
-            p_employee_id: 'aaf33986-9e8f-4aa7-97ff-8be81c5fab9b' // Ahmed's ID
-          });
-      } else {
-        console.log('✅ الفاتورة 1849184 موجودة بالفعل');
-      }
-    } catch (targetError) {
-      console.warn('⚠️ خطأ في المزامنة المستهدفة:', targetError);
-    }
-
+    // تم إزالة أي مزامنة مستهدفة خاصة لضمان نظام موحد بالكامل بدون استثناءات
     console.log(`🎉 مزامنة يومية مكتملة: ${totalSynced} فاتورة لـ ${totalProcessed} موظف`);
 
     return new Response(
