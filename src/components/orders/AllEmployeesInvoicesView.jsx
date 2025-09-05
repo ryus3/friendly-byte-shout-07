@@ -99,6 +99,8 @@ const AllEmployeesInvoicesView = () => {
       if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
         return false;
       }
+
+      const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.amount?.toString().includes(searchTerm);
