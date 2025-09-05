@@ -682,8 +682,8 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا)
-      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
+      // 1) اجلب الطلبات المعلقة لدينا (سواء بمعرف وسيط أم لا) - تضمين delivered
+      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned', 'delivered'];
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
         .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
@@ -747,7 +747,12 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
+        // حذف تلقائي إذا لم يوجد في الوسيط ويحتاج حذف
+        if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
+          console.log(`🗑️ حذف تلقائي للطلب ${localOrder.tracking_number} - غير موجود في الوسيط`);
+          await handleAutoDeleteOrder(localOrder.id, 'fastSync');
+          continue; // تخطي معالجة هذا الطلب لأنه تم حذفه
+        }
         if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
           // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
@@ -884,20 +889,8 @@ export const AlWaseetProvider = ({ children }) => {
           
           // تطبيق الحذف التلقائي إذا كان الطلب غير موجود في الوسيط
           if (!waseetOrder && canAutoDeleteOrder(localOrder)) {
-            // تحقق نهائي من الوسيط عبر QR/Tracking قبل الحذف
-            const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
-            let remoteCheck = null;
-            if (confirmKey) {
-              try {
-                remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
-              } catch (e) {
-                console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (داخل التحديث):', e);
-              }
-            }
-            if (!remoteCheck) {
-              console.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
-              await handleAutoDeleteOrder(localOrder.id, 'fastSync');
-            }
+            console.log('🗑️ الطلب غير موجود في الوسيط، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+            await handleAutoDeleteOrder(localOrder.id, 'fastSync');
           }
         } else {
           console.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
@@ -1128,28 +1121,16 @@ export const AlWaseetProvider = ({ children }) => {
       if (!waseetOrder) {
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
         
-        // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
+        // التحقق من إمكانية الحذف التلقائي
         if (localOrder && canAutoDeleteOrder(localOrder)) {
-          console.log(`⚠️ التحقق من حذف الطلب ${qrId} - لم يُعثر عليه في الوسيط`);
-          
-          // إعادة محاولة البحث للتأكد (قد يكون هناك تأخير في التزامن)
-          await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
-          const doubleCheckOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
-          
-          if (!doubleCheckOrder) {
-            console.log(`🗑️ تأكيد الحذف التلقائي للطلب ${qrId} - غير موجود فعلياً في الوسيط`);
-            const deleteResult = await performAutoDelete(localOrder);
-            if (deleteResult) {
-              return { 
-                ...deleteResult, 
-                autoDeleted: true,
-                message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في شركة التوصيل`
-              };
-            }
-          } else {
-            console.log(`✅ الطلب ${qrId} موجود فعلياً - لن يُحذف`);
-            // معالجة الطلب الموجود
-            return await processWaseetOrderUpdate(localOrder, doubleCheckOrder);
+          console.log(`🗑️ حذف تلقائي للطلب ${qrId} - غير موجود في الوسيط`);
+          const deleteResult = await handleAutoDeleteOrder(localOrder.id, 'syncByQR');
+          if (deleteResult) {
+            return { 
+              success: true,
+              autoDeleted: true,
+              message: `تم حذف الطلب ${qrId} تلقائياً - غير موجود في شركة التوصيل`
+            };
           }
         } else {
           console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
@@ -1256,7 +1237,8 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية مع فصل الحسابات)
   const canAutoDeleteOrder = (order) => {
-    if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
+    // إصلاح التحقق من شريك التوصيل
+    if (order?.delivery_partner !== 'alwaseet' || order?.receipt_received === true) {
       return false;
     }
     
@@ -1291,8 +1273,8 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // حماية حالة الطلب: فقط الطلبات في حالات معينة
-    const safeStatusesForDeletion = ['pending', 'shipped', 'delivery'];
+    // توسيع الحالات المسموح حذفها لتشمل delivered وreturned وcancelled
+    const safeStatusesForDeletion = ['pending', 'shipped', 'delivery', 'delivered', 'returned', 'cancelled'];
     if (!safeStatusesForDeletion.includes(order.status)) {
       console.log(`🔒 الطلب ${order.order_number} في حالة ${order.status} - لن يُحذف`);
       return false;
@@ -1365,47 +1347,7 @@ export const AlWaseetProvider = ({ children }) => {
     }
   };
 
-  // دالة الحذف الفردي الآمن (أرشفة بدلاً من الحذف)
-  const performAutoDelete = async (order) => {
-    try {
-      console.log(`🗑️ بدء الأرشفة التلقائية للطلب ${order.id} (الحساب: ${activeAccount?.username})`);
-      
-      // التحقق الإضافي من الأمان
-      if (!user || order.created_by !== user.id || !activeAccount) {
-        console.error('❌ فشل في التحقق الأمني قبل الأرشفة');
-        return { success: false, error: 'غير مصرح بالأرشفة' };
-      }
-      
-      // أرشفة الطلب بدلاً من الحذف النهائي
-      const { error: archiveErr } = await supabase
-        .from('orders')
-        .update({
-          isarchived: true,
-          archived_reason: `غير موجود في حساب ${activeAccount.username}`,
-          archived_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id)
-        .eq('created_by', user.id); // تأكيد إضافي للأمان
-
-      if (archiveErr) {
-        console.error('❌ فشل في أرشفة الطلب:', archiveErr);
-        return { success: false, error: archiveErr };
-      }
-
-      console.log(`✅ تم أرشفة الطلب ${order.id} تلقائياً (الحساب: ${activeAccount.username})`);
-      
-      return { 
-        success: true, 
-        autoDeleted: true,
-        message: `تم أرشفة الطلب ${order.tracking_number} لأنه غير موجود في حساب ${activeAccount.username}`
-      };
-      
-    } catch (error) {
-      console.error('❌ خطأ في الأرشفة التلقائية:', error);
-      return { success: false, error };
-    }
-  };
+  // إزالة دالة performAutoDelete القديمة واستخدام handleAutoDeleteOrder بدلاً منها
 
   // مزامنة طلب واحد بـ tracking number
   const syncOrderByTracking = async (trackingNumber) => {
