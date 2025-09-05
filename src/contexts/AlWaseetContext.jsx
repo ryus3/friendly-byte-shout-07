@@ -414,7 +414,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('id, tracking_number, delivery_partner_order_id, status, delivery_status')
         .eq('delivery_partner', 'alwaseet')
-        .eq('created_by', user?.id || user?.user_id)
         .limit(1000);
         
       if (localErr) {
@@ -540,7 +539,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('id, tracking_number')
         .eq('delivery_partner', 'alwaseet')
-        .eq('created_by', user?.id || user?.user_id)
         .is('delivery_partner_order_id', null)
         .limit(500);
       if (localErr) {
@@ -595,24 +593,23 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة الحذف التلقائي للطلبات المحذوفة من الوسيط
   const handleAutoDeleteOrder = useCallback(async (orderId, source = 'manual') => {
     try {
-      console.log(`🗑️ handleAutoDeleteOrder: بدء أرشفة الطلب ${orderId} من ${source}`);
+      console.log(`🗑️ handleAutoDeleteOrder: بدء حذف الطلب ${orderId} من ${source}`);
       
-      // 1. جلب تفاصيل الطلب قبل الأرشفة
-      const { data: orderToArchive, error: fetchError } = await supabase
+      // 1. جلب تفاصيل الطلب قبل الحذف
+      const { data: orderToDelete, error: fetchError } = await supabase
         .from('orders')
         .select('*, order_items(*)')
         .eq('id', orderId)
-        .eq('created_by', user?.id || user?.user_id)
         .single();
         
-      if (fetchError || !orderToArchive) {
-        console.error('❌ فشل في جلب الطلب للأرشفة:', fetchError);
+      if (fetchError || !orderToDelete) {
+        console.error('❌ فشل في جلب الطلب للحذف:', fetchError);
         return false;
       }
       
       // 2. تحرير المخزون المحجوز
-      if (orderToArchive.order_items && orderToArchive.order_items.length > 0) {
-        for (const item of orderToArchive.order_items) {
+      if (orderToDelete.order_items && orderToDelete.order_items.length > 0) {
+        for (const item of orderToDelete.order_items) {
           try {
             await supabase.rpc('release_stock_item', {
               p_product_id: item.product_id,
@@ -626,21 +623,20 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      // 3. أرشفة الطلب بدل الحذف النهائي
-      const { error: archiveError } = await supabase
+      // 3. حذف الطلب من قاعدة البيانات
+      const { error: deleteError } = await supabase
         .from('orders')
-        .update({ isarchived: true, updated_at: new Date().toISOString() })
-        .eq('id', orderId)
-        .eq('created_by', user?.id || user?.user_id);
+        .delete()
+        .eq('id', orderId);
         
-      if (archiveError) {
-        console.error('❌ فشل في أرشفة الطلب:', archiveError);
+      if (deleteError) {
+        console.error('❌ فشل في حذف الطلب:', deleteError);
         return false;
       }
       
-      console.log(`✅ تم أرشفة الطلب ${orderToArchive.order_number || orderId} تلقائياً من ${source}`);
+      console.log(`✅ تم حذف الطلب ${orderToDelete.order_number || orderId} تلقائياً من ${source}`);
       
-      // 4. إشعار المستخدم عند الأرشفة التلقائية
+      // 4. إشعار المستخدم عند الحذف التلقائي
       if (source === 'fastSync') {
         toast({
           title: "حذف تلقائي",
@@ -687,9 +683,8 @@ export const AlWaseetProvider = ({ children }) => {
       const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
       const { data: pendingOrders, error: pendingErr } = await supabase
         .from('orders')
-        .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received, created_by')
+        .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
         .eq('delivery_partner', 'alwaseet')
-        .eq('created_by', user?.id || user?.user_id)
         .in('status', targetStatuses)
         .limit(200);
 
@@ -1016,7 +1011,6 @@ export const AlWaseetProvider = ({ children }) => {
             .from('orders')
             .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
             .eq('tracking_number', trackingNumber)
-            .eq('created_by', user?.id || user?.user_id)
             .single();
         
           if (existingOrder) {
@@ -1119,7 +1113,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('*, order_items(*)')
         .eq('tracking_number', qrId)
-        .eq('created_by', user?.id || user?.user_id)
         .maybeSingle();
 
       if (localErr) {
@@ -1260,33 +1253,30 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية)
   const canAutoDeleteOrder = (order) => {
-    // Only when logged into AlWaseet and the order belongs to AlWaseet
-    if (activePartner !== 'alwaseet') return false;
-    if (!order || order.delivery_partner !== 'alwaseet') return false;
-
-    // Never delete orders that have an invoice/receipt received
-    if (order.receipt_received === true) return false;
-
-    // Ensure we only act on the current user's orders when creator info is present
-    if (order.created_by && user?.id && order.created_by !== user.id) return false;
-
-    // Must have a tracking reference
-    if (!order.tracking_number && !order.qr_id) return false;
-
-    // Time guard: skip very new orders (< 15 minutes)
-    const createdAt = order.created_at ? new Date(order.created_at).getTime() : 0;
-    if (createdAt && Date.now() - createdAt < 15 * 60 * 1000) {
-      console.log(`⏰ الطلب ${order.order_number || order.id} جديد جداً - لن يُحذف`);
+    if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
       return false;
     }
-
-    // Safe statuses only
+    
+    // التحقق من وجود رقم تتبع
+    if (!order?.tracking_number && !order?.qr_id) {
+      return false;
+    }
+    
+    // حماية زمنية: عدم حذف الطلبات الجديدة (أقل من 15 دقيقة)
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    const minAgeForDeletion = 15 * 60 * 1000; // 15 دقيقة
+    if (orderAge < minAgeForDeletion) {
+      console.log(`⏰ الطلب ${order.order_number} جديد جداً (${Math.round(orderAge/60000)} دقيقة) - لن يُحذف`);
+      return false;
+    }
+    
+    // حماية حالة الطلب: فقط الطلبات في حالات معينة
     const safeStatusesForDeletion = ['pending', 'shipped', 'delivery'];
     if (!safeStatusesForDeletion.includes(order.status)) {
-      console.log(`🔒 الطلب ${order.order_number || order.id} في حالة ${order.status} - لن يُحذف`);
+      console.log(`🔒 الطلب ${order.order_number} في حالة ${order.status} - لن يُحذف`);
       return false;
     }
-
+    
     return true;
   };
 
@@ -1357,7 +1347,7 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
     try {
-      console.log(`🗑️ بدء أرشفة الطلب تلقائياً ${order.id}`);
+      console.log(`🗑️ بدء الحذف التلقائي للطلب ${order.id}`);
       
       // تحرير المخزون المحجوز
       if (order.order_items && order.order_items.length > 0) {
@@ -1375,31 +1365,27 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // أرشفة الطلب بدل الحذف النهائي
-      const { error: archiveErr } = await supabase
+      // حذف الطلب من قاعدة البيانات
+      const { error: deleteErr } = await supabase
         .from('orders')
-        .update({
-          isarchived: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', order.id)
-        .eq('created_by', user?.id || user?.user_id);
+        .delete()
+        .eq('id', order.id);
 
-      if (archiveErr) {
-        console.error('❌ فشل في أرشفة الطلب:', archiveErr);
-        return { success: false, error: archiveErr };
+      if (deleteErr) {
+        console.error('❌ فشل في حذف الطلب:', deleteErr);
+        return { success: false, error: deleteErr };
       }
 
-      console.log(`✅ تم أرشفة الطلب ${order.id} تلقائياً (حذف آمن)`);
+      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً`);
       
       return { 
         success: true, 
         autoDeleted: true,
-        message: `تمت أرشفة الطلب ${order.tracking_number} تلقائياً لأنه غير موجود في شركة التوصيل`
+        message: `تم حذف الطلب ${order.tracking_number} تلقائياً لأنه محذوف من شركة التوصيل`
       };
       
     } catch (error) {
-      console.error('❌ خطأ في الأرشفة التلقائية:', error);
+      console.error('❌ خطأ في الحذف التلقائي:', error);
       return { success: false, error };
     }
   };
@@ -1447,7 +1433,6 @@ export const AlWaseetProvider = ({ children }) => {
           .from('orders')
           .select('*, order_items(*)')
           .eq('tracking_number', trackingNumber)
-          .eq('created_by', user?.id || user?.user_id)
           .maybeSingle();
 
         if (!localErr && localOrder && canAutoDeleteOrder(localOrder)) {
@@ -1481,7 +1466,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('id, status, delivery_status, delivery_fee, receipt_received, delivery_partner_order_id')
         .eq('tracking_number', trackingNumber)
-        .eq('created_by', user?.id || user?.user_id)
         .single();
 
       const updates = {
@@ -1762,7 +1746,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('id, status, tracking_number, delivery_partner_order_id, qr_id, receipt_received')
         .eq('delivery_partner', 'alwaseet')
-        .eq('created_by', user?.id || user?.user_id)
         .in('status', ['pending', 'delivered', 'returned'])
         .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         .limit(100);
@@ -1851,7 +1834,6 @@ export const AlWaseetProvider = ({ children }) => {
         .from('orders')
         .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
         .eq('delivery_partner', 'alwaseet')
-        .eq('created_by', user?.id || user?.user_id)
         .not('delivery_partner_order_id', 'is', null)
         .eq('receipt_received', false)
         .limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
@@ -1927,17 +1909,6 @@ export const AlWaseetProvider = ({ children }) => {
           console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
           const correctionResult = await comprehensiveOrderCorrection();
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
-        }
-
-        // استرجاع الطلبات المحددة (للمسؤول/المدير فقط)
-        if (user?.id === '91484496-b887-44f7-9e5d-be9db5567604') {
-          try {
-            await syncOrderByTracking('100503893');
-            await syncOrderByTracking('100579474');
-            console.log('✅ تمت محاولة استرجاع الطلبين المحددين');
-          } catch (e) {
-            console.warn('⚠️ فشل استرجاع الطلبات المحددة:', e?.message || e);
-          }
         }
 
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
