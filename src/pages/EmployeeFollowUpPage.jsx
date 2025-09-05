@@ -10,9 +10,10 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -74,6 +75,7 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('orders');
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -958,54 +960,78 @@ const filteredOrders = useMemo(() => {
           </div>
         )}
 
-        {/* قائمة الطلبات */}
-        <div className="bg-card p-4 rounded-xl border">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">
-              قائمة الطلبات ({filteredOrders.length})
-            </h2>
-          </div>
+        {/* التبويبات الرئيسية */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 gap-2 bg-muted/50 p-1">
+            <TabsTrigger 
+              value="orders" 
+              className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              الطلبات ({filteredOrders.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="invoices" 
+              className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+            >
+              <FileText className="h-4 w-4" />
+              فواتير الموظفين
+            </TabsTrigger>
+          </TabsList>
 
-          {/* تنبيه للطلبات الراجعة */}
-          {filters.status === 'returned' && !filters.archived && (
-            <Card className="mb-4 p-4 bg-secondary rounded-lg border">
-              <div className="flex items-center justify-between">
-                <p className="font-medium">
-                  {selectedOrders.length} طلبات راجعة محددة
-                </p>
-                <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
-                  <Archive className="w-4 h-4 ml-2" />
-                  استلام الراجع في المخزن
-                </Button>
+          {/* تبويب الطلبات */}
+          <TabsContent value="orders" className="mt-6">
+            <div className="bg-card p-4 rounded-xl border">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">
+                  قائمة الطلبات ({filteredOrders.length})
+                </h2>
               </div>
-            </Card>
-          )}
 
-          {/* قائمة الطلبات */}
-          <OrderList 
-            orders={filteredOrders} 
-            isLoading={loading} 
-            onViewOrder={handleViewOrder}
-            onUpdateStatus={handleUpdateStatus}
-            onDeleteOrder={handleDeleteOrder}
-            selectedOrders={selectedOrders}
-            setSelectedOrders={setSelectedOrders}
-            calculateProfit={calculateProfit}
-            profits={profits}
-            viewMode="grid"
-            showEmployeeName={filters.employeeId === 'all'}
-          />
-        </div>
+              {/* تنبيه للطلبات الراجعة */}
+              {filters.status === 'returned' && !filters.archived && (
+                <Card className="mb-4 p-4 bg-secondary rounded-lg border">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">
+                      {selectedOrders.length} طلبات راجعة محددة
+                    </p>
+                    <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
+                      <Archive className="w-4 h-4 ml-2" />
+                      استلام الراجع في المخزن
+                    </Button>
+                  </div>
+                </Card>
+              )}
 
-        {/* فواتير شركة التوصيل للموظفين */}
-        <div className="bg-card p-4 rounded-xl border">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">
-              فواتير شركة التوصيل
-            </h2>
-          </div>
-          <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
-        </div>
+              {/* قائمة الطلبات */}
+              <OrderList 
+                orders={filteredOrders} 
+                isLoading={loading} 
+                onViewOrder={handleViewOrder}
+                onUpdateStatus={handleUpdateStatus}
+                onDeleteOrder={handleDeleteOrder}
+                selectedOrders={selectedOrders}
+                setSelectedOrders={setSelectedOrders}
+                calculateProfit={calculateProfit}
+                profits={profits}
+                viewMode="grid"
+                showEmployeeName={filters.employeeId === 'all'}
+              />
+            </div>
+          </TabsContent>
+
+          {/* تبويب فواتير الموظفين */}
+          <TabsContent value="invoices" className="mt-6">
+            <div className="bg-card p-4 rounded-xl border">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">
+                  فواتير شركة التوصيل
+                </h2>
+              </div>
+              <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* نوافذ حوارية */}
         <OrderDetailsDialog

@@ -17,9 +17,9 @@ export const useEmployeeInvoices = (employeeId) => {
       return;
     }
 
-    // التحقق من الحاجة للمزامنة (كل 30 دقيقة)
+    // التحقق من الحاجة للمزامنة (كل 10 دقائق للفواتير)
     const now = Date.now();
-    const SYNC_INTERVAL = 30 * 60 * 1000; // 30 دقيقة
+    const SYNC_INTERVAL = 10 * 60 * 1000; // 10 دقائق
     
     if (!forceRefresh && lastSync && (now - lastSync) < SYNC_INTERVAL) {
       console.log('🔄 استخدام البيانات المحفوظة محلياً');
@@ -30,7 +30,7 @@ export const useEmployeeInvoices = (employeeId) => {
     try {
       console.log('🔍 جلب فواتير الموظف:', employeeId);
       
-      // استعلام محسن للفواتير الحقيقية
+      // استعلام محسن للفواتير الحقيقية مع join للطلبات
       let query = supabase
         .from('delivery_invoices')
         .select(`

@@ -20,104 +20,27 @@ import {
   Receipt,
   User
 } from 'lucide-react';
-import { useInventory } from '@/contexts/InventoryContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { useEmployeeInvoices } from '@/hooks/useEmployeeInvoices';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
 const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
-  const { refreshOrders } = useInventory();
+  const { 
+    invoices, 
+    loading, 
+    stats, 
+    refetch 
+  } = useEmployeeInvoices(employeeId);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [invoices, setInvoices] = useState([]);
   
   // Time filter state with localStorage - نفس الفلاتر الزمنية للتوحيد
   const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
   const [customDateRange, setCustomDateRange] = useState(null);
-
-  // جلب فواتير شركة التوصيل للموظف المحدد تلقائياً
-  React.useEffect(() => {
-    const fetchEmployeeInvoices = async () => {
-      if (!employeeId || employeeId === 'all') {
-        setInvoices([]);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        console.log('🔍 جلب فواتير الموظف:', employeeId);
-        
-        // استعلام محسن للفواتير الحقيقية
-        let query = supabase
-          .from('delivery_invoices')
-          .select(`
-            *,
-            delivery_invoice_orders!inner(
-              id,
-              order_id,
-              external_order_id
-            )
-          `)
-          .eq('partner', 'alwaseet');
-
-        // فلترة دقيقة للموظف
-        if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
-          query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
-        } else {
-          query = query.eq('owner_user_id', employeeId);
-        }
-
-        // تطبيق فلترة زمنية
-        if (timeFilter !== 'all' && timeFilter !== 'custom') {
-          const now = new Date();
-          let filterDate = new Date();
-          
-          switch (timeFilter) {
-            case 'week':
-              filterDate.setDate(now.getDate() - 7);
-              break;
-            case 'month':
-              filterDate.setMonth(now.getMonth() - 1);
-              break;
-            case '3months':
-              filterDate.setMonth(now.getMonth() - 3);
-              break;
-            case '6months':
-              filterDate.setMonth(now.getMonth() - 6);
-              break;
-            case 'year':
-              filterDate.setFullYear(now.getFullYear() - 1);
-              break;
-          }
-          
-          query = query.gte('issued_at', filterDate.toISOString());
-        }
-
-        const { data: employeeInvoices, error } = await query
-          .order('issued_at', { ascending: false });
-
-        if (error) {
-          console.error('خطأ في جلب فواتير الموظف:', error);
-          setInvoices([]);
-        } else {
-          console.log('✅ تم جلب الفواتير:', employeeInvoices?.length || 0);
-          setInvoices(employeeInvoices || []);
-        }
-      } catch (err) {
-        console.error('خطأ غير متوقع في جلب الفواتير:', err);
-        setInvoices([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // تحميل تلقائي فوري
-    fetchEmployeeInvoices();
-  }, [employeeId, timeFilter]);
 
   // فلترة الفواتير مع دعم الفترة المخصصة
   const filteredInvoices = useMemo(() => {
@@ -149,29 +72,13 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     });
   }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
 
-  // إحصائيات الفواتير
-  const getInvoiceStats = () => {
-    const totalInvoices = invoices.length;
-    const pendingInvoices = invoices.filter(inv => !inv.received).length;
-    const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-    const totalOrders = invoices.reduce((sum, inv) => sum + (inv.orders_count || 0), 0);
-    
-    return { totalInvoices, pendingInvoices, totalAmount, totalOrders };
-  };
-
-  const stats = getInvoiceStats();
-
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
     setDetailsDialogOpen(true);
   };
 
   const handleRefresh = async () => {
-    if (refreshOrders) {
-      await refreshOrders();
-    }
-    // إعادة تحديث الفواتير مباشرة
-    window.location.reload();
+    await refetch();
   };
   
   const handleTimeFilterChange = async (newFilter) => {
