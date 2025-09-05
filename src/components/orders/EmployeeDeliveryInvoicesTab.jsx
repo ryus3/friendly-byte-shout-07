@@ -25,6 +25,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { supabase } from '@/lib/customSupabaseClient';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+import AllEmployeesInvoicesView from './AllEmployeesInvoicesView';
 
 const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const { 
@@ -159,8 +160,15 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     };
   }, [employeeId, refetch]);
 
-  // إذا لم يتم تحديد موظف
-  if (!employeeId || employeeId === 'all') {
+  // عرض جميع فواتير الموظفين للمدير
+  const isManagerViewingAll = employeeId === 'all';
+  
+  if (isManagerViewingAll) {
+    return <AllEmployeesInvoicesView />;
+  }
+
+  // إذا لم يتم تحديد موظف محدد
+  if (!employeeId) {
     return (
       <Card>
         <CardContent className="p-8 text-center">

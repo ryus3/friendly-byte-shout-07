@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
+import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 const AlWaseetInvoicesList = ({ 
   invoices, 
   onViewInvoice, 
-  loading 
+  loading,
+  showEmployeeName = false
 }) => {
   if (loading) {
     return (
@@ -51,13 +52,14 @@ const AlWaseetInvoicesList = ({
           key={invoice.id}
           invoice={invoice}
           onView={() => onViewInvoice(invoice)}
+          showEmployeeName={showEmployeeName}
         />
       ))}
     </div>
   );
 };
 
-const InvoiceCard = ({ invoice, onView }) => {
+const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
   const [dbStatus, setDbStatus] = useState('saved'); // افتراض الحفظ للفواتير الداخلية
   const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
   
@@ -161,6 +163,17 @@ const InvoiceCard = ({ invoice, onView }) => {
               {linkedOrdersCount || ordersCount} طلب مُسلم
             </span>
           </div>
+
+          {/* Employee name if needed */}
+          {showEmployeeName && invoice.employee_name && (
+            <div className="flex items-center justify-start gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-blue-600">
+                {invoice.employee_name}
+                {invoice.employee_code && ` (${invoice.employee_code})`}
+              </span>
+            </div>
+          )}
 
           {/* Date */}
           <div className="flex items-center justify-start gap-2">

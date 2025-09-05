@@ -55,7 +55,14 @@ export const useEmployeeInvoices = (employeeId) => {
 
   // جلب الفواتير مع نظام محسن للمديرين والموظفين
   const fetchInvoices = async (forceRefresh = false, triggerSync = false) => {
-    if (!employeeId || employeeId === 'all') {
+    if (!employeeId) {
+      setInvoices([]);
+      return;
+    }
+    
+    // للمدير عرض "الكل" - جلب جميع فواتير الموظفين
+    if (employeeId === 'all') {
+      // سيتم التعامل مع هذا في component منفصل
       setInvoices([]);
       return;
     }
@@ -67,7 +74,7 @@ export const useEmployeeInvoices = (employeeId) => {
 
     // Smart caching - use DB data, sync when needed
     const now = Date.now();
-    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
+    const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة للمزامنة السريعة
     
     if (!forceRefresh && lastSync && (now - lastSync) < CACHE_DURATION) {
       console.log('🔄 استخدام البيانات المحفوظة محلياً');
@@ -186,14 +193,9 @@ export const useEmployeeInvoices = (employeeId) => {
     if (employeeId && employeeId !== 'all') {
       console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
       
-      // تحميل فوري للمديرين مع ضمان المزامنة
-      if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
-        console.log('👑 تشغيل مزامنة فورية للمدير');
-        fetchInvoices(true, true); // تحميل مع مزامنة فورية للمدير
-      } else {
-        // تحميل عادي للموظفين مع مزامنة 
-        fetchInvoices(false, true);
-      }
+      // مزامنة فورية لجميع الحالات لضمان أحدث البيانات
+      console.log('🔄 مزامنة فورية عند دخول التبويب');
+      fetchInvoices(true, true); // force refresh + trigger sync لجميع المستخدمين
     }
   }, [employeeId]);
 

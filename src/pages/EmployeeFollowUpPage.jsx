@@ -175,11 +175,22 @@ const EmployeeFollowUpPage = () => {
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, loading, orders, allUsers]); // تحسين dependencies
 
-  // إضافة Real-time Updates للصفحة
+  // Real-time updates محسن مع debouncing لتجنب التحميل المكرر
   useEffect(() => {
-    // استمع لتغييرات في جدول orders
+    let debounceTimer = null;
+    const DEBOUNCE_DELAY = 3000; // 3 ثوان
+    
+    const debouncedRefresh = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.log('🔄 Debounced refresh executed');
+        refreshOrders && refreshOrders();
+      }, DEBOUNCE_DELAY);
+    };
+
+    // استمع لتغييرات في جدول orders مع debouncing
     const ordersChannel = supabase
-      .channel('employee-follow-up-orders')
+      .channel('employee-follow-up-orders-optimized')
       .on(
         'postgres_changes',
         {
@@ -188,16 +199,15 @@ const EmployeeFollowUpPage = () => {
           table: 'orders'
         },
         (payload) => {
-          console.log('🔄 Real-time update for orders:', payload);
-          // إعادة تحديث الطلبات فوراً
-          refreshOrders && refreshOrders();
+          console.log('📡 Real-time order update:', payload.eventType);
+          debouncedRefresh();
         }
       )
       .subscribe();
 
-    // استمع لتغييرات في جدول profits
+    // إضافة profits channel منفصل
     const profitsChannel = supabase
-      .channel('employee-follow-up-profits')
+      .channel('employee-follow-up-profits-optimized')
       .on(
         'postgres_changes',
         {
@@ -206,19 +216,18 @@ const EmployeeFollowUpPage = () => {
           table: 'profits'
         },
         (payload) => {
-          console.log('🔄 Real-time update for profits:', payload);
-          // إعادة تحديث البيانات
-          refetchProducts && refetchProducts();
+          console.log('📡 Real-time profit update:', payload.eventType);
+          debouncedRefresh();
         }
       )
       .subscribe();
 
-    // تنظيف المشتركين عند إلغاء تحميل المكون
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(profitsChannel);
     };
-  }, [refetchProducts]);
+  }, [refreshOrders, refreshProfits]);
 
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
