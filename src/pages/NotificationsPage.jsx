@@ -259,7 +259,7 @@ const NotificationsPage = () => {
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold cosmic-gradient-text">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent">
               إدارة الإشعارات
             </h1>
             <p className="text-muted-foreground text-sm md:text-base lg:text-lg">تحكم شامل وإدارة احترافية لجميع الإشعارات</p>
@@ -326,21 +326,15 @@ const NotificationsPage = () => {
           transition={{ duration: 0.5 }}
           className="relative overflow-hidden"
         >
-          <Card className="glass-effect relative overflow-hidden bg-gradient-to-br from-slate-900/20 via-purple-900/20 to-blue-900/20 backdrop-blur-2xl border border-purple-500/30 shadow-2xl shadow-purple-500/20">
-            {/* تأثير الضوء المتحرك في الخلفية */}
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-600/10 via-purple-600/20 via-blue-600/10 via-cyan-500/20 to-teal-500/10 animate-pulse"></div>
-            <div className="absolute inset-0 bg-gradient-to-l from-pink-500/5 via-rose-500/10 to-orange-500/5 animate-pulse delay-1000"></div>
-            
-            <CardContent className="relative p-6 md:p-8">
+          <Card className="bg-gradient-to-r from-primary/10 via-blue-500/10 to-primary/10 border-primary/20 dark:from-primary/5 dark:via-blue-500/5 dark:to-primary/5 dark:border-primary/15 shadow-lg">
+            <CardContent className="p-6 md:p-8">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8">
                 <div className="flex items-center gap-4 lg:gap-6">
-                  <div className="relative p-3 lg:p-4 rounded-2xl bg-gradient-to-br from-violet-500/20 via-purple-500/30 to-blue-500/20 backdrop-blur-sm border border-purple-400/30">
-                    {/* تأثير الهالة المتوهجة حول الأيقونة */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-400/30 to-purple-400/30 blur-lg animate-pulse"></div>
-                    <Bell className="relative w-6 h-6 lg:w-8 lg:h-8 text-purple-300" />
+                  <div className="p-3 lg:p-4 rounded-2xl bg-primary/15 border border-primary/25 dark:bg-primary/10 dark:border-primary/20">
+                    <Bell className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
                   </div>
                   <div className="text-center lg:text-right">
-                    <h3 className="text-xl lg:text-2xl font-bold rainbow-gradient-text mb-2">
+                    <h3 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent mb-2">
                       إحصائيات الإشعارات
                     </h3>
                     <p className="text-muted-foreground text-sm lg:text-base">نظرة شاملة على جميع الإشعارات</p>
@@ -349,36 +343,28 @@ const NotificationsPage = () => {
                 
                 <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8">
                   <div className="text-center min-w-[80px]">
-                    <div className="relative text-3xl lg:text-4xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                    <div className="text-3xl lg:text-4xl font-bold text-primary">
                       {uniqueNotifications.length}
-                      {/* تأثير الانعكاس */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-violet-400 via-purple-400 to-blue-400 bg-clip-text text-transparent opacity-20 blur-sm"></div>
                     </div>
-                    <div className="text-xs lg:text-sm text-muted-foreground font-medium mt-1">إجمالي الإشعارات</div>
+                    <div className="text-xs lg:text-sm text-muted-foreground mt-1">المجموع</div>
                   </div>
                   
-                  <Separator orientation="vertical" className="h-8 lg:h-12 bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden sm:block" />
+                  <Separator orientation="vertical" className="h-12 bg-border/50" />
                   
                   <div className="text-center min-w-[80px]">
-                     <div className="relative text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
-                       {unreadCount}
-                       {/* تأثير التوهج للأرقام غير المقروءة */}
-                       {unreadCount > 0 && (
-                         <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-400 to-red-400 bg-clip-text text-transparent opacity-30 blur-md"></div>
-                       )}
-                     </div>
-                    <div className="text-xs lg:text-sm text-muted-foreground font-medium mt-1">غير مقروءة</div>
+                    <div className="text-3xl lg:text-4xl font-bold text-red-500 dark:text-red-400">
+                      {unreadCount}
+                    </div>
+                    <div className="text-xs lg:text-sm text-muted-foreground mt-1">غير مقروءة</div>
                   </div>
                   
-                  <Separator orientation="vertical" className="h-8 lg:h-12 bg-gradient-to-b from-transparent via-purple-400/50 to-transparent hidden sm:block" />
+                  <Separator orientation="vertical" className="h-12 bg-border/50" />
                   
                   <div className="text-center min-w-[80px]">
-                    <div className="relative text-3xl lg:text-4xl font-bold bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+                    <div className="text-3xl lg:text-4xl font-bold text-green-600 dark:text-green-500">
                       {uniqueNotifications.length - unreadCount}
-                      {/* تأثير الانعكاس الأخضر */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent opacity-20 blur-sm"></div>
                     </div>
-                    <div className="text-xs lg:text-sm text-muted-foreground font-medium mt-1">مقروءة</div>
+                    <div className="text-xs lg:text-sm text-muted-foreground mt-1">مقروءة</div>
                   </div>
                 </div>
               </div>
@@ -386,20 +372,15 @@ const NotificationsPage = () => {
           </Card>
         </motion.div>
 
-        <Card className="glass-effect relative overflow-hidden bg-gradient-to-br from-slate-900/10 via-indigo-900/15 to-purple-900/10 backdrop-blur-2xl border border-violet-500/20 shadow-2xl shadow-violet-500/10">
-          {/* تأثير الضوء الخلفي */}
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-purple-500/10 to-blue-500/5 animate-pulse"></div>
-          
-          <CardHeader className="relative border-b border-violet-400/20 bg-gradient-to-r from-violet-500/10 via-purple-500/15 to-blue-500/10 backdrop-blur-sm">
+        <Card className="bg-gradient-to-r from-primary/10 via-blue-500/10 to-primary/10 border-primary/20 dark:from-primary/5 dark:via-blue-500/5 dark:to-primary/5 dark:border-primary/15 shadow-lg">
+          <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/5 via-blue-500/5 to-primary/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="relative p-2 lg:p-3 rounded-xl bg-gradient-to-br from-violet-500/20 via-purple-500/30 to-blue-500/20 backdrop-blur-sm border border-violet-400/30">
-                  {/* هالة متوهجة حول الأيقونة */}
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-400/20 to-purple-400/20 blur-md animate-pulse"></div>
-                  <Bell className="relative w-5 h-5 lg:w-6 lg:h-6 text-violet-300" />
+                <div className="p-2 lg:p-3 rounded-xl bg-primary/15 border border-primary/25 dark:bg-primary/10 dark:border-primary/20">
+                  <Bell className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg lg:text-xl font-bold bg-gradient-to-r from-violet-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+                  <CardTitle className="text-lg lg:text-xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent">
                     قائمة الإشعارات
                   </CardTitle>
                   <CardDescription className="text-muted-foreground text-sm">جميع الإشعارات في مكان واحد</CardDescription>
@@ -420,40 +401,27 @@ const NotificationsPage = () => {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: -20 }}
                           transition={{ duration: 0.3 }}
-                          className={cn(
-                            "relative p-4 md:p-6 rounded-2xl border transition-all duration-500 hover:shadow-xl group overflow-hidden",
-                            "glass-effect backdrop-blur-2xl",
-                            "hover:scale-[1.01] md:hover:scale-[1.02] hover:shadow-2xl",
-                            notification.is_read 
-                              ? "border-slate-200/30 shadow-sm bg-gradient-to-br from-slate-50/50 to-slate-100/30" 
-                              : "border-violet-400/40 shadow-lg shadow-violet-500/10 bg-gradient-to-br from-violet-50/30 via-purple-50/40 to-blue-50/30"
-                          )}
+                           className={cn(
+                             "notification-item-enhanced relative p-4 md:p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg group",
+                             notification.is_read 
+                               ? "notification-read" 
+                               : "notification-unread"
+                           )}
                         >
-                          {/* تأثيرات الضوء المتحركة للإشعارات غير المقروءة */}
-                          {!notification.is_read && (
-                            <>
-                              <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-purple-500/10 to-blue-500/5 animate-pulse"></div>
-                              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500 animate-pulse"></div>
-                            </>
-                          )}
+                           {!notification.is_read && (
+                             <div className="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+                           )}
                           
                           <div className="relative flex items-start justify-between gap-3 md:gap-6">
                             <div className="flex items-start gap-3 md:gap-4 flex-1 min-w-0">
-                              <div className={cn(
-                                "relative p-2 md:p-3 rounded-xl backdrop-blur-sm border transition-all duration-300 flex-shrink-0",
-                                "group-hover:shadow-lg group-hover:scale-105",
-                                notification.is_read 
-                                  ? "bg-gradient-to-br from-slate-200/20 to-slate-300/20 border-slate-300/30" 
-                                  : "bg-gradient-to-br from-violet-500/20 via-purple-500/30 to-blue-500/20 border-violet-400/40"
-                              )}>
-                                {/* هالة متوهجة للإشعارات غير المقروءة */}
-                                {!notification.is_read && (
-                                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-violet-400/20 to-purple-400/20 blur-md animate-pulse"></div>
-                                )}
-                                <div className="relative">
-                                  {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
-                                </div>
-                              </div>
+                               <div className={cn(
+                                 "p-2 md:p-3 rounded-xl border transition-all duration-300 flex-shrink-0",
+                                 notification.is_read 
+                                   ? "bg-muted/50 border-border/30" 
+                                   : "bg-primary/10 border-primary/30"
+                               )}>
+                                 {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
+                               </div>
                               
                              <div className="flex-1 min-w-0">
                                  <div className="flex items-center gap-2 mb-2 md:mb-3">
