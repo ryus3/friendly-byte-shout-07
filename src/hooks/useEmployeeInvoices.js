@@ -29,23 +29,18 @@ export const useEmployeeInvoices = (employeeId) => {
       // جلب أحدث الفواتير من API
       const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // حفظ الفواتير في قاعدة البيانات مع owner_user_id صحيح
+      // حفظ الفواتير في قاعدة البيانات مع owner_user_id صحيح + تنظيف تلقائي لآخر 10
       if (recentInvoices?.length > 0) {
-        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-          p_invoices: recentInvoices
+        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_cleanup', {
+          p_invoices: recentInvoices,
+          p_employee_id: employeeId
         });
         
         if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list:', error.message);
+          console.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
         } else {
-          console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
+          console.log('✅ مزامنة الفواتير من API مع تنظيف:', recentInvoices.length);
           setLastAutoSync(Date.now());
-          
-          // للمدير: تشغيل مزامنة إضافية لضمان الربط الصحيح
-          if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
-            console.log('👑 مزامنة إضافية للمدير');
-            await supabase.rpc('sync_user_scoped_received_invoices');
-          }
         }
       }
     } catch (error) {

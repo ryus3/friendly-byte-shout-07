@@ -3485,6 +3485,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_delivery_invoices_keep_latest: {
+        Args: { p_keep_count?: number }
+        Returns: Json
+      }
       cleanup_duplicate_notifications: {
         Args: { p_days_back?: number }
         Returns: Json
@@ -4037,6 +4041,10 @@ export type Database = {
         Returns: Json
       }
       upsert_alwaseet_invoice_list_for_user: {
+        Args: { p_employee_id: string; p_invoices: Json }
+        Returns: Json
+      }
+      upsert_alwaseet_invoice_list_with_cleanup: {
         Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
       }

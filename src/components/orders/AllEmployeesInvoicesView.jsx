@@ -43,18 +43,13 @@ const AllEmployeesInvoicesView = () => {
 
       setEmployees(employeesData || []);
 
-      // مزامنة من API إذا مطلوب
-      if (forceSync && token && isLoggedIn) {
+      if (forceSync) {
         try {
-          const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-          if (recentInvoices?.length > 0) {
-            await supabase.rpc('upsert_alwaseet_invoice_list', {
-              p_invoices: recentInvoices
-            });
-            console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
-          }
+          // تنظيف للاحتفاظ بآخر 10 فواتير فقط لكل موظف
+          await supabase.rpc('cleanup_delivery_invoices_keep_latest', { p_keep_count: 10 });
+          console.log('✅ تنظيف الفواتير: الاحتفاظ بآخر 10 لكل موظف');
         } catch (apiError) {
-          console.warn('تحذير API:', apiError.message);
+          console.warn('تحذير أثناء التنظيف:', apiError.message);
         }
       }
 
@@ -63,18 +58,16 @@ const AllEmployeesInvoicesView = () => {
         .from('delivery_invoices')
         .select('*')
         .eq('partner', 'alwaseet')
-        .neq('owner_user_id', '91484496-b887-44f7-9e5d-be9db5567604') // استبعاد فواتير المدير
         .order('issued_at', { ascending: false })
-        .limit(50); // آخر 50 فاتورة
+        .limit(100); // آخر 100 فاتورة لضمان ظهور الأحدث
 
       if (invError) {
         console.error('خطأ في جلب الفواتير:', invError);
         return;
       }
 
-      // ربط الفواتير بالموظفين مع استبعاد فواتير المدير نهائياً
+      // ربط الفواتير بالموظفين
       const invoicesWithEmployees = (invoicesData || [])
-        .filter(invoice => invoice.owner_user_id !== '91484496-b887-44f7-9e5d-be9db5567604') // تأكد من عدم ظهور فواتير المدير
         .map(invoice => {
           const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
           return {
@@ -102,12 +95,10 @@ const AllEmployeesInvoicesView = () => {
   // فلترة الفواتير مع الفترة الزمنية
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // استبعاد فواتير المدير نهائياً
-      if (invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
+      // استبعاد فواتير المدير فقط عند اختيار "جميع الموظفين"
+      if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
         return false;
       }
-
-      const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.amount?.toString().includes(searchTerm);
