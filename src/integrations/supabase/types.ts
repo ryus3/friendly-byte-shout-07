@@ -3489,6 +3489,10 @@ export type Database = {
         Args: { p_keep_count?: number }
         Returns: Json
       }
+      cleanup_delivery_invoices_keep_recent_and_latest: {
+        Args: { p_keep_count?: number; p_keep_recent_days?: number }
+        Returns: Json
+      }
       cleanup_duplicate_notifications: {
         Args: { p_days_back?: number }
         Returns: Json

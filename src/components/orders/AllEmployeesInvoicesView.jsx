@@ -62,15 +62,16 @@ const AllEmployeesInvoicesView = () => {
             }
           }
           
-          // تنظيف الفواتير القديمة مع الاحتفاظ بالحديثة (آخر 7 أيام + آخر 10 لكل موظف)
-          const { error: cleanupError } = await supabase.rpc('cleanup_delivery_invoices_keep_latest', { 
-            p_keep_count: 15 // زيادة الاحتفاظ إلى 15 فاتورة لكل موظف
+          // تنظيف الفواتير القديمة مع الاحتفاظ بالحديثة (آخر 7 أيام + آخر 15 لكل موظف)
+          const { error: cleanupError } = await supabase.rpc('cleanup_delivery_invoices_keep_recent_and_latest', { 
+            p_keep_count: 15, // الاحتفاظ بآخر 15 فاتورة لكل موظف
+            p_keep_recent_days: 7 // + جميع الفواتير من آخر 7 أيام
           });
           
           if (cleanupError) {
             console.warn('تحذير أثناء التنظيف:', cleanupError.message);
           } else {
-            console.log('✅ تنظيف الفواتير: الاحتفاظ بآخر 15 لكل موظف');
+            console.log('✅ تنظيف محسن: الاحتفاظ بآخر 15 فاتورة + فواتير آخر 7 أيام');
           }
         } catch (apiError) {
           console.warn('تحذير أثناء المزامنة:', apiError.message);
