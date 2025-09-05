@@ -62,16 +62,15 @@ const AllEmployeesInvoicesView = () => {
             }
           }
           
-          // تنظيف الفواتير القديمة مع الاحتفاظ بالحديثة (آخر 7 أيام + آخر 15 لكل موظف)
-          const { error: cleanupError } = await supabase.rpc('cleanup_delivery_invoices_keep_recent_and_latest', { 
-            p_keep_count: 15, // الاحتفاظ بآخر 15 فاتورة لكل موظف
-            p_keep_recent_days: 7 // + جميع الفواتير من آخر 7 أيام
+          // استخدام النظام الموحد مع تنظيف صارم (10 فواتير فقط)
+          const { error: syncError } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+            body: { manual: true, manager_sync: true }
           });
           
-          if (cleanupError) {
-            console.warn('تحذير أثناء التنظيف:', cleanupError.message);
+          if (syncError) {
+            console.warn('تحذير أثناء المزامنة الموحدة:', syncError.message);
           } else {
-            console.log('✅ تنظيف محسن: الاحتفاظ بآخر 15 فاتورة + فواتير آخر 7 أيام');
+            console.log('✅ مزامنة موحدة مكتملة - نظام موحد مع احتفاظ بآخر 10 فواتير لكل موظف');
           }
         } catch (apiError) {
           console.warn('تحذير أثناء المزامنة:', apiError.message);

@@ -1,200 +1,322 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Receipt, 
   Clock, 
   RefreshCw, 
   Settings, 
   Calendar,
+  Bell,
+  BellOff,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  FileText
 } from 'lucide-react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * إعدادات مزامنة الفواتير التلقائية
+ */
 const InvoiceSyncSettings = () => {
   const { toast } = useToast();
-  const [syncSettings, setSyncSettings] = useLocalStorage('delivery-invoice-sync-settings', {
-    enabled: true,
-    frequency: 'daily',
-    dailyTime: '09:00',
-    autoSyncOnAppStart: true,
-    autoSyncOnTabEntry: true
-  });
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
 
-  const [lastAutoSync] = useLocalStorage('invoices-auto-sync', null);
+  // جلب الإعدادات الحالية
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_sync_settings')
+        .select('*')
+        .single();
 
-  const updateSetting = (key, value) => {
-    setSyncSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
-    
-    toast({
-      title: "تم حفظ الإعدادات",
-      description: "تم تحديث إعدادات مزامنة الفواتير بنجاح",
-    });
-  };
+      if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
+        throw error;
+      }
 
-  const getNextSyncTime = () => {
-    if (!syncSettings.enabled || syncSettings.frequency !== 'daily') return null;
-    
-    const now = new Date();
-    const [hour, minute] = syncSettings.dailyTime.split(':');
-    const nextSync = new Date();
-    nextSync.setHours(parseInt(hour), parseInt(minute), 0, 0);
-    
-    if (nextSync <= now) {
-      nextSync.setDate(nextSync.getDate() + 1);
+      setSettings(data || {
+        daily_sync_enabled: true,
+        daily_sync_time: '09:00:00',
+        lookback_days: 30,
+        auto_cleanup_enabled: true,
+        keep_invoices_per_employee: 10
+      });
+    } catch (error) {
+      console.error('خطأ في جلب إعدادات المزامنة:', error);
+      toast({
+        title: "خطأ في جلب الإعدادات",
+        description: "تعذر جلب إعدادات مزامنة الفواتير",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    return nextSync;
   };
+
+  // حفظ الإعدادات
+  const saveSettings = async (newSettings) => {
+    setSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('invoice_sync_settings')
+        .upsert({
+          id: '00000000-0000-0000-0000-000000000001', // ID ثابت للإعدادات
+          ...newSettings,
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSettings(data);
+      toast({
+        title: "تم حفظ الإعدادات",
+        description: "تم تحديث إعدادات مزامنة الفواتير بنجاح",
+      });
+    } catch (error) {
+      console.error('خطأ في حفظ الإعدادات:', error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "تعذر حفظ إعدادات المزامنة",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // مزامنة يدوية
+  const handleManualSync = async () => {
+    setIsManualSyncing(true);
+    try {
+      console.log('🔄 تشغيل مزامنة يدوية للفواتير...');
+      
+      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+        body: { manual: true }
+      });
+
+      if (error) throw error;
+
+      setLastSync(new Date().toISOString());
+      
+      toast({
+        title: "مزامنة مكتملة",
+        description: `تم مزامنة ${data.total_synced || 0} فاتورة لـ ${data.processed_employees || 0} موظف`,
+      });
+    } catch (error) {
+      console.error('خطأ في المزامنة اليدوية:', error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: "حدث خطأ أثناء مزامنة الفواتير",
+        variant: "destructive"
+      });
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
+
+  // تحديث إعداد واحد
+  const updateSetting = (key, value) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">جاري تحميل إعدادات المزامنة...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-destructive" />
+          <p className="text-destructive">تعذر تحميل إعدادات المزامنة</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* حالة المزامنة */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Receipt className="w-5 h-5" />
-            إعدادات مزامنة الفواتير
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* حالة آخر مزامنة */}
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-            <div className="space-y-1">
-              <p className="text-sm font-medium">آخر مزامنة تلقائية</p>
-              <p className="text-xs text-muted-foreground">
-                {lastAutoSync 
-                  ? new Date(lastAutoSync).toLocaleString('ar-EG')
-                  : 'لم يتم بعد'
-                }
-              </p>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <FileText className="w-4 h-4" />
+          إعدادات مزامنة الفواتير
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* المزامنة اليومية التلقائية */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">المزامنة اليومية التلقائية</Label>
+            <p className="text-xs text-muted-foreground">
+              تشغيل مزامنة تلقائية يومية للفواتير من Al-Waseet
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {settings.daily_sync_enabled ? (
+              <Bell className="w-4 h-4 text-green-600" />
+            ) : (
+              <BellOff className="w-4 h-4 text-muted-foreground" />
+            )}
+            <Switch
+              checked={settings.daily_sync_enabled}
+              onCheckedChange={(checked) => updateSetting('daily_sync_enabled', checked)}
+              disabled={saving}
+            />
+          </div>
+        </div>
+
+        {/* وقت المزامنة اليومية */}
+        {settings.daily_sync_enabled && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">وقت المزامنة اليومية</Label>
+            <div className="flex items-center gap-3">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <Input
+                type="time"
+                value={settings.daily_sync_time}
+                onChange={(e) => updateSetting('daily_sync_time', e.target.value)}
+                disabled={saving}
+                className="w-32"
+              />
+              <Badge variant="secondary" className="text-xs">
+                كل يوم
+              </Badge>
             </div>
-            <div className="flex items-center gap-2">
-              {lastAutoSync ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-amber-600" />
-              )}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              سيتم تشغيل المزامنة يومياً في الوقت المحدد
+            </p>
+          </div>
+        )}
+
+        <Separator />
+
+        {/* إعدادات التنظيف */}
+        <div className="space-y-4">
+          <Label className="text-sm font-medium">إعدادات الأداء والتنظيف</Label>
+          
+          {/* عدد الأيام للبحث */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">عدد الأيام للبحث في API</Label>
+            <Select 
+              value={String(settings.lookback_days)} 
+              onValueChange={(value) => updateSetting('lookback_days', parseInt(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">آخر أسبوع</SelectItem>
+                <SelectItem value="15">آخر 15 يوم</SelectItem>
+                <SelectItem value="30">آخر شهر (موصى)</SelectItem>
+                <SelectItem value="60">آخر شهرين</SelectItem>
+                <SelectItem value="90">آخر 3 أشهر</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <Separator />
+          {/* عدد الفواتير المحفوظة */}
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">عدد الفواتير المحفوظة لكل موظف</Label>
+            <Select 
+              value={String(settings.keep_invoices_per_employee)} 
+              onValueChange={(value) => updateSetting('keep_invoices_per_employee', parseInt(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">آخر 5 فواتير</SelectItem>
+                <SelectItem value="10">آخر 10 فواتير (موصى)</SelectItem>
+                <SelectItem value="15">آخر 15 فاتورة</SelectItem>
+                <SelectItem value="20">آخر 20 فاتورة</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          {/* تفعيل/إيقاف المزامنة التلقائية */}
+          {/* التنظيف التلقائي */}
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <Label className="text-sm font-medium">المزامنة التلقائية للفواتير</Label>
+              <Label className="text-xs font-medium">التنظيف التلقائي</Label>
               <p className="text-xs text-muted-foreground">
-                تشغيل المزامنة التلقائية لفواتير شركة التوصيل
+                حذف الفواتير القديمة تلقائياً مع كل مزامنة
               </p>
             </div>
             <Switch
-              checked={syncSettings.enabled}
-              onCheckedChange={(checked) => updateSetting('enabled', checked)}
+              checked={settings.auto_cleanup_enabled}
+              onCheckedChange={(checked) => updateSetting('auto_cleanup_enabled', checked)}
+              disabled={saving}
             />
           </div>
+        </div>
 
-          {syncSettings.enabled && (
-            <>
-              <Separator />
+        <Separator />
 
-              {/* تكرار المزامنة */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">تكرار المزامنة</Label>
-                <Select 
-                  value={syncSettings.frequency} 
-                  onValueChange={(value) => updateSetting('frequency', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="daily">يومياً</SelectItem>
-                    <SelectItem value="manual">يدوي فقط</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* وقت المزامنة اليومية */}
-              {syncSettings.frequency === 'daily' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">وقت المزامنة اليومية</Label>
-                  <Input
-                    type="time"
-                    value={syncSettings.dailyTime}
-                    onChange={(e) => updateSetting('dailyTime', e.target.value)}
-                    className="w-32"
-                  />
-                  {getNextSyncTime() && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      المزامنة القادمة: {getNextSyncTime().toLocaleString('ar-EG')}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              <Separator />
-
-              {/* إعدادات المزامنة التلقائية */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">إعدادات المزامنة التلقائية</Label>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label className="text-sm">مزامنة عند فتح التطبيق</Label>
-                    <p className="text-xs text-muted-foreground">
-                      مزامنة الفواتير تلقائياً عند أول فتح للتطبيق
-                    </p>
-                  </div>
-                  <Switch
-                    checked={syncSettings.autoSyncOnAppStart}
-                    onCheckedChange={(checked) => updateSetting('autoSyncOnAppStart', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <Label className="text-sm">مزامنة عند دخول تبويب الفواتير</Label>
-                    <p className="text-xs text-muted-foreground">
-                      مزامنة الفواتير عند الدخول لتبويب فواتير التوصيل
-                    </p>
-                  </div>
-                  <Switch
-                    checked={syncSettings.autoSyncOnTabEntry}
-                    onCheckedChange={(checked) => updateSetting('autoSyncOnTabEntry', checked)}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          <Separator />
-
-          <div className="text-xs text-muted-foreground bg-muted p-3 rounded flex items-start gap-2">
-            <Settings className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-medium mb-1">ملاحظات هامة:</p>
-              <ul className="space-y-1">
-                <li>• المزامنة التلقائية تحسن دقة البيانات وتقلل الحاجة للتحديث اليدوي</li>
-                <li>• يمكن دائماً استخدام زر "تحديث" للمزامنة اليدوية</li>
-                <li>• المزامنة آمنة وتحترم صلاحيات كل موظف</li>
-              </ul>
+        {/* المزامنة اليدوية */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">مزامنة يدوية فورية</Label>
+              <p className="text-xs text-muted-foreground">
+                تشغيل مزامنة فورية لجميع الموظفين
+              </p>
             </div>
+            <Button
+              onClick={handleManualSync}
+              disabled={isManualSyncing || saving}
+              variant="outline"
+              size="sm"
+            >
+              {isManualSyncing && <RefreshCw className="w-4 h-4 ml-1 animate-spin" />}
+              <Calendar className="w-4 h-4 ml-1" />
+              مزامنة الآن
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+
+          {lastSync && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <CheckCircle className="w-3 h-3 text-green-600" />
+              آخر مزامنة: {new Date(lastSync).toLocaleString('ar-EG')}
+            </div>
+          )}
+        </div>
+
+        {/* معلومات إضافية */}
+        <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
+          <strong>ملاحظات مهمة:</strong>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>سيتم الاحتفاظ بآخر {settings.keep_invoices_per_employee} فواتير لكل موظف فقط</li>
+            <li>المزامنة اليومية تتم تلقائياً بدون فتح التطبيق</li>
+            <li>البيانات محفوظة محلياً لتوفير استهلاك الانترنت</li>
+            <li>المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط</li>
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

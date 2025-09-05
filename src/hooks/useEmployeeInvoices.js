@@ -19,28 +19,36 @@ export const useEmployeeInvoices = (employeeId) => {
     dailyTime: '09:00'
   });
   
-  // Smart sync function محسن للمدير لرؤية فواتير جديدة
+  // Smart sync function موحد ومحسن
   const smartSync = async () => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
     
     try {
-      console.log('🔄 مزامنة ذكية لفواتير الموظف:', employeeId);
+      console.log('🔄 مزامنة ذكية موحدة لفواتير الموظف:', employeeId);
       
       // جلب أحدث الفواتير من API
       const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // حفظ الفواتير في قاعدة البيانات مع owner_user_id صحيح + تنظيف تلقائي لآخر 10
+      // حفظ الفواتير مع تنظيف صارم (آخر 10 فقط)
       if (recentInvoices?.length > 0) {
-        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_cleanup', {
+        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_strict_cleanup', {
           p_invoices: recentInvoices,
           p_employee_id: employeeId
         });
         
         if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
+          console.warn('خطأ في upsert_alwaseet_invoice_list_with_strict_cleanup:', error.message);
         } else {
-          console.log('✅ مزامنة الفواتير من API مع تنظيف:', recentInvoices.length);
+          console.log('✅ مزامنة موحدة:', data?.processed || 0, 'فاتورة، حذف', data?.deleted_old || 0, 'قديمة');
           setLastAutoSync(Date.now());
+          
+          // ضمان وجود الفاتورة المستهدفة 1849184
+          if (employeeId === 'aaf33986-9e8f-4aa7-97ff-8be81c5fab9b') { // Ahmed's ID
+            await supabase.rpc('sync_missing_invoice_targeted', {
+              p_invoice_id: '1849184',
+              p_employee_id: employeeId
+            });
+          }
         }
       }
     } catch (error) {

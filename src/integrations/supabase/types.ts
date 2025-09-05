@@ -1075,6 +1075,39 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_invoice_sync_log: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          id: string
+          invoices_synced: number | null
+          last_invoice_date: string | null
+          last_sync_at: string
+          sync_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          invoices_synced?: number | null
+          last_invoice_date?: string | null
+          last_sync_at?: string
+          sync_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          invoices_synced?: number | null
+          last_invoice_date?: string | null
+          last_sync_at?: string
+          sync_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employee_loyalty_permissions: {
         Row: {
           can_apply_discounts: boolean | null
@@ -1364,6 +1397,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invoice_sync_settings: {
+        Row: {
+          auto_cleanup_enabled: boolean | null
+          created_at: string | null
+          daily_sync_enabled: boolean | null
+          daily_sync_time: string | null
+          id: string
+          keep_invoices_per_employee: number | null
+          lookback_days: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_cleanup_enabled?: boolean | null
+          created_at?: string | null
+          daily_sync_enabled?: boolean | null
+          daily_sync_time?: string | null
+          id?: string
+          keep_invoices_per_employee?: number | null
+          lookback_days?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_cleanup_enabled?: boolean | null
+          created_at?: string | null
+          daily_sync_enabled?: boolean | null
+          daily_sync_time?: string | null
+          id?: string
+          keep_invoices_per_employee?: number | null
+          lookback_days?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       loyalty_points_history: {
         Row: {
@@ -3631,6 +3697,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_employee_last_sync: {
+        Args: { p_employee_id: string }
+        Returns: Json
+      }
       get_filters_data: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3962,6 +4032,10 @@ export type Database = {
         Args: { p_invoice_data: Json; p_orders_data: Json }
         Returns: Json
       }
+      sync_missing_invoice_targeted: {
+        Args: { p_employee_id: string; p_invoice_id: string }
+        Returns: Json
+      }
       sync_recent_received_invoices: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -4049,6 +4123,10 @@ export type Database = {
         Returns: Json
       }
       upsert_alwaseet_invoice_list_with_cleanup: {
+        Args: { p_employee_id: string; p_invoices: Json }
+        Returns: Json
+      }
+      upsert_alwaseet_invoice_list_with_strict_cleanup: {
         Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
       }
