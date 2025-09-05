@@ -92,19 +92,15 @@ const EmployeeFollowUpPage = () => {
     isOrdersLoaded: !!orders
   });
   
-  // إعداد تأثير URL parameters
+  // إعداد محسن لـ URL parameters مع تجنب التحميل المتكرر
   useEffect(() => {
-    console.log('🔄 URL Parameters DETAILED:', { 
+    console.log('🔄 URL Parameters:', { 
       highlightFromUrl, 
       employeeFromUrl, 
       ordersFromUrl,
-      allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl),
-      fullSearchParams: searchParams.toString(),
-      allOrders: orders?.length || 0,
-      allUsers: allUsers?.length || 0,
-      loading,
-      hasPermissionCheck: hasPermission,
-      authenticationIssue: !orders && !loading // مؤشر على مشكلة المصادقة
+      ordersLoaded: !!orders?.length,
+      usersLoaded: !!allUsers?.length,
+      loading
     });
 
     // التحقق من حالة التحميل والمصادقة
@@ -249,7 +245,7 @@ const EmployeeFollowUpPage = () => {
         }
       }, 1000);
     }
-  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
+  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, orders, allUsers]); // إضافة dependencies لتجنب التحميل المتكرر
 
   // إضافة Real-time Updates للصفحة
   useEffect(() => {

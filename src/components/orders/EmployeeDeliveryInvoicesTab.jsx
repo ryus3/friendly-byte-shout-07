@@ -353,15 +353,12 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                 disabled={loading}
                 size="sm"
                 variant="outline"
-                className="px-3 py-2 h-8 text-sm font-medium gap-2 hover:bg-primary hover:text-primary-foreground border-primary/40 hover:border-primary transition-all duration-300 hover:shadow-md"
+                className="px-2 py-1 h-7 text-xs font-medium gap-1 hover:bg-primary hover:text-primary-foreground border-primary/40 hover:border-primary transition-all duration-300 hover:shadow-md"
               >
                 {loading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : (
-                  <>
-                    <RefreshCw className="h-3 w-3" />
-                    تحديث
-                  </>
+                  <RefreshCw className="h-3 w-3" />
                 )}
               </Button>
             </div>

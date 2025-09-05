@@ -148,7 +148,7 @@ const AlWaseetInvoiceDetailsDialog = ({
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </div>
                   
-                  <div className="flex items-center justify-end gap-2">
+                   <div className="flex items-center justify-end gap-2">
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">آخر تحديث</p>
                       <p className="font-semibold text-sm">
@@ -160,7 +160,6 @@ const AlWaseetInvoiceDetailsDialog = ({
                     </div>
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                   </div>
-
                 </div>
               </CardContent>
             </Card>

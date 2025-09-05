@@ -155,30 +155,40 @@ export const useAlWaseetInvoices = () => {
     };
   }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
-  // Fetch orders for a specific invoice with improved user permissions and external_id support
+  // إصلاح fetchInvoiceOrders للاستخدام الصحيح لـ external_id
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
     if (!invoiceId) return null;
 
     setLoading(true);
     try {
       let invoiceData = null;
-      let dataSource = 'database'; // Track data source
+      let dataSource = 'database';
 
-      // First try API if token is available
+      // محاولة API أولاً إذا كان التوكن متاحاً
       if (token) {
         try {
           invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
           dataSource = 'api';
-          console.log('✅ Fetched invoice orders from API:', invoiceData?.orders?.length || 0);
+          console.log('✅ جلب طلبات الفاتورة من API:', invoiceData?.orders?.length || 0);
         } catch (apiError) {
-          console.warn('⚠️ API access failed, falling back to database:', apiError.message);
+          console.warn('⚠️ فشل الوصول للAPI، التبديل لقاعدة البيانات:', apiError.message);
         }
       }
 
-      // Fallback to database if API failed or no token
+      // البديل من قاعدة البيانات مع إصلاح البحث بـ external_id
       if (!invoiceData?.orders) {
         try {
-          // Use external_id for database lookup instead of internal id
+          // البحث عن الفاتورة بـ external_id أولاً
+          const { data: invoiceData, error: invoiceError } = await supabase
+            .from('delivery_invoices')
+            .select('id, external_id')
+            .eq('external_id', invoiceId)
+            .limit(1)
+            .single();
+
+          const finalInvoiceId = invoiceData?.id || invoiceId;
+
+          // جلب الطلبات المرتبطة بالفاتورة
           const { data: dbOrders, error: dbError } = await supabase
             .from('delivery_invoice_orders')
             .select(`
@@ -198,21 +208,11 @@ export const useAlWaseetInvoices = () => {
                 created_by
               )
             `)
-            .in('invoice_id', [
-              invoiceId, 
-              // Try to find by external_id in case invoiceId is external_id
-              ...(await supabase
-                .from('delivery_invoices')
-                .select('id')
-                .eq('external_id', invoiceId)
-                .then(result => result.data?.map(inv => inv.id) || [])
-                .catch(() => [])
-              )
-            ]);
+            .eq('invoice_id', finalInvoiceId);
 
-          if (dbError) throw dbError;
+          if (dbError && !invoiceError) throw dbError;
 
-          // Transform database data to match API format
+          // تحويل البيانات من قاعدة البيانات لصيغة API
           const orders = (dbOrders || []).map(dio => {
             const rawData = dio.raw || {};
             return {
@@ -228,22 +228,22 @@ export const useAlWaseetInvoices = () => {
           });
 
           invoiceData = { orders };
-          console.log('📊 Fetched invoice orders from database:', orders.length);
+          console.log('📊 جلب طلبات الفاتورة من قاعدة البيانات:', orders.length);
         } catch (dbError) {
-          console.error('❌ Database fallback failed:', dbError);
-          throw new Error('تعذر جلب بيانات الفاتورة من قاعدة البيانات');
+          console.error('❌ فشل البديل من قاعدة البيانات:', dbError);
+          throw new Error('تعذر جلب بيانات الفاتورة');
         }
       }
 
       setInvoiceOrders(invoiceData?.orders || []);
       setSelectedInvoice({ 
         ...(invoiceData?.invoice?.[0] || null),
-        dataSource // Add data source info
+        dataSource
       });
       
       return { ...invoiceData, dataSource };
     } catch (error) {
-      console.error('Error fetching invoice orders:', error);
+      console.error('خطأ في جلب طلبات الفاتورة:', error);
       toast({
         title: 'خطأ في جلب طلبات الفاتورة',
         description: error.message,

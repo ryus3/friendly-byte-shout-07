@@ -129,7 +129,7 @@ export const useEmployeeInvoices = (employeeId) => {
           };
         });
 
-        // فلترة للموظف المحدد إذا لم يكن المدير
+        // فلترة محسنة - المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط
         let filteredInvoices = processedInvoices;
         if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
           filteredInvoices = processedInvoices.filter(invoice => 
@@ -139,6 +139,9 @@ export const useEmployeeInvoices = (employeeId) => {
                dio.orders && dio.orders.created_by === employeeId
              ))
           );
+        } else {
+          // المدير يرى جميع الفواتير - لا حاجة لفلترة
+          console.log('👤 المدير يرى جميع الفواتير:', processedInvoices.length);
         }
 
         setInvoices(filteredInvoices);
@@ -152,11 +155,18 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // Auto-load on tab entry with intelligent sync
+  // تحميل تلقائي ومحسن للمديرين مع تجنب التحميل المتكرر
   useEffect(() => {
     if (employeeId && employeeId !== 'all') {
       console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
-      fetchInvoices(true, true); // تحميل مع مزامنة ذكية
+      
+      // تحميل فوري للمديرين
+      if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
+        fetchInvoices(true, true); // تحميل مع مزامنة فورية للمدير
+      } else {
+        // تحميل عادي للموظفين
+        fetchInvoices(false, true);
+      }
     }
   }, [employeeId]);
 
