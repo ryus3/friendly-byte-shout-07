@@ -1795,7 +1795,6 @@ export type Database = {
           customer_phone: string | null
           customer_phone2: string | null
           customer_province: string | null
-          delivery_account_code: string | null
           delivery_fee: number
           delivery_partner: string | null
           delivery_partner_invoice_date: string | null
@@ -1837,7 +1836,6 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
-          delivery_account_code?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -1879,7 +1877,6 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
-          delivery_account_code?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -3793,23 +3790,6 @@ export type Database = {
           updated_at: string
         }[]
       }
-      get_user_delivery_orders: {
-        Args: {
-          p_account_code?: string
-          p_delivery_partner?: string
-          p_user_id: string
-        }
-        Returns: {
-          created_at: string
-          customer_name: string
-          delivery_partner_order_id: string
-          delivery_status: string
-          final_amount: number
-          id: string
-          status: string
-          tracking_number: string
-        }[]
-      }
       get_user_highest_role: {
         Args: { p_user_id: string }
         Returns: string
@@ -3911,10 +3891,6 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
       }
-      restore_manager_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       review_archive_status: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -3974,10 +3950,6 @@ export type Database = {
         Returns: Json
       }
       sync_recent_received_invoices: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      sync_user_scoped_received_invoices: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
