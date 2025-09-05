@@ -12,6 +12,7 @@ import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
+import { useAppStartSync } from '@/hooks/useAppStartSync';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -92,6 +93,9 @@ function ScrollToTop() {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  
+  // Enable app start synchronization
+  useAppStartSync();
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;

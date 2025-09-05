@@ -100,7 +100,8 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   };
 
   const handleRefresh = async () => {
-    await refetch();
+    console.log('🔄 تحديث يدوي للفواتير مع مزامنة API');
+    await refetch(); // This now includes smart sync
   };
   
   const handleTimeFilterChange = async (newFilter) => {

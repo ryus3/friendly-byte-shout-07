@@ -1,27 +1,62 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import * as AlWaseetAPI from '@/lib/alwaseet-api';
 
 /**
  * هوك محسن لإدارة فواتير الموظفين مع عرض البيانات الصحيحة للمديرين
  */
 export const useEmployeeInvoices = (employeeId) => {
+  const { token, isLoggedIn, activePartner } = useAlWaseet();
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastSync, setLastSync] = useLocalStorage(`invoices-sync-${employeeId}`, null);
+  const [lastAutoSync, setLastAutoSync] = useLocalStorage('invoices-auto-sync', null);
+  const [syncSettings] = useLocalStorage('delivery-invoice-sync-settings', {
+    enabled: true,
+    frequency: 'daily', // daily, manual
+    dailyTime: '09:00'
+  });
   
+  // Smart sync function - checks API when needed, fallback to DB
+  const smartSync = async () => {
+    if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
+    
+    try {
+      // Sync only if needed (no frequent polling)
+      const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+      
+      // Persist to database
+      if (recentInvoices?.length > 0) {
+        await supabase.rpc('upsert_alwaseet_invoice_list', {
+          p_invoices: recentInvoices
+        });
+        console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
+        setLastAutoSync(Date.now());
+      }
+    } catch (error) {
+      console.warn('⚠️ Smart sync failed:', error.message);
+    }
+  };
+
   // جلب الفواتير مع نظام محسن للمديرين والموظفين
-  const fetchInvoices = async (forceRefresh = false) => {
+  const fetchInvoices = async (forceRefresh = false, triggerSync = false) => {
     if (!employeeId || employeeId === 'all') {
       setInvoices([]);
       return;
     }
 
-    // التحقق من الحاجة للمزامنة (كل 2 دقائق للفواتير الحية)
+    // Trigger smart sync if requested (entry to tab or manual refresh)
+    if (triggerSync) {
+      await smartSync();
+    }
+
+    // Smart caching - use DB data, sync when needed
     const now = Date.now();
-    const SYNC_INTERVAL = 2 * 60 * 1000; // 2 دقائق
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes cache
     
-    if (!forceRefresh && lastSync && (now - lastSync) < SYNC_INTERVAL) {
+    if (!forceRefresh && lastSync && (now - lastSync) < CACHE_DURATION) {
       console.log('🔄 استخدام البيانات المحفوظة محلياً');
       return;
     }
@@ -117,13 +152,44 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // تحميل تلقائي عند تغيير الموظف - فوري
+  // Auto-load on tab entry with intelligent sync
   useEffect(() => {
     if (employeeId && employeeId !== 'all') {
       console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
-      fetchInvoices(true); // تحميل فوري مع تجاهل Cache
+      fetchInvoices(true, true); // تحميل مع مزامنة ذكية
     }
   }, [employeeId]);
+
+  // Scheduled daily sync based on settings
+  useEffect(() => {
+    if (!syncSettings.enabled || syncSettings.frequency !== 'daily') return;
+    
+    const checkDailySync = () => {
+      const now = new Date();
+      const [hour, minute] = syncSettings.dailyTime.split(':');
+      const syncTime = new Date();
+      syncTime.setHours(parseInt(hour), parseInt(minute), 0, 0);
+      
+      // Check if it's sync time and we haven't synced today
+      const lastSyncDate = lastAutoSync ? new Date(lastAutoSync).toDateString() : null;
+      const today = now.toDateString();
+      
+      if (
+        now >= syncTime && 
+        lastSyncDate !== today &&
+        Math.abs(now - syncTime) < 60000 // Within 1 minute of sync time
+      ) {
+        console.log('🕘 تشغيل المزامنة اليومية المجدولة');
+        smartSync();
+      }
+    };
+
+    // Check every minute for scheduled sync
+    const syncInterval = setInterval(checkDailySync, 60000);
+    checkDailySync(); // Check immediately
+
+    return () => clearInterval(syncInterval);
+  }, [syncSettings, lastAutoSync, token]);
 
   // إحصائيات الفواتير المحسنة مع فلترة زمنية
   const getFilteredStats = (filteredInvoices) => {
@@ -151,7 +217,10 @@ export const useEmployeeInvoices = (employeeId) => {
     loading,
     stats,
     getFilteredStats, // إضافة دالة لحساب إحصائيات مفلترة
-    refetch: () => fetchInvoices(true),
-    forceRefresh: () => fetchInvoices(true)
+    refetch: () => fetchInvoices(true, true), // Force refresh with sync
+    forceRefresh: () => fetchInvoices(true, true),
+    smartSync, // Expose smart sync for manual trigger
+    lastAutoSync,
+    syncSettings
   };
 };

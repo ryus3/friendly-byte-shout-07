@@ -127,18 +127,17 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoices]);
 
-  // Setup real-time listeners for automatic updates
+  // Setup real-time listeners for automatic updates (remove frequent polling)
   useEffect(() => {
     if (!isLoggedIn || activePartner !== 'alwaseet') return;
 
-    // Listen for invoice updates
+    // Listen for invoice updates via custom events only
     const handleInvoiceReceived = (event) => {
       console.log('Invoice received notification:', event.detail);
       autoSyncReceivedInvoices();
       fetchInvoices();
     };
 
-    // Listen for invoice updates
     const handleInvoiceUpdated = (event) => {
       console.log('Invoice updated notification:', event.detail);
       fetchInvoices();
@@ -147,20 +146,16 @@ export const useAlWaseetInvoices = () => {
     window.addEventListener('invoiceReceived', handleInvoiceReceived);
     window.addEventListener('invoiceUpdated', handleInvoiceUpdated);
 
-    // Auto-refresh every 30 seconds
-    const autoRefreshInterval = setInterval(() => {
-      fetchInvoices();
-      autoSyncReceivedInvoices();
-    }, 30000);
+    // Remove the frequent auto-refresh interval
+    // Manual sync will be triggered by user actions or scheduled sync
 
     return () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);
       window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
-      clearInterval(autoRefreshInterval);
     };
   }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
-  // Fetch orders for a specific invoice with fallback to database
+  // Fetch orders for a specific invoice with improved user permissions and external_id support
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
     if (!invoiceId) return null;
 
@@ -183,6 +178,7 @@ export const useAlWaseetInvoices = () => {
       // Fallback to database if API failed or no token
       if (!invoiceData?.orders) {
         try {
+          // Use external_id for database lookup instead of internal id
           const { data: dbOrders, error: dbError } = await supabase
             .from('delivery_invoice_orders')
             .select(`
@@ -202,7 +198,17 @@ export const useAlWaseetInvoices = () => {
                 created_by
               )
             `)
-            .eq('invoice_id', invoiceId);
+            .in('invoice_id', [
+              invoiceId, 
+              // Try to find by external_id in case invoiceId is external_id
+              ...(await supabase
+                .from('delivery_invoices')
+                .select('id')
+                .eq('external_id', invoiceId)
+                .then(result => result.data?.map(inv => inv.id) || [])
+                .catch(() => [])
+              )
+            ]);
 
           if (dbError) throw dbError;
 
