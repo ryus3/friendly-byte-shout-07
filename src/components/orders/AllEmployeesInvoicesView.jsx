@@ -25,7 +25,7 @@ const AllEmployeesInvoicesView = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [lastSync, setLastSync] = useState(null);
 
-  // جلب جميع فواتير الموظفين
+  // جلب جميع فواتير الموظفين مع مزامنة محسنة
   const fetchAllEmployeesInvoices = async (forceSync = false) => {
     setLoading(true);
     try {
@@ -43,30 +43,55 @@ const AllEmployeesInvoicesView = () => {
 
       setEmployees(employeesData || []);
 
-      if (forceSync) {
+      // مزامنة من API قبل التنظيف للحصول على أحدث الفواتير
+      if (forceSync && token && isLoggedIn) {
         try {
-          // تنظيف للاحتفاظ بآخر 10 فواتير فقط لكل موظف
-          await supabase.rpc('cleanup_delivery_invoices_keep_latest', { p_keep_count: 10 });
-          console.log('✅ تنظيف الفواتير: الاحتفاظ بآخر 10 لكل موظف');
+          console.log('🔄 مزامنة أحدث الفواتير من API...');
+          const latestInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+          
+          if (latestInvoices?.length > 0) {
+            // حفظ أحدث الفواتير بالموظف المناسب
+            const { error: upsertError } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+              p_invoices: latestInvoices
+            });
+            
+            if (upsertError) {
+              console.warn('خطأ في مزامنة الفواتير:', upsertError.message);
+            } else {
+              console.log('✅ تم مزامنة', latestInvoices.length, 'فاتورة من API');
+            }
+          }
+          
+          // تنظيف الفواتير القديمة مع الاحتفاظ بالحديثة (آخر 7 أيام + آخر 10 لكل موظف)
+          const { error: cleanupError } = await supabase.rpc('cleanup_delivery_invoices_keep_latest', { 
+            p_keep_count: 15 // زيادة الاحتفاظ إلى 15 فاتورة لكل موظف
+          });
+          
+          if (cleanupError) {
+            console.warn('تحذير أثناء التنظيف:', cleanupError.message);
+          } else {
+            console.log('✅ تنظيف الفواتير: الاحتفاظ بآخر 15 لكل موظف');
+          }
         } catch (apiError) {
-          console.warn('تحذير أثناء التنظيف:', apiError.message);
+          console.warn('تحذير أثناء المزامنة:', apiError.message);
         }
       }
 
-      // جلب جميع الفواتير من قاعدة البيانات مع استبعاد المدير
+      // جلب جميع الفواتير من قاعدة البيانات
       const { data: invoicesData, error: invError } = await supabase
         .from('delivery_invoices')
         .select('*')
         .eq('partner', 'alwaseet')
+        .gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()) // آخر 3 أشهر
         .order('issued_at', { ascending: false })
-        .limit(100); // آخر 100 فاتورة لضمان ظهور الأحدث
+        .limit(200); // زيادة الحد لضمان عدم فقدان الفواتير
 
       if (invError) {
         console.error('خطأ في جلب الفواتير:', invError);
         return;
       }
 
-      // ربط الفواتير بالموظفين
+      // ربط الفواتير بالموظفين مع معلومات مفصلة
       const invoicesWithEmployees = (invoicesData || [])
         .map(invoice => {
           const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
@@ -75,7 +100,22 @@ const AllEmployeesInvoicesView = () => {
             employee_name: employee?.full_name || employee?.username || 'غير محدد',
             employee_code: employee?.employee_code || null
           };
+        })
+        .filter(invoice => {
+          // استبعاد فواتير المدير فقط
+          return invoice.owner_user_id !== '91484496-b887-44f7-9e5d-be9db5567604';
         });
+
+      console.log('📊 معلومات الفواتير المحملة:', {
+        totalFromDB: invoicesData?.length || 0,
+        afterEmployeeFilter: invoicesWithEmployees.length,
+        sampleInvoices: invoicesWithEmployees.slice(0, 3).map(inv => ({
+          id: inv.external_id,
+          employee: inv.employee_name,
+          amount: inv.amount,
+          issued_at: inv.issued_at
+        }))
+      });
 
       setAllInvoices(invoicesWithEmployees);
       setLastSync(new Date().toISOString());
@@ -87,15 +127,23 @@ const AllEmployeesInvoicesView = () => {
     }
   };
 
-  // تأثير التحميل الأولي مع مزامنة تلقائية
+  // تأثير التحميل الأولي مع مزامنة تلقائية ومزامنة دورية
   useEffect(() => {
     fetchAllEmployeesInvoices(true); // مع مزامنة فورية
-  }, []);
+    
+    // مزامنة تلقائية كل 30 دقيقة للحصول على أحدث الفواتير
+    const syncInterval = setInterval(() => {
+      console.log('🔄 مزامنة دورية تلقائية...');
+      fetchAllEmployeesInvoices(true);
+    }, 30 * 60 * 1000); // 30 دقيقة
+    
+    return () => clearInterval(syncInterval);
+  }, [token, isLoggedIn]);
 
-  // فلترة الفواتير مع الفترة الزمنية
+  // فلترة الفواتير مع الفترة الزمنية (محسن)
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // استبعاد فواتير المدير فقط عند اختيار "جميع الموظفين"
+      // المدير يرى جميع فواتير الموظفين (استبعاد فواتيره الشخصية فقط)
       if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
         return false;
       }
