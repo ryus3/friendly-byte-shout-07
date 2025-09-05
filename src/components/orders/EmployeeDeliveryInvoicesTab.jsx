@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useEmployeeInvoices } from '@/hooks/useEmployeeInvoices';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { supabase } from '@/lib/customSupabaseClient';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
@@ -112,6 +113,46 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const handleCustomDateRangeChange = (dateRange) => {
     setCustomDateRange(dateRange);
   };
+
+  // Real-time subscription for automatic invoice updates
+  useEffect(() => {
+    if (!employeeId || employeeId === 'all') return;
+
+    const channel = supabase
+      .channel('employee-invoices-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'delivery_invoices',
+          filter: `owner_user_id=eq.${employeeId}`
+        },
+        (payload) => {
+          console.log('📡 Real-time invoice update:', payload);
+          // Refresh invoices when changes detected
+          refetch();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'delivery_invoice_orders'
+        },
+        (payload) => {
+          console.log('📡 Real-time invoice orders update:', payload);
+          // Refresh when invoice orders change
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [employeeId, refetch]);
 
   // إذا لم يتم تحديد موظف
   if (!employeeId || employeeId === 'all') {
@@ -311,7 +352,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                 disabled={loading}
                 size="sm"
                 variant="outline"
-                className="px-2 py-1 h-7 text-xs font-medium gap-1 hover:bg-primary hover:text-primary-foreground border-primary/30 transition-all duration-200"
+                className="px-3 py-2 h-8 text-sm font-medium gap-2 hover:bg-primary hover:text-primary-foreground border-primary/40 hover:border-primary transition-all duration-300 hover:shadow-md"
               >
                 {loading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />

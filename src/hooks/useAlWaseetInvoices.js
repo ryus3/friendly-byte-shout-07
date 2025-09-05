@@ -160,16 +160,82 @@ export const useAlWaseetInvoices = () => {
     };
   }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
-  // Fetch orders for a specific invoice
+  // Fetch orders for a specific invoice with fallback to database
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
-    if (!token || !invoiceId) return null;
+    if (!invoiceId) return null;
 
     setLoading(true);
     try {
-      const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+      let invoiceData = null;
+      let dataSource = 'database'; // Track data source
+
+      // First try API if token is available
+      if (token) {
+        try {
+          invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+          dataSource = 'api';
+          console.log('✅ Fetched invoice orders from API:', invoiceData?.orders?.length || 0);
+        } catch (apiError) {
+          console.warn('⚠️ API access failed, falling back to database:', apiError.message);
+        }
+      }
+
+      // Fallback to database if API failed or no token
+      if (!invoiceData?.orders) {
+        try {
+          const { data: dbOrders, error: dbError } = await supabase
+            .from('delivery_invoice_orders')
+            .select(`
+              id,
+              external_order_id,
+              raw,
+              invoice_id,
+              order_id,
+              orders (
+                id,
+                order_number,
+                tracking_number,
+                customer_name,
+                customer_phone,
+                final_amount,
+                status,
+                created_by
+              )
+            `)
+            .eq('invoice_id', invoiceId);
+
+          if (dbError) throw dbError;
+
+          // Transform database data to match API format
+          const orders = (dbOrders || []).map(dio => {
+            const rawData = dio.raw || {};
+            return {
+              id: dio.external_order_id || rawData.id,
+              client_name: rawData.client_name || dio.orders?.customer_name || 'غير محدد',
+              client_mobile: rawData.client_mobile || dio.orders?.customer_phone || '',
+              city_name: rawData.city_name || 'غير محدد',
+              price: rawData.price || dio.orders?.final_amount || 0,
+              delivery_price: rawData.delivery_price || 0,
+              local_order: dio.orders,
+              ...rawData
+            };
+          });
+
+          invoiceData = { orders };
+          console.log('📊 Fetched invoice orders from database:', orders.length);
+        } catch (dbError) {
+          console.error('❌ Database fallback failed:', dbError);
+          throw new Error('تعذر جلب بيانات الفاتورة من قاعدة البيانات');
+        }
+      }
+
       setInvoiceOrders(invoiceData?.orders || []);
-      setSelectedInvoice(invoiceData?.invoice?.[0] || null);
-      return invoiceData;
+      setSelectedInvoice({ 
+        ...(invoiceData?.invoice?.[0] || null),
+        dataSource // Add data source info
+      });
+      
+      return { ...invoiceData, dataSource };
     } catch (error) {
       console.error('Error fetching invoice orders:', error);
       toast({

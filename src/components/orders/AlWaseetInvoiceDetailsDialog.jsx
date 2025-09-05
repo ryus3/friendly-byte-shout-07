@@ -20,7 +20,10 @@ import {
   CheckCircle,
   Eye,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Database,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -42,6 +45,7 @@ const AlWaseetInvoiceDetailsDialog = ({
   const [linkedOrders, setLinkedOrders] = useState([]);
   const [loadingLinked, setLoadingLinked] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [dataSource, setDataSource] = useState('database');
 
   useEffect(() => {
     if (isOpen && invoice) {
@@ -49,7 +53,11 @@ const AlWaseetInvoiceDetailsDialog = ({
       console.log('🔍 فتح تفاصيل الفاتورة:', invoiceId);
       
       if (invoiceId) {
-        fetchInvoiceOrders(invoiceId);
+        fetchInvoiceOrders(invoiceId).then(result => {
+          if (result?.dataSource) {
+            setDataSource(result.dataSource);
+          }
+        });
         loadLinkedOrders();
         // Auto-sync invoice data to database when opening details
         handleSyncInvoice(true);
@@ -186,7 +194,22 @@ const AlWaseetInvoiceDetailsDialog = ({
             {/* Al-Waseet Orders */}
             <Card dir="rtl">
               <CardHeader>
-                <CardTitle className="text-right">طلبات شركة التوصيل في هذه الفاتورة</CardTitle>
+                <CardTitle className="flex items-center justify-between text-right">
+                  <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="gap-1">
+                    {dataSource === 'api' ? (
+                      <>
+                        <Wifi className="h-3 w-3" />
+                        مباشر من الوسيط
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-3 w-3" />
+                        من قاعدة البيانات
+                      </>
+                    )}
+                  </Badge>
+                  <span>طلبات شركة التوصيل في هذه الفاتورة</span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {loading ? (
