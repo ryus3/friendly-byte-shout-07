@@ -65,7 +65,7 @@ const InvoiceCard = ({ invoice, onView }) => {
   const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
   const amount = parseFloat(invoice.amount || invoice.merchant_price) || 0;
   const ordersCount = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
-  const linkedOrdersCount = invoice.linked_orders?.length || invoice.delivery_invoice_orders?.length || 0;
+  const calculatedLinkedOrders = invoice.linked_orders?.length || invoice.delivery_invoice_orders?.length || 0;
   
   // تحديث عدد الطلبات المربوطة من البيانات المحملة
   useEffect(() => {
