@@ -28,6 +28,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+  const [activeAccount, setActiveAccount] = useLocalStorage('active_delivery_account', null);
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
   const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
 
@@ -311,6 +312,7 @@ export const AlWaseetProvider = ({ children }) => {
       setWaseetUser(partnerData);
       setIsLoggedIn(true);
       setActivePartner(partner);
+      setActiveAccount({ username, partner }); // حفظ بيانات الحساب النشط
       toast({ title: "نجاح", description: `تم تسجيل الدخول بنجاح في ${deliveryPartners[partner].name}.` });
       return { success: true };
     } catch (error) {
@@ -335,6 +337,7 @@ export const AlWaseetProvider = ({ children }) => {
     setIsLoggedIn(false);
     setToken(null);
     setWaseetUser(null);
+    setActiveAccount(null); // مسح بيانات الحساب النشط
     setCities([]);
     setRegions([]);
     setPackageSizes([]);
@@ -1251,9 +1254,27 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-  // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية)
+  // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية مع فصل الحسابات)
   const canAutoDeleteOrder = (order) => {
     if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
+      return false;
+    }
+    
+    // التحقق من ملكية الطلب والحساب النشط
+    if (!user || order.created_by !== user.id) {
+      console.log(`🚫 الطلب ${order.order_number} لا ينتمي للمستخدم الحالي - لن يُحذف`);
+      return false;
+    }
+    
+    // التحقق من الحساب النشط
+    if (!activeAccount) {
+      console.log(`🚫 لا يوجد حساب نشط - لن يُحذف الطلب ${order.order_number}`);
+      return false;
+    }
+    
+    // التحقق من ربط الطلب بالحساب النشط
+    if (order.delivery_account_code && order.delivery_account_code !== activeAccount.username) {
+      console.log(`🚫 الطلب ${order.order_number} مرتبط بحساب آخر (${order.delivery_account_code}) - لن يُحذف`);
       return false;
     }
     
@@ -1344,48 +1365,44 @@ export const AlWaseetProvider = ({ children }) => {
     }
   };
 
-  // دالة الحذف الفردي
+  // دالة الحذف الفردي الآمن (أرشفة بدلاً من الحذف)
   const performAutoDelete = async (order) => {
     try {
-      console.log(`🗑️ بدء الحذف التلقائي للطلب ${order.id}`);
+      console.log(`🗑️ بدء الأرشفة التلقائية للطلب ${order.id} (الحساب: ${activeAccount?.username})`);
       
-      // تحرير المخزون المحجوز
-      if (order.order_items && order.order_items.length > 0) {
-        for (const item of order.order_items) {
-          try {
-            await supabase.rpc('release_stock_item', {
-              p_product_id: item.product_id,
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity
-            });
-            console.log(`✅ تم تحرير ${item.quantity} من المنتج ${item.product_id}`);
-          } catch (releaseErr) {
-            console.warn(`⚠️ فشل في تحرير المخزون للعنصر:`, releaseErr);
-          }
-        }
+      // التحقق الإضافي من الأمان
+      if (!user || order.created_by !== user.id || !activeAccount) {
+        console.error('❌ فشل في التحقق الأمني قبل الأرشفة');
+        return { success: false, error: 'غير مصرح بالأرشفة' };
       }
-
-      // حذف الطلب من قاعدة البيانات
-      const { error: deleteErr } = await supabase
+      
+      // أرشفة الطلب بدلاً من الحذف النهائي
+      const { error: archiveErr } = await supabase
         .from('orders')
-        .delete()
-        .eq('id', order.id);
+        .update({
+          isarchived: true,
+          archived_reason: `غير موجود في حساب ${activeAccount.username}`,
+          archived_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id)
+        .eq('created_by', user.id); // تأكيد إضافي للأمان
 
-      if (deleteErr) {
-        console.error('❌ فشل في حذف الطلب:', deleteErr);
-        return { success: false, error: deleteErr };
+      if (archiveErr) {
+        console.error('❌ فشل في أرشفة الطلب:', archiveErr);
+        return { success: false, error: archiveErr };
       }
 
-      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً`);
+      console.log(`✅ تم أرشفة الطلب ${order.id} تلقائياً (الحساب: ${activeAccount.username})`);
       
       return { 
         success: true, 
         autoDeleted: true,
-        message: `تم حذف الطلب ${order.tracking_number} تلقائياً لأنه محذوف من شركة التوصيل`
+        message: `تم أرشفة الطلب ${order.tracking_number} لأنه غير موجود في حساب ${activeAccount.username}`
       };
       
     } catch (error) {
-      console.error('❌ خطأ في الحذف التلقائي:', error);
+      console.error('❌ خطأ في الأرشفة التلقائية:', error);
       return { success: false, error };
     }
   };
@@ -1600,20 +1617,23 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         const result = await AlWaseetAPI.createAlWaseetOrder(orderData, token);
 
-        // New: إذا أعاد الوسيط معرف الطلب، خزنه في طلبنا المحلي المطابق لـ tracking_number
-        if (result && result.id && orderData?.tracking_number) {
+        // إذا أعاد الوسيط معرف الطلب، خزنه في طلبنا المحلي مع ربطه بالحساب النشط
+        if (result && result.id && orderData?.tracking_number && activeAccount) {
           const { error: upErr } = await supabase
             .from('orders')
             .update({
               delivery_partner_order_id: String(result.id),
               delivery_partner: 'alwaseet',
+              delivery_account_code: activeAccount.username, // ربط الطلب بالحساب النشط
               updated_at: new Date().toISOString(),
             })
-            .eq('tracking_number', String(orderData.tracking_number));
+            .eq('tracking_number', String(orderData.tracking_number))
+            .eq('created_by', user?.id); // تأكيد إضافي للأمان
+          
           if (upErr) {
             console.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
           } else {
-            console.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي:', result.id);
+            console.log(`🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي: ${result.id} (الحساب: ${activeAccount.username})`);
           }
         }
 
@@ -1936,6 +1956,8 @@ export const AlWaseetProvider = ({ children }) => {
     logout,
     activePartner,
     setActivePartner,
+    activeAccount, // الحساب النشط
+    setActiveAccount,
     deliveryPartners,
     syncOrders,
     syncInterval,

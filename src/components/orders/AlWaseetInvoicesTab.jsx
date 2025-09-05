@@ -26,7 +26,7 @@ import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
 const AlWaseetInvoicesTab = () => {
-  const { isLoggedIn, activePartner } = useAlWaseet();
+  const { isLoggedIn, activePartner, activeAccount } = useAlWaseet();
   const { 
     invoices, 
     loading, 
@@ -111,7 +111,24 @@ const AlWaseetInvoicesTab = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Current account info */}
+      {activeAccount && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-green-600 border-green-600">
+                متصل: {activeAccount.username}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                عرض الفواتير والطلبات الخاصة بهذا الحساب فقط
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      <div className="space-y-6">
       {/* Revolutionary Statistics Cards - Equal Dimensions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total Invoices Card - Vibrant Blue */}
@@ -391,6 +408,7 @@ const AlWaseetInvoicesTab = () => {
         onClose={() => setDetailsDialogOpen(false)}
         invoice={selectedInvoice}
       />
+      </div>
     </div>
   );
 };
