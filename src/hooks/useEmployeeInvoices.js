@@ -19,37 +19,45 @@ export const useEmployeeInvoices = (employeeId) => {
     dailyTime: '09:00'
   });
   
-  // Smart sync function محسن للمدير لرؤية فواتير جديدة
+  // Smart sync function with proper owner assignment and pruning
   const smartSync = async () => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
     
     try {
-      console.log('🔄 مزامنة ذكية لفواتير الموظف:', employeeId);
+      console.log('🔄 Employee Invoices: Starting smart sync for employee:', employeeId);
+      setLoading(true);
       
-      // جلب أحدث الفواتير من API
-      const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      
-      // حفظ الفواتير في قاعدة البيانات مع owner_user_id صحيح
-      if (recentInvoices?.length > 0) {
-        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-          p_invoices: recentInvoices
-        });
+      const invoices = await AlWaseetAPI.getMerchantInvoices(token);
+      if (invoices?.data?.length > 0) {
+        // Keep only latest 5 invoices
+        const latestInvoices = invoices.data
+          .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+          .slice(0, 5);
+        
+        // Use the enhanced upsert function for proper owner assignment
+        const { data: result, error } = await supabase
+          .rpc('upsert_alwaseet_invoice_list_for_user', { 
+            p_invoices: latestInvoices, 
+            p_employee_id: employeeId 
+          });
         
         if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list:', error.message);
+          console.error('❌ Upsert invoices error:', error);
         } else {
-          console.log('✅ مزامنة الفواتير من API:', recentInvoices.length);
+          console.log('✅ Invoices synced for employee:', employeeId, result);
           setLastAutoSync(Date.now());
           
-          // للمدير: تشغيل مزامنة إضافية لضمان الربط الصحيح
-          if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
-            console.log('👑 مزامنة إضافية للمدير');
-            await supabase.rpc('sync_user_scoped_received_invoices');
-          }
+          // Prune old invoices to keep only last 5
+          await supabase.rpc('prune_delivery_invoices_for_user', {
+            p_employee_id: employeeId,
+            p_keep_count: 5
+          });
         }
       }
     } catch (error) {
-      console.warn('⚠️ Smart sync failed:', error.message);
+      console.error('❌ Smart sync failed:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,7 +86,16 @@ export const useEmployeeInvoices = (employeeId) => {
     try {
       console.log('🔍 جلب فواتير الموظف:', employeeId);
       
-      // استعلام محسن للمديرين لرؤية جميع الفواتير
+      // Check if user is manager or has admin permissions
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', employeeId)
+        .single();
+
+      const isManager = employeeId === '91484496-b887-44f7-9e5d-be9db5567604' || 
+                       userProfile?.status === 'admin';
+
       let query = supabase
         .from('delivery_invoices')
         .select(`
@@ -112,16 +129,19 @@ export const useEmployeeInvoices = (employeeId) => {
           )
         `)
         .eq('partner', 'alwaseet')
-        .gte('issued_at', new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()) // آخر 6 أشهر
-        .order('issued_at', { ascending: false })
-        .limit(50); // أحدث 50 فاتورة
+        .order('created_at', { ascending: false });
 
-      // المدير يرى جميع الفواتير بدون قيود على owner_user_id
-      if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
-        // للموظفين: فلترة بـ owner_user_id أو الفواتير القديمة
-        query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
+      if (isManager) {
+        console.log('👑 Manager view: Showing latest 5 invoices per employee');
+        // Managers see latest 5 invoices per employee (all employees)
+        query = query.limit(50); // Reasonable limit for all employees
+      } else {
+        console.log('👤 Employee view: Showing latest 5 invoices for employee:', employeeId);
+        // Employees see only their latest 5 invoices
+        query = query
+          .eq('owner_user_id', employeeId)
+          .limit(5);
       }
-      // للمدير: لا توجد فلترة إضافية - يرى جميع الفواتير
 
       const { data: employeeInvoices, error } = await query;
 

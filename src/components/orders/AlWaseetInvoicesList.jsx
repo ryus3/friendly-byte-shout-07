@@ -141,7 +141,7 @@ const InvoiceCard = ({ invoice, onView }) => {
               </Badge>
               {(dbStatus === 'saved' || ordersCount > 0 || linkedOrdersCount > 0) && (
                 <Badge variant="outline" className="text-xs">
-                  {linkedOrdersCount || ordersCount} طلب
+                  {linkedOrdersCount || ordersCount}
                 </Badge>
               )}
             </div>

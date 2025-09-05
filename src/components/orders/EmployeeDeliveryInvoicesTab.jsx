@@ -32,7 +32,8 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     loading, 
     stats, 
     getFilteredStats,
-    refetch 
+    refetch,
+    smartSync
   } = useEmployeeInvoices(employeeId);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -114,6 +115,15 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const handleCustomDateRangeChange = (dateRange) => {
     setCustomDateRange(dateRange);
   };
+
+  // Smart sync trigger when employee changes
+  useEffect(() => {
+    if (!employeeId || employeeId === 'all') return;
+    
+    console.log('🔄 Employee changed, triggering smart sync for:', employeeId);
+    // Trigger smart sync immediately when employee changes
+    smartSync();
+  }, [employeeId, smartSync]);
 
   // Real-time subscription for automatic invoice updates
   useEffect(() => {
