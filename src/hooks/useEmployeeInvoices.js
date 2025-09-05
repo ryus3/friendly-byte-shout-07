@@ -56,28 +56,27 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // جلب الفواتير مع نظام محسن للمديرين والموظفين
+  // جلب الفواتير من النظام الموحد فقط (قاعدة البيانات)
   const fetchInvoices = async (forceRefresh = false, triggerSync = false) => {
     if (!employeeId) {
       setInvoices([]);
       return;
     }
     
-    // للمدير عرض "الكل" - جلب جميع فواتير الموظفين
+    // للمدير عرض "الكل" - سيتم التعامل مع هذا في component منفصل
     if (employeeId === 'all') {
-      // سيتم التعامل مع هذا في component منفصل
       setInvoices([]);
       return;
     }
 
-    // Trigger smart sync if requested (entry to tab or manual refresh)
+    // مزامنة ذكية عند الطلب
     if (triggerSync) {
       await smartSync();
     }
 
-    // Smart caching - use DB data, sync when needed
+    // استخدام التخزين المؤقت الذكي
     const now = Date.now();
-    const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة للمزامنة السريعة
+    const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
     
     if (!forceRefresh && lastSync && (now - lastSync) < CACHE_DURATION) {
       console.log('🔄 استخدام البيانات المحفوظة محلياً');
@@ -86,9 +85,9 @@ export const useEmployeeInvoices = (employeeId) => {
 
     setLoading(true);
     try {
-      console.log('🔍 جلب فواتير الموظف:', employeeId);
+      console.log('🔍 جلب فواتير من النظام الموحد للموظف:', employeeId);
       
-      // استعلام محسن للمديرين لرؤية جميع الفواتير
+      // النظام الموحد: جلب من قاعدة البيانات فقط
       let query = supabase
         .from('delivery_invoices')
         .select(`
@@ -122,18 +121,52 @@ export const useEmployeeInvoices = (employeeId) => {
           )
         `)
         .eq('partner', 'alwaseet')
-        .gte('issued_at', new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()) // آخر 6 أشهر
         .order('issued_at', { ascending: false })
-        .limit(50); // أحدث 50 فاتورة
+        .limit(50);
 
-      // المدير يرى جميع الفواتير بدون قيود على owner_user_id
+      // فلترة حسب المستخدم (موظفين يرون فواتيرهم، المدير يرى الكل)
       if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
-        // للموظفين: فلترة بـ owner_user_id أو الفواتير القديمة
-        query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
+        // للموظفين: فواتيرهم فقط
+        query = query.eq('owner_user_id', employeeId);
       }
-      // للمدير: لا توجد فلترة إضافية - يرى جميع الفواتير
+      // للمدير: جميع الفواتير بدون فلترة إضافية
 
       const { data: employeeInvoices, error } = await query;
+
+      if (error) {
+        console.error('خطأ في جلب فواتير الموظف:', error);
+        setInvoices([]);
+      } else {
+        console.log('✅ النظام الموحد: تم جلب', employeeInvoices?.length || 0, 'فاتورة');
+        
+        // معالجة البيانات وحساب العداد الصحيح للطلبات
+        const processedInvoices = (employeeInvoices || []).map(invoice => {
+          const linkedOrders = invoice.delivery_invoice_orders?.filter(dio => 
+            dio.orders && (
+              !employeeId || 
+              employeeId === '91484496-b887-44f7-9e5d-be9db5567604' || 
+              dio.orders.created_by === employeeId
+            )
+          ) || [];
+          
+          return {
+            ...invoice,
+            linked_orders_count: linkedOrders.length,
+            linked_orders: linkedOrders,
+            orders_count: linkedOrders.length || invoice.orders_count || 0
+          };
+        });
+
+        setInvoices(processedInvoices);
+        setLastSync(now);
+      }
+    } catch (err) {
+      console.error('خطأ غير متوقع في جلب الفواتير:', err);
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
       if (error) {
         console.error('خطأ في جلب فواتير الموظف:', error);

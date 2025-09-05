@@ -4142,6 +4142,10 @@ export type Database = {
         Args: { promo_code_param: string }
         Returns: Json
       }
+      verify_invoice_1849184_for_manager: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
