@@ -168,62 +168,6 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-      if (error) {
-        console.error('خطأ في جلب فواتير الموظف:', error);
-        setInvoices([]);
-      } else {
-        console.log('✅ تم جلب الفواتير:', employeeInvoices?.length || 0);
-        
-        // معالجة البيانات وحساب العداد الصحيح للطلبات
-        const processedInvoices = (employeeInvoices || []).map(invoice => {
-          const linkedOrders = invoice.delivery_invoice_orders?.filter(dio => 
-            dio.orders && (
-              !employeeId || 
-              employeeId === '91484496-b887-44f7-9e5d-be9db5567604' || 
-              dio.orders.created_by === employeeId
-            )
-          ) || [];
-          
-          return {
-            ...invoice,
-            linked_orders_count: linkedOrders.length,
-            linked_orders: linkedOrders,
-            // إعادة حساب عدد الطلبات بناءً على الطلبات المربوطة الحقيقية
-            orders_count: linkedOrders.length || invoice.orders_count || 0
-          };
-        });
-
-        // فلترة محسنة - المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط
-        let filteredInvoices = processedInvoices;
-        if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
-          filteredInvoices = processedInvoices.filter(invoice => 
-            invoice.owner_user_id === employeeId ||
-            invoice.owner_user_id === null ||  // الفواتير القديمة بدون مالك
-            (invoice.delivery_invoice_orders && 
-             invoice.delivery_invoice_orders.some(dio => 
-               dio.orders && dio.orders.created_by === employeeId
-             ))
-          );
-        } else {
-          // المدير يرى جميع الفواتير بما في ذلك الجديدة
-          filteredInvoices = processedInvoices;
-          console.log('👑 المدير يرى جميع الفواتير:', processedInvoices.length, {
-            withOwner: processedInvoices.filter(inv => inv.owner_user_id).length,
-            withoutOwner: processedInvoices.filter(inv => !inv.owner_user_id).length
-          });
-        }
-
-        setInvoices(filteredInvoices);
-        setLastSync(now);
-      }
-    } catch (err) {
-      console.error('خطأ غير متوقع في جلب الفواتير:', err);
-      setInvoices([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // تحميل تلقائي ومحسن للمديرين مع تجنب التحميل المتكرر
   useEffect(() => {
     if (employeeId && employeeId !== 'all') {
