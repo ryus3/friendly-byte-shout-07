@@ -227,7 +227,7 @@ const EmployeeFollowUpPage = () => {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(profitsChannel);
     };
-  }, [refreshOrders, refreshProfits]);
+  }, [refreshOrders]);
 
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
