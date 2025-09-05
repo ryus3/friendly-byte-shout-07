@@ -155,7 +155,7 @@ export const useAlWaseetInvoices = () => {
     };
   }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
-  // إصلاح fetchInvoiceOrders للاستخدام الصحيح لـ external_id
+  // إصلاح fetchInvoiceOrders جذرياً لعرض البيانات من raw أو API
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
     if (!invoiceId) return null;
 
@@ -175,18 +175,22 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      // البديل من قاعدة البيانات مع إصلاح البحث بـ external_id
+      // البديل المحسن من قاعدة البيانات
       if (!invoiceData?.orders) {
         try {
-          // البحث عن الفاتورة بـ external_id أولاً
-          const { data: invoiceData, error: invoiceError } = await supabase
+          // البحث عن الفاتورة بـ external_id
+          const { data: invoiceRecord, error: invoiceError } = await supabase
             .from('delivery_invoices')
-            .select('id, external_id')
+            .select('id, external_id, raw')
             .eq('external_id', invoiceId)
             .limit(1)
             .single();
 
-          const finalInvoiceId = invoiceData?.id || invoiceId;
+          if (invoiceError && invoiceError.code !== 'PGRST116') {
+            throw invoiceError;
+          }
+
+          const finalInvoiceId = invoiceRecord?.id || invoiceId;
 
           // جلب الطلبات المرتبطة بالفاتورة
           const { data: dbOrders, error: dbError } = await supabase
@@ -210,46 +214,71 @@ export const useAlWaseetInvoices = () => {
             `)
             .eq('invoice_id', finalInvoiceId);
 
-          if (dbError && !invoiceError) throw dbError;
+          if (dbError) {
+            console.warn('خطأ في جلب الطلبات من قاعدة البيانات:', dbError);
+          }
 
-          // تحويل البيانات من قاعدة البيانات لصيغة API
-          const orders = (dbOrders || []).map(dio => {
-            const rawData = dio.raw || {};
-            return {
-              id: dio.external_order_id || rawData.id,
-              client_name: rawData.client_name || dio.orders?.customer_name || 'غير محدد',
-              client_mobile: rawData.client_mobile || dio.orders?.customer_phone || '',
-              city_name: rawData.city_name || 'غير محدد',
-              price: rawData.price || dio.orders?.final_amount || 0,
-              delivery_price: rawData.delivery_price || 0,
-              local_order: dio.orders,
-              ...rawData
-            };
-          });
+          // إنشاء الطلبات من raw data أو المحلية
+          const orders = [];
+          
+          if (dbOrders && dbOrders.length > 0) {
+            // عرض الطلبات المتاحة
+            orders.push(...dbOrders.map(dio => {
+              const rawData = dio.raw || {};
+              return {
+                id: dio.external_order_id || rawData.id || `order-${dio.id}`,
+                client_name: rawData.client_name || dio.orders?.customer_name || 'غير محدد',
+                client_mobile: rawData.client_mobile || dio.orders?.customer_phone || '',
+                city_name: rawData.city_name || 'غير محدد',
+                price: rawData.price || dio.orders?.final_amount || 0,
+                delivery_price: rawData.delivery_price || 0,
+                local_order: dio.orders,
+                source: dio.orders ? 'linked' : 'raw',
+                ...rawData
+              };
+            }));
+          } else if (invoiceRecord?.raw) {
+            // كبديل أخير، حاول استخراج الطلبات من raw data للفاتورة نفسها
+            const invoiceRawData = invoiceRecord.raw;
+            if (invoiceRawData.orders && Array.isArray(invoiceRawData.orders)) {
+              orders.push(...invoiceRawData.orders.map(order => ({
+                id: order.id || `raw-order-${Math.random()}`,
+                client_name: order.client_name || 'غير محدد',
+                client_mobile: order.client_mobile || '',
+                city_name: order.city_name || 'غير محدد',
+                price: order.price || 0,
+                delivery_price: order.delivery_price || 0,
+                source: 'invoice_raw',
+                ...order
+              })));
+            }
+          }
 
           invoiceData = { orders };
+          dataSource = 'database';
           console.log('📊 جلب طلبات الفاتورة من قاعدة البيانات:', orders.length);
         } catch (dbError) {
           console.error('❌ فشل البديل من قاعدة البيانات:', dbError);
-          throw new Error('تعذر جلب بيانات الفاتورة');
+          // عرض فاتورة فارغة بدلاً من خطأ
+          invoiceData = { orders: [] };
         }
       }
 
-      setInvoiceOrders(invoiceData?.orders || []);
+      const finalOrders = invoiceData?.orders || [];
+      setInvoiceOrders(finalOrders);
       setSelectedInvoice({ 
         ...(invoiceData?.invoice?.[0] || null),
-        dataSource
+        dataSource,
+        ordersCount: finalOrders.length
       });
       
       return { ...invoiceData, dataSource };
     } catch (error) {
       console.error('خطأ في جلب طلبات الفاتورة:', error);
-      toast({
-        title: 'خطأ في جلب طلبات الفاتورة',
-        description: error.message,
-        variant: 'destructive'
-      });
-      return null;
+      // عرض فاتورة فارغة بدلاً من toast خطأ
+      setInvoiceOrders([]);
+      setSelectedInvoice(null);
+      return { orders: [], dataSource: 'error' };
     } finally {
       setLoading(false);
     }

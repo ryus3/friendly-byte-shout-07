@@ -65,8 +65,8 @@ export const useEmployeeInvoices = (employeeId) => {
     try {
       console.log('🔍 جلب فواتير الموظف:', employeeId);
       
-      // استعلام شامل للفواتير مع ربطها بالطلبات الصحيحة
-      const { data: employeeInvoices, error } = await supabase
+      // استعلام محسن للمديرين لرؤية جميع الفواتير
+      let query = supabase
         .from('delivery_invoices')
         .select(`
           id,
@@ -99,10 +99,16 @@ export const useEmployeeInvoices = (employeeId) => {
           )
         `)
         .eq('partner', 'alwaseet')
-        .or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`)
         .gte('issued_at', new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()) // آخر 6 أشهر
         .order('issued_at', { ascending: false })
         .limit(50); // أحدث 50 فاتورة
+
+      // المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط
+      if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
+        query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
+      }
+
+      const { data: employeeInvoices, error } = await query;
 
       if (error) {
         console.error('خطأ في جلب فواتير الموظف:', error);
