@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText } from 'lucide-react';
@@ -38,6 +39,7 @@ const OrdersPage = () => {
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();
+  const { userUUID } = useUnifiedUserData();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -327,12 +329,12 @@ const OrdersPage = () => {
   // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
   useEffect(() => {
     const fetchEmployeeCode = async () => {
-      if (!user?.user_id || hasPermission('view_all_orders')) return;
+      if (!userUUID || hasPermission('view_all_orders')) return;
       try {
         const { data } = await supabase
           .from('employee_telegram_codes')
           .select('telegram_code')
-          .eq('user_id', user.user_id)
+          .eq('user_id', userUUID)
           .single();
         if (data?.telegram_code) setUserEmployeeCode(String(data.telegram_code).toUpperCase());
       } catch (err) {
@@ -357,14 +359,14 @@ const OrdersPage = () => {
       }
       return orders;
     }
-    return orders.filter(order => order.created_by === user?.user_id);
-  }, [orders, user?.user_id, hasPermission, selectedEmployeeId]);
+    return orders.filter(order => order.created_by === userUUID);
+  }, [orders, userUUID, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
     if (hasPermission('view_all_orders')) return aiOrders;
     const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-    const ids = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(norm);
+    const ids = [userEmployeeCode, user?.employee_code, userUUID, user?.user_id, user?.id].filter(Boolean).map(norm);
     if (ids.length === 0) return [];
     return aiOrders.filter(order => {
       const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;

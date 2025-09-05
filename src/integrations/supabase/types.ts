@@ -3517,6 +3517,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      debug_orders_rls: {
+        Args: { p_user_id?: string }
+        Returns: Json
+      }
       delete_ai_order_safe: {
         Args: { p_order_id: string }
         Returns: Json
