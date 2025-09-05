@@ -1344,47 +1344,6 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
-  // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية)
-  const canAutoDeleteOrder = (order) => {
-    if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
-      return false;
-    }
-    
-    // 🔒 تأمين متقدم: التحقق من ملكية الطلب قبل السماح بالحذف
-    if (!verifyOrderOwnership(order, user)) {
-      logSecurityWarning('auto_delete_attempt', order?.id, user);
-      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
-      return false;
-    }
-    
-    // 🔒 تأمين: التحقق من ملكية الطلب قبل السماح بالحذف
-    if (!canViewData(order?.created_by)) {
-      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
-      return false;
-    }
-    
-    // التحقق من وجود رقم تتبع
-    if (!order?.tracking_number && !order?.qr_id) {
-      return false;
-    }
-    
-    // حماية زمنية: عدم حذف الطلبات الجديدة (أقل من 15 دقيقة)
-    const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAgeForDeletion = 15 * 60 * 1000; // 15 دقيقة
-    if (orderAge < minAgeForDeletion) {
-      console.log(`⏰ الطلب ${order.order_number} جديد جداً (${Math.round(orderAge/60000)} دقيقة) - لن يُحذف`);
-      return false;
-    }
-    
-    // حماية حالة الطلب: فقط الطلبات في حالات معينة
-    const safeStatusesForDeletion = ['pending', 'shipped', 'delivery'];
-    if (!safeStatusesForDeletion.includes(order.status)) {
-      console.log(`🔒 الطلب ${order.order_number} في حالة ${order.status} - لن يُحذف`);
-      return false;
-    }
-    
-    return true;
-  };
 
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
   const performAutoCleanup = async () => {
