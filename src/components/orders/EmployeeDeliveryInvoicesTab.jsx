@@ -32,8 +32,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     loading, 
     stats, 
     getFilteredStats,
-    refetch,
-    smartSync
+    refetch 
   } = useEmployeeInvoices(employeeId);
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,62 +115,37 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     setCustomDateRange(dateRange);
   };
 
-  // Smart sync trigger when employee changes - no dependencies to avoid loops
-  useEffect(() => {
-    if (!employeeId || employeeId === 'all') return;
-    
-    console.log('🔄 Employee changed, triggering smart sync for:', employeeId);
-    // Trigger smart sync immediately when employee changes
-    smartSync();
-  }, [employeeId]); // Only depend on employeeId
-
-  // Refined real-time subscription with cooldown
+  // Real-time subscription for automatic invoice updates
   useEffect(() => {
     if (!employeeId || employeeId === 'all') return;
 
-    let lastRefetch = 0;
-    const REFETCH_COOLDOWN = 3000; // 3 seconds cooldown
-
-    const debouncedRefetch = () => {
-      const now = Date.now();
-      if (now - lastRefetch > REFETCH_COOLDOWN) {
-        lastRefetch = now;
-        console.log('📡 Real-time refetch triggered');
-        refetch();
-      }
-    };
-
-    // Only listen to delivery_invoices for the specific employee or all for managers
     const channel = supabase
       .channel('employee-invoices-realtime')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'delivery_invoices',
-          filter: employeeId === '91484496-b887-44f7-9e5d-be9db5567604' 
-            ? `partner=eq.alwaseet`
-            : `owner_user_id=eq.${employeeId}`
+          filter: `owner_user_id=eq.${employeeId}`
         },
         (payload) => {
-          console.log('📡 New invoice detected:', payload);
-          debouncedRefetch();
+          console.log('📡 Real-time invoice update:', payload);
+          // Refresh invoices when changes detected
+          refetch();
         }
       )
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
-          table: 'delivery_invoices',
-          filter: employeeId === '91484496-b887-44f7-9e5d-be9db5567604' 
-            ? `partner=eq.alwaseet`
-            : `owner_user_id=eq.${employeeId}`
+          table: 'delivery_invoice_orders'
         },
         (payload) => {
-          console.log('📡 Invoice updated:', payload);
-          debouncedRefetch();
+          console.log('📡 Real-time invoice orders update:', payload);
+          // Refresh when invoice orders change
+          refetch();
         }
       )
       .subscribe();
@@ -179,7 +153,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [employeeId]); // Only depend on employeeId
+  }, [employeeId, refetch]);
 
   // إذا لم يتم تحديد موظف
   if (!employeeId || employeeId === 'all') {

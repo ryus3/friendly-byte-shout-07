@@ -139,6 +139,11 @@ const InvoiceCard = ({ invoice, onView }) => {
               <Badge variant={getStatusVariant(invoice.status)}>
                 {isReceived ? 'مُستلمة' : 'معلقة'}
               </Badge>
+              {(dbStatus === 'saved' || ordersCount > 0 || linkedOrdersCount > 0) && (
+                <Badge variant="outline" className="text-xs">
+                  {linkedOrdersCount || ordersCount} طلب
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -154,7 +159,7 @@ const InvoiceCard = ({ invoice, onView }) => {
           <div className="flex items-center justify-start gap-2">
             <Package className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {linkedOrdersCount || ordersCount} مُسلم
+              {linkedOrdersCount || ordersCount} طلب مُسلم
             </span>
           </div>
 

@@ -3851,10 +3851,6 @@ export type Database = {
         }
         Returns: string
       }
-      prune_delivery_invoices_for_user: {
-        Args: { p_employee_id: string; p_keep_count?: number }
-        Returns: Json
-      }
       prune_notifications_retention: {
         Args: { p_keep?: number }
         Returns: number
@@ -4034,10 +4030,6 @@ export type Database = {
       }
       upsert_alwaseet_invoice_list: {
         Args: { p_invoices: Json }
-        Returns: Json
-      }
-      upsert_alwaseet_invoice_list_for_user: {
-        Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
       }
       username_exists: {
