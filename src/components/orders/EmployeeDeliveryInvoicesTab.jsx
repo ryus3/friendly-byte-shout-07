@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { motion } from 'framer-motion';
 import { 
   RefreshCw, 
@@ -14,12 +15,14 @@ import {
   Clock,
   AlertTriangle,
   Calendar,
+  TrendingUp,
   Banknote,
   Receipt,
   User
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
@@ -31,6 +34,10 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [invoices, setInvoices] = useState([]);
+  
+  // Time filter state with localStorage - نفس الفلاتر الزمنية للتوحيد
+  const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
+  const [customDateRange, setCustomDateRange] = useState(null);
 
   // جلب فواتير شركة التوصيل للموظف المحدد
   React.useEffect(() => {
@@ -42,11 +49,50 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
 
       setLoading(true);
       try {
-        const { data: employeeInvoices, error } = await supabase
+        // جلب فواتير الموظف مع فلترة زمنية محسنة
+        let query = supabase
           .from('delivery_invoices')
           .select('*')
-          .eq('partner', 'alwaseet')
-          .eq('owner_user_id', employeeId)
+          .eq('partner', 'alwaseet');
+
+        // فلترة بناءً على owner_user_id أو الفواتير غير المحددة للمدير
+        if (employeeId === '91484496-b887-44f7-9e5d-be9db5567604') {
+          // للمدير: عرض فواتيره الشخصية فقط أو الفواتير غير المحددة
+          query = query.or(`owner_user_id.eq.${employeeId},owner_user_id.is.null`);
+        } else {
+          // للموظفين: فواتيرهم فقط
+          query = query.eq('owner_user_id', employeeId);
+        }
+
+        // تطبيق فلترة زمنية
+        if (timeFilter !== 'all' && timeFilter !== 'custom') {
+          const now = new Date();
+          let filterDate = new Date();
+          
+          switch (timeFilter) {
+            case 'week':
+              filterDate.setDate(now.getDate() - 7);
+              break;
+            case 'month':
+              filterDate.setMonth(now.getMonth() - 1);
+              break;
+            case '3months':
+              filterDate.setMonth(now.getMonth() - 3);
+              break;
+            case '6months':
+              filterDate.setMonth(now.getMonth() - 6);
+              break;
+            case 'year':
+              filterDate.setFullYear(now.getFullYear() - 1);
+              break;
+          }
+          
+          if (timeFilter !== 'all') {
+            query = query.gte('issued_at', filterDate.toISOString());
+          }
+        }
+
+        const { data: employeeInvoices, error } = await query
           .order('issued_at', { ascending: false });
 
         if (error) {
@@ -64,11 +110,25 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     };
 
     fetchEmployeeInvoices();
-  }, [employeeId]);
+  }, [employeeId, timeFilter]);
 
-  // فلترة الفواتير
+  // فلترة الفواتير مع دعم الفترة المخصصة
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(invoice => {
+    let filtered = invoices;
+    
+    // تطبيق فلترة التاريخ المخصص
+    if (timeFilter === 'custom' && customDateRange) {
+      filtered = filtered.filter(invoice => {
+        const invoiceDate = new Date(invoice.issued_at || invoice.created_at);
+        const fromDate = new Date(customDateRange.from);
+        const toDate = customDateRange.to ? new Date(customDateRange.to) : new Date();
+        
+        return invoiceDate >= fromDate && invoiceDate <= toDate;
+      });
+    }
+    
+    // فلترة البحث والحالة
+    return filtered.filter(invoice => {
       const matchesSearch = 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.amount?.toString().includes(searchTerm);
@@ -80,7 +140,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
       
       return matchesSearch && matchesStatus;
     });
-  }, [invoices, searchTerm, statusFilter]);
+  }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
 
   // إحصائيات الفواتير
   const getInvoiceStats = () => {
@@ -103,6 +163,19 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     if (refreshOrders) {
       await refreshOrders();
     }
+    // إعادة تحديث الفواتير مباشرة
+    window.location.reload();
+  };
+  
+  const handleTimeFilterChange = async (newFilter) => {
+    setTimeFilter(newFilter);
+    if (newFilter !== 'custom') {
+      setCustomDateRange(null);
+    }
+  };
+  
+  const handleCustomDateRangeChange = (dateRange) => {
+    setCustomDateRange(dateRange);
   };
 
   // إذا لم يتم تحديد موظف
@@ -159,15 +232,25 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
           </Card>
         </motion.div>
 
-        {/* فواتير معلقة */}
+        {/* Pending Invoices Card - Vibrant Orange */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
+          whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 shadow-2xl hover:shadow-orange-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 dark:from-orange-600 dark:via-red-600 dark:to-red-700 shadow-2xl hover:shadow-orange-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+            {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
+            <div className="absolute -top-10 -right-10 w-16 h-16 bg-orange-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
+            <div className="absolute top-2 right-2 w-8 h-8 bg-white/15 rounded-full blur-sm group-hover:animate-pulse" />
+            <div className="absolute bottom-4 left-4 w-12 h-12 bg-orange-400/10 rounded-full blur-lg group-hover:scale-110 transition-transform duration-600" />
+            <div className="absolute bottom-8 left-8 w-6 h-6 bg-white/10 rounded-full" />
+            
+            {/* Glow effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
             <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
@@ -193,15 +276,25 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
           </Card>
         </motion.div>
 
-        {/* إجمالي المبالغ */}
+        {/* Total Amount Card - Vibrant Emerald */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
+          whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 shadow-2xl hover:shadow-emerald-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 dark:from-emerald-600 dark:via-teal-600 dark:to-teal-700 shadow-2xl hover:shadow-emerald-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+            {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
+            <div className="absolute -top-10 -right-10 w-16 h-16 bg-emerald-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
+            <div className="absolute top-2 right-2 w-8 h-8 bg-white/15 rounded-full blur-sm group-hover:animate-pulse" />
+            <div className="absolute bottom-4 left-4 w-12 h-12 bg-emerald-400/10 rounded-full blur-lg group-hover:scale-110 transition-transform duration-600" />
+            <div className="absolute bottom-8 left-8 w-6 h-6 bg-white/10 rounded-full" />
+            
+            {/* Glow effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
             <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
@@ -228,15 +321,25 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
           </Card>
         </motion.div>
 
-        {/* إجمالي الطلبات */}
+        {/* Total Orders Card - Vibrant Purple */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
+          whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 shadow-2xl hover:shadow-purple-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-600 dark:from-purple-600 dark:via-indigo-600 dark:to-indigo-700 shadow-2xl hover:shadow-purple-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
+            {/* Multiple decorative circles */}
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
+            <div className="absolute -top-10 -right-10 w-16 h-16 bg-purple-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
+            <div className="absolute top-2 right-2 w-8 h-8 bg-white/15 rounded-full blur-sm group-hover:animate-pulse" />
+            <div className="absolute bottom-4 left-4 w-12 h-12 bg-purple-400/10 rounded-full blur-lg group-hover:scale-110 transition-transform duration-600" />
+            <div className="absolute bottom-8 left-8 w-6 h-6 bg-white/10 rounded-full" />
+            
+            {/* Glow effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
             <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
@@ -263,7 +366,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
         </motion.div>
       </div>
 
-      {/* فلاتر البحث */}
+      {/* فلاتر البحث - نفس تصميم AlWaseetInvoicesTab */}
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -282,8 +385,24 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">
-            {/* فلتر الحالة */}
+            {/* Time Filter and Status Filter - Equal Width Side by Side */}
             <div className="flex gap-2">
+              <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
+                <SelectTrigger className="flex-1" dir="rtl">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="الفترة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="week">أسبوع</SelectItem>
+                  <SelectItem value="month">شهر</SelectItem>
+                  <SelectItem value="3months">3 أشهر</SelectItem>
+                  <SelectItem value="6months">6 أشهر</SelectItem>
+                  <SelectItem value="year">سنة</SelectItem>
+                  <SelectItem value="all">كل الوقت</SelectItem>
+                  <SelectItem value="custom">مخصص</SelectItem>
+                </SelectContent>
+              </Select>
+              
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="flex-1" dir="rtl">
                   <SelectValue placeholder="الحالة" />
@@ -296,7 +415,16 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
               </Select>
             </div>
             
-            {/* فلتر البحث */}
+            {/* Custom Date Range Picker */}
+            {timeFilter === 'custom' && (
+              <DateRangePicker
+                date={customDateRange}
+                onDateChange={handleCustomDateRangeChange}
+                className="w-full"
+              />
+            )}
+            
+            {/* Search Filter */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
