@@ -10,16 +10,22 @@ export const useNotificationHandler = () => {
   const handleNotificationClick = useCallback((notification) => {
     if (!notification) return;
 
-    // معالجة إشعارات الطلبات الجديدة
+    // معالجة إشعارات الطلبات الجديدة - محسنة لعرض رقم التتبع
     if (notification.type === 'order_created') {
       const { employee_id, order_id, tracking_number } = notification.data || {};
       
       if (employee_id && order_id) {
         // التوجه لصفحة متابعة الموظفين مع تحديد الموظف والطلب
         navigate(`/employee-follow-up?employee=${employee_id}&highlight=${order_id}`);
+      } else if (employee_id) {
+        // إذا كان هناك employee_id فقط
+        navigate(`/employee-follow-up?employee=${employee_id}`);
       } else if (tracking_number) {
         // إذا لم يكن هناك employee_id، توجه لصفحة الطلبات مع البحث برقم التتبع
-        navigate(`/my-orders?trackingNumber=${tracking_number}`);
+        navigate(`/my-orders?search=${tracking_number}`);
+      } else {
+        // افتراضي: الذهاب لمتابعة الموظفين
+        navigate('/employee-follow-up');
       }
     }
     
@@ -31,17 +37,23 @@ export const useNotificationHandler = () => {
         navigate(`/employee-follow-up?employee=${employee_id}&highlight=${order_id}`);
       } else if (order_id) {
         navigate(`/my-orders?highlight=${order_id}`);
+      } else {
+        navigate('/my-orders');
       }
     }
     
     // معالجة إشعارات الوسيط
     else if (notification.type === 'alwaseet_status_change') {
-      const { order_id, employee_id } = notification.data || {};
+      const { order_id, employee_id, tracking_number } = notification.data || {};
       
       if (employee_id && order_id) {
         navigate(`/employee-follow-up?employee=${employee_id}&highlight=${order_id}`);
       } else if (order_id) {
         navigate(`/my-orders?highlight=${order_id}`);
+      } else if (tracking_number) {
+        navigate(`/my-orders?search=${tracking_number}`);
+      } else {
+        navigate('/my-orders');
       }
     }
     
@@ -51,6 +63,8 @@ export const useNotificationHandler = () => {
       
       if (employee_id && orders) {
         navigate(`/employee-follow-up?employee=${employee_id}&orders=${orders.join(',')}&highlight=settlement`);
+      } else if (employee_id) {
+        navigate(`/employee-follow-up?employee=${employee_id}`);
       } else {
         navigate('/employee-follow-up');
       }
@@ -59,6 +73,8 @@ export const useNotificationHandler = () => {
     // معالجة أنواع إشعارات أخرى...
     else {
       console.log('نوع إشعار غير معروف:', notification.type);
+      // افتراضي: الذهاب للوحة الرئيسية
+      navigate('/dashboard');
     }
   }, [navigate]);
 

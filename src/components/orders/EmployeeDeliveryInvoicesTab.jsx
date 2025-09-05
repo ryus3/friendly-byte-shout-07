@@ -436,7 +436,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
             </div>
           </div>
 
-          {/* ملخص النتائج */}
+          {/* Results Summary */}
           <div className="flex items-center justify-between mb-4">
             <Badge variant="outline" className="text-sm">
               {filteredInvoices.length} فاتورة
