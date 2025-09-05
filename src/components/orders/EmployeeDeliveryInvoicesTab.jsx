@@ -30,6 +30,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     invoices, 
     loading, 
     stats, 
+    getFilteredStats,
     refetch 
   } = useEmployeeInvoices(employeeId);
   
@@ -86,6 +87,11 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
       return matchesSearch && matchesStatus;
     });
   }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
+
+  // إحصائيات مفلترة تعتمد على الفترة الزمنية
+  const filteredStats = useMemo(() => {
+    return getFilteredStats ? getFilteredStats(filteredInvoices) : stats;
+  }, [filteredInvoices, getFilteredStats, stats]);
 
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
@@ -146,7 +152,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.3 }}
                   >
-                    {stats.totalInvoices}
+                    {filteredStats.totalInvoices}
                   </motion.p>
                 </div>
                 <motion.div
@@ -190,7 +196,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.4 }}
                   >
-                    {stats.pendingInvoices}
+                    {filteredStats.pendingInvoices}
                   </motion.p>
                 </div>
                 <motion.div
@@ -234,7 +240,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.5 }}
                   >
-                    {stats.totalAmount.toLocaleString()}
+                    {filteredStats.totalAmount.toLocaleString()}
                   </motion.p>
                   <p className="text-sm font-medium text-emerald-200">د.ع</p>
                 </div>
@@ -279,7 +285,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.6 }}
                   >
-                    {stats.totalOrders}
+                    {filteredStats.totalOrders}
                   </motion.p>
                 </div>
                 <motion.div
@@ -305,13 +311,13 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                 disabled={loading}
                 size="sm"
                 variant="outline"
-                className="px-3 py-2 h-9"
+                className="px-2 py-1 h-7 text-xs font-medium gap-1 hover:bg-primary hover:text-primary-foreground border-primary/30 transition-all duration-200"
               >
                 {loading ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : (
                   <>
-                    <RefreshCw className="h-4 w-4 ml-2" />
+                    <RefreshCw className="h-3 w-3" />
                     تحديث
                   </>
                 )}
@@ -412,11 +418,16 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
       </Card>
 
       {/* حوار تفاصيل الفاتورة */}
-      <AlWaseetInvoiceDetailsDialog
-        invoice={selectedInvoice}
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-      />
+      {selectedInvoice && (
+        <AlWaseetInvoiceDetailsDialog
+          isOpen={detailsDialogOpen}
+          onClose={() => {
+            setDetailsDialogOpen(false);
+            setSelectedInvoice(null);
+          }}
+          invoice={selectedInvoice}
+        />
+      )}
     </div>
   );
 };

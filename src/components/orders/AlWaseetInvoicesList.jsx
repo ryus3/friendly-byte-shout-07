@@ -65,6 +65,7 @@ const InvoiceCard = ({ invoice, onView }) => {
   const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
   const amount = parseFloat(invoice.amount || invoice.merchant_price) || 0;
   const ordersCount = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+  const linkedOrdersCount = invoice.linked_orders?.length || invoice.delivery_invoice_orders?.length || 0;
   
   // تحديث عدد الطلبات المربوطة من البيانات المحملة
   useEffect(() => {
@@ -138,9 +139,9 @@ const InvoiceCard = ({ invoice, onView }) => {
               <Badge variant={getStatusVariant(invoice.status)}>
                 {isReceived ? 'مُستلمة' : 'معلقة'}
               </Badge>
-              {(dbStatus === 'saved' || ordersCount > 0) && (
+              {(dbStatus === 'saved' || ordersCount > 0 || linkedOrdersCount > 0) && (
                 <Badge variant="outline" className="text-xs">
-                  {ordersCount} طلب
+                  {linkedOrdersCount || ordersCount} طلب
                 </Badge>
               )}
             </div>
@@ -158,7 +159,7 @@ const InvoiceCard = ({ invoice, onView }) => {
           <div className="flex items-center justify-start gap-2">
             <Package className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {ordersCount} طلب مُسلم
+              {linkedOrdersCount || ordersCount} طلب مُسلم
             </span>
           </div>
 

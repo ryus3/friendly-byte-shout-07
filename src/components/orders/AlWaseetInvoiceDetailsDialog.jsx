@@ -44,20 +44,26 @@ const AlWaseetInvoiceDetailsDialog = ({
   const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
-    if (isOpen && invoice?.id) {
-      fetchInvoiceOrders(invoice.id);
-      loadLinkedOrders();
-      // Auto-sync invoice data to database when opening details
-      handleSyncInvoice(true);
+    if (isOpen && invoice) {
+      const invoiceId = invoice.external_id || invoice.id;
+      console.log('🔍 فتح تفاصيل الفاتورة:', invoiceId);
+      
+      if (invoiceId) {
+        fetchInvoiceOrders(invoiceId);
+        loadLinkedOrders();
+        // Auto-sync invoice data to database when opening details
+        handleSyncInvoice(true);
+      }
     }
-  }, [isOpen, invoice?.id, fetchInvoiceOrders]);
+  }, [isOpen, invoice?.id, invoice?.external_id, fetchInvoiceOrders]);
 
   const loadLinkedOrders = async () => {
-    if (!invoice?.id) return;
+    const invoiceId = invoice?.external_id || invoice?.id;
+    if (!invoiceId) return;
     
     setLoadingLinked(true);
     try {
-      const linked = await linkInvoiceWithLocalOrders(invoice.id);
+      const linked = await linkInvoiceWithLocalOrders(invoiceId);
       setLinkedOrders(linked);
     } catch (error) {
       console.error('Error loading linked orders:', error);
@@ -68,22 +74,23 @@ const AlWaseetInvoiceDetailsDialog = ({
 
   if (!invoice) return null;
 
-  const isReceived = invoice.status === 'تم الاستلام من قبل التاجر';
-  const amount = parseFloat(invoice.merchant_price) || 0;
-  const ordersCount = parseInt(invoice.delivered_orders_count) || 0;
+  const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
+  const amount = parseFloat(invoice.amount || invoice.merchant_price) || 0;
+  const ordersCount = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
 
   const handleSyncInvoice = async (silent = false) => {
-    if (!invoice?.id) return;
+    const invoiceId = invoice?.external_id || invoice?.id;
+    if (!invoiceId) return;
     
     if (!silent) setSyncing(true);
     try {
-      const result = await syncInvoiceById(invoice.id);
-      if (result.success) {
+      const result = await syncInvoiceById(invoiceId);
+      if (result && result.success) {
         console.log('Invoice synced successfully:', result.data);
         // Reload linked orders after sync
         loadLinkedOrders();
       } else {
-        console.error('Invoice sync failed:', result.error);
+        console.error('Invoice sync failed:', result?.error);
       }
     } catch (error) {
       console.error('Error syncing invoice:', error);
@@ -98,7 +105,7 @@ const AlWaseetInvoiceDetailsDialog = ({
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader dir="rtl">
           <DialogTitle className="flex items-center justify-end gap-2 text-right">
-            تفاصيل فاتورة شركة التوصيل #{invoice.id}
+            تفاصيل فاتورة شركة التوصيل #{invoice.external_id || invoice.id}
             <Package className="h-5 w-5" />
           </DialogTitle>
         </DialogHeader>

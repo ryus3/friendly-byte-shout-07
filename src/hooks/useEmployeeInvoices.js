@@ -117,18 +117,21 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // تحميل تلقائي عند تغيير الموظف
+  // تحميل تلقائي عند تغيير الموظف - فوري
   useEffect(() => {
-    fetchInvoices();
+    if (employeeId && employeeId !== 'all') {
+      console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
+      fetchInvoices(true); // تحميل فوري مع تجاهل Cache
+    }
   }, [employeeId]);
 
-  // إحصائيات الفواتير المحسنة
-  const stats = useMemo(() => {
-    const totalInvoices = invoices.length;
-    const pendingInvoices = invoices.filter(inv => !inv.received && !inv.received_flag).length;
-    const totalAmount = invoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-    const totalOrders = invoices.reduce((sum, inv) => sum + (inv.linked_orders_count || inv.orders_count || 0), 0);
-    const receivedInvoices = invoices.filter(inv => inv.received || inv.received_flag).length;
+  // إحصائيات الفواتير المحسنة مع فلترة زمنية
+  const getFilteredStats = (filteredInvoices) => {
+    const totalInvoices = filteredInvoices.length;
+    const pendingInvoices = filteredInvoices.filter(inv => !inv.received && !inv.received_flag).length;
+    const totalAmount = filteredInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    const totalOrders = filteredInvoices.reduce((sum, inv) => sum + (inv.linked_orders_count || inv.orders_count || 0), 0);
+    const receivedInvoices = filteredInvoices.filter(inv => inv.received || inv.received_flag).length;
     
     return { 
       totalInvoices, 
@@ -137,12 +140,17 @@ export const useEmployeeInvoices = (employeeId) => {
       totalAmount, 
       totalOrders 
     };
+  };
+
+  const stats = useMemo(() => {
+    return getFilteredStats(invoices);
   }, [invoices]);
 
   return {
     invoices,
     loading,
     stats,
+    getFilteredStats, // إضافة دالة لحساب إحصائيات مفلترة
     refetch: () => fetchInvoices(true),
     forceRefresh: () => fetchInvoices(true)
   };
