@@ -20,6 +20,7 @@ import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDial
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
+import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -994,6 +995,16 @@ const filteredOrders = useMemo(() => {
             viewMode="grid"
             showEmployeeName={filters.employeeId === 'all'}
           />
+        </div>
+
+        {/* فواتير شركة التوصيل للموظفين */}
+        <div className="bg-card p-4 rounded-xl border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">
+              فواتير شركة التوصيل
+            </h2>
+          </div>
+          <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
         </div>
 
         {/* نوافذ حوارية */}

@@ -100,20 +100,27 @@ const OrdersPage = () => {
             duration: 5000
           });
 
-          // إضافة إشعار في نافذة الإشعارات للمديرين فقط
-          if (hasPermission('view_all_data') || hasPermission('manage_orders')) {
+          // إضافة إشعار للمدير عند إنشاء طلب من قبل موظف
+          if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
+                // جلب اسم الموظف
+                const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
+                
                 await supabase.from('notifications').insert({
-                  title: 'طلب جديد',
-                  message: `تم إنشاء طلب جديد برقم ${newOrder.qr_id || newOrder.order_number} من العميل ${newOrder.customer_name}`,
+                  title: `طلب جديد بواسطة ${employeeName}`,
+                  message: `طلب جديد برقم تتبع ${newOrder.tracking_number || newOrder.qr_id || newOrder.order_number} بواسطة ${employeeName}`,
                   type: 'order_created',
                   priority: 'high',
                   data: {
                     order_id: newOrder.id,
+                    tracking_number: newOrder.tracking_number,
                     order_qr: newOrder.qr_id,
                     customer_name: newOrder.customer_name,
-                    amount: newOrder.final_amount
+                    amount: newOrder.final_amount,
+                    employee_id: newOrder.created_by,
+                    employee_name: employeeName,
+                    redirect_url: `/employee-follow-up?employee=${newOrder.created_by}&highlight=${newOrder.id}`
                   },
                   user_id: null // إشعار عام للمديرين
                 });
@@ -351,14 +358,22 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
+  // معرف المدير الرئيسي
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
+    
+    // للمدير: إظهار طلباته الشخصية فقط في صفحة /my-orders (استبعاد طلبات الموظفين)
     if (hasPermission('view_all_orders')) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
         return orders.filter(order => order.created_by === selectedEmployeeId);
       }
-      return orders;
+      // فلترة طلبات المدير الشخصية فقط - استبعاد طلبات الموظفين
+      return orders.filter(order => order.created_by === ADMIN_ID);
     }
+    
+    // للموظفين: إظهار طلباتهم فقط
     return orders.filter(order => order.created_by === userUUID);
   }, [orders, userUUID, hasPermission, selectedEmployeeId]);
   
