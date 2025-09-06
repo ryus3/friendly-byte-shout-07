@@ -359,7 +359,8 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     // دعم محسن للمدير + البحث الشامل عن الطلبات
-    const isManager = employee.user_id === '91484496-b887-44f7-9e5d-be9db5567604';
+    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+    const isManagerSyncing = employee.user_id === ADMIN_ID;
     
     const ordersQuery = supabase
       .from('orders')
@@ -367,10 +368,10 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
       .eq('delivery_partner', 'alwaseet')
       .gte('created_at', thirtyDaysAgo.toISOString())
       .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null,order_number.not.is.null')
-      .limit(100); // زيادة الحد الأقصى للمدير
+      .limit(isManagerSyncing ? 200 : 50); // حد أعلى للمدير
 
-    // إذا كان مدير، يمكنه مزامنة جميع الطلبات، وإلا فقط طلباته
-    if (!isManager) {
+    // المدير يمكنه مزامنة جميع الطلبات، الموظف فقط طلباته
+    if (!isManagerSyncing) {
       ordersQuery.eq('created_by', employee.user_id);
     }
 
@@ -381,12 +382,12 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
       return { updated: 0 };
     }
 
-    console.log(`🔍 فحص ${recentOrders.length} طلب للموظف ${employee.full_name} (${isManager ? 'المدير - جميع الطلبات' : 'الموظف - طلباته فقط'})`);
+    console.log(`🔍 فحص ${recentOrders.length} طلب للموظف ${employee.full_name} (${isManagerSyncing ? 'المدير - جميع الطلبات' : 'الموظف - طلباته فقط'})`);
 
     let updatedCount = 0;
 
     // تحديث حالات الطلبات مع دعم محسن للمعرفات
-    for (const order of recentOrders.slice(0, isManager ? 50 : 20)) {
+    for (const order of recentOrders.slice(0, isManagerSyncing ? 100 : 30)) {
       try {
         // البحث الشامل عن معرف الطلب - دعم جميع الحقول
         const orderIdToUse = order.delivery_partner_order_id || 
@@ -401,13 +402,34 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
 
         console.log(`🔍 البحث عن الطلب: ${orderIdToUse} (المنشئ: ${order.created_by === employee.user_id ? 'نفس الموظف' : 'موظف آخر'})`);
 
+        // للمدير: استخدام توكين منشئ الطلب إذا كان مختلف
+        let syncToken = token;
+        if (isManagerSyncing && order.created_by !== employee.user_id && order.created_by !== ADMIN_ID) {
+          try {
+            const { data: orderOwnerToken } = await supabase
+              .from('delivery_partner_tokens')
+              .select('token')
+              .eq('user_id', order.created_by)
+              .eq('partner_name', 'alwaseet')
+              .gte('expires_at', new Date().toISOString())
+              .single();
+            
+            if (orderOwnerToken?.token) {
+              syncToken = orderOwnerToken.token;
+              console.log(`🔐 استخدام توكين منشئ الطلب ${order.created_by}`);
+            }
+          } catch (tokenError) {
+            console.warn(`⚠️ تعذر جلب توكين منشئ الطلب ${order.created_by}`);
+          }
+        }
+
         const { data: orderStatusData } = await supabase.functions.invoke('alwaseet-proxy', {
           body: {
             endpoint: 'merchant-orders',
             method: 'GET',
-            token: token,
+            token: syncToken,
             queryParams: { 
-              token: token,
+              token: syncToken,
               qr_id: orderIdToUse 
             }
           }
@@ -427,7 +449,7 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
               .eq('id', order.id);
             
             updatedCount++;
-            console.log(`📦 تحديث حالة الطلب ${orderIdToUse}: ${order.delivery_status} → ${newStatus} (${isManager ? 'المدير' : 'الموظف'})`);
+            console.log(`📦 تحديث حالة الطلب ${orderIdToUse}: ${order.delivery_status} → ${newStatus} (${isManagerSyncing ? 'المدير' : 'الموظف'})`);
           } else {
             console.log(`📦 لا يوجد تحديث للطلب ${orderIdToUse}: ${order.delivery_status}`);
           }

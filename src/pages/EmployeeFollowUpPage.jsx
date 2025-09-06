@@ -40,6 +40,7 @@ const EmployeeFollowUpPage = () => {
     syncingEmployee, 
     smartSync, 
     syncSpecificEmployee, 
+    syncSpecificEmployeeSmart,
     comprehensiveSync, 
     syncOrdersOnly 
   } = useSmartSync();
@@ -758,17 +759,18 @@ const filteredOrders = useMemo(() => {
         </div>
 
         {/* شريط الأدوات الاحترافي للمزامنة */}
-        <ProfessionalSyncToolbar
-          syncing={syncing}
-          syncingEmployee={syncingEmployee}
-          smartSync={smartSync}
-          syncSpecificEmployee={syncSpecificEmployee}
-          comprehensiveSync={comprehensiveSync}
-          syncOrdersOnly={syncOrdersOnly}
-          lastComprehensiveSync={lastComprehensiveSync}
-          isAdmin={isAdmin}
-          employees={employees}
-        />
+                <ProfessionalSyncToolbar
+                  syncing={syncing}
+                  syncingEmployee={syncingEmployee}
+                  smartSync={smartSync}
+                  syncSpecificEmployee={syncSpecificEmployee}
+                  syncSpecificEmployeeSmart={syncSpecificEmployeeSmart}
+                  comprehensiveSync={comprehensiveSync}
+                  syncOrdersOnly={syncOrdersOnly}
+                  lastComprehensiveSync={lastComprehensiveSync}
+                  isAdmin={isAdmin}
+                  employees={employees}
+                />
 
         {/* الفلاتر */}
         <Card>
