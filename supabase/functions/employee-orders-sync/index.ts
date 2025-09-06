@@ -22,54 +22,13 @@ serve(async (req) => {
 
     console.log(`🔄 مزامنة طلبات الموظف: ${employee_id}`);
 
-    // تحديث حالات طلبات الموظف من الوسيط
-    let ordersUpdated = 0;
-    let errors = [];
+    // استدعاء دالة المزامنة التلقائية للموظف المحدد
+    const { data: syncResult, error: syncError } = await supabase.rpc('sync_employee_orders', {
+      p_employee_id: employee_id
+    });
 
-    // جلب طلبات الموظف من آخر 30 يوم
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('created_by', employee_id)
-      .eq('delivery_partner', 'alwaseet')
-      .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-      .in('status', ['pending', 'shipped', 'delivery']);
-
-    if (ordersError) {
-      throw new Error(`خطأ في جلب الطلبات: ${ordersError.message}`);
-    }
-
-    if (!orders || orders.length === 0) {
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: 'لا توجد طلبات تحتاج مزامنة',
-          orders_updated: 0
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // للمحاكاة: تحديث الطلبات لتظهر أنها تمت مزامنتها
-    for (const order of orders) {
-      try {
-        // محاكاة تحديث من الوسيط
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ 
-            updated_at: new Date().toISOString(),
-            // يمكن إضافة تحديثات فعلية من API الوسيط هنا
-          })
-          .eq('id', order.id);
-
-        if (updateError) {
-          errors.push(`خطأ في تحديث الطلب ${order.order_number}: ${updateError.message}`);
-        } else {
-          ordersUpdated++;
-        }
-      } catch (orderError) {
-        errors.push(`خطأ في معالجة الطلب ${order.order_number}: ${orderError.message}`);
-      }
+    if (syncError) {
+      throw new Error(`خطأ في مزامنة طلبات الموظف: ${syncError.message}`);
     }
 
     // تسجيل نتائج المزامنة
@@ -79,24 +38,20 @@ serve(async (req) => {
         sync_type: 'employee_manual',
         triggered_by: employee_id,
         employees_processed: 1,
-        orders_updated: ordersUpdated,
-        success: errors.length === 0,
-        error_message: errors.length > 0 ? errors.join('; ') : null,
-        results: JSON.stringify({
-          total_orders: orders.length,
-          updated_orders: ordersUpdated,
-          errors: errors
-        }),
+        orders_updated: syncResult?.orders_updated || 0,
+        success: !syncError,
+        error_message: syncError?.message || null,
+        results: JSON.stringify(syncResult || {}),
         completed_at: new Date().toISOString()
       });
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `تم تحديث ${ordersUpdated} طلب من أصل ${orders.length}`,
-        orders_updated: ordersUpdated,
-        total_orders: orders.length,
-        errors: errors.length > 0 ? errors : undefined
+        message: syncResult?.message || `تمت مزامنة طلبات الموظف بنجاح`,
+        orders_updated: syncResult?.orders_updated || 0,
+        total_orders: syncResult?.total_orders || 0,
+        sync_timestamp: new Date().toISOString()
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

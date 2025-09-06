@@ -102,6 +102,38 @@ const EmployeeFollowUpPage = () => {
       setSyncingEmployeeId(null);
     }
   };
+
+  // مزامنة شاملة لكل الموظفين (للمديرين فقط)
+  const syncAllEmployeesOrders = async () => {
+    if (!isAdmin) return;
+    
+    setSyncingEmployeeId('all');
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+        body: { sync_type: 'manual_comprehensive' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "مزامنة شاملة مكتملة",
+        description: data?.message || "تم تحديث طلبات وفواتير جميع الموظفين",
+        variant: "default",
+      });
+
+      // تحديث البيانات
+      await refreshOrders();
+    } catch (error) {
+      console.error('خطأ في المزامنة الشاملة:', error);
+      toast({
+        title: "خطأ في المزامنة الشاملة",
+        description: error.message || "تعذر مزامنة جميع الطلبات",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingEmployeeId(null);
+    }
+  };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
@@ -813,12 +845,7 @@ const filteredOrders = useMemo(() => {
             
             {filters.employeeId !== 'all' && filters.employeeId && (
               <Button
-                onClick={() => {
-                  const employee = employees.find(e => e.user_id === filters.employeeId);
-                  if (employee) {
-                    syncEmployeeOrders(filters.employeeId, employee.full_name || employee.username);
-                  }
-                }}
+                onClick={() => syncEmployeeOrders(filters.employeeId)}
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2"
@@ -830,6 +857,23 @@ const filteredOrders = useMemo(() => {
                   <RotateCcw className="w-4 h-4" />
                 )}
                 مزامنة طلبات الموظف
+              </Button>
+            )}
+            
+            {isAdmin && (
+              <Button
+                onClick={syncAllEmployeesOrders}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                disabled={syncingEmployeeId === 'all'}
+              >
+                {syncingEmployeeId === 'all' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Truck className="w-4 h-4" />
+                )}
+                مزامنة شاملة (كل الموظفين)
               </Button>
             )}
           </div>

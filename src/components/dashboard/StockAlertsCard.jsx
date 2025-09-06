@@ -12,7 +12,7 @@ import DefaultProductImage from '@/components/ui/default-product-image';
 const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { products, settings, refetchProducts } = useInventory(); // المنتجات المفلترة تلقائياً
-  const { canManageFinances, isAdmin } = usePermissions();
+  const { canManageFinances, isAdmin, canViewStockAlerts, canManageInventory } = usePermissions();
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -65,8 +65,13 @@ const StockAlertsCard = () => {
     return lowStockItems.sort((a, b) => a.totalLowStockQuantity - b.totalLowStockQuantity);
   }, [products, settings?.lowStockThreshold]);
   
-  // إخفاء إعدادات المخزون عن موظفي المبيعات
-  const canManageStockSettings = canManageFinances || isAdmin;
+  // صلاحيات عرض تنبيهات المخزون - فقط للموظفين المخولين
+  const canViewAlerts = canViewStockAlerts || canManageInventory || isAdmin;
+  
+  // إذا لم يكن لديه صلاحية، لا تعرض الكارت
+  if (!canViewAlerts) {
+    return null;
+  }
 
   const handleViewAll = () => {
     navigate('/inventory');

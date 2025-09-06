@@ -116,40 +116,46 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     setCustomDateRange(dateRange);
   };
 
-  // Real-time subscription محسن مع cooldown لتجنب التحميل المكرر
+  // Real-time subscription محسن مع cooldown أطول لتجنب التحديث غير المرغوب
   useEffect(() => {
     if (!employeeId || employeeId === 'all') return;
 
     let cooldownTimer = null;
     let lastUpdateTime = 0;
-    const COOLDOWN_MS = 2000; // 2 seconds cooldown
+    const COOLDOWN_MS = 10000; // 10 seconds cooldown - أطول لتجنب التحديثات المتكررة
 
     const debouncedRefetch = () => {
       const now = Date.now();
       if (now - lastUpdateTime < COOLDOWN_MS) {
         if (cooldownTimer) clearTimeout(cooldownTimer);
         cooldownTimer = setTimeout(() => {
+          console.log('📡 Debounced invoice refetch after cooldown');
           refetch();
           lastUpdateTime = Date.now();
         }, COOLDOWN_MS);
       } else {
+        console.log('📡 Immediate invoice refetch');
         refetch();
         lastUpdateTime = now;
       }
     };
 
+    // تقليل عدد الأحداث المراقبة - فقط UPDATE وINSERT
     const channel = supabase
       .channel(`employee-invoices-realtime-${employeeId}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'delivery_invoices'
         },
         (payload) => {
-          console.log('📡 Real-time invoice update:', payload.eventType);
-          debouncedRefetch();
+          // فقط للفواتير المرتبطة بهذا الموظف
+          if (payload.new?.owner_user_id === employeeId || !payload.new?.owner_user_id) {
+            console.log('📡 Invoice UPDATE for employee:', employeeId);
+            debouncedRefetch();
+          }
         }
       )
       .subscribe();
