@@ -52,19 +52,28 @@ export const AlWaseetProvider = ({ children }) => {
     return order.created_by === currentUser.id;
   }, []);
   
-  // دالة للتحقق من إمكانية حذف الطلب
+  // دالة للتحقق من إمكانية حذف الطلب تلقائياً
   const canAutoDeleteOrder = useCallback((order, currentUser) => {
     if (!order || !currentUser) return false;
     
-    // المدير يمكنه حذف أي طلب
+    // استخدام نفس منطق canDeleteOrder الموحد
+    const { canDeleteOrder } = require('@/lib/order-deletion-utils');
+    
+    // تطبيق منطق الحذف الموحد
+    const basicCanDelete = canDeleteOrder(order, currentUser);
+    
+    if (!basicCanDelete) return false;
+    
+    // شروط إضافية للحذف التلقائي
+    // المدير يمكنه حذف أي طلب (بما في ذلك طلباته المراجعة)
     if (currentUser.email === 'ryusbrand@gmail.com' || currentUser.id === '91484496-b887-44f7-9e5d-be9db5567604') {
       return true;
     }
     
-    // الموظف يمكنه حذف طلباته فقط وشروط معينة
+    // الموظف يمكنه حذف طلباته فقط
     if (!isOrderOwner(order, currentUser)) return false;
     
-    // لا يحذف الطلبات المستلمة أو المكتملة
+    // للموظفين: لا يحذف الطلبات المستلمة أو المكتملة
     if (order.receipt_received || order.status === 'completed') return false;
     
     return true;

@@ -20,9 +20,10 @@ const DELETABLE_DELIVERY_STATUSES = [
 /**
  * التحقق من إمكانية حذف الطلب
  * @param {Object} order - بيانات الطلب
+ * @param {Object} currentUser - المستخدم الحالي (اختياري للتحقق من المدير)
  * @returns {boolean} - هل يمكن حذف الطلب
  */
-export const canDeleteOrder = (order) => {
+export const canDeleteOrder = (order, currentUser = null) => {
   if (!order) {
     console.warn('🚫 لا يمكن فحص طلب فارغ');
     return false;
@@ -34,10 +35,13 @@ export const canDeleteOrder = (order) => {
     orderNumber: order.order_number,
     status: order.status,
     deliveryStatus: order.delivery_status,
-    isExternal: !!order.external_id
+    receiptReceived: order.receipt_received,
+    isExternal: !!order.external_id,
+    isManagerOrder: order.created_by === '91484496-b887-44f7-9e5d-be9db5567604'
   });
 
   const isLocalOrder = !order.external_id;
+  const isManagerOrder = order.created_by === '91484496-b887-44f7-9e5d-be9db5567604';
   
   if (isLocalOrder) {
     // الطلبات المحلية: فقط إذا كانت في انتظار
@@ -46,9 +50,29 @@ export const canDeleteOrder = (order) => {
     return canDelete;
   }
 
-  // الطلبات الخارجية: فحص حالة التسليم
+  // للطلبات الخارجية: فحص الحالات المختلفة
   const deliveryStatus = (order.delivery_status || '').toLowerCase().trim();
   const orderStatus = (order.status || '').toLowerCase().trim();
+  
+  // استثناء: المدير - يمكن حذف طلباته حتى لو كانت مستلمة أو مكتملة إذا كانت "راجعة للتاجر"
+  if (isManagerOrder) {
+    // إذا كانت الحالة تدل على الإرجاع، يمكن الحذف حتى لو كانت completed أو receipt_received
+    const isReturnedToMerchant = deliveryStatus.includes('ارجاع') || 
+                                deliveryStatus.includes('راجع') || 
+                                deliveryStatus.includes('تاجر') ||
+                                deliveryStatus === '17'; // الحالة 17 = تم الارجاع الى التاجر
+    
+    if (isReturnedToMerchant) {
+      console.log('🏢 طلب المدير راجع للتاجر - مسموح بالحذف');
+      return true;
+    }
+  }
+  
+  // لجميع الطلبات الخارجية: لا يحذف إذا كانت مستلمة أو مكتملة (ما عدا طلبات المدير المراجعة)
+  if (order.receipt_received || order.status === 'completed') {
+    console.log('🚫 لا يمكن حذف طلب مستلم أو مكتمل');
+    return false;
+  }
   
   // مسموح حذف الطلبات في حالة pending أو في حالات تسليم محددة
   const canDeleteByStatus = orderStatus === 'pending';
