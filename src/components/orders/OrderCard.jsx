@@ -291,9 +291,9 @@ const OrderCard = ({
         <CardContent className="relative p-4">
           <div className="space-y-3">
             
-            {/* Header العالمي */}
+            {/* Header العالمي - ترتيب موحد مع صفحة الطلبات */}
             <div className="flex items-start justify-between">
-              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يمين */}
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يسار */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
@@ -314,7 +314,7 @@ const OrderCard = ({
                   title="انقر لتحديث الحالة"
                 >
                   <StatusIcon className="h-4 w-4" />
-                  <span className="font-bold ml-1">{statusConfig.label}</span>
+                  <span className="font-bold mr-1">{statusConfig.label}</span>
                 </Button>
               ) : (
                 <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
@@ -325,7 +325,7 @@ const OrderCard = ({
                 </div>
               )}
               
-               <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <div className="text-right" dir="ltr">
                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
                      {order.tracking_number || order.order_number}
@@ -341,18 +341,18 @@ const OrderCard = ({
               {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
                 <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
-                  <CheckCircle className="w-3 h-3 ml-1" />
+                  <CheckCircle className="w-3 h-3 mr-1" />
                   مدفوع المستحقات
                 </Badge>
               )}
             </div>
 
-            {/* Customer Info مع الأيقونات في المنتصف */}
+            {/* Customer Info مع الأيقونات في المنتصف - تصميم موحد */}
             <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
               <div className="grid grid-cols-3 gap-3 items-center">
                 
-                {/* Date & Delivery Info - يمين */}
-                <div className="space-y-1 text-right">
+                {/* Date & Delivery Info - يسار (موحد مع OrdersPage) */}
+                <div className="space-y-1 text-left">
                   <div className="flex items-center gap-2 justify-start">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
@@ -365,28 +365,28 @@ const OrderCard = ({
                    {order.created_by_name && (
                       <div className="flex items-center gap-2 justify-start">
                         <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                          <User className="h-3 w-3 inline-block mr-1" />
+                          <User className="h-3 w-3 inline-block ml-1" />
                           {order.created_by_name}
                         </span>
                       </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
-                      <div className="flex justify-start w-full">
-                        <Badge className={`${deliveryBadgeColor} px-3 py-1.5 text-xs rounded-full font-bold min-w-[100px] shadow-sm flex items-center justify-center gap-1`}>
-                          <Building className="h-3 w-3" />
-                          {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}
-                        </Badge>
-                      </div>
+                       <div className="flex justify-start w-full">
+                         <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
+                           <Building className="h-3 w-3" />
+                           <span className="truncate">{order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}</span>
+                         </Badge>
+                       </div>
 
-                      {/* شارة رقم فاتورة الوسيط - مصغرة */}
-                      {order.delivery_partner_invoice_id && (
-                        <div className="flex justify-start w-full">
-                          <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1.5 rounded-full min-w-[100px] flex items-center justify-center gap-1 h-fit whitespace-nowrap">
-                            <CreditCard className="h-3 w-3" />
-                            #{order.delivery_partner_invoice_id}
-                          </Badge>
-                        </div>
-                      )}
+                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
+                       {order.delivery_partner_invoice_id && (
+                         <div className="flex justify-start w-full">
+                           <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
+                             <CreditCard className="h-3 w-3" />
+                             <span className="truncate">#{order.delivery_partner_invoice_id}</span>
+                           </Badge>
+                         </div>
+                       )}
                    </div>
                 </div>
                 

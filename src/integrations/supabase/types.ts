@@ -147,6 +147,51 @@ export type Database = {
           },
         ]
       }
+      auto_sync_log: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          employees_processed: number | null
+          error_message: string | null
+          id: string
+          invoices_synced: number | null
+          orders_updated: number | null
+          results: Json | null
+          started_at: string
+          success: boolean | null
+          sync_type: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          employees_processed?: number | null
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          results?: Json | null
+          started_at?: string
+          success?: boolean | null
+          sync_type?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          employees_processed?: number | null
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          results?: Json | null
+          started_at?: string
+          success?: boolean | null
+          sync_type?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -1075,49 +1120,38 @@ export type Database = {
         }
         Relationships: []
       }
-      employee_delivery_accounts: {
+      employee_invoice_sync_log: {
         Row: {
-          account_code: string
-          account_name: string | null
-          created_at: string
-          delivery_partner: string
+          created_at: string | null
+          employee_id: string
           id: string
-          is_active: boolean
-          partner_data: Json | null
-          updated_at: string
-          user_id: string
+          invoices_synced: number | null
+          last_invoice_date: string | null
+          last_sync_at: string
+          sync_type: string | null
+          updated_at: string | null
         }
         Insert: {
-          account_code: string
-          account_name?: string | null
-          created_at?: string
-          delivery_partner: string
+          created_at?: string | null
+          employee_id: string
           id?: string
-          is_active?: boolean
-          partner_data?: Json | null
-          updated_at?: string
-          user_id: string
+          invoices_synced?: number | null
+          last_invoice_date?: string | null
+          last_sync_at?: string
+          sync_type?: string | null
+          updated_at?: string | null
         }
         Update: {
-          account_code?: string
-          account_name?: string | null
-          created_at?: string
-          delivery_partner?: string
+          created_at?: string | null
+          employee_id?: string
           id?: string
-          is_active?: boolean
-          partner_data?: Json | null
-          updated_at?: string
-          user_id?: string
+          invoices_synced?: number | null
+          last_invoice_date?: string | null
+          last_sync_at?: string
+          sync_type?: string | null
+          updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "employee_delivery_accounts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       employee_loyalty_permissions: {
         Row: {
@@ -1408,6 +1442,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      invoice_sync_settings: {
+        Row: {
+          auto_cleanup_enabled: boolean | null
+          created_at: string | null
+          daily_sync_enabled: boolean | null
+          daily_sync_time: string | null
+          evening_sync_time: string | null
+          id: string
+          keep_invoices_per_employee: number | null
+          lookback_days: number | null
+          morning_sync_time: string | null
+          sync_frequency: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_cleanup_enabled?: boolean | null
+          created_at?: string | null
+          daily_sync_enabled?: boolean | null
+          daily_sync_time?: string | null
+          evening_sync_time?: string | null
+          id?: string
+          keep_invoices_per_employee?: number | null
+          lookback_days?: number | null
+          morning_sync_time?: string | null
+          sync_frequency?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_cleanup_enabled?: boolean | null
+          created_at?: string | null
+          daily_sync_enabled?: boolean | null
+          daily_sync_time?: string | null
+          evening_sync_time?: string | null
+          id?: string
+          keep_invoices_per_employee?: number | null
+          lookback_days?: number | null
+          morning_sync_time?: string | null
+          sync_frequency?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       loyalty_points_history: {
         Row: {
@@ -1795,6 +1871,7 @@ export type Database = {
           customer_phone: string | null
           customer_phone2: string | null
           customer_province: string | null
+          delivery_account_code: string | null
           delivery_fee: number
           delivery_partner: string | null
           delivery_partner_invoice_date: string | null
@@ -1836,6 +1913,7 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
+          delivery_account_code?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -1877,6 +1955,7 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
+          delivery_account_code?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -3485,6 +3564,15 @@ export type Database = {
         Args: { p_product_id: string; p_variant_id: string }
         Returns: number
       }
+      can_access_order: {
+        Args: {
+          p_active_account_code?: string
+          p_order_created_by: string
+          p_order_delivery_account_code: string
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
       check_city_benefits: {
         Args: { p_city_name: string; p_order_amount: number }
         Returns: Json
@@ -3517,6 +3605,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_delivery_invoices_keep_latest: {
+        Args: { p_keep_count?: number }
+        Returns: Json
+      }
+      cleanup_delivery_invoices_keep_recent_and_latest: {
+        Args: { p_keep_count?: number; p_keep_recent_days?: number }
+        Returns: Json
+      }
       cleanup_duplicate_notifications: {
         Args: { p_days_back?: number }
         Returns: Json
@@ -3547,6 +3643,10 @@ export type Database = {
       }
       daily_notifications_cleanup: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      debug_orders_rls: {
+        Args: { p_user_id?: string }
         Returns: Json
       }
       delete_ai_order_safe: {
@@ -3651,6 +3751,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_employee_last_sync: {
+        Args: { p_employee_id: string }
+        Returns: Json
+      }
       get_filters_data: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3687,6 +3791,10 @@ export type Database = {
           total_revenue: number
           variant_id: string
         }[]
+      }
+      get_safe_user_filter: {
+        Args: { p_delivery_account_code?: string; p_user_id?: string }
+        Returns: Json
       }
       get_sales_summary_stats: {
         Args: Record<PropertyKey, never>
@@ -3790,6 +3898,23 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_user_delivery_orders: {
+        Args: {
+          p_account_code?: string
+          p_delivery_partner?: string
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          customer_name: string
+          delivery_partner_order_id: string
+          delivery_status: string
+          final_amount: number
+          id: string
+          status: string
+          tracking_number: string
+        }[]
+      }
       get_user_highest_role: {
         Args: { p_user_id: string }
         Returns: string
@@ -3808,6 +3933,10 @@ export type Database = {
       }
       is_hr_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_manager_user: {
+        Args: { user_id?: string }
         Returns: boolean
       }
       link_telegram_user: {
@@ -3854,6 +3983,10 @@ export type Database = {
         }
         Returns: string
       }
+      prune_delivery_invoices_for_user: {
+        Args: { p_employee_id: string; p_keep_count?: number }
+        Returns: Json
+      }
       prune_notifications_retention: {
         Args: { p_keep?: number }
         Returns: number
@@ -3889,6 +4022,10 @@ export type Database = {
       }
       reserve_stock_for_order: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Returns: Json
+      }
+      restore_manager_orders: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       review_archive_status: {
@@ -3949,7 +4086,19 @@ export type Database = {
         Args: { p_invoice_data: Json; p_orders_data: Json }
         Returns: Json
       }
+      sync_employee_orders: {
+        Args: { p_employee_id: string }
+        Returns: Json
+      }
+      sync_missing_invoice_targeted: {
+        Args: { p_employee_id: string; p_invoice_id: string }
+        Returns: Json
+      }
       sync_recent_received_invoices: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      sync_user_scoped_received_invoices: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
@@ -4027,6 +4176,18 @@ export type Database = {
         Args: { p_invoices: Json }
         Returns: Json
       }
+      upsert_alwaseet_invoice_list_for_user: {
+        Args: { p_employee_id: string; p_invoices: Json }
+        Returns: Json
+      }
+      upsert_alwaseet_invoice_list_with_cleanup: {
+        Args: { p_employee_id: string; p_invoices: Json }
+        Returns: Json
+      }
+      upsert_alwaseet_invoice_list_with_strict_cleanup: {
+        Args: { p_employee_id: string; p_invoices: Json }
+        Returns: Json
+      }
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
@@ -4037,6 +4198,10 @@ export type Database = {
       }
       validate_promo_code: {
         Args: { promo_code_param: string }
+        Returns: Json
+      }
+      verify_invoice_1849184_for_manager: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
     }

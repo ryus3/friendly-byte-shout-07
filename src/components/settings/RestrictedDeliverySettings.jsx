@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Lock, Shield, Settings, Plus } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import DeliveryManagementDialog from './DeliveryManagementDialog';
 
@@ -37,6 +38,7 @@ const RestrictedDeliverySettings = () => {
 
   return (
     <>
+      {/* إعدادات التوصيل الرئيسية */}
       <Card 
         className="cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => setIsOpen(true)}
@@ -52,10 +54,11 @@ const RestrictedDeliverySettings = () => {
             إدارة رسوم التوصيل والإعدادات المتعلقة بها
           </p>
           <Badge variant="success">
-            مسموح - مدير
+            {isAdmin ? 'مدير - جميع الصلاحيات' : 'مسموح'}
           </Badge>
         </CardContent>
       </Card>
+
 
       <DeliveryManagementDialog 
         open={isOpen} 

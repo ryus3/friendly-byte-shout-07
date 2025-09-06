@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff } from 'lucide-react';
+import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 const AlWaseetInvoicesList = ({ 
   invoices, 
   onViewInvoice, 
-  loading 
+  loading,
+  showEmployeeName = false
 }) => {
   if (loading) {
     return (
@@ -51,48 +52,64 @@ const AlWaseetInvoicesList = ({
           key={invoice.id}
           invoice={invoice}
           onView={() => onViewInvoice(invoice)}
+          showEmployeeName={showEmployeeName}
         />
       ))}
     </div>
   );
 };
 
-const InvoiceCard = ({ invoice, onView }) => {
-  const [dbStatus, setDbStatus] = useState('checking'); // 'checking', 'saved', 'not_saved'
+const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
+  const [dbStatus, setDbStatus] = useState('saved'); // افتراض الحفظ للفواتير الداخلية
   const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
   
-  const isReceived = invoice.status === 'تم الاستلام من قبل التاجر';
-  const amount = parseFloat(invoice.merchant_price) || 0;
-  const ordersCount = parseInt(invoice.delivered_orders_count) || 0;
+  // معالجة محسنة للبيانات سواء من API أو قاعدة البيانات
+  const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
+  const amount = parseFloat(invoice.amount || invoice.merchant_price) || 0;
+  const ordersCount = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+  const calculatedLinkedOrders = invoice.linked_orders?.length || invoice.delivery_invoice_orders?.length || 0;
   
-  // Check if invoice is saved in database
+  // تحديث عدد الطلبات المربوطة من البيانات المحملة
   useEffect(() => {
-    const checkDbStatus = async () => {
-      try {
-        const { data: dbInvoice, error } = await supabase
-          .from('delivery_invoices')
-          .select('id, (delivery_invoice_orders(count))')
-          .eq('external_id', invoice.id)
-          .eq('partner', 'alwaseet')
-          .single();
+    if (invoice.linked_orders_count !== undefined) {
+      setLinkedOrdersCount(invoice.linked_orders_count);
+      setDbStatus('saved');
+    } else if (invoice.delivery_invoice_orders) {
+      setLinkedOrdersCount(invoice.delivery_invoice_orders.length);
+      setDbStatus('saved');
+    } else if (invoice.id && !invoice.external_id) {
+      // هذه فاتورة داخلية من قاعدة البيانات
+      setDbStatus('saved');
+      setLinkedOrdersCount(ordersCount);
+    } else {
+      // فحص الحالة للفواتير الخارجية فقط
+      const checkDbStatus = async () => {
+        try {
+          const { data: dbInvoice, error } = await supabase
+            .from('delivery_invoices')
+            .select('id, delivery_invoice_orders(count)')
+            .eq('external_id', invoice.external_id || invoice.id)
+            .eq('partner', 'alwaseet')
+            .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          console.warn('Error checking invoice status:', error);
-          setDbStatus('not_saved');
-        } else if (dbInvoice) {
-          setDbStatus('saved');
-          setLinkedOrdersCount(dbInvoice.delivery_invoice_orders?.[0]?.count || 0);
-        } else {
+          if (error) {
+            console.warn('Error checking invoice status:', error);
+            setDbStatus('not_saved');
+          } else if (dbInvoice) {
+            setDbStatus('saved');
+            setLinkedOrdersCount(dbInvoice.delivery_invoice_orders?.[0]?.count || 0);
+          } else {
+            setDbStatus('not_saved');
+          }
+        } catch (e) {
+          console.warn('Error checking invoice DB status:', e);
           setDbStatus('not_saved');
         }
-      } catch (e) {
-        console.warn('Error checking invoice DB status:', e);
-        setDbStatus('not_saved');
-      }
-    };
+      };
 
-    checkDbStatus();
-  }, [invoice.id]);
+      checkDbStatus();
+    }
+  }, [invoice.id, invoice.external_id, invoice.linked_orders_count, ordersCount]);
   
   const getStatusVariant = (status) => {
     if (status === 'تم الاستلام من قبل التاجر') return 'success';
@@ -117,18 +134,17 @@ const InvoiceCard = ({ invoice, onView }) => {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-lg text-left">فاتورة #{invoice.id}</h3>
+              <h3 className="font-semibold text-lg text-left">فاتورة #{invoice.external_id || invoice.id}</h3>
               {getDbStatusIcon()}
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={getStatusVariant(invoice.status)}>
+              <Badge variant={getStatusVariant(invoice.status)} className={`${
+                isReceived 
+                  ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500'
+              }`}>
                 {isReceived ? 'مُستلمة' : 'معلقة'}
               </Badge>
-              {dbStatus === 'saved' && linkedOrdersCount > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  {linkedOrdersCount} مربوط
-                </Badge>
-              )}
             </div>
           </div>
 
@@ -144,16 +160,27 @@ const InvoiceCard = ({ invoice, onView }) => {
           <div className="flex items-center justify-start gap-2">
             <Package className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {ordersCount} طلب مُسلم
+              {linkedOrdersCount || ordersCount} طلب مُسلم
             </span>
           </div>
+
+          {/* Employee name if needed */}
+          {showEmployeeName && invoice.employee_name && (
+            <div className="flex items-center justify-start gap-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-blue-600">
+                {invoice.employee_name}
+                {invoice.employee_code && ` (${invoice.employee_code})`}
+              </span>
+            </div>
+          )}
 
           {/* Date */}
           <div className="flex items-center justify-start gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">
-              {invoice.updated_at && formatDistanceToNow(
-                new Date(invoice.updated_at), 
+              {(invoice.issued_at || invoice.updated_at || invoice.created_at) && formatDistanceToNow(
+                new Date(invoice.issued_at || invoice.updated_at || invoice.created_at), 
                 { addSuffix: true, locale: ar }
               )}
             </span>

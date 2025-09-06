@@ -127,18 +127,21 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoices]);
 
-  // Setup real-time listeners for automatic updates
+  // Setup automatic initial fetch on tab load
   useEffect(() => {
     if (!isLoggedIn || activePartner !== 'alwaseet') return;
 
-    // Listen for invoice updates
+    // تحميل فوري عند دخول التبويب
+    console.log('🚀 تحميل تلقائي للفواتير عند دخول التبويب');
+    fetchInvoices('month'); // جلب فواتير الشهر الماضي تلقائياً
+
+    // Listen for invoice updates via custom events only
     const handleInvoiceReceived = (event) => {
       console.log('Invoice received notification:', event.detail);
       autoSyncReceivedInvoices();
       fetchInvoices();
     };
 
-    // Listen for invoice updates
     const handleInvoiceUpdated = (event) => {
       console.log('Invoice updated notification:', event.detail);
       fetchInvoices();
@@ -147,37 +150,169 @@ export const useAlWaseetInvoices = () => {
     window.addEventListener('invoiceReceived', handleInvoiceReceived);
     window.addEventListener('invoiceUpdated', handleInvoiceUpdated);
 
-    // Auto-refresh every 30 seconds
-    const autoRefreshInterval = setInterval(() => {
-      fetchInvoices();
-      autoSyncReceivedInvoices();
-    }, 30000);
-
     return () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);
       window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
-      clearInterval(autoRefreshInterval);
     };
   }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
 
-  // Fetch orders for a specific invoice
+  // إصلاح fetchInvoiceOrders جذرياً لعرض البيانات من raw أو API
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
-    if (!token || !invoiceId) return null;
+    if (!invoiceId) return null;
 
     setLoading(true);
     try {
-      const invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
-      setInvoiceOrders(invoiceData?.orders || []);
-      setSelectedInvoice(invoiceData?.invoice?.[0] || null);
-      return invoiceData;
-    } catch (error) {
-      console.error('Error fetching invoice orders:', error);
-      toast({
-        title: 'خطأ في جلب طلبات الفاتورة',
-        description: error.message,
-        variant: 'destructive'
+      let invoiceData = null;
+      let dataSource = 'database';
+
+      // محاولة API أولاً إذا كان التوكن متاحاً - أولوية للبيانات الحية
+      if (token && isLoggedIn) {
+        try {
+          invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+          dataSource = 'api';
+          console.log('✅ جلب طلبات الفاتورة من API مباشرة:', invoiceData?.orders?.length || 0);
+          
+          // تسجيل البيانات للمقارنة
+          if (invoiceData?.orders?.length > 0) {
+            console.log('📊 بيانات الطلبات من API:', {
+              orders: invoiceData.orders.map(o => ({
+                id: o.id,
+                client_name: o.client_name,
+                price: o.price
+              }))
+            });
+          }
+        } catch (apiError) {
+          console.warn('⚠️ فشل الوصول للAPI، التبديل لقاعدة البيانات:', apiError.message);
+        }
+      } else {
+        console.log('⚠️ لا يوجد token أو لست مسجل دخول، استخدام قاعدة البيانات مباشرة');
+      }
+
+      // البديل المحسن من قاعدة البيانات
+      if (!invoiceData?.orders) {
+        try {
+          // البحث عن الفاتورة بـ external_id
+          const { data: invoiceRecord, error: invoiceError } = await supabase
+            .from('delivery_invoices')
+            .select('id, external_id, raw')
+            .eq('external_id', invoiceId)
+            .limit(1)
+            .single();
+
+          if (invoiceError && invoiceError.code !== 'PGRST116') {
+            throw invoiceError;
+          }
+
+          const finalInvoiceId = invoiceRecord?.id || invoiceId;
+
+          // جلب الطلبات المرتبطة بالفاتورة
+          const { data: dbOrders, error: dbError } = await supabase
+            .from('delivery_invoice_orders')
+            .select(`
+              id,
+              external_order_id,
+              raw,
+              invoice_id,
+              order_id,
+              orders (
+                id,
+                order_number,
+                tracking_number,
+                customer_name,
+                customer_phone,
+                final_amount,
+                status,
+                created_by
+              )
+            `)
+            .eq('invoice_id', finalInvoiceId);
+
+          if (dbError) {
+            console.warn('خطأ في جلب الطلبات من قاعدة البيانات:', dbError);
+          }
+
+          // إنشاء الطلبات من raw data بشكل محسن
+          const orders = [];
+          
+          if (dbOrders && dbOrders.length > 0) {
+            // عرض الطلبات المرتبطة والطلبات من raw data
+            orders.push(...dbOrders.map(dio => {
+              const rawData = dio.raw || {};
+              return {
+                id: dio.external_order_id || rawData.id || `order-${dio.id}`,
+                client_name: rawData.client_name || dio.orders?.customer_name || 'غير محدد',
+                client_mobile: rawData.client_mobile || dio.orders?.customer_phone || '',
+                city_name: rawData.city_name || 'غير محدد',
+                price: rawData.price || dio.orders?.final_amount || 0,
+                delivery_price: rawData.delivery_price || 0,
+                local_order: dio.orders,
+                source: dio.orders ? 'linked' : 'raw',
+                tracking_number: dio.orders?.tracking_number,
+                order_number: dio.orders?.order_number,
+                order_status: dio.orders?.status,
+                ...rawData
+              };
+            }));
+            
+            console.log('📋 طلبات الفاتورة من قاعدة البيانات:', {
+              total: orders.length,
+              linked: orders.filter(o => o.local_order).length,
+              fromRaw: orders.filter(o => !o.local_order).length
+            });
+          } else if (invoiceRecord?.raw) {
+            // كبديل، استخراج الطلبات من raw data للفاتورة
+            const invoiceRawData = invoiceRecord.raw;
+            
+            // محاولة multiple sources للطلبات
+            let rawOrders = [];
+            if (invoiceRawData.orders && Array.isArray(invoiceRawData.orders)) {
+              rawOrders = invoiceRawData.orders;
+            } else if (invoiceRawData.data && Array.isArray(invoiceRawData.data)) {
+              rawOrders = invoiceRawData.data;
+            } else if (invoiceRawData.delivered_orders && Array.isArray(invoiceRawData.delivered_orders)) {
+              rawOrders = invoiceRawData.delivered_orders;
+            }
+            
+            orders.push(...rawOrders.map(order => ({
+              id: order.id || `raw-order-${Math.random()}`,
+              client_name: order.client_name || order.customer_name || 'غير محدد',
+              client_mobile: order.client_mobile || order.phone || '',
+              city_name: order.city_name || order.city || 'غير محدد',
+              price: order.price || order.amount || 0,
+              delivery_price: order.delivery_price || order.delivery_fee || 0,
+              source: 'invoice_raw',
+              ...order
+            })));
+            
+            console.log('📄 طلبات من raw data للفاتورة:', orders.length);
+          }
+
+          invoiceData = { orders };
+          dataSource = 'database';
+          console.log('📊 جلب طلبات الفاتورة من قاعدة البيانات:', orders.length);
+        } catch (dbError) {
+          console.error('❌ فشل البديل من قاعدة البيانات:', dbError);
+          // عرض فاتورة فارغة بدلاً من خطأ
+          invoiceData = { orders: [] };
+        }
+      }
+
+      const finalOrders = invoiceData?.orders || [];
+      setInvoiceOrders(finalOrders);
+      setSelectedInvoice({ 
+        ...(invoiceData?.invoice?.[0] || null),
+        dataSource,
+        ordersCount: finalOrders.length
       });
-      return null;
+      
+      return { ...invoiceData, dataSource };
+    } catch (error) {
+      console.error('خطأ في جلب طلبات الفاتورة:', error);
+      // عرض فاتورة فارغة بدلاً من toast خطأ
+      setInvoiceOrders([]);
+      setSelectedInvoice(null);
+      return { orders: [], dataSource: 'error' };
     } finally {
       setLoading(false);
     }

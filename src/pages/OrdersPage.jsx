@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText } from 'lucide-react';
@@ -38,6 +39,7 @@ const OrdersPage = () => {
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();
+  const { userUUID } = useUnifiedUserData();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -59,10 +61,35 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // Scroll to top when page loads
+  // Scroll to top when page loads + auto sync
   useEffect(() => {
     scrollToTopInstant();
-  }, []);
+    
+    // مزامنة تلقائية عند فتح صفحة الطلبات للمديرين فقط
+    if (hasPermission('view_all_orders')) {
+      const performAutoSync = async () => {
+        try {
+          await supabase.functions.invoke('sync-alwaseet-invoices', {
+            body: { sync_time: 'orders_page_open', scheduled: false }
+          });
+          console.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
+          
+          // تشغيل المزامنة السريعة ومرور الحذف بعد المزامنة الشاملة
+          if (fastSyncPendingOrders) {
+            try {
+              await fastSyncPendingOrders(false); // مزامنة صامتة
+            } catch (syncErr) {
+              console.log('تعذر المزامنة السريعة الإضافية:', syncErr);
+            }
+          }
+        } catch (err) {
+          console.log('تعذر المزامنة التلقائية:', err);
+        }
+      };
+      
+      performAutoSync();
+    }
+  }, [hasPermission]);
 
   // إشعارات للطلبات الجديدة والمحدثة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
@@ -98,20 +125,27 @@ const OrdersPage = () => {
             duration: 5000
           });
 
-          // إضافة إشعار في نافذة الإشعارات للمديرين فقط
-          if (hasPermission('view_all_data') || hasPermission('manage_orders')) {
+          // إضافة إشعار للمدير عند إنشاء طلب من قبل موظف
+          if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
+                // جلب اسم الموظف
+                const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
+                
                 await supabase.from('notifications').insert({
-                  title: 'طلب جديد',
-                  message: `تم إنشاء طلب جديد برقم ${newOrder.qr_id || newOrder.order_number} من العميل ${newOrder.customer_name}`,
+                  title: `طلب جديد بواسطة ${employeeName}`,
+                  message: `طلب جديد ${newOrder.qr_id || newOrder.order_number} بواسطة ${employeeName}`,
                   type: 'order_created',
                   priority: 'high',
                   data: {
                     order_id: newOrder.id,
+                    tracking_number: newOrder.tracking_number,
                     order_qr: newOrder.qr_id,
                     customer_name: newOrder.customer_name,
-                    amount: newOrder.final_amount
+                    amount: newOrder.final_amount,
+                    employee_id: newOrder.created_by,
+                    employee_name: employeeName,
+                    redirect_url: `/employee-follow-up?employee=${newOrder.created_by}&highlight=${newOrder.id}`
                   },
                   user_id: null // إشعار عام للمديرين
                 });
@@ -327,12 +361,12 @@ const OrdersPage = () => {
   // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
   useEffect(() => {
     const fetchEmployeeCode = async () => {
-      if (!user?.user_id || hasPermission('view_all_orders')) return;
+      if (!userUUID || hasPermission('view_all_orders')) return;
       try {
         const { data } = await supabase
           .from('employee_telegram_codes')
           .select('telegram_code')
-          .eq('user_id', user.user_id)
+          .eq('user_id', userUUID)
           .single();
         if (data?.telegram_code) setUserEmployeeCode(String(data.telegram_code).toUpperCase());
       } catch (err) {
@@ -349,22 +383,30 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
+  // معرف المدير الرئيسي
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
+    
+    // للمدير: إظهار طلباته الشخصية فقط في صفحة /my-orders (استبعاد طلبات الموظفين)
     if (hasPermission('view_all_orders')) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
         return orders.filter(order => order.created_by === selectedEmployeeId);
       }
-      return orders;
+      // فلترة طلبات المدير الشخصية فقط - استبعاد طلبات الموظفين
+      return orders.filter(order => order.created_by === ADMIN_ID);
     }
-    return orders.filter(order => order.created_by === user?.user_id);
-  }, [orders, user?.user_id, hasPermission, selectedEmployeeId]);
+    
+    // للموظفين: إظهار طلباتهم فقط
+    return orders.filter(order => order.created_by === userUUID);
+  }, [orders, userUUID, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
     if (hasPermission('view_all_orders')) return aiOrders;
     const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-    const ids = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(norm);
+    const ids = [userEmployeeCode, user?.employee_code, userUUID, user?.user_id, user?.id].filter(Boolean).map(norm);
     if (ids.length === 0) return [];
     return aiOrders.filter(order => {
       const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;

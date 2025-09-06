@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,83 +17,98 @@ import {
   Calendar,
   TrendingUp,
   Banknote,
-  Receipt
+  Receipt,
+  User
 } from 'lucide-react';
-import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
-import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useEmployeeInvoices } from '@/hooks/useEmployeeInvoices';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { supabase } from '@/lib/customSupabaseClient';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+import AllEmployeesInvoicesView from './AllEmployeesInvoicesView';
 
-const AlWaseetInvoicesTab = () => {
-  const { isLoggedIn, activePartner } = useAlWaseet();
+const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const { 
     invoices, 
     loading, 
-    fetchInvoices, 
-    getInvoiceStats,
-    applyCustomDateRangeFilter,
-    syncLastTwoInvoices
-  } = useAlWaseetInvoices();
-  
-  // Auto-load invoices when tab is opened
-  React.useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices('week', false); // auto-load with week filter
-    }
-  }, [isLoggedIn, activePartner]);
+    stats, 
+    getFilteredStats,
+    refetch 
+  } = useEmployeeInvoices(employeeId);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   
-  // Time filter state with localStorage
-  const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
+  // Time filter state with localStorage - نفس الفلاتر الزمنية للتوحيد
+  const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
   const [customDateRange, setCustomDateRange] = useState(null);
 
-  // Filter invoices based on search, status, and time
+  // فلترة الفواتير المحسنة مع دعم البيانات الجديدة
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
     
-    // Apply custom date range if selected
-    if (timeFilter === 'custom' && customDateRange) {
-      filtered = applyCustomDateRangeFilter(filtered, customDateRange);
+    // تطبيق فلترة التاريخ حسب النوع
+    const now = new Date();
+    const startDate = (() => {
+      switch (timeFilter) {
+        case 'week': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        case 'month': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        case '3months': return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        case '6months': return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+        case 'year': return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        case 'custom': return customDateRange?.from ? new Date(customDateRange.from) : null;
+        default: return null; // 'all'
+      }
+    })();
+    
+    if (startDate) {
+      const endDate = timeFilter === 'custom' && customDateRange?.to 
+        ? new Date(customDateRange.to) 
+        : now;
+      
+      filtered = filtered.filter(invoice => {
+        const invoiceDate = new Date(invoice.issued_at || invoice.created_at);
+        return invoiceDate >= startDate && invoiceDate <= endDate;
+      });
     }
     
-    // Apply search and status filters
+    // فلترة البحث والحالة المحسنة
     return filtered.filter(invoice => {
-      const matchesSearch = 
-        invoice.id.toString().includes(searchTerm) ||
-        invoice.merchant_price.toString().includes(searchTerm);
+      const matchesSearch = !searchTerm || 
+        invoice.external_id?.toString().includes(searchTerm) ||
+        invoice.amount?.toString().includes(searchTerm) ||
+        invoice.id?.toString().includes(searchTerm);
       
       const matchesStatus = 
         statusFilter === 'all' || 
-        (statusFilter === 'received' && invoice.status === 'تم الاستلام من قبل التاجر') ||
-        (statusFilter === 'pending' && invoice.status !== 'تم الاستلام من قبل التاجر');
+        (statusFilter === 'received' && (invoice.received === true || invoice.received_flag === true)) ||
+        (statusFilter === 'pending' && !invoice.received && !invoice.received_flag);
       
       return matchesSearch && matchesStatus;
     });
-  }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
+  }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
 
-  const stats = getInvoiceStats();
+  // إحصائيات مفلترة تعتمد على الفترة الزمنية
+  const filteredStats = useMemo(() => {
+    return getFilteredStats ? getFilteredStats(filteredInvoices) : stats;
+  }, [filteredInvoices, getFilteredStats, stats]);
 
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
     setDetailsDialogOpen(true);
   };
 
-
   const handleRefresh = async () => {
-    await fetchInvoices(timeFilter, true); // force refresh
-    await syncLastTwoInvoices();
+    console.log('🔄 تحديث يدوي للفواتير مع مزامنة API');
+    await refetch(); // This now includes smart sync
   };
   
   const handleTimeFilterChange = async (newFilter) => {
     setTimeFilter(newFilter);
     if (newFilter !== 'custom') {
       setCustomDateRange(null);
-      await fetchInvoices(newFilter, true); // force refresh with new filter
     }
   };
   
@@ -101,16 +116,72 @@ const AlWaseetInvoicesTab = () => {
     setCustomDateRange(dateRange);
   };
 
+  // Real-time subscription محسن مع cooldown أطول لتجنب التحديث غير المرغوب
+  useEffect(() => {
+    if (!employeeId || employeeId === 'all') return;
 
-  // Show message if not logged in to Al-Waseet
-  if (!isLoggedIn || activePartner !== 'alwaseet') {
+    let cooldownTimer = null;
+    let lastUpdateTime = 0;
+    const COOLDOWN_MS = 10000; // 10 seconds cooldown - أطول لتجنب التحديثات المتكررة
+
+    const debouncedRefetch = () => {
+      const now = Date.now();
+      if (now - lastUpdateTime < COOLDOWN_MS) {
+        if (cooldownTimer) clearTimeout(cooldownTimer);
+        cooldownTimer = setTimeout(() => {
+          console.log('📡 Debounced invoice refetch after cooldown');
+          refetch();
+          lastUpdateTime = Date.now();
+        }, COOLDOWN_MS);
+      } else {
+        console.log('📡 Immediate invoice refetch');
+        refetch();
+        lastUpdateTime = now;
+      }
+    };
+
+    // تقليل عدد الأحداث المراقبة - فقط UPDATE وINSERT
+    const channel = supabase
+      .channel(`employee-invoices-realtime-${employeeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'delivery_invoices'
+        },
+        (payload) => {
+          // فقط للفواتير المرتبطة بهذا الموظف
+          if (payload.new?.owner_user_id === employeeId || !payload.new?.owner_user_id) {
+            console.log('📡 Invoice UPDATE for employee:', employeeId);
+            debouncedRefetch();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (cooldownTimer) clearTimeout(cooldownTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [employeeId, refetch]);
+
+  // عرض جميع فواتير الموظفين للمدير
+  const isManagerViewingAll = employeeId === 'all';
+  
+  if (isManagerViewingAll) {
+    return <AllEmployeesInvoicesView />;
+  }
+
+  // إذا لم يتم تحديد موظف محدد
+  if (!employeeId) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">غير متصل بشركة التوصيل</h3>
-          <p className="text-muted-foreground mb-4">
-            يجب تسجيل الدخول إلى شركة التوصيل أولاً لعرض الفواتير
+          <User className="h-12 w-12 mx-auto text-amber-500 mb-4" />
+          <h3 className="text-lg font-semibold mb-2">اختر موظفاً لعرض فواتيره</h3>
+          <p className="text-muted-foreground">
+            يرجى اختيار موظف محدد من الفلاتر أعلاه لعرض فواتير شركة التوصيل الخاصة به
           </p>
         </CardContent>
       </Card>
@@ -119,9 +190,9 @@ const AlWaseetInvoicesTab = () => {
 
   return (
     <div className="space-y-6">
-      {/* Revolutionary Statistics Cards - Equal Dimensions */}
+      {/* إحصائيات فواتير الموظف */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Total Invoices Card - Vibrant Blue */}
+        {/* إجمالي الفواتير */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -129,17 +200,8 @@ const AlWaseetInvoicesTab = () => {
           whileHover={{ y: -8, transition: { duration: 0.2 } }}
           className="group"
         >
-          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 dark:from-blue-600 dark:via-blue-700 dark:to-blue-800 shadow-2xl hover:shadow-blue-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
-            {/* Multiple decorative circles */}
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 shadow-2xl hover:shadow-blue-500/25 hover:shadow-2xl transition-all duration-500 min-h-[100px] h-full">
             <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
-            <div className="absolute -top-10 -right-10 w-16 h-16 bg-blue-300/20 rounded-full group-hover:scale-150 transition-transform duration-500" />
-            <div className="absolute top-2 right-2 w-8 h-8 bg-white/15 rounded-full blur-sm group-hover:animate-pulse" />
-            <div className="absolute bottom-4 left-4 w-12 h-12 bg-blue-400/10 rounded-full blur-lg group-hover:scale-110 transition-transform duration-600" />
-            <div className="absolute bottom-8 left-8 w-6 h-6 bg-white/10 rounded-full" />
-            
-            {/* Glow effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
             <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 space-y-1">
@@ -150,7 +212,7 @@ const AlWaseetInvoicesTab = () => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.3 }}
                   >
-                    {stats.totalInvoices}
+                    {filteredStats.totalInvoices}
                   </motion.p>
                 </div>
                 <motion.div
@@ -194,7 +256,7 @@ const AlWaseetInvoicesTab = () => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.4 }}
                   >
-                    {stats.pendingInvoices}
+                    {filteredStats.pendingInvoices}
                   </motion.p>
                 </div>
                 <motion.div
@@ -238,7 +300,7 @@ const AlWaseetInvoicesTab = () => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.5 }}
                   >
-                    {stats.totalAmount.toLocaleString()}
+                    {filteredStats.totalAmount.toLocaleString()}
                   </motion.p>
                   <p className="text-sm font-medium text-emerald-200">د.ع</p>
                 </div>
@@ -283,7 +345,7 @@ const AlWaseetInvoicesTab = () => {
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.3, delay: 0.6 }}
                   >
-                    {stats.totalOrders}
+                    {filteredStats.totalOrders}
                   </motion.p>
                 </div>
                 <motion.div
@@ -299,7 +361,7 @@ const AlWaseetInvoicesTab = () => {
         </motion.div>
       </div>
 
-      {/* Filters and Actions */}
+      {/* فلاتر البحث - نفس تصميم AlWaseetInvoicesTab */}
       <Card dir="rtl">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -308,12 +370,17 @@ const AlWaseetInvoicesTab = () => {
                 onClick={handleRefresh} 
                 disabled={loading}
                 size="sm"
+                variant="outline"
+                className="px-1.5 py-0.5 h-6 text-xs font-medium gap-1 hover:bg-primary hover:text-primary-foreground border-primary/30 hover:border-primary transition-all duration-200 hover:shadow-sm"
               >
-                تحديث
-                <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+                {loading ? (
+                  <RefreshCw className="h-2.5 w-2.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-2.5 w-2.5" />
+                )}
               </Button>
             </div>
-            <span className="text-right">فواتير شركة التوصيل</span>
+            <span className="text-right">فواتير شركة التوصيل للموظف</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -371,35 +438,55 @@ const AlWaseetInvoicesTab = () => {
 
           {/* Results Summary */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                عرض {filteredInvoices.length} من {invoices.length} فاتورة
-              </span>
-              {statusFilter !== 'all' && (
-                <Badge variant="outline">
-                  {statusFilter === 'pending' ? 'معلقة' : 'مُستلمة'}
-                </Badge>
-              )}
-            </div>
+            <Badge variant="outline" className="text-sm">
+              {filteredInvoices.length} فاتورة
+            </Badge>
+            {searchTerm && (
+              <div className="text-sm text-muted-foreground">
+                البحث عن: "{searchTerm}"
+              </div>
+            )}
           </div>
 
-          {/* Invoices List */}
-          <AlWaseetInvoicesList
-            invoices={filteredInvoices}
-            onViewInvoice={handleViewInvoice}
-            loading={loading}
-          />
+          {/* قائمة الفواتير المحسنة */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+              <span className="mr-3 text-muted-foreground">جاري تحميل الفواتير...</span>
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">لا توجد فواتير</h3>
+                <p className="text-muted-foreground">
+                  لم يتم العثور على فواتير لهذا الموظف في الفترة المحددة
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <AlWaseetInvoicesList
+              invoices={filteredInvoices}
+              loading={false}
+              onViewInvoice={handleViewInvoice}
+            />
+          )}
         </CardContent>
       </Card>
 
-      {/* Invoice Details Dialog */}
-      <AlWaseetInvoiceDetailsDialog
-        isOpen={detailsDialogOpen}
-        onClose={() => setDetailsDialogOpen(false)}
-        invoice={selectedInvoice}
-      />
+      {/* حوار تفاصيل الفاتورة */}
+      {selectedInvoice && (
+        <AlWaseetInvoiceDetailsDialog
+          isOpen={detailsDialogOpen}
+          onClose={() => {
+            setDetailsDialogOpen(false);
+            setSelectedInvoice(null);
+          }}
+          invoice={selectedInvoice}
+        />
+      )}
     </div>
   );
 };
 
-export default AlWaseetInvoicesTab;
+export default EmployeeDeliveryInvoicesTab;
