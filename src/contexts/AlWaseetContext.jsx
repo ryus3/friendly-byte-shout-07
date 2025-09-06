@@ -1201,11 +1201,12 @@ export const AlWaseetProvider = ({ children }) => {
       console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
       
       // جلب الطلب المحلي أولاً للتحقق من شروط الحذف التلقائي
+      // ✅ البحث بـ tracking_number أو qr_id أو delivery_partner_order_id
       const { data: localOrder, error: localErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('*, order_items(*)')
-          .eq('tracking_number', qrId)
+          .or(`tracking_number.eq.${qrId},qr_id.eq.${qrId},delivery_partner_order_id.eq.${qrId}`)
       ).maybeSingle();
 
       if (localErr) {
@@ -1282,6 +1283,7 @@ export const AlWaseetProvider = ({ children }) => {
         status: correctLocalStatus,
         delivery_status: waseetStatusText,
         delivery_partner_order_id: String(waseetOrder.id),
+        qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
         updated_at: new Date().toISOString()
       };
 
@@ -1930,15 +1932,15 @@ export const AlWaseetProvider = ({ children }) => {
       console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
-      // ✅ الإصلاح الجذري: شمول الطلبات بـ tracking_number أو qr_id أو delivery_partner_order_id
+      // ✅ الإصلاح الجذري: شمول الطلبات بـ tracking_number أو qr_id (حتى لو كان delivery_partner_order_id فارغ)
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
-          .or('tracking_number.not.is.null,qr_id.not.is.null,delivery_partner_order_id.not.is.null')
-      ).limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
+          .or('tracking_number.not.is.null,qr_id.not.is.null')
+      ).limit(50); // إزالة فلتر delivery_partner_order_id لأن الطلبات قد تفتقده
       
       console.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
         order_number: o.order_number,

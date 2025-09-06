@@ -966,17 +966,21 @@ export const SuperProvider = ({ children }) => {
         notes: baseOrder.notes,
         created_by: user?.user_id || user?.id,
         // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح
-        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || null,
-        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || null,
+        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || null,
+        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || null,
         // ✅ إصلاح حفظ delivery_partner_order_id من جميع المصادر المحتملة
         delivery_partner_order_id: 
           deliveryPartnerDataArg?.delivery_partner_order_id || 
+          deliveryPartnerDataArg?.id || 
           arg1?.delivery_partner_order_id || 
           arg1?.external_id || 
+          arg1?.id || 
+          (isPayload && arg1?.items?.[0]?.external_id) ||
           null,
         qr_id: 
           deliveryPartnerDataArg?.qr_id || 
           arg1?.qr_id || 
+          arg1?.qr_code ||
           trackingNumber || 
           null,
       };
