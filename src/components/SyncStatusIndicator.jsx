@@ -68,8 +68,10 @@ const SyncStatusIndicator = ({ className }) => {
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "bg-background",
-        autoSyncEnabled ? "border border-border" : "border border-orange-300 dark:border-orange-600 bg-orange-50 dark:bg-orange-950/30", // Paused styling
+        "backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border",
+        autoSyncEnabled 
+          ? "border-border/50" 
+          : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50", // Paused styling
         syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
         className
       )}

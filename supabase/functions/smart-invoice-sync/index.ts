@@ -337,14 +337,23 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const { data: recentOrders } = await supabase
+    // دعم المدير لمزامنة طلبات موظفيه
+    const isManager = employee.user_id === '91484496-b887-44f7-9e5d-be9db5567604';
+    
+    const ordersQuery = supabase
       .from('orders')
-      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status')
+      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status, created_by')
       .eq('delivery_partner', 'alwaseet')
-      .eq('created_by', employee.user_id)
       .gte('created_at', thirtyDaysAgo.toISOString())
       .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null')
       .limit(50);
+
+    // إذا كان مدير، يمكنه مزامنة جميع الطلبات، وإلا فقط طلباته
+    if (!isManager) {
+      ordersQuery.eq('created_by', employee.user_id);
+    }
+
+    const { data: recentOrders } = await ordersQuery;
 
     if (!recentOrders?.length) {
       return { updated: 0 };

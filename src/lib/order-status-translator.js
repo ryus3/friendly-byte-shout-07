@@ -23,6 +23,11 @@ const STATUS_TRANSLATIONS = {
     icon: Package,
     color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
+  '1': {
+    label: 'قيد التجهيز',
+    icon: Package,
+    color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
   'pending': {
     label: 'قيد التجهيز',
     icon: Package,
@@ -366,6 +371,15 @@ export const getStatusForComponent = (order, componentType = 'default') => {
   const isLocalOrder = !order.tracking_number || 
                       order.tracking_number.startsWith('RYUS-') || 
                       order.delivery_partner === 'محلي';
+
+  // معالجة خاصة لحالات الوسيط - أولوية قصوى
+  if (order.delivery_status === 'فعال' || order.delivery_status === '1') {
+    return {
+      label: 'قيد التجهيز',
+      icon: Package,
+      color: 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+    };
+  }
 
   // Special case for Al-Waseet state_id = '3' - force translation to "قيد التوصيل"
   if (order.state_id === '3' || order.state_id === 3) {
