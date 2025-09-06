@@ -104,7 +104,27 @@ const CreateOrderPage = () => {
     }
     setLoading(true);
     try {
-      // أولاً: إنشاء الطلب المحلي
+      console.log('🎯 بدء إنشاء طلب بالنهج الجديد (remote-first)...');
+      
+      // أولاً: إنشاء الطلب في الوسيط
+      const validCart = cart.filter(item => item != null);
+      const alWaseetPayload = { 
+        ...formData,
+        details: validCart.map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
+        quantity: validCart.reduce((sum, item) => sum + (item?.quantity || 1), 0),
+        price: total + 50000, // إضافة رسوم التوصيل المقدرة
+      };
+      
+      console.log('🚀 إنشاء طلب في الوسيط أولاً:', alWaseetPayload);
+      const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+      
+      if (!alWaseetResponse?.id) {
+        throw new Error('فشل إنشاء الطلب في الوسيط - لم يتم إرجاع معرف صحيح');
+      }
+      
+      console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alWaseetResponse);
+      
+      // ثانياً: إنشاء الطلب المحلي مع معرفات الوسيط
       const customerInfo = {
         name: formData.name, 
         phone: formData.phone,
@@ -116,77 +136,54 @@ const CreateOrderPage = () => {
         promo_code: formData.promocode || ''
       };
 
-      console.log('🏠 إنشاء طلب محلي أولاً:', customerInfo);
-      const localResult = await createOrder(customerInfo, cart, null, discount);
+      // إضافة معرفات الوسيط إلى بيانات الطلب
+      const deliveryPartnerData = {
+        delivery_partner: 'alwaseet',
+        delivery_partner_order_id: String(alWaseetResponse.id),
+        qr_id: alWaseetResponse.qr_id || alWaseetResponse.tracking_id || String(alWaseetResponse.id),
+        alwaseet_city_id: formData.city_id,
+        alwaseet_region_id: formData.region_id,
+        delivery_fee: 50000
+      };
+
+      // استخدام tracking_number من الوسيط كـ tracking_number محلي
+      const trackingNumber = alWaseetResponse.qr_id || alWaseetResponse.tracking_id || String(alWaseetResponse.id);
+
+      console.log('🏠 إنشاء طلب محلي مع معرفات الوسيط:', { customerInfo, deliveryPartnerData, trackingNumber });
+      const localResult = await createOrder(customerInfo, cart, trackingNumber, discount, 'pending', null, deliveryPartnerData);
 
       if (localResult.success) {
-        console.log('✅ تم إنشاء الطلب المحلي:', localResult);
+        console.log('✅ تم إنشاء الطلب المحلي مع ربط كامل:', localResult);
         
-        // ثانياً: ربط الطلب مع الوسيط
-        try {
-          const validCart = cart.filter(item => item != null);
-          const alWaseetPayload = { 
-            ...formData,
-            details: validCart.map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
-            quantity: validCart.reduce((sum, item) => sum + (item?.quantity || 1), 0),
-            price: total + (50000), // إضافة رسوم التوصيل المقدرة
-          };
-          
-          console.log('📦 إرسال للوسيط:', alWaseetPayload);
-          const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
-          
-          if (alWaseetResponse?.id) {
-            console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResponse);
-            
-            // تحديث الطلب المحلي بمعرف الوسيط - استخدام qr_id بدلاً من tracking_id
-            const updateData = {
-              delivery_partner_order_id: String(alWaseetResponse.id),
-              tracking_number: alWaseetResponse.qr_id || alWaseetResponse.tracking_id,
-              delivery_partner: 'alwaseet'
-            };
-            
-            console.log('🔄 تحديث الطلب المحلي بمعرف الوسيط:', updateData);
-            // استخدام Supabase مباشرة للتحديث السريع
-            const { error: updateError } = await supabase
-              .from('orders')
-              .update(updateData)
-              .eq('id', localResult.orderId);
-              
-            if (updateError) {
-              console.error('⚠️ فشل تحديث معرف الوسيط:', updateError);
-            } else {
-              console.log('✅ تم ربط الطلب مع الوسيط بنجاح');
-            }
-
-            toast({ 
-              title: "نجاح", 
-              description: `تم إنشاء الطلب وربطه مع الوسيط بنجاح. رقم الطلب: ${localResult.trackingNumber}، رقم الوسيط: ${alWaseetResponse.qr_id || alWaseetResponse.id}`,
-              variant: "success",
-              duration: 6000
-            });
-          } else {
-            throw new Error('لم يتم إرجاع معرف من الوسيط');
-          }
-        } catch (alWaseetError) {
-          console.error('⚠️ فشل ربط الوسيط (الطلب المحلي موجود):', alWaseetError);
-          toast({ 
-            title: "تم إنشاء الطلب محلياً فقط", 
-            description: `رقم الطلب: ${localResult.trackingNumber}. فشل الربط مع الوسيط: ${alWaseetError.message}`,
-            variant: "warning",
-            duration: 6000
-          });
-        }
+        toast({ 
+          title: "نجاح الإنشاء الكامل", 
+          description: `تم إنشاء الطلب وربطه مع الوسيط بنجاح. رقم الطلب: ${localResult.trackingNumber}، معرف الوسيط: ${alWaseetResponse.id}`,
+          variant: "success",
+          duration: 6000
+        });
         
         // تنظيف النموذج
         setFormData({ name: '', phone: '', second_phone: '', city_id: '', region_id: '', address: '', notes: '', details: '', quantity: 1, price: 0, size: 'normal', type: 'new', promocode: '' });
         setCart([]); 
         setDiscount(0);
       } else { 
-        throw new Error(localResult.error || "فشل إنشاء الطلب في النظام المحلي."); 
+        console.error('❌ فشل إنشاء الطلب المحلي رغم نجاح الوسيط:', localResult.error);
+        
+        // إشعار المستخدم أن الطلب موجود في الوسيط لكن فشل محلياً
+        toast({ 
+          title: "تحذير - طلب الوسيط موجود", 
+          description: `تم إنشاء الطلب في الوسيط (${alWaseetResponse.id}) لكن فشل الحفظ محلياً: ${localResult.error}`,
+          variant: "warning",
+          duration: 8000
+        });
       }
     } catch (error) {
       console.error('❌ خطأ في إنشاء الطلب:', error);
-      toast({ title: "خطأ", description: error.message || "فشل إنشاء الطلب.", variant: "destructive" });
+      toast({ 
+        title: "خطأ في الإنشاء", 
+        description: error.message || "فشل إنشاء الطلب.",
+        variant: "destructive" 
+      });
     } finally { 
       setLoading(false); 
     }

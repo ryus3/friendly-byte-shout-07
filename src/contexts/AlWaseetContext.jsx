@@ -1974,9 +1974,13 @@ export const AlWaseetProvider = ({ children }) => {
           continue;
         }
         
-        // إضافة logging خاص للطلب المحدد
-        if (localOrder.order_number === '101025896' || localOrder.tracking_number === '101025896') {
-          console.log('🎯 فحص الطلب المحدد 101025896:', {
+        // إضافة logging خاص للطلبات المحددة للاختبار
+        if (['101025896', '101028161'].some(testId => 
+          localOrder.order_number === testId || 
+          localOrder.tracking_number === testId ||
+          localOrder.delivery_partner_order_id === testId
+        )) {
+          console.log('🎯 فحص طلب اختبار:', {
             order_number: localOrder.order_number,
             tracking_number: localOrder.tracking_number,
             delivery_partner_order_id: localOrder.delivery_partner_order_id,
@@ -1984,7 +1988,9 @@ export const AlWaseetProvider = ({ children }) => {
             status: localOrder.status,
             delivery_status: localOrder.delivery_status,
             used_identifier: trackingNumber,
-            should_be_included: true // ✅ يجب أن يظهر الآن
+            has_remote_order: !!remoteOrder,
+            should_be_deleted: !remoteOrder,
+            trigger_source: 'auto_deletion_pass'
           });
         }
         

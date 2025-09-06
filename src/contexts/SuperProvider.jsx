@@ -1073,19 +1073,23 @@ export const SuperProvider = ({ children }) => {
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
 
-      // ✅ محاولة ربط معرف الوسيط إذا كان الطلب للوسيط
+      // ✅ معاينة للتأكد من حفظ معرفات الوسيط بشكل صحيح
       if (orderRow.delivery_partner === 'alwaseet') {
-        setTimeout(async () => {
-          try {
-            // محاولة ربط معرف الوسيط للطلب الجديد
-            if (window.linkRemoteIdsForExistingOrders) {
-              await window.linkRemoteIdsForExistingOrders();
-              console.log('🔗 تم محاولة ربط معرف الوسيط للطلب الجديد');
-            }
-          } catch (error) {
-            console.warn('⚠️ فشل في ربط معرف الوسيط للطلب الجديد:', error);
-          }
-        }, 2000); // تأخير للسماح للطلب بالوصول للوسيط أولاً
+        console.log('🔍 معاينة معرفات الوسيط المحفوظة:', {
+          delivery_partner_order_id: orderRow.delivery_partner_order_id,
+          qr_id: orderRow.qr_id,
+          tracking_number: orderRow.tracking_number,
+          alwaseet_city_id: orderRow.alwaseet_city_id,
+          alwaseet_region_id: orderRow.alwaseet_region_id
+        });
+        
+        // التحقق من وجود المعرفات الأساسية
+        if (!orderRow.delivery_partner_order_id) {
+          console.warn('⚠️ تحذير: لم يتم حفظ delivery_partner_order_id للطلب الجديد');
+        }
+        if (!orderRow.qr_id) {
+          console.warn('⚠️ تحذير: لم يتم حفظ qr_id للطلب الجديد');
+        }
       }
 
       return {
