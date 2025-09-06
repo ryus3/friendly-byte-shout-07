@@ -147,6 +147,51 @@ export type Database = {
           },
         ]
       }
+      auto_sync_log: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          employees_processed: number | null
+          error_message: string | null
+          id: string
+          invoices_synced: number | null
+          orders_updated: number | null
+          results: Json | null
+          started_at: string
+          success: boolean | null
+          sync_type: string
+          triggered_by: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          employees_processed?: number | null
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          results?: Json | null
+          started_at?: string
+          success?: boolean | null
+          sync_type?: string
+          triggered_by?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          employees_processed?: number | null
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          results?: Json | null
+          started_at?: string
+          success?: boolean | null
+          sync_type?: string
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -1404,9 +1449,12 @@ export type Database = {
           created_at: string | null
           daily_sync_enabled: boolean | null
           daily_sync_time: string | null
+          evening_sync_time: string | null
           id: string
           keep_invoices_per_employee: number | null
           lookback_days: number | null
+          morning_sync_time: string | null
+          sync_frequency: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1414,9 +1462,12 @@ export type Database = {
           created_at?: string | null
           daily_sync_enabled?: boolean | null
           daily_sync_time?: string | null
+          evening_sync_time?: string | null
           id?: string
           keep_invoices_per_employee?: number | null
           lookback_days?: number | null
+          morning_sync_time?: string | null
+          sync_frequency?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1424,9 +1475,12 @@ export type Database = {
           created_at?: string | null
           daily_sync_enabled?: boolean | null
           daily_sync_time?: string | null
+          evening_sync_time?: string | null
           id?: string
           keep_invoices_per_employee?: number | null
           lookback_days?: number | null
+          morning_sync_time?: string | null
+          sync_frequency?: string | null
           updated_at?: string | null
         }
         Relationships: []
