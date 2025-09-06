@@ -253,6 +253,100 @@ serve(async (req) => {
           }
         }
 
+        // 6. مزامنة شاملة للطلبات - جلب جميع طلبات الموظف من Al-Waseet وتحديث حالاتها
+        try {
+          console.log(`🔄 مزامنة شاملة لطلبات الموظف: ${employee.full_name || employee.username}`);
+          
+          // جلب جميع طلبات الموظف من Al-Waseet
+          const { data: allOrdersData, error: allOrdersErr } = await supabase.functions.invoke('alwaseet-proxy', {
+            body: {
+              endpoint: 'get_merchant_orders',
+              method: 'GET',
+              token: tokenData.token,
+              payload: null,
+              queryParams: { token: tokenData.token }
+            }
+          });
+
+          if (allOrdersErr) {
+            console.warn(`⚠️ تعذر جلب طلبات الموظف ${employee.full_name}:`, allOrdersErr.message);
+          } else if (allOrdersData?.data) {
+            const allOrders = allOrdersData.data || [];
+            console.log(`📦 تم جلب ${allOrders.length} طلب للموظف ${employee.full_name}`);
+            
+            // مزامنة كل طلب محلياً
+            for (const orderData of allOrders) {
+              try {
+                const externalOrderId = String(orderData.id ?? orderData.qr_id ?? orderData.qrId ?? '').trim();
+                if (!externalOrderId) continue;
+                
+                const stateCode = String(orderData.state_id ?? orderData.stateId ?? orderData.status ?? '').trim();
+                const localStatus = mapAlWaseetStateToLocal(stateCode);
+
+                // البحث عن الطلب المحلي بناءً على tracking_number أو delivery_partner_order_id
+                const { data: localOrders, error: findOrderErr } = await supabase
+                  .from('orders')
+                  .select('id,status,delivery_status,delivery_partner,delivery_partner_order_id,tracking_number,created_by')
+                  .or(`delivery_partner_order_id.eq.${externalOrderId},tracking_number.eq.${externalOrderId}`)
+                  .eq('created_by', employee.user_id)
+                  .limit(1);
+
+                if (findOrderErr || !localOrders || localOrders.length === 0) {
+                  continue;
+                }
+
+                const localOrder = localOrders[0];
+                const updates: Record<string, unknown> = {
+                  delivery_status: stateCode || localOrder.delivery_status || null,
+                  delivery_partner: 'alwaseet',
+                  updated_at: new Date().toISOString()
+                };
+
+                // ربط معرف الطلب الخارجي إذا لم يكن موجوداً
+                if (!localOrder.delivery_partner_order_id) {
+                  updates.delivery_partner_order_id = externalOrderId;
+                }
+
+                // تحديث الحالة المحلية إذا كانت مختلفة
+                if (localStatus && localStatus !== localOrder.status) {
+                  updates.status = localStatus;
+                }
+
+                // تطبيق التحديثات على الطلب المحلي
+                const { error: updateErr } = await supabase
+                  .from('orders')
+                  .update(updates)
+                  .eq('id', localOrder.id);
+
+                if (!updateErr) {
+                  updatedOrdersForEmployee += 1;
+                  ordersUpdatedTotal += 1;
+                  
+                  console.log(`✅ تم تحديث الطلب ${externalOrderId} - حالة: ${stateCode}`);
+                  
+                  // تحديث حالة الحجز/الإفراج عن المخزون
+                  const { error: reservationErr } = await supabase.rpc('update_order_reservation_status', {
+                    p_order_id: localOrder.id,
+                    p_new_status: (updates as any).status ?? localOrder.status,
+                    p_new_delivery_status: stateCode || localOrder.delivery_status,
+                    p_delivery_partner: 'alwaseet'
+                  });
+                  
+                  if (reservationErr) {
+                    console.warn(`⚠️ فشل تحديث حالة الحجز للطلب ${localOrder.id}:`, reservationErr.message);
+                  }
+                } else {
+                  console.warn(`⚠️ فشل تحديث الطلب المحلي ${localOrder.id}:`, updateErr.message);
+                }
+              } catch (orderSyncErr) {
+                console.warn('⚠️ خطأ في مزامنة طلب فردي:', orderSyncErr?.message || orderSyncErr);
+              }
+            }
+          }
+        } catch (comprehensiveSyncErr) {
+          console.warn(`⚠️ خطأ في المزامنة الشاملة للموظف ${employee.full_name}:`, comprehensiveSyncErr?.message || comprehensiveSyncErr);
+        }
+
         results.push({
           employee_id: employee.user_id,
           employee_name: employee.full_name || employee.username,
