@@ -92,22 +92,26 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // التحقق من الملكية
-    const isAdmin = currentUser.email === 'ryusbrand@gmail.com' || currentUser.id === '91484496-b887-44f7-9e5d-be9db5567604';
-    if (!isAdmin && !isOrderOwner(order, currentUser)) {
-      console.log('❌ canAutoDeleteOrder: فشل - المستخدم لا يملك الطلب');
-      return false;
-    }
+  // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
+  if (!isOrderOwner(order, currentUser)) {
+    console.log('❌ canAutoDeleteOrder: فشل - المستخدم لا يملك الطلب (الحماية صالحة للجميع بما في ذلك المدير)');
+    return false;
+  }
     
     console.log(`✅ canAutoDeleteOrder: مسموح - الطلب ${order.tracking_number || order.qr_id} يمكن حذفه`);
     return true;
   }, [user, isOrderOwner]);
   
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
-  const scopeOrdersQuery = useCallback((query) => {
+  const scopeOrdersQuery = useCallback((query, restrictToOwnOrders = false) => {
     if (!user?.id) return query;
     
-    // المدير يرى جميع الطلبات
+    // إذا كان restrictToOwnOrders = true، حتى المدير يحصل على طلباته فقط (للحذف الآمن)
+    if (restrictToOwnOrders) {
+      return query.eq('created_by', user.id);
+    }
+    
+    // المدير يرى جميع الطلبات للعرض
     if (user.email === 'ryusbrand@gmail.com' || user.id === '91484496-b887-44f7-9e5d-be9db5567604') {
       return query;
     }
@@ -1973,16 +1977,17 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
-      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
-      // ✅ الإصلاح الجذري: شمول الطلبات بـ tracking_number أو qr_id (حتى لو كان delivery_partner_order_id فارغ)
+      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
+      // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name')
+          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
-          .or('tracking_number.not.is.null,qr_id.not.is.null')
-      ).limit(50); // إزالة فلتر delivery_partner_order_id لأن الطلبات قد تفتقده
+          .or('tracking_number.not.is.null,qr_id.not.is.null'),
+        true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
+      ).limit(50);
       
       console.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
         order_number: o.order_number,
