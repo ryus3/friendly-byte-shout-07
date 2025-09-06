@@ -6,6 +6,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Map Al-Waseet state_id to local order status
+const mapAlWaseetStateToLocal = (state?: string) => {
+  const s = String(state || '').trim();
+  switch (s) {
+    case '3': return 'delivery'; // قيد التوصيل
+    case '4': return 'delivered'; // تم التسليم
+    case '16': return 'returned'; // قيد الارجاع
+    case '17': return 'returned_in_stock'; // تم الارجاع الى التاجر
+    default: return null;
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -30,14 +42,13 @@ serve(async (req) => {
       .select('*')
       .single();
 
-    if (settingsError || !settings?.daily_sync_enabled) {
-      console.log('⏸️ المزامنة اليومية معطلة أو لا توجد إعدادات');
+    if (settingsError) {
+      console.log('⚠️ تعذر جلب إعدادات المزامنة، سنُكمل بالمبدئي.');
+    }
+    if (isScheduled && !body.force && settings && settings.daily_sync_enabled === false) {
+      console.log('⏸️ المزامنة المجدولة معطلة وفق الإعدادات');
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'المزامنة اليومية معطلة',
-          skipped: true 
-        }),
+        JSON.stringify({ success: true, message: 'المزامنة المجدولة معطلة', skipped: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -64,13 +75,14 @@ serve(async (req) => {
     let totalSynced = 0;
     let totalProcessed = 0;
     let needsLoginCount = 0;
+    let ordersUpdatedTotal = 0;
     const results = [];
     const needsLoginEmployees = [];
 
     for (const employee of employees) {
       try {
         console.log(`🔄 مزامنة فواتير الموظف: ${employee.full_name || employee.username}`);
-
+        let updatedOrdersForEmployee = 0;
         // جلب توكن الموظف من جدول delivery_partner_tokens
         const { data: tokenData, error: tokenError } = await supabase
           .from('delivery_partner_tokens')
@@ -176,6 +188,64 @@ serve(async (req) => {
                 console.warn(`⚠️ خطأ في حفظ تفاصيل الفاتورة ${inv.id}:`, syncErr.message);
               } else {
                 console.log(`✅ تم مزامنة تفاصيل الفاتورة ${inv.id} مع ${ordersData.length} طلب`);
+                // تحديث حالات الطلبات محلياً
+                for (const od of ordersData) {
+                  try {
+                    const externalId = String(od.id ?? od.qr_id ?? od.qrId ?? '').trim();
+                    if (!externalId) continue;
+                    const stateCode = String(od.state_id ?? od.stateId ?? od.status ?? '').trim();
+                    const localStatus = mapAlWaseetStateToLocal(stateCode);
+
+                    const { data: foundOrders, error: findErr } = await supabase
+                      .from('orders')
+                      .select('id,status,delivery_status,delivery_partner,delivery_partner_order_id,tracking_number')
+                      .or(`delivery_partner_order_id.eq.${externalId},tracking_number.eq.${externalId}`)
+                      .eq('delivery_partner', 'alwaseet')
+                      .limit(1);
+
+                    if (findErr || !foundOrders || foundOrders.length === 0) {
+                      continue;
+                    }
+
+                    const order = foundOrders[0];
+                    const updates: Record<string, unknown> = {
+                      delivery_status: stateCode || order.delivery_status || null,
+                      delivery_partner: 'alwaseet',
+                    };
+
+                    if (!order.delivery_partner_order_id) {
+                      updates.delivery_partner_order_id = externalId;
+                    }
+
+                    if (localStatus && localStatus !== order.status) {
+                      updates.status = localStatus;
+                    }
+
+                    const { error: updErr } = await supabase
+                      .from('orders')
+                      .update(updates)
+                      .eq('id', order.id);
+
+                    if (!updErr) {
+                      updatedOrdersForEmployee += 1;
+                      ordersUpdatedTotal += 1;
+                      // تحديث حالة الحجز/الإفراج عن المخزون حسب الحالة الجديدة
+                      const { error: resvErr } = await supabase.rpc('update_order_reservation_status', {
+                        p_order_id: order.id,
+                        p_new_status: (updates as any).status ?? order.status,
+                        p_new_delivery_status: stateCode || order.delivery_status,
+                        p_delivery_partner: 'alwaseet'
+                      });
+                      if (resvErr) {
+                        console.warn(`⚠️ فشل تحديث حالة الحجز للطلب ${order.id}:`, resvErr.message);
+                      }
+                    } else {
+                      console.warn(`⚠️ فشل تحديث الطلب ${order.id}:`, updErr.message);
+                    }
+                  } catch (orderErr) {
+                    console.warn('⚠️ استثناء أثناء تحديث حالة الطلب:', orderErr?.message || orderErr);
+                  }
+                }
               }
             }
           } catch (e) {
@@ -188,6 +258,7 @@ serve(async (req) => {
           employee_name: employee.full_name || employee.username,
           success: true,
           synced: syncedCount,
+          updated_orders: updatedOrdersForEmployee,
           deleted_old: upsertResult?.deleted_old || 0
         });
 
@@ -213,6 +284,7 @@ serve(async (req) => {
         triggered_by: isScheduled ? `system_${syncTime}` : 'admin_manual',
         employees_processed: totalProcessed,
         invoices_synced: totalSynced,
+        orders_updated: ordersUpdatedTotal,
         success: true,
         results: JSON.stringify(results),
         completed_at: new Date().toISOString()
@@ -238,6 +310,7 @@ serve(async (req) => {
         needs_login_count: needsLoginCount,
         needs_login_employees: needsLoginEmployees,
         total_synced: totalSynced,
+        orders_updated: ordersUpdatedTotal,
         results: results,
         timestamp: new Date().toISOString()
       }),
