@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useSmartSync } from '@/hooks/useSmartSync';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -44,6 +45,8 @@ const EmployeeFollowUpPage = () => {
     comprehensiveSync, 
     syncOrdersOnly 
   } = useSmartSync();
+  
+  const { syncVisibleOrdersBatch } = useAlWaseet();
   
   const { 
     orders, 
@@ -103,6 +106,52 @@ const EmployeeFollowUpPage = () => {
       const syncTime = new Date().toISOString();
       localStorage.setItem('last-comprehensive-sync', syncTime);
       setLastComprehensiveSync(syncTime);
+    }
+  };
+
+  // دالة مزامنة الطلبات المرئية الجديدة - سريعة وذكية
+  const syncVisibleOrders = async () => {
+    if (!filteredOrders || filteredOrders.length === 0) {
+      toast({
+        title: "لا توجد طلبات",
+        description: "لا توجد طلبات مرئية للمزامنة",
+        variant: "default"
+      });
+      return;
+    }
+
+    toast({
+      title: "بدء المزامنة الذكية",
+      description: `مزامنة ${filteredOrders.length} طلب مرئي...`,
+      variant: "default"
+    });
+
+    try {
+      const result = await syncVisibleOrdersBatch(filteredOrders, (progress) => {
+        console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
+      });
+
+      if (result.success) {
+        await refreshOrders();
+        toast({
+          title: "تمت المزامنة بنجاح",
+          description: `تم تحديث ${result.updatedCount} طلب من ${filteredOrders.length} طلب مرئي`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "خطأ في المزامنة",
+          description: result.error || "حدث خطأ غير متوقع",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('خطأ في مزامنة الطلبات المرئية:', error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -766,7 +815,7 @@ const filteredOrders = useMemo(() => {
                   syncSpecificEmployee={syncSpecificEmployee}
                   syncSpecificEmployeeSmart={syncSpecificEmployeeSmart}
                   comprehensiveSync={comprehensiveSync}
-                  syncOrdersOnly={syncOrdersOnly}
+                  syncOrdersOnly={syncVisibleOrders}
                   lastComprehensiveSync={lastComprehensiveSync}
                   isAdmin={isAdmin}
                   employees={employees}

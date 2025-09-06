@@ -45,6 +45,149 @@ export const AlWaseetProvider = ({ children }) => {
       return null;
     }
   }, []);
+
+  // دالة مزامنة الطلبات المرئية بكفاءة (للطلبات الموجودة في الصفحة فقط)
+  const syncVisibleOrdersBatch = useCallback(async (visibleOrders, onProgress) => {
+    if (!visibleOrders || visibleOrders.length === 0) {
+      console.log('لا توجد طلبات مرئية للمزامنة');
+      return { success: true, updatedCount: 0 };
+    }
+
+    console.log(`🚀 بدء مزامنة ${visibleOrders.length} طلب مرئي بكفاءة...`);
+    
+    try {
+      // تجميع الطلبات حسب منشئها (created_by)
+      const ordersByEmployee = new Map();
+      
+      for (const order of visibleOrders) {
+        if (!order.created_by || order.delivery_partner !== 'alwaseet') continue;
+        
+        if (!ordersByEmployee.has(order.created_by)) {
+          ordersByEmployee.set(order.created_by, []);
+        }
+        ordersByEmployee.get(order.created_by).push(order);
+      }
+
+      console.log(`📊 تم تجميع الطلبات: ${ordersByEmployee.size} موظف`);
+      
+      let totalUpdated = 0;
+      let processedEmployees = 0;
+      
+      // معالجة كل موظف على حدة
+      for (const [employeeId, employeeOrders] of ordersByEmployee) {
+        try {
+          // الحصول على توكن الموظف
+          const token = await getTokenForUser(employeeId);
+          if (!token) {
+            console.log(`⚠️ لا يوجد توكن صالح للموظف: ${employeeId}`);
+            continue;
+          }
+
+          console.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId}`);
+          
+          // جلب جميع طلبات الموظف من الوسيط
+          const merchantOrders = await AlWaseetAPI.getMerchantOrders(token);
+          
+          if (!merchantOrders || !Array.isArray(merchantOrders)) {
+            console.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
+            continue;
+          }
+
+          // تحديث كل طلب محلي بناءً على بيانات الوسيط
+          for (const localOrder of employeeOrders) {
+            const trackingIds = [
+              localOrder.tracking_number,
+              localOrder.qr_id,
+              localOrder.delivery_partner_order_id
+            ].filter(Boolean);
+
+            // البحث عن الطلب في بيانات الوسيط
+            const remoteOrder = merchantOrders.find(ro => 
+              trackingIds.some(id => 
+                ro.tracking_number === id || 
+                ro.qr_id === id || 
+                ro.id === id ||
+                ro.order_id === id
+              )
+            );
+
+            if (remoteOrder) {
+              // تحديد الحالة المحلية بناءً على حالة الوسيط
+              const statusConfig = getStatusConfig(remoteOrder.status_text);
+              const newDeliveryStatus = remoteOrder.status_text;
+              const newStatus = statusConfig.localStatus;
+              const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
+              const newReceiptReceived = statusConfig.receiptReceived;
+
+              // تحديث الطلب إذا تغيرت بياناته
+              const needsUpdate = (
+                localOrder.delivery_status !== newDeliveryStatus ||
+                localOrder.status !== newStatus ||
+                localOrder.delivery_fee !== newDeliveryFee ||
+                localOrder.receipt_received !== newReceiptReceived ||
+                !localOrder.delivery_partner_order_id
+              );
+
+              if (needsUpdate) {
+                const updates = {
+                  delivery_status: newDeliveryStatus,
+                  status: newStatus,
+                  delivery_fee: newDeliveryFee,
+                  receipt_received: newReceiptReceived,
+                  delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id
+                };
+
+                // تحديث الطلب في قاعدة البيانات
+                const { error } = await supabase
+                  .from('orders')
+                  .update(updates)
+                  .eq('id', localOrder.id);
+
+                if (!error) {
+                  totalUpdated++;
+                  console.log(`✅ تم تحديث الطلب: ${localOrder.tracking_number}`);
+                } else {
+                  console.error(`❌ خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
+                }
+              }
+            }
+          }
+
+          processedEmployees++;
+          
+          // تحديث التقدم
+          if (onProgress) {
+            onProgress({
+              processed: processedEmployees,
+              total: ordersByEmployee.size,
+              updated: totalUpdated,
+              currentEmployee: employeeId
+            });
+          }
+
+        } catch (error) {
+          console.error(`❌ خطأ في مزامنة طلبات الموظف ${employeeId}:`, error);
+        }
+      }
+
+      console.log(`✅ انتهت المزامنة: تم تحديث ${totalUpdated} طلب من ${visibleOrders.length}`);
+      
+      return { 
+        success: true, 
+        updatedCount: totalUpdated,
+        processedEmployees,
+        totalEmployees: ordersByEmployee.size
+      };
+
+    } catch (error) {
+      console.error('❌ خطأ في مزامنة الطلبات المرئية:', error);
+      return { 
+        success: false, 
+        error: error.message,
+        updatedCount: 0
+      };
+    }
+  }, [getTokenForUser]);
   
   // دالة للتحقق من ملكية الطلب
   const isOrderOwner = useCallback((order, currentUser) => {
@@ -2190,6 +2333,7 @@ export const AlWaseetProvider = ({ children }) => {
     setAutoSyncEnabled,
     correctionComplete,
     setCorrectionComplete,
+    syncVisibleOrdersBatch,
   };
 
   // Export linkRemoteIdsForExistingOrders to window for SuperProvider access
