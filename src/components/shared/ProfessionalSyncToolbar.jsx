@@ -32,14 +32,37 @@ const ProfessionalSyncToolbar = ({
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const getTimeSinceSync = () => {
     if (!lastComprehensiveSync) return null;
-    const diff = Date.now() - new Date(lastComprehensiveSync).getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (hours > 0) {
-      return `${hours}س ${minutes}د`;
+    const now = Date.now();
+    const syncTime = new Date(lastComprehensiveSync).getTime();
+    
+    // التأكد من صحة التاريخ
+    if (isNaN(syncTime)) return "غير صحيح";
+    
+    const diff = now - syncTime;
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    // إذا كان في المستقبل
+    if (diff < 0) return "الآن";
+    
+    // أقل من دقيقة
+    if (seconds < 60) return "منذ لحظات";
+    
+    // أقل من ساعة
+    if (minutes < 60) return `${minutes}د`;
+    
+    // أقل من يوم
+    if (hours < 24) {
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}س ${remainingMinutes}د` : `${hours}س`;
     }
-    return `${minutes}د`;
+    
+    // أكثر من يوم
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}ي ${remainingHours}س` : `${days}ي`;
   };
 
   const timeSinceSync = getTimeSinceSync();
@@ -168,29 +191,35 @@ const ProfessionalSyncToolbar = ({
               whileTap={{ scale: 0.98 }}
               className="relative"
             >
-              <div className="w-full h-auto flex flex-col items-center gap-2 p-4 border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 dark:border-purple-600 dark:hover:border-purple-500 dark:hover:bg-purple-800/50 rounded-md">
-                <UserCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                <div className="text-center">
-                  <div className="font-bold text-sm text-purple-700 dark:text-purple-300">اختيار موظف</div>
-                  <div className="text-xs opacity-70 mb-2">للمزامنة المخصصة</div>
+              <Button
+                variant="outline"
+                className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white border-0 shadow-lg hover:shadow-purple-500/25"
+                onClick={() => {}} // فارغ لأن التفاعل يحدث عبر Select
+              >
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5" />
                 </div>
-                <Select value={selectedEmployee?.user_id || "ALL_EMPLOYEES"} onValueChange={(value) => {
-                  const emp = value === "ALL_EMPLOYEES" ? null : employees.find(e => e.user_id === value);
-                  setSelectedEmployee(emp || null);
-                }}>
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="جميع الموظفين" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL_EMPLOYEES">جميع الموظفين</SelectItem>
-                    {employees.map((emp) => (
-                      <SelectItem key={emp.user_id} value={emp.user_id}>
-                        {emp.full_name || emp.username}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <div className="text-center">
+                  <div className="font-bold text-sm">اختيار موظف</div>
+                  <div className="text-xs opacity-90 mb-2">للمزامنة المخصصة</div>
+                  <Select value={selectedEmployee?.user_id || "ALL_EMPLOYEES"} onValueChange={(value) => {
+                    const emp = value === "ALL_EMPLOYEES" ? null : employees.find(e => e.user_id === value);
+                    setSelectedEmployee(emp || null);
+                  }}>
+                    <SelectTrigger className="w-full text-xs bg-white/20 border-white/30 text-white hover:bg-white/30">
+                      <SelectValue placeholder="جميع الموظفين" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50">
+                      <SelectItem value="ALL_EMPLOYEES">جميع الموظفين</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.user_id} value={emp.user_id}>
+                          {emp.full_name || emp.username}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </Button>
             </motion.div>
           </div>
 
