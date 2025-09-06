@@ -4107,6 +4107,10 @@ export type Database = {
         Args: { p_employee_id: string; p_invoice_id: string }
         Returns: Json
       }
+      sync_orders_with_fallback_search: {
+        Args: { p_employee_id?: string; p_force_refresh?: boolean }
+        Returns: Json
+      }
       sync_recent_received_invoices: {
         Args: Record<PropertyKey, never>
         Returns: Json
