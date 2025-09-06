@@ -194,45 +194,49 @@ async function processSmartEmployeeSync(employee: any, supabase: any, options: a
   }
 }
 
-// مزامنة الفواتير فقط - ذكية وسريعة مع فلترة تاريخية
+// مزامنة الفواتير فقط - ذكية وسريعة مع فلترة محسنة
 async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: any, forceRefresh: boolean) {
   try {
-    // التحقق من آخر مزامنة - مقاوم للأخطاء
-    let lastSyncTime = null;
+    console.log(`🔄 Smart sync للموظف: ${employee.full_name || employee.username}`);
+
+    // التحقق من آخر مزامنة ذكية للموظف (استخدام الجدول الجديد)
+    let lastSmartSync = null;
     if (!forceRefresh) {
       try {
-        const { data: lastSync } = await supabase
-          .from('employee_invoice_sync_log')
-          .select('last_sync_at')
+        const { data: smartSyncData } = await supabase
+          .from('employee_smart_sync_log')
+          .select('last_smart_sync_at, last_invoice_date')
           .eq('employee_id', employee.user_id)
           .single();
 
-        lastSyncTime = lastSync?.last_sync_at ? new Date(lastSync.last_sync_at) : null;
-        const now = new Date();
-        const timeDiff = lastSyncTime ? (now.getTime() - lastSyncTime.getTime()) / (1000 * 60) : Infinity;
+        lastSmartSync = smartSyncData;
+        
+        if (lastSmartSync?.last_smart_sync_at) {
+          const now = new Date();
+          const timeDiff = (now.getTime() - new Date(lastSmartSync.last_smart_sync_at).getTime()) / (1000 * 60);
 
-        // إذا كانت آخر مزامنة أقل من 3 دقائق، تخطي
-        if (timeDiff < 3) {
-          console.log(`⏭️ تخطي مزامنة الفواتير للموظف ${employee.full_name} - تمت مؤخراً (${Math.round(timeDiff)} دقيقة)`);
-          return { synced: 0 };
+          // إذا كانت آخر مزامنة ذكية أقل من 3 دقائق، تخطي
+          if (timeDiff < 3) {
+            console.log(`⏭️ تخطي ${employee.full_name} - مزامنة ذكية حديثة (${Math.round(timeDiff)} دقيقة)`);
+            return { synced: 0 };
+          }
         }
       } catch (syncLogError) {
-        console.warn(`⚠️ خطأ في قراءة سجل المزامنة للموظف ${employee.full_name}, سأكمل المزامنة`);
+        console.warn(`⚠️ خطأ في قراءة سجل المزامنة الذكية للموظف ${employee.full_name}, سأكمل المزامنة`);
       }
     }
 
-    // إعداد فلتر ذكي بناء على force_refresh
+    // تحديد نقطة البداية للمزامنة الذكية
     let sinceDate;
     if (forceRefresh) {
-      // مزامنة شاملة - آخر 30 يوم
-      const lastMonth = new Date();
-      lastMonth.setDate(lastMonth.getDate() - 30);
-      sinceDate = lastMonth;
+      // مزامنة شاملة - آخر 60 يوم
+      sinceDate = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+    } else if (lastSmartSync?.last_invoice_date) {
+      // مزامنة ذكية - من آخر فاتورة تم جلبها
+      sinceDate = new Date(lastSmartSync.last_invoice_date);
     } else {
-      // مزامنة ذكية - من آخر مزامنة أو آخر 3 أيام
-      const threeDaysAgo = new Date();
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-      sinceDate = lastSyncTime && lastSyncTime > threeDaysAgo ? lastSyncTime : threeDaysAgo;
+      // أول مزامنة ذكية - آخر 7 أيام
+      sinceDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     }
     
     // بناء معاملات API ذكية مع تحديد الفترة
@@ -273,14 +277,25 @@ async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: 
 
     if (!invoiceData?.data || !Array.isArray(invoiceData.data)) {
       console.log(`📭 لا توجد فواتير جديدة للموظف ${employee.full_name}`);
+      // تحديث سجل المزامنة الذكية حتى لو لم توجد فواتير
+      try {
+        await supabase.from('employee_smart_sync_log').upsert({
+          employee_id: employee.user_id,
+          last_smart_sync_at: new Date().toISOString(),
+          last_invoice_date: lastSmartSync?.last_invoice_date || sinceDate.toISOString(),
+          invoices_synced: 0,
+          sync_type: forceRefresh ? 'comprehensive' : 'smart'
+        });
+      } catch (logError) {
+        console.warn(`⚠️ تعذر تحديث سجل المزامنة الذكية للموظف ${employee.full_name}`);
+      }
       return { synced: 0 };
     }
 
-    // فلترة الفواتير الجديدة فقط (تجنب التكرار)
+    // فلترة الفواتير الجديدة فقط بناء على التاريخ
     const newInvoices = invoiceData.data.filter(invoice => {
-      if (!lastSyncTime) return true;
       const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-      return invoiceDate > lastSyncTime;
+      return invoiceDate > sinceDate;
     });
 
     console.log(`🔄 معالجة ${newInvoices.length} فاتورة جديدة من أصل ${invoiceData.data.length} للموظف ${employee.full_name}`);
@@ -300,22 +315,28 @@ async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: 
         }
 
         syncedCount = upsertResult?.processed || newInvoices.length;
+        console.log(`✅ تمت مزامنة ${syncedCount} فاتورة جديدة للموظف ${employee.full_name}`);
       } catch (saveError) {
         console.error(`❌ خطأ في عملية الحفظ للموظف ${employee.full_name}:`, saveError);
         return { synced: 0 };
       }
     }
 
-    // تحديث سجل المزامنة مع مقاومة الأخطاء
+    // تحديث سجل المزامنة الذكية مع تاريخ آخر فاتورة
     try {
-      await supabase.from('employee_invoice_sync_log').upsert({
+      const latestInvoiceDate = newInvoices.length > 0 
+        ? new Date(Math.max(...newInvoices.map(inv => new Date(inv.updated_at || inv.created_at).getTime()))).toISOString()
+        : lastSmartSync?.last_invoice_date || sinceDate.toISOString();
+
+      await supabase.from('employee_smart_sync_log').upsert({
         employee_id: employee.user_id,
-        last_sync_at: new Date().toISOString(),
+        last_smart_sync_at: new Date().toISOString(),
+        last_invoice_date: latestInvoiceDate,
         invoices_synced: syncedCount,
-        sync_type: forceRefresh ? 'manual' : 'smart'
+        sync_type: forceRefresh ? 'comprehensive' : 'smart'
       });
     } catch (logError) {
-      console.warn(`⚠️ تعذر تحديث سجل المزامنة للموظف ${employee.full_name}`);
+      console.warn(`⚠️ تعذر تحديث سجل المزامنة الذكية للموظف ${employee.full_name}`);
     }
 
     if (syncedCount > 0) {
@@ -337,16 +358,16 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // دعم المدير لمزامنة طلبات موظفيه
+    // دعم محسن للمدير + البحث الشامل عن الطلبات
     const isManager = employee.user_id === '91484496-b887-44f7-9e5d-be9db5567604';
     
     const ordersQuery = supabase
       .from('orders')
-      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status, created_by')
+      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status, created_by, order_number')
       .eq('delivery_partner', 'alwaseet')
       .gte('created_at', thirtyDaysAgo.toISOString())
-      .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null')
-      .limit(50);
+      .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null,order_number.not.is.null')
+      .limit(100); // زيادة الحد الأقصى للمدير
 
     // إذا كان مدير، يمكنه مزامنة جميع الطلبات، وإلا فقط طلباته
     if (!isManager) {
@@ -356,17 +377,29 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     const { data: recentOrders } = await ordersQuery;
 
     if (!recentOrders?.length) {
+      console.log(`📭 لا توجد طلبات للمزامنة للموظف ${employee.full_name}`);
       return { updated: 0 };
     }
 
+    console.log(`🔍 فحص ${recentOrders.length} طلب للموظف ${employee.full_name} (${isManager ? 'المدير - جميع الطلبات' : 'الموظف - طلباته فقط'})`);
+
     let updatedCount = 0;
 
-    // تحديث حالات الطلبات بدفعات صغيرة
-    for (const order of recentOrders.slice(0, 20)) { // حد أقصى 20 طلب لسرعة المعالجة
+    // تحديث حالات الطلبات مع دعم محسن للمعرفات
+    for (const order of recentOrders.slice(0, isManager ? 50 : 20)) {
       try {
-        // استخدام fallback للمعرف المناسب
-        const orderIdToUse = order.delivery_partner_order_id || order.tracking_number || order.qr_id;
-        if (!orderIdToUse) continue;
+        // البحث الشامل عن معرف الطلب - دعم جميع الحقول
+        const orderIdToUse = order.delivery_partner_order_id || 
+                            order.tracking_number || 
+                            order.qr_id || 
+                            order.order_number;
+        
+        if (!orderIdToUse) {
+          console.warn(`⚠️ لا يوجد معرف صالح للطلب ${order.id}`);
+          continue;
+        }
+
+        console.log(`🔍 البحث عن الطلب: ${orderIdToUse} (المنشئ: ${order.created_by === employee.user_id ? 'نفس الموظف' : 'موظف آخر'})`);
 
         const { data: orderStatusData } = await supabase.functions.invoke('alwaseet-proxy', {
           body: {
@@ -394,10 +427,14 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
               .eq('id', order.id);
             
             updatedCount++;
+            console.log(`📦 تحديث حالة الطلب ${orderIdToUse}: ${order.delivery_status} → ${newStatus} (${isManager ? 'المدير' : 'الموظف'})`);
+          } else {
+            console.log(`📦 لا يوجد تحديث للطلب ${orderIdToUse}: ${order.delivery_status}`);
           }
+        } else {
+          console.warn(`⚠️ لا توجد بيانات للطلب ${orderIdToUse}`);
         }
       } catch (orderError) {
-        // تسجيل صامت للأخطاء الفردية
         console.warn(`⚠️ تخطي طلب ${order.delivery_partner_order_id}:`, orderError.message);
       }
     }
