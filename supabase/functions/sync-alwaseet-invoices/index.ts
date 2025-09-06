@@ -78,11 +78,13 @@ serve(async (req) => {
       );
     }
 
-    // 2. جلب الموظفين النشطين - بما في ذلك المدير للمزامنة الشاملة
+    // 2. جلب الموظفين النشطين فقط (استبعاد المدير نهائياً)
+    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
     const { data: employees, error: empError } = await supabase
       .from('profiles')
       .select('user_id, full_name, username')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .neq('user_id', ADMIN_ID);
 
     if (empError || !employees?.length) {
       console.error('❌ خطأ في جلب الموظفين:', empError);
@@ -95,7 +97,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. معالجة متوازية للموظفين (3 موظفين في المرة الواحدة)
+    // 3. معالجة متوازية محسنة للموظفين (5 موظفين في المرة الواحدة لسرعة أكبر)
     let totalSynced = 0;
     let totalProcessed = 0;
     let needsLoginCount = 0;
@@ -103,7 +105,7 @@ serve(async (req) => {
     const results = [];
     const needsLoginEmployees = [];
 
-    const BATCH_SIZE = 3;
+    const BATCH_SIZE = 5; // معالجة أسرع
     const employeeBatches = [];
     for (let i = 0; i < employees.length; i += BATCH_SIZE) {
       employeeBatches.push(employees.slice(i, i + BATCH_SIZE));
@@ -211,39 +213,8 @@ async function processEmployeeSync(employee: any, supabase: any) {
       .single();
 
     if (tokenError || !tokenData?.token) {
-      // إذا كان المدير، استخدم توكن أي موظف متاح
-      if (employee.user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
-        const { data: anyValidToken, error: anyTokenError } = await supabase
-          .from('delivery_partner_tokens')
-          .select('token, expires_at')
-          .eq('partner_name', 'alwaseet')
-          .gte('expires_at', new Date().toISOString())
-          .limit(1)
-          .single();
-        
-        if (anyTokenError || !anyValidToken?.token) {
-          console.warn(`⚠️ لا يوجد توكن صالح للمدير أو الموظفين`);
-          return {
-            synced: 0,
-            processed: 0,
-            ordersUpdated: 0,
-            needsLogin: true,
-            employeeName: employee.full_name || employee.username,
-            result: {
-              employee_id: employee.user_id,
-              employee_name: employee.full_name || employee.username,
-              success: false,
-              error: 'لا يوجد توكن صالح - يحتاج موظف واحد على الأقل لتسجيل الدخول في الوسيط',
-              synced: 0,
-              needs_login: true
-            }
-          };
-        }
-        
-        // استخدام توكن الموظف للمدير
-        tokenData.token = anyValidToken.token;
-        console.log('✅ تم استخدام توكن موظف للمدير في المزامنة الشاملة');
-      } else {
+      // المدير مستبعد، لا حاجة لمعالجة خاصة
+      {
         console.warn(`⚠️ لا يوجد توكن صالح للموظف ${employee.full_name || employee.username}`);
         return {
           synced: 0,

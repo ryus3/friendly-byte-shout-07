@@ -120,14 +120,15 @@ const EmployeeFollowUpPage = () => {
     }, 180000); // 3 minutes
     
     try {
-      console.log('🚀 بدء المزامنة الشاملة المحسنة...');
+      console.log('🚀 بدء المزامنة الشاملة المحسنة (الموظفين فقط)...');
       const startTime = Date.now();
       
       const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
         body: { 
           scheduled: false, 
           force: true, 
-          sync_time: 'comprehensive_manual_optimized' 
+          sync_time: 'employees_only_optimized',
+          exclude_admin: true  // التأكيد على استبعاد المدير
         }
       });
 
@@ -145,8 +146,8 @@ const EmployeeFollowUpPage = () => {
         : '';
 
       toast({
-        title: "مزامنة شاملة مكتملة ⚡",
-        description: successMsg + needsLoginMsg,
+        title: "مزامنة الموظفين مكتملة ⚡",
+        description: successMsg + needsLoginMsg + " (المدير مستبعد)",
         variant: "default",
         duration: 8000
       });
@@ -182,6 +183,7 @@ const EmployeeFollowUpPage = () => {
   
   // إزالة المزامنة التلقائية المزعجة عند فتح الصفحة
   // سيتم الاعتماد على المزامنة اليدوية والمجدولة فقط
+  // فواتير المدير لها مكان منفصل ولا تظهر في متابعة الموظفين
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {

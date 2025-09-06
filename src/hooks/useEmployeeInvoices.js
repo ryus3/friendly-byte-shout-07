@@ -63,8 +63,9 @@ export const useEmployeeInvoices = (employeeId) => {
       return;
     }
     
-    // للمدير عرض "الكل" - سيتم التعامل مع هذا في component منفصل
-    if (employeeId === 'all') {
+  // استبعاد المدير من مزامنة الفواتير في صفحة متابعة الموظفين
+    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+    if (employeeId === 'all' || employeeId === ADMIN_ID) {
       setInvoices([]);
       return;
     }
@@ -125,12 +126,8 @@ export const useEmployeeInvoices = (employeeId) => {
         .order('issued_at', { ascending: false })
         .limit(50);
 
-      // فلترة حسب المستخدم (موظفين يرون فواتيرهم، المدير يرى الكل)
-      if (employeeId !== '91484496-b887-44f7-9e5d-be9db5567604') {
-        // للموظفين: فواتيرهم فقط
-        query = query.eq('owner_user_id', employeeId);
-      }
-      // للمدير: جميع الفواتير بدون فلترة إضافية
+      // في صفحة متابعة الموظفين: فواتير الموظف المحدد فقط
+      query = query.eq('owner_user_id', employeeId);
 
       const { data: employeeInvoices, error } = await query;
 
