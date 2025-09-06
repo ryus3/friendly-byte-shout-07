@@ -965,12 +965,20 @@ export const SuperProvider = ({ children }) => {
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: baseOrder.notes,
         created_by: user?.user_id || user?.id,
-        // ✅ الحل الجذري - حفظ معرفات الوسيط
+        // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح
         alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || null,
         alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || null,
-        // ✅ حفظ delivery_partner_order_id إذا كان متوفراً
-        delivery_partner_order_id: deliveryPartnerDataArg?.delivery_partner_order_id || null,
-        qr_id: deliveryPartnerDataArg?.qr_id || null,
+        // ✅ إصلاح حفظ delivery_partner_order_id من جميع المصادر المحتملة
+        delivery_partner_order_id: 
+          deliveryPartnerDataArg?.delivery_partner_order_id || 
+          arg1?.delivery_partner_order_id || 
+          arg1?.external_id || 
+          null,
+        qr_id: 
+          deliveryPartnerDataArg?.qr_id || 
+          arg1?.qr_id || 
+          trackingNumber || 
+          null,
       };
 
       // إنشاء الطلب

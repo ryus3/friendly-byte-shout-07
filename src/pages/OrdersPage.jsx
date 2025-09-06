@@ -80,7 +80,13 @@ const OrdersPage = () => {
               await fastSyncPendingOrders(false); // مزامنة صامتة
               // ✅ إضافة مرور الحذف التلقائي بعد المزامنة السريعة
               if (performDeletionPassAfterStatusSync) {
-                await performDeletionPassAfterStatusSync();
+                console.log('🗑️ تشغيل عملية الحذف التلقائي من OrdersPage...');
+                try {
+                  const deletionResult = await performDeletionPassAfterStatusSync();
+                  console.log('🗑️ نتيجة الحذف التلقائي من OrdersPage:', deletionResult);
+                } catch (deletionError) {
+                  console.warn('⚠️ خطأ في عملية الحذف التلقائي من OrdersPage:', deletionError);
+                }
               }
             } catch (syncErr) {
               console.log('تعذر المزامنة السريعة الإضافية:', syncErr);

@@ -1930,15 +1930,23 @@ export const AlWaseetProvider = ({ children }) => {
       console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
-      // ✅ التعديل الجذري: شمول الطلبات بـ tracking_number أو qr_id حتى لو لم يكن لديها delivery_partner_order_id
+      // ✅ الإصلاح الجذري: شمول الطلبات بـ tracking_number أو qr_id أو delivery_partner_order_id
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
+          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
-          .or('tracking_number.not.is.null,qr_id.not.is.null')
+          .or('tracking_number.not.is.null,qr_id.not.is.null,delivery_partner_order_id.not.is.null')
       ).limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
+      
+      console.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
+        order_number: o.order_number,
+        tracking_number: o.tracking_number,
+        delivery_partner_order_id: o.delivery_partner_order_id,
+        qr_id: o.qr_id,
+        status: o.status
+      })));
         
       if (error) {
         console.error('❌ خطأ في جلب الطلبات المحلية:', error);
@@ -1957,20 +1965,37 @@ export const AlWaseetProvider = ({ children }) => {
       
       // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
       for (const localOrder of localOrders) {
-        const trackingNumber = localOrder.tracking_number || localOrder.qr_id;
+        // توسيع البحث عن المعرف ليشمل جميع المصادر المحتملة
+        const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
         if (!trackingNumber) {
-          console.warn(`⚠️ لا يوجد tracking_number للطلب ${localOrder.id}`);
+          console.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
           continue;
         }
         
+        // إضافة logging خاص للطلب المحدد
+        if (localOrder.order_number === '101025896') {
+          console.log('🎯 فحص الطلب المحدد 101025896:', {
+            order_number: localOrder.order_number,
+            tracking_number: localOrder.tracking_number,
+            delivery_partner_order_id: localOrder.delivery_partner_order_id,
+            qr_id: localOrder.qr_id,
+            status: localOrder.status,
+            delivery_status: localOrder.delivery_status,
+            used_identifier: trackingNumber
+          });
+        }
+        
         try {
-          console.log(`🔄 فحص الطلب ${trackingNumber} (ID: ${localOrder.id}) باستخدام syncOrderByQR...`);
+          console.log(`🔄 فحص الطلب ${trackingNumber} (رقم: ${localOrder.order_number}, ID: ${localOrder.id}) باستخدام syncOrderByQR...`);
           console.log(`📋 معلومات الطلب:`, {
+            order_number: localOrder.order_number,
             tracking_number: localOrder.tracking_number,
             qr_id: localOrder.qr_id,
+            delivery_partner_order_id: localOrder.delivery_partner_order_id,
             has_remote_id: !!localOrder.delivery_partner_order_id,
             status: localOrder.status,
-            delivery_status: localOrder.delivery_status
+            delivery_status: localOrder.delivery_status,
+            used_identifier: trackingNumber
           });
           
           // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
