@@ -174,15 +174,15 @@ const ProfessionalSyncToolbar = ({
                   <div className="font-bold text-sm text-purple-700 dark:text-purple-300">اختيار موظف</div>
                   <div className="text-xs opacity-70 mb-2">للمزامنة المخصصة</div>
                 </div>
-                <Select value={selectedEmployee?.user_id || ""} onValueChange={(value) => {
-                  const emp = employees.find(e => e.user_id === value);
+                <Select value={selectedEmployee?.user_id || "ALL_EMPLOYEES"} onValueChange={(value) => {
+                  const emp = value === "ALL_EMPLOYEES" ? null : employees.find(e => e.user_id === value);
                   setSelectedEmployee(emp || null);
                 }}>
                   <SelectTrigger className="w-full text-xs">
                     <SelectValue placeholder="جميع الموظفين" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">جميع الموظفين</SelectItem>
+                    <SelectItem value="ALL_EMPLOYEES">جميع الموظفين</SelectItem>
                     {employees.map((emp) => (
                       <SelectItem key={emp.user_id} value={emp.user_id}>
                         {emp.full_name || emp.username}
