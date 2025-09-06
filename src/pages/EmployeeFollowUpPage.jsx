@@ -156,6 +156,32 @@ const EmployeeFollowUpPage = () => {
     localStorage.getItem('last-comprehensive-sync')
   );
   
+  // مزامنة تلقائية عند فتح صفحة متابعة الموظفين
+  useEffect(() => {
+    if (!loading && isAdmin) {
+      const performAutoSync = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+            body: { sync_time: 'employee_followup_page_open', scheduled: false }
+          });
+          
+          if (!error && data?.success) {
+            console.log('🔄 مزامنة تلقائية عند فتح صفحة متابعة الموظفين:', data.message);
+            
+            // تحديث آخر مزامنة
+            const syncTime = new Date().toISOString();
+            localStorage.setItem('last-comprehensive-sync', syncTime);
+            setLastComprehensiveSync(syncTime);
+          }
+        } catch (err) {
+          console.log('تعذر المزامنة التلقائية:', err);
+        }
+      };
+      
+      performAutoSync();
+    }
+  }, [loading, isAdmin]);
+  
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
     ordersCount: orders?.length || 0,

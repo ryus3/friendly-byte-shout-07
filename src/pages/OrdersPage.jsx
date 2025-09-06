@@ -61,10 +61,26 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // Scroll to top when page loads
+  // Scroll to top when page loads + auto sync
   useEffect(() => {
     scrollToTopInstant();
-  }, []);
+    
+    // مزامنة تلقائية عند فتح صفحة الطلبات للمديرين فقط
+    if (hasPermission('view_all_orders')) {
+      const performAutoSync = async () => {
+        try {
+          await supabase.functions.invoke('sync-alwaseet-invoices', {
+            body: { sync_time: 'orders_page_open', scheduled: false }
+          });
+          console.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
+        } catch (err) {
+          console.log('تعذر المزامنة التلقائية:', err);
+        }
+      };
+      
+      performAutoSync();
+    }
+  }, [hasPermission]);
 
   // إشعارات للطلبات الجديدة والمحدثة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {
@@ -109,7 +125,7 @@ const OrdersPage = () => {
                 
                 await supabase.from('notifications').insert({
                   title: `طلب جديد بواسطة ${employeeName}`,
-                  message: `طلب جديد برقم تتبع ${newOrder.tracking_number || newOrder.qr_id || newOrder.order_number} بواسطة ${employeeName}`,
+                  message: `طلب جديد ${newOrder.qr_id || newOrder.order_number} بواسطة ${employeeName}`,
                   type: 'order_created',
                   priority: 'high',
                   data: {

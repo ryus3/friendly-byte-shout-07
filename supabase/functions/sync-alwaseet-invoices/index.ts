@@ -384,11 +384,11 @@ serve(async (req) => {
         completed_at: new Date().toISOString()
       });
 
-    console.log(`🎉 مزامنة ${isScheduled ? 'تلقائية' : 'يدوية'} مكتملة: ${totalSynced} فاتورة لـ ${totalProcessed} موظف`);
+    console.log(`🎉 مزامنة ${isScheduled ? 'تلقائية' : 'يدوية'} مكتملة: معالجة ${totalSynced} فاتورة وتحديث ${ordersUpdatedTotal} طلب لـ ${totalProcessed} موظف`);
 
     // إعداد رسالة مفصلة
     const successMessage = totalProcessed > 0 
-      ? `تم مزامنة ${totalSynced} فاتورة لـ ${totalProcessed} موظف`
+      ? `تم معالجة ${totalSynced} فاتورة وتحديث ${ordersUpdatedTotal} طلب لـ ${totalProcessed} موظف`
       : 'لا توجد موظفين بتوكن صالح للمزامنة';
     
     const warningMessage = needsLoginCount > 0 
