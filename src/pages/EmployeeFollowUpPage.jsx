@@ -30,7 +30,7 @@ import { toast } from '@/hooks/use-toast';
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
   const { allUsers } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const { 
     orders, 
     loading, 
