@@ -27,18 +27,6 @@ serve(async (req) => {
   try {
     const { endpoint, method, token, payload, queryParams } = await req.json();
 
-    // التحقق من وجود الـ token
-    if (!token) {
-      console.error(`❌ لا يوجد token للـ endpoint: ${endpoint}`);
-      return new Response(JSON.stringify({ 
-        msg: 'Token is required',
-        error: 'missing_token' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const headers: any = {
       "Accept": "application/json",
       ...corsHeaders,
@@ -53,8 +41,8 @@ serve(async (req) => {
 
     // For specific endpoints, token must be in query params only. For others, use auth-token header
     if (token) {
-      if (endpoint === 'create-order' || endpoint === 'edit-order' || endpoint === 'statuses' || endpoint === 'merchant-orders') {
-        // Ensure token exists in query params for these endpoints
+      if (endpoint === 'create-order' || endpoint === 'edit-order' || endpoint === 'statuses') {
+        // Ensure token exists in query params
         if (!url.searchParams.has('token')) {
           url.searchParams.append('token', token);
         }
@@ -72,64 +60,20 @@ serve(async (req) => {
       Object.keys(payload).forEach(key => url.searchParams.append(key, payload[key]));
     }
 
-    console.log(`🔄 طلب API إلى: ${endpoint}، الرابط: ${url.toString()}`);
-
-    // إضافة retry mechanism للطلبات
-    let response;
-    let retries = 3;
-    let lastError;
-
-    for (let i = 0; i < retries; i++) {
-      try {
-        response = await fetch(url.toString(), {
-          method,
-          headers,
-          body,
-        });
-        break; // نجح الطلب، اخرج من الحلقة
-      } catch (error) {
-        lastError = error;
-        console.warn(`⚠️ محاولة ${i + 1} فشلت للـ endpoint ${endpoint}:`, error.message);
-        if (i < retries - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // انتظار متزايد
-        }
-      }
-    }
-
-    if (!response) {
-      console.error(`❌ فشل في الوصول إلى ${endpoint} بعد ${retries} محاولات:`, lastError?.message);
-      return new Response(JSON.stringify({ 
-        msg: `Failed to reach Al-Waseet API after ${retries} attempts`,
-        error: lastError?.message || 'network_error' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const response = await fetch(url.toString(), {
+      method,
+      headers,
+      body,
+    });
     
-    let responseData;
-    try {
-      responseData = await response.json();
-    } catch (parseError) {
-      console.error(`❌ فشل في تحليل استجابة JSON من ${endpoint}:`, parseError.message);
-      return new Response(JSON.stringify({ 
-        msg: 'Invalid JSON response from Al-Waseet API',
-        error: 'parse_error' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const responseData = await response.json();
 
     if (!response.ok) {
-      console.error(`❌ استجابة خطأ من ${endpoint}:`, response.status, responseData);
       return new Response(JSON.stringify(responseData), {
         status: response.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    console.log(`✅ نجح طلب ${endpoint}:`, responseData?.msg || 'success');
 
     // The API returns "citys" for cities endpoint, let's normalize it to "cities"
     if (endpoint === 'citys' && responseData.data) {
