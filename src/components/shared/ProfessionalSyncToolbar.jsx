@@ -124,7 +124,7 @@ const ProfessionalSyncToolbar = ({
               <Button
                 onClick={() => selectedEmployee ? syncSpecificEmployee(selectedEmployee.user_id, selectedEmployee.full_name) : smartSync()}
                 disabled={syncing || syncingEmployee}
-                className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white border-0 shadow-lg hover:shadow-emerald-500/25"
+                className="w-full min-h-[120px] flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white border-0 shadow-lg hover:shadow-emerald-500/25"
               >
                 <div className="flex items-center gap-2">
                   <Zap className="h-5 w-5" />
@@ -147,7 +147,7 @@ const ProfessionalSyncToolbar = ({
               <Button
                 onClick={() => selectedEmployee ? syncSpecificEmployee(selectedEmployee.user_id, selectedEmployee.full_name) : comprehensiveSync()}
                 disabled={syncing || syncingEmployee || (!selectedEmployee && !isAdmin)}
-                className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-lg hover:shadow-blue-500/25"
+                className="w-full min-h-[120px] flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-lg hover:shadow-blue-500/25"
               >
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
@@ -170,7 +170,7 @@ const ProfessionalSyncToolbar = ({
               <Button
                 onClick={() => selectedEmployee ? syncOrdersOnly(selectedEmployee.user_id) : syncOrdersOnly()}
                 disabled={syncing || syncingEmployee}
-                className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg hover:shadow-orange-500/25"
+                className="w-full min-h-[120px] flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg hover:shadow-orange-500/25"
               >
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
@@ -193,20 +193,20 @@ const ProfessionalSyncToolbar = ({
             >
               <Button
                 variant="outline"
-                className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white border-0 shadow-lg hover:shadow-purple-500/25"
+                className="w-full min-h-[120px] flex flex-col items-center justify-center gap-1 p-3 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white border-0 shadow-lg hover:shadow-purple-500/25"
                 onClick={() => {}} // فارغ لأن التفاعل يحدث عبر Select
               >
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5" />
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-sm">اختيار موظف</div>
-                  <div className="text-xs opacity-90 mb-2">للمزامنة المخصصة</div>
+                <div className="text-center w-full">
+                  <div className="font-bold text-sm mb-1">اختيار موظف</div>
+                  <div className="text-xs opacity-90 mb-1">للمزامنة المخصصة</div>
                   <Select value={selectedEmployee?.user_id || "ALL_EMPLOYEES"} onValueChange={(value) => {
                     const emp = value === "ALL_EMPLOYEES" ? null : employees.find(e => e.user_id === value);
                     setSelectedEmployee(emp || null);
                   }}>
-                    <SelectTrigger className="w-full text-xs bg-white/20 border-white/30 text-white hover:bg-white/30">
+                    <SelectTrigger className="w-full text-xs bg-white/20 border-white/30 text-white hover:bg-white/30 h-8">
                       <SelectValue placeholder="جميع الموظفين" />
                     </SelectTrigger>
                     <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 z-50">
