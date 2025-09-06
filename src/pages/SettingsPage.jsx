@@ -333,13 +333,18 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* إدارة التوصيل - للمديرين ومن لديهم الصلاحية */}
-            {canAccessDeliveryPartners && (
+            {/* إدارة التوصيل - للمدير فقط */}
+            {isAdmin && (
               <ModernCard
                 icon={Settings}
                 title="إدارة التوصيل"
                 description="مزامنة الطلبات مع شركات التوصيل وإدارة الإعدادات"
                 iconColor="from-indigo-500 to-indigo-600"
+                badge={
+                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+                    مدير فقط
+                  </Badge>
+                }
               >
                 <RestrictedDeliverySettings />
               </ModernCard>

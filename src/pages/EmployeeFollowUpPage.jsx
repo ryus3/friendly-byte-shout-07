@@ -105,7 +105,7 @@ const EmployeeFollowUpPage = () => {
     if (!isAdmin) return;
     
     // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
-    const result = await comprehensiveSync(filteredOrders);
+    const result = await comprehensiveSync(filteredOrders, syncVisibleOrdersBatch);
     if (result.success) {
       await refreshOrders();
       const syncTime = new Date().toISOString();

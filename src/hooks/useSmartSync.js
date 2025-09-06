@@ -159,20 +159,16 @@ export const useSmartSync = () => {
   }, []);
 
   // مزامنة شاملة ذكية - فقط الطلبات الظاهرة والفواتير الجديدة
-  const comprehensiveSync = useCallback(async (visibleOrders = null) => {
+  const comprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null) => {
     setSyncing(true);
     const startTime = Date.now();
     
     try {
       console.log('🚀 بدء المزامنة الشاملة الذكية...');
       
-      // إذا تم تمرير الطلبات الظاهرة، استخدم البدل الذكي
-      if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0) {
+      // إذا تم تمرير الطلبات الظاهرة ودالة المزامنة، استخدم البدل الذكي
+      if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch) {
         console.log(`📋 استخدام المزامنة الذكية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
-        
-        // استيراد دالة المزامنة الذكية من AlWaseet Context
-        const { useAlWaseet } = await import('../contexts/AlWaseetContext');
-        const { syncVisibleOrdersBatch } = useAlWaseet();
         
         // مزامنة الطلبات الظاهرة فقط
         const ordersResult = await syncVisibleOrdersBatch(visibleOrders);
