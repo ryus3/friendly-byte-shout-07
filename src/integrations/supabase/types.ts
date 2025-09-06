@@ -1484,11 +1484,21 @@ export type Database = {
           daily_sync_time: string | null
           evening_sync_time: string | null
           id: string
+          invoice_auto_sync: boolean | null
+          invoice_daily_sync: boolean | null
           keep_invoices_per_employee: number | null
           lookback_days: number | null
           morning_sync_time: string | null
+          orders_auto_sync: boolean | null
+          orders_evening_time: string | null
+          orders_morning_time: string | null
+          orders_twice_daily: boolean | null
           sync_frequency: string | null
+          sync_only_visible_orders: boolean | null
+          sync_work_hours_only: boolean | null
           updated_at: string | null
+          work_end_hour: number | null
+          work_start_hour: number | null
         }
         Insert: {
           auto_cleanup_enabled?: boolean | null
@@ -1497,11 +1507,21 @@ export type Database = {
           daily_sync_time?: string | null
           evening_sync_time?: string | null
           id?: string
+          invoice_auto_sync?: boolean | null
+          invoice_daily_sync?: boolean | null
           keep_invoices_per_employee?: number | null
           lookback_days?: number | null
           morning_sync_time?: string | null
+          orders_auto_sync?: boolean | null
+          orders_evening_time?: string | null
+          orders_morning_time?: string | null
+          orders_twice_daily?: boolean | null
           sync_frequency?: string | null
+          sync_only_visible_orders?: boolean | null
+          sync_work_hours_only?: boolean | null
           updated_at?: string | null
+          work_end_hour?: number | null
+          work_start_hour?: number | null
         }
         Update: {
           auto_cleanup_enabled?: boolean | null
@@ -1510,11 +1530,21 @@ export type Database = {
           daily_sync_time?: string | null
           evening_sync_time?: string | null
           id?: string
+          invoice_auto_sync?: boolean | null
+          invoice_daily_sync?: boolean | null
           keep_invoices_per_employee?: number | null
           lookback_days?: number | null
           morning_sync_time?: string | null
+          orders_auto_sync?: boolean | null
+          orders_evening_time?: string | null
+          orders_morning_time?: string | null
+          orders_twice_daily?: boolean | null
           sync_frequency?: string | null
+          sync_only_visible_orders?: boolean | null
+          sync_work_hours_only?: boolean | null
           updated_at?: string | null
+          work_end_hour?: number | null
+          work_start_hour?: number | null
         }
         Relationships: []
       }
