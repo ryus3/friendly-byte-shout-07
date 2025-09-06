@@ -9,6 +9,7 @@ import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
 import { displaySecuritySummary } from '@/utils/securityLogger';
+import { canDeleteOrder } from '@/lib/order-deletion-utils';
 
 const AlWaseetContext = createContext();
 
@@ -55,9 +56,6 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة للتحقق من إمكانية حذف الطلب تلقائياً
   const canAutoDeleteOrder = useCallback((order, currentUser) => {
     if (!order || !currentUser) return false;
-    
-    // استخدام نفس منطق canDeleteOrder الموحد
-    const { canDeleteOrder } = require('@/lib/order-deletion-utils');
     
     // تطبيق منطق الحذف الموحد
     const basicCanDelete = canDeleteOrder(order, currentUser);
