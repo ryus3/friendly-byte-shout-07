@@ -42,7 +42,7 @@ serve(async (req) => {
       );
     }
 
-    // 2. جلب الموظفين النشطين مع رمز Al-Waseet
+    // 2. جلب الموظفين النشطين
     const { data: employees, error: empError } = await supabase
       .from('profiles')
       .select('user_id, full_name, username')
@@ -63,20 +63,46 @@ serve(async (req) => {
     // 3. مزامنة فواتير كل موظف
     let totalSynced = 0;
     let totalProcessed = 0;
+    let needsLoginCount = 0;
     const results = [];
+    const needsLoginEmployees = [];
 
     for (const employee of employees) {
       try {
         console.log(`🔄 مزامنة فواتير الموظف: ${employee.full_name || employee.username}`);
 
-        // استدعاء الدالة proxy لجلب الفواتير من Al-Waseet API
+        // جلب توكن الموظف من جدول delivery_partner_tokens
+        const { data: tokenData, error: tokenError } = await supabase
+          .from('delivery_partner_tokens')
+          .select('token, expires_at')
+          .eq('user_id', employee.user_id)
+          .eq('partner_name', 'alwaseet')
+          .gte('expires_at', new Date().toISOString())
+          .single();
+
+        if (tokenError || !tokenData?.token) {
+          console.warn(`⚠️ لا يوجد توكن صالح للموظف ${employee.full_name || employee.username}`);
+          needsLoginCount++;
+          needsLoginEmployees.push(employee.full_name || employee.username);
+          results.push({
+            employee_id: employee.user_id,
+            employee_name: employee.full_name || employee.username,
+            success: false,
+            error: 'يحتاج تسجيل دخول في الوسيط',
+            synced: 0,
+            needs_login: true
+          });
+          continue;
+        }
+
+        // استدعاء الدالة proxy لجلب الفواتير من Al-Waseet API باستخدام توكن الموظف
         const { data: invoiceData, error: apiError } = await supabase.functions.invoke('alwaseet-proxy', {
           body: {
             endpoint: 'get_merchant_invoices',
             method: 'GET',
-            token: Deno.env.get('ALWASEET_TOKEN'), // يجب إضافة هذا كسر
+            token: tokenData.token,
             payload: null,
-            queryParams: { token: Deno.env.get('ALWASEET_TOKEN') }
+            queryParams: { token: tokenData.token }
           }
         });
 
@@ -94,7 +120,7 @@ serve(async (req) => {
 
         // 4. حفظ الفواتير مع تنظيف تلقائي للاحتفاظ بـ10 فواتير فقط
         const { data: upsertResult, error: upsertError } = await supabase
-          .rpc('upsert_alwaseet_invoice_list_with_strict_cleanup', {
+          .rpc('upsert_alwaseet_invoice_list_with_cleanup', {
             p_invoices: invoiceData.data,
             p_employee_id: employee.user_id
           });
@@ -116,49 +142,44 @@ serve(async (req) => {
         totalProcessed++;
 
         // 5. مزامنة تفاصيل كل فاتورة (قائمة الطلبات) مع قاعدة البيانات الموحدة
-        const token = Deno.env.get('ALWASEET_TOKEN');
-        if (!token) {
-          console.warn('⚠️ مفقود متغير ALWASEET_TOKEN - سيتم حفظ الفواتير بدون تفاصيل الطلبات');
-        } else {
-          for (const inv of invoiceData.data) {
-            try {
-              // جلب تفاصيل الطلبات لكل فاتورة
-              const { data: invoiceOrdersResp, error: ordersErr } = await supabase.functions.invoke('alwaseet-proxy', {
-                body: {
-                  endpoint: 'get_merchant_invoice_orders',
-                  method: 'GET',
-                  token,
-                  payload: null,
-                  queryParams: { token, id: inv.id }
-                }
+        for (const inv of invoiceData.data) {
+          try {
+            // جلب تفاصيل الطلبات لكل فاتورة باستخدام توكن الموظف
+            const { data: invoiceOrdersResp, error: ordersErr } = await supabase.functions.invoke('alwaseet-proxy', {
+              body: {
+                endpoint: 'get_merchant_invoice_orders',
+                method: 'GET',
+                token: tokenData.token,
+                payload: null,
+                queryParams: { token: tokenData.token, id: inv.id }
+              }
+            });
+
+            if (ordersErr) {
+              console.warn(`⚠️ تعذر جلب طلبات الفاتورة ${inv.id}:`, ordersErr.message);
+              continue;
+            }
+
+            if (invoiceOrdersResp?.data) {
+              const invData = Array.isArray(invoiceOrdersResp.data.invoice) && invoiceOrdersResp.data.invoice.length > 0
+                ? invoiceOrdersResp.data.invoice[0]
+                : inv;
+              const ordersData = invoiceOrdersResp.data.orders || [];
+
+              // حفظ الفاتورة مع طلباتها في قاعدة البيانات الموحدة
+              const { error: syncErr } = await supabase.rpc('sync_alwaseet_invoice_data', {
+                p_invoice_data: invData,
+                p_orders_data: ordersData
               });
 
-              if (ordersErr) {
-                console.warn(`⚠️ تعذر جلب طلبات الفاتورة ${inv.id}:`, ordersErr.message);
-                continue;
+              if (syncErr) {
+                console.warn(`⚠️ خطأ في حفظ تفاصيل الفاتورة ${inv.id}:`, syncErr.message);
+              } else {
+                console.log(`✅ تم مزامنة تفاصيل الفاتورة ${inv.id} مع ${ordersData.length} طلب`);
               }
-
-              if (invoiceOrdersResp?.data) {
-                const invData = Array.isArray(invoiceOrdersResp.data.invoice) && invoiceOrdersResp.data.invoice.length > 0
-                  ? invoiceOrdersResp.data.invoice[0]
-                  : inv;
-                const ordersData = invoiceOrdersResp.data.orders || [];
-
-                // حفظ الفاتورة مع طلباتها في قاعدة البيانات الموحدة
-                const { error: syncErr } = await supabase.rpc('sync_alwaseet_invoice_data', {
-                  p_invoice_data: invData,
-                  p_orders_data: ordersData
-                });
-
-                if (syncErr) {
-                  console.warn(`⚠️ خطأ في حفظ تفاصيل الفاتورة ${inv.id}:`, syncErr.message);
-                } else {
-                  console.log(`✅ تم مزامنة تفاصيل الفاتورة ${inv.id} مع ${ordersData.length} طلب`);
-                }
-              }
-            } catch (e) {
-              console.warn(`⚠️ استثناء أثناء مزامنة تفاصيل الفاتورة ${inv.id}:`, e.message);
             }
+          } catch (e) {
+            console.warn(`⚠️ استثناء أثناء مزامنة تفاصيل الفاتورة ${inv.id}:`, e.message);
           }
         }
 
@@ -199,12 +220,23 @@ serve(async (req) => {
 
     console.log(`🎉 مزامنة ${isScheduled ? 'تلقائية' : 'يدوية'} مكتملة: ${totalSynced} فاتورة لـ ${totalProcessed} موظف`);
 
+    // إعداد رسالة مفصلة
+    const successMessage = totalProcessed > 0 
+      ? `تم مزامنة ${totalSynced} فاتورة لـ ${totalProcessed} موظف`
+      : 'لا توجد موظفين بتوكن صالح للمزامنة';
+    
+    const warningMessage = needsLoginCount > 0 
+      ? ` - ${needsLoginCount} موظف يحتاج تسجيل دخول: ${needsLoginEmployees.join(', ')}`
+      : '';
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: `تم مزامنة ${totalSynced} فاتورة لـ ${totalProcessed} موظف`,
+        message: successMessage + warningMessage,
         total_employees: employees.length,
         processed_employees: totalProcessed,
+        needs_login_count: needsLoginCount,
+        needs_login_employees: needsLoginEmployees,
         total_synced: totalSynced,
         results: results,
         timestamp: new Date().toISOString()

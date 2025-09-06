@@ -115,14 +115,27 @@ const EmployeeFollowUpPage = () => {
 
       if (error) throw error;
 
+      // رسالة مفصلة مع نتائج المزامنة
+      const successMsg = data?.message || "تم تحديث طلبات وفواتير جميع الموظفين";
+      const needsLoginMsg = data?.needs_login_count > 0 
+        ? `\n${data.needs_login_count} موظف يحتاج تسجيل دخول في الوسيط`
+        : '';
+
       toast({
         title: "مزامنة شاملة مكتملة",
-        description: data?.message || "تم تحديث طلبات وفواتير جميع الموظفين",
+        description: successMsg + needsLoginMsg,
         variant: "default",
+        duration: 8000
       });
 
       // تحديث البيانات
       await refreshOrders();
+      
+      // تحديث آخر مزامنة في localStorage
+      const syncTime = new Date().toISOString();
+      localStorage.setItem('last-comprehensive-sync', syncTime);
+      setLastComprehensiveSync(syncTime);
+      
     } catch (error) {
       console.error('خطأ في المزامنة الشاملة:', error);
       toast({
@@ -139,6 +152,9 @@ const EmployeeFollowUpPage = () => {
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
   const [syncingEmployeeId, setSyncingEmployeeId] = useState(null);
+  const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
+    localStorage.getItem('last-comprehensive-sync')
+  );
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -830,18 +846,24 @@ const filteredOrders = useMemo(() => {
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
           
-          {/* أزرار الإجراءات */}
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => refreshOrders()}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              تحديث البيانات
-            </Button>
+          {/* أزرار الإجراءات وآخر مزامنة */}
+          <div className="flex flex-col items-end gap-2">
+            {lastComprehensiveSync && (
+              <div className="text-xs text-muted-foreground">
+                آخر مزامنة شاملة: {new Date(lastComprehensiveSync).toLocaleString('ar-IQ')}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => refreshOrders()}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                disabled={loading}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                تحديث البيانات
+              </Button>
             
             {filters.employeeId !== 'all' && filters.employeeId && (
               <Button
@@ -876,6 +898,7 @@ const filteredOrders = useMemo(() => {
                 مزامنة شاملة (كل الموظفين)
               </Button>
             )}
+            </div>
           </div>
         </div>
 

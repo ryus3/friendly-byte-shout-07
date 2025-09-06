@@ -31,13 +31,13 @@ export const useEmployeeInvoices = (employeeId) => {
       
       // حفظ الفواتير مع تنظيف صارم (آخر 10 فقط)
       if (recentInvoices?.length > 0) {
-        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_strict_cleanup', {
+        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_cleanup', {
           p_invoices: recentInvoices,
           p_employee_id: employeeId
         });
         
         if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list_with_strict_cleanup:', error.message);
+          console.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
         } else {
           console.log('✅ مزامنة موحدة:', data?.processed || 0, 'فاتورة، حذف', data?.deleted_old || 0, 'قديمة');
           setLastAutoSync(Date.now());

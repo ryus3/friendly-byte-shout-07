@@ -43,34 +43,20 @@ const AllEmployeesInvoicesView = () => {
 
       setEmployees(employeesData || []);
 
-      // مزامنة من API قبل التنظيف للحصول على أحدث الفواتير
-      if (forceSync && token && isLoggedIn) {
+      // مزامنة شاملة باستخدام Edge Function (لا نستخدم توكن المدير)
+      if (forceSync) {
         try {
-          console.log('🔄 مزامنة أحدث الفواتير من API...');
-          const latestInvoices = await AlWaseetAPI.getMerchantInvoices(token);
+          console.log('🔄 مزامنة شاملة للفواتير عبر Edge Function...');
           
-          if (latestInvoices?.length > 0) {
-            // حفظ أحدث الفواتير بالموظف المناسب
-            const { error: upsertError } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-              p_invoices: latestInvoices
-            });
-            
-            if (upsertError) {
-              console.warn('خطأ في مزامنة الفواتير:', upsertError.message);
-            } else {
-              console.log('✅ تم مزامنة', latestInvoices.length, 'فاتورة من API');
-            }
-          }
-          
-          // استخدام النظام الموحد مع تنظيف صارم (10 فواتير فقط)
+          // استدعاء المزامنة الشاملة التي تستخدم توكن كل موظف
           const { error: syncError } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-            body: { manual: true, manager_sync: true }
+            body: { manual: true, manager_view: true }
           });
           
           if (syncError) {
             console.warn('تحذير أثناء المزامنة الموحدة:', syncError.message);
           } else {
-            console.log('✅ مزامنة موحدة مكتملة - نظام موحد مع احتفاظ بآخر 10 فواتير لكل موظف');
+            console.log('✅ مزامنة موحدة مكتملة - كل موظف بتوكنه الخاص');
           }
         } catch (apiError) {
           console.warn('تحذير أثناء المزامنة:', apiError.message);
