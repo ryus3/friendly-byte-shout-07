@@ -1933,9 +1933,18 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة مُحسّنة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات
   const performDeletionPassAfterStatusSync = useCallback(async () => {
-    if (!user || !userUUID) return;
+    if (!user || !userUUID) {
+      console.log('❌ لا يوجد مستخدم أو معرف مستخدم');
+      return;
+    }
+    
+    if (!token) {
+      console.log('❌ لا يوجد توكن - سيتم تجاهل مرور الحذف التلقائي');
+      return;
+    }
     
     console.log('🧹 تشغيل مرور الحذف التلقائي بعد تحديث الحالات...');
+    console.log('🔑 Token available:', !!token);
     
     try {
       
