@@ -42,6 +42,7 @@ const EmployeeFollowUpPage = () => {
     comprehensiveSync, 
     syncOrdersOnly 
   } = useSmartSync();
+  
   const { 
     orders, 
     loading, 
@@ -83,16 +84,6 @@ const EmployeeFollowUpPage = () => {
     });
     return initialSelectedOrders;
   });
-
-  // استخدام النظام الذكي الجديد
-  const { 
-    syncing, 
-    syncingEmployee, 
-    smartSync, 
-    syncSpecificEmployee, 
-    comprehensiveSync, 
-    syncOrdersOnly 
-  } = useSmartSync();
 
   // ربط الدوال بالواجهة القديمة
   const syncEmployeeOrders = async (employeeId, employeeName) => {
