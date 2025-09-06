@@ -1975,7 +1975,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
         
         // إضافة logging خاص للطلب المحدد
-        if (localOrder.order_number === '101025896') {
+        if (localOrder.order_number === '101025896' || localOrder.tracking_number === '101025896') {
           console.log('🎯 فحص الطلب المحدد 101025896:', {
             order_number: localOrder.order_number,
             tracking_number: localOrder.tracking_number,
@@ -1983,7 +1983,8 @@ export const AlWaseetProvider = ({ children }) => {
             qr_id: localOrder.qr_id,
             status: localOrder.status,
             delivery_status: localOrder.delivery_status,
-            used_identifier: trackingNumber
+            used_identifier: trackingNumber,
+            should_be_included: true // ✅ يجب أن يظهر الآن
           });
         }
         
