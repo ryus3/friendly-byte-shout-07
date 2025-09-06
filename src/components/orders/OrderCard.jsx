@@ -293,19 +293,6 @@ const OrderCard = ({
             
             {/* Header العالمي - ترتيب موحد مع صفحة الطلبات */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
-                />
-                <div className="text-left" dir="ltr">
-                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                     {order.tracking_number || order.order_number}
-                   </h3>
-                </div>
-              </div>
-              
               {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يسار */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
@@ -337,6 +324,19 @@ const OrderCard = ({
                   </div>
                 </div>
               )}
+              
+              <div className="flex items-center gap-3">
+                <div className="text-right" dir="ltr">
+                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                     {order.tracking_number || order.order_number}
+                   </h3>
+                </div>
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onSelect?.(order.id)}
+                  className="shrink-0 scale-125 border-2"
+                />
+              </div>
               
               {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
@@ -371,22 +371,22 @@ const OrderCard = ({
                       </div>
                    )}
                    <div className="flex flex-col gap-1 items-start">
-                      <div className="flex justify-start w-full">
-                        <Badge className={`${deliveryBadgeColor} px-3 py-1.5 text-xs rounded-full font-bold min-w-[100px] shadow-sm flex items-center justify-center gap-1`}>
-                          <Building className="h-3 w-3" />
-                          {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}
-                        </Badge>
-                      </div>
+                       <div className="flex justify-start w-full">
+                         <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
+                           <Building className="h-3 w-3" />
+                           <span className="truncate">{order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner}</span>
+                         </Badge>
+                       </div>
 
-                      {/* شارة رقم فاتورة الوسيط - مصغرة */}
-                      {order.delivery_partner_invoice_id && (
-                        <div className="flex justify-start w-full">
-                          <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-3 py-1.5 rounded-full min-w-[100px] flex items-center justify-center gap-1 h-fit whitespace-nowrap">
-                            <CreditCard className="h-3 w-3" />
-                            #{order.delivery_partner_invoice_id}
-                          </Badge>
-                        </div>
-                      )}
+                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
+                       {order.delivery_partner_invoice_id && (
+                         <div className="flex justify-start w-full">
+                           <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
+                             <CreditCard className="h-3 w-3" />
+                             <span className="truncate">#{order.delivery_partner_invoice_id}</span>
+                           </Badge>
+                         </div>
+                       )}
                    </div>
                 </div>
                 

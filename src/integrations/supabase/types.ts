@@ -4086,6 +4086,10 @@ export type Database = {
         Args: { p_invoice_data: Json; p_orders_data: Json }
         Returns: Json
       }
+      sync_employee_orders: {
+        Args: { p_employee_id: string }
+        Returns: Json
+      }
       sync_missing_invoice_targeted: {
         Args: { p_employee_id: string; p_invoice_id: string }
         Returns: Json

@@ -168,47 +168,104 @@ const InvoiceSyncSettings = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* المزامنة اليومية التلقائية */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Label className="text-sm font-medium">المزامنة اليومية التلقائية</Label>
-            <p className="text-xs text-muted-foreground">
-              تشغيل مزامنة تلقائية يومية للفواتير من Al-Waseet
-            </p>
+        {/* المزامنة التلقائية المتقدمة */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">المزامنة التلقائية المتقدمة</Label>
+              <p className="text-xs text-muted-foreground">
+                تشغيل مزامنة تلقائية للفواتير من Al-Waseet
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {settings.daily_sync_enabled ? (
+                <Bell className="w-4 h-4 text-green-600" />
+              ) : (
+                <BellOff className="w-4 h-4 text-muted-foreground" />
+              )}
+              <Switch
+                checked={settings.daily_sync_enabled}
+                onCheckedChange={(checked) => updateSetting('daily_sync_enabled', checked)}
+                disabled={saving}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {settings.daily_sync_enabled ? (
-              <Bell className="w-4 h-4 text-green-600" />
-            ) : (
-              <BellOff className="w-4 h-4 text-muted-foreground" />
-            )}
-            <Switch
-              checked={settings.daily_sync_enabled}
-              onCheckedChange={(checked) => updateSetting('daily_sync_enabled', checked)}
-              disabled={saving}
-            />
-          </div>
+
+          {/* تكرار المزامنة */}
+          {settings.daily_sync_enabled && (
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">تكرار المزامنة</Label>
+              <Select 
+                value={settings.sync_frequency || 'once_daily'} 
+                onValueChange={(value) => updateSetting('sync_frequency', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="once_daily">مرة واحدة يومياً</SelectItem>
+                  <SelectItem value="twice_daily">مرتين يومياً (صباح ومساء)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
-        {/* وقت المزامنة اليومية */}
+        {/* أوقات المزامنة */}
         {settings.daily_sync_enabled && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">وقت المزامنة اليومية</Label>
-            <div className="flex items-center gap-3">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <Input
-                type="time"
-                value={settings.daily_sync_time}
-                onChange={(e) => updateSetting('daily_sync_time', e.target.value)}
-                disabled={saving}
-                className="w-32"
-              />
-              <Badge variant="secondary" className="text-xs">
-                كل يوم
-              </Badge>
-            </div>
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">أوقات المزامنة</Label>
+            
+            {settings.sync_frequency === 'twice_daily' ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">مزامنة الصباح</Label>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="time"
+                      value={settings.morning_sync_time || '09:00'}
+                      onChange={(e) => updateSetting('morning_sync_time', e.target.value)}
+                      disabled={saving}
+                      className="w-28"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">مزامنة المساء</Label>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <Input
+                      type="time"
+                      value={settings.evening_sync_time || '21:00'}
+                      onChange={(e) => updateSetting('evening_sync_time', e.target.value)}
+                      disabled={saving}
+                      className="w-28"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="time"
+                  value={settings.daily_sync_time || '09:00'}
+                  onChange={(e) => updateSetting('daily_sync_time', e.target.value)}
+                  disabled={saving}
+                  className="w-32"
+                />
+                <Badge variant="secondary" className="text-xs">
+                  كل يوم
+                </Badge>
+              </div>
+            )}
+            
             <p className="text-xs text-muted-foreground">
-              سيتم تشغيل المزامنة يومياً في الوقت المحدد
+              {settings.sync_frequency === 'twice_daily' 
+                ? 'سيتم تشغيل المزامنة مرتين يومياً في الأوقات المحددة'
+                : 'سيتم تشغيل المزامنة يومياً في الوقت المحدد'
+              }
             </p>
           </div>
         )}
@@ -310,9 +367,10 @@ const InvoiceSyncSettings = () => {
           <strong>ملاحظات مهمة:</strong>
           <ul className="list-disc list-inside mt-1 space-y-1">
             <li>سيتم الاحتفاظ بآخر {settings.keep_invoices_per_employee} فواتير لكل موظف فقط</li>
-            <li>المزامنة اليومية تتم تلقائياً بدون فتح التطبيق</li>
+            <li>المزامنة التلقائية تتم {settings.sync_frequency === 'twice_daily' ? 'مرتين يومياً' : 'مرة واحدة يومياً'} بدون فتح التطبيق</li>
             <li>البيانات محفوظة محلياً لتوفير استهلاك الانترنت</li>
             <li>المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط</li>
+            <li>يمكن للمدير مزامنة طلبات موظف محدد من صفحة متابعة الموظفين</li>
           </ul>
         </div>
       </CardContent>

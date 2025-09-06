@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -72,10 +72,41 @@ const EmployeeFollowUpPage = () => {
     });
     return initialSelectedOrders;
   });
+
+  // دالة مزامنة طلبات موظف محدد
+  const syncEmployeeOrders = async (employeeId, employeeName) => {
+    setSyncingEmployeeId(employeeId);
+    try {
+      const { data, error } = await supabase.rpc('sync_employee_orders', {
+        p_employee_id: employeeId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "تم مزامنة الطلبات",
+        description: `${employeeName}: ${data.message}`,
+        variant: "default"
+      });
+
+      // تحديث البيانات
+      refreshOrders();
+    } catch (error) {
+      console.error('خطأ في مزامنة طلبات الموظف:', error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message || "تعذر مزامنة طلبات الموظف",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncingEmployeeId(null);
+    }
+  };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
+  const [syncingEmployeeId, setSyncingEmployeeId] = useState(null);
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -767,6 +798,41 @@ const filteredOrders = useMemo(() => {
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
           
+          {/* أزرار الإجراءات */}
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => refreshOrders()}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              تحديث البيانات
+            </Button>
+            
+            {filters.employeeId !== 'all' && filters.employeeId && (
+              <Button
+                onClick={() => {
+                  const employee = employees.find(e => e.user_id === filters.employeeId);
+                  if (employee) {
+                    syncEmployeeOrders(filters.employeeId, employee.full_name || employee.username);
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                disabled={syncingEmployeeId === filters.employeeId}
+              >
+                {syncingEmployeeId === filters.employeeId ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                مزامنة طلبات الموظف
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* الفلاتر */}

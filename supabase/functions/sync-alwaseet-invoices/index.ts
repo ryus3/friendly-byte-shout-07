@@ -13,12 +13,16 @@ serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+    const isScheduled = body.scheduled === true;
+    const syncTime = body.sync_time || 'manual';
+    
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('🔄 بدء مزامنة الفواتير اليومية التلقائية...');
+    console.log(`🔄 بدء مزامنة الفواتير ${isScheduled ? 'التلقائية' : 'اليدوية'} - ${syncTime}...`);
 
     // 1. جلب إعدادات المزامنة
     const { data: settings, error: settingsError } = await supabase
@@ -180,8 +184,20 @@ serve(async (req) => {
       }
     }
 
-    // تم إزالة أي مزامنة مستهدفة خاصة لضمان نظام موحد بالكامل بدون استثناءات
-    console.log(`🎉 مزامنة يومية مكتملة: ${totalSynced} فاتورة لـ ${totalProcessed} موظف`);
+    // تسجيل نتائج المزامنة في قاعدة البيانات
+    await supabase
+      .from('auto_sync_log')
+      .insert({
+        sync_type: isScheduled ? 'scheduled' : 'manual',
+        triggered_by: isScheduled ? `system_${syncTime}` : 'admin_manual',
+        employees_processed: totalProcessed,
+        invoices_synced: totalSynced,
+        success: true,
+        results: JSON.stringify(results),
+        completed_at: new Date().toISOString()
+      });
+
+    console.log(`🎉 مزامنة ${isScheduled ? 'تلقائية' : 'يدوية'} مكتملة: ${totalSynced} فاتورة لـ ${totalProcessed} موظف`);
 
     return new Response(
       JSON.stringify({
