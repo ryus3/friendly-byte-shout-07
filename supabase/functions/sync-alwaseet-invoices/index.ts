@@ -9,10 +9,33 @@ const corsHeaders = {
 // Map Al-Waseet state_id to local order status
 const mapAlWaseetStateToLocal = (state?: string) => {
   const s = String(state || '').trim();
+  
+  // دعم الحالات النصية العربية أيضاً
+  if (s === 'فعال' || s === 'فعال ( قيد التجهير)') return 'pending';
+  
   switch (s) {
+    case '1': return 'pending'; // فعال قيد التجهيز
+    case '2': return 'shipped'; // تم الشحن
     case '3': return 'delivery'; // قيد التوصيل
     case '4': return 'delivered'; // تم التسليم
-    case '16': return 'returned'; // قيد الارجاع
+    case '5': 
+    case '6': 
+    case '7': 
+    case '14': 
+    case '22': 
+    case '23': 
+    case '24': 
+    case '42': 
+    case '44': return 'delivery'; // قيد التوصيل - مراحل مختلفة
+    case '12':
+    case '13':
+    case '15':
+    case '16':
+    case '19':
+    case '20':
+    case '21':
+    case '31':
+    case '32': return 'returned'; // حالات الإرجاع والإلغاء
     case '17': return 'returned_in_stock'; // تم الارجاع الى التاجر
     default: return null;
   }
@@ -53,12 +76,11 @@ serve(async (req) => {
       );
     }
 
-    // 2. جلب الموظفين النشطين
+    // 2. جلب الموظفين النشطين - بما في ذلك المدير للمزامنة الشاملة
     const { data: employees, error: empError } = await supabase
       .from('profiles')
       .select('user_id, full_name, username')
-      .eq('is_active', true)
-      .neq('user_id', '91484496-b887-44f7-9e5d-be9db5567604'); // استبعاد المدير
+      .eq('is_active', true);
 
     if (empError || !employees?.length) {
       console.error('❌ خطأ في جلب الموظفين:', empError);
@@ -93,18 +115,48 @@ serve(async (req) => {
           .single();
 
         if (tokenError || !tokenData?.token) {
-          console.warn(`⚠️ لا يوجد توكن صالح للموظف ${employee.full_name || employee.username}`);
-          needsLoginCount++;
-          needsLoginEmployees.push(employee.full_name || employee.username);
-          results.push({
-            employee_id: employee.user_id,
-            employee_name: employee.full_name || employee.username,
-            success: false,
-            error: 'يحتاج تسجيل دخول في الوسيط',
-            synced: 0,
-            needs_login: true
-          });
-          continue;
+          // إذا كان المدير، استخدم توكن أي موظف متاح
+          if (employee.user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
+            const { data: anyValidToken, error: anyTokenError } = await supabase
+              .from('delivery_partner_tokens')
+              .select('token, expires_at')
+              .eq('partner_name', 'alwaseet')
+              .gte('expires_at', new Date().toISOString())
+              .limit(1)
+              .single();
+            
+            if (anyTokenError || !anyValidToken?.token) {
+              console.warn(`⚠️ لا يوجد توكن صالح للمدير أو الموظفين`);
+              needsLoginCount++;
+              needsLoginEmployees.push(employee.full_name || employee.username);
+              results.push({
+                employee_id: employee.user_id,
+                employee_name: employee.full_name || employee.username,
+                success: false,
+                error: 'لا يوجد توكن صالح - يحتاج موظف واحد على الأقل لتسجيل الدخول في الوسيط',
+                synced: 0,
+                needs_login: true
+              });
+              continue;
+            }
+            
+            // استخدام توكن الموظف للمدير
+            tokenData = anyValidToken;
+            console.log('✅ تم استخدام توكن موظف للمدير في المزامنة الشاملة');
+          } else {
+            console.warn(`⚠️ لا يوجد توكن صالح للموظف ${employee.full_name || employee.username}`);
+            needsLoginCount++;
+            needsLoginEmployees.push(employee.full_name || employee.username);
+            results.push({
+              employee_id: employee.user_id,
+              employee_name: employee.full_name || employee.username,
+              success: false,
+              error: 'يحتاج تسجيل دخول في الوسيط',
+              synced: 0,
+              needs_login: true
+            });
+            continue;
+          }
         }
 
         // استدعاء الدالة proxy لجلب الفواتير من Al-Waseet API باستخدام توكن الموظف
@@ -289,47 +341,18 @@ serve(async (req) => {
             // إنشاء مجموعة من معرفات الطلبات الخارجية الموجودة
             const remoteOrderIds = new Set(allOrders.map(od => String(od.id ?? od.qr_id ?? od.qrId ?? '').trim()).filter(Boolean));
             
-            // البحث عن الطلبات المحلية التي لم تعد موجودة في الخارج
-            const ordersToDelete = [];
+            // لا نحذف الطلبات - فقط تحديث الحالات
+            console.log(`📊 مراجعة ${allOrders.length} طلب خارجي مقابل ${localOrders?.length || 0} طلب محلي للموظف ${employee.full_name}`);
+            
+            // إنشاء خريطة الطلبات المحلية للبحث السريع
+            const localOrdersMap = new Map();
             if (localOrders && localOrders.length > 0) {
-              for (const localOrder of localOrders) {
-                const externalId = localOrder.delivery_partner_order_id || localOrder.tracking_number;
-                if (externalId && !remoteOrderIds.has(String(externalId).trim())) {
-                  // التحقق من صلاحية الحذف
-                  const canDelete = ['pending', 'shipped', 'delivery'].includes(localOrder.status);
-                  if (canDelete) {
-                    ordersToDelete.push({
-                      id: localOrder.id,
-                      order_number: localOrder.order_number,
-                      external_id: externalId,
-                      status: localOrder.status
-                    });
-                  }
+              localOrders.forEach(lo => {
+                const externalId = lo.delivery_partner_order_id || lo.tracking_number;
+                if (externalId) {
+                  localOrdersMap.set(String(externalId).trim(), lo);
                 }
-              }
-            }
-
-            // حذف الطلبات التي لم تعد موجودة خارجياً
-            if (ordersToDelete.length > 0) {
-              console.log(`🗑️ حذف ${ordersToDelete.length} طلب لم يعد موجوداً في الوسيط للموظف ${employee.full_name}`);
-              for (const orderToDelete of ordersToDelete) {
-                try {
-                  const { error: deleteErr } = await supabase
-                    .from('orders')
-                    .delete()
-                    .eq('id', orderToDelete.id);
-                  
-                  if (!deleteErr) {
-                    console.log(`✅ تم حذف الطلب ${orderToDelete.order_number} (${orderToDelete.external_id}) بنجاح`);
-                    updatedOrdersForEmployee += 1;
-                    ordersUpdatedTotal += 1;
-                  } else {
-                    console.warn(`⚠️ فشل حذف الطلب ${orderToDelete.order_number}:`, deleteErr.message);
-                  }
-                } catch (deleteError) {
-                  console.warn(`⚠️ خطأ في حذف الطلب ${orderToDelete.order_number}:`, deleteError?.message || deleteError);
-                }
-              }
+              });
             }
             
             // مزامنة كل طلب محلياً
