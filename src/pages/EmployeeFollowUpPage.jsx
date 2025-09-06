@@ -84,8 +84,6 @@ const EmployeeFollowUpPage = () => {
     return initialSelectedOrders;
   });
 
-import { useSmartSync } from '@/hooks/useSmartSync';
-
   // استخدام النظام الذكي الجديد
   const { 
     syncing, 
