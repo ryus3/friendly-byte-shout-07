@@ -1,14 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   RefreshCw, 
   Zap, 
   Users, 
   Truck, 
-  RotateCcw,
+  UserCheck,
   Clock,
   Sparkles,
   Target
@@ -25,8 +26,10 @@ const ProfessionalSyncToolbar = ({
   comprehensiveSync, 
   syncOrdersOnly,
   lastComprehensiveSync,
-  isAdmin
+  isAdmin,
+  employees = []
 }) => {
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const getTimeSinceSync = () => {
     if (!lastComprehensiveSync) return null;
     const diff = Date.now() - new Date(lastComprehensiveSync).getTime();
@@ -96,7 +99,7 @@ const ProfessionalSyncToolbar = ({
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                onClick={smartSync}
+                onClick={() => selectedEmployee ? syncSpecificEmployee(selectedEmployee.user_id, selectedEmployee.full_name) : smartSync()}
                 disabled={syncing || syncingEmployee}
                 className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white border-0 shadow-lg hover:shadow-emerald-500/25"
               >
@@ -106,7 +109,9 @@ const ProfessionalSyncToolbar = ({
                 </div>
                 <div className="text-center">
                   <div className="font-bold text-sm">مزامنة سريعة</div>
-                  <div className="text-xs opacity-90">فواتير جديدة فقط</div>
+                  <div className="text-xs opacity-90">
+                    {selectedEmployee ? `للموظف: ${selectedEmployee.full_name}` : 'لجميع الموظفين'}
+                  </div>
                 </div>
               </Button>
             </motion.div>
@@ -117,8 +122,8 @@ const ProfessionalSyncToolbar = ({
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                onClick={comprehensiveSync}
-                disabled={syncing || syncingEmployee || !isAdmin}
+                onClick={() => selectedEmployee ? syncSpecificEmployee(selectedEmployee.user_id, selectedEmployee.full_name) : comprehensiveSync()}
+                disabled={syncing || syncingEmployee || (!selectedEmployee && !isAdmin)}
                 className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-lg hover:shadow-blue-500/25"
               >
                 <div className="flex items-center gap-2">
@@ -127,7 +132,9 @@ const ProfessionalSyncToolbar = ({
                 </div>
                 <div className="text-center">
                   <div className="font-bold text-sm">مزامنة شاملة</div>
-                  <div className="text-xs opacity-90">جميع الموظفين</div>
+                  <div className="text-xs opacity-90">
+                    {selectedEmployee ? `للموظف: ${selectedEmployee.full_name}` : 'لجميع الموظفين'}
+                  </div>
                 </div>
               </Button>
             </motion.div>
@@ -138,7 +145,7 @@ const ProfessionalSyncToolbar = ({
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                onClick={() => syncOrdersOnly()}
+                onClick={() => selectedEmployee ? syncOrdersOnly(selectedEmployee.user_id) : syncOrdersOnly()}
                 disabled={syncing || syncingEmployee}
                 className="w-full h-auto flex flex-col items-center gap-2 p-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-lg hover:shadow-orange-500/25"
               >
@@ -148,28 +155,42 @@ const ProfessionalSyncToolbar = ({
                 </div>
                 <div className="text-center">
                   <div className="font-bold text-sm">تحديث الطلبات</div>
-                  <div className="text-xs opacity-90">حالات التوصيل</div>
+                  <div className="text-xs opacity-90">
+                    {selectedEmployee ? `للموظف: ${selectedEmployee.full_name}` : 'لجميع الموظفين'}
+                  </div>
                 </div>
               </Button>
             </motion.div>
 
-            {/* إعادة تحميل البيانات */}
+            {/* اختيار موظف */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              className="relative"
             >
-              <Button
-                onClick={() => window.location.reload()}
-                disabled={syncing || syncingEmployee}
-                variant="outline"
-                className="w-full h-auto flex flex-col items-center gap-2 p-4 border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-800/50"
-              >
-                <RotateCcw className="h-5 w-5" />
+              <div className="w-full h-auto flex flex-col items-center gap-2 p-4 border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 dark:border-purple-600 dark:hover:border-purple-500 dark:hover:bg-purple-800/50 rounded-md">
+                <UserCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                 <div className="text-center">
-                  <div className="font-bold text-sm">إعادة تحميل</div>
-                  <div className="text-xs opacity-70">البيانات المحلية</div>
+                  <div className="font-bold text-sm text-purple-700 dark:text-purple-300">اختيار موظف</div>
+                  <div className="text-xs opacity-70 mb-2">للمزامنة المخصصة</div>
                 </div>
-              </Button>
+                <Select value={selectedEmployee?.user_id || ""} onValueChange={(value) => {
+                  const emp = employees.find(e => e.user_id === value);
+                  setSelectedEmployee(emp || null);
+                }}>
+                  <SelectTrigger className="w-full text-xs">
+                    <SelectValue placeholder="جميع الموظفين" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">جميع الموظفين</SelectItem>
+                    {employees.map((emp) => (
+                      <SelectItem key={emp.user_id} value={emp.user_id}>
+                        {emp.full_name || emp.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </motion.div>
           </div>
 
@@ -196,8 +217,9 @@ const ProfessionalSyncToolbar = ({
               <div>
                 <div className="font-medium mb-1">نصائح للاستخدام الأمثل:</div>
                 <ul className="space-y-1 text-xs">
+                  <li>• <strong>اختيار موظف:</strong> يجعل جميع أزرار المزامنة تعمل للموظف المحدد فقط</li>
                   <li>• <strong>المزامنة السريعة:</strong> تجلب الفواتير الجديدة فقط (الأسرع)</li>
-                  <li>• <strong>المزامنة الشاملة:</strong> تجلب جميع البيانات (للمديرين فقط)</li>
+                  <li>• <strong>المزامنة الشاملة:</strong> تجلب جميع البيانات</li>
                   <li>• <strong>تحديث الطلبات:</strong> يحدث حالات التوصيل فقط</li>
                 </ul>
               </div>

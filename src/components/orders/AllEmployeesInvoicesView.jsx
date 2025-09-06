@@ -319,43 +319,15 @@ const AllEmployeesInvoicesView = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>فواتير جميع الموظفين</span>
-            <div className="flex items-center gap-2">
-              <Select value="" onValueChange={(empId) => {
-                if (empId === 'all_invoices') {
-                  handleRefresh();
-                } else if (empId === 'all_orders') {
-                  // مزامنة طلبات جميع الموظفين
-                  supabase.functions.invoke('smart-invoice-sync', {
-                    body: { mode: 'comprehensive', sync_invoices: false, sync_orders: true }
-                  });
-                } else {
-                  // مزامنة موظف محدد
-                  const employee = employees.find(emp => emp.user_id === empId);
-                  if (employee) {
-                    supabase.functions.invoke('smart-invoice-sync', {
-                      body: { 
-                        mode: 'specific_employee', 
-                        employee_id: empId,
-                        force_refresh: true 
-                      }
-                    });
-                  }
-                }
-              }}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="مزامنة موظف محدد" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all_invoices">مزامنة جميع الفواتير</SelectItem>
-                  <SelectItem value="all_orders">مزامنة جميع الطلبات</SelectItem>
-                  {employees.map((emp) => (
-                    <SelectItem key={emp.user_id} value={emp.user_id}>
-                      {emp.full_name || emp.username}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
+              <RefreshCw className="h-4 w-4" />
+              تحديث الفواتير
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

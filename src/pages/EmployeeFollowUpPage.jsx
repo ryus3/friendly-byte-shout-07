@@ -767,6 +767,7 @@ const filteredOrders = useMemo(() => {
           syncOrdersOnly={syncOrdersOnly}
           lastComprehensiveSync={lastComprehensiveSync}
           isAdmin={isAdmin}
+          employees={employees}
         />
 
         {/* الفلاتر */}
