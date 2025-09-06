@@ -3621,6 +3621,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_delivery_invoices: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       cleanup_old_notifications: {
         Args: { p_days?: number }
         Returns: number
@@ -4105,6 +4109,10 @@ export type Database = {
       }
       sync_recent_received_invoices: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      sync_specific_order_by_tracking: {
+        Args: { p_tracking_number: string }
         Returns: Json
       }
       sync_user_scoped_received_invoices: {
