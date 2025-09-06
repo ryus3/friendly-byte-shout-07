@@ -825,14 +825,35 @@ export const SuperProvider = ({ children }) => {
     // orderCreated event removed — relying solely on realtime INSERT
 
     
+    // مستمع حذف الطلبات من الحذف التلقائي
+    const handleOrderDeleted = (event) => {
+      const { id, tracking_number, order_number } = event.detail;
+      console.log('🗑️ تم تلقي حدث حذف طلب:', { id, tracking_number, order_number });
+      
+      // إزالة الطلب من البيانات المحلية فوراً
+      setAllData(prev => ({
+        ...prev,
+        orders: prev.orders.filter(order => order.id !== id)
+      }));
+      
+      // إضافة للطلبات المحذوفة نهائياً
+      const deletedOrders = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
+      deletedOrders.push(id);
+      localStorage.setItem('permanentlyDeletedOrders', JSON.stringify(deletedOrders));
+      
+      console.log(`✅ تم إزالة الطلب ${tracking_number || order_number} من الواجهة`);
+    };
+
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
     window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+    window.addEventListener('orderDeleted', handleOrderDeleted);
 
     return () => {
       window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
       window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+      window.removeEventListener('orderDeleted', handleOrderDeleted);
     };
   }, [normalizeOrder]);
 
