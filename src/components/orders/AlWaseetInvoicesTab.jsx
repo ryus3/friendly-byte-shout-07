@@ -36,19 +36,20 @@ const AlWaseetInvoicesTab = () => {
     syncLastTwoInvoices
   } = useAlWaseetInvoices();
   
-  // Auto-load invoices when tab is opened
+  // Auto-load invoices when tab is opened - optimized for better UX
   React.useEffect(() => {
     if (isLoggedIn && activePartner === 'alwaseet') {
-      fetchInvoices('week', false); // auto-load with week filter
+      // Load with default timeFilter (week) for faster initial load
+      fetchInvoices(timeFilter, false);
     }
-  }, [isLoggedIn, activePartner]);
+  }, [isLoggedIn, activePartner, timeFilter]);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   
-  // Time filter state with localStorage
+  // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
   const [customDateRange, setCustomDateRange] = useState(null);
 
@@ -326,7 +327,7 @@ const AlWaseetInvoicesTab = () => {
                   <SelectValue placeholder="الفترة" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="week">أسبوع</SelectItem>
+                  <SelectItem value="week">أسبوع (افتراضي)</SelectItem>
                   <SelectItem value="month">شهر</SelectItem>
                   <SelectItem value="3months">3 أشهر</SelectItem>
                   <SelectItem value="6months">6 أشهر</SelectItem>

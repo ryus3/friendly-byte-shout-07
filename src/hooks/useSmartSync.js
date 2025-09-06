@@ -31,10 +31,12 @@ export const useSmartSync = () => {
       const duration = Math.round((Date.now() - startTime) / 1000);
       
       toast({
-        title: "مزامنة ذكية مكتملة ⚡",
-        description: `${data.invoices_synced} فاتورة جديدة في ${duration} ثانية${data.needs_login?.length > 0 ? ` - ${data.needs_login.length} موظف يحتاج تسجيل دخول` : ''}`,
-        variant: "default",
-        duration: 5000
+        title: "✅ مزامنة ذكية مكتملة",
+        description: data.invoices_synced > 0 
+          ? `تم جلب ${data.invoices_synced} فاتورة جديدة في ${duration} ثانية فقط${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`
+          : `لا توجد فواتير جديدة - آخر تحديث في ${duration} ثانية${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`,
+        variant: data.invoices_synced > 0 ? "default" : "secondary",
+        duration: 6000
       });
 
       return { success: true, data };
@@ -82,9 +84,10 @@ export const useSmartSync = () => {
         });
       } else {
         toast({
-          title: "مزامنة الموظف مكتملة",
-          description: `${employeeName}: ${data.invoices_synced} فاتورة، ${data.orders_updated} طلب في ${duration}ث`,
-          variant: "default"
+          title: "✅ مزامنة الموظف مكتملة",
+          description: `${employeeName}: ${data.invoices_synced} فاتورة جديدة | ${data.orders_updated} طلب محدث في ${duration} ثانية`,
+          variant: "default",
+          duration: 7000
         });
       }
 
@@ -125,10 +128,10 @@ export const useSmartSync = () => {
       const duration = Math.round((Date.now() - startTime) / 1000);
       
       toast({
-        title: "مزامنة شاملة مكتملة 🎉",
-        description: `${data.employees_processed} موظف، ${data.invoices_synced} فاتورة، ${data.orders_updated} طلب في ${duration} ثانية`,
+        title: "🎉 مزامنة شاملة مكتملة",
+        description: `تمت معالجة ${data.employees_processed} موظف | ${data.invoices_synced} فاتورة جديدة | ${data.orders_updated} طلب محدث في ${duration} ثانية${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`,
         variant: "default",
-        duration: 8000
+        duration: 10000
       });
 
       return { success: true, data };

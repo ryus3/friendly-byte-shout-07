@@ -23,6 +23,7 @@ import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
+import ProfessionalSyncToolbar from '@/components/shared/ProfessionalSyncToolbar';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -752,97 +753,21 @@ const filteredOrders = useMemo(() => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
-            <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
-          </div>
-          
-          {/* أزرار الإجراءات وآخر مزامنة */}
-          <div className="flex flex-col items-end gap-2">
-            {lastComprehensiveSync && (
-              <div className="text-xs text-muted-foreground">
-                آخر مزامنة شاملة: {new Date(lastComprehensiveSync).toLocaleString('ar-IQ')}
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => refreshOrders()}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                تحديث البيانات
-              </Button>
-            
-            {filters.employeeId !== 'all' && filters.employeeId && (
-              <Button
-                onClick={() => syncEmployeeOrders(filters.employeeId)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                disabled={syncingEmployeeId === filters.employeeId}
-              >
-                {syncingEmployeeId === filters.employeeId ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4" />
-                )}
-                مزامنة طلبات الموظف
-              </Button>
-            )}
-            
-            {/* أزرار المزامنة الذكية الجديدة */}
-            {isAdmin && (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={smartSync}
-                  disabled={syncing}
-                  className="gap-2"
-                >
-                  {syncing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                  مزامنة ذكية
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={syncAllEmployeesOrders}
-                  disabled={syncing}
-                  className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
-                >
-                  {syncing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="h-4 w-4" />
-                  )}
-                  مزامنة شاملة
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => syncOrdersOnly()}
-                  disabled={syncing}
-                  className="gap-2"
-                >
-                  {syncing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Truck className="h-4 w-4" />
-                  )}
-                  تحديث الطلبات
-                </Button>
-              </div>
-            )}
-            </div>
+            <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل وإدارة المزامنة الذكية.</p>
           </div>
         </div>
+
+        {/* شريط الأدوات الاحترافي للمزامنة */}
+        <ProfessionalSyncToolbar
+          syncing={syncing}
+          syncingEmployee={syncingEmployee}
+          smartSync={smartSync}
+          syncSpecificEmployee={syncSpecificEmployee}
+          comprehensiveSync={comprehensiveSync}
+          syncOrdersOnly={syncOrdersOnly}
+          lastComprehensiveSync={lastComprehensiveSync}
+          isAdmin={isAdmin}
+        />
 
         {/* الفلاتر */}
         <Card>

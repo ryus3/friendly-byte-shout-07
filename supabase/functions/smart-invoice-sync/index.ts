@@ -115,7 +115,13 @@ serve(async (req) => {
         mode,
         duration_seconds: duration,
         ...totalResults,
-        message: `Smart Sync مكتمل - ${totalResults.invoices_synced} فاتورة جديدة، ${totalResults.orders_updated} طلب محدث`,
+        message: totalResults.invoices_synced > 0 
+          ? `تم جلب ${totalResults.invoices_synced} فاتورة جديدة وتحديث ${totalResults.orders_updated} طلب في ${duration} ثانية` 
+          : `لا توجد فواتير جديدة - فحص ${totalResults.employees_processed} موظف في ${duration} ثانية`,
+        performance: {
+          employees_per_second: Math.round(totalResults.employees_processed / duration * 10) / 10,
+          total_operations: totalResults.invoices_synced + totalResults.orders_updated
+        },
         timestamp: new Date().toISOString()
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -188,60 +194,129 @@ async function processSmartEmployeeSync(employee: any, supabase: any, options: a
   }
 }
 
-// مزامنة الفواتير فقط - ذكية وسريعة
+// مزامنة الفواتير فقط - ذكية وسريعة مع فلترة تاريخية
 async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: any, forceRefresh: boolean) {
   try {
-    // التحقق من آخر مزامنة
+    // التحقق من آخر مزامنة - مقاوم للأخطاء
+    let lastSyncTime = null;
     if (!forceRefresh) {
-      const { data: lastSync } = await supabase
-        .from('employee_invoice_sync_log')
-        .select('last_sync_at')
-        .eq('employee_id', employee.user_id)
-        .single();
+      try {
+        const { data: lastSync } = await supabase
+          .from('employee_invoice_sync_log')
+          .select('last_sync_at')
+          .eq('employee_id', employee.user_id)
+          .single();
 
-      const lastSyncTime = lastSync?.last_sync_at ? new Date(lastSync.last_sync_at) : null;
-      const now = new Date();
-      const timeDiff = lastSyncTime ? (now.getTime() - lastSyncTime.getTime()) / (1000 * 60) : Infinity;
+        lastSyncTime = lastSync?.last_sync_at ? new Date(lastSync.last_sync_at) : null;
+        const now = new Date();
+        const timeDiff = lastSyncTime ? (now.getTime() - lastSyncTime.getTime()) / (1000 * 60) : Infinity;
 
-      // إذا كانت آخر مزامنة أقل من 5 دقائق، تخطي
-      if (timeDiff < 5) {
-        console.log(`⏭️ تخطي مزامنة الفواتير للموظف ${employee.full_name} - تمت مؤخراً`);
+        // إذا كانت آخر مزامنة أقل من 3 دقائق، تخطي
+        if (timeDiff < 3) {
+          console.log(`⏭️ تخطي مزامنة الفواتير للموظف ${employee.full_name} - تمت مؤخراً (${Math.round(timeDiff)} دقيقة)`);
+          return { synced: 0 };
+        }
+      } catch (syncLogError) {
+        console.warn(`⚠️ خطأ في قراءة سجل المزامنة للموظف ${employee.full_name}, سأكمل المزامنة`);
+      }
+    }
+
+    // إعداد فلتر ذكي للفواتير الحديثة - آخر 7 أيام للسرعة
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const sinceDate = lastSyncTime && lastSyncTime > lastWeek ? lastSyncTime : lastWeek;
+    
+    // بناء معاملات API ذكية مع تحديد الفترة
+    const apiParams = { 
+      token: token,
+      limit: 50, // حد أقصى 50 فاتورة لتجنب الحمولة الثقيلة
+      since_date: sinceDate.toISOString().split('T')[0] // فقط التاريخ بصيغة YYYY-MM-DD
+    };
+
+    console.log(`📅 جلب فواتير ${employee.full_name} منذ ${apiParams.since_date} (${forceRefresh ? 'إجباري' : 'تلقائي'})`);
+
+    // جلب الفواتير من API مع التعامل مع أخطاء Token
+    let invoiceData, apiError;
+    try {
+      const response = await supabase.functions.invoke('alwaseet-proxy', {
+        body: {
+          endpoint: 'get_merchant_invoices',
+          method: 'GET',
+          token: token,
+          queryParams: apiParams
+        }
+      });
+      invoiceData = response.data;
+      apiError = response.error;
+    } catch (proxyError) {
+      console.warn(`⚠️ خطأ في استدعاء API للموظف ${employee.full_name}:`, proxyError.message);
+      return { synced: 0 };
+    }
+
+    if (apiError) {
+      if (apiError.message?.includes('token') || apiError.message?.includes('unauthorized')) {
+        console.warn(`🔑 توكن غير صالح للموظف ${employee.full_name}`);
+        return { synced: 0, needs_login: true };
+      }
+      console.warn(`⚠️ تعذر جلب فواتير ${employee.full_name}: ${apiError.message}`);
+      return { synced: 0 };
+    }
+
+    if (!invoiceData?.data || !Array.isArray(invoiceData.data)) {
+      console.log(`📭 لا توجد فواتير جديدة للموظف ${employee.full_name}`);
+      return { synced: 0 };
+    }
+
+    // فلترة الفواتير الجديدة فقط (تجنب التكرار)
+    const newInvoices = invoiceData.data.filter(invoice => {
+      if (!lastSyncTime) return true;
+      const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
+      return invoiceDate > lastSyncTime;
+    });
+
+    console.log(`🔄 معالجة ${newInvoices.length} فاتورة جديدة من أصل ${invoiceData.data.length} للموظف ${employee.full_name}`);
+
+    let syncedCount = 0;
+    if (newInvoices.length > 0) {
+      // حفظ مع مقاومة الأخطاء
+      try {
+        const { data: upsertResult, error: upsertError } = await supabase.rpc('upsert_alwaseet_invoice_list_for_user', {
+          p_invoices: newInvoices,
+          p_employee_id: employee.user_id
+        });
+
+        if (upsertError) {
+          console.error(`❌ خطأ في حفظ فواتير ${employee.full_name}:`, upsertError);
+          return { synced: 0 };
+        }
+
+        syncedCount = upsertResult?.processed || newInvoices.length;
+      } catch (saveError) {
+        console.error(`❌ خطأ في عملية الحفظ للموظف ${employee.full_name}:`, saveError);
         return { synced: 0 };
       }
     }
 
-    // جلب الفواتير من API
-    const { data: invoiceData, error: apiError } = await supabase.functions.invoke('alwaseet-proxy', {
-      body: {
-        endpoint: 'get_merchant_invoices',
-        method: 'GET',
-        token: token,
-        queryParams: { token: token }
-      }
-    });
-
-    if (apiError || !invoiceData?.data) {
-      console.warn(`⚠️ تعذر جلب فواتير ${employee.full_name}`);
-      return { synced: 0 };
+    // تحديث سجل المزامنة مع مقاومة الأخطاء
+    try {
+      await supabase.from('employee_invoice_sync_log').upsert({
+        employee_id: employee.user_id,
+        last_sync_at: new Date().toISOString(),
+        invoices_synced: syncedCount,
+        sync_type: forceRefresh ? 'manual' : 'smart'
+      });
+    } catch (logError) {
+      console.warn(`⚠️ تعذر تحديث سجل المزامنة للموظف ${employee.full_name}`);
     }
 
-    // حفظ مع تنظيف ذكي - آخر 10 فواتير فقط
-    const { data: upsertResult } = await supabase.rpc('upsert_alwaseet_invoice_list_for_user', {
-      p_invoices: invoiceData.data,
-      p_employee_id: employee.user_id
-    });
+    if (syncedCount > 0) {
+      console.log(`✅ تمت مزامنة ${syncedCount} فاتورة جديدة للموظف ${employee.full_name}`);
+    }
 
-    // تحديث سجل المزامنة
-    await supabase.from('employee_invoice_sync_log').upsert({
-      employee_id: employee.user_id,
-      last_sync_at: new Date().toISOString(),
-      invoices_synced: upsertResult?.processed || 0
-    });
-
-    return { synced: upsertResult?.processed || 0 };
+    return { synced: syncedCount };
 
   } catch (error) {
-    console.warn(`⚠️ خطأ في مزامنة فواتير ${employee.full_name}:`, error);
+    console.error(`❌ خطأ عام في مزامنة فواتير ${employee.full_name}:`, error);
     return { synced: 0 };
   }
 }
