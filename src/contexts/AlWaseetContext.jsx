@@ -1229,15 +1229,10 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
   const syncOrderByQR = useCallback(async (qrId) => {
-    if (!token) {
-      console.warn('❌ لا يوجد توكن للمزامنة');
-      return null;
-    }
-
     try {
       console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
       
-      // جلب الطلب المحلي أولاً للتحقق من شروط الحذف التلقائي
+      // جلب الطلب المحلي أولاً للتحقق من شروط الحذف + تحديد صاحب الطلب
       // ✅ البحث بـ tracking_number أو qr_id أو delivery_partner_order_id
       const { data: localOrder, error: localErr } = await scopeOrdersQuery(
         supabase
@@ -1251,9 +1246,144 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      // جلب الطلب من الوسيط
-      const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
+      // تحديد التوكن الفعّال: استخدم توكن صاحب الطلب إن كان المستخدم الحالي ليس المالك
+      let effectiveToken = token;
+      let tokenSource = 'current_user';
+      if (localOrder?.created_by && user?.id && localOrder.created_by !== user.id) {
+        try {
+          const employeeToken = await getTokenForUser(localOrder.created_by);
+          if (employeeToken) {
+            effectiveToken = employeeToken;
+            tokenSource = `employee:${localOrder.created_by}`;
+            console.log(`👤 استخدام توكن الموظف لطلب غير مملوك: owner=${localOrder.created_by}`);
+          } else {
+            console.warn('⚠️ تعذر الحصول على توكن الموظف، سيتم استخدام توكن المستخدم الحالي إن وجد');
+          }
+        } catch (e) {
+          console.warn('⚠️ فشل جلب توكن الموظف، سيتم استخدام توكن المستخدم الحالي إن وجد', e);
+        }
+      }
+
+      if (!effectiveToken) {
+        console.warn('❌ لا يوجد توكن صالح للمزامنة (لا توكن للمستخدم الحالي ولا لصاحب الطلب)');
+        return null;
+      }
+
+      // جلب الطلب من الوسيط باستخدام التوكن المناسب
+      const waseetOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
       if (!waseetOrder) {
+        console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط (token_source=${tokenSource})`);
+        
+        // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
+        if (localOrder && canAutoDeleteOrder(localOrder, user)) {
+          console.log(`⚠️ التحقق من حذف الطلب ${qrId} - لم يُعثر عليه في الوسيط`);
+          
+          // إعادة محاولة البحث للتأكد (قد يكون هناك تأخير في التزامن)
+          await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
+          const doubleCheckOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
+          
+          if (!doubleCheckOrder) {
+            console.log(`🗑️ تأكيد الحذف التلقائي للطلب ${qrId} - غير موجود فعلياً في الوسيط`);
+            const deleteResult = await performAutoDelete(localOrder);
+            if (deleteResult) {
+              return { 
+                ...deleteResult, 
+                autoDeleted: true,
+                message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في شركة التوصيل`
+              };
+            }
+          } else {
+            console.log(`✅ الطلب ${qrId} موجود فعلياً - لن يُحذف`);
+            // معالجة الطلب الموجود
+            return await processWaseetOrderUpdate(localOrder, doubleCheckOrder);
+          }
+        } else {
+          console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
+        }
+        
+        return null;
+      }
+
+      console.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
+
+      // تحميل حالات الطلبات إذا لم تكن محملة
+      let statusMap = orderStatusesMap;
+      if (statusMap.size === 0) {
+        statusMap = await loadOrderStatuses();
+      }
+
+      // تحديد الحالة المحلية الصحيحة
+      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId;
+      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+      
+      const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
+        (() => {
+          const t = String(waseetStatusText || '').toLowerCase();
+          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
+          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
+          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
+          if (t.includes('راجع')) return 'returned';
+          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
+          if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
+          return 'pending';
+        })();
+
+      if (!localOrder) {
+        console.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);
+        return null;
+      }
+
+      // تحضير التحديثات
+      const updates = {
+        status: correctLocalStatus,
+        delivery_status: waseetStatusText,
+        delivery_partner_order_id: String(waseetOrder.id),
+        qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
+        updated_at: new Date().toISOString()
+      };
+
+      // تحديث رسوم التوصيل
+      if (waseetOrder.delivery_price) {
+        const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
+        if (deliveryPrice >= 0) {
+          updates.delivery_fee = deliveryPrice;
+        }
+      }
+
+      // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
+      if (waseetOrder.deliver_confirmed_fin === 1) {
+        updates.receipt_received = true;
+        // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
+        if (correctLocalStatus === 'delivered') {
+          updates.status = 'completed';
+        }
+      }
+
+      // تطبيق التحديثات
+      const { error: updateErr } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', localOrder.id);
+
+      if (updateErr) {
+        console.error('❌ خطأ في تحديث الطلب:', updateErr);
+        return null;
+      }
+
+      console.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
+      
+      return {
+        needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
+        updates,
+        waseet_order: waseetOrder,
+        local_order: { ...localOrder, ...updates }
+      };
+
+    } catch (error) {
+      console.error(`❌ خطأ في مزامنة الطلب ${qrId}:`, error);
+      throw error;
+    }
+  }, [token, orderStatusesMap, loadOrderStatuses, user, getTokenForUser]);
         console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
         
         // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
