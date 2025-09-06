@@ -23,6 +23,7 @@ const ProfessionalSyncToolbar = ({
   syncingEmployee, 
   smartSync, 
   syncSpecificEmployee, 
+  syncSpecificEmployeeSmart,
   comprehensiveSync, 
   syncOrdersOnly,
   lastComprehensiveSync,
@@ -122,7 +123,7 @@ const ProfessionalSyncToolbar = ({
               whileTap={{ scale: 0.98 }}
             >
               <Button
-                onClick={() => selectedEmployee ? syncSpecificEmployee(selectedEmployee.user_id, selectedEmployee.full_name) : smartSync()}
+                onClick={() => selectedEmployee ? syncSpecificEmployeeSmart(selectedEmployee.user_id, selectedEmployee.full_name) : smartSync()}
                 disabled={syncing || syncingEmployee}
                 className="w-full min-h-[120px] flex flex-col items-center justify-center gap-2 p-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white border-0 shadow-lg hover:shadow-emerald-500/25"
               >

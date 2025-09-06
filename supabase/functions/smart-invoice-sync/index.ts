@@ -221,10 +221,19 @@ async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: 
       }
     }
 
-    // إعداد فلتر ذكي للفواتير الحديثة - آخر 7 أيام للسرعة
-    const lastWeek = new Date();
-    lastWeek.setDate(lastWeek.getDate() - 7);
-    const sinceDate = lastSyncTime && lastSyncTime > lastWeek ? lastSyncTime : lastWeek;
+    // إعداد فلتر ذكي بناء على force_refresh
+    let sinceDate;
+    if (forceRefresh) {
+      // مزامنة شاملة - آخر 30 يوم
+      const lastMonth = new Date();
+      lastMonth.setDate(lastMonth.getDate() - 30);
+      sinceDate = lastMonth;
+    } else {
+      // مزامنة ذكية - من آخر مزامنة أو آخر 3 أيام
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      sinceDate = lastSyncTime && lastSyncTime > threeDaysAgo ? lastSyncTime : threeDaysAgo;
+    }
     
     // بناء معاملات API ذكية مع تحديد الفترة
     const apiParams = { 
@@ -233,7 +242,7 @@ async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: 
       since_date: sinceDate.toISOString().split('T')[0] // فقط التاريخ بصيغة YYYY-MM-DD
     };
 
-    console.log(`📅 جلب فواتير ${employee.full_name} منذ ${apiParams.since_date} (${forceRefresh ? 'إجباري' : 'تلقائي'})`);
+    console.log(`📅 جلب فواتير ${employee.full_name} منذ ${apiParams.since_date} (${forceRefresh ? 'شاملة' : 'ذكية'})`);
 
     // جلب الفواتير من API مع التعامل مع أخطاء Token
     let invoiceData, apiError;
@@ -330,11 +339,11 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
 
     const { data: recentOrders } = await supabase
       .from('orders')
-      .select('id, delivery_partner_order_id, tracking_number, delivery_status')
+      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status')
       .eq('delivery_partner', 'alwaseet')
       .eq('created_by', employee.user_id)
       .gte('created_at', thirtyDaysAgo.toISOString())
-      .not('delivery_partner_order_id', 'is', null)
+      .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null')
       .limit(50);
 
     if (!recentOrders?.length) {
@@ -346,6 +355,10 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     // تحديث حالات الطلبات بدفعات صغيرة
     for (const order of recentOrders.slice(0, 20)) { // حد أقصى 20 طلب لسرعة المعالجة
       try {
+        // استخدام fallback للمعرف المناسب
+        const orderIdToUse = order.delivery_partner_order_id || order.tracking_number || order.qr_id;
+        if (!orderIdToUse) continue;
+
         const { data: orderStatusData } = await supabase.functions.invoke('alwaseet-proxy', {
           body: {
             endpoint: 'merchant-orders',
@@ -353,7 +366,7 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
             token: token,
             queryParams: { 
               token: token,
-              qr_id: order.delivery_partner_order_id 
+              qr_id: orderIdToUse 
             }
           }
         });
