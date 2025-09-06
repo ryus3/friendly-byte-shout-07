@@ -5,6 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useSmartSync } from '@/hooks/useSmartSync';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +32,16 @@ const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
   const { allUsers } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
+  
+  // استخدام النظام الذكي الجديد
+  const { 
+    syncing, 
+    syncingEmployee, 
+    smartSync, 
+    syncSpecificEmployee, 
+    comprehensiveSync, 
+    syncOrdersOnly 
+  } = useSmartSync();
   const { 
     orders, 
     loading, 
@@ -73,110 +84,41 @@ const EmployeeFollowUpPage = () => {
     return initialSelectedOrders;
   });
 
-  // دالة مزامنة طلبات موظف محدد
+import { useSmartSync } from '@/hooks/useSmartSync';
+
+  // استخدام النظام الذكي الجديد
+  const { 
+    syncing, 
+    syncingEmployee, 
+    smartSync, 
+    syncSpecificEmployee, 
+    comprehensiveSync, 
+    syncOrdersOnly 
+  } = useSmartSync();
+
+  // ربط الدوال بالواجهة القديمة
   const syncEmployeeOrders = async (employeeId, employeeName) => {
-    setSyncingEmployeeId(employeeId);
-    try {
-      const { data, error } = await supabase.rpc('sync_employee_orders', {
-        p_employee_id: employeeId
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "تم مزامنة الطلبات",
-        description: `${employeeName}: ${data.message}`,
-        variant: "default"
-      });
-
-      // تحديث البيانات
-      refreshOrders();
-    } catch (error) {
-      console.error('خطأ في مزامنة طلبات الموظف:', error);
-      toast({
-        title: "خطأ في المزامنة",
-        description: error.message || "تعذر مزامنة طلبات الموظف",
-        variant: "destructive"
-      });
-    } finally {
-      setSyncingEmployeeId(null);
+    const result = await syncSpecificEmployee(employeeId, employeeName);
+    if (result.success) {
+      await refreshOrders();
     }
   };
 
-  // مزامنة شاملة محسنة مع Timeout Protection
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
-    
-    setSyncingEmployeeId('all');
-    
-    // Timeout protection - 3 دقائق كحد أقصى
-    const timeoutId = setTimeout(() => {
-      setSyncingEmployeeId(null);
-      toast({
-        title: "انتهت مهلة المزامنة",
-        description: "المزامنة تستغرق وقتاً أطول من المتوقع. جاري المتابعة في الخلفية...",
-        variant: "default",
-      });
-    }, 180000); // 3 minutes
-    
-    try {
-      console.log('🚀 بدء المزامنة الشاملة المحسنة (الموظفين فقط)...');
-      const startTime = Date.now();
-      
-      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-        body: { 
-          scheduled: false, 
-          force: true, 
-          sync_time: 'employees_only_optimized',
-          exclude_admin: true  // التأكيد على استبعاد المدير
-        }
-      });
-
-      clearTimeout(timeoutId);
-      const duration = Math.round((Date.now() - startTime) / 1000);
-
-      if (error) throw error;
-
-      // رسالة مفصلة مع نتائج المزامنة المحسنة
-      const successMsg = data?.message || 
-        `تمت المزامنة بنجاح في ${duration} ثانية - معالجة ${data?.employees_processed || 0} موظف، مزامنة ${data?.invoices_synced || 0} فاتورة، تحديث ${data?.orders_updated || 0} طلب`;
-      
-      const needsLoginMsg = data?.needs_login_count > 0 
-        ? `\n${data.needs_login_count} موظف يحتاج تسجيل دخول في الوسيط`
-        : '';
-
-      toast({
-        title: "مزامنة الموظفين مكتملة ⚡",
-        description: successMsg + needsLoginMsg + " (المدير مستبعد)",
-        variant: "default",
-        duration: 8000
-      });
-
-      // تحديث البيانات
+    const result = await comprehensiveSync();
+    if (result.success) {
       await refreshOrders();
-      
-      // تحديث آخر مزامنة في localStorage
       const syncTime = new Date().toISOString();
       localStorage.setItem('last-comprehensive-sync', syncTime);
       setLastComprehensiveSync(syncTime);
-      
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error('خطأ في المزامنة الشاملة:', error);
-      toast({
-        title: "خطأ في المزامنة الشاملة",
-        description: error.message || "تعذر مزامنة جميع الطلبات",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncingEmployeeId(null);
     }
   };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
-  const [syncingEmployeeId, setSyncingEmployeeId] = useState(null);
+  // إزالة الحالة القديمة - استخدام النظام الجديد
   const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
     localStorage.getItem('last-comprehensive-sync')
   );
@@ -860,21 +802,54 @@ const filteredOrders = useMemo(() => {
               </Button>
             )}
             
+            {/* أزرار المزامنة الذكية الجديدة */}
             {isAdmin && (
-              <Button
-                onClick={syncAllEmployeesOrders}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
-                disabled={syncingEmployeeId === 'all'}
-              >
-                {syncingEmployeeId === 'all' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Truck className="w-4 h-4" />
-                )}
-                مزامنة شاملة (كل الموظفين)
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={smartSync}
+                  disabled={syncing}
+                  className="gap-2"
+                >
+                  {syncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  مزامنة ذكية
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={syncAllEmployeesOrders}
+                  disabled={syncing}
+                  className="gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
+                >
+                  {syncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4" />
+                  )}
+                  مزامنة شاملة
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => syncOrdersOnly()}
+                  disabled={syncing}
+                  className="gap-2"
+                >
+                  {syncing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Truck className="h-4 w-4" />
+                  )}
+                  تحديث الطلبات
+                </Button>
+              </div>
             )}
             </div>
           </div>
