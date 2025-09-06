@@ -1966,7 +1966,7 @@ export const AlWaseetProvider = ({ children }) => {
       console.log(`🔍 فحص ${localOrders.length} طلب محلي للمقارنة مع الوسيط...`);
       
       // جلب البيانات من الوسيط للمقارنة
-      const waseetOrders = await getAllWaseetOrders();
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       
       // إنشاء مجموعة من معرفات الطلبات في الوسيط (تشمل id و tracking_number)
       const waseetOrderIds = new Set();
@@ -2022,7 +2022,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ خطأ في مرور الحذف التلقائي:', error);
     }
-  }, [user, userUUID, canAutoDeleteOrder, getAllWaseetOrders, handleOrderDeletion, toast]);
+  }, [user, userUUID, canAutoDeleteOrder, token, handleOrderDeletion, toast]);
 
   // Handle order deletion with stock release and notification
   const handleOrderDeletion = async (order) => {
