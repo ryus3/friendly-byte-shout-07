@@ -35,7 +35,7 @@ import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts, refreshOrders } = useSuper();
-  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
+  const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, performDeletionPassAfterStatusSync, autoSyncEnabled, setAutoSyncEnabled, correctionComplete } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();
@@ -78,6 +78,10 @@ const OrdersPage = () => {
           if (fastSyncPendingOrders) {
             try {
               await fastSyncPendingOrders(false); // مزامنة صامتة
+              // ✅ إضافة مرور الحذف التلقائي بعد المزامنة السريعة
+              if (performDeletionPassAfterStatusSync) {
+                await performDeletionPassAfterStatusSync();
+              }
             } catch (syncErr) {
               console.log('تعذر المزامنة السريعة الإضافية:', syncErr);
             }

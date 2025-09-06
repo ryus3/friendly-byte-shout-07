@@ -1930,13 +1930,14 @@ export const AlWaseetProvider = ({ children }) => {
       console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
+      // ✅ التعديل الجذري: شمول الطلبات بـ tracking_number أو qr_id حتى لو لم يكن لديها delivery_partner_order_id
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
           .eq('delivery_partner', 'alwaseet')
-          .not('delivery_partner_order_id', 'is', null)
           .eq('receipt_received', false)
+          .or('tracking_number.not.is.null,qr_id.not.is.null')
       ).limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
         
       if (error) {
@@ -1963,7 +1964,14 @@ export const AlWaseetProvider = ({ children }) => {
         }
         
         try {
-          console.log(`🔄 فحص الطلب ${trackingNumber} باستخدام syncOrderByQR...`);
+          console.log(`🔄 فحص الطلب ${trackingNumber} (ID: ${localOrder.id}) باستخدام syncOrderByQR...`);
+          console.log(`📋 معلومات الطلب:`, {
+            tracking_number: localOrder.tracking_number,
+            qr_id: localOrder.qr_id,
+            has_remote_id: !!localOrder.delivery_partner_order_id,
+            status: localOrder.status,
+            delivery_status: localOrder.delivery_status
+          });
           
           // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
           const syncResult = await syncOrderByQR(trackingNumber);
@@ -1974,7 +1982,10 @@ export const AlWaseetProvider = ({ children }) => {
             deletedCount++;
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
           } else if (syncResult) {
-            console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
+            console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
+              exists_in_remote: syncResult.foundInRemote !== false,
+              action_taken: syncResult.action || 'update'
+            });
           } else {
             console.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
           }
@@ -2079,6 +2090,14 @@ export const AlWaseetProvider = ({ children }) => {
     correctionComplete,
     setCorrectionComplete,
   };
+
+  // Export linkRemoteIdsForExistingOrders to window for SuperProvider access
+  useEffect(() => {
+    window.linkRemoteIdsForExistingOrders = linkRemoteIdsForExistingOrders;
+    return () => {
+      delete window.linkRemoteIdsForExistingOrders;
+    };
+  }, [linkRemoteIdsForExistingOrders]);
 
   return (
     <AlWaseetContext.Provider value={value}>

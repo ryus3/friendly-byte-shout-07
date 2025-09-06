@@ -968,6 +968,9 @@ export const SuperProvider = ({ children }) => {
         // ✅ الحل الجذري - حفظ معرفات الوسيط
         alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || null,
         alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || null,
+        // ✅ حفظ delivery_partner_order_id إذا كان متوفراً
+        delivery_partner_order_id: deliveryPartnerDataArg?.delivery_partner_order_id || null,
+        qr_id: deliveryPartnerDataArg?.qr_id || null,
       };
 
       // إنشاء الطلب
@@ -1057,6 +1060,21 @@ export const SuperProvider = ({ children }) => {
       // إبطال الكاش للتزامن مع الخادم
       superAPI.invalidate('all_data');
       superAPI.invalidate('orders_only');
+
+      // ✅ محاولة ربط معرف الوسيط إذا كان الطلب للوسيط
+      if (orderRow.delivery_partner === 'alwaseet') {
+        setTimeout(async () => {
+          try {
+            // محاولة ربط معرف الوسيط للطلب الجديد
+            if (window.linkRemoteIdsForExistingOrders) {
+              await window.linkRemoteIdsForExistingOrders();
+              console.log('🔗 تم محاولة ربط معرف الوسيط للطلب الجديد');
+            }
+          } catch (error) {
+            console.warn('⚠️ فشل في ربط معرف الوسيط للطلب الجديد:', error);
+          }
+        }, 2000); // تأخير للسماح للطلب بالوصول للوسيط أولاً
+      }
 
       return {
         success: true,
