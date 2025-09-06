@@ -7,6 +7,8 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useInventory } from '@/contexts/InventoryContext';
 import { useSmartSync } from '@/hooks/useSmartSync';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
+import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -47,6 +49,7 @@ const EmployeeFollowUpPage = () => {
   } = useSmartSync();
   
   const { syncVisibleOrdersBatch } = useAlWaseet();
+  const { autoSyncVisibleOrders } = useUnifiedAutoSync();
   
   const { 
     orders, 
@@ -100,7 +103,9 @@ const EmployeeFollowUpPage = () => {
 
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
-    const result = await comprehensiveSync();
+    
+    // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
+    const result = await comprehensiveSync(filteredOrders);
     if (result.success) {
       await refreshOrders();
       const syncTime = new Date().toISOString();
@@ -158,6 +163,7 @@ const EmployeeFollowUpPage = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
+  const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
   // إزالة الحالة القديمة - استخدام النظام الجديد
   const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
     localStorage.getItem('last-comprehensive-sync')
@@ -814,11 +820,12 @@ const filteredOrders = useMemo(() => {
                   smartSync={smartSync}
                   syncSpecificEmployee={syncSpecificEmployee}
                   syncSpecificEmployeeSmart={syncSpecificEmployeeSmart}
-                  comprehensiveSync={comprehensiveSync}
+                  comprehensiveSync={syncAllEmployeesOrders}
                   syncOrdersOnly={syncVisibleOrders}
                   lastComprehensiveSync={lastComprehensiveSync}
                   isAdmin={isAdmin}
                   employees={employees}
+                  onOpenSyncSettings={() => setIsUnifiedSyncSettingsOpen(true)}
                 />
 
         {/* الفلاتر */}
@@ -1036,6 +1043,12 @@ const filteredOrders = useMemo(() => {
           profits={profits || []} // تمرير بيانات الأرباح
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
           timePeriod={filters.timePeriod} // تمرير فلتر الفترة
+        />
+
+        {/* إعدادات المزامنة التلقائية الموحدة */}
+        <UnifiedSyncSettings
+          open={isUnifiedSyncSettingsOpen}
+          onOpenChange={setIsUnifiedSyncSettingsOpen}
         />
 
       </motion.div>

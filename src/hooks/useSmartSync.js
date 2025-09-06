@@ -158,14 +158,57 @@ export const useSmartSync = () => {
     }
   }, []);
 
-  // مزامنة شاملة - جميع الموظفين
-  const comprehensiveSync = useCallback(async () => {
+  // مزامنة شاملة ذكية - فقط الطلبات الظاهرة والفواتير الجديدة
+  const comprehensiveSync = useCallback(async (visibleOrders = null) => {
     setSyncing(true);
     const startTime = Date.now();
     
     try {
-      console.log('🚀 بدء المزامنة الشاملة...');
+      console.log('🚀 بدء المزامنة الشاملة الذكية...');
       
+      // إذا تم تمرير الطلبات الظاهرة، استخدم البدل الذكي
+      if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0) {
+        console.log(`📋 استخدام المزامنة الذكية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
+        
+        // استيراد دالة المزامنة الذكية من AlWaseet Context
+        const { useAlWaseet } = await import('../contexts/AlWaseetContext');
+        const { syncVisibleOrdersBatch } = useAlWaseet();
+        
+        // مزامنة الطلبات الظاهرة فقط
+        const ordersResult = await syncVisibleOrdersBatch(visibleOrders);
+        
+        // مزامنة الفواتير الجديدة فقط
+        const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
+          body: { 
+            mode: 'smart',
+            sync_invoices: true,
+            sync_orders: false,
+            force_refresh: false
+          }
+        });
+
+        if (invoiceError) throw invoiceError;
+
+        const duration = Math.round((Date.now() - startTime) / 1000);
+        
+        toast({
+          title: "🎉 مزامنة شاملة ذكية مكتملة",
+          description: `${invoiceData.invoices_synced || 0} فاتورة جديدة | ${ordersResult.updatedCount || 0} طلب محدث في ${duration} ثانية (ذكية وسريعة!)`,
+          variant: "default",
+          duration: 8000
+        });
+
+        return { 
+          success: true, 
+          data: {
+            invoices_synced: invoiceData.invoices_synced || 0,
+            orders_updated: ordersResult.updatedCount || 0,
+            smart_mode: true
+          } 
+        };
+      }
+      
+      // المزامنة الشاملة التقليدية (للاستخدام في حالات خاصة)
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
         body: { 
           mode: 'comprehensive',
