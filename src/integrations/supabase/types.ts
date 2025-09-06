@@ -3641,6 +3641,15 @@ export type Database = {
         Args: { p_variant_id: string }
         Returns: number
       }
+      create_order_deletion_notification: {
+        Args: {
+          p_employee_id?: string
+          p_order_id: string
+          p_order_number?: string
+          p_tracking_number?: string
+        }
+        Returns: undefined
+      }
       daily_notifications_cleanup: {
         Args: Record<PropertyKey, never>
         Returns: Json
