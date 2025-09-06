@@ -1222,39 +1222,6 @@ export type Database = {
         }
         Relationships: []
       }
-      employee_smart_sync_log: {
-        Row: {
-          created_at: string | null
-          employee_id: string
-          id: string
-          invoices_synced: number | null
-          last_invoice_date: string | null
-          last_smart_sync_at: string
-          sync_type: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          employee_id: string
-          id?: string
-          invoices_synced?: number | null
-          last_invoice_date?: string | null
-          last_smart_sync_at?: string
-          sync_type?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          employee_id?: string
-          id?: string
-          invoices_synced?: number | null
-          last_invoice_date?: string | null
-          last_smart_sync_at?: string
-          sync_type?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       employee_telegram_codes: {
         Row: {
           created_at: string

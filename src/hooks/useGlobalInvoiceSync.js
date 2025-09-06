@@ -1,57 +1,35 @@
 import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Global hook for automatic SMART invoice synchronization (no more conflicts!)
+// Global hook for automatic invoice/order synchronization
 export const useGlobalInvoiceSync = () => {
-  // استخدام المزامنة الذكية الحقيقية بدلاً من القديمة
-  const smartSync = useCallback(async () => {
+  const syncInvoices = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'smart',
-          sync_invoices: true,
-          sync_orders: false,
-          force_refresh: false // فقط الفواتير الجديدة
-        }
-      });
-      
+      const { data, error } = await supabase.rpc('sync_recent_received_invoices');
       if (error) {
-        console.warn('🔄 Smart background sync failed:', error.message);
-      } else if (data?.invoices_synced > 0) {
-        console.log(`🔄 Smart sync: ${data.invoices_synced} new invoices synced`);
-        window.dispatchEvent(new CustomEvent('invoicesSynced', { 
-          detail: { updatedOrders: data.invoices_synced, syncType: 'smart' } 
-        }));
-      } else {
-        console.log('🔄 Smart sync: No new invoices found');
+        console.warn('Background invoice sync failed:', error.message);
+      } else if (data?.updated_orders_count > 0) {
+        console.log(`🔄 Background sync: Updated ${data.updated_orders_count} orders from received invoices`);
+        window.dispatchEvent(new CustomEvent('invoicesSynced', { detail: { updatedOrders: data.updated_orders_count } }));
       }
     } catch (error) {
-      console.warn('Smart background sync error:', error);
+      console.warn('Background invoice sync error:', error);
     }
   }, []);
 
-  // إبقاء وظيفة المزامنة الشاملة للاستخدام اليدوي فقط
-  const syncComprehensive = useCallback(async (reason = 'manual') => {
+  const syncComprehensive = useCallback(async (reason = 'app_open') => {
     try {
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'comprehensive',
-          sync_invoices: true,
-          sync_orders: true,
-          force_refresh: true
-        }
+      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+        body: { scheduled: false, force: true, sync_time: reason },
       });
-      
       if (error) {
         console.warn('Comprehensive sync failed:', error.message);
-      } else if (data?.invoices_synced || data?.orders_updated) {
-        console.log(`✅ Comprehensive sync: invoices=${data?.invoices_synced || 0}, orders=${data?.orders_updated || 0}`);
-        window.dispatchEvent(new CustomEvent('invoicesSynced', { 
-          detail: { 
-            updatedOrders: data?.orders_updated || 0, 
-            syncType: 'comprehensive' 
-          } 
-        }));
+      } else if (data?.orders_updated || data?.total_synced) {
+        console.log(`✅ Comprehensive sync: invoices=${data?.total_synced || 0}, orders=${data?.orders_updated || 0}`);
+        window.dispatchEvent(new CustomEvent('invoicesSynced', { detail: { updatedOrders: data?.orders_updated || 0 } }));
+        
+        // تشغيل مرور الحذف بعد المزامنة الشاملة
+        window.dispatchEvent(new CustomEvent('triggerDeletionPass', { detail: { reason: 'post_comprehensive_sync' } }));
       }
     } catch (e) {
       console.warn('Comprehensive sync error:', e);
@@ -59,22 +37,23 @@ export const useGlobalInvoiceSync = () => {
   }, []);
 
   useEffect(() => {
-    // مزامنة ذكية واحدة فقط عند فتح التطبيق (لا توجد مزامنة شاملة تلقائية)
+    // Initial quick sync and comprehensive sync after 5 seconds
     const initialTimer = setTimeout(() => {
-      smartSync(); // فقط مزامنة ذكية سريعة
-    }, 3000);
+      syncInvoices();
+      syncComprehensive('app_open');
+    }, 5000);
 
-    // مزامنة ذكية كل 10 دقائق لتجنب التضارب تماماً
-    const intervalSmart = setInterval(smartSync, 10 * 60 * 1000); // كل 10 دقائق
+    // Quick sync every 60s
+    const intervalQuick = setInterval(syncInvoices, 60000);
+    // Comprehensive sync every 15 minutes
+    const intervalFull = setInterval(() => syncComprehensive('background_15m'), 15 * 60 * 1000);
 
     return () => {
       clearTimeout(initialTimer);
-      clearInterval(intervalSmart);
+      clearInterval(intervalQuick);
+      clearInterval(intervalFull);
     };
-  }, [smartSync]);
+  }, [syncInvoices, syncComprehensive]);
 
-  return { 
-    syncInvoices: smartSync, // للتوافق مع الرمز الموجود
-    syncComprehensive 
-  };
+  return { syncInvoices, syncComprehensive };
 };

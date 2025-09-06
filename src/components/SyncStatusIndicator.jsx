@@ -68,7 +68,7 @@ const SyncStatusIndicator = ({ className }) => {
     <div 
       className={cn(
         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "backdrop-blur-sm bg-white dark:bg-gray-800 shadow-lg border-2",
+        "backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border",
         autoSyncEnabled 
           ? "border-border/50" 
           : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50", // Paused styling

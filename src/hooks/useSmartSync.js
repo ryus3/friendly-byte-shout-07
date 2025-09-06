@@ -56,25 +56,15 @@ export const useSmartSync = () => {
 
   // مزامنة موظف محدد ذكية (بدون force refresh)
   const syncSpecificEmployeeSmart = useCallback(async (employeeId, employeeName) => {
-    if (!employeeId || !employeeName) {
-      console.error('معرف الموظف أو الاسم مفقود');
-      toast({
-        title: "خطأ في البيانات",
-        description: "معرف الموظف أو الاسم مفقود",
-        variant: "destructive"
-      });
-      return { success: false, error: 'معرف الموظف مفقود' };
-    }
-
     setSyncingEmployee(employeeId);
     const startTime = Date.now();
     
     try {
-      console.log(`🔄 مزامنة ذكية للموظف: ${employeeName} (${employeeId})`);
+      console.log(`🔄 مزامنة ذكية للموظف: ${employeeName}`);
       
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
         body: { 
-          mode: 'specific_employee_smart',
+          mode: 'specific_employee',
           employee_id: employeeId,
           sync_invoices: true,
           sync_orders: true,
@@ -82,10 +72,7 @@ export const useSmartSync = () => {
         }
       });
 
-      if (error) {
-        console.error('خطأ في استدعاء المزامنة:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       const duration = Math.round((Date.now() - startTime) / 1000);
       
