@@ -20,7 +20,9 @@ const AllEmployeesInvoicesView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all');
-  const [timePeriodFilter, setTimePeriodFilter] = useState('all');
+  const [timePeriodFilter, setTimePeriodFilter] = useState(() => {
+    return localStorage.getItem('allEmployeesInvoicesTimePeriod') || 'week';
+  });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [lastSync, setLastSync] = useState(null);
@@ -48,16 +50,21 @@ const AllEmployeesInvoicesView = () => {
         try {
           console.log('🔄 مزامنة شاملة للفواتير عبر Edge Function...');
           
-          // استدعاء المزامنة الشاملة التي تستخدم توكن كل موظف
-          const { error: syncError } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-            body: { manual: true, manager_view: true }
+          // استدعاء المزامنة الذكية الجديدة
+          const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
+            body: { 
+              mode: 'comprehensive',
+              force_refresh: true,
+              sync_invoices: true,
+              sync_orders: false
+            }
           });
           
           if (syncError) {
             console.warn('تحذير أثناء المزامنة الموحدة:', syncError.message);
-          } else {
-            console.log('✅ مزامنة موحدة مكتملة - كل موظف بتوكنه الخاص');
-          }
+            } else {
+              console.log('✅ مزامنة ذكية مكتملة - فواتير حديثة فقط');
+            }
         } catch (apiError) {
           console.warn('تحذير أثناء المزامنة:', apiError.message);
         }
@@ -312,15 +319,43 @@ const AllEmployeesInvoicesView = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>فواتير جميع الموظفين</span>
-            <Button 
-              onClick={handleRefresh} 
-              disabled={loading}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              تحديث
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value="" onValueChange={(empId) => {
+                if (empId === 'all_invoices') {
+                  handleRefresh();
+                } else if (empId === 'all_orders') {
+                  // مزامنة طلبات جميع الموظفين
+                  supabase.functions.invoke('smart-invoice-sync', {
+                    body: { mode: 'comprehensive', sync_invoices: false, sync_orders: true }
+                  });
+                } else {
+                  // مزامنة موظف محدد
+                  const employee = employees.find(emp => emp.user_id === empId);
+                  if (employee) {
+                    supabase.functions.invoke('smart-invoice-sync', {
+                      body: { 
+                        mode: 'specific_employee', 
+                        employee_id: empId,
+                        force_refresh: true 
+                      }
+                    });
+                  }
+                }
+              }}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="مزامنة موظف محدد" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_invoices">مزامنة جميع الفواتير</SelectItem>
+                  <SelectItem value="all_orders">مزامنة جميع الطلبات</SelectItem>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.user_id} value={emp.user_id}>
+                      {emp.full_name || emp.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -373,9 +408,12 @@ const AllEmployeesInvoicesView = () => {
             {/* فلتر الفترة الزمنية */}
             <div className="relative">
               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 z-10" />
-              <Select value={timePeriodFilter} onValueChange={setTimePeriodFilter}>
+              <Select value={timePeriodFilter} onValueChange={(value) => {
+                setTimePeriodFilter(value);
+                localStorage.setItem('allEmployeesInvoicesTimePeriod', value);
+              }}>
                 <SelectTrigger className="pl-10">
-                  <SelectValue placeholder="جميع الفترات" />
+                  <SelectValue placeholder="آخر أسبوع" />
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border shadow-lg">
                   <SelectItem value="all">جميع الفترات</SelectItem>
