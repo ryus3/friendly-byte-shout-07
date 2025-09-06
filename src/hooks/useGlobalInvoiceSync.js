@@ -64,8 +64,8 @@ export const useGlobalInvoiceSync = () => {
       smartSync(); // فقط مزامنة ذكية سريعة
     }, 3000);
 
-    // مزامنة ذكية كل 5 دقائق بدلاً من كل دقيقة (تقليل التداخل)
-    const intervalSmart = setInterval(smartSync, 5 * 60 * 1000); // كل 5 دقائق
+    // مزامنة ذكية كل 10 دقائق لتجنب التضارب تماماً
+    const intervalSmart = setInterval(smartSync, 10 * 60 * 1000); // كل 10 دقائق
 
     return () => {
       clearTimeout(initialTimer);
