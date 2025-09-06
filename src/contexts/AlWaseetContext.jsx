@@ -9,7 +9,6 @@ import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
 import { displaySecuritySummary } from '@/utils/securityLogger';
-import { canDeleteOrder } from '@/lib/order-deletion-utils';
 
 const AlWaseetContext = createContext();
 
@@ -20,62 +19,6 @@ export const AlWaseetProvider = ({ children }) => {
   
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
-  
-  // دالة للحصول على توكن المستخدم من النظام الأصلي
-  const getTokenForUser = useCallback(async (userId) => {
-    if (!userId) return null;
-    
-    try {
-      const { data, error } = await supabase
-        .from('delivery_partner_tokens')
-        .select('token, expires_at')
-        .eq('user_id', userId)
-        .eq('partner_name', 'alwaseet')
-        .maybeSingle();
-      
-      if (error || !data) return null;
-      
-      // التحقق من صلاحية التوكن
-      if (new Date(data.expires_at) <= new Date()) {
-        return null;
-      }
-      
-      return data.token;
-    } catch (error) {
-      console.error('خطأ في الحصول على توكن المستخدم:', error);
-      return null;
-    }
-  }, []);
-  
-  // دالة للتحقق من ملكية الطلب
-  const isOrderOwner = useCallback((order, currentUser) => {
-    if (!order || !currentUser) return false;
-    return order.created_by === currentUser.id;
-  }, []);
-  
-  // دالة للتحقق من إمكانية حذف الطلب تلقائياً
-  const canAutoDeleteOrder = useCallback((order, currentUser) => {
-    if (!order || !currentUser) return false;
-    
-    // تطبيق منطق الحذف الموحد
-    const basicCanDelete = canDeleteOrder(order, currentUser);
-    
-    if (!basicCanDelete) return false;
-    
-    // شروط إضافية للحذف التلقائي
-    // المدير يمكنه حذف أي طلب (بما في ذلك طلباته المراجعة)
-    if (currentUser.email === 'ryusbrand@gmail.com' || currentUser.id === '91484496-b887-44f7-9e5d-be9db5567604') {
-      return true;
-    }
-    
-    // الموظف يمكنه حذف طلباته فقط
-    if (!isOrderOwner(order, currentUser)) return false;
-    
-    // للموظفين: لا يحذف الطلبات المستلمة أو المكتملة
-    if (order.receipt_received || order.status === 'completed') return false;
-    
-    return true;
-  }, [isOrderOwner]);
   
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
   const scopeOrdersQuery = useCallback((query) => {
@@ -1351,6 +1294,47 @@ export const AlWaseetProvider = ({ children }) => {
     return prePickupKeywords.some(s => deliveryText.includes(s.toLowerCase()));
   };
 
+  // دالة للتحقق من إمكانية الحذف التلقائي (محسّنة ومحمية)
+  const canAutoDeleteOrder = (order) => {
+    if (!order?.delivery_partner === 'alwaseet' || order?.receipt_received === true) {
+      return false;
+    }
+    
+    // 🔒 تأمين متقدم: التحقق من ملكية الطلب قبل السماح بالحذف
+    if (!verifyOrderOwnership(order, user)) {
+      logSecurityWarning('auto_delete_attempt', order?.id, user);
+      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
+      return false;
+    }
+    
+    // 🔒 تأمين: التحقق من ملكية الطلب قبل السماح بالحذف
+    if (!canViewData(order?.created_by)) {
+      console.warn('🚫 منع حذف طلب غير مملوك للمستخدم الحالي:', order?.id);
+      return false;
+    }
+    
+    // التحقق من وجود رقم تتبع
+    if (!order?.tracking_number && !order?.qr_id) {
+      return false;
+    }
+    
+    // حماية زمنية: عدم حذف الطلبات الجديدة (أقل من 15 دقيقة)
+    const orderAge = Date.now() - new Date(order.created_at).getTime();
+    const minAgeForDeletion = 15 * 60 * 1000; // 15 دقيقة
+    if (orderAge < minAgeForDeletion) {
+      console.log(`⏰ الطلب ${order.order_number} جديد جداً (${Math.round(orderAge/60000)} دقيقة) - لن يُحذف`);
+      return false;
+    }
+    
+    // حماية حالة الطلب: فقط الطلبات في حالات معينة
+    const safeStatusesForDeletion = ['pending', 'shipped', 'delivery'];
+    if (!safeStatusesForDeletion.includes(order.status)) {
+      console.log(`🔒 الطلب ${order.order_number} في حالة ${order.status} - لن يُحذف`);
+      return false;
+    }
+    
+    return true;
+  };
 
   // دالة محسنة للحذف التلقائي مع تحقق متعدد
   const performAutoCleanup = async () => {
@@ -1480,10 +1464,8 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
-      // جلب طلبات الوسيط باستخدام التوكن الحالي
-      const userToken = token;
-      const waseetOrdersResult = await getMerchantOrders();
-      const waseetOrders = waseetOrdersResult.success ? waseetOrdersResult.data : [];
+      // جلب جميع طلبات الوسيط والبحث عن الطلب المطلوب (تطبيع المقارنة لتجنب اختلاف النوع/المسافات)
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       const norm = (v) => String(v ?? '').trim();
       const tn = norm(trackingNumber);
       let waseetOrder = waseetOrders.find(order => (
@@ -1595,23 +1577,17 @@ export const AlWaseetProvider = ({ children }) => {
   // للتوافق مع الإصدار السابق
   const syncOrders = syncAndApplyOrders;
 
-  const getMerchantOrders = useCallback(async (userId = null) => {
-    // إذا تم تمرير userId، استخدم توكن ذلك المستخدم
-    let requestToken = token;
-    if (userId && userId !== user?.id) {
-      requestToken = await getTokenForUser(userId);
-    }
-    
-    if (requestToken) {
+  const getMerchantOrders = useCallback(async () => {
+    if (token) {
       try {
-        const orders = await AlWaseetAPI.getMerchantOrders(requestToken);
+        const orders = await AlWaseetAPI.getMerchantOrders(token);
         return { success: true, data: orders };
       } catch (error) {
         return { success: false, message: error.message };
       }
     }
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
-  }, [token, user, getTokenForUser]);
+  }, [token]);
 
   const getOrderStatuses = useCallback(async () => {
     if (token) {
@@ -1680,27 +1656,20 @@ export const AlWaseetProvider = ({ children }) => {
   }, [token]);
 
   const createOrder = useCallback(async (orderData) => {
-    // استخدام توكن المستخدم الحالي لإنشاء الطلب
-    const userToken = token; // استخدام التوكن الأصلي
-    
-    if (userToken) {
+    if (token) {
       try {
-        const result = await AlWaseetAPI.createAlWaseetOrder(orderData, userToken);
+        const result = await AlWaseetAPI.createAlWaseetOrder(orderData, token);
 
-        // حفظ معرف الطلب من الوسيط في الطلب المحلي
+        // New: إذا أعاد الوسيط معرف الطلب، خزنه في طلبنا المحلي المطابق لـ tracking_number
         if (result && result.id && orderData?.tracking_number) {
-          const { error: upErr } = await scopeOrdersQuery(
-            supabase
-              .from('orders')
-              .update({
-                delivery_partner_order_id: String(result.id),
-                delivery_partner: 'alwaseet',
-                delivery_account_code: orderData.account_code || waseetUser?.username,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('tracking_number', String(orderData.tracking_number))
-          );
-          
+          const { error: upErr } = await supabase
+            .from('orders')
+            .update({
+              delivery_partner_order_id: String(result.id),
+              delivery_partner: 'alwaseet',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('tracking_number', String(orderData.tracking_number));
           if (upErr) {
             console.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
           } else {
@@ -1714,7 +1683,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
-  }, [token, waseetUser, scopeOrdersQuery]);
+  }, [token]);
 
   const editOrder = useCallback(async (orderData) => {
     if (token) {
@@ -1844,9 +1813,8 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (error || !problematicOrders?.length) return;
       
-      // اجلب طلبات الوسيط
-      const waseetOrdersResult = await getMerchantOrders();
-      const waseetOrders = waseetOrdersResult.success ? waseetOrdersResult.data : [];
+      // اجلب جميع طلبات الوسيط لعمل المطابقة
+      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       
       // بناء خرائط للبحث السريع
       const byWaseetId = new Map();
@@ -1915,189 +1883,78 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, correctionComplete]);
 
-  // إضافة مستمع لحدث تشغيل مرور الحذف
-  useEffect(() => {
-    const handleDeletionPassTrigger = (event) => {
-      console.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
-      performDeletionPassAfterStatusSync();
-    };
-
-    window.addEventListener('triggerDeletionPass', handleDeletionPassTrigger);
-    
-    return () => {
-      window.removeEventListener('triggerDeletionPass', handleDeletionPassTrigger);
-    };
-  }, []);
-
-  // دالة مُحسّنة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
   const performDeletionPassAfterStatusSync = useCallback(async () => {
-    if (!user || !userUUID) {
-      console.log('❌ لا يوجد مستخدم أو معرف مستخدم');
-      return;
-    }
-    
-    if (!token) {
-      console.log('❌ لا يوجد توكن - سيتم تجاهل مرور الحذف التلقائي');
-      return;
-    }
-    
-    console.log('🧹 تشغيل مرور الحذف التلقائي بعد تحديث الحالات...');
-    console.log('🔑 Token available:', !!token);
+    if (!token) return;
     
     try {
+      console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
-      // الحصول على جميع الطلبات المرشحة للحذف (ليس فقط طلبات المستخدم الحالي)
-      let ordersQuery = supabase
-        .from('orders')
-        .select('*')
-        .or('delivery_partner.eq.alwaseet,delivery_partner_order_id.not.is.null,tracking_number.not.is.null')
-        .neq('isarchived', true);
-      
-      // إذا لم يكن المستخدم مديراً، فلتر للطلبات الخاصة به فقط
-      if (user.id !== '91484496-b887-44f7-9e5d-be9db5567604') {
-        ordersQuery = ordersQuery.eq('created_by', userUUID);
-      }
-      
-      const { data: localOrders, error } = await ordersQuery;
-      
+      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات
+      const { data: localOrders, error } = await scopeOrdersQuery(
+        supabase
+          .from('orders')
+          .select('id, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received')
+          .eq('delivery_partner', 'alwaseet')
+          .not('delivery_partner_order_id', 'is', null)
+          .eq('receipt_received', false)
+      ).limit(50); // إزالة فلتر status لأن syncOrderByQR تتعامل مع جميع الحالات
+        
       if (error) {
-        console.error('❌ خطأ في جلب الطلبات المحلية للمقارنة:', error);
+        console.error('❌ خطأ في جلب الطلبات المحلية:', error);
         return;
       }
       
-      if (!localOrders || localOrders.length === 0) {
-        console.log('📭 لا توجد طلبات محلية للمقارنة');
+      if (!localOrders?.length) {
+        console.log('✅ لا توجد طلبات مرشحة للفحص');
         return;
       }
       
-      console.log(`🔍 فحص ${localOrders.length} طلب محلي للمقارنة مع الوسيط...`);
+      console.log(`🔍 سيتم فحص ${localOrders.length} طلب باستخدام syncOrderByQR...`);
       
-      // جلب البيانات من الوسيط للمقارنة
-      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+      let checkedCount = 0;
+      let deletedCount = 0;
       
-      // إنشاء مجموعة من معرفات الطلبات في الوسيط (تشمل id و tracking_number)
-      const waseetOrderIds = new Set();
-      waseetOrders.forEach(order => {
-        if (order.id) waseetOrderIds.add(String(order.id));
-        if (order.tracking_number) waseetOrderIds.add(String(order.tracking_number));
-      });
-      
-      console.log(`📊 عدد طلبات الوسيط: ${waseetOrderIds.size}`);
-      
-      // البحث عن الطلبات المحذوفة من الوسيط
-      const ordersToDelete = localOrders.filter(localOrder => {
-        // فحص معرفات متعددة للطلب
-        const orderIds = [
-          localOrder.delivery_partner_order_id,
-          localOrder.tracking_number,
-          localOrder.order_number
-        ].filter(Boolean);
-        
-        // فحص إذا كان أي من المعرفات موجود في الوسيط
-        const existsInWaseet = orderIds.some(id => waseetOrderIds.has(String(id)));
-        const isDeletedFromWaseet = !existsInWaseet && orderIds.length > 0;
-        
-        // فحص إمكانية الحذف باستخدام الدالة الموحدة
-        const canDelete = canAutoDeleteOrder(localOrder, user);
-        
-        if (isDeletedFromWaseet && canDelete) {
-          console.log(`🗑️ مرشح للحذف: ${localOrder.order_number} (${orderIds.join(', ')})`);
+      // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
+      for (const localOrder of localOrders) {
+        const trackingNumber = localOrder.tracking_number || localOrder.qr_id;
+        if (!trackingNumber) {
+          console.warn(`⚠️ لا يوجد tracking_number للطلب ${localOrder.id}`);
+          continue;
         }
         
-        return isDeletedFromWaseet && canDelete;
-      });
-      
-      console.log(`🗑️ وجد ${ordersToDelete.length} طلب للحذف`);
-      
-      // حذف الطلبات المحذوفة من الوسيط
-      for (const orderToDelete of ordersToDelete) {
         try {
-          await handleOrderDeletion(orderToDelete);
-          console.log(`✅ تم حذف الطلب ${orderToDelete.order_number} تلقائياً`);
-        } catch (deleteError) {
-          console.error(`❌ خطأ في حذف الطلب ${orderToDelete.order_number}:`, deleteError);
+          console.log(`🔄 فحص الطلب ${trackingNumber} باستخدام syncOrderByQR...`);
+          
+          // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
+          const syncResult = await syncOrderByQR(trackingNumber);
+          checkedCount++;
+          
+          // التحقق من الحذف التلقائي
+          if (syncResult?.autoDeleted) {
+            deletedCount++;
+            console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
+          } else if (syncResult) {
+            console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
+          } else {
+            console.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
+          }
+          
+        } catch (error) {
+          console.error(`❌ خطأ في فحص الطلب ${trackingNumber}:`, error);
         }
       }
       
-      if (ordersToDelete.length > 0) {
-        toast({
-          title: "تم الحذف التلقائي",
-          description: `تم حذف ${ordersToDelete.length} طلب محذوف من شركة التوصيل`,
-        });
+      console.log(`✅ انتهاء الفحص التلقائي: تم فحص ${checkedCount} طلب، حذف ${deletedCount} طلب`);
+      
+      if (deletedCount > 0) {
+        console.log(`🗑️ إجمالي الطلبات المحذوفة تلقائياً: ${deletedCount}`);
       }
       
     } catch (error) {
-      console.error('❌ خطأ في مرور الحذف التلقائي:', error);
+      console.error('❌ خطأ في فحص الطلبات للحذف التلقائي:', error);
     }
-  }, [user, userUUID, canAutoDeleteOrder, token, handleOrderDeletion, toast]);
-
-  // Handle order deletion with stock release and notification
-  const handleOrderDeletion = async (order) => {
-    try {
-      const { error } = await supabase.from('orders').delete().eq('id', order.id);
-      
-      if (error) throw error;
-      
-      // Release reserved stock
-      const { data: orderItems } = await supabase
-        .from('order_items')
-        .select('product_id, variant_id, quantity')
-        .eq('order_id', order.id);
-      
-      if (orderItems) {
-        for (const item of orderItems) {
-          await supabase.rpc('release_stock_item', {
-            p_product_id: item.product_id,
-            p_variant_id: item.variant_id,
-            p_quantity: item.quantity
-          });
-        }
-      }
-      
-      // إنشاء إشعار الحذف
-      const trackingNumber = order.tracking_number || order.order_number || order.id;
-      if (createNotification) {
-        await createNotification({
-          type: 'order_deleted',
-          title: 'حذف طلب',
-          message: `${trackingNumber} تم حذف الطلب وتحرير المخزون المحجوز`,
-          user_id: order.created_by, // إشعار لصاحب الطلب
-          data: {
-            order_id: order.id,
-            order_number: order.order_number,
-            tracking_number: order.tracking_number,
-            reason: 'deleted_from_delivery_partner'
-          },
-          priority: 'medium'
-        });
-        
-        // إشعار للمديرين أيضاً
-        await createNotification({
-          type: 'order_deleted',
-          title: 'حذف طلب',
-          message: `${trackingNumber} تم حذف الطلب وتحرير المخزون المحجوز`,
-          user_id: null, // للمديرين
-          data: {
-            order_id: order.id,
-            order_number: order.order_number,
-            tracking_number: order.tracking_number,
-            employee_id: order.created_by,
-            reason: 'deleted_from_delivery_partner'
-          },
-          priority: 'medium'
-        });
-      }
-      
-      // Trigger order deleted event
-      window.dispatchEvent(new CustomEvent('orderDeleted', { 
-        detail: { orderId: order.id, orderNumber: order.order_number } 
-      }));
-      
-    } catch (error) {
-      console.error('Error deleting order:', error);
-      throw error;
-    }
-  };
+  }, [token, syncOrderByQR]);
 
   // Auto-sync and repair on login
   useEffect(() => {
@@ -2140,10 +1997,6 @@ export const AlWaseetProvider = ({ children }) => {
     login,
     logout,
     activePartner,
-    // دوال النظام الأصلي المحسن
-    getTokenForUser,
-    isOrderOwner,
-    canAutoDeleteOrder,
     setActivePartner,
     deliveryPartners,
     syncOrders,

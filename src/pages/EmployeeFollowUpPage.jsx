@@ -10,10 +10,9 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -21,7 +20,6 @@ import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDial
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
-import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -30,7 +28,7 @@ import { toast } from '@/hooks/use-toast';
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
   const { allUsers } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission } = usePermissions();
   const { 
     orders, 
     loading, 
@@ -72,115 +70,9 @@ const EmployeeFollowUpPage = () => {
     });
     return initialSelectedOrders;
   });
-
-  // دالة مزامنة طلبات موظف محدد
-  const syncEmployeeOrders = async (employeeId, employeeName) => {
-    setSyncingEmployeeId(employeeId);
-    try {
-      const { data, error } = await supabase.rpc('sync_employee_orders', {
-        p_employee_id: employeeId
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "تم مزامنة الطلبات",
-        description: `${employeeName}: ${data.message}`,
-        variant: "default"
-      });
-
-      // تحديث البيانات
-      refreshOrders();
-    } catch (error) {
-      console.error('خطأ في مزامنة طلبات الموظف:', error);
-      toast({
-        title: "خطأ في المزامنة",
-        description: error.message || "تعذر مزامنة طلبات الموظف",
-        variant: "destructive"
-      });
-    } finally {
-      setSyncingEmployeeId(null);
-    }
-  };
-
-  // مزامنة شاملة لكل الموظفين (للمديرين فقط)
-  const syncAllEmployeesOrders = async () => {
-    if (!isAdmin) return;
-    
-    setSyncingEmployeeId('all');
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-        body: { sync_type: 'manual_comprehensive' }
-      });
-
-      if (error) throw error;
-
-      // رسالة مفصلة مع نتائج المزامنة
-      const successMsg = data?.message || "تم تحديث طلبات وفواتير جميع الموظفين";
-      const needsLoginMsg = data?.needs_login_count > 0 
-        ? `\n${data.needs_login_count} موظف يحتاج تسجيل دخول في الوسيط`
-        : '';
-
-      toast({
-        title: "مزامنة شاملة مكتملة",
-        description: successMsg + needsLoginMsg,
-        variant: "default",
-        duration: 8000
-      });
-
-      // تحديث البيانات
-      await refreshOrders();
-      
-      // تحديث آخر مزامنة في localStorage
-      const syncTime = new Date().toISOString();
-      localStorage.setItem('last-comprehensive-sync', syncTime);
-      setLastComprehensiveSync(syncTime);
-      
-    } catch (error) {
-      console.error('خطأ في المزامنة الشاملة:', error);
-      toast({
-        title: "خطأ في المزامنة الشاملة",
-        description: error.message || "تعذر مزامنة جميع الطلبات",
-        variant: "destructive",
-      });
-    } finally {
-      setSyncingEmployeeId(null);
-    }
-  };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('orders');
-  const [syncingEmployeeId, setSyncingEmployeeId] = useState(null);
-  const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
-    localStorage.getItem('last-comprehensive-sync')
-  );
-  
-  // مزامنة تلقائية عند فتح صفحة متابعة الموظفين
-  useEffect(() => {
-    if (!loading && isAdmin) {
-      const performAutoSync = async () => {
-        try {
-          const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-            body: { sync_time: 'employee_followup_page_open', scheduled: false }
-          });
-          
-          if (!error && data?.success) {
-            console.log('🔄 مزامنة تلقائية عند فتح صفحة متابعة الموظفين:', data.message);
-            
-            // تحديث آخر مزامنة
-            const syncTime = new Date().toISOString();
-            localStorage.setItem('last-comprehensive-sync', syncTime);
-            setLastComprehensiveSync(syncTime);
-          }
-        } catch (err) {
-          console.log('تعذر المزامنة التلقائية:', err);
-        }
-      };
-      
-      performAutoSync();
-    }
-  }, [loading, isAdmin]);
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -197,34 +89,86 @@ const EmployeeFollowUpPage = () => {
     isOrdersLoaded: !!orders
   });
   
-  // إعداد محسن لـ URL parameters - منع التحميل المتكرر
+  // إعداد تأثير URL parameters
   useEffect(() => {
-    // تشغيل المعالجة فقط مرة واحدة عند توفر البيانات
-    if (loading || !orders || !allUsers || orders.length === 0) return;
-    
-    console.log('🔄 URL Parameters:', { 
+    console.log('🔄 URL Parameters DETAILED:', { 
       highlightFromUrl, 
       employeeFromUrl, 
       ordersFromUrl,
-      ordersLoaded: !!orders?.length,
-      usersLoaded: !!allUsers?.length
+      allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl),
+      fullSearchParams: searchParams.toString(),
+      allOrders: orders?.length || 0,
+      allUsers: allUsers?.length || 0,
+      loading,
+      hasPermissionCheck: hasPermission,
+      authenticationIssue: !orders && !loading // مؤشر على مشكلة المصادقة
     });
-    
-    if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
-      // طلب تحاسب محدد من الإشعار
-      console.log('⚡ معالجة طلب التحاسب من الإشعار');
-      processSettlementRequest();
-    } else if (highlightFromUrl === 'settlement') {
-      // إشعار عام للتحاسب
-      console.log('🔔 إشعار تحاسب عام');
+
+    // التحقق من حالة التحميل والمصادقة
+    if (!loading && (!orders || orders.length === 0)) {
+      console.warn('⚠️ مشكلة محتملة في تحميل البيانات - قد تكون مشكلة مصادقة');
+      
+      // إعادة المحاولة بعد تأخير قصير
       setTimeout(() => {
-        toast({
-          title: "طلبات تحاسب متاحة",
-          description: "راجع طلبات التحاسب في صفحة متابعة الموظفين واختر الطلبات المطلوبة لكل موظف",
-          variant: "default",
-          duration: 6000
-        });
-      }, 1000);
+        if (!orders || orders.length === 0) {
+          toast({
+            title: "مشكلة في تحميل البيانات",
+            description: "يرجى تسجيل الدخول مرة أخرى أو إعادة تحميل الصفحة",
+            variant: "destructive",
+            duration: 8000
+          });
+        }
+      }, 3000);
+    }
+    
+    if (highlightFromUrl === 'settlement') {
+      if (employeeFromUrl && ordersFromUrl) {
+        // طلب تحاسب محدد من الإشعار
+        console.log('⚡ معالجة طلب التحاسب من الإشعار');
+        
+        // التحقق من تحميل البيانات أولاً
+        if (!orders || orders.length === 0 || !allUsers || allUsers.length === 0) {
+          console.warn('⚠️ البيانات لم تحمل بعد، انتظار...');
+          
+          // إعادة المحاولة كل ثانية حتى تحمل البيانات
+          const dataWaitInterval = setInterval(() => {
+            if (orders && orders.length > 0 && allUsers && allUsers.length > 0) {
+              clearInterval(dataWaitInterval);
+              console.log('✅ البيانات تحملت، بدء المعالجة');
+              processSettlementRequest();
+            }
+          }, 1000);
+          
+          // إيقاف الانتظار بعد 30 ثانية
+          setTimeout(() => {
+            clearInterval(dataWaitInterval);
+            if (!orders || orders.length === 0) {
+              console.error('❌ فشل في تحميل البيانات خلال 30 ثانية');
+              toast({
+                title: "مشكلة في تحميل البيانات",
+                description: "لم يتم تحميل البيانات. يرجى تسجيل الدخول مرة أخرى.",
+                variant: "destructive",
+                duration: 10000
+              });
+            }
+          }, 30000);
+          
+          return;
+        }
+        
+        processSettlementRequest();
+      } else {
+        // إشعار عام للتحاسب - عرض رسالة توضيحية فقط
+        console.log('🔔 إشعار تحاسب عام');
+        setTimeout(() => {
+          toast({
+            title: "طلبات تحاسب متاحة",
+            description: "راجع طلبات التحاسب في صفحة متابعة الموظفين واختر الطلبات المطلوبة لكل موظف",
+            variant: "default",
+            duration: 6000
+          });
+        }, 1000);
+      }
     }
     
     function processSettlementRequest() {
@@ -257,11 +201,12 @@ const EmployeeFollowUpPage = () => {
         });
       }, 1500);
       
-      // التمرير للكارت مع تأثير بصري - محسن
-      setTimeout(() => {
+      // التمرير للكارت مع تأثير بصري قوي - انتظار ذكي للتحميل
+      const scrollToEmployeeCard = () => {
         const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // تأثير بصري مميز
           element.style.transform = "scale(1.05)";
           element.style.border = "3px solid #10b981";
           element.style.borderRadius = "16px";
@@ -275,27 +220,39 @@ const EmployeeFollowUpPage = () => {
             element.style.boxShadow = "";
             element.style.background = "";
           }, 5000);
+        } else {
+          console.warn('⚠️ لم يتم العثور على كارت الموظف، محاولة أخرى...');
+          return false;
         }
-      }, 2000);
+        return true;
+      };
+
+      // محاولة التمرير مع إعادة المحاولة كل ثانية لمدة 10 ثوان
+      let attempts = 0;
+      const maxAttempts = 10;
+      const scrollInterval = setInterval(() => {
+        attempts++;
+        if (scrollToEmployeeCard() || attempts >= maxAttempts) {
+          clearInterval(scrollInterval);
+          if (attempts >= maxAttempts) {
+            console.warn('⚠️ لم يتم العثور على كارت الموظف بعد 10 محاولات');
+            toast({
+              title: "طلب التحاسب جاهز",
+              description: "تم تحديد الطلبات المطلوبة. ابحث عن كارت التحاسب أدناه.",
+              variant: "default",
+              duration: 5000
+            });
+          }
+        }
+      }, 1000);
     }
-  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, loading, orders, allUsers]); // تحسين dependencies
+  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
-  // Real-time updates محسن مع debouncing لتجنب التحميل المكرر
+  // إضافة Real-time Updates للصفحة
   useEffect(() => {
-    let debounceTimer = null;
-    const DEBOUNCE_DELAY = 3000; // 3 ثوان
-    
-    const debouncedRefresh = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        console.log('🔄 Debounced refresh executed');
-        refreshOrders && refreshOrders();
-      }, DEBOUNCE_DELAY);
-    };
-
-    // استمع لتغييرات في جدول orders مع debouncing
+    // استمع لتغييرات في جدول orders
     const ordersChannel = supabase
-      .channel('employee-follow-up-orders-optimized')
+      .channel('employee-follow-up-orders')
       .on(
         'postgres_changes',
         {
@@ -304,15 +261,16 @@ const EmployeeFollowUpPage = () => {
           table: 'orders'
         },
         (payload) => {
-          console.log('📡 Real-time order update:', payload.eventType);
-          debouncedRefresh();
+          console.log('🔄 Real-time update for orders:', payload);
+          // إعادة تحديث الطلبات فوراً
+          refreshOrders && refreshOrders();
         }
       )
       .subscribe();
 
-    // إضافة profits channel منفصل
+    // استمع لتغييرات في جدول profits
     const profitsChannel = supabase
-      .channel('employee-follow-up-profits-optimized')
+      .channel('employee-follow-up-profits')
       .on(
         'postgres_changes',
         {
@@ -321,18 +279,19 @@ const EmployeeFollowUpPage = () => {
           table: 'profits'
         },
         (payload) => {
-          console.log('📡 Real-time profit update:', payload.eventType);
-          debouncedRefresh();
+          console.log('🔄 Real-time update for profits:', payload);
+          // إعادة تحديث البيانات
+          refetchProducts && refetchProducts();
         }
       )
       .subscribe();
 
+    // تنظيف المشتركين عند إلغاء تحميل المكون
     return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(profitsChannel);
     };
-  }, [refreshOrders]);
+  }, [refetchProducts]);
 
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
@@ -872,60 +831,6 @@ const filteredOrders = useMemo(() => {
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
           
-          {/* أزرار الإجراءات وآخر مزامنة */}
-          <div className="flex flex-col items-end gap-2">
-            {lastComprehensiveSync && (
-              <div className="text-xs text-muted-foreground">
-                آخر مزامنة شاملة: {new Date(lastComprehensiveSync).toLocaleString('ar-IQ')}
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => refreshOrders()}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                تحديث البيانات
-              </Button>
-            
-            {filters.employeeId !== 'all' && filters.employeeId && (
-              <Button
-                onClick={() => syncEmployeeOrders(filters.employeeId)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                disabled={syncingEmployeeId === filters.employeeId}
-              >
-                {syncingEmployeeId === filters.employeeId ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="w-4 h-4" />
-                )}
-                مزامنة طلبات الموظف
-              </Button>
-            )}
-            
-            {isAdmin && (
-              <Button
-                onClick={syncAllEmployeesOrders}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700"
-                disabled={syncingEmployeeId === 'all'}
-              >
-                {syncingEmployeeId === 'all' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Truck className="w-4 h-4" />
-                )}
-                مزامنة شاملة (كل الموظفين)
-              </Button>
-            )}
-            </div>
-          </div>
         </div>
 
         {/* الفلاتر */}
@@ -1052,78 +957,44 @@ const filteredOrders = useMemo(() => {
           </div>
         )}
 
-        {/* التبويبات الرئيسية */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 gap-2 bg-muted/50 p-1">
-            <TabsTrigger 
-              value="orders" 
-              className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              الطلبات ({filteredOrders.length})
-            </TabsTrigger>
-            <TabsTrigger 
-              value="invoices" 
-              className="flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <FileText className="h-4 w-4" />
-              فواتير الموظفين
-            </TabsTrigger>
-          </TabsList>
+        {/* قائمة الطلبات */}
+        <div className="bg-card p-4 rounded-xl border">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">
+              قائمة الطلبات ({filteredOrders.length})
+            </h2>
+          </div>
 
-          {/* تبويب الطلبات */}
-          <TabsContent value="orders" className="mt-6">
-            <div className="bg-card p-4 rounded-xl border">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">
-                  قائمة الطلبات ({filteredOrders.length})
-                </h2>
+          {/* تنبيه للطلبات الراجعة */}
+          {filters.status === 'returned' && !filters.archived && (
+            <Card className="mb-4 p-4 bg-secondary rounded-lg border">
+              <div className="flex items-center justify-between">
+                <p className="font-medium">
+                  {selectedOrders.length} طلبات راجعة محددة
+                </p>
+                <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
+                  <Archive className="w-4 h-4 ml-2" />
+                  استلام الراجع في المخزن
+                </Button>
               </div>
+            </Card>
+          )}
 
-              {/* تنبيه للطلبات الراجعة */}
-              {filters.status === 'returned' && !filters.archived && (
-                <Card className="mb-4 p-4 bg-secondary rounded-lg border">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">
-                      {selectedOrders.length} طلبات راجعة محددة
-                    </p>
-                    <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
-                      <Archive className="w-4 h-4 ml-2" />
-                      استلام الراجع في المخزن
-                    </Button>
-                  </div>
-                </Card>
-              )}
-
-              {/* قائمة الطلبات */}
-              <OrderList 
-                orders={filteredOrders} 
-                isLoading={loading} 
-                onViewOrder={handleViewOrder}
-                onUpdateStatus={handleUpdateStatus}
-                onDeleteOrder={handleDeleteOrder}
-                selectedOrders={selectedOrders}
-                setSelectedOrders={setSelectedOrders}
-                calculateProfit={calculateProfit}
-                profits={profits}
-                viewMode="grid"
-                showEmployeeName={filters.employeeId === 'all'}
-              />
-            </div>
-          </TabsContent>
-
-          {/* تبويب فواتير الموظفين */}
-          <TabsContent value="invoices" className="mt-6">
-            <div className="bg-card p-4 rounded-xl border">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">
-                  فواتير شركة التوصيل
-                </h2>
-              </div>
-              <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
-            </div>
-          </TabsContent>
-        </Tabs>
+          {/* قائمة الطلبات */}
+          <OrderList 
+            orders={filteredOrders} 
+            isLoading={loading} 
+            onViewOrder={handleViewOrder}
+            onUpdateStatus={handleUpdateStatus}
+            onDeleteOrder={handleDeleteOrder}
+            selectedOrders={selectedOrders}
+            setSelectedOrders={setSelectedOrders}
+            calculateProfit={calculateProfit}
+            profits={profits}
+            viewMode="grid"
+            showEmployeeName={filters.employeeId === 'all'}
+          />
+        </div>
 
         {/* نوافذ حوارية */}
         <OrderDetailsDialog

@@ -28,7 +28,6 @@ import {
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import InvoiceSyncSettings from './InvoiceSyncSettings';
 
 const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const { 
@@ -292,12 +291,12 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
             </CardContent>
           </Card>
 
-          {/* إعدادات المزامنة الطلبات */}
+          {/* إعدادات المزامنة */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Settings className="w-4 h-4" />
-                إعدادات مزامنة الطلبات
+                إعدادات المزامنة
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -358,9 +357,6 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
               </div>
             </CardContent>
           </Card>
-
-          {/* إعدادات مزامنة الفواتير */}
-          <InvoiceSyncSettings />
 
           {/* فحص حالات الوسيط */}
           <Card>

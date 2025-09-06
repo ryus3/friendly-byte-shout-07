@@ -3,7 +3,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bell, BellOff, User, Users } from 'lucide-react';
-import { useNotificationHandler } from './NotificationHandler';
 
 const PermissionBasedNotifications = ({ notifications, children }) => {
   const { 
@@ -12,8 +11,6 @@ const PermissionBasedNotifications = ({ notifications, children }) => {
     isSalesEmployee,
     user 
   } = usePermissions();
-  
-  const { handleNotificationClick } = useNotificationHandler();
 
   // فلترة الإشعارات حسب المستخدم
   const filteredNotifications = useMemo(() => {
@@ -96,8 +93,7 @@ const PermissionBasedNotifications = ({ notifications, children }) => {
       {React.Children.map(children, child => 
         React.cloneElement(child, { 
           notifications: filteredNotifications,
-          canViewAll: isAdmin,
-          onNotificationClick: handleNotificationClick
+          canViewAll: isAdmin
         })
       )}
     </div>
