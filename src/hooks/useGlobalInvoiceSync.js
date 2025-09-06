@@ -27,6 +27,9 @@ export const useGlobalInvoiceSync = () => {
       } else if (data?.orders_updated || data?.total_synced) {
         console.log(`✅ Comprehensive sync: invoices=${data?.total_synced || 0}, orders=${data?.orders_updated || 0}`);
         window.dispatchEvent(new CustomEvent('invoicesSynced', { detail: { updatedOrders: data?.orders_updated || 0 } }));
+        
+        // تشغيل مرور الحذف بعد المزامنة الشاملة
+        window.dispatchEvent(new CustomEvent('triggerDeletionPass', { detail: { reason: 'post_comprehensive_sync' } }));
       }
     } catch (e) {
       console.warn('Comprehensive sync error:', e);

@@ -1908,6 +1908,20 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, correctionComplete]);
 
+  // إضافة مستمع لحدث تشغيل مرور الحذف
+  useEffect(() => {
+    const handleDeletionPassTrigger = (event) => {
+      console.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
+      performDeletionPassAfterStatusSync();
+    };
+
+    window.addEventListener('triggerDeletionPass', handleDeletionPassTrigger);
+    
+    return () => {
+      window.removeEventListener('triggerDeletionPass', handleDeletionPassTrigger);
+    };
+  }, []);
+
   // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
   const performDeletionPassAfterStatusSync = useCallback(async () => {
     if (!token) return;

@@ -73,6 +73,15 @@ const OrdersPage = () => {
             body: { sync_time: 'orders_page_open', scheduled: false }
           });
           console.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
+          
+          // تشغيل المزامنة السريعة ومرور الحذف بعد المزامنة الشاملة
+          if (fastSyncPendingOrders) {
+            try {
+              await fastSyncPendingOrders(false); // مزامنة صامتة
+            } catch (syncErr) {
+              console.log('تعذر المزامنة السريعة الإضافية:', syncErr);
+            }
+          }
         } catch (err) {
           console.log('تعذر المزامنة التلقائية:', err);
         }

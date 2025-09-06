@@ -163,7 +163,7 @@ serve(async (req) => {
                 method: 'GET',
                 token: tokenData.token,
                 payload: null,
-                queryParams: { token: tokenData.token, id: inv.id }
+                queryParams: { token: tokenData.token, invoice_id: inv.id }
               }
             });
 
@@ -260,7 +260,7 @@ serve(async (req) => {
           // جلب جميع طلبات الموظف من Al-Waseet
           const { data: allOrdersData, error: allOrdersErr } = await supabase.functions.invoke('alwaseet-proxy', {
             body: {
-              endpoint: 'get_merchant_orders',
+              endpoint: 'merchant-orders',
               method: 'GET',
               token: tokenData.token,
               payload: null,
@@ -273,6 +273,64 @@ serve(async (req) => {
           } else if (allOrdersData?.data) {
             const allOrders = allOrdersData.data || [];
             console.log(`📦 تم جلب ${allOrders.length} طلب للموظف ${employee.full_name}`);
+            
+            // جلب الطلبات المحلية للموظف لمقارنتها مع الخارجية
+            const { data: localOrders, error: localOrdersErr } = await supabase
+              .from('orders')
+              .select('id,delivery_partner_order_id,tracking_number,status,order_number')
+              .eq('created_by', employee.user_id)
+              .eq('delivery_partner', 'alwaseet')
+              .not('delivery_partner_order_id', 'is', null);
+
+            if (localOrdersErr) {
+              console.warn(`⚠️ تعذر جلب الطلبات المحلية للموظف ${employee.full_name}:`, localOrdersErr.message);
+            }
+
+            // إنشاء مجموعة من معرفات الطلبات الخارجية الموجودة
+            const remoteOrderIds = new Set(allOrders.map(od => String(od.id ?? od.qr_id ?? od.qrId ?? '').trim()).filter(Boolean));
+            
+            // البحث عن الطلبات المحلية التي لم تعد موجودة في الخارج
+            const ordersToDelete = [];
+            if (localOrders && localOrders.length > 0) {
+              for (const localOrder of localOrders) {
+                const externalId = localOrder.delivery_partner_order_id || localOrder.tracking_number;
+                if (externalId && !remoteOrderIds.has(String(externalId).trim())) {
+                  // التحقق من صلاحية الحذف
+                  const canDelete = ['pending', 'shipped', 'delivery'].includes(localOrder.status);
+                  if (canDelete) {
+                    ordersToDelete.push({
+                      id: localOrder.id,
+                      order_number: localOrder.order_number,
+                      external_id: externalId,
+                      status: localOrder.status
+                    });
+                  }
+                }
+              }
+            }
+
+            // حذف الطلبات التي لم تعد موجودة خارجياً
+            if (ordersToDelete.length > 0) {
+              console.log(`🗑️ حذف ${ordersToDelete.length} طلب لم يعد موجوداً في الوسيط للموظف ${employee.full_name}`);
+              for (const orderToDelete of ordersToDelete) {
+                try {
+                  const { error: deleteErr } = await supabase
+                    .from('orders')
+                    .delete()
+                    .eq('id', orderToDelete.id);
+                  
+                  if (!deleteErr) {
+                    console.log(`✅ تم حذف الطلب ${orderToDelete.order_number} (${orderToDelete.external_id}) بنجاح`);
+                    updatedOrdersForEmployee += 1;
+                    ordersUpdatedTotal += 1;
+                  } else {
+                    console.warn(`⚠️ فشل حذف الطلب ${orderToDelete.order_number}:`, deleteErr.message);
+                  }
+                } catch (deleteError) {
+                  console.warn(`⚠️ خطأ في حذف الطلب ${orderToDelete.order_number}:`, deleteError?.message || deleteError);
+                }
+              }
+            }
             
             // مزامنة كل طلب محلياً
             for (const orderData of allOrders) {
