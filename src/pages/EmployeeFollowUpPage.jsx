@@ -103,26 +103,49 @@ const EmployeeFollowUpPage = () => {
     }
   };
 
-  // مزامنة شاملة لكل الموظفين (للمديرين فقط)
+  // مزامنة شاملة محسنة مع Timeout Protection
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
     
     setSyncingEmployeeId('all');
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-        body: { sync_type: 'manual_comprehensive' }
+    
+    // Timeout protection - 3 دقائق كحد أقصى
+    const timeoutId = setTimeout(() => {
+      setSyncingEmployeeId(null);
+      toast({
+        title: "انتهت مهلة المزامنة",
+        description: "المزامنة تستغرق وقتاً أطول من المتوقع. جاري المتابعة في الخلفية...",
+        variant: "default",
       });
+    }, 180000); // 3 minutes
+    
+    try {
+      console.log('🚀 بدء المزامنة الشاملة المحسنة...');
+      const startTime = Date.now();
+      
+      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
+        body: { 
+          scheduled: false, 
+          force: true, 
+          sync_time: 'comprehensive_manual_optimized' 
+        }
+      });
+
+      clearTimeout(timeoutId);
+      const duration = Math.round((Date.now() - startTime) / 1000);
 
       if (error) throw error;
 
-      // رسالة مفصلة مع نتائج المزامنة
-      const successMsg = data?.message || "تم تحديث طلبات وفواتير جميع الموظفين";
+      // رسالة مفصلة مع نتائج المزامنة المحسنة
+      const successMsg = data?.message || 
+        `تمت المزامنة بنجاح في ${duration} ثانية - معالجة ${data?.employees_processed || 0} موظف، مزامنة ${data?.invoices_synced || 0} فاتورة، تحديث ${data?.orders_updated || 0} طلب`;
+      
       const needsLoginMsg = data?.needs_login_count > 0 
         ? `\n${data.needs_login_count} موظف يحتاج تسجيل دخول في الوسيط`
         : '';
 
       toast({
-        title: "مزامنة شاملة مكتملة",
+        title: "مزامنة شاملة مكتملة ⚡",
         description: successMsg + needsLoginMsg,
         variant: "default",
         duration: 8000
@@ -137,6 +160,7 @@ const EmployeeFollowUpPage = () => {
       setLastComprehensiveSync(syncTime);
       
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('خطأ في المزامنة الشاملة:', error);
       toast({
         title: "خطأ في المزامنة الشاملة",
@@ -257,59 +281,8 @@ const EmployeeFollowUpPage = () => {
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, loading, orders, allUsers]); // تحسين dependencies
 
-  // Real-time updates محسن مع debouncing لتجنب التحميل المكرر
-  useEffect(() => {
-    let debounceTimer = null;
-    const DEBOUNCE_DELAY = 3000; // 3 ثوان
-    
-    const debouncedRefresh = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        console.log('🔄 Debounced refresh executed');
-        refreshOrders && refreshOrders();
-      }, DEBOUNCE_DELAY);
-    };
-
-    // استمع لتغييرات في جدول orders مع debouncing
-    const ordersChannel = supabase
-      .channel('employee-follow-up-orders-optimized')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('📡 Real-time order update:', payload.eventType);
-          debouncedRefresh();
-        }
-      )
-      .subscribe();
-
-    // إضافة profits channel منفصل
-    const profitsChannel = supabase
-      .channel('employee-follow-up-profits-optimized')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profits'
-        },
-        (payload) => {
-          console.log('📡 Real-time profit update:', payload.eventType);
-          debouncedRefresh();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(profitsChannel);
-    };
-  }, [refreshOrders]);
+  // تعطيل Real-time updates لتحسين الأداء والاعتماد على المزامنة المجدولة
+  // المزامنة ستتم تلقائياً مرتين يومياً ولا حاجة للتحديث المستمر
 
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';

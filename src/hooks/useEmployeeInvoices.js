@@ -187,14 +187,13 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   };
 
-  // تحميل تلقائي ومحسن للمديرين مع تجنب التحميل المتكرر
+  // تحميل بدون مزامنة تلقائية - فقط جلب البيانات المحفوظة
   useEffect(() => {
     if (employeeId && employeeId !== 'all') {
-      console.log('🚀 تحميل تلقائي للفواتير للموظف:', employeeId);
+      console.log('🚀 جلب الفواتير المحفوظة للموظف:', employeeId);
       
-      // مزامنة فورية لجميع الحالات لضمان أحدث البيانات
-      console.log('🔄 مزامنة فورية عند دخول التبويب');
-      fetchInvoices(true, true); // force refresh + trigger sync لجميع المستخدمين
+      // جلب البيانات بدون مزامنة تلقائية لتجنب البطء
+      fetchInvoices(false, false); // no force, no sync - just cached data
     }
   }, [employeeId]);
 
