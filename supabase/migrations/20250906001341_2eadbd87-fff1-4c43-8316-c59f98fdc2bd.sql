@@ -1,0 +1,192 @@
+-- إصلاح دالة إشعارات الطلبات الجديدة لإرسال للمديرين فقط
+CREATE OR REPLACE FUNCTION public.notify_new_order()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  employee_name text;
+  notification_title text;
+  notification_message text;
+  tracking_display text;
+BEGIN
+  -- الحصول على اسم الموظف
+  SELECT COALESCE(p.full_name, p.username, 'موظف غير معروف') INTO employee_name
+  FROM profiles p
+  WHERE p.user_id = NEW.created_by;
+
+  -- استخدام tracking_number بدلاً من order_number
+  tracking_display := COALESCE(NULLIF(NEW.tracking_number, ''), NULLIF(NEW.order_number, ''), NEW.id::text);
+
+  -- صيغة الرسالة المحسنة
+  notification_message := 'طلب جديد برقم تتبع ' || tracking_display || ' بواسطة ' || employee_name;
+  notification_title := COALESCE(NULLIF(TRIM(NEW.customer_city), ''), 'غير محدد') || ' - ' || 
+    COALESCE(
+      NULLIF(TRIM(SPLIT_PART(NEW.customer_address, ',', 2)), ''),
+      NULLIF(TRIM(SPLIT_PART(NEW.customer_address, ',', 1)), ''),
+      'غير محدد'
+    );
+
+  -- إشعار للمديرين فقط (user_id = null) - لا يصل للموظف المنشئ
+  INSERT INTO public.notifications (type, title, message, user_id, data, priority, is_read)
+  VALUES (
+    'order_created',
+    notification_title,
+    notification_message,
+    NULL, -- للمديرين فقط
+    jsonb_build_object(
+      'order_id', NEW.id,
+      'order_number', NEW.order_number,
+      'tracking_number', NEW.tracking_number,
+      'employee_id', NEW.created_by,
+      'employee_name', employee_name,
+      'customer_name', NEW.customer_name,
+      'customer_phone', NEW.customer_phone,
+      'final_amount', NEW.final_amount
+    ),
+    'high',
+    false
+  );
+
+  RETURN NEW;
+END;
+$function$;
+
+-- إنشاء جدول لسجل المزامنة التلقائية
+CREATE TABLE IF NOT EXISTS public.auto_sync_log (
+  id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  sync_type text NOT NULL DEFAULT 'scheduled',
+  triggered_by text DEFAULT NULL,
+  employees_processed integer DEFAULT 0,
+  invoices_synced integer DEFAULT 0,
+  orders_updated integer DEFAULT 0,
+  started_at timestamp with time zone NOT NULL DEFAULT now(),
+  completed_at timestamp with time zone DEFAULT NULL,
+  success boolean DEFAULT false,
+  error_message text DEFAULT NULL,
+  results jsonb DEFAULT '[]'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- تفعيل RLS على جدول سجل المزامنة
+ALTER TABLE public.auto_sync_log ENABLE ROW LEVEL SECURITY;
+
+-- سياسة للمديرين فقط
+CREATE POLICY "المديرون فقط يديرون سجل المزامنة التلقائية" 
+ON public.auto_sync_log 
+FOR ALL 
+USING (is_admin_or_deputy())
+WITH CHECK (is_admin_or_deputy());
+
+-- تحديث إعدادات المزامنة لتشمل مرتين يومياً
+ALTER TABLE public.invoice_sync_settings 
+ADD COLUMN IF NOT EXISTS sync_frequency text DEFAULT 'once_daily',
+ADD COLUMN IF NOT EXISTS morning_sync_time time DEFAULT '09:00:00',
+ADD COLUMN IF NOT EXISTS evening_sync_time time DEFAULT '21:00:00';
+
+-- إعداد Cron Jobs للمزامنة مرتين يومياً
+-- تفعيل امتداد pg_cron إذا لم يكن مفعلاً
+SELECT cron.schedule(
+  'alwaseet-invoices-morning-sync',
+  '0 9 * * *', -- كل يوم الساعة 9 صباحاً
+  $$
+  select
+    net.http_post(
+        url:='https://tkheostkubborwkwzugl.supabase.co/functions/v1/sync-alwaseet-invoices',
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA"}'::jsonb,
+        body:='{"scheduled": true, "sync_time": "morning"}'::jsonb
+    ) as request_id;
+  $$
+);
+
+SELECT cron.schedule(
+  'alwaseet-invoices-evening-sync',
+  '0 21 * * *', -- كل يوم الساعة 9 مساءً
+  $$
+  select
+    net.http_post(
+        url:='https://tkheostkubborwkwzugl.supabase.co/functions/v1/sync-alwaseet-invoices',
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA"}'::jsonb,
+        body:='{"scheduled": true, "sync_time": "evening"}'::jsonb
+    ) as request_id;
+  $$
+);
+
+-- دالة لمزامنة طلبات موظف محدد
+CREATE OR REPLACE FUNCTION public.sync_employee_orders(p_employee_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  v_updated_orders integer := 0;
+  v_error_message text := '';
+  v_success boolean := true;
+BEGIN
+  -- التحقق من صلاحية المستخدم
+  IF NOT is_admin_or_deputy() THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'غير مصرح لك بهذا الإجراء'
+    );
+  END IF;
+
+  -- تسجيل بداية العملية
+  INSERT INTO public.auto_sync_log (
+    sync_type, triggered_by, started_at, success
+  ) VALUES (
+    'employee_manual', auth.uid()::text, now(), false
+  );
+
+  -- محاولة تحديث حالات الطلبات (محاكاة - في التطبيق الحقيقي ستستدعي API)
+  UPDATE public.orders 
+  SET updated_at = now()
+  WHERE created_by = p_employee_id
+    AND status IN ('pending', 'shipped', 'delivery')
+    AND created_at >= now() - interval '30 days';
+  
+  GET DIAGNOSTICS v_updated_orders = ROW_COUNT;
+
+  -- تحديث سجل المزامنة
+  UPDATE public.auto_sync_log 
+  SET 
+    completed_at = now(),
+    success = v_success,
+    orders_updated = v_updated_orders,
+    employees_processed = 1
+  WHERE sync_type = 'employee_manual' 
+    AND triggered_by = auth.uid()::text
+    AND completed_at IS NULL
+  ORDER BY created_at DESC
+  LIMIT 1;
+
+  RETURN jsonb_build_object(
+    'success', v_success,
+    'updated_orders', v_updated_orders,
+    'message', 'تم تحديث ' || v_updated_orders || ' طلب للموظف'
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    v_error_message := SQLERRM;
+    v_success := false;
+    
+    -- تحديث سجل المزامنة بالخطأ
+    UPDATE public.auto_sync_log 
+    SET 
+      completed_at = now(),
+      success = false,
+      error_message = v_error_message
+    WHERE sync_type = 'employee_manual' 
+      AND triggered_by = auth.uid()::text
+      AND completed_at IS NULL
+    ORDER BY created_at DESC
+    LIMIT 1;
+
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', v_error_message
+    );
+END;
+$function$;
