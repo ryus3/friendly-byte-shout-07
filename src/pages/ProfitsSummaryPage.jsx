@@ -467,7 +467,7 @@ const ProfitsSummaryPage = () => {
       
       // استخراج معرفات الطلبات من الأرباح المحددة
       const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
-      const orderIds = selectedProfits.map(p => p.order_id);
+      const orderIds = selectedProfits.map(p => p.order_id).filter(id => id != null); // تصحيح: استخدام order_id مع فلترة القيم الفارغة
       
       const amountToSettle = selectedProfits.reduce((sum, p) => sum + p.profit, 0);
 

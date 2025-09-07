@@ -131,12 +131,21 @@ export const ProfitsProvider = ({ children }) => {
   // طلب تحاسب من الموظف مع إصلاح session management
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
-      const currentUserId = user?.user_id || user?.id;
+      // التحقق من صحة orderIds
+      const validOrderIds = orderIds.filter(id => id != null && id !== '');
+      if (validOrderIds.length === 0) {
+        throw new Error('لا توجد معرفات طلبات صالحة');
+      }
+
+      // الحصول على المستخدم من المصادقة مباشرة مع fallback للسياق
+      const { data: authData } = await supabase.auth.getUser();
+      const currentUserId = authData?.user?.id || user?.user_id || user?.id;
       
       console.log('🔍 محاولة طلب التحاسب:', { 
-        orderIds, 
+        orderIds: validOrderIds, 
         currentUserId, 
-        authUid: await supabase.auth.getUser(),
+        authUser: authData?.user?.id,
+        contextUser: user?.user_id || user?.id,
         sessionExists: !!user
       });
 
@@ -154,8 +163,7 @@ export const ProfitsProvider = ({ children }) => {
         const { data, error } = await supabase
           .from('profits')
           .select('*')
-          .in('order_id', orderIds)
-          .eq('employee_id', currentUserId);
+          .in('order_id', validOrderIds); // إزالة فلتر employee_id والاعتماد على RLS
 
         if (!error) {
           freshProfits = data;
@@ -197,14 +205,14 @@ export const ProfitsProvider = ({ children }) => {
 
       // التحقق من أن جميع الطلبات مؤهلة للتحاسب باستخدام البيانات المحدثة
       const eligibleProfits = freshProfits.filter(p => 
-        orderIds.includes(p.order_id) && 
+        validOrderIds.includes(p.order_id) && 
         p.status === 'invoice_received' &&
-        p.employee_id === currentUserId
+        p.employee_id === currentUserId // التحقق من الملكية في الكود
       );
 
-      if (eligibleProfits.length !== orderIds.length) {
-        const ineligibleOrders = orderIds.filter(orderId => 
-          !freshProfits.find(p => p.order_id === orderId && p.status === 'invoice_received')
+      if (eligibleProfits.length !== validOrderIds.length) {
+        const ineligibleOrders = validOrderIds.filter(orderId => 
+          !freshProfits.find(p => p.order_id === orderId && p.status === 'invoice_received' && p.employee_id === currentUserId)
         );
         
         const ineligibleMessages = ineligibleOrders.map(orderId => {
@@ -220,7 +228,7 @@ export const ProfitsProvider = ({ children }) => {
 
       const requestData = {
         employee_id: currentUserId,
-        order_ids: orderIds,
+        order_ids: validOrderIds,
         total_profit: totalProfit,
         status: 'pending',
         notes,
@@ -245,7 +253,7 @@ export const ProfitsProvider = ({ children }) => {
       await supabase
         .from('profits')
         .update({ status: 'settlement_requested' })
-        .in('order_id', orderIds);
+        .in('order_id', validOrderIds);
 
       setSettlementRequests(prev => [...prev, data]);
       setProfits(prev => prev.map(p => 
