@@ -104,13 +104,28 @@ const EmployeeFollowUpPage = () => {
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
     
-    // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
-    const result = await comprehensiveSync(filteredOrders, syncVisibleOrdersBatch);
-    if (result.success) {
-      await refreshOrders();
-      const syncTime = new Date().toISOString();
-      localStorage.setItem('last-comprehensive-sync', syncTime);
-      setLastComprehensiveSync(syncTime);
+    toast({
+      title: "بدء المزامنة الشاملة",
+      description: `مزامنة ${filteredOrders.length} طلب مرئي والفواتير الجديدة...`,
+      variant: "default"
+    });
+    
+    try {
+      // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
+      const result = await comprehensiveSync(filteredOrders, syncVisibleOrdersBatch);
+      if (result.success) {
+        await refreshOrders();
+        const syncTime = new Date().toISOString();
+        localStorage.setItem('last-comprehensive-sync', syncTime);
+        setLastComprehensiveSync(syncTime);
+      }
+    } catch (error) {
+      console.error('خطأ في المزامنة الشاملة:', error);
+      toast({
+        title: "خطأ في المزامنة الشاملة",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 

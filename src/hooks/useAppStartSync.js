@@ -20,7 +20,7 @@ export const useAppStartSync = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, status: '' });
 
-  // دالة المزامنة الشاملة عند بدء التطبيق
+  // دالة المزامنة الشاملة عند بدء التطبيق - محسنة لاستخدام syncVisibleOrdersBatch
   const performComprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null) => {
     if (syncing) return;
     
@@ -28,35 +28,45 @@ export const useAppStartSync = () => {
     setSyncProgress({ current: 0, total: 4, status: 'بدء المزامنة الشاملة...' });
     
     try {
-      console.log('🚀 بدء المزامنة الشاملة عند تشغيل التطبيق');
+      console.log('🚀 بدء المزامنة الشاملة الذكية عند تشغيل التطبيق');
 
-      // المرحلة 1: مزامنة الفواتير الجديدة
-      setSyncProgress({ current: 1, total: 4, status: 'جلب الفواتير الجديدة...' });
-      const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'smart',
-          sync_invoices: true,
-          sync_orders: false,
-          force_refresh: false
-        }
-      });
-
-      if (invoiceError) throw invoiceError;
-
-      // المرحلة 2: تحديث حالات الطلبات الذكية (إذا توفرت الطلبات المرئية)
-      setSyncProgress({ current: 2, total: 4, status: 'تحديث الطلبات المرئية...' });
+      // المرحلة 1: مزامنة الطلبات المرئية بالأولوية القصوى
+      setSyncProgress({ current: 1, total: 4, status: 'مزامنة الطلبات المرئية (ذكية)...' });
       let ordersUpdated = 0;
       
       if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch) {
         console.log(`📋 استخدام المزامنة الذكية للطلبات المرئية: ${visibleOrders.length} طلب`);
         
-        const ordersResult = await syncVisibleOrdersBatch(visibleOrders);
-        ordersUpdated = ordersResult?.updatedCount || 0;
-        
-        console.log(`✅ تحديث ذكي للطلبات المرئية: ${ordersUpdated} طلب محدث`);
+        try {
+          const ordersResult = await syncVisibleOrdersBatch(visibleOrders, (progress) => {
+            console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
+          });
+          
+          if (ordersResult.success) {
+            ordersUpdated = ordersResult.updatedCount || 0;
+            console.log(`✅ مزامنة ذكية للطلبات المرئية: ${ordersUpdated} طلب محدث`);
+          } else {
+            console.warn('فشل في المزامنة الذكية، التبديل للوضع التقليدي');
+            throw new Error('فشل المزامنة الذكية');
+          }
+        } catch (error) {
+          console.warn('التراجع للمزامنة التقليدية للطلبات:', error.message);
+          // التراجع للمزامنة التقليدية
+          const { data: ordersData, error: ordersError } = await supabase.functions.invoke('smart-invoice-sync', {
+            body: { 
+              mode: 'smart',
+              sync_invoices: false,
+              sync_orders: true,
+              force_refresh: false
+            }
+          });
+
+          if (ordersError) throw ordersError;
+          ordersUpdated = ordersData?.orders_updated || 0;
+        }
       } else {
-        // التراجع للمزامنة التقليدية إذا لم تتوفر الطلبات المرئية
-        console.log('📋 استخدام المزامنة التقليدية للطلبات');
+        // استخدام المزامنة التقليدية في حالة عدم توفر الطلبات المرئية
+        console.log('📋 استخدام المزامنة التقليدية للطلبات (لا توجد طلبات مرئية)');
         const { data: ordersData, error: ordersError } = await supabase.functions.invoke('smart-invoice-sync', {
           body: { 
             mode: 'smart',
@@ -70,6 +80,19 @@ export const useAppStartSync = () => {
         ordersUpdated = ordersData?.orders_updated || 0;
       }
 
+      // المرحلة 2: مزامنة الفواتير الجديدة (بأولوية منخفضة)
+      setSyncProgress({ current: 2, total: 4, status: 'جلب الفواتير الجديدة...' });
+      const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'smart',
+          sync_invoices: true,
+          sync_orders: false,
+          force_refresh: false
+        }
+      });
+
+      if (invoiceError) throw invoiceError;
+
       // المرحلة 3: تنظيف البيانات القديمة
       setSyncProgress({ current: 3, total: 4, status: 'تنظيف البيانات القديمة...' });
       await supabase.rpc('cleanup_old_delivery_invoices');
@@ -79,12 +102,12 @@ export const useAppStartSync = () => {
       
       const totalInvoices = invoiceData?.invoices_synced || 0;
       
-      console.log(`✅ مزامنة شاملة مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
+      console.log(`✅ مزامنة شاملة ذكية مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
       
-      // إرسال إشعار النجاح
+      // إرسال إشعار النجاح محسن
       toast({
-        title: "🎉 مزامنة شاملة مكتملة",
-        description: `تم جلب ${totalInvoices} فاتورة جديدة وتحديث ${ordersUpdated} طلب`,
+        title: "🎉 مزامنة شاملة ذكية مكتملة",
+        description: `تم تحديث ${ordersUpdated} طلب وجلب ${totalInvoices} فاتورة جديدة بنجاح`,
         variant: "default",
         duration: 8000
       });
@@ -93,17 +116,18 @@ export const useAppStartSync = () => {
       setLastAppStartSync(Date.now());
       setSessionSynced(true);
 
-      // إرسال إشارة للنظام
+      // إرسال إشارة للنظام مع بيانات محسنة
       window.dispatchEvent(new CustomEvent('comprehensiveSyncCompleted', { 
         detail: { 
           invoices: totalInvoices, 
           orders: ordersUpdated,
+          smartSync: true,
           timestamp: new Date().toISOString()
         } 
       }));
 
     } catch (error) {
-      console.error('⚠️ فشل في المزامنة الشاملة:', error);
+      console.error('⚠️ فشل في المزامنة الشاملة الذكية:', error);
       toast({
         title: "خطأ في المزامنة الشاملة",
         description: error.message || 'حدث خطأ غير متوقع',

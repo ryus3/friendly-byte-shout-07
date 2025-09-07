@@ -18,7 +18,7 @@ import {
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
    BarChart, TrendingUp, Activity, Settings
 } from 'lucide-react';
-import { DeliveryManagementDialog } from '@/components/DeliveryManagementDialog';
+import ComprehensiveDeliveryManagementDialog from '@/components/delivery/ComprehensiveDeliveryManagementDialog';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
@@ -544,7 +544,7 @@ const SettingsPage = () => {
         onOpenChange={setIsSyncNotificationOpen} 
       />
 
-      <DeliveryManagementDialog 
+      <ComprehensiveDeliveryManagementDialog 
         open={isDeliveryManagementOpen} 
         onOpenChange={setIsDeliveryManagementOpen} 
       />
