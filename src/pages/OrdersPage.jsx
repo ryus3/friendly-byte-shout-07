@@ -61,18 +61,6 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب (تم نقلها قبل استخدامها)
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    (allUsers || []).forEach(u => {
-      if (u && u.user_id) {
-        // استخدام user_id للربط مع created_by
-        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
-      }
-    });
-    return map;
-  }, [allUsers]);
-
   // Scroll to top when page loads + auto sync
   useEffect(() => {
     scrollToTopInstant();
@@ -151,8 +139,8 @@ const OrdersPage = () => {
           if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
-                // جلب اسم الموظف مع التحقق من وجود usersMap
-                const employeeName = usersMap?.get(newOrder.created_by) || 'موظف غير معروف';
+                // جلب اسم الموظف
+                const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
                 
                 await supabase.from('notifications').insert({
                   title: `طلب جديد بواسطة ${employeeName}`,
@@ -368,8 +356,17 @@ const OrdersPage = () => {
     permission: 'view_orders',
   };
 
-  // معرف المدير الرئيسي
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    (allUsers || []).forEach(u => {
+      if (u && u.user_id) {
+        // استخدام user_id للربط مع created_by
+        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
+      }
+    });
+    return map;
+  }, [allUsers]);
 
   // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
   useEffect(() => {
@@ -387,7 +384,7 @@ const OrdersPage = () => {
       }
     };
     fetchEmployeeCode();
-  }, [userUUID, hasPermission]);
+  }, [user?.user_id, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
@@ -396,6 +393,8 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
+  // معرف المدير الرئيسي
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -411,7 +410,7 @@ const OrdersPage = () => {
     
     // للموظفين: إظهار طلباتهم فقط
     return orders.filter(order => order.created_by === userUUID);
-  }, [orders, userUUID, hasPermission, selectedEmployeeId, ADMIN_ID]);
+  }, [orders, userUUID, hasPermission, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
