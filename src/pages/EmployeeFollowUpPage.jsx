@@ -385,7 +385,7 @@ const filteredOrders = useMemo(() => {
     if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
       const isArchived = (order.is_archived === true || order.isArchived === true || order.isarchived === true);
-      const isSettled = profitRecord ? (profitRecord.settled_at || profitRecord.status === 'settled') : false;
+      const isSettled = profitRecord ? (profitRecord.status === 'settled') : false;
       const profitStatus = (isSettled || isArchived) ? 'settled' : 'pending';
       profitStatusMatch = profitStatus === filters.profitStatus;
     }
@@ -577,7 +577,7 @@ useEffect(() => {
         const profitRecord = profits?.find(p => p.order_id === order.id);
         let employeeProfit = 0;
         
-        if (profitRecord && !profitRecord.settled_at) {
+        if (profitRecord && profitRecord.status !== 'settled') {
           // إذا كان هناك سجل ربح غير مُسوى
           employeeProfit = profitRecord.employee_profit || 0;
         } else if (!profitRecord) {
@@ -618,7 +618,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && o.status === 'completed' && (profitRecord?.status === 'settled' || profitRecord?.settled_at);
+      return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
     }).length;
 
     return {

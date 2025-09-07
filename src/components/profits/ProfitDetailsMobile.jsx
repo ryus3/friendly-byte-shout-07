@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, DollarSign } from 'lucide-react';
+import { getStatusInfo, canRequestSettlement } from '@/utils/profitStatusHelper';
 
 const ProfitDetailsMobile = ({
   orders,
@@ -18,12 +19,13 @@ const ProfitDetailsMobile = ({
     <div className="space-y-4">
       {orders.length > 0 ? (
         orders.map(order => {
-          const isPending = (order.profitStatus || 'pending') === 'pending';
+          const statusInfo = getStatusInfo(order.profitStatus);
+          const canSelect = canRequestSettlement && statusInfo.canSelect;
           return (
             <Card key={order.id} className="p-4">
               <div className="flex justify-between items-start">
                 <div className="flex items-start gap-2">
-                  {canRequestSettlement && isPending && (
+                  {canSelect && (
                     <Checkbox
                       className="mt-1"
                       checked={selectedOrders.includes(order.id)}
@@ -37,8 +39,8 @@ const ProfitDetailsMobile = ({
                 </div>
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">حالة الربح</p>
-                  <Badge variant={isPending ? 'warning' : 'success'}>
-                    {isPending ? 'معلق' : 'مدفوع'}
+                  <Badge variant={statusInfo.variant}>
+                    {statusInfo.text}
                   </Badge>
                 </div>
               </div>
@@ -58,7 +60,7 @@ const ProfitDetailsMobile = ({
                   <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}>
                     <Eye className="w-4 h-4" />
                   </Button>
-                  {isPending && canViewAll && onMarkReceived && (
+                  {statusInfo.canSelect && canViewAll && onMarkReceived && (
                     <Button 
                       variant="outline" 
                       size="sm" 

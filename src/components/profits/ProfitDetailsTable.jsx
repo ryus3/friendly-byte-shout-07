@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, DollarSign } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { getStatusInfo, canRequestSettlement } from '@/utils/profitStatusHelper';
 
 const ProfitDetailsTable = ({
   orders,
@@ -18,7 +19,7 @@ const ProfitDetailsTable = ({
   onViewInvoice,
   onMarkReceived,
 }) => {
-  const allPendingSelectable = orders.filter(p => (p.profitStatus || 'pending') === 'pending');
+  const allPendingSelectable = orders.filter(p => getStatusInfo(p.profitStatus).canSelect);
 
   return (
     <Table>
@@ -48,12 +49,13 @@ const ProfitDetailsTable = ({
         {orders.length > 0 ? (
           orders.map(order => {
             const deliveryDate = order.created_at ? parseISO(order.created_at) : null;
-            const isPending = (order.profitStatus || 'pending') === 'pending';
+            const statusInfo = getStatusInfo(order.profitStatus);
+            const canSelect = canRequestSettlement && statusInfo.canSelect;
             return (
               <TableRow key={order.id} data-state={selectedOrders.includes(order.id) ? 'selected' : ''}>
                 {canRequestSettlement && (
                   <TableCell>
-                    {isPending && (
+                    {canSelect && (
                       <Checkbox
                         checked={selectedOrders.includes(order.id)}
                         onCheckedChange={() => onSelectOrder(order.id)}
@@ -77,8 +79,8 @@ const ProfitDetailsTable = ({
                 <TableCell className="text-blue-400 font-semibold">{order.profit.toLocaleString()} د.ع</TableCell>
                 {canViewAll && <TableCell className="text-green-400 font-semibold">{order.managerProfitShare.toLocaleString()} د.ع</TableCell>}
                 <TableCell>
-                  <Badge variant={isPending ? 'warning' : 'success'}>
-                    {isPending ? 'معلق' : 'مدفوع'}
+                  <Badge variant={statusInfo.variant}>
+                    {statusInfo.text}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -86,7 +88,7 @@ const ProfitDetailsTable = ({
                     <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}>
                       <Eye className="w-4 h-4" />
                     </Button>
-                    {isPending && canViewAll && onMarkReceived && (
+                    {statusInfo.canSelect && canViewAll && onMarkReceived && (
                       <Button 
                         variant="outline" 
                         size="sm" 
