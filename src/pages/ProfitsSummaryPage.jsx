@@ -444,17 +444,38 @@ const ProfitsSummaryPage = () => {
         return;
     }
     
-    const amountToSettle = filteredDetailedProfits
-        .filter(p => selectedOrders.includes(p.id))
-        .reduce((sum, p) => sum + p.profit, 0);
+    // استخراج معرفات الطلبات من الأرباح المحددة
+    const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
+    const orderIds = selectedProfits.map(p => p.order_id);
+    
+    const amountToSettle = selectedProfits.reduce((sum, p) => sum + p.profit, 0);
 
-    if (amountToSettle > 0 && !isRequesting) {
+    console.log('🏦 طلب التحاسب:', {
+      selectedOrdersCount: selectedOrders.length,
+      selectedProfitsCount: selectedProfits.length,
+      orderIds,
+      amountToSettle,
+      userId: user?.user_id || user?.id
+    });
+
+    if (orderIds.length > 0 && amountToSettle > 0 && !isRequesting) {
       setIsRequesting(true);
       try {
-        await requestProfitSettlement(user.id, amountToSettle, selectedOrders);
+        // تمرير معرفات الطلبات بدلاً من معرفات الأرباح
+        await requestProfitSettlement(orderIds, '');
         setSelectedOrders([]);
+        toast({ 
+          title: "تم إرسال الطلب", 
+          description: `تم إرسال طلب تحاسب بقيمة ${amountToSettle.toLocaleString()} دينار`,
+          variant: "default"
+        });
       } catch (error) {
-        toast({ title: "خطأ", description: "فشل إرسال الطلب.", variant: "destructive" });
+        console.error('❌ خطأ في طلب التحاسب:', error);
+        toast({ 
+          title: "خطأ", 
+          description: error.message || "فشل إرسال الطلب.", 
+          variant: "destructive" 
+        });
       } finally {
         setIsRequesting(false);
       }

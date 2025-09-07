@@ -2003,21 +2003,19 @@ export const SuperProvider = ({ children }) => {
       try {
         console.log('🏦 SuperProvider: طلب تسوية الأرباح:', { orderIds, notes });
         
+        if (!orderIds || orderIds.length === 0) {
+          throw new Error('يجب تحديد طلبات للتحاسب');
+        }
+
         // استخدام دالة createSettlementRequest من ProfitsContext
         const result = await profitsCreateSettlement(orderIds, notes);
         
         if (result) {
           console.log('✅ تم إرسال طلب التسوية بنجاح');
-          toast({
-            title: "تم إرسال طلب التسوية",
-            description: "سيتم مراجعة طلبك من قبل الإدارة",
-            variant: "success"
-          });
+          return result;
         } else {
           throw new Error('فشل في إرسال طلب التسوية');
         }
-        
-        return result;
       } catch (error) {
         console.error('❌ خطأ في طلب التسوية:', error);
         toast({
