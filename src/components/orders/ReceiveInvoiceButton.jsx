@@ -15,10 +15,13 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
     setIsReceiving(true);
     try {
       // استلام الفاتورة فقط - التحديث لـ completed سيتم عبر trigger عند تسوية الأرباح
+      const isLocal = !order?.delivery_partner || ['محلي', 'local'].includes(String(order.delivery_partner).toLowerCase());
+      const invoiceId = order?.delivery_partner_invoice_id || (isLocal ? `LOCAL-${order?.order_number || order?.id}` : order?.delivery_partner_invoice_id || '');
       const updateData = {
         receipt_received: true,
         receipt_received_at: new Date().toISOString(),
-        receipt_received_by: user.id
+        receipt_received_by: user.id,
+        ...(isLocal && { delivery_partner_invoice_id: invoiceId })
       };
 
       const { error } = await supabase
