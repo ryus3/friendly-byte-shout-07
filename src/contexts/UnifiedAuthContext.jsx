@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/integrations/supabase/client';
-import { UnifiedPermissionsProvider } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { UnifiedPermissionsProvider } from '@/contexts/UnifiedPermissionsProvider';
 
 const UnifiedAuthContext = createContext(null);
 
