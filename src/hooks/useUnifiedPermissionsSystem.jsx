@@ -139,6 +139,7 @@ export const useUnifiedPermissionsSystem = () => {
       isSalesEmployee: false,
       isWarehouseEmployee: false,
       isCashier: false,
+      isEmployee: false,
       hasRole: () => false,
 
       // فحص الصلاحيات
@@ -181,6 +182,11 @@ export const useUnifiedPermissionsSystem = () => {
   const isCashier = useMemo(() => {
     return userRoles?.some(role => role.name === 'cashier') || false;
   }, [userRoles]);
+
+  // إضافة isEmployee - كل من له دور فعال وليس مديراً
+  const isEmployee = useMemo(() => {
+    return userRoles?.length > 0 && !isAdmin;
+  }, [userRoles, isAdmin]);
 
   const hasRole = useMemo(() => {
     return (roleName) => userRoles?.some(role => role.name === roleName) || false;
@@ -319,6 +325,7 @@ export const useUnifiedPermissionsSystem = () => {
     isSalesEmployee,
     isWarehouseEmployee,
     isCashier,
+    isEmployee,
     hasRole,
 
     // فحص الصلاحيات

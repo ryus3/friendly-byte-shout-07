@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Receipt, AlertCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -17,7 +17,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 const PendingProfitsCard = () => {
   const { user } = useAuth();
   const { profits, orders, loading } = useInventory();
-  const { hasPermission, isEmployee } = usePermissions();
+  const { isEmployee } = useUnifiedPermissionsSystem();
   
   // فقط للموظفين
   if (!isEmployee) {

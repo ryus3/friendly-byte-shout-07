@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/hooks/use-toast';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
 const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
@@ -16,20 +17,32 @@ const EmployeeSettlementCard = ({
   onClearSelection,
   calculateProfit 
 }) => {
-  const { settleEmployeeProfits } = useInventory();
+  const { settleEmployeeProfits, profits } = useInventory();
+  const { canManageEmployees, isAdmin } = useUnifiedPermissionsSystem();
   const [isSettling, setIsSettling] = useState(false);
 
-  // حساب إجمالي المستحقات للطلبات المحددة
+  // التحقق من صلاحية المدير لدفع المستحقات
+  if (!canManageEmployees && !isAdmin) {
+    return null;
+  }
+
+  // حساب إجمالي المستحقات من جدول الأرباح المعلقة
   const totalSettlement = useMemo(() => {
-    return selectedOrders
+    if (!profits || !selectedOrders) return 0;
+    
+    // البحث عن الأرباح المعلقة للطلبات المحددة
+    const selectedOrderIds = selectedOrders
       .filter(order => order.created_by === employee.user_id)
-      .reduce((sum, order) => {
-        const employeeProfit = (order.items || []).reduce((itemSum, item) => 
-          itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0), 0
-        );
-        return sum + employeeProfit;
-      }, 0);
-  }, [selectedOrders, employee.user_id, calculateProfit]);
+      .map(order => order.id);
+      
+    return profits
+      .filter(profit => 
+        profit.employee_id === employee.user_id &&
+        profit.status === 'pending' &&
+        selectedOrderIds.includes(profit.order_id)
+      )
+      .reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
+  }, [selectedOrders, employee.user_id, profits]);
 
   // الطلبات الخاصة بهذا الموظف فقط
   const employeeOrders = useMemo(() => {
