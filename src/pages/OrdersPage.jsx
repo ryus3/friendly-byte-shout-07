@@ -387,7 +387,7 @@ const OrdersPage = () => {
       }
     };
     fetchEmployeeCode();
-  }, [user?.user_id, hasPermission]);
+  }, [userUUID, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
@@ -411,7 +411,7 @@ const OrdersPage = () => {
     
     // للموظفين: إظهار طلباتهم فقط
     return orders.filter(order => order.created_by === userUUID);
-  }, [orders, userUUID, hasPermission, selectedEmployeeId]);
+  }, [orders, userUUID, hasPermission, selectedEmployeeId, ADMIN_ID]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
