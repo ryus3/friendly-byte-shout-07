@@ -149,10 +149,11 @@ export const ProfitsProvider = ({ children }) => {
 
       const currentUserId = authUser.id;
       
-      console.log('🔍 طلب التحاسب - التحقق من المصادقة:', { 
+      console.log('🔍 طلب التحاسب - المعرفات الواردة:', { 
         authUserId: currentUserId,
         userUUID,
         orderIds: validOrderIds,
+        orderIdsTypes: validOrderIds.map(id => typeof id),
         isAdmin
       });
 
@@ -161,12 +162,48 @@ export const ProfitsProvider = ({ children }) => {
         throw new Error('معرف المستخدم غير صحيح');
       }
 
+      // **الإصلاح الجذري: تحويل order numbers إلى UUIDs**
+      let orderUUIDs = [];
+      
+      // التحقق إذا كانت المعرفات UUIDs أم order numbers
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const hasUUIDs = validOrderIds.some(id => uuidRegex.test(id));
+      const hasOrderNumbers = validOrderIds.some(id => !uuidRegex.test(id));
+
+      if (hasOrderNumbers || !hasUUIDs) {
+        // تحويل order numbers إلى UUIDs
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, order_number')
+          .in('order_number', validOrderIds)
+          .eq('created_by', currentUserId);
+
+        if (ordersError) {
+          console.error('خطأ في جلب الطلبات:', ordersError);
+          throw new Error(`فشل في العثور على الطلبات: ${ordersError.message}`);
+        }
+
+        orderUUIDs = ordersData.map(order => order.id);
+        
+        console.log('🔄 تحويل order numbers إلى UUIDs:', {
+          input: validOrderIds,
+          output: orderUUIDs,
+          ordersFound: ordersData.length
+        });
+
+        if (orderUUIDs.length === 0) {
+          throw new Error('لم يتم العثور على طلبات تطابق الأرقام المرسلة');
+        }
+      } else {
+        orderUUIDs = validOrderIds;
+      }
+
       // جلب أرباح الموظف مع فلترة صريحة (تجاوز RLS)
       const { data: freshProfits, error: profitsError } = await supabase
         .from('profits')
         .select('*')
-        .in('order_id', validOrderIds)
-        .eq('employee_id', currentUserId); // فلترة صريحة للأمان
+        .in('order_id', orderUUIDs) // استخدام UUIDs الآن
+        .eq('employee_id', currentUserId);
 
       if (profitsError) {
         console.error('خطأ في جلب بيانات الأرباح:', profitsError);
@@ -174,15 +211,15 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       console.log('📊 الأرباح المجلبة:', { 
-        ordersRequested: validOrderIds.length,
+        orderUUIDs: orderUUIDs,
         profitsFound: freshProfits?.length || 0,
         profits: freshProfits 
       });
 
       // التحقق من أن جميع الطلبات مؤهلة للتحاسب
       const eligibleProfits = freshProfits.filter(p => 
-        validOrderIds.includes(p.order_id) && 
-        (p.status === 'invoice_received' || p.status === 'pending') && // قبول كلا الحالتين
+        orderUUIDs.includes(p.order_id) && 
+        (p.status === 'invoice_received' || p.status === 'pending' || p.status === 'profits_pending') && 
         p.employee_id === currentUserId
       );
 
@@ -193,10 +230,10 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       // التحقق التفصيلي للطلبات غير المؤهلة
-      const ineligibleOrders = validOrderIds.filter(orderId => {
+      const ineligibleOrders = orderUUIDs.filter(orderId => {
         const profit = freshProfits.find(p => p.order_id === orderId);
         return !profit || 
-               !['invoice_received', 'pending'].includes(profit.status) || 
+               !['invoice_received', 'pending', 'profits_pending'].includes(profit.status) || 
                profit.employee_id !== currentUserId;
       });
 
@@ -218,7 +255,7 @@ export const ProfitsProvider = ({ children }) => {
 
       const requestData = {
         employee_id: currentUserId,
-        order_ids: validOrderIds,
+        order_ids: orderUUIDs, // استخدام UUIDs بدلاً من order numbers
         total_profit: totalProfit,
         status: 'pending',
         notes,
@@ -246,8 +283,8 @@ export const ProfitsProvider = ({ children }) => {
       const { error: updateError } = await supabase
         .from('profits')
         .update({ status: 'settlement_requested' })
-        .in('order_id', validOrderIds)
-        .eq('employee_id', currentUserId); // التأكد من التحديث للموظف الصحيح
+        .in('order_id', orderUUIDs) // استخدام UUIDs
+        .eq('employee_id', currentUserId);
 
       if (updateError) {
         console.error('خطأ في تحديث حالة الأرباح:', updateError);
@@ -257,7 +294,7 @@ export const ProfitsProvider = ({ children }) => {
       // تحديث الحالة المحلية
       setSettlementRequests(prev => [...prev, notificationData]);
       setProfits(prev => prev.map(p => 
-        validOrderIds.includes(p.order_id) && p.employee_id === currentUserId
+        orderUUIDs.includes(p.order_id) && p.employee_id === currentUserId
           ? { ...p, status: 'settlement_requested' }
           : p
       ));
