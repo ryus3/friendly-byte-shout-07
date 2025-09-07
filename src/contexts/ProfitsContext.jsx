@@ -128,21 +128,57 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, []);
 
-  // طلب تحاسب من الموظف
+  // طلب تحاسب من الموظف مع إصلاح session management
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
       const currentUserId = user?.user_id || user?.id;
       
-      // جلب أحدث حالات الأرباح من قاعدة البيانات مباشرة
-      const { data: freshProfits, error: profitsError } = await supabase
-        .from('profits')
-        .select('*')
-        .in('order_id', orderIds)
-        .eq('employee_id', currentUserId);
+      console.log('🔍 محاولة طلب التحاسب:', { 
+        orderIds, 
+        currentUserId, 
+        authUid: await supabase.auth.getUser(),
+        sessionExists: !!user
+      });
+
+      // التحقق من وجود المستخدم
+      if (!currentUserId) {
+        throw new Error('يجب تسجيل الدخول أولاً');
+      }
+
+      // جلب أحدث حالات الأرباح مع retry عند فشل المصادقة
+      let freshProfits, profitsError;
+      let retryCount = 0;
+      const maxRetries = 2;
+
+      while (retryCount <= maxRetries) {
+        const { data, error } = await supabase
+          .from('profits')
+          .select('*')
+          .in('order_id', orderIds)
+          .eq('employee_id', currentUserId);
+
+        if (!error) {
+          freshProfits = data;
+          profitsError = null;
+          break;
+        }
+
+        console.warn(`❌ محاولة ${retryCount + 1} فشلت:`, error);
+        
+        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+          // مشكلة في المصادقة - محاولة refresh session
+          console.log('🔄 محاولة تحديث الجلسة...');
+          await supabase.auth.refreshSession();
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        retryCount++;
+        profitsError = error;
+      }
 
       if (profitsError) {
-        console.error('Error fetching fresh profits:', profitsError);
-        throw new Error('فشل في جلب بيانات الأرباح المحدثة');
+        console.error('Error fetching fresh profits after retries:', profitsError);
+        throw new Error(`فشل في جلب بيانات الأرباح: ${profitsError.message}`);
       }
 
       // تحديث البيانات المحلية

@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { getUserUUID } from '@/utils/userIdUtils';
@@ -444,37 +445,66 @@ const ProfitsSummaryPage = () => {
         return;
     }
     
-    // تحديث البيانات أولاً للحصول على أحدث الحالات
-    await refreshProfitsData();
+    setIsRequesting(true);
     
-    // استخراج معرفات الطلبات من الأرباح المحددة
-    const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
-    const orderIds = selectedProfits.map(p => p.order_id);
-    
-    const amountToSettle = selectedProfits.reduce((sum, p) => sum + p.profit, 0);
+    try {
+      console.log('🔄 بدء عملية طلب التحاسب...');
+      
+      // التحقق من حالة المصادقة أولاً
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('❌ مشكلة في الجلسة:', sessionError);
+        throw new Error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى');
+      }
 
-    console.log('🏦 طلب التحاسب:', {
-      selectedOrdersCount: selectedOrders.length,
-      selectedProfitsCount: selectedProfits.length,
-      orderIds,
-      amountToSettle,
-      userId: user?.user_id || user?.id
-    });
+      console.log('✅ الجلسة صالحة، تحديث البيانات...');
+      
+      // تحديث البيانات أولاً مع retry
+      await refreshProfitsData();
+      
+      console.log('✅ تم تحديث البيانات، إرسال طلب التحاسب...');
+      
+      // استخراج معرفات الطلبات من الأرباح المحددة
+      const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
+      const orderIds = selectedProfits.map(p => p.order_id);
+      
+      const amountToSettle = selectedProfits.reduce((sum, p) => sum + p.profit, 0);
 
-    if (orderIds.length > 0 && amountToSettle > 0 && !isRequesting) {
-      setIsRequesting(true);
-      try {
+      console.log('🏦 طلب التحاسب:', {
+        selectedOrdersCount: selectedOrders.length,
+        selectedProfitsCount: selectedProfits.length,
+        orderIds,
+        amountToSettle,
+        userId: user?.user_id || user?.id
+      });
+
+      if (orderIds.length > 0 && amountToSettle > 0) {
         // استخدام النظام الجديد للتحاسب مع جلب البيانات المحدثة
         const result = await createSettlementRequest(orderIds, '');
         if (result) {
           setSelectedOrders([]);
           // لا حاجة لتوست إضافي لأن createSettlementRequest يرسل توست بالفعل
         }
-      } catch (error) {
-        console.error('❌ خطأ في طلب التحاسب:', error);
-        toast({ 
-          title: "خطأ", 
-          description: error.message || "فشل إرسال الطلب.", 
+      } else {
+        throw new Error('لا توجد طلبات صالحة للتحاسب');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في طلب التحاسب:', error);
+      
+      // رسائل خطأ مخصصة
+      let errorMessage = "حدث خطأ غير متوقع";
+      if (error.message?.includes('JWT') || error.message?.includes('انتهت صلاحية')) {
+        errorMessage = "انتهت صلاحية الجلسة، يرجى تحديث الصفحة وتسجيل الدخول مرة أخرى";
+      } else if (error.message?.includes('غير مؤهلة')) {
+        errorMessage = error.message;
+      } else if (error.message?.includes('فشل في جلب')) {
+        errorMessage = "فشل في الاتصال بقاعدة البيانات، يرجى المحاولة مرة أخرى";
+      }
+      
+      toast({
+          title: "خطأ في طلب التحاسب", 
+          description: errorMessage, 
           variant: "destructive" 
         });
       } finally {

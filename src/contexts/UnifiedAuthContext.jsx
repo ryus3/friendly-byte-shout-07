@@ -150,35 +150,48 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
   }, []);
 
-  // Set up auth state listener
+  // Set up auth state listener with enhanced session management
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
 
-    // Set up auth state listener FIRST
+    let isInitialized = false;
+
+    // Set up auth state listener FIRST with better error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        console.log('🔐 Auth state changed:', { event, session: !!session, userId: session?.user?.id });
+        
+        // Always update session state immediately
         setSession(session);
         
         if (session?.user) {
-          // Defer profile fetch to avoid blocking
+          // Update user state with session data immediately for auth.uid() to work
           setTimeout(async () => {
-            const profile = await fetchUserProfile(session.user);
-            if (profile?.status === 'active') {
-              setUser(profile);
-            } else {
-              setUser(null);
-              if (profile?.status === 'pending') {
-                toast({ 
-                  title: "حسابك قيد المراجعة", 
-                  description: "سيقوم المدير بمراجعة طلبك وتفعيله قريباً.", 
-                  duration: 7000 
-                });
+            try {
+              const profile = await fetchUserProfile(session.user);
+              if (profile?.status === 'active') {
+                setUser(profile);
+                console.log('✅ User profile loaded:', { userId: profile.user_id, email: profile.email });
+              } else {
+                setUser(null);
+                if (profile?.status === 'pending') {
+                  toast({ 
+                    title: "حسابك قيد المراجعة", 
+                    description: "سيقوم المدير بمراجعة طلبك وتفعيله قريباً.", 
+                    duration: 7000 
+                  });
+                }
               }
+            } catch (error) {
+              console.error('❌ Error fetching user profile:', error);
+              // Keep session but clear user on profile fetch error
+              setUser(null);
+            } finally {
+              setLoading(false);
             }
-            setLoading(false);
           }, 0);
         } else {
           setUser(null);
@@ -187,23 +200,43 @@ export const UnifiedAuthProvider = ({ children }) => {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        setTimeout(async () => {
-          const profile = await fetchUserProfile(session.user);
-          if (profile?.status === 'active') {
-            setUser(profile);
-          } else {
+    // THEN check for existing session with retry logic
+    const checkExistingSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+
+        console.log('🔍 Initial session check:', { session: !!session, userId: session?.user?.id });
+        setSession(session);
+        
+        if (session?.user && !isInitialized) {
+          isInitialized = true;
+          try {
+            const profile = await fetchUserProfile(session.user);
+            if (profile?.status === 'active') {
+              setUser(profile);
+              console.log('✅ Initial user profile loaded:', { userId: profile.user_id });
+            } else {
+              setUser(null);
+            }
+          } catch (error) {
+            console.error('❌ Error fetching initial profile:', error);
             setUser(null);
           }
-          setLoading(false);
-        }, 0);
-      } else {
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('❌ Session check failed:', error);
         setLoading(false);
       }
-    });
+    };
+
+    checkExistingSession();
 
     return () => subscription.unsubscribe();
   }, [fetchUserProfile]);
