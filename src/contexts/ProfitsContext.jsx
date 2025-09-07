@@ -131,16 +131,53 @@ export const ProfitsProvider = ({ children }) => {
   // طلب تحاسب من الموظف
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
-      // التحقق من أن جميع الطلبات مؤهلة للتحاسب
       const currentUserId = user?.user_id || user?.id;
-      const eligibleProfits = profits.filter(p => 
+      
+      // جلب أحدث حالات الأرباح من قاعدة البيانات مباشرة
+      const { data: freshProfits, error: profitsError } = await supabase
+        .from('profits')
+        .select('*')
+        .in('order_id', orderIds)
+        .eq('employee_id', currentUserId);
+
+      if (profitsError) {
+        console.error('Error fetching fresh profits:', profitsError);
+        throw new Error('فشل في جلب بيانات الأرباح المحدثة');
+      }
+
+      // تحديث البيانات المحلية
+      setProfits(prev => {
+        const updatedProfits = [...prev];
+        freshProfits.forEach(freshProfit => {
+          const index = updatedProfits.findIndex(p => p.order_id === freshProfit.order_id);
+          if (index >= 0) {
+            updatedProfits[index] = freshProfit;
+          } else {
+            updatedProfits.push(freshProfit);
+          }
+        });
+        return updatedProfits;
+      });
+
+      // التحقق من أن جميع الطلبات مؤهلة للتحاسب باستخدام البيانات المحدثة
+      const eligibleProfits = freshProfits.filter(p => 
         orderIds.includes(p.order_id) && 
         p.status === 'invoice_received' &&
         p.employee_id === currentUserId
       );
 
       if (eligibleProfits.length !== orderIds.length) {
-        throw new Error('بعض الطلبات غير مؤهلة للتحاسب');
+        const ineligibleOrders = orderIds.filter(orderId => 
+          !freshProfits.find(p => p.order_id === orderId && p.status === 'invoice_received')
+        );
+        
+        const ineligibleMessages = ineligibleOrders.map(orderId => {
+          const profit = freshProfits.find(p => p.order_id === orderId);
+          if (!profit) return `الطلب ${orderId}: لم يتم العثور على سجل أرباح`;
+          return `الطلب ${orderId}: الحالة ${profit.status} - يجب أن تكون 'استلمت الفاتورة'`;
+        }).join('\n');
+        
+        throw new Error(`بعض الطلبات غير مؤهلة للتحاسب:\n${ineligibleMessages}`);
       }
 
       const totalProfit = eligibleProfits.reduce((sum, p) => sum + (p.employee_profit ?? p.profit_amount ?? 0), 0);
@@ -424,6 +461,23 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, [user?.user_id, user?.id]);
 
+  // تحديث البيانات بدون loading spinner
+  const refreshProfitsData = useCallback(async () => {
+    const currentUserId = user?.user_id || user?.id;
+    if (!currentUserId) return;
+
+    try {
+      const [profitsRes] = await Promise.all([
+        supabase.from('profits').select('*').order('created_at', { ascending: false })
+      ]);
+
+      if (profitsRes.error) throw profitsRes.error;
+      setProfits(profitsRes.data || []);
+    } catch (error) {
+      console.error('Error refreshing profits data:', error);
+    }
+  }, [user?.user_id, user?.id]);
+
   useEffect(() => {
     fetchProfitsData();
   }, [fetchProfitsData]);
@@ -439,7 +493,8 @@ export const ProfitsProvider = ({ children }) => {
     approveSettlementRequest,
     rejectSettlementRequest,
     markInvoiceReceived,
-    fetchProfitsData
+    fetchProfitsData,
+    refreshProfitsData
   };
 
   return (

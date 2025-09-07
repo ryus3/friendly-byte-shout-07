@@ -46,7 +46,7 @@ const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
+  const { profits, createSettlementRequest, markInvoiceReceived, refreshProfitsData } = useProfits();
   
   // استخدام النظام الموحد للحصول على صافي الربح الموحد
   const { profitData: unifiedProfitData } = useUnifiedProfits();
@@ -444,6 +444,9 @@ const ProfitsSummaryPage = () => {
         return;
     }
     
+    // تحديث البيانات أولاً للحصول على أحدث الحالات
+    await refreshProfitsData();
+    
     // استخراج معرفات الطلبات من الأرباح المحددة
     const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
     const orderIds = selectedProfits.map(p => p.order_id);
@@ -461,14 +464,12 @@ const ProfitsSummaryPage = () => {
     if (orderIds.length > 0 && amountToSettle > 0 && !isRequesting) {
       setIsRequesting(true);
       try {
-        // تمرير معرفات الطلبات بدلاً من معرفات الأرباح
-        await requestProfitSettlement(orderIds, '');
-        setSelectedOrders([]);
-        toast({ 
-          title: "تم إرسال الطلب", 
-          description: `تم إرسال طلب تحاسب بقيمة ${amountToSettle.toLocaleString()} دينار`,
-          variant: "default"
-        });
+        // استخدام النظام الجديد للتحاسب مع جلب البيانات المحدثة
+        const result = await createSettlementRequest(orderIds, '');
+        if (result) {
+          setSelectedOrders([]);
+          // لا حاجة لتوست إضافي لأن createSettlementRequest يرسل توست بالفعل
+        }
       } catch (error) {
         console.error('❌ خطأ في طلب التحاسب:', error);
         toast({ 
