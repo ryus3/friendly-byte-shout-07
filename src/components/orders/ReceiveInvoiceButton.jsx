@@ -14,14 +14,11 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
     setIsReceiving(true);
     try {
-      // استلام الفاتورة فقط - التحديث لـ completed سيتم عبر trigger عند تسوية الأرباح
-      const isLocal = !order?.delivery_partner || ['محلي', 'local'].includes(String(order.delivery_partner).toLowerCase());
-      const invoiceId = order?.delivery_partner_invoice_id || (isLocal ? `LOCAL-${order?.order_number || order?.id}` : order?.delivery_partner_invoice_id || '');
+      // trigger الجديد سيتولى إنشاء رقم الفاتورة تلقائياً للطلبات المحلية
       const updateData = {
         receipt_received: true,
         receipt_received_at: new Date().toISOString(),
-        receipt_received_by: user.id,
-        ...(isLocal && { delivery_partner_invoice_id: invoiceId })
+        receipt_received_by: user.id
       };
 
       const { error } = await supabase
@@ -55,7 +52,7 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
     return null;
   }
 
-  // إظهار الزر فقط للطلبات المُسلّمة (delivered) وليس المكتملة
+  // إظهار الزر فقط للطلبات المُسلّمة (delivered) - سواء محلية أو خارجية
   if (order?.status !== 'delivered') {
     return null;
   }
