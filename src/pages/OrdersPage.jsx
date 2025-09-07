@@ -396,8 +396,6 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
-  // معرف المدير الرئيسي
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
