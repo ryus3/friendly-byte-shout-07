@@ -12,8 +12,10 @@ import {
   UserCheck,
   Clock,
   Sparkles,
-  Target
+  Target,
+  Settings
 } from 'lucide-react';
+import { DeliveryManagementDialog } from '@/components/DeliveryManagementDialog';
 
 /**
  * شريط أدوات احترافي للمزامنة - تجميع جميع أزرار المزامنة
@@ -31,6 +33,7 @@ const ProfessionalSyncToolbar = ({
   employees = []
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [showManagementDialog, setShowManagementDialog] = useState(false);
   const getTimeSinceSync = () => {
     if (!lastComprehensiveSync) return null;
     
@@ -106,13 +109,28 @@ const ProfessionalSyncToolbar = ({
               </div>
             </div>
             
-            {/* مؤشر آخر مزامنة */}
-            {timeSinceSync && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                آخر مزامنة: {timeSinceSync}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2">
+              {/* مؤشر آخر مزامنة */}
+              {timeSinceSync && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  آخر مزامنة: {timeSinceSync}
+                </Badge>
+              )}
+              
+              {/* زر إدارة التوصيل - للمديرين فقط */}
+              {isAdmin && (
+                <Button
+                  onClick={() => setShowManagementDialog(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-violet-500 hover:from-purple-600 hover:to-violet-600 text-white border-0"
+                >
+                  <Settings className="h-4 w-4" />
+                  إدارة التوصيل
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* شريط الأزرار الاحترافي */}
@@ -257,6 +275,12 @@ const ProfessionalSyncToolbar = ({
           </div>
         </div>
       </Card>
+
+      {/* نافذة إدارة التوصيل */}
+      <DeliveryManagementDialog
+        open={showManagementDialog}
+        onOpenChange={setShowManagementDialog}
+      />
     </motion.div>
   );
 };

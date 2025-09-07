@@ -9,12 +9,13 @@ import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
-import { useGlobalInvoiceSync } from '@/hooks/useGlobalInvoiceSync';
+import { GlobalSyncProgress } from '@/components/GlobalSyncProgress.jsx';
+import { useAppStartSync } from '@/hooks/useAppStartSync';
 
-// Global invoice sync component
-const GlobalInvoiceSync = () => {
-  useGlobalInvoiceSync();
-  return null;
+// تشغيل المزامنة الشاملة عند بدء التطبيق
+const AppStartSync = () => {
+  useAppStartSync();
+  return <GlobalSyncProgress />;
 };
 export const AppProviders = ({ children }) => {
   return (
@@ -28,7 +29,7 @@ export const AppProviders = ({ children }) => {
                   <ProfitsProvider>
                     <SuperProvider>
                       <VariantsProvider>
-                        <GlobalInvoiceSync />
+                        <AppStartSync />
                         {children}
                       </VariantsProvider>
                     </SuperProvider>
