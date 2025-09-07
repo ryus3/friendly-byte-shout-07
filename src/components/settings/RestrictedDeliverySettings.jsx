@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Truck, Shield, FileText, Settings, RefreshCw } from 'lucide-react';
 import { checkUserPermissions } from '@/lib/permissions';
-import { useAuth } from '@/contexts/SuperProvider';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import DeliverySettingsDialog from './DeliverySettingsDialog';
 import { UnifiedSyncSettings } from '../delivery/UnifiedSyncSettings';
 import { OrdersSyncSettings } from '../delivery/OrdersSyncSettings';
