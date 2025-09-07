@@ -474,3 +474,17 @@ export const defaultPermissions = {
     'reports_settings'
   ]
 };
+
+// Function to check user permissions
+export const checkUserPermissions = (user, requiredPermissions) => {
+  if (!user || !Array.isArray(requiredPermissions)) return false;
+  
+  // Admin always has all permissions
+  if (user.role === 'admin') return true;
+  
+  // Check if user has all required permissions
+  const userPermissions = user.permissions || [];
+  return requiredPermissions.every(permission => 
+    userPermissions.includes(permission)
+  );
+};

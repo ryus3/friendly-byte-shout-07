@@ -43,6 +43,18 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب - تحريك هذا للأعلى قبل الاستخدام
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    (allUsers || []).forEach(u => {
+      if (u && u.user_id) {
+        // استخدام user_id للربط مع created_by
+        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
+      }
+    });
+    return map;
+  }, [allUsers]);
+  
   const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all', archiveSubStatus: 'all' });
   const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid');
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -356,17 +368,7 @@ const OrdersPage = () => {
     permission: 'view_orders',
   };
 
-  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    (allUsers || []).forEach(u => {
-      if (u && u.user_id) {
-        // استخدام user_id للربط مع created_by
-        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
-      }
-    });
-    return map;
-  }, [allUsers]);
+  // تم تحريك usersMap للأعلى لتجنب مشكلة "Cannot access uninitialized variable"
 
   // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
   useEffect(() => {
