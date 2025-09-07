@@ -189,15 +189,7 @@ const EmployeeFollowUpPage = () => {
     localStorage.getItem('last-comprehensive-sync')
   );
   
-  // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق
-  useEffect(() => {
-    if (filteredOrders && filteredOrders.length > 0) {
-      // إرسال إشارة للنظام بوجود طلبات مرئية للمزامنة الشاملة
-      window.dispatchEvent(new CustomEvent('requestAppStartSyncWithVisibleOrders', {
-        detail: { visibleOrders: filteredOrders }
-      }));
-    }
-  }, [filteredOrders]);
+  // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - سيتم تحريكها بعد تعريف filteredOrders
 
   // إزالة المزامنة التلقائية المزعجة عند فتح الصفحة
   // سيتم الاعتماد على المزامنة اليدوية والمجدولة فقط
@@ -433,6 +425,17 @@ const filteredOrders = useMemo(() => {
   });
   
   return filtered;
+}, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+
+// إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - بعد تعريف filteredOrders
+useEffect(() => {
+  if (filteredOrders && filteredOrders.length > 0) {
+    // إرسال إشارة للنظام بوجود طلبات مرئية للمزامنة الشاملة
+    window.dispatchEvent(new CustomEvent('requestAppStartSyncWithVisibleOrders', {
+      detail: { visibleOrders: filteredOrders }
+    }));
+  }
+}, [filteredOrders]);
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
 
   // تحديد وإبراز طلب عند الوصول من الإشعار برقم الطلب
