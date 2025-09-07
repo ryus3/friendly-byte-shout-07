@@ -42,7 +42,7 @@ export const NotificationsProvider = ({ children }) => {
         const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
         if (!isAdmin) {
             // إضافة order_created لقائمة الإشعارات المحظورة للموظفين
-            query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
+            query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
         }
         
         const { data, error } = await query;
@@ -90,7 +90,7 @@ export const NotificationsProvider = ({ children }) => {
                     shouldShow = true;
                 } else {
                     // إضافة order_created لقائمة الإشعارات المحظورة للموظفين
-                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'order_created', 'cash_correction', 'balance_correction', 'main_cash_correction', 'ai_order', 'ai_order_created', 'ai_order_updated', 'telegram_order', 'telegram_ai_order'];
+                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'order_created', 'cash_correction', 'balance_correction', 'main_cash_correction', 'ai_order', 'ai_order_created', 'ai_order_updated', 'telegram_order', 'telegram_ai_order'];
                     if (!adminOnlyGlobalTypes.includes(newNotification.type)) {
                         shouldShow = true;
                     }

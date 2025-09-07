@@ -273,40 +273,17 @@ export const ProfitsProvider = ({ children }) => {
 
       const employeeName = profileData?.full_name || 'موظف غير محدد';
 
-      // البحث عن إشعار طلب تحاسب موجود للموظف نفسه
-      const { data: existingNotification } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('type', 'settlement_request')
-        .eq('user_id', null) // للمديرين
-        .contains('data', { employee_id: currentUserId })
-        .single();
+      // إنشاء/تحديث إشعار المدير عبر الدالة المضمونة الأمان
+      const { data: notifResult, error: notifError } = await supabase
+        .rpc('upsert_settlement_request_notification', {
+          p_employee_id: currentUserId,
+          p_order_ids: eligibleOrderIds,
+          p_total_profit: totalProfit,
+        });
 
-      let notificationData = null;
-      try {
-        if (existingNotification) {
-          // تحديث الإشعار الموجود
-          const { data, error: updateError } = await supabase
-            .from('notifications')
-            .update({
-              message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
-              data: {
-                ...requestData,
-                employee_name: employeeName
-              },
-              is_read: false, // جعل الإشعار غير مقروء
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingNotification.id)
-            .select()
-            .single();
-          if (updateError) throw updateError;
-          notificationData = data;
-        } else {
-          // إنشاء إشعار جديد
-          const { data, error: notificationError } = await supabase
-            .from('notifications')
-            .insert([{
+      if (notifError) {
+        console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
+      }
               type: 'settlement_request',
               title: 'طلب تحاسب',
               message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
@@ -338,9 +315,6 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       // تحديث الحالة المحلية
-      if (notificationData) {
-        setSettlementRequests(prev => [...prev, notificationData]);
-      }
       setProfits(prev => prev.map(p => 
         eligibleOrderIds.includes(p.order_id) && p.employee_id === currentUserId
           ? { ...p, status: 'settlement_requested' }
@@ -353,7 +327,7 @@ export const ProfitsProvider = ({ children }) => {
         variant: "success"
       });
 
-      return notificationData;
+      return { success: true, notification: notifResult?.notification ?? null };
     } catch (error) {
       console.error('❌ خطأ في طلب التحاسب:', error);
       toast({

@@ -4338,6 +4338,14 @@ export type Database = {
         Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
       }
+      upsert_settlement_request_notification: {
+        Args: {
+          p_employee_id: string
+          p_order_ids: string[]
+          p_total_profit?: number
+        }
+        Returns: Json
+      }
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
