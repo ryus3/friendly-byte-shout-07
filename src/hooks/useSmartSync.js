@@ -173,6 +173,32 @@ export const useSmartSync = () => {
         // مزامنة الطلبات الظاهرة فقط
         const ordersResult = await syncVisibleOrdersBatch(visibleOrders);
         
+        if (!ordersResult.success) {
+          console.warn('فشل في مزامنة الطلبات الظاهرة، التبديل للوضع التقليدي');
+          // التراجع للمزامنة التقليدية
+          const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+            body: { 
+              mode: 'comprehensive',
+              sync_invoices: true,
+              sync_orders: true,
+              force_refresh: true
+            }
+          });
+          
+          if (error) throw error;
+          
+          const duration = Math.round((Date.now() - startTime) / 1000);
+          
+          toast({
+            title: "🎉 مزامنة شاملة مكتملة (تقليدية)",
+            description: `${data.invoices_synced} فاتورة | ${data.orders_updated} طلب في ${duration} ثانية`,
+            variant: "default",
+            duration: 8000
+          });
+
+          return { success: true, data };
+        }
+        
         // مزامنة الفواتير الجديدة فقط
         const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
           body: { 

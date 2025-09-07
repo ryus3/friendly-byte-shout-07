@@ -230,13 +230,23 @@ const SettingsPage = () => {
               />
             )}
 
-            <ModernCard
-              icon={PackageX}
-              title="إشعارات المخزون المتقدمة"
-              description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsStockSettingsOpen(true)}
-            />
+            {/* إشعارات المخزون - للموظفين حسب صلاحياتهم */}
+            {(isAdmin || canManageSettings || isSalesEmployee) && (
+              <ModernCard
+                icon={PackageX}
+                title="إشعارات المخزون المتقدمة"
+                description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
+                iconColor="from-red-500 to-red-600"
+                onClick={() => setIsStockSettingsOpen(true)}
+                badge={
+                  isSalesEmployee && !isAdmin ? (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
+                      عرض فقط
+                    </Badge>
+                  ) : null
+                }
+              />
+            )}
           </div>
 
           <SectionHeader 

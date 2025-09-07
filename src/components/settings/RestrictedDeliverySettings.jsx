@@ -2,13 +2,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lock, Shield, Settings, Plus } from 'lucide-react';
+import { Lock, Shield, Settings, Plus, RefreshCw } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import DeliveryManagementDialog from './DeliveryManagementDialog';
+import UnifiedSyncSettings from '../delivery/UnifiedSyncSettings';
 
 const RestrictedDeliverySettings = () => {
   const { canAccessDeliveryPartners, isAdmin, user } = usePermissions();
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isSyncSettingsOpen, setIsSyncSettingsOpen] = React.useState(false);
 
   if (!canAccessDeliveryPartners && !isAdmin) {
     return (
@@ -53,9 +55,25 @@ const RestrictedDeliverySettings = () => {
           <p className="text-sm text-muted-foreground mb-2">
             إدارة رسوم التوصيل والإعدادات المتعلقة بها
           </p>
-          <Badge variant="success">
-            {isAdmin ? 'مدير - جميع الصلاحيات' : 'مسموح'}
-          </Badge>
+          <div className="flex items-center gap-2 mb-3">
+            <Badge variant="success">
+              {isAdmin ? 'مدير - جميع الصلاحيات' : 'مسموح'}
+            </Badge>
+          </div>
+          
+          {/* زر إعدادات المزامنة */}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsSyncSettingsOpen(true);
+            }}
+            className="w-full mt-2"
+          >
+            <RefreshCw className="w-4 h-4 ml-2" />
+            إعدادات المزامنة التلقائية
+          </Button>
         </CardContent>
       </Card>
 
@@ -63,6 +81,12 @@ const RestrictedDeliverySettings = () => {
       <DeliveryManagementDialog 
         open={isOpen} 
         onOpenChange={setIsOpen} 
+      />
+      
+      {/* إعدادات المزامنة التلقائية */}
+      <UnifiedSyncSettings 
+        open={isSyncSettingsOpen} 
+        onOpenChange={setIsSyncSettingsOpen} 
       />
     </>
   );
