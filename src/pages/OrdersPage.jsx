@@ -61,6 +61,18 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
+  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب (تم نقلها قبل استخدامها)
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    (allUsers || []).forEach(u => {
+      if (u && u.user_id) {
+        // استخدام user_id للربط مع created_by
+        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
+      }
+    });
+    return map;
+  }, [allUsers]);
+
   // Scroll to top when page loads + auto sync
   useEffect(() => {
     scrollToTopInstant();
@@ -139,8 +151,8 @@ const OrdersPage = () => {
           if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
-                // جلب اسم الموظف
-                const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
+                // جلب اسم الموظف مع التحقق من وجود usersMap
+                const employeeName = usersMap?.get(newOrder.created_by) || 'موظف غير معروف';
                 
                 await supabase.from('notifications').insert({
                   title: `طلب جديد بواسطة ${employeeName}`,
@@ -356,17 +368,8 @@ const OrdersPage = () => {
     permission: 'view_orders',
   };
 
-  // جلب أسماء المستخدمين لعرض اسم صاحب الطلب
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    (allUsers || []).forEach(u => {
-      if (u && u.user_id) {
-        // استخدام user_id للربط مع created_by
-        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
-      }
-    });
-    return map;
-  }, [allUsers]);
+  // معرف المدير الرئيسي
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
   useEffect(() => {
