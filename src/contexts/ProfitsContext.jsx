@@ -216,10 +216,10 @@ export const ProfitsProvider = ({ children }) => {
         profits: freshProfits 
       });
 
-      // التحقق من أن جميع الطلبات مؤهلة للتحاسب - فقط عند استلام الفاتورة
+      // التحقق من أن جميع الطلبات مؤهلة للتحاسب - الفاتورة مستلمة أو طلب تحاسب معلق
       const eligibleProfits = freshProfits.filter(p => 
         orderUUIDs.includes(p.order_id) &&
-        p.status === 'invoice_received' &&
+        (p.status === 'invoice_received' || p.status === 'settlement_requested') &&
         p.employee_id === currentUserId
       );
 
@@ -235,7 +235,7 @@ export const ProfitsProvider = ({ children }) => {
       const ineligibleOrders = orderUUIDs.filter(orderId => {
         const profit = freshProfits.find(p => p.order_id === orderId);
         return !profit || 
-               profit.status !== 'invoice_received' || 
+               (profit.status !== 'invoice_received' && profit.status !== 'settlement_requested') || 
                profit.employee_id !== currentUserId;
       });
 
@@ -273,27 +273,56 @@ export const ProfitsProvider = ({ children }) => {
 
       const employeeName = profileData?.full_name || 'موظف غير محدد';
 
-      // تسجيل الطلب في الإشعارات للمديرين فقط (user_id: null)
+      // البحث عن إشعار طلب تحاسب موجود للموظف نفسه
+      const { data: existingNotification } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('type', 'settlement_request')
+        .eq('user_id', null) // للمديرين
+        .contains('data', { employee_id: currentUserId })
+        .single();
+
       let notificationData = null;
       try {
-        const { data, error: notificationError } = await supabase
-          .from('notifications')
-          .insert([{
-            type: 'settlement_request',
-            title: 'طلب تحاسب',
-            message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
-            user_id: null, // للمديرين فقط
-            data: {
-              ...requestData,
-              employee_name: employeeName
-            }
-          }])
-          .select()
-          .single();
-        if (notificationError) throw notificationError;
-        notificationData = data;
+        if (existingNotification) {
+          // تحديث الإشعار الموجود
+          const { data, error: updateError } = await supabase
+            .from('notifications')
+            .update({
+              message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
+              data: {
+                ...requestData,
+                employee_name: employeeName
+              },
+              is_read: false, // جعل الإشعار غير مقروء
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingNotification.id)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          notificationData = data;
+        } else {
+          // إنشاء إشعار جديد
+          const { data, error: notificationError } = await supabase
+            .from('notifications')
+            .insert([{
+              type: 'settlement_request',
+              title: 'طلب تحاسب',
+              message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
+              user_id: null, // للمديرين فقط
+              data: {
+                ...requestData,
+                employee_name: employeeName
+              }
+            }])
+            .select()
+            .single();
+          if (notificationError) throw notificationError;
+          notificationData = data;
+        }
       } catch (e) {
-        console.warn('⚠️ تعذر إنشاء إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
+        console.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
       }
 
       // تحديث حالة الأرباح إلى طلب تحاسب
@@ -504,10 +533,10 @@ export const ProfitsProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // إرجاع حالة الأرباح
+      // إرجاع حالة الأرباح إلى invoice_received للسماح بطلب التحاسب مجدداً
       await supabase
         .from('profits')
-        .update({ status: 'pending' })
+        .update({ status: 'invoice_received' })
         .in('order_id', request.order_ids);
 
       setSettlementRequests(prev => prev.map(r => 

@@ -211,8 +211,8 @@ const ProfitsSummaryPage = () => {
             let employeeProfitShare, profitStatus;
             if (profitRecord) {
                 employeeProfitShare = profitRecord.employee_profit || 0;
-                // إذا كان settled_at موجود = مستلم، وإلا = معلق
-                profitStatus = profitRecord.settled_at ? 'settled' : 'pending';
+                // استخدام status من قاعدة البيانات بدلاً من settled_at فقط
+                profitStatus = profitRecord.status || 'pending';
             } else {
                 employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
                 profitStatus = 'pending'; // معلق إذا لم يكن هناك سجل في الأرباح
@@ -520,7 +520,11 @@ const ProfitsSummaryPage = () => {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-        setSelectedOrders(filteredDetailedProfits.filter(p => (p.profitStatus || 'pending') === 'invoice_received').map(p => p.id));
+        // تضمين الطلبات المؤهلة للتحاسب (فاتورة مستلمة أو طلب تحاسب معلق)
+        setSelectedOrders(filteredDetailedProfits.filter(p => {
+            const status = p.profitStatus || 'pending';
+            return status === 'invoice_received' || status === 'settlement_requested';
+        }).map(p => p.id));
     } else {
         setSelectedOrders([]);
     }
