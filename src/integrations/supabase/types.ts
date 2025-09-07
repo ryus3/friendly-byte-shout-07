@@ -3635,6 +3635,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      calculate_employee_item_profit: {
+        Args: {
+          p_base_profit_amount: number
+          p_employee_id: string
+          p_product_id: string
+          p_quantity: number
+          p_variant_id: string
+        }
+        Returns: number
+      }
       calculate_fifo_cost: {
         Args: {
           p_product_id: string
@@ -3654,6 +3664,10 @@ export type Database = {
       calculate_missing_profits: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      calculate_order_profit_fixed_amounts: {
+        Args: { order_id_input: string }
+        Returns: undefined
       }
       calculate_order_profits: {
         Args: { p_order_id: string }
