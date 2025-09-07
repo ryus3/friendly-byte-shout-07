@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
+import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = [] }) => {
     const navigate = useNavigate();
@@ -21,8 +22,8 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
         if (!allProfits || !orders) return [];
         
         return allProfits.filter(profit => {
-            // فقط الأرباح المعلقة
-            if (profit.status !== 'pending') return false;
+            // استخدام دالة موحدة لفحص الحالات المعلقة
+            if (!isPendingStatus(profit.status)) return false;
             
             // التحقق من وجود الطلب
             const order = orders.find(o => o.id === profit.order_id);

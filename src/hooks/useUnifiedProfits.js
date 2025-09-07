@@ -3,6 +3,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
+import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 /**
  * هوك موحد لجلب بيانات الأرباح - يستخدم نفس منطق AccountingPage
@@ -197,6 +198,16 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         return isApproved && isEmployeeDue;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
+      // مستحقات الموظفين المعلقة من جدول الأرباح
+      const employeePendingDues = profitsData.filter(profit => {
+        // استخدام دالة موحدة لفحص الحالات المعلقة
+        if (!isPendingStatus(profit.status)) return false;
+        
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        return order && order.receipt_received === true;
+      }).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
+
       // صافي الربح
       const netProfit = systemProfit - generalExpenses;
 
@@ -229,6 +240,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         netProfit,
         generalExpenses, // إضافة المصاريف العامة
         employeeSettledDues,
+        employeePendingDues, // إضافة المستحقات المعلقة
         managerSales,
         employeeSales,
         chartData
