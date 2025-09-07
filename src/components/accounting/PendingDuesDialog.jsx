@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { AlertTriangle, User, DollarSign, UserCheck } from 'lucide-react';
+import { AlertTriangle, User, DollarSign, UserCheck, Calendar, Package, TrendingUp, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
+import { cn } from '@/lib/utils';
 
 const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = [] }) => {
     const navigate = useNavigate();
@@ -96,64 +98,180 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                         عرض وتسوية الأرباح التي لم تتم تسويتها للموظفين بعد.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="flex-grow space-y-4 py-4 overflow-y-auto">
-                    <div className="flex flex-col sm:flex-row gap-4 items-center p-4 bg-secondary rounded-lg border">
-                        <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                            <SelectTrigger className="flex-1">
-                                <SelectValue placeholder="اختر موظف" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">كل الموظفين</SelectItem>
-                                {employeesWithPendingDues.map(emp => (
-                                    <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <div className="flex-1 text-center">
-                            <p className="text-sm text-muted-foreground">الإجمالي المعلق للمحدد</p>
-                            <p className="text-2xl font-bold text-amber-500">{totalPendingAmount.toLocaleString()} د.ع</p>
+                <div className="flex-grow space-y-6 py-4 overflow-y-auto">
+                    {/* لوحة التحكم والإحصائيات */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        <div className="lg:col-span-2">
+                            <Card className="border-l-4 border-l-primary">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <User className="w-5 h-5 text-primary" />
+                                        تصفية حسب الموظف
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                                        <SelectTrigger className="h-11">
+                                            <SelectValue placeholder="اختر موظف" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                <div className="flex items-center gap-2">
+                                                    <User className="w-4 h-4" />
+                                                    كل الموظفين
+                                                </div>
+                                            </SelectItem>
+                                            {employeesWithPendingDues.map(emp => (
+                                                <SelectItem key={emp.id} value={emp.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4" />
+                                                        {emp.full_name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </CardContent>
+                            </Card>
                         </div>
+                        
+                        <Card className="border-l-4 border-l-amber-500 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/50">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm text-amber-700 dark:text-amber-300">الإجمالي المعلق</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center gap-2">
+                                    <TrendingUp className="w-6 h-6 text-amber-600" />
+                                    <span className="text-2xl font-bold text-amber-600">{totalPendingAmount.toLocaleString()}</span>
+                                    <span className="text-sm text-amber-600">د.ع</span>
+                                </div>
+                                <p className="text-xs text-amber-600/80 mt-1">
+                                    {filteredData.length} طلب معلق
+                                </p>
+                            </CardContent>
+                        </Card>
                     </div>
-                    <ScrollArea className="h-80 border rounded-lg">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead></TableHead>
-                                    <TableHead>الموظف</TableHead>
-                                    <TableHead>رقم الطلب</TableHead>
-                                    <TableHead>تاريخ التسليم</TableHead>
-                                    <TableHead className="text-right">الربح</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+
+                    {/* إحصائيات التحديد */}
+                    {selectedOrders.length > 0 && (
+                        <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/50 dark:to-emerald-900/50 animate-fade-in">
+                            <CardContent className="py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <CheckSquare className="w-5 h-5 text-green-600" />
+                                        <span className="font-medium text-green-700 dark:text-green-300">
+                                            تم تحديد {selectedOrders.length} طلب
+                                        </span>
+                                    </div>
+                                    <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                                        {filteredData.filter(p => selectedOrders.includes(p.id)).reduce((sum, p) => sum + (p.employee_profit || 0), 0).toLocaleString()} د.ع
+                                    </Badge>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* قائمة الطلبات */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 pb-2">
+                            <Package className="w-5 h-5 text-primary" />
+                            <h3 className="font-semibold text-lg">الطلبات المعلقة</h3>
+                            <Badge variant="secondary">{filteredData.length}</Badge>
+                        </div>
+                        
+                        <ScrollArea className="h-96">
+                            <div className="space-y-3 p-1">
                                 {filteredData.length > 0 ? filteredData.map(profit => {
-                                    const employee = allUsers.find(u => u.id === profit.employee_id);
+                                    const employee = allUsers.find(u => u.id === profit.employee_id) || profit.employee;
                                     const order = profit.order;
+                                    const isSelected = selectedOrders.includes(profit.id);
+                                    const isSelectable = selectedEmployee !== 'all' && profit.employee_id === selectedEmployee;
+                                    
                                     return (
-                                        <TableRow key={profit.id}>
-                                            <TableCell>
-                                                <Checkbox
-                                                    checked={selectedOrders.includes(profit.id)}
-                                                    onCheckedChange={() => handleSelectOrder(profit.id)}
-                                                    disabled={selectedEmployee === 'all' || profit.employee_id !== selectedEmployee}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{employee?.full_name || 'غير معروف'}</TableCell>
-                                            <TableCell className="font-mono">{order?.order_number || 'غير معروف'}</TableCell>
-                                            <TableCell>{order ? format(parseISO(order.updated_at), 'd MMM yyyy', { locale: ar }) : '-'}</TableCell>
-                                            <TableCell className="text-right font-semibold text-amber-500">{(profit.employee_profit || 0).toLocaleString()} د.ع</TableCell>
-                                        </TableRow>
+                                        <Card 
+                                            key={profit.id} 
+                                            className={cn(
+                                                "transition-all duration-300 cursor-pointer hover:shadow-lg",
+                                                isSelected && "ring-2 ring-primary shadow-lg scale-[1.02]",
+                                                !isSelectable && "opacity-60",
+                                                "hover:-translate-y-1"
+                                            )}
+                                            onClick={() => isSelectable && handleSelectOrder(profit.id)}
+                                        >
+                                            <CardContent className="p-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                                    {/* معلومات الموظف */}
+                                                    <div className="flex items-center gap-3">
+                                                        <Checkbox
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => handleSelectOrder(profit.id)}
+                                                            disabled={!isSelectable}
+                                                            className="mr-auto"
+                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                                                                {(employee?.full_name || 'غ')[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-medium text-sm">{employee?.full_name || 'غير معروف'}</p>
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* معلومات الطلب */}
+                                                    <div className="text-center">
+                                                        <div className="flex items-center gap-2 justify-center">
+                                                            <Package className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="font-mono text-sm font-medium">
+                                                                {order?.order_number || 'غير معروف'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1">رقم الطلب</p>
+                                                    </div>
+
+                                                    {/* تاريخ التسليم */}
+                                                    <div className="text-center">
+                                                        <div className="flex items-center gap-2 justify-center">
+                                                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                                                            <span className="text-sm">
+                                                                {order ? format(parseISO(order.updated_at), 'd MMM yyyy', { locale: ar }) : '-'}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1">تاريخ التسليم</p>
+                                                    </div>
+
+                                                    {/* المبلغ */}
+                                                    <div className="text-center">
+                                                        <div className="flex items-center gap-2 justify-center">
+                                                            <DollarSign className="w-4 h-4 text-amber-500" />
+                                                            <span className="text-lg font-bold text-amber-600">
+                                                                {(profit.employee_profit || 0).toLocaleString()}
+                                                            </span>
+                                                            <span className="text-sm text-amber-600">د.ع</span>
+                                                        </div>
+                                                        <p className="text-xs text-muted-foreground mt-1">ربح الموظف</p>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
                                     );
                                 }) : (
-                                    <TableRow>
-                                        <TableCell colSpan={5} className="text-center h-24">
-                                            لا توجد مستحقات معلقة حالياً.
-                                        </TableCell>
-                                    </TableRow>
+                                    <Card className="border-dashed">
+                                        <CardContent className="flex flex-col items-center justify-center py-12">
+                                            <AlertTriangle className="w-12 h-12 text-muted-foreground mb-4" />
+                                            <h3 className="font-medium text-lg mb-2">لا توجد مستحقات معلقة</h3>
+                                            <p className="text-muted-foreground text-center">
+                                                جميع المستحقات تم تسويتها أو لا توجد أرباح معلقة حالياً.
+                                            </p>
+                                        </CardContent>
+                                    </Card>
                                 )}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
+                            </div>
+                        </ScrollArea>
+                    </div>
                 </div>
                 <DialogFooter className="gap-2 sm:justify-between flex-wrap">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
