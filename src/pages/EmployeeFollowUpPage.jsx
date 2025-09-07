@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -427,13 +427,19 @@ const filteredOrders = useMemo(() => {
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
 
-// إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - بعد تعريف filteredOrders
+// إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - مع منع التكرار
+const hasSentSyncSignal = useRef(false);
+
 useEffect(() => {
-  if (filteredOrders && filteredOrders.length > 0) {
-    // إرسال إشارة للنظام بوجود طلبات مرئية للمزامنة الشاملة
+  if (filteredOrders && filteredOrders.length > 0 && !hasSentSyncSignal.current) {
+    console.log('🚀 إرسال إشارة مزامنة شاملة للطلبات المرئية (مرة واحدة):', filteredOrders.length);
+    
+    // إرسال إشارة للمزامنة الشاملة مع الطلبات المرئية مع autoSync=true
     window.dispatchEvent(new CustomEvent('requestAppStartSyncWithVisibleOrders', {
-      detail: { visibleOrders: filteredOrders }
+      detail: { visibleOrders: filteredOrders, autoSync: true }
     }));
+    
+    hasSentSyncSignal.current = true;
   }
 }, [filteredOrders]);
 

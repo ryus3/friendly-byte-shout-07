@@ -20,10 +20,10 @@ const AppStartSync = () => {
   // محاولة الحصول على الطلبات المرئية من النظام
   useEffect(() => {
     const handleVisibleOrdersSync = (event) => {
-      const { visibleOrders } = event.detail || {};
+      const { visibleOrders, autoSync = false } = event.detail || {};
       if (visibleOrders && visibleOrders.length > 0) {
-        console.log('🔄 تشغيل المزامنة الشاملة مع الطلبات المرئية');
-        performComprehensiveSync(visibleOrders, syncVisibleOrdersBatch);
+        console.log('🔄 تشغيل المزامنة الشاملة مع الطلبات المرئية:', autoSync ? '(تلقائي)' : '(يدوي)');
+        performComprehensiveSync(visibleOrders, syncVisibleOrdersBatch, autoSync);
       }
     };
     

@@ -1857,9 +1857,98 @@ export const SuperProvider = ({ children }) => {
     // تبديل الظهور الفوري
     toggleProductVisibility,
     
-    // وظائف أخرى للتوافق
-    calculateProfit: () => 0,
-    calculateManagerProfit: () => 0,
+    // وظائف حساب الأرباح الحقيقية
+    calculateProfit: (order) => {
+      if (!order || !order.items) return 0;
+      
+      // البحث عن قاعدة الربح للموظف
+      const employeeProfitRules = allData.employeeProfitRules || [];
+      const employeeId = order.created_by;
+      
+      let totalEmployeeProfit = 0;
+      
+      order.items.forEach(item => {
+        // محاولة الحصول على product_id من variant_id إذا لم يكن موجود
+        let productId = item.product_id;
+        if (!productId && item.sku) {
+          const variant = getVariantDetails(item.sku);
+          productId = variant?.product_id;
+        }
+        
+        if (!productId) return;
+        
+        // البحث عن قاعدة ربح مطابقة
+        const rule = employeeProfitRules.find(r => 
+          r.employee_id === employeeId && 
+          r.is_active === true &&
+          (
+            (r.rule_type === 'product' && r.target_id === productId) ||
+            (r.rule_type === 'variant' && r.target_id === item.sku)
+          )
+        );
+        
+        if (rule) {
+          if (rule.profit_amount) {
+            totalEmployeeProfit += rule.profit_amount * item.quantity;
+          } else if (rule.profit_percentage) {
+            const itemRevenue = item.price * item.quantity;
+            totalEmployeeProfit += (itemRevenue * rule.profit_percentage / 100);
+          }
+        }
+      });
+      
+      return totalEmployeeProfit;
+    },
+    
+    calculateManagerProfit: (order) => {
+      if (!order || !order.items) return 0;
+      
+      // استخدام الدالة المعرفة أعلاه مباشرة
+      const employeeProfit = (() => {
+        if (!order || !order.items) return 0;
+        
+        const employeeProfitRules = allData.employeeProfitRules || [];
+        const employeeId = order.created_by;
+        
+        let totalEmployeeProfit = 0;
+        
+        order.items.forEach(item => {
+          let productId = item.product_id;
+          if (!productId && item.sku) {
+            const variant = getVariantDetails(item.sku);
+            productId = variant?.product_id;
+          }
+          
+          if (!productId) return;
+          
+          const rule = employeeProfitRules.find(r => 
+            r.employee_id === employeeId && 
+            r.is_active === true &&
+            (
+              (r.rule_type === 'product' && r.target_id === productId) ||
+              (r.rule_type === 'variant' && r.target_id === item.sku)
+            )
+          );
+          
+          if (rule) {
+            if (rule.profit_amount) {
+              totalEmployeeProfit += rule.profit_amount * item.quantity;
+            } else if (rule.profit_percentage) {
+              const itemRevenue = item.price * item.quantity;
+              totalEmployeeProfit += (itemRevenue * rule.profit_percentage / 100);
+            }
+          }
+        });
+        
+        return totalEmployeeProfit;
+      })();
+      
+      const totalRevenue = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const totalCost = order.items.reduce((sum, item) => sum + (item.cost_price * item.quantity), 0);
+      const totalProfit = totalRevenue - totalCost;
+      
+      return Math.max(0, totalProfit - employeeProfit);
+    },
     
     // وظائف قواعد أرباح الموظفين
     employeeProfitRules: allData.employeeProfitRules || [],
