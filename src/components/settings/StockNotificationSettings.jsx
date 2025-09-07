@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
 
-const StockNotificationSettings = ({ open, onOpenChange }) => {
+const StockNotificationSettings = ({ open, onOpenChange, readonly = false, showLimitedView = false }) => {
   const { isAdmin } = useAuth();
   const { canManageFinances } = usePermissions();
   
@@ -35,8 +36,10 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     lastSavedAt: null
   });
   
-  // منع الوصول للموظفين - بعد استدعاء جميع الhooks
-  if (!isAdmin && !canManageFinances) {
+  // السماح بالقراءة فقط للموظفين في الوضع المقيد
+  const hasFullAccess = isAdmin || canManageFinances;
+  
+  if (!hasFullAccess && !showLimitedView) {
     return null;
   }
 
@@ -189,7 +192,8 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PackageX className="w-5 h-5 text-primary" />
-            إعدادات تنبيهات المخزون
+            {readonly ? 'عرض إعدادات تنبيهات المخزون' : 'إعدادات تنبيهات المخزون'}
+            {readonly && <Badge variant="secondary" className="mr-2">قراءة فقط</Badge>}
           </DialogTitle>
         </DialogHeader>
 
@@ -213,8 +217,9 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
                 <Switch
                   checked={settings.enableLowStockNotifications}
                   onCheckedChange={(checked) => 
-                    handleSettingChange('enableLowStockNotifications', checked)
+                    !readonly && handleSettingChange('enableLowStockNotifications', checked)
                   }
+                  disabled={readonly}
                 />
               </div>
 
@@ -228,8 +233,9 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
                 <Switch
                   checked={settings.enableOutOfStockNotifications}
                   onCheckedChange={(checked) => 
-                    handleSettingChange('enableOutOfStockNotifications', checked)
+                    !readonly && handleSettingChange('enableOutOfStockNotifications', checked)
                   }
+                  disabled={readonly}
                 />
               </div>
 
@@ -243,8 +249,9 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
                 <Switch
                   checked={settings.enableSounds}
                   onCheckedChange={(checked) => 
-                    handleSettingChange('enableSounds', checked)
+                    !readonly && handleSettingChange('enableSounds', checked)
                   }
+                  disabled={readonly}
                 />
               </div>
 
@@ -277,9 +284,10 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
                     max="50"
                     value={settings.lowStockThreshold || 5}
                     onChange={(e) => 
-                      handleSettingChange('lowStockThreshold', parseInt(e.target.value) || 5)
+                      !readonly && handleSettingChange('lowStockThreshold', parseInt(e.target.value) || 5)
                     }
                     className="max-w-32"
+                    disabled={readonly}
                   />
                 </div>
 
@@ -396,55 +404,68 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
             </CardContent>
           </Card>
 
-          {/* Management Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <RefreshCw className="w-4 h-4" />
-                إعادة تعيين
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                onClick={resetNotificationHistory}
-                className="w-full justify-start"
-              >
-                <Clock className="w-4 h-4 mr-2" />
-                إعادة تعيين تاريخ الإشعارات
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                سيؤدي هذا إلى إرسال تنبيهات جديدة للمنتجات المنخفضة حتى لو تم إرسال تنبيه سابقاً
-              </p>
-            </CardContent>
-          </Card>
+          {/* Management Actions - only for admins */}
+          {!readonly && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  إعادة تعيين
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  onClick={resetNotificationHistory}
+                  className="w-full justify-start"
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  إعادة تعيين تاريخ الإشعارات
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  سيؤدي هذا إلى إرسال تنبيهات جديدة للمنتجات المنخفضة حتى لو تم إرسال تنبيه سابقاً
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Save Button */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={async () => {
-              try {
-                await saveSettingsToDatabase(settings);
-                toast({
-                  title: "تم الحفظ بنجاح",
-                  description: "تم حفظ إعدادات تنبيهات المخزون في قاعدة البيانات",
-                  variant: "success"
-                });
-                onOpenChange(false);
-              } catch (error) {
-                toast({
-                  title: "خطأ في الحفظ",
-                  description: "تعذر حفظ الإعدادات، يرجى المحاولة مرة أخرى",
-                  variant: "destructive"
-                });
-              }
-            }}>
-              <CheckCircle className="w-4 h-4 mr-2" />
-              حفظ الإعدادات
-            </Button>
-          </div>
+          {/* Save Button - hidden in readonly mode */}
+          {!readonly && (
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                إلغاء
+              </Button>
+              <Button onClick={async () => {
+                try {
+                  await saveSettingsToDatabase(settings);
+                  toast({
+                    title: "تم الحفظ بنجاح",
+                    description: "تم حفظ إعدادات تنبيهات المخزون في قاعدة البيانات",
+                    variant: "success"
+                  });
+                  onOpenChange(false);
+                } catch (error) {
+                  toast({
+                    title: "خطأ في الحفظ",
+                    description: "تعذر حفظ الإعدادات، يرجى المحاولة مرة أخرى",
+                    variant: "destructive"
+                  });
+                }
+              }}>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                حفظ الإعدادات
+              </Button>
+            </div>
+          )}
+          
+          {/* Close button for readonly mode */}
+          {readonly && (
+            <div className="flex justify-end pt-4 border-t">
+              <Button onClick={() => onOpenChange(false)}>
+                إغلاق
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

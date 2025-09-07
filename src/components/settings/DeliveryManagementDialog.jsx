@@ -29,6 +29,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import InvoiceSyncSettings from './InvoiceSyncSettings';
+import { useSmartSync } from '@/hooks/useSmartSync';
 
 const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const { 
@@ -48,6 +49,7 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
     getOrderStatuses
   } = useAlWaseet();
   
+  const { syncOrdersOnly } = useSmartSync();
   const { toast } = useToast();
   const [isManualSyncing, setIsManualSyncing] = React.useState(false);
   const [singleOrderTracking, setSingleOrderTracking] = React.useState('');
@@ -537,6 +539,39 @@ const DeliveryManagementDialog = ({ open, onOpenChange }) => {
                     (جميع الطلبات)
                   </span>
                 </Button>
+                
+                <Button
+                  onClick={async () => {
+                    if (isManualSyncing || isSyncing) return;
+                    setIsManualSyncing(true);
+                    try {
+                      const result = await syncOrdersOnly();
+                      if (result.success) {
+                        toast({
+                          title: "تحديث الطلبات مكتمل",
+                          description: `تم تحديث ${result.data?.orders_updated || 0} طلب`,
+                        });
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "خطأ في تحديث الطلبات",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setIsManualSyncing(false);
+                    }
+                  }}
+                  disabled={isManualSyncing || isSyncing}
+                  variant="outline"
+                  className="justify-start"
+                >
+                  {(isManualSyncing || isSyncing) && <RefreshCw className="w-4 h-4 ml-2 animate-spin" />}
+                  تحديث الطلبات
+                  <span className="text-xs text-muted-foreground mr-auto">
+                     (فقط حالات الطلبات)
+                   </span>
+                 </Button>
                 
                 <Button
                   onClick={() => handleManualSync('correction')}

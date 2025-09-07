@@ -158,7 +158,7 @@ export const useSmartSync = () => {
     }
   }, []);
 
-  // مزامنة شاملة ذكية - فقط الطلبات الظاهرة والفواتير الجديدة
+  // مزامنة شاملة ذكية - الطلبات الظاهرة أولاً ثم الفواتير الجديدة
   const comprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null) => {
     setSyncing(true);
     const startTime = Date.now();
@@ -166,8 +166,10 @@ export const useSmartSync = () => {
     try {
       console.log('🚀 بدء المزامنة الشاملة الذكية...');
       
-      // إذا تم تمرير الطلبات الظاهرة ودالة المزامنة، استخدم البدل الذكي
-      if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch) {
+      // استخدام الطلبات الظاهرة كحالة افتراضية مع fallback للمزامنة التقليدية
+      const shouldUseSmart = visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch;
+      
+      if (shouldUseSmart) {
         console.log(`📋 استخدام المزامنة الذكية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
         
         // مزامنة الطلبات الظاهرة فقط
