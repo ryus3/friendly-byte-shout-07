@@ -216,14 +216,15 @@ export const ProfitsProvider = ({ children }) => {
         profits: freshProfits 
       });
 
-      // التحقق من أن جميع الطلبات مؤهلة للتحاسب
+      // التحقق من أن جميع الطلبات مؤهلة للتحاسب - فقط عند استلام الفاتورة
       const eligibleProfits = freshProfits.filter(p => 
-        orderUUIDs.includes(p.order_id) && 
-        (p.status === 'invoice_received' || p.status === 'pending' || p.status === 'profits_pending') && 
+        orderUUIDs.includes(p.order_id) &&
+        p.status === 'invoice_received' &&
         p.employee_id === currentUserId
       );
 
       console.log('✅ الأرباح المؤهلة للتحاسب:', eligibleProfits);
+      const eligibleOrderIds = eligibleProfits.map(p => p.order_id);
 
       if (eligibleProfits.length === 0) {
         throw new Error('لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
@@ -233,7 +234,7 @@ export const ProfitsProvider = ({ children }) => {
       const ineligibleOrders = orderUUIDs.filter(orderId => {
         const profit = freshProfits.find(p => p.order_id === orderId);
         return !profit || 
-               !['invoice_received', 'pending', 'profits_pending'].includes(profit.status) || 
+               profit.status !== 'invoice_received' || 
                profit.employee_id !== currentUserId;
       });
 
@@ -255,35 +256,38 @@ export const ProfitsProvider = ({ children }) => {
 
       const requestData = {
         employee_id: currentUserId,
-        order_ids: orderUUIDs, // استخدام UUIDs بدلاً من order numbers
+        order_ids: eligibleOrderIds,
         total_profit: totalProfit,
         status: 'pending',
         notes,
         requested_at: new Date().toISOString()
       };
 
-      // تسجيل الطلب في الإشعارات
-      const { data: notificationData, error: notificationError } = await supabase
-        .from('notifications')
-        .insert([{
-          type: 'settlement_request',
-          title: 'طلب تحاسب',
-          message: `طلب تحاسب بقيمة ${totalProfit} دينار`,
-          data: requestData
-        }])
-        .select()
-        .single();
-
-      if (notificationError) {
-        console.error('خطأ في تسجيل الإشعار:', notificationError);
-        throw notificationError;
+      // تسجيل الطلب في الإشعارات (غير معطل عند فشل RLS)
+      let notificationData = null;
+      try {
+        const { data, error: notificationError } = await supabase
+          .from('notifications')
+          .insert([{
+            type: 'settlement_request',
+            title: 'طلب تحاسب',
+            message: `طلب تحاسب بقيمة ${totalProfit} دينار`,
+            user_id: currentUserId,
+            data: requestData
+          }])
+          .select()
+          .single();
+        if (notificationError) throw notificationError;
+        notificationData = data;
+      } catch (e) {
+        console.warn('⚠️ تعذر إنشاء إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
       }
 
       // تحديث حالة الأرباح إلى طلب تحاسب
       const { error: updateError } = await supabase
         .from('profits')
         .update({ status: 'settlement_requested' })
-        .in('order_id', orderUUIDs) // استخدام UUIDs
+        .in('order_id', eligibleOrderIds)
         .eq('employee_id', currentUserId);
 
       if (updateError) {
@@ -292,9 +296,11 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       // تحديث الحالة المحلية
-      setSettlementRequests(prev => [...prev, notificationData]);
+      if (notificationData) {
+        setSettlementRequests(prev => [...prev, notificationData]);
+      }
       setProfits(prev => prev.map(p => 
-        orderUUIDs.includes(p.order_id) && p.employee_id === currentUserId
+        eligibleOrderIds.includes(p.order_id) && p.employee_id === currentUserId
           ? { ...p, status: 'settlement_requested' }
           : p
       ));

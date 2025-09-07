@@ -479,7 +479,7 @@ const ProfitsSummaryPage = () => {
         userId: user?.user_id || user?.id
       });
 
-      if (orderIds.length > 0 && amountToSettle > 0) {
+      if (orderIds.length > 0) {
         // استخدام النظام الجديد للتحاسب مع جلب البيانات المحدثة
         const result = await createSettlementRequest(orderIds, '');
         if (result) {
@@ -520,7 +520,7 @@ const ProfitsSummaryPage = () => {
 
   const handleSelectAll = (checked) => {
     if (checked) {
-        setSelectedOrders(filteredDetailedProfits.filter(p => (p.profitStatus || 'pending') === 'pending').map(p => p.id));
+        setSelectedOrders(filteredDetailedProfits.filter(p => (p.profitStatus || 'pending') === 'invoice_received').map(p => p.id));
     } else {
         setSelectedOrders([]);
     }
