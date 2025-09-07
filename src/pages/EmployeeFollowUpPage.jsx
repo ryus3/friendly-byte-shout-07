@@ -104,15 +104,18 @@ const EmployeeFollowUpPage = () => {
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
     
+    // الحصول على الطلبات المرئية الحالية
+    const currentFilteredOrders = filteredOrders || [];
+    
     toast({
       title: "بدء المزامنة الشاملة",
-      description: `مزامنة ${filteredOrders.length} طلب مرئي والفواتير الجديدة...`,
+      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي والفواتير الجديدة...`,
       variant: "default"
     });
     
     try {
       // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
-      const result = await comprehensiveSync(filteredOrders, syncVisibleOrdersBatch);
+      const result = await comprehensiveSync(currentFilteredOrders, syncVisibleOrdersBatch);
       if (result.success) {
         await refreshOrders();
         const syncTime = new Date().toISOString();
@@ -131,7 +134,9 @@ const EmployeeFollowUpPage = () => {
 
   // دالة مزامنة الطلبات المرئية الجديدة - سريعة وذكية
   const syncVisibleOrders = async () => {
-    if (!filteredOrders || filteredOrders.length === 0) {
+    const currentFilteredOrders = filteredOrders || [];
+    
+    if (currentFilteredOrders.length === 0) {
       toast({
         title: "لا توجد طلبات",
         description: "لا توجد طلبات مرئية للمزامنة",
@@ -142,12 +147,12 @@ const EmployeeFollowUpPage = () => {
 
     toast({
       title: "بدء المزامنة الذكية",
-      description: `مزامنة ${filteredOrders.length} طلب مرئي...`,
+      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
       variant: "default"
     });
 
     try {
-      const result = await syncVisibleOrdersBatch(filteredOrders, (progress) => {
+      const result = await syncVisibleOrdersBatch(currentFilteredOrders, (progress) => {
         console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
       });
 
@@ -155,7 +160,7 @@ const EmployeeFollowUpPage = () => {
         await refreshOrders();
         toast({
           title: "تمت المزامنة بنجاح",
-          description: `تم تحديث ${result.updatedCount} طلب من ${filteredOrders.length} طلب مرئي`,
+          description: `تم تحديث ${result.updatedCount} طلب من ${currentFilteredOrders.length} طلب مرئي`,
           variant: "default"
         });
       } else {
