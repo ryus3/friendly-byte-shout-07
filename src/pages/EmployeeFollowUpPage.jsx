@@ -856,6 +856,7 @@ useEffect(() => {
                   syncOrdersOnly={syncVisibleOrders}
                   lastComprehensiveSync={lastComprehensiveSync}
                   isAdmin={isAdmin}
+                  hideDeliveryManagement={true}
                   employees={employees}
                   onOpenSyncSettings={() => setIsUnifiedSyncSettingsOpen(true)}
                 />

@@ -31,7 +31,7 @@ const AppStartSync = () => {
     return () => window.removeEventListener('requestAppStartSyncWithVisibleOrders', handleVisibleOrdersSync);
   }, [performComprehensiveSync, syncVisibleOrdersBatch]);
   
-  return <GlobalSyncProgress />;
+  return <GlobalSyncProgress hideAutoSync={true} />;
 };
 export const AppProviders = ({ children }) => {
   return (

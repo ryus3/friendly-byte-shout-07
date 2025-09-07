@@ -18,13 +18,15 @@ export const useAppStartSync = () => {
   const [lastAppStartSync, setLastAppStartSync] = useLocalStorage('app-start-sync', null);
   const [sessionSynced, setSessionSynced] = useLocalStorage('session-synced', false);
   const [syncing, setSyncing] = useState(false);
+  const [isAutoSync, setIsAutoSync] = useState(false); // معرفة إذا كانت المزامنة تلقائية
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, status: '' });
 
   // دالة المزامنة الشاملة عند بدء التطبيق - محسنة لاستخدام syncVisibleOrdersBatch
-  const performComprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null) => {
+  const performComprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null, autoSync = false) => {
     if (syncing) return;
     
     setSyncing(true);
+    setIsAutoSync(autoSync); // تحديد إذا كانت المزامنة تلقائية
     setSyncProgress({ current: 0, total: 4, status: 'بدء المزامنة الشاملة...' });
     
     try {
@@ -136,6 +138,7 @@ export const useAppStartSync = () => {
       });
     } finally {
       setSyncing(false);
+      setIsAutoSync(false); // إعادة تعيين حالة المزامنة التلقائية
       setSyncProgress({ current: 0, total: 0, status: '' });
     }
   }, [syncing, setLastAppStartSync, setSessionSynced]);
@@ -163,8 +166,8 @@ export const useAppStartSync = () => {
         return;
       }
 
-      // تأخير قصير للتأكد من جاهزية النظام
-      const timeoutId = setTimeout(performComprehensiveSync, 2000);
+      // تأخير قصير للتأكد من جاهزية النظام - مع تمرير true للمزامنة التلقائية
+      const timeoutId = setTimeout(() => performComprehensiveSync(null, null, true), 2000);
       
       return () => clearTimeout(timeoutId);
     };
@@ -182,10 +185,11 @@ export const useAppStartSync = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [setSessionSynced]);
 
-  return {
-    syncing,
+  return { 
+    syncing, 
     syncProgress,
     performComprehensiveSync,
-    sessionSynced
+    sessionSynced,
+    isAutoSync
   };
 };

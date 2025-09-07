@@ -30,7 +30,8 @@ const ProfessionalSyncToolbar = ({
   syncOrdersOnly,
   lastComprehensiveSync,
   isAdmin,
-  employees = []
+  employees = [],
+  hideDeliveryManagement = false // خيار لإخفاء زر إدارة التوصيل
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showManagementDialog, setShowManagementDialog] = useState(false);
@@ -118,8 +119,8 @@ const ProfessionalSyncToolbar = ({
                 </Badge>
               )}
               
-              {/* زر إدارة التوصيل - للمديرين فقط */}
-              {isAdmin && (
+              {/* زر إدارة التوصيل - للمديرين فقط وفقط في صفحة الإعدادات */}
+              {isAdmin && !hideDeliveryManagement && (
                 <Button
                   onClick={() => setShowManagementDialog(true)}
                   variant="outline"
@@ -276,11 +277,13 @@ const ProfessionalSyncToolbar = ({
         </div>
       </Card>
 
-      {/* نافذة إدارة التوصيل */}
-      <DeliveryManagementDialog
-        open={showManagementDialog}
-        onOpenChange={setShowManagementDialog}
-      />
+      {/* نافذة إدارة التوصيل - فقط إذا لم يكن مخفياً */}
+      {isAdmin && !hideDeliveryManagement && (
+        <DeliveryManagementDialog
+          open={showManagementDialog}
+          onOpenChange={setShowManagementDialog}
+        />
+      )}
     </motion.div>
   );
 };

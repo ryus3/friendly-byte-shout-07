@@ -7,10 +7,11 @@ import { useAppStartSync } from '@/hooks/useAppStartSync';
 /**
  * مؤشر التقدم العام للمزامنة الشاملة عند بدء التطبيق
  */
-export const GlobalSyncProgress = () => {
-  const { syncing, syncProgress } = useAppStartSync();
+export const GlobalSyncProgress = ({ hideAutoSync = false }) => {
+  const { syncing, syncProgress, isAutoSync } = useAppStartSync();
 
-  if (!syncing) return null;
+  // إخفاء الإشعار إذا كانت المزامنة تلقائية وطُلب إخفاؤها
+  if (!syncing || (isAutoSync && hideAutoSync)) return null;
 
   const progressPercentage = syncProgress.total > 0 ? (syncProgress.current / syncProgress.total) * 100 : 0;
 

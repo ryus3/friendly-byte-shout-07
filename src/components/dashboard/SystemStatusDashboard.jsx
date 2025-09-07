@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircle, XCircle, AlertTriangle, TrendingUp, TrendingDown, BarChart3, Package, Users, ShoppingCart } from 'lucide-react';
 
@@ -16,7 +17,8 @@ const SystemStatusDashboard = () => {
     purchases
   } = useInventory();
   
-  const { allUsers } = useAuth();
+  const { allUsers, user } = useAuth();
+  const { isAdmin, canViewAllData } = usePermissions();
   
   const [showDetails, setShowDetails] = useState(false);
 
@@ -27,11 +29,14 @@ const SystemStatusDashboard = () => {
     const safeUsers = Array.isArray(allUsers) ? allUsers : [];
     const safePurchases = Array.isArray(purchases) ? purchases : [];
     
+    // فلترة الطلبات حسب المستخدم إذا لم يكن مديراً
+    const filteredOrders = canViewAllData ? safeOrders : safeOrders.filter(order => order.created_by === user?.id);
+    
     // إحصائيات الطلبات
-    const totalOrders = safeOrders.length;
-    const deliveredOrders = safeOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
-    const pendingOrders = safeOrders.filter(o => o.status === 'pending').length;
-    const totalRevenue = safeOrders
+    const totalOrders = filteredOrders.length;
+    const deliveredOrders = filteredOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
+    const pendingOrders = filteredOrders.filter(o => o.status === 'pending').length;
+    const totalRevenue = filteredOrders
       .filter(o => o.status === 'delivered' || o.status === 'completed')
       .reduce((sum, o) => sum + (o.final_amount || 0), 0);
 
@@ -69,7 +74,7 @@ const SystemStatusDashboard = () => {
       finance: { revenue: totalRevenue, expenses: totalExpenses, profit: netProfit, margin: profitMargin },
       purchases: { total: totalPurchases, amount: totalPurchaseAmount, pending: pendingPurchases }
     };
-  }, [orders, products, allUsers, accounting, purchases]);
+  }, [orders, products, allUsers, accounting, purchases, canViewAllData, user?.id]);
 
   // تحديد حالة النظام
   const systemHealth = useMemo(() => {
