@@ -143,7 +143,7 @@ export const ProfitsProvider = ({ children }) => {
         throw new Error('بعض الطلبات غير مؤهلة للتحاسب');
       }
 
-      const totalProfit = eligibleProfits.reduce((sum, p) => sum + p.total_profit, 0);
+      const totalProfit = eligibleProfits.reduce((sum, p) => sum + (p.employee_profit ?? p.profit_amount ?? 0), 0);
 
       const requestData = {
         employee_id: currentUserId,
@@ -263,7 +263,7 @@ export const ProfitsProvider = ({ children }) => {
       // أرشفة الطلبات
       await supabase
         .from('orders')
-        .update({ is_archived: true })
+        .update({ isarchived: true })
         .in('id', request.order_ids);
 
       setSettlementRequests(prev => prev.map(r => 

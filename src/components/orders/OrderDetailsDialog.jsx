@@ -340,33 +340,33 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
              )}
 
              {/* معلومات استلام الفاتورة إذا تم الاستلام */}
-             {order.receipt_received && (
-               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                 <h4 className="font-semibold text-emerald-800 mb-2">تفاصيل استلام الفاتورة</h4>
-                 <div className="space-y-2 text-sm">
-                   <div className="flex justify-between">
-                     <span className="text-emerald-700">تاريخ الاستلام:</span>
-                     <span className="font-medium">
-                       {order.receipt_received_at && format(parseISO(order.receipt_received_at), 'd/M/yyyy h:mm a', { locale: ar })}
-                     </span>
-                   </div>
-                   {order.delivery_partner_invoice_id && (
-                     <div className="flex justify-between">
-                       <span className="text-emerald-700">رقم فاتورة الشريك:</span>
-                       <span className="font-medium">{order.delivery_partner_invoice_id}</span>
-                     </div>
-                   )}
-                   {order.delivery_partner_invoice_date && (
-                     <div className="flex justify-between">
-                       <span className="text-emerald-700">تاريخ فاتورة الشريك:</span>
-                       <span className="font-medium">
-                         {format(parseISO(order.delivery_partner_invoice_date), 'd/M/yyyy', { locale: ar })}
-                       </span>
-                     </div>
-                   )}
-                 </div>
-               </div>
-             )}
+              {order.receipt_received && (
+                <div className="p-4 rounded-lg border bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-700">
+                  <h4 className="font-semibold mb-2 text-emerald-800 dark:text-emerald-100">تفاصيل استلام الفاتورة</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-emerald-700 dark:text-emerald-200">تاريخ الاستلام:</span>
+                      <span className="font-medium text-foreground">
+                        {order.receipt_received_at && format(parseISO(order.receipt_received_at), 'd/M/yyyy h:mm a', { locale: ar })}
+                      </span>
+                    </div>
+                    {order.delivery_partner_invoice_id && (
+                      <div className="flex justify-between">
+                        <span className="text-emerald-700 dark:text-emerald-200">رقم فاتورة الشريك:</span>
+                        <span className="font-medium text-foreground">{order.delivery_partner_invoice_id}</span>
+                      </div>
+                    )}
+                    {order.delivery_partner_invoice_date && (
+                      <div className="flex justify-between">
+                        <span className="text-emerald-700 dark:text-emerald-200">تاريخ فاتورة الشريك:</span>
+                        <span className="font-medium text-foreground">
+                          {format(parseISO(order.delivery_partner_invoice_date), 'd/M/yyyy', { locale: ar })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
              <div className="p-4 bg-secondary rounded-lg border border-border">
                <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
