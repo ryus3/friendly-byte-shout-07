@@ -263,7 +263,16 @@ export const ProfitsProvider = ({ children }) => {
         requested_at: new Date().toISOString()
       };
 
-      // تسجيل الطلب في الإشعارات (غير معطل عند فشل RLS)
+      // جلب اسم الموظف من جدول الملفات الشخصية
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', currentUserId)
+        .single();
+
+      const employeeName = profileData?.full_name || 'موظف غير محدد';
+
+      // تسجيل الطلب في الإشعارات للمديرين فقط (user_id: null)
       let notificationData = null;
       try {
         const { data, error: notificationError } = await supabase
@@ -271,9 +280,12 @@ export const ProfitsProvider = ({ children }) => {
           .insert([{
             type: 'settlement_request',
             title: 'طلب تحاسب',
-            message: `طلب تحاسب بقيمة ${totalProfit} دينار`,
-            user_id: currentUserId,
-            data: requestData
+            message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
+            user_id: null, // للمديرين فقط
+            data: {
+              ...requestData,
+              employee_name: employeeName
+            }
           }])
           .select()
           .single();
