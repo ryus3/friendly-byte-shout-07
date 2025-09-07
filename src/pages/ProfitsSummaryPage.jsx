@@ -507,9 +507,8 @@ const ProfitsSummaryPage = () => {
           description: errorMessage, 
           variant: "destructive" 
         });
-      } finally {
-        setIsRequesting(false);
-      }
+    } finally {
+      setIsRequesting(false);
     }
   };
 
