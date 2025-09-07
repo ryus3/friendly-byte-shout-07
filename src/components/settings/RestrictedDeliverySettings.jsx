@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Lock, Shield, Settings, Plus, RefreshCw } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import DeliveryManagementDialog from './DeliveryManagementDialog';
-import UnifiedSyncSettings from '../delivery/UnifiedSyncSettings';
+import { UnifiedSyncSettings } from '../delivery/UnifiedSyncSettings';
 
 const RestrictedDeliverySettings = () => {
   const { canAccessDeliveryPartners, isAdmin, user } = usePermissions();

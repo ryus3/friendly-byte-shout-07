@@ -192,6 +192,39 @@ export type Database = {
         }
         Relationships: []
       }
+      background_sync_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          invoices_synced: number | null
+          orders_updated: number | null
+          success: boolean
+          sync_time: string
+          sync_type: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          success?: boolean
+          sync_time?: string
+          sync_type: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invoices_synced?: number | null
+          orders_updated?: number | null
+          success?: boolean
+          sync_time?: string
+          sync_type?: string
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount: number
