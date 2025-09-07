@@ -7,6 +7,7 @@ import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/hooks/use-toast';
 import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
 const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
@@ -38,8 +39,8 @@ const EmployeeSettlementCard = ({
     return profits
       .filter(profit => 
         profit.employee_id === employee.user_id &&
-        // شمول جميع الحالات المستحقة للدفع
-        ['invoice_received', 'pending', 'profits_pending'].includes(profit.status) &&
+        // استخدام دالة موحدة لفحص الحالات المعلقة
+        isPendingStatus(profit.status) &&
         selectedOrderIds.includes(profit.order_id)
       )
       .reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
