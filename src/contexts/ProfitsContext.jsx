@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 // import removed to avoid circular dependency with SuperProvider
 import { useAuth } from './UnifiedAuthContext';
+import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -16,6 +17,7 @@ export const useProfits = () => {
 
 export const ProfitsProvider = ({ children }) => {
   const { user } = useAuth();
+  const { userUUID, isAdmin, canViewAllData } = useUnifiedUserData();
   const [profits, setProfits] = useState([]);
   const [settlementRequests, setSettlementRequests] = useState([]);
   const [settlementInvoices, setSettlementInvoices] = useState([]);
@@ -24,7 +26,7 @@ export const ProfitsProvider = ({ children }) => {
   // حساب الأرباح عند إنشاء طلب
   const calculateOrderProfit = useCallback(async (order) => {
     try {
-      const currentUserId = user?.user_id || user?.id;
+      const currentUserId = userUUID;
       let totalProfit = 0;
       const profitDetails = [];
 
@@ -128,7 +130,7 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, []);
 
-  // طلب تحاسب من الموظف مع إصلاح session management
+  // طلب تحاسب من الموظف - النظام الموحد
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
       // التحقق من صحة orderIds
@@ -137,16 +139,14 @@ export const ProfitsProvider = ({ children }) => {
         throw new Error('لا توجد معرفات طلبات صالحة');
       }
 
-      // الحصول على المستخدم من المصادقة مباشرة مع fallback للسياق
-      const { data: authData } = await supabase.auth.getUser();
-      const currentUserId = authData?.user?.id || user?.user_id || user?.id;
+      // استخدام النظام الموحد لمعرف المستخدم
+      const currentUserId = userUUID;
       
-      console.log('🔍 محاولة طلب التحاسب:', { 
+      console.log('🔍 طلب التحاسب باستخدام النظام الموحد:', { 
         orderIds: validOrderIds, 
         currentUserId, 
-        authUser: authData?.user?.id,
-        contextUser: user?.user_id || user?.id,
-        sessionExists: !!user
+        isAdmin,
+        canViewAllData
       });
 
       // التحقق من وجود المستخدم
@@ -218,7 +218,7 @@ export const ProfitsProvider = ({ children }) => {
         const ineligibleMessages = ineligibleOrders.map(orderId => {
           const profit = freshProfits.find(p => p.order_id === orderId);
           if (!profit) return `الطلب ${orderId}: لم يتم العثور على سجل أرباح`;
-          return `الطلب ${orderId}: الحالة ${profit.status} - يجب أن تكون 'استلمت الفاتورة'`;
+      return `الطلب ${orderId}: الحالة ${profit.status} - يجب أن تكون 'استلمت الفاتورة'`;
         }).join('\n');
         
         throw new Error(`بعض الطلبات غير مؤهلة للتحاسب:\n${ineligibleMessages}`);
@@ -476,10 +476,9 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, [settlementRequests, user?.user_id, user?.id]);
 
-  // جلب البيانات
+  // جلب البيانات - النظام الموحد
   const fetchProfitsData = useCallback(async () => {
-    const currentUserId = user?.user_id || user?.id;
-    if (!currentUserId) return;
+    if (!userUUID) return;
 
     try {
       setLoading(true);
@@ -503,12 +502,11 @@ export const ProfitsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.user_id, user?.id]);
+  }, [userUUID]);
 
-  // تحديث البيانات بدون loading spinner
+  // تحديث البيانات بدون loading spinner - النظام الموحد
   const refreshProfitsData = useCallback(async () => {
-    const currentUserId = user?.user_id || user?.id;
-    if (!currentUserId) return;
+    if (!userUUID) return;
 
     try {
       const [profitsRes] = await Promise.all([
@@ -520,7 +518,7 @@ export const ProfitsProvider = ({ children }) => {
     } catch (error) {
       console.error('Error refreshing profits data:', error);
     }
-  }, [user?.user_id, user?.id]);
+  }, [userUUID]);
 
   useEffect(() => {
     fetchProfitsData();
