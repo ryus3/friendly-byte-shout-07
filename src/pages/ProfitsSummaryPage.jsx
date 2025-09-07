@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { getUserUUID } from '@/utils/userIdUtils';
+import { isPendingStatus } from '@/utils/profitStatusHelper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';

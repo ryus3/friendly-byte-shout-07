@@ -9,6 +9,7 @@ import { useSmartSync } from '@/hooks/useSmartSync';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
 import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
+import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
