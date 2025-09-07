@@ -284,20 +284,6 @@ export const ProfitsProvider = ({ children }) => {
       if (notifError) {
         console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
       }
-              type: 'settlement_request',
-              title: 'طلب تحاسب',
-              message: `طلب تحاسب بقيمة ${totalProfit} دينار من قبل ${employeeName}`,
-              user_id: null, // للمديرين فقط
-              data: {
-                ...requestData,
-                employee_name: employeeName
-              }
-            }])
-            .select()
-            .single();
-          if (notificationError) throw notificationError;
-          notificationData = data;
-        }
       } catch (e) {
         console.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
       }
