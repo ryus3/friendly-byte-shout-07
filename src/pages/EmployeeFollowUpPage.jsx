@@ -169,6 +169,16 @@ const EmployeeFollowUpPage = () => {
     localStorage.getItem('last-comprehensive-sync')
   );
   
+  // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق
+  useEffect(() => {
+    if (filteredOrders && filteredOrders.length > 0) {
+      // إرسال إشارة للنظام بوجود طلبات مرئية للمزامنة الشاملة
+      window.dispatchEvent(new CustomEvent('requestAppStartSyncWithVisibleOrders', {
+        detail: { visibleOrders: filteredOrders }
+      }));
+    }
+  }, [filteredOrders]);
+
   // إزالة المزامنة التلقائية المزعجة عند فتح الصفحة
   // سيتم الاعتماد على المزامنة اليدوية والمجدولة فقط
   // فواتير المدير لها مكان منفصل ولا تظهر في متابعة الموظفين
