@@ -260,15 +260,7 @@ const EmployeeFollowUpPage = () => {
         ordersCount: orderList.length
       });
       
-      // إضافة toast لتوضيح الإجراء المطلوب
-      setTimeout(() => {
-        toast({
-          title: "طلب تحاسب جاهز!",
-          description: `تم تحديد ${orderList.length} طلب للموظف. ستجد كارت التحاسب أدناه - اضغط "دفع المستحقات" لإكمال العملية.`,
-          variant: "default",
-          duration: 8000
-        });
-      }, 1500);
+      // تم إزالة toast المضلل - الإشعار الوحيد يجب أن يكون من ProfitsContext
       
       // التمرير للكارت مع تأثير بصري - محسن
       setTimeout(() => {

@@ -227,7 +227,8 @@ export const ProfitsProvider = ({ children }) => {
       const eligibleOrderIds = eligibleProfits.map(p => p.order_id);
 
       if (eligibleProfits.length === 0) {
-        throw new Error('لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
+        console.warn('⚠️ لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
+        return { success: false, message: 'لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة' };
       }
 
       // التحقق التفصيلي للطلبات غير المؤهلة
