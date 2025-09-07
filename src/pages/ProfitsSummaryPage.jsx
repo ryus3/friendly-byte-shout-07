@@ -325,7 +325,7 @@ const ProfitsSummaryPage = () => {
       
         // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
         const personalPendingProfit = personalProfits
-            .filter(p => (p.profitStatus || 'pending') === 'pending')
+            .filter(p => isPendingStatus(p.profitStatus || 'pending'))
             .reduce((sum, p) => sum + p.profit, 0);
 
         const personalSettledProfit = personalProfits

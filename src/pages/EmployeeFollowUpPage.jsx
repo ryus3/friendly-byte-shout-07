@@ -580,7 +580,7 @@ useEffect(() => {
         const profitRecord = profits?.find(p => p.order_id === order.id);
         let employeeProfit = 0;
         
-        if (profitRecord && profitRecord.status !== 'settled') {
+        if (profitRecord && isPendingStatus(profitRecord.status)) {
           // إذا كان هناك سجل ربح غير مُسوى
           employeeProfit = profitRecord.employee_profit || 0;
         } else if (!profitRecord) {
