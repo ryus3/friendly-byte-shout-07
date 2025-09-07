@@ -82,7 +82,7 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [user?.user_id, user?.id]);
+  }, [userUUID, isAdmin]);
 
   // تحديث حالة الربح بناءً على حالة الطلب
   const updateProfitStatus = useCallback(async (orderId, orderStatus, invoiceReceived = false) => {
@@ -278,12 +278,12 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [profits, user?.user_id, user?.id]);
+  }, [userUUID, isAdmin]);
 
   // موافقة المدير على طلب التحاسب
   const approveSettlementRequest = useCallback(async (requestId, paymentMethod = 'cash') => {
     try {
-      const currentUserId = user?.user_id || user?.id;
+      const currentUserId = userUUID;
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
@@ -373,7 +373,7 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [settlementRequests, user?.user_id, user?.id]);
+  }, [settlementRequests, userUUID, isAdmin]);
 
   // تسجيل استلام الفاتورة للطلبات المحلية
   const markInvoiceReceived = useCallback(async (orderId, amountReceived = null) => {
@@ -427,7 +427,7 @@ export const ProfitsProvider = ({ children }) => {
   // رفض طلب التحاسب
   const rejectSettlementRequest = useCallback(async (requestId, reason = '') => {
     try {
-      const currentUserId = user?.user_id || user?.id;
+      const currentUserId = userUUID;
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
@@ -474,7 +474,7 @@ export const ProfitsProvider = ({ children }) => {
       console.error('Error rejecting settlement:', error);
       return null;
     }
-  }, [settlementRequests, user?.user_id, user?.id]);
+  }, [settlementRequests, userUUID, isAdmin]);
 
   // جلب البيانات - النظام الموحد
   const fetchProfitsData = useCallback(async () => {

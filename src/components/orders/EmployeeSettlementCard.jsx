@@ -38,7 +38,7 @@ const EmployeeSettlementCard = ({
     return profits
       .filter(profit => 
         profit.employee_id === employee.user_id &&
-        profit.status === 'pending' &&
+        (profit.status === 'invoice_received' || profit.status === 'pending') &&
         selectedOrderIds.includes(profit.order_id)
       )
       .reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
