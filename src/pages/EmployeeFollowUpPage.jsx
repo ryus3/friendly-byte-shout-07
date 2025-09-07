@@ -436,7 +436,6 @@ useEffect(() => {
     }));
   }
 }, [filteredOrders]);
-}, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
 
   // تحديد وإبراز طلب عند الوصول من الإشعار برقم الطلب
   useEffect(() => {
