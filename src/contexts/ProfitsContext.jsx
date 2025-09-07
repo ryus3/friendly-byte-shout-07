@@ -274,16 +274,17 @@ export const ProfitsProvider = ({ children }) => {
       const employeeName = profileData?.full_name || 'موظف غير محدد';
 
       // إنشاء/تحديث إشعار المدير عبر الدالة المضمونة الأمان
-      const { data: notifResult, error: notifError } = await supabase
-        .rpc('upsert_settlement_request_notification', {
-          p_employee_id: currentUserId,
-          p_order_ids: eligibleOrderIds,
-          p_total_profit: totalProfit,
-        });
+      try {
+        const { data: notifResult, error: notifError } = await supabase
+          .rpc('upsert_settlement_request_notification', {
+            p_employee_id: currentUserId,
+            p_order_ids: eligibleOrderIds,
+            p_total_profit: totalProfit,
+          });
 
-      if (notifError) {
-        console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
-      }
+        if (notifError) {
+          console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
+        }
       } catch (e) {
         console.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
       }
