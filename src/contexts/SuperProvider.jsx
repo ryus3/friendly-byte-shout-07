@@ -89,7 +89,10 @@ export const SuperProvider = ({ children }) => {
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   // أرباح وفواتير التسوية من السياق المتخصص (مع بقاء التوصيل عبر المزود الموحد)
-  const { settlementInvoices } = useProfits() || { settlementInvoices: [] };
+  const { settlementInvoices, createSettlementRequest: profitsCreateSettlement } = useProfits() || { 
+    settlementInvoices: [], 
+    createSettlementRequest: () => Promise.resolve(null) 
+  };
   
   // استدعاء useProducts في المكان الصحيح
   const {
@@ -1994,6 +1997,37 @@ export const SuperProvider = ({ children }) => {
 
     // دالة الحصول على تفاصيل المتغير للحجز
     getVariantDetails,
+
+    // دالة طلب التسوية - ربط مع ProfitsContext
+    requestProfitSettlement: async (orderIds, notes = '') => {
+      try {
+        console.log('🏦 SuperProvider: طلب تسوية الأرباح:', { orderIds, notes });
+        
+        // استخدام دالة createSettlementRequest من ProfitsContext
+        const result = await profitsCreateSettlement(orderIds, notes);
+        
+        if (result) {
+          console.log('✅ تم إرسال طلب التسوية بنجاح');
+          toast({
+            title: "تم إرسال طلب التسوية",
+            description: "سيتم مراجعة طلبك من قبل الإدارة",
+            variant: "success"
+          });
+        } else {
+          throw new Error('فشل في إرسال طلب التسوية');
+        }
+        
+        return result;
+      } catch (error) {
+        console.error('❌ خطأ في طلب التسوية:', error);
+        toast({
+          title: "خطأ في طلب التسوية",
+          description: error.message,
+          variant: "destructive"
+        });
+        throw error;
+      }
+    },
 
     // للتوافق مع الألوان والأحجام
     colors: allData.colors || [],

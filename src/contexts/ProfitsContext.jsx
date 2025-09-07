@@ -24,6 +24,7 @@ export const ProfitsProvider = ({ children }) => {
   // حساب الأرباح عند إنشاء طلب
   const calculateOrderProfit = useCallback(async (order) => {
     try {
+      const currentUserId = user?.user_id || user?.id;
       let totalProfit = 0;
       const profitDetails = [];
 
@@ -44,7 +45,7 @@ export const ProfitsProvider = ({ children }) => {
 
       const profitRecord = {
         order_id: order.id,
-        employee_id: order.created_by || user?.id,
+        employee_id: order.created_by || currentUserId,
         total_profit: totalProfit,
         profit_details: profitDetails,
         status: 'pending', // قيد التجهيز
@@ -55,7 +56,7 @@ export const ProfitsProvider = ({ children }) => {
         .from('profits')
         .insert([{
           order_id: order.id,
-          employee_id: order.created_by || user?.id,
+          employee_id: order.created_by || currentUserId,
           total_revenue: order.total_amount || 0,
           total_cost: order.cost_amount || 0,
           profit_amount: totalProfit,
@@ -79,7 +80,7 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [user?.id]);
+  }, [user?.user_id, user?.id]);
 
   // تحديث حالة الربح بناءً على حالة الطلب
   const updateProfitStatus = useCallback(async (orderId, orderStatus, invoiceReceived = false) => {
@@ -131,10 +132,11 @@ export const ProfitsProvider = ({ children }) => {
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
       // التحقق من أن جميع الطلبات مؤهلة للتحاسب
+      const currentUserId = user?.user_id || user?.id;
       const eligibleProfits = profits.filter(p => 
         orderIds.includes(p.order_id) && 
         p.status === 'invoice_received' &&
-        p.employee_id === user?.id
+        p.employee_id === currentUserId
       );
 
       if (eligibleProfits.length !== orderIds.length) {
@@ -144,7 +146,7 @@ export const ProfitsProvider = ({ children }) => {
       const totalProfit = eligibleProfits.reduce((sum, p) => sum + p.total_profit, 0);
 
       const requestData = {
-        employee_id: user?.id,
+        employee_id: currentUserId,
         order_ids: orderIds,
         total_profit: totalProfit,
         status: 'pending',
@@ -195,11 +197,12 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [profits, user?.id]);
+  }, [profits, user?.user_id, user?.id]);
 
   // موافقة المدير على طلب التحاسب
   const approveSettlementRequest = useCallback(async (requestId, paymentMethod = 'cash') => {
     try {
+      const currentUserId = user?.user_id || user?.id;
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
@@ -210,7 +213,7 @@ export const ProfitsProvider = ({ children }) => {
           data: {
             ...request,
             status: 'approved',
-            approved_by: user?.id,
+            approved_by: currentUserId,
             approved_at: new Date().toISOString(),
             payment_method: paymentMethod
           }
@@ -231,7 +234,7 @@ export const ProfitsProvider = ({ children }) => {
         order_ids: request.order_ids,
         payment_method: paymentMethod,
         generated_at: new Date().toISOString(),
-        generated_by: user?.id
+        generated_by: currentUserId
       };
 
       // تسجيل التسوية في الإشعارات بدلاً من جدول منفصل
@@ -289,7 +292,7 @@ export const ProfitsProvider = ({ children }) => {
       });
       return null;
     }
-  }, [settlementRequests, user?.id]);
+  }, [settlementRequests, user?.user_id, user?.id]);
 
   // تسجيل استلام الفاتورة للطلبات المحلية
   const markInvoiceReceived = useCallback(async (orderId, amountReceived = null) => {
@@ -343,6 +346,7 @@ export const ProfitsProvider = ({ children }) => {
   // رفض طلب التحاسب
   const rejectSettlementRequest = useCallback(async (requestId, reason = '') => {
     try {
+      const currentUserId = user?.user_id || user?.id;
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
@@ -352,7 +356,7 @@ export const ProfitsProvider = ({ children }) => {
           data: {
             ...request,
             status: 'rejected',
-            rejected_by: user?.id,
+            rejected_by: currentUserId,
             rejected_at: new Date().toISOString(),
             rejection_reason: reason
           }
@@ -389,11 +393,12 @@ export const ProfitsProvider = ({ children }) => {
       console.error('Error rejecting settlement:', error);
       return null;
     }
-  }, [settlementRequests, user?.id]);
+  }, [settlementRequests, user?.user_id, user?.id]);
 
   // جلب البيانات
   const fetchProfitsData = useCallback(async () => {
-    if (!user?.id) return;
+    const currentUserId = user?.user_id || user?.id;
+    if (!currentUserId) return;
 
     try {
       setLoading(true);
@@ -417,7 +422,7 @@ export const ProfitsProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.user_id, user?.id]);
 
   useEffect(() => {
     fetchProfitsData();
