@@ -139,92 +139,82 @@ export const ProfitsProvider = ({ children }) => {
         throw new Error('لا توجد معرفات طلبات صالحة');
       }
 
-      // استخدام النظام الموحد لمعرف المستخدم
-      const currentUserId = userUUID;
+      // الحصول على المستخدم الحالي من auth مباشرة
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
-      console.log('🔍 طلب التحاسب باستخدام النظام الموحد:', { 
-        orderIds: validOrderIds, 
-        currentUserId, 
-        isAdmin,
-        canViewAllData
-      });
-
-      // التحقق من وجود المستخدم
-      if (!currentUserId) {
+      if (authError || !authUser) {
+        console.error('مشكلة في المصادقة:', authError);
         throw new Error('يجب تسجيل الدخول أولاً');
       }
 
-      // جلب أحدث حالات الأرباح مع retry عند فشل المصادقة
-      let freshProfits, profitsError;
-      let retryCount = 0;
-      const maxRetries = 2;
+      const currentUserId = authUser.id;
+      
+      console.log('🔍 طلب التحاسب - التحقق من المصادقة:', { 
+        authUserId: currentUserId,
+        userUUID,
+        orderIds: validOrderIds,
+        isAdmin
+      });
 
-      while (retryCount <= maxRetries) {
-        const { data, error } = await supabase
-          .from('profits')
-          .select('*')
-          .in('order_id', validOrderIds); // إزالة فلتر employee_id والاعتماد على RLS
-
-        if (!error) {
-          freshProfits = data;
-          profitsError = null;
-          break;
-        }
-
-        console.warn(`❌ محاولة ${retryCount + 1} فشلت:`, error);
-        
-        if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
-          // مشكلة في المصادقة - محاولة refresh session
-          console.log('🔄 محاولة تحديث الجلسة...');
-          await supabase.auth.refreshSession();
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-        retryCount++;
-        profitsError = error;
+      // التحقق من صحة UUID
+      if (!currentUserId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentUserId)) {
+        throw new Error('معرف المستخدم غير صحيح');
       }
 
+      // جلب أرباح الموظف مع فلترة صريحة (تجاوز RLS)
+      const { data: freshProfits, error: profitsError } = await supabase
+        .from('profits')
+        .select('*')
+        .in('order_id', validOrderIds)
+        .eq('employee_id', currentUserId); // فلترة صريحة للأمان
+
       if (profitsError) {
-        console.error('Error fetching fresh profits after retries:', profitsError);
+        console.error('خطأ في جلب بيانات الأرباح:', profitsError);
         throw new Error(`فشل في جلب بيانات الأرباح: ${profitsError.message}`);
       }
 
-      // تحديث البيانات المحلية
-      setProfits(prev => {
-        const updatedProfits = [...prev];
-        freshProfits.forEach(freshProfit => {
-          const index = updatedProfits.findIndex(p => p.order_id === freshProfit.order_id);
-          if (index >= 0) {
-            updatedProfits[index] = freshProfit;
-          } else {
-            updatedProfits.push(freshProfit);
-          }
-        });
-        return updatedProfits;
+      console.log('📊 الأرباح المجلبة:', { 
+        ordersRequested: validOrderIds.length,
+        profitsFound: freshProfits?.length || 0,
+        profits: freshProfits 
       });
 
-      // التحقق من أن جميع الطلبات مؤهلة للتحاسب باستخدام البيانات المحدثة
+      // التحقق من أن جميع الطلبات مؤهلة للتحاسب
       const eligibleProfits = freshProfits.filter(p => 
         validOrderIds.includes(p.order_id) && 
-        p.status === 'invoice_received' &&
-        p.employee_id === currentUserId // التحقق من الملكية في الكود
+        (p.status === 'invoice_received' || p.status === 'pending') && // قبول كلا الحالتين
+        p.employee_id === currentUserId
       );
 
-      if (eligibleProfits.length !== validOrderIds.length) {
-        const ineligibleOrders = validOrderIds.filter(orderId => 
-          !freshProfits.find(p => p.order_id === orderId && p.status === 'invoice_received' && p.employee_id === currentUserId)
-        );
-        
+      console.log('✅ الأرباح المؤهلة للتحاسب:', eligibleProfits);
+
+      if (eligibleProfits.length === 0) {
+        throw new Error('لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
+      }
+
+      // التحقق التفصيلي للطلبات غير المؤهلة
+      const ineligibleOrders = validOrderIds.filter(orderId => {
+        const profit = freshProfits.find(p => p.order_id === orderId);
+        return !profit || 
+               !['invoice_received', 'pending'].includes(profit.status) || 
+               profit.employee_id !== currentUserId;
+      });
+
+      if (ineligibleOrders.length > 0) {
         const ineligibleMessages = ineligibleOrders.map(orderId => {
           const profit = freshProfits.find(p => p.order_id === orderId);
           if (!profit) return `الطلب ${orderId}: لم يتم العثور على سجل أرباح`;
-      return `الطلب ${orderId}: الحالة ${profit.status} - يجب أن تكون 'استلمت الفاتورة'`;
+          if (profit.employee_id !== currentUserId) return `الطلب ${orderId}: ليس ملكك`;
+          return `الطلب ${orderId}: الحالة ${profit.status} - غير مؤهل للتحاسب`;
         }).join('\n');
         
+        console.warn('⚠️ طلبات غير مؤهلة:', ineligibleMessages);
         throw new Error(`بعض الطلبات غير مؤهلة للتحاسب:\n${ineligibleMessages}`);
       }
 
       const totalProfit = eligibleProfits.reduce((sum, p) => sum + (p.employee_profit ?? p.profit_amount ?? 0), 0);
+
+      console.log('💰 إجمالي الأرباح للتحاسب:', totalProfit);
 
       const requestData = {
         employee_id: currentUserId,
@@ -235,8 +225,8 @@ export const ProfitsProvider = ({ children }) => {
         requested_at: new Date().toISOString()
       };
 
-      // تسجيل الطلب في الإشعارات مؤقتاً
-      const { data, error } = await supabase
+      // تسجيل الطلب في الإشعارات
+      const { data: notificationData, error: notificationError } = await supabase
         .from('notifications')
         .insert([{
           type: 'settlement_request',
@@ -247,30 +237,40 @@ export const ProfitsProvider = ({ children }) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (notificationError) {
+        console.error('خطأ في تسجيل الإشعار:', notificationError);
+        throw notificationError;
+      }
 
       // تحديث حالة الأرباح إلى طلب تحاسب
-      await supabase
+      const { error: updateError } = await supabase
         .from('profits')
         .update({ status: 'settlement_requested' })
-        .in('order_id', validOrderIds);
+        .in('order_id', validOrderIds)
+        .eq('employee_id', currentUserId); // التأكد من التحديث للموظف الصحيح
 
-      setSettlementRequests(prev => [...prev, data]);
+      if (updateError) {
+        console.error('خطأ في تحديث حالة الأرباح:', updateError);
+        // لا نرمي خطأ هنا لأن الطلب تم تسجيله بنجاح
+      }
+
+      // تحديث الحالة المحلية
+      setSettlementRequests(prev => [...prev, notificationData]);
       setProfits(prev => prev.map(p => 
-        orderIds.includes(p.order_id) 
+        validOrderIds.includes(p.order_id) && p.employee_id === currentUserId
           ? { ...p, status: 'settlement_requested' }
           : p
       ));
 
       toast({
         title: "تم إرسال طلب التحاسب",
-        description: `طلب تحاسب بقيمة ${totalProfit.toLocaleString()} د.ع`,
+        description: `طلب تحاسب بقيمة ${totalProfit.toLocaleString()} د.ع للطلبات: ${eligibleProfits.length}`,
         variant: "success"
       });
 
-      return data;
+      return notificationData;
     } catch (error) {
-      console.error('Error creating settlement request:', error);
+      console.error('❌ خطأ في طلب التحاسب:', error);
       toast({
         title: "خطأ في طلب التحاسب",
         description: error.message,

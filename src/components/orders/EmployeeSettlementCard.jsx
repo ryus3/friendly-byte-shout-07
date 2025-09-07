@@ -38,7 +38,8 @@ const EmployeeSettlementCard = ({
     return profits
       .filter(profit => 
         profit.employee_id === employee.user_id &&
-        (profit.status === 'invoice_received' || profit.status === 'pending') &&
+        // شمول جميع الحالات المستحقة للدفع
+        ['invoice_received', 'pending', 'profits_pending'].includes(profit.status) &&
         selectedOrderIds.includes(profit.order_id)
       )
       .reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
