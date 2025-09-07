@@ -106,13 +106,15 @@ export const useAppStartSync = () => {
       
       console.log(`✅ مزامنة شاملة ذكية مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
       
-      // إرسال إشعار النجاح محسن
-      toast({
-        title: "🎉 مزامنة شاملة ذكية مكتملة",
-        description: `تم تحديث ${ordersUpdated} طلب وجلب ${totalInvoices} فاتورة جديدة بنجاح`,
-        variant: "default",
-        duration: 8000
-      });
+      // إرسال إشعار النجاح محسن فقط للمزامنة اليدوية
+      if (!autoSync) {
+        toast({
+          title: "🎉 مزامنة شاملة ذكية مكتملة",
+          description: `تم تحديث ${ordersUpdated} طلب وجلب ${totalInvoices} فاتورة جديدة بنجاح`,
+          variant: "default",
+          duration: 8000
+        });
+      }
 
       // تسجيل وقت المزامنة
       setLastAppStartSync(Date.now());

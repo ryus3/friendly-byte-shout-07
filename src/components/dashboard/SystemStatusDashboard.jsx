@@ -29,8 +29,8 @@ const SystemStatusDashboard = () => {
     const safeUsers = Array.isArray(allUsers) ? allUsers : [];
     const safePurchases = Array.isArray(purchases) ? purchases : [];
     
-    // فلترة الطلبات حسب المستخدم إذا لم يكن مديراً
-    const filteredOrders = canViewAllData ? safeOrders : safeOrders.filter(order => order.created_by === user?.id);
+    // فلترة الطلبات لإظهار الطلبات الشخصية للمستخدم فقط (حتى للمدير)
+    const filteredOrders = safeOrders.filter(order => order.created_by === user?.id);
     
     // إحصائيات الطلبات
     const totalOrders = filteredOrders.length;
