@@ -20,7 +20,9 @@ serve(async (req) => {
       employee_id = null,
       force_refresh = false,
       sync_invoices = true,
-      sync_orders = true
+      sync_orders = true,
+      orders_visible_only = false,
+      context = null
     } = body;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -71,7 +73,13 @@ serve(async (req) => {
 
     for (const batch of employeeBatches) {
       const batchPromises = batch.map(employee => 
-        processSmartEmployeeSync(employee, supabase, { sync_invoices, sync_orders, force_refresh })
+        processSmartEmployeeSync(employee, supabase, { 
+          sync_invoices, 
+          sync_orders, 
+          force_refresh, 
+          orders_visible_only, 
+          context 
+        })
       );
       const batchResults = await Promise.allSettled(batchPromises);
       
@@ -177,7 +185,13 @@ async function processSmartEmployeeSync(employee: any, supabase: any, options: a
 
     // 3. مزامنة حالات الطلبات (إذا مطلوب)
     if (options.sync_orders) {
-      const ordersResult = await syncEmployeeOrdersOnly(employee, tokenData.token, supabase);
+      const ordersResult = await syncEmployeeOrdersOnly(
+        employee, 
+        tokenData.token, 
+        supabase, 
+        options.orders_visible_only, 
+        options.context
+      );
       ordersUpdated = ordersResult.updated;
     }
 
@@ -352,7 +366,7 @@ async function syncEmployeeInvoicesOnly(employee: any, token: string, supabase: 
 }
 
 // مزامنة حالات الطلبات فقط - سريع ومحدود
-async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: any) {
+async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: any, visibleOnly = false, context = null) {
   try {
     // جلب الطلبات الحديثة فقط (آخر 30 يوم)
     const thirtyDaysAgo = new Date();
@@ -362,13 +376,22 @@ async function syncEmployeeOrdersOnly(employee: any, token: string, supabase: an
     const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
     const isManagerSyncing = employee.user_id === ADMIN_ID;
     
-    const ordersQuery = supabase
+    let ordersQuery = supabase
       .from('orders')
-      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status, created_by, order_number')
+      .select('id, delivery_partner_order_id, tracking_number, qr_id, delivery_status, created_by, order_number, status, isarchived')
       .eq('delivery_partner', 'alwaseet')
       .gte('created_at', thirtyDaysAgo.toISOString())
-      .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null,order_number.not.is.null')
-      .limit(isManagerSyncing ? 200 : 50); // حد أعلى للمدير
+      .or('delivery_partner_order_id.not.is.null,tracking_number.not.is.null,qr_id.not.is.null,order_number.not.is.null');
+
+    // تطبيق فلتر الطلبات الظاهرة إذا مطلوب (للطلبات في صفحة متابعة الطلبات)
+    if (visibleOnly && context === 'orders_tracking') {
+      ordersQuery = ordersQuery
+        .eq('isarchived', false)
+        .neq('status', 'completed')
+        .limit(isManagerSyncing ? 100 : 30); // حد أقل للطلبات الظاهرة
+    } else {
+      ordersQuery = ordersQuery.limit(isManagerSyncing ? 200 : 50); // حد أعلى للمدير
+    }
 
     // المدير يمكنه مزامنة جميع الطلبات، الموظف فقط طلباته
     if (!isManagerSyncing) {

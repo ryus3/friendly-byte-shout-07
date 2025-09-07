@@ -14,6 +14,11 @@ interface SyncSettings {
   orders_twice_daily: boolean;
   orders_morning_time: string;
   orders_evening_time: string;
+  orders_sync_enabled: boolean;
+  orders_sync_every_hours: number;
+  orders_visible_only: boolean;
+  delivery_invoices_daily_sync: boolean;
+  delivery_invoices_sync_time: string;
   sync_work_hours_only: boolean;
   work_start_hour: number;
   work_end_hour: number;
@@ -31,7 +36,8 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
     )
 
-    console.log('🕒 بدء المزامنة التلقائية في الخلفية...')
+    const { sync_type = 'legacy' } = await req.json().catch(() => ({}));
+    console.log(`🕒 بدء المزامنة التلقائية في الخلفية - نوع: ${sync_type}...`)
 
     // جلب إعدادات المزامنة
     const { data: syncSettings, error: settingsError } = await supabaseClient
@@ -52,6 +58,11 @@ serve(async (req) => {
       orders_twice_daily: true,
       orders_morning_time: '09:00:00',
       orders_evening_time: '18:00:00',
+      orders_sync_enabled: true,
+      orders_sync_every_hours: 3,
+      orders_visible_only: true,
+      delivery_invoices_daily_sync: true,
+      delivery_invoices_sync_time: '09:00:00',
       sync_work_hours_only: true,
       work_start_hour: 8,
       work_end_hour: 20
@@ -84,13 +95,33 @@ serve(async (req) => {
       sync_type: 'none'
     }
 
-    // مزامنة الفواتير اليومية
-    if (settings.invoice_auto_sync && settings.invoice_daily_sync) {
-      const invoiceTime = settings.invoice_sync_time
-      const [invoiceHour, invoiceMinute] = invoiceTime.split(':').map(Number)
-      
-      if (currentHour === invoiceHour && now.getMinutes() >= invoiceMinute && now.getMinutes() < invoiceMinute + 5) {
-        console.log('📄 بدء مزامنة الفواتير اليومية...')
+    // معالجة أنواع المزامنة المختلفة
+    if (sync_type === 'orders_tracking') {
+      // مزامنة طلبات صفحة متابعة الطلبات (كل 3 ساعات)
+      if (settings.orders_sync_enabled) {
+        console.log('📦 بدء مزامنة طلبات صفحة متابعة الطلبات...')
+        
+        const { data: ordersData, error: ordersError } = await supabaseClient.functions.invoke('smart-invoice-sync', {
+          body: { 
+            mode: 'smart',
+            sync_invoices: false,
+            sync_orders: true,
+            orders_visible_only: settings.orders_visible_only,
+            context: 'orders_tracking',
+            force_refresh: false
+          }
+        })
+
+        if (!ordersError && ordersData) {
+          syncResults.orders_updated = ordersData.orders_updated || 0
+          syncResults.sync_type = 'orders_tracking'
+          console.log(`✅ مزامنة طلبات متابعة الطلبات: ${syncResults.orders_updated} طلب محدث`)
+        }
+      }
+    } else if (sync_type === 'delivery_invoices') {
+      // مزامنة فواتير التوصيل اليومية
+      if (settings.delivery_invoices_daily_sync) {
+        console.log('📄 بدء مزامنة فواتير التوصيل اليومية...')
         
         const { data: invoiceData, error: invoiceError } = await supabaseClient.functions.invoke('smart-invoice-sync', {
           body: { 
@@ -103,38 +134,65 @@ serve(async (req) => {
 
         if (!invoiceError && invoiceData) {
           syncResults.invoices_synced = invoiceData.invoices_synced || 0
-          syncResults.sync_type = 'invoices'
-          console.log(`✅ مزامنة الفواتير: ${syncResults.invoices_synced} فاتورة جديدة`)
+          syncResults.sync_type = 'delivery_invoices'
+          console.log(`✅ مزامنة فواتير التوصيل: ${syncResults.invoices_synced} فاتورة جديدة`)
         }
       }
-    }
-
-    // مزامنة الطلبات (مرتين يومياً)
-    if (settings.orders_auto_sync && settings.orders_twice_daily) {
-      const morningTime = settings.orders_morning_time
-      const eveningTime = settings.orders_evening_time
-      const [morningHour, morningMinute] = morningTime.split(':').map(Number)
-      const [eveningHour, eveningMinute] = eveningTime.split(':').map(Number)
+    } else {
+      // المزامنة القديمة للتوافق مع الإعدادات الموجودة
       
-      const isMorningSync = currentHour === morningHour && now.getMinutes() >= morningMinute && now.getMinutes() < morningMinute + 5
-      const isEveningSync = currentHour === eveningHour && now.getMinutes() >= eveningMinute && now.getMinutes() < eveningMinute + 5
-      
-      if (isMorningSync || isEveningSync) {
-        console.log(`📦 بدء مزامنة الطلبات ${isMorningSync ? 'الصباحية' : 'المسائية'}...`)
+      // مزامنة الفواتير اليومية
+      if (settings.invoice_auto_sync && settings.invoice_daily_sync) {
+        const invoiceTime = settings.invoice_sync_time
+        const [invoiceHour, invoiceMinute] = invoiceTime.split(':').map(Number)
         
-        const { data: ordersData, error: ordersError } = await supabaseClient.functions.invoke('smart-invoice-sync', {
-          body: { 
-            mode: 'smart',
-            sync_invoices: false,
-            sync_orders: true,
-            force_refresh: false
-          }
-        })
+        if (currentHour === invoiceHour && now.getMinutes() >= invoiceMinute && now.getMinutes() < invoiceMinute + 5) {
+          console.log('📄 بدء مزامنة الفواتير اليومية...')
+          
+          const { data: invoiceData, error: invoiceError } = await supabaseClient.functions.invoke('smart-invoice-sync', {
+            body: { 
+              mode: 'smart',
+              sync_invoices: true,
+              sync_orders: false,
+              force_refresh: false
+            }
+          })
 
-        if (!ordersError && ordersData) {
-          syncResults.orders_updated = ordersData.orders_updated || 0
-          syncResults.sync_type = syncResults.sync_type === 'invoices' ? 'both' : 'orders'
-          console.log(`✅ مزامنة الطلبات: ${syncResults.orders_updated} طلب محدث`)
+          if (!invoiceError && invoiceData) {
+            syncResults.invoices_synced = invoiceData.invoices_synced || 0
+            syncResults.sync_type = 'invoices'
+            console.log(`✅ مزامنة الفواتير: ${syncResults.invoices_synced} فاتورة جديدة`)
+          }
+        }
+      }
+
+      // مزامنة الطلبات (مرتين يومياً)
+      if (settings.orders_auto_sync && settings.orders_twice_daily) {
+        const morningTime = settings.orders_morning_time
+        const eveningTime = settings.orders_evening_time
+        const [morningHour, morningMinute] = morningTime.split(':').map(Number)
+        const [eveningHour, eveningMinute] = eveningTime.split(':').map(Number)
+        
+        const isMorningSync = currentHour === morningHour && now.getMinutes() >= morningMinute && now.getMinutes() < morningMinute + 5
+        const isEveningSync = currentHour === eveningHour && now.getMinutes() >= eveningMinute && now.getMinutes() < eveningMinute + 5
+        
+        if (isMorningSync || isEveningSync) {
+          console.log(`📦 بدء مزامنة الطلبات ${isMorningSync ? 'الصباحية' : 'المسائية'}...`)
+          
+          const { data: ordersData, error: ordersError } = await supabaseClient.functions.invoke('smart-invoice-sync', {
+            body: { 
+              mode: 'smart',
+              sync_invoices: false,
+              sync_orders: true,
+              force_refresh: false
+            }
+          })
+
+          if (!ordersError && ordersData) {
+            syncResults.orders_updated = ordersData.orders_updated || 0
+            syncResults.sync_type = syncResults.sync_type === 'invoices' ? 'both' : 'orders'
+            console.log(`✅ مزامنة الطلبات: ${syncResults.orders_updated} طلب محدث`)
+          }
         }
       }
     }

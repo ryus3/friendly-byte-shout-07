@@ -216,8 +216,8 @@ export const useSmartSync = () => {
         const duration = Math.round((Date.now() - startTime) / 1000);
         
         toast({
-          title: "🎉 مزامنة شاملة ذكية مكتملة",
-          description: `${invoiceData.invoices_synced || 0} فاتورة جديدة | ${ordersResult.updatedCount || 0} طلب محدث في ${duration} ثانية (ذكية وسريعة!)`,
+          title: "🎉 مزامنة شاملة مكتملة",
+          description: `${invoiceData.invoices_synced || 0} فاتورة جديدة | ${ordersResult.updatedCount || 0} طلب محدث في ${duration} ثانية`,
           variant: "default",
           duration: 8000
         });

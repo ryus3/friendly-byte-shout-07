@@ -1515,6 +1515,8 @@ export type Database = {
           created_at: string | null
           daily_sync_enabled: boolean | null
           daily_sync_time: string | null
+          delivery_invoices_daily_sync: boolean | null
+          delivery_invoices_sync_time: string | null
           evening_sync_time: string | null
           id: string
           invoice_auto_sync: boolean | null
@@ -1525,7 +1527,10 @@ export type Database = {
           orders_auto_sync: boolean | null
           orders_evening_time: string | null
           orders_morning_time: string | null
+          orders_sync_enabled: boolean | null
+          orders_sync_every_hours: number | null
           orders_twice_daily: boolean | null
+          orders_visible_only: boolean | null
           sync_frequency: string | null
           sync_only_visible_orders: boolean | null
           sync_work_hours_only: boolean | null
@@ -1538,6 +1543,8 @@ export type Database = {
           created_at?: string | null
           daily_sync_enabled?: boolean | null
           daily_sync_time?: string | null
+          delivery_invoices_daily_sync?: boolean | null
+          delivery_invoices_sync_time?: string | null
           evening_sync_time?: string | null
           id?: string
           invoice_auto_sync?: boolean | null
@@ -1548,7 +1555,10 @@ export type Database = {
           orders_auto_sync?: boolean | null
           orders_evening_time?: string | null
           orders_morning_time?: string | null
+          orders_sync_enabled?: boolean | null
+          orders_sync_every_hours?: number | null
           orders_twice_daily?: boolean | null
+          orders_visible_only?: boolean | null
           sync_frequency?: string | null
           sync_only_visible_orders?: boolean | null
           sync_work_hours_only?: boolean | null
@@ -1561,6 +1571,8 @@ export type Database = {
           created_at?: string | null
           daily_sync_enabled?: boolean | null
           daily_sync_time?: string | null
+          delivery_invoices_daily_sync?: boolean | null
+          delivery_invoices_sync_time?: string | null
           evening_sync_time?: string | null
           id?: string
           invoice_auto_sync?: boolean | null
@@ -1571,7 +1583,10 @@ export type Database = {
           orders_auto_sync?: boolean | null
           orders_evening_time?: string | null
           orders_morning_time?: string | null
+          orders_sync_enabled?: boolean | null
+          orders_sync_every_hours?: number | null
           orders_twice_daily?: boolean | null
+          orders_visible_only?: boolean | null
           sync_frequency?: string | null
           sync_only_visible_orders?: boolean | null
           sync_work_hours_only?: boolean | null
@@ -4054,6 +4069,10 @@ export type Database = {
       }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }
+        Returns: undefined
+      }
+      manage_background_sync_cron: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       mark_invoice_orders_synced: {
