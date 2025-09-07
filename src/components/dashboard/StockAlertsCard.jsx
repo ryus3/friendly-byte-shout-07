@@ -6,13 +6,17 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
 
 import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { products, settings, refetchProducts } = useInventory(); // المنتجات المفلترة تلقائياً
+  const { products, settings, refetchProducts } = useInventory(); // المنتجات الخام
   const { canManageFinances, isAdmin, canViewStockAlerts, canManageInventory } = usePermissions();
+  
+  // فلترة المنتجات حسب صلاحيات المستخدم
+  const filteredProducts = useFilteredStockNotifications(products);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -33,12 +37,12 @@ const StockAlertsCard = () => {
   
   // حساب المتغيرات منخفضة المخزون فقط (استبعاد النافذ تماماً)
   const lowStockProducts = React.useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
+    if (!filteredProducts || !Array.isArray(filteredProducts)) return [];
     
     const threshold = settings?.lowStockThreshold || 5;
     const lowStockItems = [];
     
-    products.forEach(product => {
+    filteredProducts.forEach(product => {
       if (product.variants && product.variants.length > 0) {
         // البحث عن المتغيرات منخفضة المخزون (أكبر من 0 وأقل من أو يساوي العتبة)
         const lowStockVariants = product.variants.filter(variant => {
@@ -63,7 +67,7 @@ const StockAlertsCard = () => {
     
     // ترتيب حسب أقل كمية
     return lowStockItems.sort((a, b) => a.totalLowStockQuantity - b.totalLowStockQuantity);
-  }, [products, settings?.lowStockThreshold]);
+  }, [filteredProducts, settings?.lowStockThreshold]);
   
   // صلاحيات عرض تنبيهات المخزون - فقط للموظفين المخولين
   const canViewAlerts = canViewStockAlerts || canManageInventory || isAdmin;

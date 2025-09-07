@@ -25,6 +25,7 @@ import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces 
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 import UnifiedSettlementRequestCard from '@/components/dashboard/UnifiedSettlementRequestCard';
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
+import PendingProfitsCard from '@/components/profits/PendingProfitsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
@@ -800,6 +801,7 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                     <StockAlertsCard />
+                    {!canViewAllData && <PendingProfitsCard />}
                     <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
                 </div>
             </div>
