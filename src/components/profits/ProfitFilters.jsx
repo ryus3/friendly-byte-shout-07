@@ -32,6 +32,7 @@ const ProfitFilters = ({
         <SelectContent>
           <SelectItem value="all">الكل</SelectItem>
           <SelectItem value="pending">معلق</SelectItem>
+          <SelectItem value="settlement_requested">تم طلب تحاسب</SelectItem>
           <SelectItem value="settled">مدفوع</SelectItem>
         </SelectContent>
       </Select>

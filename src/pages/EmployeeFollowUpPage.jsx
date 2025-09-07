@@ -380,14 +380,17 @@ const filteredOrders = useMemo(() => {
     // فلتر الحالة
     const statusMatch = filters.status === 'all' || order.status === filters.status;
 
-    // فلتر حالة الربح
+    // فلتر حالة الربح - محدث لدعم "تم طلب تحاسب"
     let profitStatusMatch = true;
     if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
-      const isArchived = (order.is_archived === true || order.isArchived === true || order.isarchived === true);
-      const isSettled = profitRecord ? (profitRecord.status === 'settled') : false;
-      const profitStatus = (isSettled || isArchived) ? 'settled' : 'pending';
-      profitStatusMatch = profitStatus === filters.profitStatus;
+      if (filters.profitStatus === 'settlement_requested') {
+        profitStatusMatch = profitRecord?.status === 'settlement_requested';
+      } else if (filters.profitStatus === 'settled') {
+        profitStatusMatch = profitRecord?.status === 'settled';
+      } else if (filters.profitStatus === 'pending') {
+        profitStatusMatch = ['pending', 'invoice_received'].includes(profitRecord?.status);
+      }
     }
 
     // فلتر الأرشيف والتسوية

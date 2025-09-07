@@ -165,9 +165,9 @@ const UnifiedProfitDisplay = ({
         .filter(p => p.status === 'settled')
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
-      // الأرباح المعلقة
+      // الأرباح المعلقة - تشمل كل الحالات غير المستلمة
       personalData.personalPendingProfit = userProfits
-        .filter(p => p.status === 'pending')
+        .filter(p => ['pending', 'invoice_received', 'settlement_requested'].includes(p.status))
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
       // الطلبات المؤرشفة للموظف - حساب صحيح ومطابق للواقع
