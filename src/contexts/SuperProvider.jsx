@@ -1369,12 +1369,14 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // تسوية مستحقات الموظف - بديل متوافق مع EmployeeSettlementCard
+  // تسوية مستحقات الموظف - بديل متوافق مع EmployeeSettlementCard (محدث لتطبيق نفس آلية ORD000004)
   const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
     try {
       if (!orderIds || orderIds.length === 0) {
         throw new Error('لا توجد طلبات لتسويتها');
       }
+
+      console.debug('🔧 بدء تسوية مستحقات الموظف:', { employeeId, totalSettlement, employeeName, orderIds });
 
       const now = new Date().toISOString();
       const ordersMap = new Map((allData.orders || []).map(o => [o.id, o]));
@@ -1429,18 +1431,31 @@ export const SuperProvider = ({ children }) => {
         const base = perOrderBase.find(x => x.id === orderId)?.amount;
         const baseProfit = Number.isFinite(base) ? Number(base) : baseProfitFromItems;
 
-        // الإيراد: نفضّل final_amount ثم total_amount ثم مجموع أسعار العناصر
-        const revenueCandidate = Number(order?.final_amount ?? order?.total_amount ?? itemsRevenue ?? 0) || 0;
+        // الإيراد: final_amount - delivery_fee (كما في ORD000004 الناجح)
+        const finalAmount = Number(order?.final_amount ?? order?.total_amount ?? itemsRevenue ?? 0) || 0;
+        const deliveryFee = Number(order?.delivery_fee ?? 0) || 0;
+        const revenueWithoutDelivery = finalAmount - deliveryFee;
+        
         const profit_amount = Math.max(0, Number(baseProfit) || 0);
-        const total_cost = Math.max(0, revenueCandidate - profit_amount);
+        const total_cost = Math.max(0, revenueWithoutDelivery - profit_amount);
 
         const emp = perOrderEmployee.find(x => x.id === orderId)?.employee || 0;
+
+        console.debug('🔧 حساب ربح الطلب:', { 
+          orderId: order?.order_number, 
+          finalAmount, 
+          deliveryFee, 
+          revenueWithoutDelivery, 
+          profit_amount, 
+          total_cost,
+          employee_profit: emp
+        });
 
         return {
           ...(existingRow ? { id: existingRow.id } : {}),
           order_id: orderId,
           employee_id: employeeId || order?.created_by,
-          total_revenue: revenueCandidate,
+          total_revenue: revenueWithoutDelivery, // الإيراد بدون أجور التوصيل
           total_cost,
           profit_amount,
           employee_profit: emp,
@@ -1451,13 +1466,93 @@ export const SuperProvider = ({ children }) => {
 
       const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
       if (upsertErr) throw upsertErr;
+      console.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
-      // أرشفة الطلبات بعد التسوية (بدون تغيير receipt_received)
+      // إضافة مصروف مستحقات الموظف (كما في ORD000004)
+      const expenseData = {
+        amount: totalSettlement,
+        category: 'مستحقات الموظفين',
+        expense_type: 'system',
+        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'}`,
+        receipt_number: `EMP-${Date.now()}`,
+        vendor_name: employeeName || 'موظف',
+        status: 'approved',
+        created_by: user?.user_id || user?.id,
+        approved_by: user?.user_id || user?.id,
+        approved_at: now,
+        metadata: {
+          employee_id: employeeId,
+          employee_name: employeeName,
+          order_ids: orderIds,
+          settlement_type: 'employee_dues'
+        }
+      };
+
+      const { data: expenseRecord, error: expenseErr } = await supabase
+        .from('expenses')
+        .insert(expenseData)
+        .select()
+        .single();
+      
+      if (expenseErr) {
+        console.error('❌ خطأ في إضافة مصروف مستحقات الموظف:', expenseErr);
+        throw expenseErr;
+      }
+      console.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
+
+      // إضافة حركة نقدية (employee_dues)
+      const { data: cashSources } = await supabase
+        .from('cash_sources')
+        .select('id, balance')
+        .eq('is_main', true)
+        .maybeSingle();
+
+      if (cashSources) {
+        const movementData = {
+          cash_source_id: cashSources.id,
+          amount: -totalSettlement, // خصم من القاصة
+          movement_type: 'expense',
+          reference_type: 'employee_dues',
+          reference_id: expenseRecord.id,
+          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'}`,
+          balance_before: cashSources.balance,
+          balance_after: cashSources.balance - totalSettlement,
+          created_by: user?.user_id || user?.id
+        };
+
+        const { error: movementErr } = await supabase
+          .from('cash_movements')
+          .insert(movementData);
+        
+        if (movementErr) {
+          console.error('❌ خطأ في إضافة حركة نقدية:', movementErr);
+        } else {
+          console.debug('✅ تم إضافة حركة نقدية لمستحقات الموظف');
+          
+          // تحديث رصيد القاصة
+          const { error: updateErr } = await supabase
+            .from('cash_sources')
+            .update({ balance: cashSources.balance - totalSettlement })
+            .eq('id', cashSources.id);
+          
+          if (updateErr) {
+            console.error('❌ خطأ في تحديث رصيد القاصة:', updateErr);
+          } else {
+            console.debug('✅ تم تحديث رصيد القاصة بعد خصم مستحقات الموظف');
+          }
+        }
+      }
+
+      // أرشفة الطلبات بعد التسوية (إصلاح عمود الأرشفة)
       const { error: ordersErr } = await supabase
         .from('orders')
-        .update({ is_archived: true, isarchived: true })
+        .update({ isarchived: true }) // إصلاح: استخدام isarchived بدلاً من is_archived
         .in('id', orderIds);
-      if (ordersErr) throw ordersErr;
+      if (ordersErr) {
+        console.error('❌ خطأ في أرشفة الطلبات:', ordersErr);
+        throw ordersErr;
+      }
+      console.debug('✅ تم أرشفة الطلبات بنجاح');
 
       // تحديث الذاكرة وCache
       superAPI.invalidate('all_data');
@@ -1465,7 +1560,7 @@ export const SuperProvider = ({ children }) => {
 
       toast({
         title: 'تم دفع مستحقات الموظف',
-        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length}`,
+        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${totalSettlement.toLocaleString()} دينار`,
         variant: 'success'
       });
 

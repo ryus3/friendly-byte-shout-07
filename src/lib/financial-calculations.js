@@ -55,7 +55,7 @@ export const filterByDateRange = (items, dateRange, dateField = 'created_at') =>
 };
 
 /**
- * حساب إجمالي الإيرادات من الطلبات المستلمة
+ * حساب إجمالي الإيرادات من الطلبات المستلمة (بدون أجور التوصيل كما في ORD000004)
  */
 export const calculateTotalRevenue = (orders, dateRange) => {
   if (!orders || !Array.isArray(orders)) return 0;
@@ -67,7 +67,10 @@ export const calculateTotalRevenue = (orders, dateRange) => {
   const filteredOrders = filterByDateRange(deliveredOrders, dateRange, 'updated_at');
   
   return filteredOrders.reduce((sum, order) => {
-    return sum + (order.final_amount || order.total_amount || 0);
+    const finalAmount = order.final_amount || order.total_amount || 0;
+    const deliveryFee = order.delivery_fee || 0;
+    // الإيراد = المبلغ النهائي - أجور التوصيل (كما في ORD000004 الناجح)
+    return sum + (finalAmount - deliveryFee);
   }, 0);
 };
 
@@ -127,7 +130,7 @@ export const calculateCOGS = (orders, dateRange) => {
 };
 
 /**
- * حساب المصاريف العامة (استبعاد النظامية ومستحقات الموظفين)
+ * حساب المصاريف العامة (استبعاد النظامية ومستحقات الموظفين ومصاريف التوصيل)
  */
 export const calculateGeneralExpenses = (expenses, dateRange) => {
   if (!expenses || !Array.isArray(expenses)) return 0;
@@ -145,11 +148,19 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
       expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED ||
       expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED
     );
+    
+    // استبعاد مصاريف التوصيل والشحن (لمنع التكرار لأنها تُخصم من الإيراد)
+    const isDeliveryExpense = (
+      expense.category === 'التوصيل والشحن' ||
+      expense.related_data?.category === 'التوصيل والشحن' ||
+      expense.metadata?.category === 'التوصيل والشحن'
+    );
 
-    // استبعاد: مصاريف نظامية + مستحقات الموظفين + مصاريف الشراء
+    // استبعاد: مصاريف نظامية + مستحقات الموظفين + مصاريف الشراء + مصاريف التوصيل
     if (isSystemExpense) return false;
     if (isEmployeeDue) return false;
     if (isPurchaseRelated) return false;
+    if (isDeliveryExpense) return false; // منع تكرار مصاريف التوصيل
 
     // اعتماد الحالة إذا وُجدت فقط
     if (expense.status && expense.status !== 'approved') return false;
