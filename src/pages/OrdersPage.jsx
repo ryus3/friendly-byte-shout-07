@@ -235,7 +235,7 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasPermission, usersMap]);
+  }, [hasPermission]);
 
   // دالة مساعدة لترجمة حالات الطلبات
   const getStatusLabel = (status) => {
