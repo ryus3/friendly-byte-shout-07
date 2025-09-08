@@ -234,6 +234,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string
+          effective_at: string
           id: string
           movement_type: string
           reference_id: string | null
@@ -247,6 +248,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description: string
+          effective_at?: string
           id?: string
           movement_type: string
           reference_id?: string | null
@@ -260,6 +262,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string
+          effective_at?: string
           id?: string
           movement_type?: string
           reference_id?: string | null
