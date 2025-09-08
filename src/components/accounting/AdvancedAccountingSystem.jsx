@@ -98,6 +98,13 @@ const AdvancedAccountingSystem = () => {
       .filter(e => (
         e.related_data?.category !== 'مستحقات الموظفين' &&
         e.metadata?.category !== 'مستحقات الموظفين' &&
+        !e.description?.includes('التوصيل والشحن') &&
+        !e.description?.includes('شحن ونقل') &&
+        !e.description?.includes('توصيل الطلب') &&
+        !e.description?.includes('رسوم توصيل') &&
+        e.description !== 'رسوم التوصيل' &&
+        e.category !== 'توصيل' &&
+        e.category !== 'التوصيل' &&
         e.related_data?.category !== 'شراء بضاعة' &&
         e.metadata?.category !== 'شراء بضاعة'
       ))

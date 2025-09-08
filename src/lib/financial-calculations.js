@@ -69,7 +69,7 @@ export const calculateTotalRevenue = (orders, dateRange) => {
   return filteredOrders.reduce((sum, order) => {
     const finalAmount = order.final_amount || order.total_amount || 0;
     const deliveryFee = order.delivery_fee || 0;
-    // الإيراد = المبلغ النهائي - أجور التوصيل (كما في ORD000004 الناجح)
+    // الإيراد = المبلغ النهائي - أجور التوصيل (لتطبيق نفس آلية ORD000004 الناجح)
     return sum + (finalAmount - deliveryFee);
   }, 0);
 };
@@ -149,11 +149,18 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
       expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED
     );
     
-    // استبعاد مصاريف التوصيل والشحن (لمنع التكرار لأنها تُخصم من الإيراد)
+    // استبعاد مصاريف التوصيل والشحن بجميع أشكالها (لمنع التكرار مع خصم الإيراد)
     const isDeliveryExpense = (
       expense.category === 'التوصيل والشحن' ||
       expense.related_data?.category === 'التوصيل والشحن' ||
-      expense.metadata?.category === 'التوصيل والشحن'
+      expense.metadata?.category === 'التوصيل والشحن' ||
+      expense.description?.includes('التوصيل والشحن') ||
+      expense.description?.includes('شحن ونقل') ||
+      expense.description?.includes('توصيل الطلب') ||
+      expense.description?.includes('رسوم توصيل') ||
+      expense.description === 'رسوم التوصيل' ||
+      expense.category === 'توصيل' ||
+      expense.category === 'التوصيل'
     );
 
     // استبعاد: مصاريف نظامية + مستحقات الموظفين + مصاريف الشراء + مصاريف التوصيل

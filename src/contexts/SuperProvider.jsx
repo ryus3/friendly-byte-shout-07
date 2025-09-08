@@ -1369,7 +1369,7 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // تسوية مستحقات الموظف - بديل متوافق مع EmployeeSettlementCard (محدث لتطبيق نفس آلية ORD000004)
+  // تسوية مستحقات الموظف - نسخة محدثة لتطبيق نفس آلية ORD000004 الناجح
   const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
     try {
       if (!orderIds || orderIds.length === 0) {
@@ -1468,7 +1468,7 @@ export const SuperProvider = ({ children }) => {
       if (upsertErr) throw upsertErr;
       console.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
-      // إضافة مصروف مستحقات الموظف (كما في ORD000004)
+      // إضافة مصروف مستحقات الموظف مع transaction_date (كما في ORD000004 الناجح)
       const expenseData = {
         amount: totalSettlement,
         category: 'مستحقات الموظفين',
@@ -1477,6 +1477,7 @@ export const SuperProvider = ({ children }) => {
         receipt_number: `EMP-${Date.now()}`,
         vendor_name: employeeName || 'موظف',
         status: 'approved',
+        transaction_date: now, // إضافة transaction_date للإظهار الصحيح كمدفوع
         created_by: user?.user_id || user?.id,
         approved_by: user?.user_id || user?.id,
         approved_at: now,
@@ -1510,9 +1511,9 @@ export const SuperProvider = ({ children }) => {
       if (cashSources) {
         const movementData = {
           cash_source_id: cashSources.id,
-          amount: -totalSettlement, // خصم من القاصة
-          movement_type: 'expense',
-          reference_type: 'employee_dues',
+          amount: totalSettlement,
+          movement_type: 'employee_dues', // كما في ORD000004 الناجح
+          reference_type: 'expense',
           reference_id: expenseRecord.id,
           description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'}`,
           balance_before: cashSources.balance,
@@ -2116,6 +2117,75 @@ export const SuperProvider = ({ children }) => {
 
     // دالة الحصول على تفاصيل المتغير للحجز
     getVariantDetails,
+
+    // دالة حذف المصروف مع إنشاء حركة نقدية عكسية
+    deleteExpense: async (expenseId) => {
+      try {
+        console.log('🗑️ حذف المصروف:', expenseId);
+        
+        // جلب تفاصيل المصروف قبل الحذف
+        const { data: expense, error: fetchError } = await supabase
+          .from('expenses')
+          .select('*')
+          .eq('id', expenseId)
+          .single();
+        
+        if (fetchError) throw fetchError;
+        
+        // حذف المصروف
+        const { error: deleteError } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('id', expenseId);
+        
+        if (deleteError) throw deleteError;
+        
+        // إنشاء حركة نقدية عكسية (إضافة أموال)
+        if (expense.amount > 0) {
+          const { error: movementError } = await supabase
+            .from('cash_movements')
+            .insert({
+              cash_source_id: expense.cash_source_id || 'fb19dcc0-0a2d-44c2-93cb-bc7cb8ee7e7b',
+              amount: expense.amount,
+              movement_type: 'credit',
+              reference_type: 'expense_deletion',
+              reference_id: expenseId,
+              description: `حذف مصروف: ${expense.description}`,
+              balance_before: 0, // سيتم حسابه بواسطة trigger
+              balance_after: 0,  // سيتم حسابه بواسطة trigger
+              created_by: user?.user_id || user?.id
+            });
+          
+          if (movementError) {
+            console.warn('⚠️ فشل في إنشاء حركة نقدية عكسية:', movementError);
+          }
+        }
+        
+        // تحديث البيانات المحلية
+        setAllData(prev => ({
+          ...prev,
+          accounting: {
+            ...prev.accounting,
+            expenses: prev.accounting?.expenses?.filter(e => e.id !== expenseId) || []
+          }
+        }));
+        
+        toast({
+          title: "تم الحذف بنجاح",
+          description: "تم حذف المصروف وإنشاء حركة نقدية عكسية"
+        });
+        
+        return { success: true };
+      } catch (error) {
+        console.error('❌ فشل في حذف المصروف:', error);
+        toast({
+          title: "خطأ في الحذف",
+          description: error.message,
+          variant: "destructive"
+        });
+        throw error;
+      }
+    },
 
     // دالة طلب التسوية - ربط مع ProfitsContext
     requestProfitSettlement: async (orderIds, notes = '') => {
