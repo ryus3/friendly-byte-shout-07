@@ -206,17 +206,14 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                         <Card 
                                             key={profit.id} 
                                             className={cn(
-                                                "transition-all duration-200 cursor-pointer hover:shadow-md border-r-4",
-                                                isSelected ? "ring-2 ring-primary shadow-md border-r-primary bg-primary/5" : "border-r-muted hover:border-r-primary/50",
-                                                "hover:scale-[1.01] active:scale-[0.99]"
+                                                "transition-all duration-200 hover:shadow-md border-r-4",
+                                                isSelected ? "ring-2 ring-primary shadow-md border-r-primary bg-primary/5" : "border-r-muted hover:border-r-primary/50"
                                             )}
-                                            onClick={() => handleSelectOrder(profit.id)}
                                         >
-                                            <CardContent className="p-3">
-                                                <div className="flex items-center justify-between gap-3">
+                                            <CardContent className="p-2">
+                                                <div className="flex items-center justify-between">
                                                     {/* الجهة اليسرى: المبلغ + تاريخ التسليم */}
                                                     <div className="flex flex-col gap-1">
-                                                        {/* المبلغ */}
                                                         <div className="flex items-center gap-1">
                                                             <DollarSign className="w-4 h-4 text-primary" />
                                                             <span className="text-lg font-bold text-primary">
@@ -224,8 +221,6 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                                             </span>
                                                             <span className="text-xs text-muted-foreground">د.ع</span>
                                                         </div>
-                                                        
-                                                        {/* تاريخ التسليم */}
                                                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                                             <Calendar className="w-3 h-3" />
                                                             <span>
@@ -234,38 +229,26 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* الجهة اليمنى: اسم الموظف + الحالة + التحديد + رقم التتبع */}
-                                                    <div className="flex items-center gap-3">
-                                                        {/* اسم الموظف والحالة */}
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                                {(employee?.full_name || 'غ')[0]}
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="font-medium text-sm truncate">{employee?.full_name || 'غير معروف'}</p>
-                                                                <Badge variant="outline" className="text-xs h-5 px-1.5">
-                                                                    {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
-                                                                </Badge>
-                                                            </div>
+                                                    {/* الجهة اليمنى: التحديد + الموظف + الحالة + رقم التتبع */}
+                                                    <div className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            checked={isSelected}
+                                                            onCheckedChange={() => handleSelectOrder(profit.id)}
+                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary w-5 h-5"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold">
+                                                            {(employee?.full_name || 'غ')[0]}
                                                         </div>
-                                                        
-                                                        {/* رقم التتبع */}
-                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                            <Package className="w-3 h-3" />
-                                                            <span className="font-mono">#{order?.order_number || 'غير معروف'}</span>
-                                                            {order?.tracking_number && (
-                                                                <span className="text-muted-foreground/60">• {order.tracking_number}</span>
-                                                            )}
-                                                        </div>
-                                                        
-                                                        {/* Checkbox على اليمين */}
-                                                        <div className="flex-shrink-0">
-                                                            <Checkbox
-                                                                checked={isSelected}
-                                                                onCheckedChange={() => handleSelectOrder(profit.id)}
-                                                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                            />
-                                                        </div>
+                                                        <span className="font-medium text-sm">{employee?.full_name || 'غير معروف'}</span>
+                                                        <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                                            {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
+                                                        </Badge>
+                                                        {order?.tracking_number && (
+                                                            <span className="text-xs text-muted-foreground font-mono">
+                                                                {order.tracking_number}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </CardContent>
