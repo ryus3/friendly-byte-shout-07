@@ -565,59 +565,42 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     }
   }, [open, timePeriod, dateRange]);
 
-  // معالجة فواتير التحاسب - الفواتير الحقيقية أولاً
+  // معالجة فواتير التحاسب - المصدر الموحد الجديد
   const settlementInvoices = useMemo(() => {
-    console.log('🔄 معالجة فواتير التحاسب الحقيقية');
+    console.log('🔄 معالجة فواتير التحاسب من المصدر الموحد');
     
-    let allInvoices = [];
+    if (!realSettlementInvoices || realSettlementInvoices.length === 0) {
+      console.log('⚠️ لا توجد فواتير تسوية');
+      return [];
+    }
 
-    // إضافة الفواتير الحقيقية أولاً
-    if (realSettlementInvoices && realSettlementInvoices.length > 0) {
-      const realInvoices = realSettlementInvoices.map(invoice => ({
+    const processedInvoices = realSettlementInvoices.map(invoice => {
+      // الحصول على اسم الموظف من قاعدة البيانات أو استخدام المحفوظ
+      const employeeName = allUsers?.find(user => 
+        user.user_id === invoice.employee_id
+      )?.full_name || invoice.employee_name || 'غير محدد';
+
+      return {
         id: invoice.id,
         invoice_number: invoice.invoice_number,
-        employee_name: invoice.employee_name,
+        employee_name: employeeName,
         employee_id: invoice.employee_id,
-        employee_code: invoice.employee_code, // المعرف الصغير
+        employee_code: invoice.employee_code,
         total_amount: invoice.total_amount,
         settlement_date: invoice.settlement_date,
         created_at: invoice.created_at,
-        description: invoice.description,
+        description: invoice.notes || invoice.description,
         status: invoice.status || 'completed',
-        type: 'real_settlement',
-        payment_method: invoice.payment_method,
+        type: 'settlement_invoice',
+        payment_method: invoice.payment_method || 'cash',
         notes: invoice.notes,
-        settled_orders: invoice.settled_orders || [] // الطلبات المسواة
-      }));
+        settled_orders: invoice.settled_orders || [],
+        order_ids: invoice.order_ids || []
+      };
+    });
       
-      allInvoices = [...realInvoices];
-      console.log('✅ تمت إضافة الفواتير الحقيقية:', realInvoices.length);
-    }
-
-    // إضافة الفواتير القديمة فقط إذا لم توجد نسخة حقيقية
-    if (invoices && Array.isArray(invoices)) {
-      const legacyInvoices = invoices
-        .filter(expense => {
-          const invoiceNumber = expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`;
-          return !realSettlementInvoices.some(real => real.invoice_number === invoiceNumber);
-        })
-        .map(expense => {
-          const employeeId = expense.metadata?.employee_id || expense.created_by;
-          const employeeName = allUsers?.find(user => 
-            user.user_id === employeeId
-          )?.full_name || expense.metadata?.employee_name || 'غير محدد';
-          
-          return {
-            id: expense.id,
-            invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
-            employee_name: employeeName,
-            employee_id: employeeId,
-            total_amount: expense.amount,
-            settlement_date: expense.approved_at || expense.created_at,
-            created_at: expense.created_at,
-            description: expense.description,
-            status: 'completed',
-            type: 'legacy',
+    console.log('✅ تمت معالجة فواتير التسوية:', processedInvoices.length);
+    return processedInvoices;
             metadata: expense.metadata || {}
           };
         });
