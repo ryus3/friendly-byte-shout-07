@@ -529,15 +529,55 @@ export const ProfitsProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      const [profitsRes] = await Promise.all([
-        supabase.from('profits').select('*').order('created_at', { ascending: false })
+      const [profitsRes, expenseInvoicesRes, notificationInvoicesRes] = await Promise.all([
+        supabase.from('profits').select('*').order('created_at', { ascending: false }),
+        // جلب فواتير التحاسب من جدول المصاريف (مستحقات الموظفين)
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('expense_type', 'system')
+          .eq('category', 'مستحقات الموظفين')
+          .eq('status', 'approved')
+          .order('created_at', { ascending: false }),
+        // جلب فواتير التحاسب من الإشعارات
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('type', 'settlement_invoice')
+          .order('created_at', { ascending: false })
       ]);
 
       if (profitsRes.error) throw profitsRes.error;
+      if (expenseInvoicesRes.error) throw expenseInvoicesRes.error;
+      if (notificationInvoicesRes.error) throw notificationInvoicesRes.error;
+
+      // تحويل فواتير المصاريف إلى التنسيق المطلوب
+      const formattedExpenseInvoices = (expenseInvoicesRes.data || []).map(expense => ({
+        id: expense.id,
+        type: 'settlement_invoice',
+        title: 'فاتورة تسوية',
+        message: `تم إنشاء فاتورة تسوية للموظف`,
+        data: {
+          invoice_number: expense.receipt_number || `EXP-${expense.id.slice(0, 8)}`,
+          total_amount: expense.amount,
+          employee_id: expense.metadata?.employee_id || expense.created_by,
+          payment_method: expense.metadata?.payment_method || 'cash',
+          generated_at: expense.approved_at || expense.created_at,
+          generated_by: expense.approved_by || expense.created_by,
+          order_ids: expense.metadata?.order_ids || [],
+          receipt_number: expense.receipt_number,
+          description: expense.description
+        },
+        created_at: expense.created_at,
+        updated_at: expense.updated_at
+      }));
+
+      // دمج فواتير الإشعارات مع فواتير المصاريف
+      const allInvoices = [...(notificationInvoicesRes.data || []), ...formattedExpenseInvoices];
 
       setProfits(profitsRes.data || []);
-      setSettlementRequests([]); // مؤقتاً حتى يتم تطوير النظام
-      setSettlementInvoices([]);  // مؤقتاً حتى يتم تطوير النظام
+      setSettlementRequests([]); // مؤقتاً حتى يتم تطوير النظام  
+      setSettlementInvoices(allInvoices);
     } catch (error) {
       console.error('Error fetching profits data:', error);
       toast({
