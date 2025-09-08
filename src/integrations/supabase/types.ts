@@ -4125,6 +4125,10 @@ export type Database = {
         Args: { p_keep?: number }
         Returns: number
       }
+      recompute_cash_source_balances: {
+        Args: { p_source_id: string; p_starting_balance?: number }
+        Returns: Json
+      }
       record_discount_usage: {
         Args: {
           p_customer_id: string
