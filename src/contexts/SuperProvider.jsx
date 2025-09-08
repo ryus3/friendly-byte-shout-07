@@ -1432,7 +1432,7 @@ export const SuperProvider = ({ children }) => {
       // أرشفة الطلبات بعد التسوية (بدون تغيير receipt_received)
       const { error: ordersErr } = await supabase
         .from('orders')
-        .update({ is_archived: true })
+        .update({ is_archived: true, isarchived: true })
         .in('id', orderIds);
       if (ordersErr) throw ordersErr;
 
@@ -1785,6 +1785,7 @@ export const SuperProvider = ({ children }) => {
     updateOrder: updateOrder || (async () => ({ success: false })),
     deleteOrders: deleteOrders || (async () => ({ success: false })),
     addExpense: addExpense || (async () => ({ success: false })),
+    settleEmployeeProfits: settleEmployeeProfits || (async () => ({ success: false })),
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
     refetchProducts: refreshProducts || (() => {}),

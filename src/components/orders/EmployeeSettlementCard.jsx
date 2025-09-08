@@ -62,6 +62,11 @@ const EmployeeSettlementCard = ({
     }
 
     try {
+      if (typeof settleEmployeeProfits !== 'function') {
+        console.error('settleEmployeeProfits is not available:', settleEmployeeProfits);
+        toast({ title: 'تعذر إجراء التسوية', description: 'وظيفة التسوية غير متاحة حالياً. حدّث الصفحة وحاول مجدداً.', variant: 'destructive' });
+        return;
+      }
       setIsSettling(true);
       const orderIds = employeeOrders.map(order => order.id);
       await settleEmployeeProfits(employee.user_id, totalSettlement, employee.full_name, orderIds);
