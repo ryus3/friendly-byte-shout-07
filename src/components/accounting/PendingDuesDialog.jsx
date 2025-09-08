@@ -206,70 +206,65 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                         <Card 
                                             key={profit.id} 
                                             className={cn(
-                                                "transition-all duration-200 cursor-pointer hover:shadow-md border-l-4",
-                                                isSelected ? "ring-2 ring-primary shadow-md border-l-primary bg-primary/5" : "border-l-muted hover:border-l-primary/50",
+                                                "transition-all duration-200 cursor-pointer hover:shadow-md border-r-4",
+                                                isSelected ? "ring-2 ring-primary shadow-md border-r-primary bg-primary/5" : "border-r-muted hover:border-r-primary/50",
                                                 "hover:scale-[1.01] active:scale-[0.99]"
                                             )}
                                             onClick={() => handleSelectOrder(profit.id)}
                                         >
                                             <CardContent className="p-3">
-                                                <div className="flex items-center gap-3">
-                                                    {/* Checkbox على اليسار */}
-                                                    <div className="flex-shrink-0">
-                                                        <Checkbox
-                                                            checked={isSelected}
-                                                            onCheckedChange={() => handleSelectOrder(profit.id)}
-                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                                        />
+                                                <div className="flex items-center justify-between gap-3">
+                                                    {/* الجهة اليسرى: المبلغ + تاريخ التسليم */}
+                                                    <div className="flex flex-col gap-1">
+                                                        {/* المبلغ */}
+                                                        <div className="flex items-center gap-1">
+                                                            <DollarSign className="w-4 h-4 text-primary" />
+                                                            <span className="text-lg font-bold text-primary">
+                                                                {(profit.employee_profit || 0).toLocaleString()}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">د.ع</span>
+                                                        </div>
+                                                        
+                                                        {/* تاريخ التسليم */}
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Calendar className="w-3 h-3" />
+                                                            <span>
+                                                                {order ? format(parseISO(order.updated_at), 'd/M/yyyy', { locale: ar }) : '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     
-                                                    {/* محتوى الكارت المضغوط */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center justify-between">
-                                                            {/* اسم الموظف والحالة */}
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                                                    {(employee?.full_name || 'غ')[0]}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <p className="font-medium text-sm truncate">{employee?.full_name || 'غير معروف'}</p>
-                                                                    <Badge variant="outline" className="text-xs h-5 px-1.5">
-                                                                        {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
-                                                                    </Badge>
-                                                                </div>
+                                                    {/* الجهة اليمنى: اسم الموظف + الحالة + التحديد + رقم التتبع */}
+                                                    <div className="flex items-center gap-3">
+                                                        {/* اسم الموظف والحالة */}
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                                                {(employee?.full_name || 'غ')[0]}
                                                             </div>
-                                                            
-                                                            {/* المبلغ */}
-                                                            <div className="text-left flex-shrink-0">
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-lg font-bold text-primary">
-                                                                        {(profit.employee_profit || 0).toLocaleString()}
-                                                                    </span>
-                                                                    <span className="text-xs text-muted-foreground">د.ع</span>
-                                                                </div>
+                                                            <div className="min-w-0">
+                                                                <p className="font-medium text-sm truncate">{employee?.full_name || 'غير معروف'}</p>
+                                                                <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                                                    {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
+                                                                </Badge>
                                                             </div>
                                                         </div>
                                                         
-                                                        {/* تفاصيل الطلب */}
-                                                        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                                                            <div className="flex items-center gap-3">
-                                                                {/* رقم الطلب + رقم التتبع */}
-                                                                <div className="flex items-center gap-1">
-                                                                    <Package className="w-3 h-3" />
-                                                                    <span className="font-mono">#{order?.order_number || 'غير معروف'}</span>
-                                                                    {order?.tracking_number && (
-                                                                        <span className="text-muted-foreground/60">• {order.tracking_number}</span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            {/* تاريخ التسليم */}
-                                                            <div className="flex items-center gap-1">
-                                                                <Calendar className="w-3 h-3" />
-                                                                <span>
-                                                                    {order ? format(parseISO(order.updated_at), 'd/M/yyyy', { locale: ar }) : '-'}
-                                                                </span>
-                                                            </div>
+                                                        {/* رقم التتبع */}
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Package className="w-3 h-3" />
+                                                            <span className="font-mono">#{order?.order_number || 'غير معروف'}</span>
+                                                            {order?.tracking_number && (
+                                                                <span className="text-muted-foreground/60">• {order.tracking_number}</span>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {/* Checkbox على اليمين */}
+                                                        <div className="flex-shrink-0">
+                                                            <Checkbox
+                                                                checked={isSelected}
+                                                                onCheckedChange={() => handleSelectOrder(profit.id)}
+                                                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -302,7 +297,7 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                             <DollarSign className="w-4 h-4 ml-2" />
                             متابعة الموظفين
                         </Button>
-                        <Button onClick={handleSettleSelected} disabled={selectedOrders.length === 0 || selectedEmployee === 'all'}>
+                        <Button onClick={handleSettleSelected} disabled={selectedOrders.length === 0}>
                             <UserCheck className="w-4 h-4 ml-2" />
                             تسوية المحدد ({selectedOrders.length})
                         </Button>
