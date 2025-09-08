@@ -59,7 +59,12 @@ const CashManagementPage = () => {
       try {
         // جلب رصيد القاصة الرئيسية من current_balance مباشرة
         const mainBalance = await getMainCashBalance();
-        const totalAllSources = await getTotalAllSourcesBalance();
+        const totalAllSources = getTotalAllSourcesBalance(); // لا تحتاج await لأنها دالة عادية الآن
+        
+        console.log('📊 البيانات المُحدثة:', {
+          mainBalance: mainBalance?.toLocaleString() || '0',
+          totalAllSources: totalAllSources?.toLocaleString() || '0'
+        });
         
         // تحديث جميع الحالات من البيانات الحقيقية
         setMainCashBalance(mainBalance);
@@ -84,17 +89,13 @@ const CashManagementPage = () => {
             employeeDues: 0,
             netProfit: finalBalance,
             finalBalance: mainBalance,
-            // للتوافق مع المكونات الأخرى
-            grossProfit: Number(real.total_sales || 0)
+            grossProfit: finalBalance
           });
 
-          const sourcesBalance = getTotalSourcesBalance();
-          setTotalSourcesBalance(sourcesBalance);
-
           console.log('💰 النظام المالي الحقيقي محدث:', {
-            mainBalance: mainBalance.toLocaleString(),
-            capital: Number(real.capital_amount || 0).toLocaleString(),
-            netProfit: Number(real.net_profit || 0).toLocaleString()
+            mainBalance: mainBalance?.toLocaleString() || '0',
+            totalAllSources: totalAllSources?.toLocaleString() || '0',
+            enhancedBalance: finalBalance?.toLocaleString() || '0'
           });
         }
       } catch (error) {
@@ -107,7 +108,7 @@ const CashManagementPage = () => {
     // تحديث كل دقيقة (أقل تكراراً وأكثر كفاءة)
     const interval = setInterval(fetchRealFinancialData, 60000);
     return () => clearInterval(interval);
-  }, [getTotalSourcesBalance, cashSources]);
+  }, [cashSources, getMainCashBalance, getTotalAllSourcesBalance]);
 
   // تم دمج هذه الدالة في useEffect الموحد أعلاه
 
@@ -230,7 +231,7 @@ const CashManagementPage = () => {
     },
     {
       title: 'الرصيد النقدي الفعلي',
-      value: mainCashBalance,
+      value: totalSourcesBalance,
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],

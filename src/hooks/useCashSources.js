@@ -233,13 +233,19 @@ export const useCashSources = () => {
   };
 
   // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية
-  const getTotalAllSourcesBalance = async () => {
-    // استخدام current_balance من القاصة الرئيسية مباشرة
-    const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية');
-    const mainBalance = mainSource?.current_balance || 0;
+  const getTotalAllSourcesBalance = () => {
+    // حساب مجموع current_balance لجميع مصادر النقد النشطة
+    const total = cashSources
+      .filter(source => source.is_active)
+      .reduce((sum, source) => sum + (source.current_balance || 0), 0);
     
-    console.log('💰 مجموع جميع المصادر (الآن = القاصة الرئيسية فقط):', mainBalance.toLocaleString());
-    return mainBalance;
+    console.log('💰 مجموع جميع المصادر النشطة:', total.toLocaleString(), 'د.ع');
+    console.log('📊 تفاصيل المصادر:', cashSources.map(s => ({
+      name: s.name, 
+      balance: s.current_balance?.toLocaleString() || '0'
+    })));
+    
+    return total;
   };
 
   // الحصول على القاصة الرئيسية
