@@ -42,6 +42,7 @@ const CashManagementPage = () => {
     withdrawCashFromSource,
     getMainCashBalance,
     getTotalSourcesBalance,
+    getTotalAllSourcesBalance,
     getTotalBalance
   } = useCashSources();
 
