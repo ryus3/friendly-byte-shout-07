@@ -602,17 +602,18 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           return !realSettlementInvoices.some(real => real.invoice_number === invoiceNumber);
         })
         .map(expense => {
+          const employeeId = expense.metadata?.employee_id || expense.created_by;
           const employeeName = allUsers?.find(user => 
-            user.user_id === expense.metadata?.employee_id
+            user.user_id === employeeId
           )?.full_name || expense.metadata?.employee_name || 'غير محدد';
           
           return {
             id: expense.id,
             invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
             employee_name: employeeName,
-            employee_id: expense.metadata?.employee_id,
+            employee_id: employeeId,
             total_amount: expense.amount,
-            settlement_date: expense.created_at,
+            settlement_date: expense.approved_at || expense.created_at,
             created_at: expense.created_at,
             description: expense.description,
             status: 'completed',
