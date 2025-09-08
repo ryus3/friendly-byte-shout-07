@@ -11,6 +11,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   DollarSign,
+  Banknote,
   Activity,
   Calendar,
   PieChart,
@@ -187,13 +188,13 @@ const CashManagementPage = () => {
   const monthStart = startOfMonth(today);
 
   const todayMovements = cashMovements.filter(m => 
-    new Date(m.created_at) >= todayStart
+    new Date(m.effective_at || m.created_at) >= todayStart
   );
   const weekMovements = cashMovements.filter(m => 
-    new Date(m.created_at) >= weekStart
+    new Date(m.effective_at || m.created_at) >= weekStart
   );
   const monthMovements = cashMovements.filter(m => 
-    new Date(m.created_at) >= monthStart
+    new Date(m.effective_at || m.created_at) >= monthStart
   );
 
   const calculateStats = (movements) => {
@@ -220,19 +221,23 @@ const CashManagementPage = () => {
       format: 'currency',
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
-      change: enhancedFinancialData 
-        ? `رأس المال: ${enhancedFinancialData.capitalValue.toLocaleString()} + صافي ربح: ${enhancedFinancialData.netProfit.toLocaleString()}` 
-        : 'جاري تحميل البيانات الحقيقية...'
+      change: `الرصيد الحقيقي من حركات النقد`
     },
     {
       title: 'الرصيد النقدي الفعلي',
-      value: mainCashBalance,
+      value: totalSourcesBalance,
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],
-      change: enhancedFinancialData && enhancedFinancialData.netProfit > 0 
-        ? `صافي الربح: ${enhancedFinancialData.netProfit.toLocaleString()}`
-        : 'رأس المال فقط'
+      change: `مجموع جميع مصادر النقد النشطة`
+    },
+    {
+      title: 'الرصيد الحالي',
+      value: mainCashBalance,
+      format: 'currency',
+      icon: Banknote,
+      colors: ['blue-600', 'cyan-600'],
+      change: `نفس القاصة الرئيسية`
     },
     {
       title: 'داخل هذا الشهر',

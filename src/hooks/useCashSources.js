@@ -196,28 +196,26 @@ export const useCashSources = () => {
     return mainBalance + othersBalance;
   };
 
-  // الحصول على رصيد القاصة الرئيسية من الدالة الصحيحة الجديدة
+  // الحصول على رصيد القاصة الرئيسية من current_balance مباشرة
   const getMainCashBalance = async () => {
     try {
-      const { data, error } = await supabase.rpc('calculate_real_main_cash_balance');
+      const { data, error } = await supabase
+        .from('cash_sources')
+        .select('current_balance')
+        .eq('name', 'القاصة الرئيسية')
+        .eq('is_active', true)
+        .single();
 
       if (error) {
-        console.error('❌ خطأ في جلب الرصيد الحقيقي:', error);
+        console.error('❌ خطأ في جلب رصيد القاصة الرئيسية:', error);
         return 0;
       }
 
-      const realData = data?.[0] || {};
-      const realBalance = Number(realData.final_balance || 0);
-      
-      console.log('💰 رصيد القاصة الرئيسية الحقيقي:', {
-        realBalance: realBalance.toLocaleString(),
-        capital: Number(realData.capital_amount || 0).toLocaleString(),
-        netProfit: Number(realData.net_profit || 0).toLocaleString()
-      });
-
-      return realBalance;
+      const balance = Number(data?.current_balance || 0);
+      console.log('💰 رصيد القاصة الرئيسية:', balance.toLocaleString());
+      return balance;
     } catch (error) {
-      console.error('❌ فشل النظام المالي الحقيقي:', error);
+      console.error('❌ فشل في جلب رصيد القاصة الرئيسية:', error);
       return 0;
     }
   };
@@ -234,11 +232,17 @@ export const useCashSources = () => {
     return getTotalSourcesBalance();
   };
 
-  // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية الحقيقية
+  // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية
   const getTotalAllSourcesBalance = async () => {
-    const mainBalance = await getMainCashBalance(); // القاصة الرئيسية (رأس المال + الأرباح)
-    const otherBalance = getTotalSourcesBalance(); // باقي المصادر
-    return mainBalance + otherBalance;
+    const mainBalance = await getMainCashBalance(); // القاصة الرئيسية
+    const otherBalance = getTotalSourcesBalance(); // باقي المصادر (بعد تصفير الأعظمية ستكون 0)
+    const total = mainBalance + otherBalance;
+    console.log('💰 مجموع جميع المصادر:', {
+      main: mainBalance.toLocaleString(),
+      others: otherBalance.toLocaleString(),
+      total: total.toLocaleString()
+    });
+    return total;
   };
 
   // الحصول على القاصة الرئيسية
