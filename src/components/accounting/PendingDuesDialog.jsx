@@ -77,12 +77,28 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
             toast({ title: "خطأ", description: "الرجاء تحديد طلب واحد على الأقل.", variant: "destructive" });
             return;
         }
+        
+        // إذا كان "كل الموظفين" محدد، نحتاج لتحديد موظف واحد
         if (selectedEmployee === 'all') {
-            toast({ title: "خطأ", description: "الرجاء تحديد موظف أولاً لتسوية مستحقاته.", variant: "destructive" });
-            return;
+            // فحص الطلبات المحددة للتأكد من أنها لموظف واحد
+            const selectedProfits = filteredData.filter(p => selectedOrders.includes(p.id));
+            const uniqueEmployees = new Set(selectedProfits.map(p => p.employee_id));
+            
+            if (uniqueEmployees.size > 1) {
+                toast({ 
+                    title: "خطأ", 
+                    description: "يجب تحديد طلبات لموظف واحد فقط أو اختيار موظف محدد من الفلتر.", 
+                    variant: "destructive" 
+                });
+                return;
+            }
+            
+            const employeeId = Array.from(uniqueEmployees)[0];
+            navigate(`/employee-follow-up?employee=${employeeId}&orders=${selectedOrders.join(',')}&highlight=settlement`);
+        } else {
+            navigate(`/employee-follow-up?employee=${selectedEmployee}&orders=${selectedOrders.join(',')}&highlight=settlement`);
         }
-        // التوجيه لصفحة متابعة الموظفين مع تحديد البيانات
-        navigate(`/employee-follow-up?employee=${selectedEmployee}&orders=${selectedOrders.join(',')}&highlight=settlement`);
+        
         onOpenChange(false);
     };
 
@@ -185,74 +201,76 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                     const employee = allUsers.find(u => u.id === profit.employee_id) || profit.employee;
                                     const order = profit.order;
                                     const isSelected = selectedOrders.includes(profit.id);
-                                    const isSelectable = selectedEmployee !== 'all' && profit.employee_id === selectedEmployee;
                                     
                                     return (
                                         <Card 
                                             key={profit.id} 
                                             className={cn(
-                                                "transition-all duration-300 cursor-pointer hover:shadow-lg",
-                                                isSelected && "ring-2 ring-primary shadow-lg scale-[1.02]",
-                                                !isSelectable && "opacity-60",
-                                                "hover:-translate-y-1"
+                                                "transition-all duration-200 cursor-pointer hover:shadow-md border-l-4",
+                                                isSelected ? "ring-2 ring-primary shadow-md border-l-primary bg-primary/5" : "border-l-muted hover:border-l-primary/50",
+                                                "hover:scale-[1.01] active:scale-[0.99]"
                                             )}
-                                            onClick={() => isSelectable && handleSelectOrder(profit.id)}
+                                            onClick={() => handleSelectOrder(profit.id)}
                                         >
-                                            <CardContent className="p-4">
-                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                                    {/* معلومات الموظف */}
-                                                    <div className="flex items-center gap-3">
+                                            <CardContent className="p-3">
+                                                <div className="flex items-center gap-3">
+                                                    {/* Checkbox على اليسار */}
+                                                    <div className="flex-shrink-0">
                                                         <Checkbox
                                                             checked={isSelected}
                                                             onCheckedChange={() => handleSelectOrder(profit.id)}
-                                                            disabled={!isSelectable}
-                                                            className="mr-auto"
+                                                            className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                                         />
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white text-sm font-bold">
-                                                                {(employee?.full_name || 'غ')[0]}
+                                                    </div>
+                                                    
+                                                    {/* محتوى الكارت المضغوط */}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center justify-between">
+                                                            {/* اسم الموظف والحالة */}
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                                                    {(employee?.full_name || 'غ')[0]}
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="font-medium text-sm truncate">{employee?.full_name || 'غير معروف'}</p>
+                                                                    <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                                                        {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
+                                                                    </Badge>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <p className="font-medium text-sm">{employee?.full_name || 'غير معروف'}</p>
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
-                                                                </Badge>
+                                                            
+                                                            {/* المبلغ */}
+                                                            <div className="text-left flex-shrink-0">
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-lg font-bold text-primary">
+                                                                        {(profit.employee_profit || 0).toLocaleString()}
+                                                                    </span>
+                                                                    <span className="text-xs text-muted-foreground">د.ع</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-
-                                                    {/* معلومات الطلب */}
-                                                    <div className="text-center">
-                                                        <div className="flex items-center gap-2 justify-center">
-                                                            <Package className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="font-mono text-sm font-medium">
-                                                                {order?.order_number || 'غير معروف'}
-                                                            </span>
+                                                        
+                                                        {/* تفاصيل الطلب */}
+                                                        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                                                            <div className="flex items-center gap-3">
+                                                                {/* رقم الطلب + رقم التتبع */}
+                                                                <div className="flex items-center gap-1">
+                                                                    <Package className="w-3 h-3" />
+                                                                    <span className="font-mono">#{order?.order_number || 'غير معروف'}</span>
+                                                                    {order?.tracking_number && (
+                                                                        <span className="text-muted-foreground/60">• {order.tracking_number}</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* تاريخ التسليم */}
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="w-3 h-3" />
+                                                                <span>
+                                                                    {order ? format(parseISO(order.updated_at), 'd/M/yyyy', { locale: ar }) : '-'}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                        <p className="text-xs text-muted-foreground mt-1">رقم الطلب</p>
-                                                    </div>
-
-                                                    {/* تاريخ التسليم */}
-                                                    <div className="text-center">
-                                                        <div className="flex items-center gap-2 justify-center">
-                                                            <Calendar className="w-4 h-4 text-muted-foreground" />
-                                                            <span className="text-sm">
-                                                                {order ? format(parseISO(order.updated_at), 'd MMM yyyy', { locale: ar }) : '-'}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground mt-1">تاريخ التسليم</p>
-                                                    </div>
-
-                                                    {/* المبلغ */}
-                                                    <div className="text-center">
-                                                        <div className="flex items-center gap-2 justify-center">
-                                                            <DollarSign className="w-4 h-4 text-amber-500" />
-                                                            <span className="text-lg font-bold text-amber-600">
-                                                                {(profit.employee_profit || 0).toLocaleString()}
-                                                            </span>
-                                                            <span className="text-sm text-amber-600">د.ع</span>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground mt-1">ربح الموظف</p>
                                                     </div>
                                                 </div>
                                             </CardContent>
