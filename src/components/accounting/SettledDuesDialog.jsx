@@ -601,16 +601,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
       
     console.log('✅ تمت معالجة فواتير التسوية:', processedInvoices.length);
     return processedInvoices;
-            metadata: expense.metadata || {}
-          };
-        });
-      
-      allInvoices = [...allInvoices, ...legacyInvoices];
-      console.log('📝 تمت إضافة الفواتير القديمة:', legacyInvoices.length);
-    }
-
-    return allInvoices;
-  }, [realSettlementInvoices, invoices, allUsers]);
+  }, [realSettlementInvoices, allUsers]);
 
   // قائمة الموظفين الفريدة
   const employees = useMemo(() => {
