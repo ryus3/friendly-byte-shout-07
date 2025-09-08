@@ -1411,15 +1411,38 @@ export const SuperProvider = ({ children }) => {
       const upserts = orderIds.map(orderId => {
         const order = ordersMap.get(orderId);
         const existingRow = existingMap.get(orderId);
-        const base = perOrderBase.find(x => x.id === orderId)?.amount || 0;
+
+        // حسابات دقيقة لكل طلب لضمان عدم تمرير قيم null
+        const items = Array.isArray(order?.items) ? order.items : [];
+        const itemsRevenue = items.reduce((sum, it) => {
+          const qty = Number(it.quantity ?? 1) || 0;
+          const price = Number(it.price ?? it.selling_price ?? it.product_variants?.price ?? 0) || 0;
+          return sum + price * qty;
+        }, 0);
+        const itemsCost = items.reduce((sum, it) => {
+          const qty = Number(it.quantity ?? 1) || 0;
+          const cost = Number(it.cost_price ?? it.product_variants?.cost_price ?? 0) || 0;
+          return sum + cost * qty;
+        }, 0);
+
+        const baseProfitFromItems = itemsRevenue - itemsCost;
+        const base = perOrderBase.find(x => x.id === orderId)?.amount;
+        const baseProfit = Number.isFinite(base) ? Number(base) : baseProfitFromItems;
+
+        // الإيراد: نفضّل final_amount ثم total_amount ثم مجموع أسعار العناصر
+        const revenueCandidate = Number(order?.final_amount ?? order?.total_amount ?? itemsRevenue ?? 0) || 0;
+        const profit_amount = Math.max(0, Number(baseProfit) || 0);
+        const total_cost = Math.max(0, revenueCandidate - profit_amount);
+
         const emp = perOrderEmployee.find(x => x.id === orderId)?.employee || 0;
+
         return {
           ...(existingRow ? { id: existingRow.id } : {}),
           order_id: orderId,
           employee_id: employeeId || order?.created_by,
-          total_revenue: order?.final_amount || order?.total_amount || 0,
-          total_cost: null,
-          profit_amount: base,
+          total_revenue: revenueCandidate,
+          total_cost,
+          profit_amount,
           employee_profit: emp,
           status: 'settled',
           settled_at: now
