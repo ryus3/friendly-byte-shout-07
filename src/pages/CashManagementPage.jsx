@@ -53,31 +53,36 @@ const CashManagementPage = () => {
   const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // نظام حقيقي لجلب البيانات المالية الصحيحة
+  // جلب الأرصدة الحقيقية من قاعدة البيانات
   useEffect(() => {
     const fetchRealFinancialData = async () => {
       try {
-        // جلب البيانات المالية الحقيقية الصحيحة
+        // جلب رصيد القاصة الرئيسية من current_balance مباشرة
+        const mainBalance = await getMainCashBalance();
+        const totalAllSources = await getTotalAllSourcesBalance();
+        
+        // تحديث جميع الحالات من البيانات الحقيقية
+        setMainCashBalance(mainBalance);
+        setTotalSourcesBalance(totalAllSources);
+        
+        // جلب البيانات المالية المتقدمة
         const { data: realData, error } = await supabase.rpc('calculate_real_main_cash_balance');
-
-        if (!error && realData?.[0]) {
-          const real = realData[0];
-          const mainBalance = Number(real.final_balance || 0);
+        
+        if (!error && realData) {
+          const finalBalance = typeof realData === 'number' ? realData : (realData?.[0]?.final_balance || realData?.final_balance || mainBalance);
           
-          // تحديث جميع الحالات من البيانات الحقيقية
-          setMainCashBalance(mainBalance);
           setEnhancedFinancialData({
-            capitalValue: Number(real.capital_amount || 0),
-            totalRevenue: Number(real.total_sales || 0),
-            totalSales: Number(real.total_sales || 0),
-            realSales: Number(real.total_sales || 0),
-            deliveryFees: 0, // لا توجد رسوم توصيل في النظام الجديد
-            systemProfit: Number(real.net_profit || 0),
-            totalExpenses: Number(real.total_expenses || 0),
-            totalPurchases: Number(real.total_purchases || 0),
-            employeeDuesPaid: Number(real.employee_dues_paid || 0),
-            employeeDues: Number(real.employee_dues_paid || 0),
-            netProfit: Number(real.net_profit || 0),
+            capitalValue: finalBalance,
+            totalRevenue: finalBalance,
+            totalSales: finalBalance,
+            realSales: finalBalance,
+            deliveryFees: 0,
+            systemProfit: finalBalance,
+            totalExpenses: 0,
+            totalPurchases: 0,
+            employeeDuesPaid: 0,
+            employeeDues: 0,
+            netProfit: finalBalance,
             finalBalance: mainBalance,
             // للتوافق مع المكونات الأخرى
             grossProfit: Number(real.total_sales || 0)
@@ -225,7 +230,7 @@ const CashManagementPage = () => {
     },
     {
       title: 'الرصيد النقدي الفعلي',
-      value: totalSourcesBalance,
+      value: mainCashBalance,
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],

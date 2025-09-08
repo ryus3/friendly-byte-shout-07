@@ -234,15 +234,12 @@ export const useCashSources = () => {
 
   // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية
   const getTotalAllSourcesBalance = async () => {
-    const mainBalance = await getMainCashBalance(); // القاصة الرئيسية
-    const otherBalance = getTotalSourcesBalance(); // باقي المصادر (بعد تصفير الأعظمية ستكون 0)
-    const total = mainBalance + otherBalance;
-    console.log('💰 مجموع جميع المصادر:', {
-      main: mainBalance.toLocaleString(),
-      others: otherBalance.toLocaleString(),
-      total: total.toLocaleString()
-    });
-    return total;
+    // استخدام current_balance من القاصة الرئيسية مباشرة
+    const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية');
+    const mainBalance = mainSource?.current_balance || 0;
+    
+    console.log('💰 مجموع جميع المصادر (الآن = القاصة الرئيسية فقط):', mainBalance.toLocaleString());
+    return mainBalance;
   };
 
   // الحصول على القاصة الرئيسية
