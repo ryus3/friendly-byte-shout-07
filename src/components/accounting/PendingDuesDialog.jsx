@@ -229,26 +229,26 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* الجهة اليمنى: التحديد + الموظف + الحالة + رقم التتبع */}
+                                                    {/* الجهة اليمنى: رقم التتبع + الحالة + الموظف + التحديد */}
                                                     <div className="flex items-center gap-2">
+                                                        {order?.tracking_number && (
+                                                            <span className="text-xs text-muted-foreground font-mono">
+                                                                {order.tracking_number}
+                                                            </span>
+                                                        )}
+                                                        <Badge variant="outline" className="text-xs h-5 px-1.5">
+                                                            {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
+                                                        </Badge>
+                                                        <span className="font-medium text-sm">{employee?.full_name || 'غير معروف'}</span>
+                                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold">
+                                                            {(employee?.full_name || 'غ')[0]}
+                                                        </div>
                                                         <Checkbox
                                                             checked={isSelected}
                                                             onCheckedChange={() => handleSelectOrder(profit.id)}
                                                             className="data-[state=checked]:bg-primary data-[state=checked]:border-primary w-5 h-5"
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
-                                                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white text-xs font-bold">
-                                                            {(employee?.full_name || 'غ')[0]}
-                                                        </div>
-                                                        <span className="font-medium text-sm">{employee?.full_name || 'غير معروف'}</span>
-                                                        <Badge variant="outline" className="text-xs h-5 px-1.5">
-                                                            {profit.status === 'invoice_received' ? 'مستلم الفاتورة' : 'معلق'}
-                                                        </Badge>
-                                                        {order?.tracking_number && (
-                                                            <span className="text-xs text-muted-foreground font-mono">
-                                                                {order.tracking_number}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </CardContent>
