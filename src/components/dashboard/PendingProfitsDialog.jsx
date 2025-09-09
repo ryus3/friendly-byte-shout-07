@@ -54,9 +54,7 @@ const PendingProfitsDialog = ({
     });
     
     // حساب الربح بناءً على سعر المنتجات بعد الخصم (بدون التوصيل)
-    const orderSalesAmount = (order.sales_amount != null)
-      ? (Number(order.sales_amount) || 0)
-      : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0));
+    const orderSalesAmount = Number(order.sales_amount ?? order.final_amount ?? order.total_amount ?? 0) - Number(order.delivery_fee || 0);
     const orderTotalCost = order.items.reduce((costSum, item) => {
       const costPrice = item.cost_price || item.costPrice || 0;
       const quantity = item.quantity || 0;
@@ -289,9 +287,7 @@ const PendingProfitsDialog = ({
                                   <div className="text-center">
                                     <p className="text-sm font-medium">
                                       {(
-                                        (order.sales_amount != null)
-                                          ? (Number(order.sales_amount) || 0)
-                                          : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
+                                        Number(order.sales_amount ?? order.final_amount ?? order.total_amount ?? 0) - Number(order.delivery_fee || 0)
                                       ).toLocaleString()} د.ع
                                     </p>
                                     <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
