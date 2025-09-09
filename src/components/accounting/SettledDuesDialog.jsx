@@ -502,6 +502,20 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     const fetchRealSettlementInvoices = async () => {
       setLoadingRealInvoices(true);
       try {
+        // Attempt to migrate any legacy employee-dues expenses into settlement_invoices before fetching
+        try {
+          const rpcArgs = {};
+          if (dateRange?.from) rpcArgs.p_from_date = dateRange.from.toISOString();
+          if (dateRange?.to) {
+            const endOfDay = new Date(dateRange.to);
+            endOfDay.setHours(23, 59, 59, 999);
+            rpcArgs.p_to_date = endOfDay.toISOString();
+          }
+          await supabase.rpc('migrate_employee_dues_expenses', rpcArgs);
+        } catch (mErr) {
+          console.warn('⚠️ تعذر ترحيل مصاريف مستحقات الموظفين القديمة:', mErr);
+        }
+
         let query = supabase
           .from('settlement_invoices')
           .select('*');
