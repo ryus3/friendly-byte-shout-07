@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PackageCheck, DollarSign, Calendar, User, MapPin, Phone } from 'lucide-react';
+import { PackageCheck, DollarSign, Calendar, User, MapPin, Phone, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/components/ui/use-toast';
 import superAPI from '@/api/SuperAPI';
+import { useSuper } from '@/contexts/SuperProvider';
 
 const PendingProfitsDialog = ({ 
   open, 
@@ -18,6 +19,7 @@ const PendingProfitsDialog = ({
   user
 }) => {
   const [selectedOrders, setSelectedOrders] = useState([]);
+  const { calculateProfit, calculateManagerProfit } = useSuper();
 
   useEffect(() => {
     if (!open) {
@@ -42,46 +44,78 @@ const PendingProfitsDialog = ({
   };
 
 
-  const calculateOrderProfit = (order) => {
-    if (!order.items || !Array.isArray(order.items)) return 0;
-    
-    console.log('🔢 حساب ربح الطلب:', { 
-      orderNumber: order.order_number, 
-      totalAmount: order.total_amount, 
-      finalAmount: order.final_amount,
-      deliveryFee: order.delivery_fee,
-      salesAmount: order.sales_amount ?? ((order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0))
-    });
-    
-    // حساب الربح بناءً على سعر المنتجات بعد الخصم (بدون التوصيل)
-    const orderSalesAmount = (order.sales_amount != null)
+  // دوال مساعدة للحسابات المالية
+  const getNetSales = (order) => {
+    // إجمالي المبيعات بدون رسوم التوصيل
+    return (order.sales_amount != null)
       ? (Number(order.sales_amount) || 0)
       : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0));
-    const orderTotalCost = order.items.reduce((costSum, item) => {
+  };
+
+  const getTotalCost = (order) => {
+    if (!order.items || !Array.isArray(order.items)) return 0;
+    return order.items.reduce((costSum, item) => {
       const costPrice = item.cost_price || item.costPrice || 0;
       const quantity = item.quantity || 0;
       return costSum + (costPrice * quantity);
     }, 0);
-    
-    const profit = Math.max(0, orderSalesAmount - orderTotalCost);
-    
-    console.log('💰 نتيجة حساب الربح:', { 
-      orderNumber: order.order_number,
-      salesAmount: orderSalesAmount,
-      totalCost: orderTotalCost,
-      calculatedProfit: profit
-    });
-    
-    return profit;
   };
 
+  const getEmployeeProfit = (order) => {
+    if (!order.items || !Array.isArray(order.items) || !calculateProfit) return 0;
+    
+    return order.items.reduce((sum, item) => {
+      const profit = calculateProfit(item, order.created_by) || 0;
+      return sum + profit;
+    }, 0);
+  };
+
+  const getTotalProfit = (order) => {
+    const netSales = getNetSales(order);
+    const totalCost = getTotalCost(order);
+    return Math.max(0, netSales - totalCost);
+  };
+
+  const getManagerProfit = (order) => {
+    if (!calculateManagerProfit) return 0;
+    return calculateManagerProfit(order) || 0;
+  };
+
+  const calculateOrderProfitForDisplay = (order) => {
+    const netSales = getNetSales(order);
+    const totalCost = getTotalCost(order);
+    const employeeProfit = getEmployeeProfit(order);
+    const totalProfit = getTotalProfit(order);
+    const managerProfit = getManagerProfit(order);
+
+    console.log('🔢 تفاصيل حساب ربح الطلب:', { 
+      orderNumber: order.order_number,
+      createdBy: order.created_by,
+      netSales,
+      totalCost,
+      employeeProfit,
+      totalProfit,
+      managerProfit,
+      hasEmployeeProfitRules: employeeProfit > 0
+    });
+
+    return {
+      netSales,
+      totalCost,
+      employeeProfit,
+      totalProfit,
+      managerProfit
+    };
+  };
+
+  // حساب إجمالي أرباح الموظفين المعلقة (وليس الأرباح الإجمالية)
   const totalPendingProfit = pendingProfitOrders.reduce((sum, order) => {
-    return sum + calculateOrderProfit(order);
+    return sum + getEmployeeProfit(order);
   }, 0);
 
   const selectedOrdersProfit = pendingProfitOrders
     .filter(order => selectedOrders.includes(order.id))
-    .reduce((sum, order) => sum + calculateOrderProfit(order), 0);
+    .reduce((sum, order) => sum + getEmployeeProfit(order), 0);
 
   const handleReceiveInvoices = async () => {
     if (selectedOrders.length === 0) {
@@ -156,7 +190,7 @@ const PendingProfitsDialog = ({
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                   <div>
-                    <p className="text-xs text-muted-foreground">إجمالي الأرباح المعلقة</p>
+                    <p className="text-xs text-muted-foreground">أرباح الموظفين المعلقة</p>
                     <p className="text-sm sm:text-base font-semibold">{totalPendingProfit.toLocaleString()} د.ع</p>
                   </div>
                 </div>
@@ -168,7 +202,7 @@ const PendingProfitsDialog = ({
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />
                   <div>
-                    <p className="text-xs text-muted-foreground">الأرباح المحددة</p>
+                    <p className="text-xs text-muted-foreground">أرباح الموظفين المحددة</p>
                     <p className="text-sm sm:text-base font-semibold">{selectedOrdersProfit.toLocaleString()} د.ع</p>
                   </div>
                 </div>
@@ -215,7 +249,7 @@ const PendingProfitsDialog = ({
                   </div>
                 ) : (
                   pendingProfitOrders.map((order) => {
-                    const orderProfit = calculateOrderProfit(order);
+                    const profitData = calculateOrderProfitForDisplay(order);
                     const isSelected = selectedOrders.includes(order.id);
 
                     return (
@@ -277,26 +311,51 @@ const PendingProfitsDialog = ({
 
                               {/* الأرباح والمعلومات المالية */}
                               <div className="space-y-2">
-                                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
+                                {/* ربح الموظف المتوقع */}
+                                <div className={`rounded-lg p-2 ${
+                                  profitData.employeeProfit > 0 
+                                    ? 'bg-green-50 dark:bg-green-900/20' 
+                                    : 'bg-yellow-50 dark:bg-yellow-900/20'
+                                }`}>
                                   <div className="text-center">
-                                    <p className="text-sm sm:text-base font-bold text-green-600">
-                                      {orderProfit.toLocaleString()} د.ع
+                                    <p className={`text-sm sm:text-base font-bold ${
+                                      profitData.employeeProfit > 0 
+                                        ? 'text-green-600' 
+                                        : 'text-yellow-600'
+                                    }`}>
+                                      {profitData.employeeProfit.toLocaleString()} د.ع
                                     </p>
-                                    <p className="text-xs text-muted-foreground">ربح متوقع</p>
+                                    <p className="text-xs text-muted-foreground">ربح الموظف المتوقع</p>
+                                    {profitData.employeeProfit === 0 && (
+                                      <div className="flex items-center justify-center gap-1 mt-1">
+                                        <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                        <span className="text-xs text-yellow-600">لا توجد قاعدة ربح</span>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
+
+                                {/* إجمالي المبيعات */}
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
                                   <div className="text-center">
                                     <p className="text-sm font-medium">
-                                      {(
-                                        (order.sales_amount != null)
-                                          ? (Number(order.sales_amount) || 0)
-                                          : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
-                                      ).toLocaleString()} د.ع
+                                      {profitData.netSales.toLocaleString()} د.ع
                                     </p>
                                     <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
                                   </div>
                                 </div>
+
+                                {/* ربح الإدارة (اختياري للشفافية) */}
+                                {profitData.managerProfit > 0 && (
+                                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
+                                    <div className="text-center">
+                                      <p className="text-sm font-medium text-purple-600">
+                                        {profitData.managerProfit.toLocaleString()} د.ع
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">ربح الإدارة</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -305,13 +364,18 @@ const PendingProfitsDialog = ({
                               <div className="border-t pt-2">
                                 <p className="text-xs text-muted-foreground mb-2">المنتجات ({order.items.length}):</p>
                                 <div className="space-y-1 max-h-20 overflow-y-auto">
-                                  {order.items.map((item, index) => (
-                                    <div key={index} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
-                                      <span className="truncate flex-1">{item.product_name || item.name}</span>
-                                      <span className="ml-2 font-mono">x{item.quantity}</span>
-                                      <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
-                                    </div>
-                                  ))}
+                                   {order.items.map((item, index) => (
+                                     <div key={index} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
+                                       <span className="truncate flex-1">{item.product_name || item.name}</span>
+                                       <span className="ml-2 font-mono">x{item.quantity}</span>
+                                       <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
+                                       {calculateProfit && (
+                                         <span className="ml-2 text-xs text-green-600 font-medium">
+                                           +{(calculateProfit(item, order.created_by) || 0).toLocaleString()}
+                                         </span>
+                                       )}
+                                     </div>
+                                   ))}
                                 </div>
                               </div>
                             )}
