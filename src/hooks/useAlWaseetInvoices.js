@@ -18,6 +18,8 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
+  console.log('🔧 useAlWaseetInvoices hook initialized');
+
   // Enhanced smart fetch with instant loading and background sync
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
@@ -806,6 +808,9 @@ export const useAlWaseetInvoices = () => {
     setSelectedInvoice,
     setInvoiceOrders,
     syncLastTwoInvoices,
-    smartBackgroundSync
+    smartBackgroundSync,
+    syncInvoiceById,
+    syncAlwaseetInvoiceData,
+    syncAllRecentInvoices
   };
 };
