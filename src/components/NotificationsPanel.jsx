@@ -853,11 +853,40 @@ const NotificationsPanel = () => {
                           <IconComponent />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-1">
-                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                               <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
-                                  {notification.title || 'إشعار جديد'}
-                               </h3>
+                           <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
+                                   {(() => {
+                                     // تخصيص العنوان لإشعارات تحديث حالة الطلب
+                                     if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                       const data = notification.data || {};
+                                       const orderId = data.order_id;
+                                       
+                                       // البحث عن الطلب من النظام الموحد
+                                       if (orderId && orders && orders.length > 0) {
+                                         const foundOrder = orders.find(order => order.id === orderId);
+                                         if (foundOrder) {
+                                           // استخدام تنسيق "المدينة - المنطقة"
+                                           const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
+                                           const addressParts = (foundOrder.customer_address || '').split(',');
+                                           const region = (addressParts[1] || addressParts[0] || 'غير محدد').trim();
+                                           return `${city} - ${region}`;
+                                         }
+                                       }
+                                       
+                                       // للإشعارات القديمة بدون order_id، استخدام البيانات من data
+                                       if (data.customer_city || data.customer_address) {
+                                         const city = data.customer_city || 'غير محدد';
+                                         const addressParts = (data.customer_address || '').split(',');
+                                         const region = (addressParts[1] || addressParts[0] || 'غير محدد').trim();
+                                         return `${city} - ${region}`;
+                                       }
+                                     }
+                                     
+                                     // العنوان الافتراضي
+                                     return notification.title || 'إشعار جديد';
+                                   })()}
+                                </h3>
                                 <div className="flex items-center gap-1">
                                   {!(notification.is_read || notification.read) && (
                                     <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>

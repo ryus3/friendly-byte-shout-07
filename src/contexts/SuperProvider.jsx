@@ -1980,13 +1980,41 @@ export const SuperProvider = ({ children }) => {
     // تبديل الظهور الفوري
     toggleProductVisibility,
     
-    // وظائف حساب الأرباح الحقيقية
-    calculateProfit: (order) => {
+    // وظائف حساب الأرباح الحقيقية - دعم إما عنصر واحد أو طلب كامل
+    calculateProfit: (orderOrItem, employeeId = null) => {
+      // إذا تم تمرير عنصر واحد مع معرف الموظف
+      if (employeeId && orderOrItem.productId) {
+        const item = orderOrItem;
+        const employeeProfitRules = allData.employeeProfitRules || [];
+        
+        // البحث عن قاعدة ربح مطابقة
+        const rule = employeeProfitRules.find(r => 
+          r.employee_id === employeeId && 
+          r.is_active === true &&
+          (
+            (r.rule_type === 'product' && r.target_id === item.productId) ||
+            (r.rule_type === 'variant' && r.target_id === item.sku)
+          )
+        );
+        
+        if (rule) {
+          if (rule.profit_amount) {
+            return rule.profit_amount * (item.quantity || 1);
+          } else if (rule.profit_percentage) {
+            const itemRevenue = (item.price || 0) * (item.quantity || 1);
+            return (itemRevenue * rule.profit_percentage / 100);
+          }
+        }
+        return 0;
+      }
+      
+      // إذا تم تمرير طلب كامل
+      const order = orderOrItem;
       if (!order || !order.items) return 0;
       
       // البحث عن قاعدة الربح للموظف
       const employeeProfitRules = allData.employeeProfitRules || [];
-      const employeeId = order.created_by;
+      const orderEmployeeId = order.created_by;
       
       let totalEmployeeProfit = 0;
       
@@ -2001,6 +2029,53 @@ export const SuperProvider = ({ children }) => {
         if (!productId) return;
         
         // البحث عن قاعدة ربح مطابقة
+        const rule = employeeProfitRules.find(r => 
+          r.employee_id === orderEmployeeId && 
+          r.is_active === true &&
+          (
+            (r.rule_type === 'product' && r.target_id === productId) ||
+            (r.rule_type === 'variant' && r.target_id === item.sku)
+          )
+        );
+        
+        if (rule) {
+          if (rule.profit_amount) {
+            totalEmployeeProfit += rule.profit_amount * item.quantity;
+          } else if (rule.profit_percentage) {
+            const itemRevenue = item.price * item.quantity;
+            totalEmployeeProfit += (itemRevenue * rule.profit_percentage / 100);
+          }
+        }
+      });
+      
+      // خصم الخصومات التي تؤثر على ربح الموظف
+      const orderDiscounts = allData.orderDiscounts || [];
+      const relevantDiscounts = orderDiscounts.filter(d => 
+        d.order_id === order.id && d.affects_employee_profit === true
+      );
+      const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
+      
+      return Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
+    },
+    
+    calculateManagerProfit: (order) => {
+      if (!order || !order.items) return 0;
+      
+      // حساب ربح الموظف مباشرة
+      const employeeProfitRules = allData.employeeProfitRules || [];
+      const employeeId = order.created_by;
+      
+      let totalEmployeeProfit = 0;
+      
+      order.items.forEach(item => {
+        let productId = item.product_id;
+        if (!productId && item.sku) {
+          const variant = getVariantDetails(item.sku);
+          productId = variant?.product_id;
+        }
+        
+        if (!productId) return;
+        
         const rule = employeeProfitRules.find(r => 
           r.employee_id === employeeId && 
           r.is_active === true &&
@@ -2020,56 +2095,26 @@ export const SuperProvider = ({ children }) => {
         }
       });
       
-      return totalEmployeeProfit;
-    },
-    
-    calculateManagerProfit: (order) => {
-      if (!order || !order.items) return 0;
+      // خصم الخصومات التي تؤثر على ربح الموظف
+      const orderDiscounts = allData.orderDiscounts || [];
+      const relevantDiscounts = orderDiscounts.filter(d => 
+        d.order_id === order.id && d.affects_employee_profit === true
+      );
+      const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
+      const employeeProfit = Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
       
-      // استخدام الدالة المعرفة أعلاه مباشرة
-      const employeeProfit = (() => {
-        if (!order || !order.items) return 0;
-        
-        const employeeProfitRules = allData.employeeProfitRules || [];
-        const employeeId = order.created_by;
-        
-        let totalEmployeeProfit = 0;
-        
-        order.items.forEach(item => {
-          let productId = item.product_id;
-          if (!productId && item.sku) {
-            const variant = getVariantDetails(item.sku);
-            productId = variant?.product_id;
-          }
-          
-          if (!productId) return;
-          
-          const rule = employeeProfitRules.find(r => 
-            r.employee_id === employeeId && 
-            r.is_active === true &&
-            (
-              (r.rule_type === 'product' && r.target_id === productId) ||
-              (r.rule_type === 'variant' && r.target_id === item.sku)
-            )
-          );
-          
-          if (rule) {
-            if (rule.profit_amount) {
-              totalEmployeeProfit += rule.profit_amount * item.quantity;
-            } else if (rule.profit_percentage) {
-              const itemRevenue = item.price * item.quantity;
-              totalEmployeeProfit += (itemRevenue * rule.profit_percentage / 100);
-            }
-          }
-        });
-        
-        return totalEmployeeProfit;
-      })();
+      // حساب الإيراد الإجمالي من final_amount (بعد الخصم) - أجور التوصيل
+      const finalAmount = Number(order.final_amount || order.total_amount || 0);
+      const deliveryFee = Number(order.delivery_fee || 0);
+      const revenueWithoutDelivery = finalAmount - deliveryFee;
       
-      const totalRevenue = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const totalCost = order.items.reduce((sum, item) => sum + (item.cost_price * item.quantity), 0);
-      const totalProfit = totalRevenue - totalCost;
+      // حساب التكلفة الإجمالية
+      const totalCost = order.items.reduce((sum, item) => sum + ((item.cost_price || 0) * (item.quantity || 0)), 0);
       
+      // الربح الإجمالي = الإيراد بعد الخصم - التكلفة
+      const totalProfit = revenueWithoutDelivery - totalCost;
+      
+      // ربح الإدارة = الربح الإجمالي - ربح الموظف
       return Math.max(0, totalProfit - employeeProfit);
     },
     

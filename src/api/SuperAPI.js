@@ -183,6 +183,7 @@ return this.fetch('all_data', async () => {
     profiles,
     customerLoyalty,
     loyaltyTiers,
+    orderDiscounts,
     
     // بيانات المرشحات
     colors,
@@ -244,6 +245,7 @@ return this.fetch('all_data', async () => {
     supabase.from('profiles').select('user_id, full_name, employee_code, status'),
     supabase.from('customer_loyalty').select('*'),
     supabase.from('loyalty_tiers').select('*'),
+    supabase.from('order_discounts').select('*').order('created_at', { ascending: false }),
     
     // بيانات المرشحات
     supabase.from('colors').select('*').order('name'),
@@ -256,7 +258,7 @@ return this.fetch('all_data', async () => {
 
   // التحقق من الأخطاء
   const responses = [products, orders, customers, purchases, expenses, profits, 
-                    cashSources, settings, aiOrders, profitRules, profiles, colors, sizes, 
+                    cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, 
                     categories, departments, productTypes, seasons];
   
   // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
@@ -270,7 +272,7 @@ return this.fetch('all_data', async () => {
   }
   
   // السجلات غير الحرجة: نسجل تحذيراً ونكمل بجداول فارغة لضمان تحميل الواجهة
-  const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, colors, sizes, categories, departments, productTypes, seasons };
+  const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, categories, departments, productTypes, seasons };
   Object.entries(nonCritical).forEach(([key, resp]) => {
     if (resp.error) {
       console.warn(`⚠️ خطأ غير حرج في جلب ${key}:`, resp.error);
@@ -291,6 +293,7 @@ return this.fetch('all_data', async () => {
     profitRules: profitRules.data || [],
     employeeProfitRules: profitRules.data || [],
     users: profiles.data || [],
+    orderDiscounts: orderDiscounts.data || [],
     
     // بيانات المرشحات
     colors: colors.data || [],
