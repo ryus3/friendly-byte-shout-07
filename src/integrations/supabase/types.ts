@@ -3914,6 +3914,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_ry_settlement_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_settlement_invoice_number: {
         Args: { p_hint?: string }
         Returns: string
