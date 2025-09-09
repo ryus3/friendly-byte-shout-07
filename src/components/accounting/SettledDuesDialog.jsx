@@ -440,10 +440,21 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
   const [loadingRealInvoices, setLoadingRealInvoices] = useState(false);
 
-  // جلب الأرباح المسواة والطلبات
+  // جلب الأرباح المسواة والطلبات مع تشغيل الهجرة
   useEffect(() => {
     const fetchSettledProfits = async () => {
       try {
+        // تشغيل هجرة المصروفات إلى فواتير التسوية أولاً
+        console.log('🔄 تشغيل هجرة مصروفات مستحقات الموظفين...');
+        const { data: migrationResult, error: migrationError } = await supabase
+          .rpc('migrate_employee_dues_expenses');
+
+        if (migrationError) {
+          console.error('❌ خطأ في الهجرة:', migrationError);
+        } else if (migrationResult?.migrated_count > 0) {
+          console.log('✅ نجحت الهجرة:', migrationResult);
+        }
+
         console.log('🔄 جلب الأرباح المسواة...');
         const { data, error } = await supabase
           .from('profits')

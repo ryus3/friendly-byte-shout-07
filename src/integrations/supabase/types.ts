@@ -4088,6 +4088,21 @@ export type Database = {
         Args: { p_external_id: string; p_partner?: string }
         Returns: boolean
       }
+      migrate_employee_dues_expense_by_id: {
+        Args: { p_expense_id: string }
+        Returns: Json
+      }
+      migrate_employee_dues_expenses: {
+        Args:
+          | Record<PropertyKey, never>
+          | {
+              p_employee_id?: string
+              p_from_date?: string
+              p_limit?: number
+              p_to_date?: string
+            }
+        Returns: Json
+      }
       migrate_existing_customers_to_phone_loyalty: {
         Args: Record<PropertyKey, never>
         Returns: undefined
