@@ -18,14 +18,27 @@
 		<!-- Critical CSS inlined for FCP optimization -->
 		<style>
 			/* Critical CSS for First Contentful Paint optimization */
-			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}.flex-col{flex-direction:column}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}.p-6{padding:1.5rem}.text-center{text-align:center}.font-semibold{font-weight:600}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.w-44{width:11rem}.h-full{height:100%}.w-full{width:100%}.object-contain{object-fit:contain}.block{display:block}.mix-blend-multiply{mix-blend-mode:multiply}.dark .dark\\:hidden{display:none}.glass-effect{backdrop-filter:blur(10px);background:hsl(var(--background)/0.8);border:1px solid hsl(var(--border)/0.2);border-radius:calc(var(--radius)*2)}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%;--border:214.3 31.8% 91.4%;--radius:0.5rem}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%;--border:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}body{margin:0;padding:0;font-family:'Cairo',system-ui,-apple-system,sans-serif;direction:rtl}*{box-sizing:border-box}.hidden{display:none!important}img{max-width:100%;height:auto}
+			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.bg-muted{background-color:hsl(var(--muted))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}.flex-col{flex-direction:column}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}.p-6{padding:1.5rem}.text-center{text-align:center}.font-semibold{font-weight:600}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.w-44{width:11rem}.h-44{height:11rem}.h-6{height:1.5rem}.w-32{width:8rem}.h-full{height:100%}.w-full{width:100%}.mx-auto{margin-left:auto;margin-right:auto}.object-contain{object-fit:contain}.block{display:block}.mix-blend-multiply{mix-blend-mode:multiply}.rounded{border-radius:calc(var(--radius))}.rounded-lg{border-radius:calc(var(--radius)*2)}.animate-pulse{animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}.dark .dark\\:hidden{display:none}.glass-effect{backdrop-filter:blur(10px);background:hsl(var(--background)/0.8);border:1px solid hsl(var(--border)/0.2);border-radius:calc(var(--radius)*2)}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%;--border:214.3 31.8% 91.4%;--radius:0.5rem}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%;--border:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}body{margin:0;padding:0;font-family:'Cairo',system-ui,-apple-system,sans-serif;direction:rtl}*{box-sizing:border-box}.hidden{display:none!important}img{max-width:100%;height:auto}
 		</style>
 		
 		<title>RYUS | نظام إدارة المخزون والطلبات</title>
 		<meta name="description" content="منصة RYUS الاحترافية لإدارة المنتجات والطلبات والمخزون والتقارير." />
 	</head>
 	<body>
-		<div id="root"></div>
+		<div id="root">
+			<!-- Immediate loading screen for FCP optimization -->
+			<div class="h-screen w-screen bg-background flex items-center justify-center">
+				<div class="glass-effect p-6 text-center space-y-6">
+					<div class="w-44 h-44 mx-auto">
+						<div class="w-full h-full bg-muted animate-pulse rounded-lg"></div>
+					</div>
+					<div class="space-y-4">
+						<div class="h-6 bg-muted animate-pulse rounded w-32 mx-auto"></div>
+						<div class="loader mx-auto"></div>
+					</div>
+				</div>
+			</div>
+		</div>
 		
 		<!-- Async CSS and resource loading to eliminate render-blocking -->
 		<script>
