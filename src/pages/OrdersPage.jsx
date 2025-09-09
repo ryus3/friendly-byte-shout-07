@@ -43,6 +43,21 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // دالة مساعدة لترجمة حالات الطلبات - تحريك للأعلى قبل الاستخدام
+  const getStatusLabel = useCallback((status) => {
+    const statusLabels = {
+      'pending': 'قيد الانتظار',
+      'shipped': 'تم الشحن',
+      'delivery': 'قيد التوصيل',
+      'delivered': 'تم التسليم',
+      'cancelled': 'ملغي',
+      'returned': 'مرجع',
+      'completed': 'مكتمل',
+      'returned_in_stock': 'راجع للمخزن'
+    };
+    return statusLabels[status] || status;
+  }, []);
+  
   // جلب أسماء المستخدمين لعرض اسم صاحب الطلب - تحريك هذا للأعلى قبل الاستخدام
   const usersMap = useMemo(() => {
     const map = new Map();
@@ -235,22 +250,7 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasPermission]);
-
-  // دالة مساعدة لترجمة حالات الطلبات
-  const getStatusLabel = (status) => {
-    const statusLabels = {
-      'pending': 'قيد الانتظار',
-      'shipped': 'تم الشحن',
-      'delivery': 'قيد التوصيل',
-      'delivered': 'تم التسليم',
-      'cancelled': 'ملغي',
-      'returned': 'مرجع',
-      'completed': 'مكتمل',
-      'returned_in_stock': 'راجع للمخزن'
-    };
-    return statusLabels[status] || status;
-  };
+  }, [hasPermission, getStatusLabel]);
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
   const deletedOrdersSet = useRef(new Set());
