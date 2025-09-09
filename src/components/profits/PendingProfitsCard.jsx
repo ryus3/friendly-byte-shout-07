@@ -76,8 +76,8 @@ const PendingProfitsCard = () => {
     
     // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
-      // البيانات مفلترة مسبقاً حسب المستخدم، لذا نحسب الربح مباشرة
-      const orderProfit = calculateProfit ? calculateProfit(order) : 0;
+      // نحسب ربح المستخدم الحالي من هذا الطلب
+      const orderProfit = calculateProfit ? calculateProfit(order, user.id) : 0;
       
       console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, {
         orderId: order.id,
@@ -143,8 +143,8 @@ const PendingProfitsCard = () => {
             </div>
             
             {pendingInvoiceOrders.slice(0, 3).map((order) => {
-              // البيانات مفلترة مسبقاً، نحسب الربح مباشرة
-              const expectedProfit = calculateProfit ? calculateProfit(order) : 0;
+              // نحسب ربح المستخدم الحالي من هذا الطلب
+              const expectedProfit = calculateProfit ? calculateProfit(order, user.id) : 0;
               const hasRule = expectedProfit > 0;
               
               return (
