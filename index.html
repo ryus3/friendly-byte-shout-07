@@ -18,7 +18,7 @@
 		<!-- Critical CSS inlined for FCP optimization -->
 		<style>
 			/* Critical CSS for First Contentful Paint optimization */
-			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%;--border:214.3 31.8% 91.4%;--radius:0.5rem}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%;--border:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}body{margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}*{box-sizing:border-box}.hidden{display:none!important}
+			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}.flex-col{flex-direction:column}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}.p-6{padding:1.5rem}.text-center{text-align:center}.font-semibold{font-weight:600}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.w-44{width:11rem}.h-full{height:100%}.w-full{width:100%}.object-contain{object-fit:contain}.block{display:block}.mix-blend-multiply{mix-blend-mode:multiply}.dark .dark\\:hidden{display:none}.glass-effect{backdrop-filter:blur(10px);background:hsl(var(--background)/0.8);border:1px solid hsl(var(--border)/0.2);border-radius:calc(var(--radius)*2)}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%;--border:214.3 31.8% 91.4%;--radius:0.5rem}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%;--border:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}body{margin:0;padding:0;font-family:'Cairo',system-ui,-apple-system,sans-serif;direction:rtl}*{box-sizing:border-box}.hidden{display:none!important}img{max-width:100%;height:auto}
 		</style>
 		
 		<title>RYUS | نظام إدارة المخزون والطلبات</title>
@@ -27,24 +27,66 @@
 	<body>
 		<div id="root"></div>
 		
-		<!-- Async CSS loading to eliminate render-blocking -->
+		<!-- Async CSS and resource loading to eliminate render-blocking -->
 		<script>
-			// Load main CSS asynchronously to prevent render-blocking
+			// Load CSS asynchronously to prevent render-blocking
 			function loadCSS(href) {
 				var link = document.createElement('link');
 				link.rel = 'stylesheet';
 				link.href = href;
 				document.head.appendChild(link);
 			}
-			// Use requestAnimationFrame to defer CSS loading until after first paint
-			requestAnimationFrame(function() {
-				var cssFiles = document.querySelectorAll('link[rel="preload"][as="style"]');
-				cssFiles.forEach(function(link) {
+			
+			// Defer all non-critical resource loading until after first paint
+			function loadNonCriticalResources() {
+				// Load Google Fonts async
+				var fontLinks = document.querySelectorAll('link[rel="preload"][as="style"]');
+				fontLinks.forEach(function(link) {
 					if (!link.hasAttribute('data-loaded')) {
 						link.setAttribute('data-loaded', 'true');
 						if (link.onload) link.onload();
 					}
 				});
+				
+				// Load main CSS bundle async
+				var cssLinks = document.querySelectorAll('link[rel="stylesheet"]');
+				var hasCSSBundle = false;
+				cssLinks.forEach(function(link) {
+					if (link.href.includes('index-') && link.href.includes('.css')) {
+						hasCSSBundle = true;
+					}
+				});
+				
+				// If no CSS bundle found in DOM yet, wait for Vite to inject it and make it async
+				if (!hasCSSBundle) {
+					var observer = new MutationObserver(function(mutations) {
+						mutations.forEach(function(mutation) {
+							mutation.addedNodes.forEach(function(node) {
+								if (node.tagName === 'LINK' && node.rel === 'stylesheet' && 
+									node.href.includes('index-') && node.href.includes('.css')) {
+									// Remove the synchronous link and load it async
+									var href = node.href;
+									node.remove();
+									requestIdleCallback(function() {
+										loadCSS(href);
+									});
+									observer.disconnect();
+								}
+							});
+						});
+					});
+					observer.observe(document.head, { childList: true });
+				}
+			}
+			
+			// Use requestAnimationFrame to defer loading until after first paint
+			requestAnimationFrame(function() {
+				// Use requestIdleCallback for further deferral with fallback
+				if (typeof requestIdleCallback !== 'undefined') {
+					requestIdleCallback(loadNonCriticalResources, { timeout: 100 });
+				} else {
+					setTimeout(loadNonCriticalResources, 50);
+				}
 			});
 		</script>
 		<script type="module" src="/src/main.jsx"></script>
