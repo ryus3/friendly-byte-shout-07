@@ -151,7 +151,7 @@ const OrdersPage = () => {
           if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
-                // جلب اسم الموظف
+                // جلب اسم الموظف - استخدام usersMap مباشرة
                 const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
                 
                 await supabase.from('notifications').insert({
@@ -235,7 +235,7 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasPermission]);
+  }, [hasPermission, usersMap]);
 
   // دالة مساعدة لترجمة حالات الطلبات
   const getStatusLabel = (status) => {
