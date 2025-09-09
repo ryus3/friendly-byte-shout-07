@@ -43,9 +43,6 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // معرف المدير الرئيسي - تعريفه في البداية
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-  
   // جلب أسماء المستخدمين لعرض اسم صاحب الطلب - تحريك هذا للأعلى قبل الاستخدام
   const usersMap = useMemo(() => {
     const map = new Map();
@@ -154,7 +151,7 @@ const OrdersPage = () => {
           if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
             const createNotification = async () => {
               try {
-                // جلب اسم الموظف - استخدام usersMap مباشرة
+                // جلب اسم الموظف
                 const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
                 
                 await supabase.from('notifications').insert({
@@ -238,10 +235,10 @@ const OrdersPage = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [hasPermission, usersMap, getStatusLabel]);
+  }, [hasPermission]);
 
   // دالة مساعدة لترجمة حالات الطلبات
-  const getStatusLabel = useCallback((status) => {
+  const getStatusLabel = (status) => {
     const statusLabels = {
       'pending': 'قيد الانتظار',
       'shipped': 'تم الشحن',
@@ -253,7 +250,7 @@ const OrdersPage = () => {
       'returned_in_stock': 'راجع للمخزن'
     };
     return statusLabels[status] || status;
-  }, []);
+  };
 
   // Real-time listeners محسن للطلبات مع منع العودة المضمون
   const deletedOrdersSet = useRef(new Set());
@@ -389,7 +386,7 @@ const OrdersPage = () => {
       }
     };
     fetchEmployeeCode();
-  }, [userUUID, hasPermission]);
+  }, [user?.user_id, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
@@ -398,7 +395,8 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
-  // معرف المدير الرئيسي - تم نقله للأعلى بالفعل
+  // معرف المدير الرئيسي
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
@@ -420,14 +418,13 @@ const OrdersPage = () => {
     if (!Array.isArray(aiOrders)) return [];
     if (hasPermission('view_all_orders')) return aiOrders;
     const norm = (v) => (v ?? '').toString().trim().toLowerCase();
-    // إضافة null check لـ userEmployeeCode
     const ids = [userEmployeeCode, user?.employee_code, userUUID, user?.user_id, user?.id].filter(Boolean).map(norm);
     if (ids.length === 0) return [];
     return aiOrders.filter(order => {
       const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
       return ids.includes(norm(by));
     });
-  }, [aiOrders, userEmployeeCode, user?.employee_code, hasPermission, user?.user_id, user?.id, userUUID]);
+  }, [aiOrders, userEmployeeCode, user?.employee_code, hasPermission, user?.user_id, user?.id]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;
@@ -571,14 +568,14 @@ const OrdersPage = () => {
     await updateOrder(orderId, { status: newStatus });
   }, [updateOrder]);
   
-  const handleArchiveSelected = useCallback(async () => {
+  const handleArchiveSelected = async () => {
     for (const orderId of selectedOrders) {
       await updateOrder(orderId, { isArchived: true });
     }
     toast({ title: 'تمت الأرشفة', description: `تمت أرشفة ${selectedOrders.length} طلبات.`, variant: 'success' });
     setSelectedOrders([]);
     setDialogs(d => ({ ...d, archiveAlert: false }));
-  }, [selectedOrders, updateOrder]);
+  }
 
   const handleDeleteSelected = useCallback(async (ordersToDelete) => {
     if(!hasPermission('delete_local_orders')) {
@@ -655,7 +652,7 @@ const OrdersPage = () => {
             console.error('فشل استعادة البيانات:', refreshError);
         }
     }
-  }, [hasPermission, deleteOrdersContext, refetchProducts]);
+  }, [hasPermission, orders, deleteOrdersContext]);
 
   const handleStatCardClick = useCallback((status, period) => {
     setFilters(prev => ({ ...prev, status, period: period || 'all' }));
