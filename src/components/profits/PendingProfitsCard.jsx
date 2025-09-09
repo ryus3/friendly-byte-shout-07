@@ -76,14 +76,32 @@ const PendingProfitsCard = () => {
     
     // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
-      // حساب الربح من الطلب كما هو (بدون تغيير created_by)
-      const orderProfit = calculateProfit ? calculateProfit(order) : 0;
+      let orderProfit = 0;
+      
+      if (calculateProfit) {
+        if (canViewAllData) {
+          // المدير: يحسب ربح الموظف الذي أنشأ الطلب
+          orderProfit = calculateProfit(order);
+        } else {
+          // الموظف: يحسب ربحه فقط إذا كان هو من أنشأ الطلب
+          if (order.created_by === user.id) {
+            orderProfit = calculateProfit(order);
+          } else {
+            orderProfit = 0; // ليس طلبه، ربحه = 0
+          }
+        }
+      }
+      
       console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, {
         orderId: order.id,
         createdBy: order.created_by,
+        currentUserId: user.id,
+        isUserOrder: order.created_by === user.id,
         calculatedProfit: orderProfit,
-        userType
+        userType,
+        canViewAllData
       });
+      
       return sum + orderProfit;
     }, 0);
     
@@ -91,7 +109,8 @@ const PendingProfitsCard = () => {
     console.log(`📊 ملخص الأرباح المعلقة - ${userType}:`, {
       settledProfits,
       expectedProfits,
-      total
+      total,
+      userCanViewAll: canViewAllData
     });
     
     return total;
@@ -140,8 +159,17 @@ const PendingProfitsCard = () => {
             </div>
             
             {pendingInvoiceOrders.slice(0, 3).map((order) => {
-              // حساب الربح من الطلب كما هو
-              const expectedProfit = calculateProfit ? calculateProfit(order) : 0;
+              // حساب الربح حسب نوع المستخدم
+              let expectedProfit = 0;
+              if (calculateProfit) {
+                if (canViewAllData) {
+                  // المدير: يحسب ربح الموظف الذي أنشأ الطلب
+                  expectedProfit = calculateProfit(order);
+                } else {
+                  // الموظف: يحسب ربحه فقط إذا كان هو من أنشأ الطلب
+                  expectedProfit = order.created_by === user.id ? calculateProfit(order) : 0;
+                }
+              }
               const hasRule = expectedProfit > 0;
               
               return (
