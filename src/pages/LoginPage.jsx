@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import ryusLogoDark from '@/assets/ryus-logo-dark.webp';
+import ryusLogoLight from '@/assets/ryus-logo-light.webp';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
@@ -95,8 +97,8 @@ const LoginPage = () => {
             transition={{ delay: 0.2, type: 'spring' }} 
             className="w-44 h-44 mx-auto mb-4 flex items-center justify-center"
           >
-            <img className="w-full h-full object-contain hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" />
-            <img className="w-full h-full object-contain block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" />
+            <img className="w-full h-full object-contain hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src={ryusLogoDark} />
+            <img className="w-full h-full object-contain block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src={ryusLogoLight} />
           </motion.div>
           <h1 className="font-brand text-4xl font-bold gradient-text mb-2">RYUS BRAND</h1>
           <p className="text-muted-foreground">نظام إدارة المخزون ومتابعة الطلبات</p>

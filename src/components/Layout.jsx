@@ -8,6 +8,8 @@ import {
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
   Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet, Heart
 } from 'lucide-react';
+import ryusLogoDark from '@/assets/ryus-logo-dark.webp';
+import ryusLogoLight from '@/assets/ryus-logo-light.webp';
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
 import { useTheme } from '@/contexts/ThemeContext.jsx';
@@ -299,8 +301,8 @@ const Layout = ({ children }) => {
                 </Button>
               )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
-                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" loading="lazy" decoding="async" fetchpriority="low" />
-                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" loading="lazy" decoding="async" fetchpriority="low" />
+                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src={ryusLogoDark} loading="lazy" decoding="async" fetchpriority="low" />
+                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src={ryusLogoLight} loading="lazy" decoding="async" fetchpriority="low" />
               </div>
             </div>
             
