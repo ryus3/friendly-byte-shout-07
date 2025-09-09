@@ -4051,6 +4051,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      get_unique_employees_count_with_settlements: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_user_allowed_filters: {
         Args: { p_user_id: string }
         Returns: {
