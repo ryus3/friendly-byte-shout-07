@@ -2058,7 +2058,7 @@ export const SuperProvider = ({ children }) => {
       
       // البحث عن قاعدة الربح للموظف
       const employeeProfitRules = allData.employeeProfitRules || [];
-      const orderEmployeeId = order.created_by;
+      const orderEmployeeId = employeeId || order.created_by;
       
       let totalEmployeeProfit = 0;
       
