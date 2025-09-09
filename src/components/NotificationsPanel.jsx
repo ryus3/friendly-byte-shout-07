@@ -856,16 +856,7 @@ const NotificationsPanel = () => {
                           <div className="flex items-center justify-between mb-1">
                              <div className="flex items-center gap-2 flex-1 min-w-0">
                                <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
-                                 {(() => {
-                                   // تحديد عنوان موحد للإشعارات
-                                   if (notificationType === 'alwaseet_status_change') {
-                                     return 'تحديث حالة الوسيط';
-                                   } else if (notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                     return 'تحديث حالة الطلب';
-                                   } else {
-                                     return notification.title;
-                                   }
-                                 })()}
+                                  {notification.title || 'إشعار جديد'}
                                </h3>
                                 <div className="flex items-center gap-1">
                                   {!(notification.is_read || notification.read) && (
