@@ -637,7 +637,7 @@ const ManagerProfitsDialog = ({
         {/* Main Stats - 2x2 Grid مضغوط */}
         <div className="grid grid-cols-2 gap-2 mb-3">
           <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-center">
-            <p className="text-sm font-bold text-blue-600">{formatCurrency(order.orderTotal || order.totalWithoutDelivery || order.final_amount || order.total_amount || 0)}</p>
+            <p className="text-sm font-bold text-blue-600">{formatCurrency(order.final_amount || order.orderTotal || order.totalWithoutDelivery || order.total_amount || 0)}</p>
             <p className="text-xs text-muted-foreground">الطلب</p>
           </div>
           <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950/20 text-center">

@@ -462,12 +462,12 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                 )}
                 
                 {/* Total Amount */}
-                {(order.order_data.total_amount || order.order_data.total || order.total_amount) && (
+                {(order.final_amount || order.order_data.total_amount || order.order_data.total || order.total_amount) && (
                   <div className="mt-2 pt-2 border-t border-white/20">
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-medium">المجموع:</span>
                       <span className="text-sm font-bold">
-                        {order.order_data.total_amount || order.order_data.total || order.total_amount} د.ع
+                        {order.final_amount || order.order_data.total_amount || order.order_data.total || order.total_amount} د.ع
                       </span>
                     </div>
                   </div>
