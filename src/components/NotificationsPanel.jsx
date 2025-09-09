@@ -885,7 +885,7 @@ const NotificationsPanel = () => {
                                      const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
                                      
                                       return displayText.length > 30 ? (
-                                        <ScrollingText text={displayText} className="" maxWidth="200px" />
+                                        <ScrollingText text={displayText} className="" maxWidth="220px" />
                                       ) : displayText;
                                    }
                                  }
@@ -910,7 +910,7 @@ const NotificationsPanel = () => {
                                    const displayText = `${trackingNumber} ${statusInfo.label}`;
                                    
                                     return displayText.length > 30 ? (
-                                      <ScrollingText text={displayText} className="" maxWidth="200px" />
+                                      <ScrollingText text={displayText} className="" maxWidth="220px" />
                                     ) : displayText;
                                  }
                                }
@@ -918,7 +918,7 @@ const NotificationsPanel = () => {
                               // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
                               const message = notification.message || '';
                                return message.length > 30 ? (
-                                 <ScrollingText text={message} className="" maxWidth="200px" />
+                                 <ScrollingText text={message} className="" maxWidth="220px" />
                                ) : message;
                             })()}
                           </div>
