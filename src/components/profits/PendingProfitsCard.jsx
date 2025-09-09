@@ -55,18 +55,44 @@ const PendingProfitsCard = () => {
 
   // حساب الأرباح المعلقة الإجمالية
   const totalPendingAmount = useMemo(() => {
+    console.log('🔄 حساب الأرباح المعلقة للموظف:', user?.id);
+    
     // أرباح محسوبة ومسجلة في profits
     const settledProfits = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
+    console.log('💰 أرباح محسوبة:', settledProfits);
     
-    // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
+    // أرباح متوقعة من الطلبات المسلمة بدون فاتورة (حساب ربح الموظف الحالي فقط)
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
-      const employeeProfit = calculateProfit ? calculateProfit(order) : 0;
-      console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
+      // إنشاء طلب مؤقت لحساب ربح الموظف الحالي
+      const tempOrderForCalculation = {
+        ...order,
+        created_by: user?.id // تغيير منشئ الطلب للموظف الحالي لحساب ربحه
+      };
+      
+      const employeeProfit = calculateProfit ? calculateProfit(tempOrderForCalculation) : 0;
+      console.log(`🔍 ربح متوقع للطلب ${order.order_number} للموظف الحالي:`, {
+        orderId: order.id,
+        currentEmployeeId: user?.id,
+        originalCreatedBy: order.created_by,
+        calculatedProfit: employeeProfit,
+        orderItems: order.items?.map(item => ({
+          sku: item.sku,
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      });
       return sum + employeeProfit;
     }, 0);
     
+    console.log('📊 ملخص الأرباح المعلقة:', {
+      settledProfits,
+      expectedProfits,
+      total: settledProfits + expectedProfits
+    });
+    
     return settledProfits + expectedProfits;
-  }, [pendingProfits, pendingInvoiceOrders, calculateProfit]);
+  }, [pendingProfits, pendingInvoiceOrders, calculateProfit, user?.id]);
 
   if (loading) {
     return (
@@ -111,7 +137,12 @@ const PendingProfitsCard = () => {
             </div>
             
             {pendingInvoiceOrders.slice(0, 3).map((order) => {
-              const expectedProfit = calculateProfit ? calculateProfit(order) : 0;
+              // إنشاء طلب مؤقت لحساب ربح الموظف الحالي
+              const tempOrderForCalculation = {
+                ...order,
+                created_by: user?.id
+              };
+              const expectedProfit = calculateProfit ? calculateProfit(tempOrderForCalculation) : 0;
               const hasRule = expectedProfit > 0;
               
               return (
