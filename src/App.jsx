@@ -109,7 +109,7 @@ function AppContent() {
 
   return (
     <div className="h-dvh bg-background text-foreground">
-       <Helmet prioritizeSeoTags>
+       <Helmet>
         <title>RYUS</title>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
