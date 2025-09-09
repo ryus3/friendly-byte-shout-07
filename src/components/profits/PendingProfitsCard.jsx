@@ -65,17 +65,29 @@ const PendingProfitsCard = () => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: ar });
   };
 
-  // حساب الأرباح المعلقة الإجمالية
+  // حساب الأرباح المعلقة الإجمالية - إصلاح جذري للحساب المضاعف
   const totalPendingAmount = useMemo(() => {
     const userType = canViewAllData ? 'مدير' : 'موظف';
     console.log(`🔄 حساب الأرباح المعلقة - ${userType}:`, user?.id);
     
-    // أرباح محسوبة ومسجلة في profits
-    const settledProfits = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
-    console.log('💰 أرباح محسوبة:', settledProfits);
+    // 1. أرباح محسوبة ومسجلة في profits (معلقة)
+    const settledProfits = pendingProfits.reduce((sum, profit) => {
+      const amount = canViewAllData 
+        ? (profit.total_profit || 0) - (profit.employee_profit || 0) // للمدير: ربح النظام = إجمالي - موظف
+        : (profit.employee_profit || 0); // للموظف: ربحه فقط
+      return sum + amount;
+    }, 0);
+    console.log('💰 أرباح محسوبة ومعلقة:', settledProfits);
     
-    // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
+    // 2. أرباح متوقعة من الطلبات المسلمة بدون فاتورة
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
+      // تحقق من أن هذا الطلب ليس له ربح محسوب مسبقاً
+      const hasExistingProfit = pendingProfits.some(profit => profit.order_id === order.id);
+      if (hasExistingProfit) {
+        console.log(`⚠️ تجاهل الطلب ${order.order_number} - له ربح محسوب مسبقاً`);
+        return sum; // تجنب الحساب المضاعف
+      }
+      
       // نحسب ربح المستخدم الحالي من هذا الطلب
       const orderProfit = calculateProfit ? calculateProfit(order, user.id) : 0;
       
@@ -83,7 +95,8 @@ const PendingProfitsCard = () => {
         orderId: order.id,
         createdBy: order.created_by,
         calculatedProfit: orderProfit,
-        userType
+        userType,
+        hasExistingProfit
       });
       
       return sum + orderProfit;
@@ -94,7 +107,9 @@ const PendingProfitsCard = () => {
       settledProfits,
       expectedProfits,
       total,
-      userCanViewAll: canViewAllData
+      userCanViewAll: canViewAllData,
+      pendingProfitsCount: pendingProfits.length,
+      pendingInvoiceOrdersCount: pendingInvoiceOrders.length
     });
     
     return total;

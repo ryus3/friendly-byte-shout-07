@@ -114,7 +114,8 @@ export const AlWaseetProvider = ({ children }) => {
             if (remoteOrder) {
               // تحديد الحالة المحلية بناءً على حالة الوسيط
               const statusConfig = getStatusConfig(remoteOrder.status_text);
-              const newDeliveryStatus = remoteOrder.status_text;
+              const statusId = remoteOrder.status_id || remoteOrder.statusId || remoteOrder.status?.id;
+              const newDeliveryStatus = String(statusId || '').trim() || (remoteOrder.status_text === 'تم التسليم للزبون' ? '4' : remoteOrder.status_text);
               const newStatus = statusConfig.localStatus;
               const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
               const newReceiptReceived = statusConfig.receiptReceived;
@@ -254,8 +255,9 @@ export const AlWaseetProvider = ({ children }) => {
       return query.eq('created_by', user.id);
     }
     
-    // المدير يرى جميع الطلبات للعرض
-    if (user.email === 'ryusbrand@gmail.com' || user.id === '91484496-b887-44f7-9e5d-be9db5567604') {
+    // Use role-based admin detection instead of hardcoded checks
+    // RLS policies now handle admin access control automatically
+    if (isAdmin) {
       return query;
     }
     
@@ -729,8 +731,9 @@ export const AlWaseetProvider = ({ children }) => {
             console.log(`📝 تحديث حالة الطلب ${localOrder.id}: ${localOrder.status} → ${correctLocalStatus}`);
           }
           
-          if (localOrder.delivery_status !== waseetStatusText) {
-            updates.delivery_status = waseetStatusText;
+          const normalizedDeliveryStatus = (String(waseetStatusId || '').trim() || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText));
+          if (localOrder.delivery_status !== normalizedDeliveryStatus) {
+            updates.delivery_status = normalizedDeliveryStatus;
             needsUpdate = true;
           }
           
@@ -1088,7 +1091,11 @@ export const AlWaseetProvider = ({ children }) => {
 
         // فحص ما إذا كانت هناك حاجة لتحديث
         const needsStatusUpdate = localOrder.status !== localStatus;
-        const needsDeliveryStatusUpdate = localOrder.delivery_status !== waseetStatusText;
+        const normalizedDeliveryStatus = (() => {
+          const id = String(waseetOrder.status_id || waseetOrder.statusId || '').trim();
+          return id || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText);
+        })();
+        const needsDeliveryStatusUpdate = localOrder.delivery_status !== normalizedDeliveryStatus;
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
@@ -1124,7 +1131,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (needsDeliveryStatusUpdate) {
-          updates.delivery_status = waseetStatusText;
+          updates.delivery_status = normalizedDeliveryStatus;
         }
 
         // تحديث رسوم التوصيل إن وُجدت
@@ -1287,9 +1294,10 @@ export const AlWaseetProvider = ({ children }) => {
         
           if (existingOrder) {
             // تحضير التحديثات
+            const normalizedDeliveryStatus = (String(waseetStatusId || '').trim() || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText));
             const updates = {
               status: localStatus,
-              delivery_status: waseetStatusText,
+              delivery_status: normalizedDeliveryStatus,
               updated_at: new Date().toISOString(),
             };
             
@@ -1477,9 +1485,10 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // تحضير التحديثات
+      const normalizedDeliveryStatus = (String(waseetStatusId || '').trim() || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText));
       const updates = {
         status: correctLocalStatus,
-        delivery_status: waseetStatusText,
+        delivery_status: normalizedDeliveryStatus,
         delivery_partner_order_id: String(waseetOrder.id),
         qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
         updated_at: new Date().toISOString()
@@ -1748,9 +1757,10 @@ export const AlWaseetProvider = ({ children }) => {
           .eq('tracking_number', trackingNumber)
       ).single();
 
+      const normalizedDeliveryStatus = (String(waseetStatusId || '').trim() || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText));
       const updates = {
         status: localStatus,
-        delivery_status: waseetStatusText,
+        delivery_status: normalizedDeliveryStatus,
         updated_at: new Date().toISOString(),
       };
       
