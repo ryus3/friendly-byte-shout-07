@@ -254,8 +254,9 @@ export const AlWaseetProvider = ({ children }) => {
       return query.eq('created_by', user.id);
     }
     
-    // المدير يرى جميع الطلبات للعرض
-    if (user.email === 'ryusbrand@gmail.com' || user.id === '91484496-b887-44f7-9e5d-be9db5567604') {
+    // Use role-based admin detection instead of hardcoded checks
+    // RLS policies now handle admin access control automatically
+    if (isAdmin) {
       return query;
     }
     
