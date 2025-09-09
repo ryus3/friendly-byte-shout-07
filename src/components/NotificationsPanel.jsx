@@ -884,9 +884,9 @@ const NotificationsPanel = () => {
                                      const statusInfo = getStatusForComponent(foundOrder);
                                      const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
                                      
-                                     return displayText.length > 35 ? (
-                                       <ScrollingText text={displayText} className="w-full" />
-                                     ) : displayText;
+                                      return displayText.length > 30 ? (
+                                        <ScrollingText text={displayText} className="" maxWidth="200px" />
+                                      ) : displayText;
                                    }
                                  }
                                  
@@ -909,17 +909,17 @@ const NotificationsPanel = () => {
                                    const statusInfo = getStatusForComponent(tempOrder);
                                    const displayText = `${trackingNumber} ${statusInfo.label}`;
                                    
-                                   return displayText.length > 35 ? (
-                                     <ScrollingText text={displayText} className="w-full" />
-                                   ) : displayText;
+                                    return displayText.length > 30 ? (
+                                      <ScrollingText text={displayText} className="" maxWidth="200px" />
+                                    ) : displayText;
                                  }
                                }
                               
                               // للإشعارات العادية - استخدام ScrollingText للنصوص الطويلة
                               const message = notification.message || '';
-                              return message.length > 35 ? (
-                                <ScrollingText text={message} className="w-full" />
-                              ) : message;
+                               return message.length > 30 ? (
+                                 <ScrollingText text={message} className="" maxWidth="200px" />
+                               ) : message;
                             })()}
                           </div>
                           <div className="flex items-center justify-end">
