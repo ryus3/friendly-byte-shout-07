@@ -545,7 +545,7 @@ const Dashboard = () => {
         const pendingCandidates = visibleOrders.filter(isPendingSale);
         const pendingSalesOrders = filterOrdersByPeriod(pendingCandidates, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
-          const productsSalesOnly = (o.total_amount || 0);
+          const productsSalesOnly = (o.final_amount || o.total_amount || 0);
           return sum + productsSalesOnly;
         }, 0);
 
