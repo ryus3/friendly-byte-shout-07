@@ -43,6 +43,9 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // معرف المدير الرئيسي - تعريفه في البداية
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+  
   // جلب أسماء المستخدمين لعرض اسم صاحب الطلب - تحريك هذا للأعلى قبل الاستخدام
   const usersMap = useMemo(() => {
     const map = new Map();
@@ -386,7 +389,7 @@ const OrdersPage = () => {
       }
     };
     fetchEmployeeCode();
-  }, [user?.user_id, hasPermission]);
+  }, [userUUID, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
@@ -395,8 +398,7 @@ const OrdersPage = () => {
     return [{ value: 'all', label: 'كل الموظفين' }, ...opts];
   }, [allUsers, hasPermission]);
 
-  // معرف المدير الرئيسي
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+  // معرف المدير الرئيسي - تم نقله للأعلى بالفعل
 
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
