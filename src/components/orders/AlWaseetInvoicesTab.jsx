@@ -44,13 +44,7 @@ const AlWaseetInvoicesTab = () => {
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
 
-  // Auto-load invoices when tab is opened - optimized for better UX
-  React.useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet') {
-      // Load with default timeFilter (week) for faster initial load
-      fetchInvoices(timeFilter, false);
-    }
-  }, [isLoggedIn, activePartner, timeFilter]);
+  // Remove the useEffect - let the hook handle all loading automatically
   const [customDateRange, setCustomDateRange] = useState(null);
 
   // Filter invoices based on search, status, and time
@@ -86,7 +80,7 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    await fetchInvoices(timeFilter, true); // force refresh
+    await fetchInvoices(timeFilter, true); // force refresh with loading indicator
     await syncLastTwoInvoices();
   };
   
@@ -94,7 +88,7 @@ const AlWaseetInvoicesTab = () => {
     setTimeFilter(newFilter);
     if (newFilter !== 'custom') {
       setCustomDateRange(null);
-      await fetchInvoices(newFilter, true); // force refresh with new filter
+      await fetchInvoices(newFilter, true); // force refresh with new filter and loading
     }
   };
   

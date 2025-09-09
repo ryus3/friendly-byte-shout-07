@@ -18,34 +18,43 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  // Fetch all merchant invoices (focus on recent only)
-  const fetchInvoices = useCallback(async (timeFilter = 'week') => {
+  // Enhanced smart fetch with instant loading and background sync
+  const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
       return;
     }
 
-    setLoading(true);
+    // Only show loading if this is a force refresh or manual action
+    if (forceRefresh) {
+      setLoading(true);
+    }
+
     try {
-      // Fetch only recent invoices to improve performance
+      // Smart fetch: only get recent invoices to avoid loading thousands
+      console.log(`🔄 جلب الفواتير (${timeFilter}) - ${forceRefresh ? 'إجباري' : 'تلقائي'}`);
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
-      // Persist invoices to DB (bulk upsert via RPC)
-      try {
-        const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-          p_invoices: invoicesData || []
-        });
-        if (upsertErr) {
-          console.warn('upsert_alwaseet_invoice_list error:', upsertErr.message);
+      // Persist invoices to DB (bulk upsert via RPC) - in background
+      if (invoicesData?.length > 0) {
+        try {
+          const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+            p_invoices: invoicesData
+          });
+          if (upsertErr) {
+            console.warn('خطأ في حفظ الفواتير:', upsertErr.message);
+          } else {
+            console.log(`💾 حفظ ${invoicesData.length} فاتورة في قاعدة البيانات`);
+          }
+        } catch (e) {
+          console.warn('تعذر حفظ الفواتير:', e?.message || e);
         }
-      } catch (e) {
-        console.warn('Failed to upsert invoices list:', e?.message || e);
       }
       
-      // Apply time filtering (focus on recent invoices for better performance)
+      // Enhanced smart filtering and sorting
       const filteredAndSortedInvoices = (invoicesData || [])
         .filter(invoice => {
           if (timeFilter === 'all') {
-            // For "all", still limit to last 6 months to avoid loading thousands of old invoices
+            // For "all", limit to last 6 months for performance
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
             const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
@@ -53,7 +62,6 @@ export const useAlWaseetInvoices = () => {
           }
           
           const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-          const now = new Date();
           
           switch (timeFilter) {
             case 'week':
@@ -77,13 +85,13 @@ export const useAlWaseetInvoices = () => {
               yearAgo.setFullYear(yearAgo.getFullYear() - 1);
               return invoiceDate >= yearAgo;
             case 'custom':
-              return invoice; // Handle custom range in the component
+              return true; // Handle custom range in the component
             default:
               return true;
           }
         })
         .sort((a, b) => {
-          // First sort by status - pending invoices first
+          // Priority sort: pending invoices first
           const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
           const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
           
@@ -97,54 +105,123 @@ export const useAlWaseetInvoices = () => {
         });
       
       setInvoices(filteredAndSortedInvoices);
+      console.log(`📊 عرض ${filteredAndSortedInvoices.length} فاتورة (${timeFilter})`);
       return filteredAndSortedInvoices;
     } catch (error) {
-      console.error('Error fetching invoices:', error);
-      toast({
-        title: 'خطأ في جلب الفواتير',
-        description: error.message,
-        variant: 'destructive'
-      });
+      console.error('خطأ في جلب الفواتير:', error);
+      
+      // Only show error toast for force refresh (manual actions)
+      if (forceRefresh) {
+        toast({
+          title: 'خطأ في جلب الفواتير',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } else {
+        console.warn('تعذر التحديث التلقائي للفواتير:', error.message);
+      }
       return [];
     } finally {
-      setLoading(false);
+      if (forceRefresh) {
+        setLoading(false);
+      }
     }
   }, [token, isLoggedIn, activePartner]);
 
-  // Auto-sync function for received invoices
-  const autoSyncReceivedInvoices = useCallback(async () => {
+  // Enhanced smart sync for background updates
+  const smartBackgroundSync = useCallback(async () => {
     try {
-      const { data, error } = await supabase.rpc('sync_recent_received_invoices');
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'smart',
+          employee_id: user?.id,
+          sync_invoices: true,
+          sync_orders: false // Only sync invoices in background
+        }
+      });
+      
       if (error) {
-        console.warn('Auto-sync failed:', error.message);
-      } else if (data?.updated_orders_count > 0) {
-        console.log(`Auto-synced ${data.updated_orders_count} orders from received invoices`);
-        // Refresh invoices after successful sync
-        fetchInvoices();
+        console.warn('مزامنة تلقائية فشلت:', error.message);
+      } else if (data?.invoices_synced > 0) {
+        console.log(`🔄 مزامنة تلقائية: ${data.invoices_synced} فاتورة جديدة`);
+        // Refresh local state without loading indicator
+        fetchInvoices('week', false);
+      } else {
+        console.log('✅ لا توجد فواتير جديدة للمزامنة');
       }
     } catch (error) {
-      console.warn('Auto-sync error:', error);
+      console.warn('خطأ في المزامنة التلقائية:', error);
     }
-  }, [fetchInvoices]);
+  }, [fetchInvoices, user?.id]);
 
-  // Setup automatic initial fetch on tab load
+  // Enhanced instant loading with smart caching
   useEffect(() => {
     if (!isLoggedIn || activePartner !== 'alwaseet') return;
 
-    // تحميل فوري عند دخول التبويب
-    console.log('🚀 تحميل تلقائي للفواتير عند دخول التبويب');
-    fetchInvoices('month'); // جلب فواتير الشهر الماضي تلقائياً
+    const loadInvoicesInstantly = async () => {
+      // 1. Load cached invoices from database FIRST (instant)
+      try {
+        const { data: cachedInvoices, error } = await supabase
+          .from('delivery_invoices')
+          .select('*')
+          .eq('partner', 'alwaseet')
+          .eq('owner_user_id', user?.id)
+          .order('issued_at', { ascending: false })
+          .limit(50);
+
+        if (!error && cachedInvoices?.length > 0) {
+          // Transform to match API format for consistency
+          const transformedInvoices = cachedInvoices.map(inv => ({
+            id: inv.external_id,
+            merchant_price: inv.amount,
+            delivered_orders_count: inv.orders_count,
+            status: inv.status,
+            merchant_id: inv.merchant_id,
+            updated_at: inv.issued_at,
+            created_at: inv.created_at,
+            raw: inv.raw
+          }));
+          
+          setInvoices(transformedInvoices);
+          console.log('⚡ تحميل فوري: عرض الفواتير المحفوظة -', transformedInvoices.length);
+        }
+      } catch (cacheError) {
+        console.warn('تعذر تحميل الفواتير المحفوظة:', cacheError);
+      }
+
+      // 2. Then update from API in background (non-blocking)
+      const lastSyncKey = `${LAST_SYNC_COOLDOWN_KEY}_${user?.id}`;
+      const lastSync = localStorage.getItem(lastSyncKey);
+      const timeSinceLastSync = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
+      const cooldownMs = SYNC_COOLDOWN_MINUTES * 60 * 1000;
+
+      if (timeSinceLastSync > cooldownMs) {
+        console.log('🔄 تحديث في الخلفية: جلب فواتير جديدة...');
+        localStorage.setItem(lastSyncKey, Date.now().toString());
+        
+        // Smart background sync using edge function
+        smartBackgroundSync().then(() => {
+          console.log('✅ تم التحديث الذكي في الخلفية');
+        }).catch(err => {
+          console.warn('تعذر التحديث الذكي في الخلفية:', err);
+        });
+      } else {
+        const remainingMinutes = Math.ceil((cooldownMs - timeSinceLastSync) / 60000);
+        console.log(`⏰ تم التحديث مؤخراً، التالي خلال ${remainingMinutes} دقيقة`);
+      }
+    };
+
+    loadInvoicesInstantly();
 
     // Listen for invoice updates via custom events only
     const handleInvoiceReceived = (event) => {
-      console.log('Invoice received notification:', event.detail);
-      autoSyncReceivedInvoices();
-      fetchInvoices();
+      console.log('تحديث فوري للفاتورة المستلمة:', event.detail);
+      fetchInvoices('week', false); // Refresh without loading indicator
     };
 
     const handleInvoiceUpdated = (event) => {
-      console.log('Invoice updated notification:', event.detail);
-      fetchInvoices();
+      console.log('تحديث فوري للفاتورة:', event.detail);
+      fetchInvoices('week', false); // Refresh without loading indicator
     };
 
     window.addEventListener('invoiceReceived', handleInvoiceReceived);
@@ -154,7 +231,7 @@ export const useAlWaseetInvoices = () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);
       window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
     };
-  }, [isLoggedIn, activePartner, fetchInvoices, autoSyncReceivedInvoices]);
+  }, [isLoggedIn, activePartner, fetchInvoices, user?.id]);
 
   // إصلاح fetchInvoiceOrders جذرياً لعرض البيانات من raw أو API
   const fetchInvoiceOrders = useCallback(async (invoiceId) => {
