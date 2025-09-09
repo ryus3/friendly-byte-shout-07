@@ -36,14 +36,6 @@ const AlWaseetInvoicesTab = () => {
     syncLastTwoInvoices
   } = useAlWaseetInvoices();
   
-  // Auto-load invoices when tab is opened - optimized for better UX
-  React.useEffect(() => {
-    if (isLoggedIn && activePartner === 'alwaseet') {
-      // Load with default timeFilter (week) for faster initial load
-      fetchInvoices(timeFilter, false);
-    }
-  }, [isLoggedIn, activePartner, timeFilter]);
-  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -51,6 +43,14 @@ const AlWaseetInvoicesTab = () => {
   
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
+
+  // Auto-load invoices when tab is opened - optimized for better UX
+  React.useEffect(() => {
+    if (isLoggedIn && activePartner === 'alwaseet') {
+      // Load with default timeFilter (week) for faster initial load
+      fetchInvoices(timeFilter, false);
+    }
+  }, [isLoggedIn, activePartner, timeFilter]);
   const [customDateRange, setCustomDateRange] = useState(null);
 
   // Filter invoices based on search, status, and time

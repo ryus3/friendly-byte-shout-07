@@ -910,8 +910,8 @@ export const AlWaseetProvider = ({ children }) => {
       // 4. إشعار المستخدم عند الحذف التلقائي
       if (source === 'fastSync') {
         toast({
-          title: "حذف تلقائي",
-          description: `تم حذف الطلب ${orderToDelete.order_number || orderToDelete.tracking_number} تلقائياً لأنه غير موجود في الوسيط`,
+          title: "حذف طلب تلقائي",
+          description: `${orderToDelete.tracking_number || orderToDelete.order_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
           variant: "default"
         });
       }
@@ -1595,11 +1595,11 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
           
           // إشعار المدير
-          showToast({
-            title: "تنبيه: حذف طلب تلقائي",
-            description: `تم حذف الطلب ${order.tracking_number} لعدم وجوده في شركة التوصيل`,
-            variant: "destructive"
-          });
+        showToast({
+          title: "حذف طلب تلقائي",
+          description: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
+          variant: "destructive"
+        });
 
           await performAutoDelete(order);
         }
@@ -1657,7 +1657,7 @@ export const AlWaseetProvider = ({ children }) => {
       return { 
         success: true, 
         autoDeleted: true,
-        message: `تم حذف الطلب ${order.tracking_number} تلقائياً لأنه محذوف من شركة التوصيل`
+        message: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`
       };
       
     } catch (error) {
