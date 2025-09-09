@@ -19,6 +19,10 @@ export const syncSpecificOrder = async (qrId, token) => {
     const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
     const statusLower = String(waseetStatusText || '').toLowerCase();
     
+    // تطبيع حالة التوصيل: تفضيل المعرّف الرقمي، وإلا تحويل النص 'تم التسليم للزبون' إلى '4'
+    const waseetStatusId = waseetOrder.status_id || waseetOrder.state_id || waseetOrder.statusId || waseetOrder.stateId;
+    const normalizedDeliveryStatus = String(waseetStatusId || '').trim() || (waseetStatusText === 'تم التسليم للزبون' ? '4' : waseetStatusText);
+    
     let correctLocalStatus = 'pending';
     if (statusLower.includes('تسليم') || statusLower.includes('مسلم')) {
       correctLocalStatus = 'delivered';
@@ -55,7 +59,7 @@ export const syncSpecificOrder = async (qrId, token) => {
     // تحضير التحديثات
     const updates = {
       status: correctLocalStatus,
-      delivery_status: waseetStatusText,
+      delivery_status: normalizedDeliveryStatus,
       delivery_partner_order_id: String(waseetOrder.id),
       updated_at: new Date().toISOString()
     };

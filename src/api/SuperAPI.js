@@ -420,10 +420,13 @@ return this.fetch('all_data', async () => {
         console.log('🔄 تحديث حالة المخزون للطلب:', { orderId, newStatus: updates.status, deliveryStatus: updates.delivery_status });
         
         // استدعاء دالة Supabase لتحديث حالة الحجز
+        const normalizedDeliveryStatus = (updates.delivery_partner === 'alwaseet' && updates.delivery_status === 'تم التسليم للزبون')
+          ? '4'
+          : (updates.delivery_status || null);
         const { data: reservationResult } = await supabase.rpc('update_order_reservation_status', {
           p_order_id: orderId,
           p_new_status: updates.status,
-          p_new_delivery_status: updates.delivery_status || null,
+          p_new_delivery_status: normalizedDeliveryStatus,
           p_delivery_partner: updates.delivery_partner || null
         });
         
