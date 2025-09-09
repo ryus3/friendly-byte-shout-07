@@ -7,23 +7,20 @@ const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
 
   const checkScrollNeed = useCallback(() => {
     if (textRef.current && containerRef.current) {
-      // انتظار صغير للتأكد من جهوزية DOM
       setTimeout(() => {
         const textWidth = textRef.current?.scrollWidth || 0;
         const containerWidth = containerRef.current?.clientWidth || 0;
-        setShouldScroll(textWidth > containerWidth + 5); // هامش أصغر
-      }, 100);
+        setShouldScroll(textWidth > containerWidth + 5);
+      }, 50);
     }
   }, []);
 
   useLayoutEffect(() => {
     checkScrollNeed();
     
-    // مراقبة تغييرات حجم النافذة
     const handleResize = () => checkScrollNeed();
     window.addEventListener('resize', handleResize);
     
-    // مراقبة التغييرات في حجم النص
     let resizeObserver;
     if (textRef.current) {
       resizeObserver = new ResizeObserver(() => {
@@ -43,23 +40,30 @@ const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
   if (!shouldScroll) {
     return (
       <div ref={containerRef} className={className} style={{ maxWidth }}>
-        <span ref={textRef} className="whitespace-nowrap">{text}</span>
+        <span ref={textRef} className="whitespace-nowrap truncate block">{text}</span>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} className={`overflow-hidden relative ${className}`} style={{ maxWidth, direction: 'rtl' }}>
-      <div 
+    <div 
+      ref={containerRef} 
+      className={`overflow-hidden relative ${className}`} 
+      style={{ maxWidth }}
+      dir="rtl"
+    >
+      <span 
         ref={textRef}
-        className="animate-scroll-text whitespace-nowrap absolute top-0 right-0"
+        className="animate-scroll-text whitespace-nowrap inline-block"
         style={{
-          animationDelay: '1s',
-          direction: 'rtl'
+          animationDuration: '4s',
+          animationDelay: '0.5s',
+          animationIterationCount: 'infinite',
+          animationTimingFunction: 'ease-in-out'
         }}
       >
         {text}
-      </div>
+      </span>
     </div>
   );
 };
