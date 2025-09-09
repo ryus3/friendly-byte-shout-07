@@ -4,96 +4,24 @@
 		<meta charset="UTF-8" />
 		<link rel="icon" type="image/svg+xml" href="/vite.svg" />
 		<meta name="generator" content="Lovable" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		
 		<!-- Performance & SEO optimizations -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link rel="dns-prefetch" href="//tkheostkubborwkwzugl.supabase.co" />
 		
-		<!-- Cache control meta tags for better caching behavior -->
-		<meta http-equiv="Cache-Control" content="public, max-age=31536000, immutable" />
-		<meta http-equiv="Expires" content="31536000" />
-		
-		<!-- Preload LCP image for optimal performance -->
-		<link rel="preload" href="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" as="image" fetchpriority="high" />
-		
-		<!-- Async font loading to eliminate render-blocking -->
-		<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-		<link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" /></noscript>
-		
 		<!-- Critical CSS inlined for FCP optimization -->
 		<style>
 			/* Critical CSS for First Contentful Paint optimization */
-			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.bg-muted{background-color:hsl(var(--muted))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}.flex-col{flex-direction:column}.space-y-4>*+*{margin-top:1rem}.space-y-6>*+*{margin-top:1.5rem}.space-y-8>*+*{margin-top:2rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.mx-4{margin-left:1rem;margin-right:1rem}.max-w-md{max-width:28rem}.text-center{text-align:center}.font-semibold{font-weight:600}.text-lg{font-size:1.125rem}.text-xl{font-size:1.25rem}.text-2xl{font-size:1.5rem}.w-44{width:11rem}.h-44{height:11rem}.w-48{width:12rem}.h-48{height:12rem}.h-6{height:1.5rem}.h-8{height:2rem}.w-32{width:8rem}.w-40{width:10rem}.h-full{height:100%}.w-full{width:100%}.mx-auto{margin-left:auto;margin-right:auto}.object-contain{object-fit:contain}.block{display:block}.mix-blend-multiply{mix-blend-mode:multiply}.rounded{border-radius:calc(var(--radius))}.rounded-lg{border-radius:calc(var(--radius)*2)}.rounded-xl{border-radius:calc(var(--radius)*3)}.animate-pulse{animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}.dark .dark\\:hidden{display:none}.glass-effect{backdrop-filter:blur(10px);background:hsl(var(--background)/0.8);border:1px solid hsl(var(--border)/0.2);border-radius:calc(var(--radius)*2)}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%;--border:214.3 31.8% 91.4%;--radius:0.5rem}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%;--border:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}body{margin:0;padding:0;font-family:'Cairo',system-ui,-apple-system,sans-serif;direction:rtl}*{box-sizing:border-box}.hidden{display:none!important}img{max-width:100%;height:auto}
+			#root{height:100vh;width:100vw}.h-dvh{height:100dvh}.h-screen{height:100vh}.w-screen{width:100vw}.bg-background{background-color:hsl(var(--background))}.text-foreground{color:hsl(var(--foreground))}.flex{display:flex}.items-center{align-items:center}.justify-center{justify-content:center}:root{--background:0 0% 100%;--foreground:222.2 84% 4.9%;--primary:222.2 47.4% 11.2%;--primary-foreground:210 40% 98%;--muted:210 40% 96%}.dark{--background:222.2 84% 4.9%;--foreground:210 40% 98%;--primary:210 40% 98%;--primary-foreground:222.2 47.4% 11.2%;--muted:217.2 32.6% 17.5%}.loader{width:48px;height:48px;border:5px solid hsl(var(--muted));border-bottom-color:hsl(var(--primary));border-radius:50%;display:inline-block;box-sizing:border-box;animation:rotation 1s linear infinite}@keyframes rotation{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
 		</style>
 		
 		<title>RYUS | نظام إدارة المخزون والطلبات</title>
 		<meta name="description" content="منصة RYUS الاحترافية لإدارة المنتجات والطلبات والمخزون والتقارير." />
 	</head>
 	<body>
-		<div id="root">
-			<!-- Immediate loading screen for LCP optimization -->
-			<div class="h-screen w-screen bg-background flex items-center justify-center">
-				<div class="glass-effect p-8 text-center space-y-8 max-w-md w-full mx-4">
-					<!-- Large skeleton for LCP optimization -->
-					<div class="w-48 h-48 mx-auto">
-						<div class="w-full h-full bg-muted animate-pulse rounded-xl"></div>
-					</div>
-					<div class="space-y-6">
-						<div class="h-8 bg-muted animate-pulse rounded w-40 mx-auto"></div>
-						<div class="h-6 bg-muted animate-pulse rounded w-32 mx-auto"></div>
-						<div class="loader mx-auto"></div>
-					</div>
-				</div>
-			</div>
-		</div>
-		
-		<!-- Async CSS and resource loading to eliminate render-blocking -->
-		<script>
-			// Load CSS asynchronously to prevent render-blocking
-			function loadCSS(href) {
-				var link = document.createElement('link');
-				link.rel = 'stylesheet';
-				link.href = href;
-				link.media = 'print';
-				link.onload = function() { this.media = 'all'; };
-				document.head.appendChild(link);
-			}
-			
-			// Load Google Fonts completely async
-			function loadGoogleFonts() {
-				loadCSS('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
-			}
-			
-			// Intercept and defer main CSS bundle loading
-			var originalObserver = new MutationObserver(function(mutations) {
-				mutations.forEach(function(mutation) {
-					mutation.addedNodes.forEach(function(node) {
-						if (node.tagName === 'LINK' && node.rel === 'stylesheet' && 
-							(node.href.includes('index-') || node.href.includes('main-')) && node.href.includes('.css')) {
-							// Immediately remove render-blocking CSS
-							var href = node.href;
-							node.remove();
-							// Load it async after first paint
-							requestAnimationFrame(function() {
-								loadCSS(href);
-							});
-							originalObserver.disconnect();
-						}
-					});
-				});
-			});
-			originalObserver.observe(document.head, { childList: true, subtree: true });
-			
-			// Load non-critical resources after first paint
-			requestAnimationFrame(function() {
-				requestAnimationFrame(function() {
-					loadGoogleFonts();
-				});
-			});
-		</script>
+		<div id="root"></div>
 		<script type="module" src="/src/main.jsx"></script>
 	</body>
 </html>

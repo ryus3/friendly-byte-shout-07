@@ -2,16 +2,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 // إعداد Real-time مع debouncing لمنع التجمد
 export const setupRealtime = () => {
-  // Avoid WebSocket errors during automated audits/prerender/offline
-  try {
-    const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
-    const isAutomatedAudit = /lighthouse|pagespeed|ptst|webpagetest|chrome-lighthouse|google-insights/i.test(ua);
-    const isPrerender = typeof document !== 'undefined' && (document.visibilityState === 'hidden' || document.prerendering);
-    const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
-    if (isAutomatedAudit || isPrerender || isOffline) {
-      return () => {};
-    }
-  } catch (_) { /* noop */ }
   let debounceTimers = new Map();
   
   const debouncedDispatch = (eventName, detail, delay = 200) => {
