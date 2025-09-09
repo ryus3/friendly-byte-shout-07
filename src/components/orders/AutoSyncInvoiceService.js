@@ -10,13 +10,13 @@ export class AutoSyncInvoiceService {
         .update({
           receipt_received: true,
           receipt_received_at: new Date().toISOString(),
-          receipt_received_by: null, // Let RLS handle user identification
+          receipt_received_by: '91484496-b887-44f7-9e5d-be9db5567604',
           delivery_partner_invoice_id: invoiceId,
           status: 'completed', // Manager orders become completed automatically
           updated_at: new Date().toISOString()
         })
         .eq('tracking_number', trackingNumber)
-        // Remove hardcoded admin filter - let RLS handle access
+        .eq('created_by', '91484496-b887-44f7-9e5d-be9db5567604')
         .select();
 
       if (error) {

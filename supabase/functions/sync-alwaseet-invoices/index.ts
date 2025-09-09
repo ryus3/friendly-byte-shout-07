@@ -394,12 +394,7 @@ async function updateOrderStatus(od: any, employee: any, supabase: any) {
     const externalId = String(od.id ?? od.qr_id ?? od.qrId ?? '').trim();
     if (!externalId) return false;
     
-    const rawCode = String(od.state_id ?? od.stateId ?? od.status_id ?? od.statusId ?? '').trim();
-    let stateCode = rawCode;
-    if (!stateCode) {
-      const text = String(od.status_text ?? od.status_name ?? od.status ?? '').trim();
-      if (text === 'تم التسليم للزبون') stateCode = '4';
-    }
+    const stateCode = String(od.state_id ?? od.stateId ?? od.status ?? '').trim();
     const localStatus = mapAlWaseetStateToLocal(stateCode);
 
     const { data: foundOrders, error: findErr } = await supabase

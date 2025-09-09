@@ -9,8 +9,8 @@ import { toast } from '@/hooks/use-toast';
 import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 
-// Use role-based admin detection instead of hardcoded ID
-const ADMIN_ID = null; // Removed hardcoded admin ID
+// معرف المدير الرئيسي - يجب عدم عرض التسوية له
+const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
 const EmployeeSettlementCard = ({ 
   employee, 
