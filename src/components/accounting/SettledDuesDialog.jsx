@@ -30,12 +30,17 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
   console.log('🔍 الأرباح المسواة المرسلة:', settledProfits?.length || 0);
   console.log('🔍 الطلبات المرسلة:', allOrders?.length || 0);
 
-  // البحث عن الأرباح والطلبات المرتبطة بهذا الموظف
+  // البحث عن الأرباح المرتبطة بهذه الفاتورة المحددة فقط
   const relatedProfits = settledProfits?.filter(profit => 
-    profit.employee_id === invoice.employee_id
+    profit.employee_id === invoice.employee_id &&
+    // إضافة فلتر إضافي للتأكد من أن الأرباح تخص هذه الفاتورة
+    (invoice.profit_ids?.includes(profit.id) || 
+     invoice.order_ids?.includes(profit.order_id) ||
+     // إذا لم تكن هناك معرفات محددة، نأخذ الأرباح بناءً على تاريخ التسوية
+     (!invoice.profit_ids && !invoice.order_ids))
   ) || [];
 
-  console.log('🔍 الأرباح المرتبطة بالموظف:', relatedProfits);
+  console.log('🔍 الأرباح المرتبطة بهذه الفاتورة فقط:', relatedProfits);
 
   // البحث عن الطلبات المسواة
   let settledOrders = [];
@@ -76,13 +81,26 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
   console.log('📋 الطلبات المسواة النهائية:', settledOrders);
 
-  // حساب الإحصائيات
-  const stats = relatedProfits.reduce((acc, profit) => ({
-    totalRevenue: acc.totalRevenue + (profit.total_revenue || 0),
-    totalCost: acc.totalCost + (profit.total_cost || 0),
-    totalProfit: acc.totalProfit + (profit.employee_profit || 0),
-    ordersCount: acc.ordersCount + 1
-  }), { totalRevenue: 0, totalCost: 0, totalProfit: 0, ordersCount: 0 });
+  // حساب الإحصائيات للفاتورة المحددة فقط
+  const stats = useMemo(() => {
+    // إذا كانت الفاتورة تحتوي على settled_orders، استخدمها مباشرة
+    if (invoice.settled_orders && Array.isArray(invoice.settled_orders) && invoice.settled_orders.length > 0) {
+      return invoice.settled_orders.reduce((acc, order) => ({
+        totalRevenue: acc.totalRevenue + (parseFloat(order.order_total) || 0),
+        totalCost: acc.totalCost + (parseFloat(order.total_cost) || 0),
+        totalProfit: acc.totalProfit + (parseFloat(order.employee_profit) || 0),
+        ordersCount: acc.ordersCount + 1
+      }), { totalRevenue: 0, totalCost: 0, totalProfit: 0, ordersCount: 0 });
+    }
+    
+    // وإلا احسب من الأرباح المرتبطة
+    return relatedProfits.reduce((acc, profit) => ({
+      totalRevenue: acc.totalRevenue + (profit.total_revenue || 0),
+      totalCost: acc.totalCost + (profit.total_cost || 0),
+      totalProfit: acc.totalProfit + (profit.employee_profit || 0),
+      ordersCount: acc.ordersCount + 1
+    }), { totalRevenue: 0, totalCost: 0, totalProfit: 0, ordersCount: 0 });
+  }, [relatedProfits, invoice.settled_orders]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -639,10 +657,17 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     return allInvoices;
   }, [realSettlementInvoices, invoices, allUsers]);
 
-  // قائمة الموظفين الفريدة
+  // قائمة الموظفين الفريدة - استخدام employee_id للتأكد من عدم التكرار
   const employees = useMemo(() => {
-    const uniqueEmployees = [...new Set(settlementInvoices.map(invoice => invoice.employee_name))];
-    return uniqueEmployees.filter(name => name && name !== 'غير محدد');
+    const uniqueEmployeesMap = new Map();
+    
+    settlementInvoices.forEach(invoice => {
+      if (invoice.employee_id && invoice.employee_name && invoice.employee_name !== 'غير محدد') {
+        uniqueEmployeesMap.set(invoice.employee_id, invoice.employee_name);
+      }
+    });
+    
+    return Array.from(uniqueEmployeesMap.values());
   }, [settlementInvoices]);
 
   // تصفية الفواتير
