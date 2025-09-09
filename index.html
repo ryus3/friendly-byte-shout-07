@@ -16,7 +16,8 @@
 		<meta http-equiv="Expires" content="31536000" />
 		
 		<!-- Async font loading to eliminate render-blocking -->
-		<link rel="preload" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+		<link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+		<link rel="dns-prefetch" href="https://fonts.gstatic.com" />
 		<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap" /></noscript>
 		
 		<!-- Critical CSS inlined for FCP optimization -->
@@ -53,59 +54,41 @@
 				var link = document.createElement('link');
 				link.rel = 'stylesheet';
 				link.href = href;
+				link.media = 'print';
+				link.onload = function() { this.media = 'all'; };
 				document.head.appendChild(link);
 			}
 			
-			// Defer all non-critical resource loading until after first paint
-			function loadNonCriticalResources() {
-				// Load Google Fonts async
-				var fontLinks = document.querySelectorAll('link[rel="preload"][as="style"]');
-				fontLinks.forEach(function(link) {
-					if (!link.hasAttribute('data-loaded')) {
-						link.setAttribute('data-loaded', 'true');
-						if (link.onload) link.onload();
-					}
-				});
-				
-				// Load main CSS bundle async
-				var cssLinks = document.querySelectorAll('link[rel="stylesheet"]');
-				var hasCSSBundle = false;
-				cssLinks.forEach(function(link) {
-					if (link.href.includes('index-') && link.href.includes('.css')) {
-						hasCSSBundle = true;
-					}
-				});
-				
-				// If no CSS bundle found in DOM yet, wait for Vite to inject it and make it async
-				if (!hasCSSBundle) {
-					var observer = new MutationObserver(function(mutations) {
-						mutations.forEach(function(mutation) {
-							mutation.addedNodes.forEach(function(node) {
-								if (node.tagName === 'LINK' && node.rel === 'stylesheet' && 
-									node.href.includes('index-') && node.href.includes('.css')) {
-									// Remove the synchronous link and load it async
-									var href = node.href;
-									node.remove();
-									requestIdleCallback(function() {
-										loadCSS(href);
-									});
-									observer.disconnect();
-								}
-							});
-						});
-					});
-					observer.observe(document.head, { childList: true });
-				}
+			// Load Google Fonts completely async
+			function loadGoogleFonts() {
+				loadCSS('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Tajawal:wght@400;500;700&display=swap');
 			}
 			
-			// Use requestAnimationFrame to defer loading until after first paint
+			// Intercept and defer main CSS bundle loading
+			var originalObserver = new MutationObserver(function(mutations) {
+				mutations.forEach(function(mutation) {
+					mutation.addedNodes.forEach(function(node) {
+						if (node.tagName === 'LINK' && node.rel === 'stylesheet' && 
+							(node.href.includes('index-') || node.href.includes('main-')) && node.href.includes('.css')) {
+							// Immediately remove render-blocking CSS
+							var href = node.href;
+							node.remove();
+							// Load it async after first paint
+							requestAnimationFrame(function() {
+								loadCSS(href);
+							});
+							originalObserver.disconnect();
+						}
+					});
+				});
+			});
+			originalObserver.observe(document.head, { childList: true, subtree: true });
+			
+			// Load non-critical resources after first paint
 			requestAnimationFrame(function() {
-				// Use requestIdleCallback for further deferral with fallback
-				if (typeof requestIdleCallback !== 'undefined') {
-					requestIdleCallback(loadNonCriticalResources, { timeout: 100 });
-				} else {
-					setTimeout(loadNonCriticalResources, 50);
-				}
+				requestAnimationFrame(function() {
+					loadGoogleFonts();
+				});
 			});
 		</script>
 		<script type="module" src="/src/main.jsx"></script>
