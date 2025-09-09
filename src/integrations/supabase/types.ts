@@ -3139,6 +3139,65 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_invoice_orders: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          order_id: string
+          profit_id: string | null
+          settlement_invoice_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id: string
+          profit_id?: string | null
+          settlement_invoice_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          profit_id?: string | null
+          settlement_invoice_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "settlement_invoice_orders_profit_id_fkey"
+            columns: ["profit_id"]
+            isOneToOne: false
+            referencedRelation: "profits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_invoice_orders_settlement_invoice_id_fkey"
+            columns: ["settlement_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "settlement_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settlement_invoices: {
         Row: {
           created_at: string
@@ -3853,6 +3912,10 @@ export type Database = {
       }
       generate_purchase_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_settlement_invoice_number: {
+        Args: { p_hint?: string }
         Returns: string
       }
       generate_telegram_code: {
