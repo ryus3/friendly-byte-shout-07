@@ -351,57 +351,32 @@ export const ProfitsProvider = ({ children }) => {
 
       if (requestError) throw requestError;
 
-      // الحصول على بيانات الموظف
-      const { data: employee } = await supabase
-        .from('profiles')
-        .select('full_name, employee_code')
-        .eq('user_id', request.employee_id)
-        .single();
-
-      // الحصول على تفاصيل الطلبات المسواة
-      const { data: ordersToSettle } = await supabase
-        .from('orders')
-        .select('id, order_number, final_amount, customer_name')
-        .in('id', request.order_ids);
-
-      // إنشاء فاتورة التحاسب في الجدول الموحد
+      // إنشاء فاتورة التحاسب
       const invoiceNumber = `INV-${Date.now()}`;
+      const invoiceData = {
+        request_id: requestId,
+        employee_id: request.employee_id,
+        invoice_number: invoiceNumber,
+        total_amount: request.total_profit,
+        order_ids: request.order_ids,
+        payment_method: paymentMethod,
+        generated_at: new Date().toISOString(),
+        generated_by: currentUserId
+      };
+
+      // تسجيل التسوية في الإشعارات بدلاً من جدول منفصل
       const { data: invoice, error: invoiceError } = await supabase
-        .from('settlement_invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          employee_id: request.employee_id,
-          employee_name: employee?.full_name || 'غير محدد',
-          employee_code: employee?.employee_code || null,
-          total_amount: request.total_profit,
-          payment_method: paymentMethod,
-          settlement_date: new Date().toISOString(),
-          generated_by: currentUserId,
-          order_ids: request.order_ids,
-          settled_orders: ordersToSettle || [],
-          notes: `تسوية ${request.order_ids.length} طلب`,
-          status: 'completed'
-        })
+        .from('notifications')
+        .insert([{
+          type: 'settlement_invoice',
+          title: 'فاتورة تسوية',
+          message: `تم إنشاء فاتورة تسوية للموظف`,
+          data: invoiceData
+        }])
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
-
-      // إرسال إشعار بسيط فقط
-      await supabase
-        .from('notifications')
-        .insert({
-          type: 'settlement_success',
-          title: 'تمت التسوية بنجاح',
-          message: `تم إنشاء فاتورة التسوية ${invoiceNumber}`,
-          user_id: request.employee_id,
-          data: {
-            invoice_id: invoice.id,
-            invoice_number: invoiceNumber,
-            total_amount: request.total_profit
-          },
-          priority: 'medium'
-        });
 
       // تحديث حالة الأرباح إلى مدفوعة
       await supabase
@@ -554,22 +529,15 @@ export const ProfitsProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      const [profitsRes, settlementInvoicesRes] = await Promise.all([
-        supabase.from('profits').select('*').order('created_at', { ascending: false }),
-        // جلب فواتير التسوية من الجدول الموحد الجديد
-        supabase
-          .from('settlement_invoices')
-          .select('*')
-          .order('settlement_date', { ascending: false })
+      const [profitsRes] = await Promise.all([
+        supabase.from('profits').select('*').order('created_at', { ascending: false })
       ]);
 
       if (profitsRes.error) throw profitsRes.error;
-      if (settlementInvoicesRes.error) throw settlementInvoicesRes.error;
 
       setProfits(profitsRes.data || []);
       setSettlementRequests([]); // مؤقتاً حتى يتم تطوير النظام
-      // استخدام الجدول الموحد الجديد كمصدر وحيد
-      setSettlementInvoices(settlementInvoicesRes.data || []);
+      setSettlementInvoices([]);  // مؤقتاً حتى يتم تطوير النظام
     } catch (error) {
       console.error('Error fetching profits data:', error);
       toast({

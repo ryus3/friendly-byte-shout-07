@@ -502,20 +502,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     const fetchRealSettlementInvoices = async () => {
       setLoadingRealInvoices(true);
       try {
-        // Attempt to migrate any legacy employee-dues expenses into settlement_invoices before fetching
-        try {
-          const rpcArgs = {};
-          if (dateRange?.from) rpcArgs.p_from_date = dateRange.from.toISOString();
-          if (dateRange?.to) {
-            const endOfDay = new Date(dateRange.to);
-            endOfDay.setHours(23, 59, 59, 999);
-            rpcArgs.p_to_date = endOfDay.toISOString();
-          }
-          await supabase.rpc('migrate_employee_dues_expenses', rpcArgs);
-        } catch (mErr) {
-          console.warn('⚠️ تعذر ترحيل مصاريف مستحقات الموظفين القديمة:', mErr);
-        }
-
         let query = supabase
           .from('settlement_invoices')
           .select('*');
@@ -579,43 +565,68 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     }
   }, [open, timePeriod, dateRange]);
 
-  // معالجة فواتير التحاسب - المصدر الموحد الجديد
+  // معالجة فواتير التحاسب - الفواتير الحقيقية أولاً
   const settlementInvoices = useMemo(() => {
-    console.log('🔄 معالجة فواتير التحاسب من المصدر الموحد');
+    console.log('🔄 معالجة فواتير التحاسب الحقيقية');
     
-    if (!realSettlementInvoices || realSettlementInvoices.length === 0) {
-      console.log('⚠️ لا توجد فواتير تسوية');
-      return [];
-    }
+    let allInvoices = [];
 
-    const processedInvoices = realSettlementInvoices.map(invoice => {
-      // الحصول على اسم الموظف من قاعدة البيانات أو استخدام المحفوظ
-      const employeeName = allUsers?.find(user => 
-        user.user_id === invoice.employee_id
-      )?.full_name || invoice.employee_name || 'غير محدد';
-
-      return {
+    // إضافة الفواتير الحقيقية أولاً
+    if (realSettlementInvoices && realSettlementInvoices.length > 0) {
+      const realInvoices = realSettlementInvoices.map(invoice => ({
         id: invoice.id,
         invoice_number: invoice.invoice_number,
-        employee_name: employeeName,
+        employee_name: invoice.employee_name,
         employee_id: invoice.employee_id,
-        employee_code: invoice.employee_code,
+        employee_code: invoice.employee_code, // المعرف الصغير
         total_amount: invoice.total_amount,
         settlement_date: invoice.settlement_date,
         created_at: invoice.created_at,
-        description: invoice.notes || invoice.description,
+        description: invoice.description,
         status: invoice.status || 'completed',
-        type: 'settlement_invoice',
-        payment_method: invoice.payment_method || 'cash',
+        type: 'real_settlement',
+        payment_method: invoice.payment_method,
         notes: invoice.notes,
-        settled_orders: invoice.settled_orders || [],
-        order_ids: invoice.order_ids || []
-      };
-    });
+        settled_orders: invoice.settled_orders || [] // الطلبات المسواة
+      }));
       
-    console.log('✅ تمت معالجة فواتير التسوية:', processedInvoices.length);
-    return processedInvoices;
-  }, [realSettlementInvoices, allUsers]);
+      allInvoices = [...realInvoices];
+      console.log('✅ تمت إضافة الفواتير الحقيقية:', realInvoices.length);
+    }
+
+    // إضافة الفواتير القديمة فقط إذا لم توجد نسخة حقيقية
+    if (invoices && Array.isArray(invoices)) {
+      const legacyInvoices = invoices
+        .filter(expense => {
+          const invoiceNumber = expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`;
+          return !realSettlementInvoices.some(real => real.invoice_number === invoiceNumber);
+        })
+        .map(expense => {
+          const employeeName = allUsers?.find(user => 
+            user.user_id === expense.metadata?.employee_id
+          )?.full_name || expense.metadata?.employee_name || 'غير محدد';
+          
+          return {
+            id: expense.id,
+            invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
+            employee_name: employeeName,
+            employee_id: expense.metadata?.employee_id,
+            total_amount: expense.amount,
+            settlement_date: expense.created_at,
+            created_at: expense.created_at,
+            description: expense.description,
+            status: 'completed',
+            type: 'legacy',
+            metadata: expense.metadata || {}
+          };
+        });
+      
+      allInvoices = [...allInvoices, ...legacyInvoices];
+      console.log('📝 تمت إضافة الفواتير القديمة:', legacyInvoices.length);
+    }
+
+    return allInvoices;
+  }, [realSettlementInvoices, invoices, allUsers]);
 
   // قائمة الموظفين الفريدة
   const employees = useMemo(() => {
