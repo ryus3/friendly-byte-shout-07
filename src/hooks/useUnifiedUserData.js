@@ -3,7 +3,7 @@
  * يحل مشكلة التناقضات في معرفات المستخدمين
  */
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { 
@@ -14,10 +14,32 @@ import {
   createSettlementInvoiceFilter,
   logUserIdInconsistency
 } from '@/utils/userIdUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useUnifiedUserData = () => {
   const { user } = useAuth();
   const { isAdmin, hasPermission } = usePermissions();
+  
+  // Check if user can view all data using secure functions
+  const [canViewAllData, setCanViewAllData] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkPermissions = async () => {
+      if (user?.id) {
+        try {
+          const { data, error } = await supabase.rpc('can_view_all_orders');
+          if (!error) {
+            setCanViewAllData(data);
+          }
+        } catch (error) {
+          console.warn('Error checking permissions:', error);
+          setCanViewAllData(isAdmin); // Fallback to existing logic
+        }
+      }
+    };
+    
+    checkPermissions();
+  }, [user?.id, isAdmin]);
 
   // تسجيل أي تناقضات في المعرفات
   useMemo(() => {
@@ -35,14 +57,14 @@ export const useUnifiedUserData = () => {
   // فلاتر البيانات الموحدة
   const dataFilters = useMemo(() => ({
     // فلتر عام للطلبات والمنتجات
-    general: createUserFilter(user, isAdmin),
+    general: createUserFilter(user, canViewAllData),
     
     // فلتر خاص بالأرباح
-    profits: createProfitFilter(user, isAdmin),
+    profits: createProfitFilter(user, canViewAllData),
     
     // فلتر فواتير التسوية
     settlements: user ? createSettlementInvoiceFilter(user) : {}
-  }), [user, isAdmin]);
+  }), [user, canViewAllData]);
 
   // بيانات المستخدم المنظمة
   const userData = useMemo(() => {
@@ -63,28 +85,28 @@ export const useUnifiedUserData = () => {
   const queryHelpers = useMemo(() => ({
     // تحديد ما إذا كان المستخدم يستطيع رؤية البيانات
     canViewData: (dataCreatedBy) => {
-      if (isAdmin) return true;
+      if (canViewAllData) return true;
       return dataCreatedBy === userUUID;
     },
     
     // تحديد ما إذا كان المستخدم يستطيع تعديل البيانات
     canEditData: (dataCreatedBy) => {
-      if (isAdmin) return true;
+      if (canViewAllData) return true;
       return dataCreatedBy === userUUID;
     },
     
     // إنشاء شروط قاعدة البيانات للطلبات
     getOrdersQuery: () => {
-      if (isAdmin) return {};
+      if (canViewAllData) return {};
       return { created_by: userUUID };
     },
     
     // إنشاء شروط قاعدة البيانات للأرباح
     getProfitsQuery: () => {
-      if (isAdmin) return {};
+      if (canViewAllData) return {};
       return { employee_id: userUUID };
     }
-  }), [isAdmin, userUUID]);
+  }), [canViewAllData, userUUID]);
 
   return {
     // بيانات المستخدم
