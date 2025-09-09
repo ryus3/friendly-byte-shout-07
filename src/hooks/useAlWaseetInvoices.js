@@ -745,58 +745,43 @@ export const useAlWaseetInvoices = () => {
     }
   }, [isLoggedIn, activePartner, token, syncInvoiceById]);
 
-  // Sync ONLY last two invoices (fetch their orders and upsert) - automatic and lightweight
+  // Enhanced quick sync using smart edge function
   const syncLastTwoInvoices = useCallback(async () => {
-    if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false };
+    if (!token || !isLoggedIn) return { success: false };
+    
     try {
-      const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      if (!allInvoices?.length) return { success: true, processed: 0 };
-
-      // Sort by most recently updated and take last two invoices
-      const lastTwo = [...allInvoices]
-        .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
-        .slice(0, 2);
-
-      let processed = 0;
-      for (const inv of lastTwo) {
-        try {
-          const resp = await AlWaseetAPI.getInvoiceOrders(token, inv.id);
-          const orders = resp?.orders || [];
-          const result = await syncAlwaseetInvoiceData(inv, orders);
-          if (result?.success) processed += 1;
-        } catch (e) {
-          console.warn('Failed syncing invoice', inv?.id, e?.message || e);
-        }
-      }
-
-      // refresh list after syncing
-      await fetchInvoices();
-      return { success: true, processed };
-    } catch (e) {
-      console.warn('syncLastTwoInvoices failed:', e?.message || e);
-      return { success: false, error: e?.message };
-    }
-  }, [isLoggedIn, activePartner, token, fetchInvoices, syncAlwaseetInvoiceData]);
-
-   // Auto-fetch invoices then sync when token is available
-  useEffect(() => {
-    if (token && isLoggedIn && activePartner === 'alwaseet') {
-      const initializeInvoices = async () => {
-        // Fetch and upsert invoices
-        await fetchInvoices();
-        
-        // Sync last two invoices with their orders
-        await syncLastTwoInvoices();
-        
-        // Auto-sync received invoices
-        await autoSyncReceivedInvoices();
-        
-        console.log('✅ Invoice tab initialization complete');
-      };
+      console.log('🔄 مزامنة سريعة - آخر فاتورتين...');
       
-      initializeInvoices();
+      // Use smart sync for quick updates
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'smart',
+          employee_id: user?.id,
+          sync_invoices: true,
+          sync_orders: false,
+          force_refresh: false
+        }
+      });
+      
+      if (error) {
+        console.warn('تعذر المزامنة السريعة:', error.message);
+        return { success: false, error: error.message };
+      }
+      
+      const synced = data?.invoices_synced || 0;
+      console.log('✅ مزامنة سريعة مكتملة:', synced, 'فاتورة');
+      
+      // Refresh state if we got new invoices
+      if (synced > 0) {
+        await fetchInvoices('week', false);
+      }
+      
+      return { success: true, processed: synced };
+    } catch (error) {
+      console.warn('خطأ في المزامنة السريعة:', error);
+      return { success: false, error: error.message };
     }
-  }, [token, isLoggedIn, activePartner, fetchInvoices, syncLastTwoInvoices, autoSyncReceivedInvoices]);
+  }, [token, isLoggedIn, user?.id, fetchInvoices]);
 
   // Clear invoices state when logged out or switched away from AlWaseet
   useEffect(() => {
@@ -820,10 +805,7 @@ export const useAlWaseetInvoices = () => {
     applyCustomDateRangeFilter,
     setSelectedInvoice,
     setInvoiceOrders,
-    syncReceivedInvoicesAutomatically,
-    syncAlwaseetInvoiceData,
-    syncInvoiceById,
-    syncAllRecentInvoices,
-    syncLastTwoInvoices
+    syncLastTwoInvoices,
+    smartBackgroundSync
   };
 };
