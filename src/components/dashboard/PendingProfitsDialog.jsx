@@ -49,22 +49,25 @@ const PendingProfitsDialog = ({
       orderNumber: order.order_number, 
       totalAmount: order.total_amount, 
       finalAmount: order.final_amount,
-      discountApplied: (order.total_amount || 0) - (order.final_amount || 0)
+      deliveryFee: order.delivery_fee,
+      salesAmount: order.sales_amount ?? ((order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0))
     });
     
-    // حساب الربح بناءً على السعر النهائي بعد الخصم
-    const orderFinalAmount = order.final_amount || order.total_amount || 0;
+    // حساب الربح بناءً على سعر المنتجات بعد الخصم (بدون التوصيل)
+    const orderSalesAmount = (order.sales_amount != null)
+      ? (Number(order.sales_amount) || 0)
+      : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0));
     const orderTotalCost = order.items.reduce((costSum, item) => {
       const costPrice = item.cost_price || item.costPrice || 0;
       const quantity = item.quantity || 0;
       return costSum + (costPrice * quantity);
     }, 0);
     
-    const profit = Math.max(0, orderFinalAmount - orderTotalCost);
+    const profit = Math.max(0, orderSalesAmount - orderTotalCost);
     
     console.log('💰 نتيجة حساب الربح:', { 
       orderNumber: order.order_number,
-      finalAmount: orderFinalAmount,
+      salesAmount: orderSalesAmount,
       totalCost: orderTotalCost,
       calculatedProfit: profit
     });
@@ -285,7 +288,11 @@ const PendingProfitsDialog = ({
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
                                   <div className="text-center">
                                     <p className="text-sm font-medium">
-                                      {(order.final_amount || order.total_amount || 0).toLocaleString()} د.ع
+                                      {(
+                                        (order.sales_amount != null)
+                                          ? (Number(order.sales_amount) || 0)
+                                          : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
+                                      ).toLocaleString()} د.ع
                                     </p>
                                     <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
                                   </div>

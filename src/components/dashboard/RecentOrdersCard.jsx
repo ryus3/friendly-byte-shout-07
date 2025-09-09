@@ -174,7 +174,11 @@ const RecentOrdersCard = ({ recentOrders }) => {
                     <div className="flex items-center justify-end">
                       <div className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
                         <span className="font-bold text-sm text-primary">
-                          {(order.final_amount || order.total_amount || 0).toLocaleString()}
+                          {(
+                            (order.sales_amount != null)
+                              ? (Number(order.sales_amount) || 0)
+                              : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
+                          ).toLocaleString()}
                         </span>
                         <span className="text-xs text-primary/70">د.ع</span>
                       </div>

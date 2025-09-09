@@ -509,22 +509,25 @@ const Dashboard = () => {
             orderNumber: o.order_number, 
             totalAmount: o.total_amount, 
             finalAmount: o.final_amount,
-            discountApplied: (o.total_amount || 0) - (o.final_amount || 0)
+            deliveryFee: o.delivery_fee,
+            salesAmount: o.sales_amount ?? ((o.final_amount || o.total_amount || 0) - (o.delivery_fee || 0))
           });
           
-          // حساب الربح بناءً على السعر النهائي بعد الخصم (final_amount)
-          const orderFinalAmount = o.final_amount || o.total_amount || 0;
+          // حساب الربح بناءً على سعر المنتجات بعد الخصم (بدون التوصيل)
+          const orderSalesAmount = (o.sales_amount != null)
+            ? (Number(o.sales_amount) || 0)
+            : (Number(o.final_amount || o.total_amount || 0) - Number(o.delivery_fee || 0));
           const orderTotalCost = o.items.reduce((costSum, item) => {
             const costPrice = item.cost_price || item.costPrice || 0;
             const quantity = item.quantity || 0;
             return costSum + (costPrice * quantity);
           }, 0);
           
-          const employeeProfit = Math.max(0, orderFinalAmount - orderTotalCost);
+          const employeeProfit = Math.max(0, orderSalesAmount - orderTotalCost);
           
           console.log('💰 تفاصيل الربح:', { 
             orderNumber: o.order_number,
-            finalAmount: orderFinalAmount,
+            salesAmount: orderSalesAmount,
             totalCost: orderTotalCost,
             employeeProfit: employeeProfit
           });
@@ -537,8 +540,10 @@ const Dashboard = () => {
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          // المبيعات المستلمة = إجمالي المبلغ بدون خصم التوصيل (كما هو مطلوب)
-          return sum + (o.total_amount || 0);
+          const sales = (o.sales_amount != null)
+            ? (Number(o.sales_amount) || 0)
+            : (Number(o.final_amount || o.total_amount || 0) - Number(o.delivery_fee || 0));
+          return sum + sales;
         }, 0);
 
         // المبيعات المعلقة: تشمل المشحونة وقيد التوصيل (محلي وخارجي) وتستبعد قيد التجهيز/المُسلّمة/الملغاة/الراجعة

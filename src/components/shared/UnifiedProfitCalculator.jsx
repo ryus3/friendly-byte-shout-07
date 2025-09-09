@@ -53,18 +53,23 @@ export const useUnifiedProfitCalculator = ({
     );
 
     // حساب الإيرادات والتكاليف
-    const totalRevenue = deliveredOrders.reduce((sum, o) => {
-      const orderTotal = o.final_amount || o.total_amount || 0;
-      console.log('💰 حساب إيراد طلب:', { 
-        orderNumber: o.order_number, 
-        finalAmount: o.final_amount, 
-        totalAmount: o.total_amount, 
-        used: orderTotal 
+    const salesSum = deliveredOrders.reduce((sum, o) => {
+      const sales = (o.sales_amount != null)
+        ? (Number(o.sales_amount) || 0)
+        : (Number(o.final_amount ?? o.total_amount ?? 0) - Number(o.delivery_fee ?? 0));
+      console.log('💰 حساب مبيعات الطلب:', {
+        orderNumber: o.order_number,
+        salesAmount: sales,
+        finalAmount: o.final_amount,
+        totalAmount: o.total_amount,
+        deliveryFee: o.delivery_fee,
+        used: sales
       });
-      return sum + orderTotal;
+      return sum + sales;
     }, 0);
+    const totalRevenue = salesSum;
     const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-    const salesWithoutDelivery = totalRevenue - deliveryFees;
+    const salesWithoutDelivery = salesSum;
     
     const cogs = deliveredOrders.reduce((sum, o) => {
       const orderCogs = (o.items || []).reduce((itemSum, item) => {
@@ -74,7 +79,7 @@ export const useUnifiedProfitCalculator = ({
       return sum + orderCogs;
     }, 0);
 
-    const grossProfit = salesWithoutDelivery - cogs;
+    const grossProfit = salesWithoutDelivery - cogs; // مبني على سعر المنتجات بعد الخصم فقط
 
     // المصاريف العامة - استبعاد المصاريف النظامية ومستحقات الموظفين
     const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));

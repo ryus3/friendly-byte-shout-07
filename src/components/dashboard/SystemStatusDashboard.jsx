@@ -38,7 +38,12 @@ const SystemStatusDashboard = () => {
     const pendingOrders = filteredOrders.filter(o => o.status === 'pending').length;
     const totalRevenue = filteredOrders
       .filter(o => o.status === 'delivered' || o.status === 'completed')
-      .reduce((sum, o) => sum + (o.final_amount || 0), 0);
+      .reduce((sum, o) => {
+        const sales = (o.sales_amount != null)
+          ? (Number(o.sales_amount) || 0)
+          : (Number(o.final_amount || 0) - Number(o.delivery_fee || 0));
+        return sum + sales;
+      }, 0);
 
     // إحصائيات المخزون
     const totalProducts = safeProducts.length;

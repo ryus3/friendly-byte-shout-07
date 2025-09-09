@@ -223,9 +223,13 @@ const UnifiedProfitDisplay = ({
     const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
     
     // حساب إجمالي الإيرادات
-    const totalRevenue = deliveredOrders.reduce((sum, o) => {
-      return sum + (o.final_amount || o.total_amount || 0);
+    const salesSum = deliveredOrders.reduce((sum, o) => {
+      const sales = (o.sales_amount != null)
+        ? (Number(o.sales_amount) || 0)
+        : (Number(o.final_amount || o.total_amount || 0) - Number(o.delivery_fee || 0));
+      return sum + sales;
     }, 0);
+    const totalRevenue = salesSum;
     
     // حساب تكلفة البضاعة المباعة
     const cogs = deliveredOrders.reduce((sum, o) => {
@@ -240,7 +244,7 @@ const UnifiedProfitDisplay = ({
     }, 0);
     
     const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-    const salesWithoutDelivery = totalRevenue - deliveryFees;
+    const salesWithoutDelivery = salesSum;
     const grossProfit = salesWithoutDelivery - cogs;
     
     // حساب ربح النظام (نفس منطق AccountingPage)
