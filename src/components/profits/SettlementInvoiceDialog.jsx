@@ -284,7 +284,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                             <div className="flex flex-col items-center justify-center">
                                                                 <span className="text-xs md:hidden text-slate-500 mb-1">المبلغ:</span>
                                                                 <div className="text-xl md:text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                                                    {(order.total_amount || order.final_amount || order.total || 0).toLocaleString()}
+                                                                    {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
                                                                 </div>
                                                                 <div className="text-xs md:text-sm text-green-500 font-semibold">د.ع</div>
                                                             </div>

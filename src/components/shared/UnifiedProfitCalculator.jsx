@@ -53,7 +53,16 @@ export const useUnifiedProfitCalculator = ({
     );
 
     // حساب الإيرادات والتكاليف
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+    const totalRevenue = deliveredOrders.reduce((sum, o) => {
+      const orderTotal = o.final_amount || o.total_amount || 0;
+      console.log('💰 حساب إيراد طلب:', { 
+        orderNumber: o.order_number, 
+        finalAmount: o.final_amount, 
+        totalAmount: o.total_amount, 
+        used: orderTotal 
+      });
+      return sum + orderTotal;
+    }, 0);
     const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
     const salesWithoutDelivery = totalRevenue - deliveryFees;
     

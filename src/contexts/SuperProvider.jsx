@@ -671,6 +671,18 @@ export const SuperProvider = ({ children }) => {
           addOrderInstantly(payload.new);
         } else if (type === 'UPDATE') {
           console.log('🔄 Real-time: تحديث طلب فورياً');
+          
+          // طباعة تفاصيل التحديث للمتابعة
+          console.log('📊 تفاصيل تحديث الطلب:', {
+            orderId: rowNew.id,
+            orderNumber: rowNew.order_number,
+            status: rowNew.status,
+            totalAmount: rowNew.total_amount,
+            finalAmount: rowNew.final_amount,
+            discountApplied: rowNew.total_amount - rowNew.final_amount,
+            receiptReceived: rowNew.receipt_received
+          });
+          
           setAllData(prev => ({
             ...prev,
             orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
