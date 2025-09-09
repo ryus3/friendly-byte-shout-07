@@ -49,12 +49,13 @@ const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
   }
 
   return (
-    <div ref={containerRef} className={`overflow-hidden relative ${className}`} style={{ maxWidth }}>
+    <div ref={containerRef} className={`overflow-hidden relative ${className}`} style={{ maxWidth, direction: 'rtl' }}>
       <div 
         ref={textRef}
         className="animate-scroll-text whitespace-nowrap absolute top-0 right-0"
         style={{
-          animationDelay: '0.5s'
+          animationDelay: '1s',
+          direction: 'rtl'
         }}
       >
         {text}
