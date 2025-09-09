@@ -39,7 +39,9 @@ const SystemStatusDashboard = () => {
     const totalRevenue = filteredOrders
       .filter(o => o.status === 'delivered' || o.status === 'completed')
       .reduce((sum, o) => {
-        const sales = Number(o.sales_amount ?? o.final_amount ?? o.total_amount ?? 0) - Number(o.delivery_fee || 0);
+        const sales = (o.sales_amount != null)
+          ? (Number(o.sales_amount) || 0)
+          : (Number(o.final_amount || 0) - Number(o.delivery_fee || 0));
         return sum + sales;
       }, 0);
 
