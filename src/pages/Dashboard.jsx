@@ -505,13 +505,29 @@ const Dashboard = () => {
         const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
           if (!o.items || !Array.isArray(o.items)) return sum;
           
-          const employeeProfit = o.items.reduce((itemSum, item) => {
-            const unitPrice = item.unit_price || item.price || 0;
+          console.log('🔢 حساب الأرباح المعلقة للطلب:', { 
+            orderNumber: o.order_number, 
+            totalAmount: o.total_amount, 
+            finalAmount: o.final_amount,
+            discountApplied: (o.total_amount || 0) - (o.final_amount || 0)
+          });
+          
+          // حساب الربح بناءً على السعر النهائي بعد الخصم (final_amount)
+          const orderFinalAmount = o.final_amount || o.total_amount || 0;
+          const orderTotalCost = o.items.reduce((costSum, item) => {
             const costPrice = item.cost_price || item.costPrice || 0;
             const quantity = item.quantity || 0;
-            const profit = (unitPrice - costPrice) * quantity;
-            return itemSum + profit;
+            return costSum + (costPrice * quantity);
           }, 0);
+          
+          const employeeProfit = Math.max(0, orderFinalAmount - orderTotalCost);
+          
+          console.log('💰 تفاصيل الربح:', { 
+            orderNumber: o.order_number,
+            finalAmount: orderFinalAmount,
+            totalCost: orderTotalCost,
+            employeeProfit: employeeProfit
+          });
           
           const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
             ? calculateManagerProfit(o) : 0;

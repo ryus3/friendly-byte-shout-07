@@ -45,13 +45,31 @@ const PendingProfitsDialog = ({
   const calculateOrderProfit = (order) => {
     if (!order.items || !Array.isArray(order.items)) return 0;
     
-    return order.items.reduce((sum, item) => {
-      const unitPrice = item.unit_price || item.price || 0;
+    console.log('🔢 حساب ربح الطلب:', { 
+      orderNumber: order.order_number, 
+      totalAmount: order.total_amount, 
+      finalAmount: order.final_amount,
+      discountApplied: (order.total_amount || 0) - (order.final_amount || 0)
+    });
+    
+    // حساب الربح بناءً على السعر النهائي بعد الخصم
+    const orderFinalAmount = order.final_amount || order.total_amount || 0;
+    const orderTotalCost = order.items.reduce((costSum, item) => {
       const costPrice = item.cost_price || item.costPrice || 0;
       const quantity = item.quantity || 0;
-      const profit = (unitPrice - costPrice) * quantity;
-      return sum + profit;
+      return costSum + (costPrice * quantity);
     }, 0);
+    
+    const profit = Math.max(0, orderFinalAmount - orderTotalCost);
+    
+    console.log('💰 نتيجة حساب الربح:', { 
+      orderNumber: order.order_number,
+      finalAmount: orderFinalAmount,
+      totalCost: orderTotalCost,
+      calculatedProfit: profit
+    });
+    
+    return profit;
   };
 
   const totalPendingProfit = pendingProfitOrders.reduce((sum, order) => {
@@ -267,7 +285,7 @@ const PendingProfitsDialog = ({
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
                                   <div className="text-center">
                                     <p className="text-sm font-medium">
-                                      {(order.total_amount || 0).toLocaleString()} د.ع
+                                      {(order.final_amount || order.total_amount || 0).toLocaleString()} د.ع
                                     </p>
                                     <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
                                   </div>
