@@ -230,18 +230,19 @@ const OrderListItem = ({
             <MobileTableCell label="المبلغ">
               <span className="font-bold text-primary">
                 {(() => {
-                  const finalAmount = Number(order.final_amount || 0);
+                  const finalAmount = Number(order.final_amount || order.total_amount || 0);
                   const salesAmount = Number(order.sales_amount || 0);
                   const deliveryFee = Number(order.delivery_fee || 0);
                   
-                  // إذا كان final_amount موجود ومحسوب صحيح، استخدمه
-                  if (finalAmount > 0 && finalAmount === (salesAmount + deliveryFee)) {
-                    return `${finalAmount.toLocaleString()} د.ع شامل التوصيل`;
+                  // إذا توفر sales_amount نحتسب (المبيعات + التوصيل)
+                  if (salesAmount > 0) {
+                    const total = salesAmount + deliveryFee;
+                    return `${total.toLocaleString()} د.ع شامل التوصيل`;
                   }
                   
-                  // وإلا احسب المجموع
-                  const calculatedTotal = salesAmount + deliveryFee;
-                  return `${calculatedTotal.toLocaleString()} د.ع شامل التوصيل`;
+                  // خلاف ذلك نستخدم (final/total) + أجور التوصيل
+                  const total = finalAmount + deliveryFee;
+                  return `${total.toLocaleString()} د.ع شامل التوصيل`;
                 })()}
               </span>
             </MobileTableCell>
@@ -424,18 +425,19 @@ const OrderListItem = ({
         <div className="min-w-[120px] flex-shrink-0 text-left">
           <div className="font-bold text-sm text-primary">
             {(() => {
-              const finalAmount = Number(order.final_amount || 0);
+              const finalAmount = Number(order.final_amount || order.total_amount || 0);
               const salesAmount = Number(order.sales_amount || 0);
               const deliveryFee = Number(order.delivery_fee || 0);
               
-              // إذا كان final_amount موجود ومحسوب صحيح، استخدمه
-              if (finalAmount > 0 && finalAmount === (salesAmount + deliveryFee)) {
-                return `${finalAmount.toLocaleString()} د.ع شامل التوصيل`;
+              // إذا توفر sales_amount نحتسب (المبيعات + التوصيل)
+              if (salesAmount > 0) {
+                const total = salesAmount + deliveryFee;
+                return `${total.toLocaleString()} د.ع شامل التوصيل`;
               }
               
-              // وإلا احسب المجموع
-              const calculatedTotal = salesAmount + deliveryFee;
-              return `${calculatedTotal.toLocaleString()} د.ع شامل التوصيل`;
+              // خلاف ذلك نستخدم (final/total) + أجور التوصيل
+              const total = finalAmount + deliveryFee;
+              return `${total.toLocaleString()} د.ع شامل التوصيل`;
             })()}
           </div>
           {/* عرض ربح الموظف وحالة التسوية */}

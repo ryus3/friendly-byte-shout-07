@@ -481,7 +481,13 @@ const OrderCard = ({
                     <div className="flex items-center gap-1 justify-end">
                       <span className="text-xs text-primary/70 font-bold">د.ع</span>
                       <span className="font-bold text-lg text-primary">
-                        {(Number(order.final_amount || order.total_amount || 0)).toLocaleString()}
+                        {(() => {
+                          const finalAmount = Number(order.final_amount || order.total_amount || 0);
+                          const salesAmount = Number(order.sales_amount || 0);
+                          const deliveryFee = Number(order.delivery_fee || 0);
+                          const total = salesAmount > 0 ? (salesAmount + deliveryFee) : (finalAmount + deliveryFee);
+                          return total.toLocaleString();
+                        })()}
                       </span>
                       <span className="text-xs text-muted-foreground font-medium">
                         شامل التوصيل
