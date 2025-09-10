@@ -97,6 +97,7 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
+    const { profitData: unifiedProfitData } = useUnifiedProfits('all');
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
@@ -502,8 +503,8 @@ const Dashboard = () => {
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        // تم إزالة حساب الأرباح المعلقة لتجنب التضاعف - يتم الاعتماد على UnifiedProfitDisplay
-        const pendingProfit = 0;
+        // استخدام الأرباح المعلقة من النظام الموحد
+        const pendingProfit = unifiedProfitData?.employeePendingDues || 0;
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
@@ -571,7 +572,8 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData
+        canViewAllData,
+        unifiedProfitData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
