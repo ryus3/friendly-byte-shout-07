@@ -112,9 +112,22 @@ export const AlWaseetProvider = ({ children }) => {
             );
 
             if (remoteOrder) {
-              // تحديد الحالة المحلية بناءً على حالة الوسيط
-              const statusConfig = getStatusConfig(remoteOrder.status_text);
-              const newDeliveryStatus = remoteOrder.status_text;
+              // تحديد الحالة المحلية بناءً على حالة الوسيط مع أولوية للمعرفات الرقمية
+              const statusId = remoteOrder.status_id || remoteOrder.state_id;
+              let newDeliveryStatus;
+              
+              // أولوية للمعرف الرقمي إن وجد
+              if (statusId) {
+                newDeliveryStatus = String(statusId);
+              } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
+                newDeliveryStatus = '4';
+              } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
+                newDeliveryStatus = '17';
+              } else {
+                newDeliveryStatus = remoteOrder.status_text;
+              }
+              
+              const statusConfig = getStatusConfig(newDeliveryStatus);
               const newStatus = statusConfig.localStatus;
               const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
               const newReceiptReceived = statusConfig.receiptReceived;
