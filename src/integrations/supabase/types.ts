@@ -4054,6 +4054,10 @@ export type Database = {
         Args: { p_user_id?: string }
         Returns: Json
       }
+      debug_reservation_triggers: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       delete_ai_order_safe: {
         Args: { p_order_id: string }
         Returns: Json
