@@ -7,8 +7,7 @@ import {
   PackageCheck,
   Clock,
   AlertTriangle,
-  MapPin,
-  Home
+  MapPin
 } from 'lucide-react';
 
 /**
@@ -73,37 +72,6 @@ const STATUS_TRANSLATIONS = {
     label: 'ملغي',
     icon: XCircle,
     color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  // ترجمات الحالات الرقمية من الوسيط
-  '4': {
-    label: 'تم التسليم',
-    icon: CheckCircle,
-    color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '12': {
-    label: 'راجع جزئي',
-    icon: RotateCcw,
-    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '13': {
-    label: 'راجع كلي',
-    icon: RotateCcw,
-    color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '15': {
-    label: 'تأجيل',
-    icon: Clock,
-    color: 'bg-gradient-to-r from-purple-500 to-violet-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '16': {
-    label: 'إلغاء',
-    icon: XCircle,
-    color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '17': {
-    label: 'تم الإرجاع للتاجر',
-    icon: Home,
-    color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 
@@ -404,16 +372,7 @@ export const getStatusForComponent = (order, componentType = 'default') => {
                       order.tracking_number.startsWith('RYUS-') || 
                       order.delivery_partner === 'محلي';
 
-  // معالجة خاصة للحالات الرقمية من الوسيط - أولوية قصوى
-  if (order.delivery_status && /^\d+$/.test(order.delivery_status)) {
-    // للحالات الرقمية، استخدم الترجمات المحددة
-    const numericStatus = getStatusConfig(order.delivery_status);
-    if (numericStatus && numericStatus.label !== order.delivery_status) {
-      return numericStatus;
-    }
-  }
-
-  // معالجة خاصة لحالات الوسيط النصية - أولوية عالية
+  // معالجة خاصة لحالات الوسيط - أولوية قصوى
   if (order.delivery_status === 'فعال' || order.delivery_status === '1') {
     return {
       label: 'قيد التجهيز',
