@@ -229,7 +229,10 @@ const OrderListItem = ({
 
             <MobileTableCell label="المبلغ">
               <span className="font-bold text-primary">
-                {order.final_amount?.toLocaleString()} د.ع
+                {(((order.sales_amount != null)
+                  ? (Number(order.sales_amount) || 0)
+                  : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
+                )).toLocaleString()} د.ع
               </span>
             </MobileTableCell>
           </MobileTableGrid>
@@ -410,7 +413,10 @@ const OrderListItem = ({
         {/* Amount */}
         <div className="min-w-[120px] flex-shrink-0 text-left">
           <div className="font-bold text-sm text-primary">
-            {order.final_amount?.toLocaleString()} د.ع
+            {(((order.sales_amount != null)
+              ? (Number(order.sales_amount) || 0)
+              : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
+            )).toLocaleString()} د.ع
           </div>
           {/* عرض ربح الموظف وحالة التسوية */}
           {employeeProfit > 0 && (
