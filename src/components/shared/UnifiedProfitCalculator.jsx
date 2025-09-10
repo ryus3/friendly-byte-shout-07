@@ -53,23 +53,20 @@ export const useUnifiedProfitCalculator = ({
     );
 
     // حساب الإيرادات والتكاليف
-    const salesSum = deliveredOrders.reduce((sum, o) => {
-      const sales = (o.sales_amount != null)
-        ? (Number(o.sales_amount) || 0)
-        : (Number(o.final_amount ?? o.total_amount ?? 0) - Number(o.delivery_fee ?? 0));
-      console.log('💰 حساب مبيعات الطلب:', {
+    const totalRevenue = deliveredOrders.reduce((sum, o) => {
+      // استخدام المبلغ النهائي شامل التوصيل
+      const finalAmount = Number(o.final_amount ?? o.total_amount ?? 0);
+      console.log('💰 حساب إيرادات الطلب:', {
         orderNumber: o.order_number,
-        salesAmount: sales,
-        finalAmount: o.final_amount,
-        totalAmount: o.total_amount,
+        finalAmount: finalAmount,
         deliveryFee: o.delivery_fee,
-        used: sales
+        totalRevenue: finalAmount
       });
-      return sum + sales;
+      return sum + finalAmount;
     }, 0);
-    const totalRevenue = salesSum;
+    
     const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-    const salesWithoutDelivery = salesSum;
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
     
     const cogs = deliveredOrders.reduce((sum, o) => {
       const orderCogs = (o.items || []).reduce((itemSum, item) => {
