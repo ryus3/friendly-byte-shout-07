@@ -7,7 +7,8 @@ import {
   PackageCheck,
   Clock,
   AlertTriangle,
-  MapPin
+  MapPin,
+  Home
 } from 'lucide-react';
 
 /**
@@ -72,6 +73,11 @@ const STATUS_TRANSLATIONS = {
     label: 'ملغي',
     icon: XCircle,
     color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '17': {
+    label: 'تم الإرجاع إلى التاجر',
+    icon: Home,
+    color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 
