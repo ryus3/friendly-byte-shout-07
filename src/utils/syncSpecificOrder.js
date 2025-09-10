@@ -97,20 +97,9 @@ export const syncSpecificOrder = async (qrId, token) => {
     }
 
     // تحديث حالة المخزون باستخدام النظام الجديد
-    try {
-      const { data: stockResult } = await supabase.rpc('update_order_reservation_status', {
-        p_order_id: localOrder.id,
-        p_new_status: correctLocalStatus,
-        p_new_delivery_status: standardizedDeliveryStatus,
-        p_delivery_partner: 'alwaseet'
-      });
-      
-      if (stockResult?.success) {
-        console.log(`✅ تم تحديث المخزون: ${stockResult.message}`);
-      }
-    } catch (stockErr) {
-      console.warn('⚠️ تحذير في تحديث المخزون:', stockErr);
-    }
+    // تم إزالة استدعاء update_order_reservation_status من هنا
+    // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
+    console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
 
     console.log(`✅ تم تحديث الطلب ${qrId} بنجاح:`);
     console.log(`   - الحالة: ${localOrder.status} → ${correctLocalStatus}`);

@@ -428,16 +428,9 @@ async function updateOrderStatus(od: any, employee: any, supabase: any) {
       .eq('id', order.id);
 
     if (!updErr) {
-      // تحديث حالة الحجز/الإفراج عن المخزون حسب الحالة الجديدة
-      const { error: resvErr } = await supabase.rpc('update_order_reservation_status', {
-        p_order_id: order.id,
-        p_new_status: (updates as any).status ?? order.status,
-        p_new_delivery_status: stateCode || order.delivery_status,
-        p_delivery_partner: 'alwaseet'
-      });
-      if (resvErr) {
-        console.warn(`⚠️ فشل تحديث حالة الحجز للطلب ${order.id}:`, resvErr.message);
-      }
+      // تم إزالة استدعاء update_order_reservation_status من هنا
+      // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
+      console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
       return true;
     } else {
       console.warn(`⚠️ فشل تحديث الطلب ${order.id}:`, updErr.message);

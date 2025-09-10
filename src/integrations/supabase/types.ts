@@ -2025,6 +2025,39 @@ export type Database = {
           },
         ]
       }
+      order_stock_actions: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          created_by: string | null
+          delivery_partner: string | null
+          delivery_status: string | null
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          created_by?: string | null
+          delivery_partner?: string | null
+          delivery_status?: string | null
+          id?: string
+          order_id: string
+          status: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          delivery_partner?: string | null
+          delivery_status?: string | null
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           alwaseet_city_id: number | null
@@ -4040,8 +4073,10 @@ export type Database = {
         }[]
       }
       finalize_stock_item: {
-        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
-        Returns: undefined
+        Args:
+          | { p_product_id: string; p_quantity: number; p_variant_id: string }
+          | { p_quantity: number; p_variant_id: string }
+        Returns: boolean
       }
       fix_all_damaged_alwaseet_orders: {
         Args: Record<PropertyKey, never>
