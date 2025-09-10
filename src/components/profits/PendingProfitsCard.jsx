@@ -53,13 +53,17 @@ const PendingProfitsCard = () => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: ar });
   };
 
-  // حساب الأرباح المعلقة الإجمالية
+  // حساب الأرباح المعلقة الإجمالية - من مصدر واحد فقط لتجنب التضاعف
   const totalPendingAmount = useMemo(() => {
-    // أرباح محسوبة ومسجلة في profits
+    // أولوية للأرباح المعلقة المسجلة في جدول profits
     const settledProfits = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
     
-    // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
+    // إضافة الأرباح المتوقعة من الطلبات المسلمة بدون فاتورة فقط إذا لم تكن مسجلة في profits
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
+      // تحقق من عدم وجود ربح مسجل لهذا الطلب لتجنب التضاعف
+      const hasExistingProfit = pendingProfits.some(profit => profit.order_id === order.id);
+      if (hasExistingProfit) return sum;
+      
       const employeeProfit = calculateProfit ? calculateProfit(order) : 0;
       console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
       return sum + employeeProfit;

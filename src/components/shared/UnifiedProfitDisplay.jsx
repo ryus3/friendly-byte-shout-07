@@ -436,14 +436,20 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    // إضافة بطاقة الأرباح المعلقة فقط للجميع
+    // إضافة بطاقة الأرباح المعلقة فقط للجميع - حساب من جدول profits فقط لتجنب التضاعف
     if (canViewAll) {
+      // حساب الأرباح المعلقة من جدول profits فقط (تجنب العد المزدوج)
+      const pendingProfitsFromTable = allProfits
+        .filter(p => {
+          const isInDateRange = deliveredOrders.some(o => o.id === p.order_id);
+          return p.status === 'pending' && isInDateRange;
+        })
+        .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+
       cards.push({
         key: 'pending-profit',
         title: 'الأرباح المعلقة',
-        value: (profitData.detailedProfits || [])
-          .filter(p => (p.profitStatus || 'pending') === 'pending')
-          .reduce((sum, p) => sum + p.profit, 0),
+        value: pendingProfitsFromTable,
         icon: Hourglass,
         colors: ['yellow-500', 'amber-500'],
         format: 'currency',
