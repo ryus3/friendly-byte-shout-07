@@ -381,15 +381,6 @@ export const getStatusForComponent = (order, componentType = 'default') => {
     };
   }
 
-  // حالة تم التسليم للزبون (delivery_status = '4')
-  if (order.delivery_status === '4') {
-    return {
-      label: 'تم التسليم للزبون',
-      icon: CheckCircle,
-      color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border border-green-300/50 shadow-lg shadow-green-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-    };
-  }
-
   // Special case for Al-Waseet state_id = '3' - force translation to "قيد التوصيل"
   if (order.state_id === '3' || order.state_id === 3) {
     return {

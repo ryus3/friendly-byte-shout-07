@@ -16,7 +16,7 @@ import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
  */
 const PendingProfitsCard = () => {
   const { user } = useAuth();
-  const { profits, orders, loading, calculateProfit } = useInventory();
+  const { profits, orders, loading } = useInventory();
   const { isEmployee } = useUnifiedPermissionsSystem();
   
   // فقط للموظفين
@@ -53,24 +53,7 @@ const PendingProfitsCard = () => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: ar });
   };
 
-  // حساب الأرباح المعلقة الإجمالية - من مصدر واحد فقط لتجنب التضاعف
-  const totalPendingAmount = useMemo(() => {
-    // أولوية للأرباح المعلقة المسجلة في جدول profits
-    const settledProfits = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
-    
-    // إضافة الأرباح المتوقعة من الطلبات المسلمة بدون فاتورة فقط إذا لم تكن مسجلة في profits
-    const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
-      // تحقق من عدم وجود ربح مسجل لهذا الطلب لتجنب التضاعف
-      const hasExistingProfit = pendingProfits.some(profit => profit.order_id === order.id);
-      if (hasExistingProfit) return sum;
-      
-      const employeeProfit = calculateProfit ? calculateProfit(order) : 0;
-      console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
-      return sum + employeeProfit;
-    }, 0);
-    
-    return settledProfits + expectedProfits;
-  }, [pendingProfits, pendingInvoiceOrders, calculateProfit]);
+  const totalPendingAmount = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
 
   if (loading) {
     return (
@@ -114,56 +97,41 @@ const PendingProfitsCard = () => {
               </h3>
             </div>
             
-            {pendingInvoiceOrders.slice(0, 3).map((order) => {
-              const expectedProfit = calculateProfit ? calculateProfit(order) : 0;
-              const hasRule = expectedProfit > 0;
-              
-              return (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-3 bg-card border border-border/50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">
-                        {order.order_number || order.tracking_number}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {order.delivery_partner || 'محلي'}
-                      </Badge>
-                      {!hasRule && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
-                          بلا قاعدة
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      العميل: {order.customer_name} - {formatDate(order.created_at)}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className="text-xs text-green-600 font-medium">
-                        المبلغ: {formatCurrency(order.final_amount)}
-                      </p>
-                      <p className={`text-xs font-medium ${hasRule ? 'text-blue-600' : 'text-muted-foreground'}`}>
-                        ربحي المتوقع: {formatCurrency(expectedProfit)}
-                      </p>
-                    </div>
+            {pendingInvoiceOrders.slice(0, 3).map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between p-3 bg-card border border-border/50 rounded-lg"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">
+                      {order.order_number || order.tracking_number}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {order.delivery_partner || 'محلي'}
+                    </Badge>
                   </div>
-                  
-                  <ReceiveInvoiceButton 
-                    order={order}
-                    onSuccess={() => {
-                      // سيتم إعادة تحميل البيانات تلقائياً عبر الـ context
-                      toast({
-                        title: "✅ تم استلام الفاتورة",
-                        description: "سيتم حساب الأرباح تلقائياً",
-                        variant: "success",
-                      });
-                    }}
-                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    العميل: {order.customer_name} - {formatDate(order.created_at)}
+                  </p>
+                  <p className="text-xs text-green-600 font-medium">
+                    المبلغ: {formatCurrency(order.final_amount)}
+                  </p>
                 </div>
-              );
-            })}
+                
+                <ReceiveInvoiceButton 
+                  order={order}
+                  onSuccess={() => {
+                    // سيتم إعادة تحميل البيانات تلقائياً عبر الـ context
+                    toast({
+                      title: "✅ تم استلام الفاتورة",
+                      description: "سيتم حساب الأرباح تلقائياً",
+                      variant: "success",
+                    });
+                  }}
+                />
+              </div>
+            ))}
             
             {pendingInvoiceOrders.length > 3 && (
               <p className="text-xs text-muted-foreground text-center">

@@ -12,7 +12,7 @@
 export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
   if (!variantId || !Array.isArray(orders)) return 0;
 
-  const activeOrderStatuses = ['pending', 'shipped', 'delivery']; // استبعاد 'returned' لأنها لا تحتجز المخزون في المنطق الصحيح القديم
+  const activeOrderStatuses = ['pending', 'shipped', 'delivery', 'returned'];
   
   return orders.reduce((totalReserved, order) => {
     // تحقق من أن الطلب يحجز مخزون

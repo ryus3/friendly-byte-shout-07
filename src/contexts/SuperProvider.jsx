@@ -1845,41 +1845,20 @@ export const SuperProvider = ({ children }) => {
         
         if (error) throw error;
       } else {
-        // فحص وجود قاعدة مماثلة
-        const { data: existingRules } = await supabase
+        // إضافة قاعدة جديدة
+        const { error } = await supabase
           .from('employee_profit_rules')
-          .select('id')
-          .eq('employee_id', employeeId)
-          .eq('rule_type', ruleData.rule_type)
-          .eq('target_id', ruleData.target_id)
-          .eq('is_active', true);
-
-        if (existingRules && existingRules.length > 0) {
-          // تحديث القاعدة الموجودة
-          const { error } = await supabase
-            .from('employee_profit_rules')
-            .update({
-              profit_amount: ruleData.profit_amount,
-              profit_percentage: ruleData.profit_percentage,
-            })
-            .eq('id', existingRules[0].id);
-          
-          if (error) throw error;
-        } else {
-          // إضافة قاعدة جديدة - بدون created_by
-          const { error } = await supabase
-            .from('employee_profit_rules')
-            .insert({
-              employee_id: employeeId,
-              rule_type: ruleData.rule_type,
-              target_id: ruleData.target_id,
-              profit_amount: ruleData.profit_amount,
-              profit_percentage: ruleData.profit_percentage,
-              is_active: true
-            });
-          
-          if (error) throw error;
-        }
+          .insert({
+            employee_id: employeeId,
+            rule_type: ruleData.rule_type,
+            target_id: ruleData.target_id,
+            profit_amount: ruleData.profit_amount,
+            profit_percentage: ruleData.profit_percentage,
+            is_active: true,
+            created_by: user?.user_id || user?.id
+          });
+        
+        if (error) throw error;
       }
 
       // تحديث البيانات المحلية
@@ -1888,18 +1867,9 @@ export const SuperProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('❌ خطأ في تعديل قاعدة الربح:', error);
-      
-      // رسائل خطأ واضحة
-      let errorMessage = 'فشل في حفظ قاعدة الربح';
-      if (error.message?.includes('duplicate')) {
-        errorMessage = 'توجد قاعدة ربح مماثلة بالفعل لهذا الموظف';
-      } else if (error.message?.includes('foreign key')) {
-        errorMessage = 'معرف الموظف أو المنتج غير صحيح';
-      }
-      
-      throw new Error(errorMessage);
+      throw error;
     }
-  }, [fetchAllData]);
+  }, [user, fetchAllData]);
 
   // القيم المرجعة - نفس بنية InventoryContext بالضبط مع قيم آمنة
   const contextValue = {
@@ -2029,16 +1999,14 @@ export const SuperProvider = ({ children }) => {
         const item = orderOrItem;
         const employeeProfitRules = allData.employeeProfitRules || [];
         
-        // البحث عن قاعدة ربح مطابقة مع التحقق من التاريخ
+        // البحث عن قاعدة ربح مطابقة
         const rule = employeeProfitRules.find(r => 
           r.employee_id === employeeId && 
           r.is_active === true &&
           (
             (r.rule_type === 'product' && r.target_id === item.productId) ||
             (r.rule_type === 'variant' && r.target_id === item.sku)
-          ) &&
-          // القاعدة يجب أن تكون موجودة قبل إنشاء الطلب
-          new Date(r.created_at) <= new Date(item.orderDate || Date.now())
+          )
         );
         
         if (rule) {
@@ -2072,16 +2040,14 @@ export const SuperProvider = ({ children }) => {
         
         if (!productId) return;
         
-        // البحث عن قاعدة ربح مطابقة مع التحقق من التاريخ
+        // البحث عن قاعدة ربح مطابقة
         const rule = employeeProfitRules.find(r => 
           r.employee_id === orderEmployeeId && 
           r.is_active === true &&
           (
             (r.rule_type === 'product' && r.target_id === productId) ||
             (r.rule_type === 'variant' && r.target_id === item.sku)
-          ) &&
-          // القاعدة يجب أن تكون موجودة قبل إنشاء الطلب
-          new Date(r.created_at) <= new Date(order.created_at)
+          )
         );
         
         if (rule) {
@@ -2128,9 +2094,7 @@ export const SuperProvider = ({ children }) => {
           (
             (r.rule_type === 'product' && r.target_id === productId) ||
             (r.rule_type === 'variant' && r.target_id === item.sku)
-          ) &&
-          // القاعدة يجب أن تكون موجودة قبل إنشاء الطلب
-          new Date(r.created_at) <= new Date(order.created_at)
+          )
         );
         
         if (rule) {
@@ -2151,10 +2115,10 @@ export const SuperProvider = ({ children }) => {
       const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
       const employeeProfit = Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
       
-      // حساب الإيراد الإجمالي - أولوية لـ sales_amount للحصول على القيمة الصحيحة
-      const revenueWithoutDelivery = Number(order.sales_amount || 0) > 0 
-        ? Number(order.sales_amount)
-        : Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0);
+      // حساب الإيراد الإجمالي من final_amount (بعد الخصم) - أجور التوصيل
+      const finalAmount = Number(order.final_amount || order.total_amount || 0);
+      const deliveryFee = Number(order.delivery_fee || 0);
+      const revenueWithoutDelivery = finalAmount - deliveryFee;
       
       // حساب التكلفة الإجمالية
       const totalCost = order.items.reduce((sum, item) => sum + ((item.cost_price || 0) * (item.quantity || 0)), 0);
