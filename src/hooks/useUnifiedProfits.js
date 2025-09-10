@@ -208,6 +208,30 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         return order && order.receipt_received === true;
       }).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
 
+      // حساب أرباح المدير المعلقة من الطلبات المُسلّمة التي لم تُستلم فواتيرها
+      const managerPendingOrders = safeOrders.filter(o => {
+        const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
+        const isReceiptNotReceived = o.receipt_received === false || o.receipt_received === null;
+        const isManagerOrder = !o.created_by || o.created_by === currentUser?.id;
+        const isInDateRange = filterByDate(o.updated_at || o.created_at);
+        
+        return isDeliveredStatus && isReceiptNotReceived && isManagerOrder && isInDateRange;
+      });
+
+      const managerPendingProfits = managerPendingOrders.reduce((sum, order) => {
+        if (!order.order_items || !Array.isArray(order.order_items)) return sum;
+        const orderProfit = order.order_items.reduce((itemSum, item) => {
+          const sellPrice = item.unit_price || 0;
+          const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+          const quantity = item.quantity || 0;
+          return itemSum + ((sellPrice - costPrice) * quantity);
+        }, 0);
+        return sum + orderProfit;
+      }, 0);
+
+      // إجمالي الأرباح المعلقة للنظام (موظفين + مدير)
+      const totalSystemPendingProfits = employeePendingDues + managerPendingProfits;
+
       // صافي الربح
       const netProfit = systemProfit - generalExpenses;
 
@@ -240,7 +264,9 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         netProfit,
         generalExpenses, // إضافة المصاريف العامة
         employeeSettledDues,
-        employeePendingDues, // إضافة المستحقات المعلقة
+        employeePendingDues, // أرباح الموظفين المعلقة فقط
+        managerPendingProfits, // أرباح المدير المعلقة
+        totalSystemPendingProfits, // إجمالي أرباح النظام المعلقة
         managerSales,
         employeeSales,
         chartData

@@ -502,8 +502,10 @@ const Dashboard = () => {
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        // استخدام الأرباح المعلقة من النظام الموحد
-        const pendingProfit = unifiedProfitData?.employeePendingDues || 0;
+        // استخدام الأرباح المعلقة المناسبة حسب نوع المستخدم
+        const pendingProfit = canViewAllData 
+          ? (unifiedProfitData?.totalSystemPendingProfits || 0) // المدير يرى أرباح النظام ككل
+          : (unifiedProfitData?.employeePendingDues || 0); // الموظف يرى أرباحه فقط
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
