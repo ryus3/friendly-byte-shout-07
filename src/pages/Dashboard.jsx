@@ -502,41 +502,8 @@ const Dashboard = () => {
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
-          if (!o.items || !Array.isArray(o.items)) return sum;
-          
-          console.log('🔢 حساب الأرباح المعلقة للطلب:', { 
-            orderNumber: o.order_number, 
-            totalAmount: o.total_amount, 
-            finalAmount: o.final_amount,
-            deliveryFee: o.delivery_fee,
-            salesAmount: o.sales_amount ?? ((o.final_amount || o.total_amount || 0) - (o.delivery_fee || 0))
-          });
-          
-          // حساب الربح بناءً على سعر المنتجات بعد الخصم (بدون التوصيل)
-          const orderSalesAmount = (o.sales_amount != null)
-            ? (Number(o.sales_amount) || 0)
-            : (Number(o.final_amount || o.total_amount || 0) - Number(o.delivery_fee || 0));
-          const orderTotalCost = o.items.reduce((costSum, item) => {
-            const costPrice = item.cost_price || item.costPrice || 0;
-            const quantity = item.quantity || 0;
-            return costSum + (costPrice * quantity);
-          }, 0);
-          
-          const employeeProfit = Math.max(0, orderSalesAmount - orderTotalCost);
-          
-          console.log('💰 تفاصيل الربح:', { 
-            orderNumber: o.order_number,
-            salesAmount: orderSalesAmount,
-            totalCost: orderTotalCost,
-            employeeProfit: employeeProfit
-          });
-          
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
-            ? calculateManagerProfit(o) : 0;
-          
-          return sum + employeeProfit + managerProfit;
-        }, 0);
+        // تم إزالة حساب الأرباح المعلقة لتجنب التضاعف - يتم الاعتماد على UnifiedProfitDisplay
+        const pendingProfit = 0;
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
