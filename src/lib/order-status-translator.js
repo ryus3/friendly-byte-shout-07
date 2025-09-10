@@ -7,8 +7,7 @@ import {
   PackageCheck,
   Clock,
   AlertTriangle,
-  MapPin,
-  Home
+  MapPin
 } from 'lucide-react';
 
 /**
@@ -73,37 +72,6 @@ const STATUS_TRANSLATIONS = {
     label: 'ملغي',
     icon: XCircle,
     color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  // الحالات الرقمية من شركة التوصيل
-  '4': {
-    label: 'تم التسليم للزبون',
-    icon: CheckCircle,
-    color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border border-green-300/50 shadow-lg shadow-green-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '12': {
-    label: 'في مخزن مرتجع المحافظة',
-    icon: Package,
-    color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '13': {
-    label: 'في مخزن مرتجع بغداد',
-    icon: Package,
-    color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '15': {
-    label: 'إرجاع إلى التاجر',
-    icon: RotateCcw,
-    color: 'bg-gradient-to-r from-orange-500 to-red-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '16': {
-    label: 'قيد الإرجاع إلى التاجر',
-    icon: RotateCcw,
-    color: 'bg-gradient-to-r from-orange-500 to-red-500 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '17': {
-    label: 'تم الإرجاع للتاجر',
-    icon: Home,
-    color: 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 
@@ -413,15 +381,6 @@ export const getStatusForComponent = (order, componentType = 'default') => {
     };
   }
 
-  // معالجة الحالات الرقمية المهمة من شركة التوصيل
-  if (order.delivery_status === '17') {
-    return {
-      label: 'تم الإرجاع للتاجر',
-      icon: Home,
-      color: 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-    };
-  }
-
   // حالة تم التسليم للزبون (delivery_status = '4')
   if (order.delivery_status === '4') {
     return {
@@ -429,18 +388,6 @@ export const getStatusForComponent = (order, componentType = 'default') => {
       icon: CheckCircle,
       color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border border-green-300/50 shadow-lg shadow-green-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
     };
-  }
-
-  // معالجة الحالات الرقمية الأخرى
-  if (['12', '13', '15', '16'].includes(order.delivery_status)) {
-    const config = STATUS_TRANSLATIONS[order.delivery_status];
-    if (config) {
-      return {
-        label: config.label,
-        icon: config.icon,
-        color: config.color
-      };
-    }
   }
 
   // Special case for Al-Waseet state_id = '3' - force translation to "قيد التوصيل"
