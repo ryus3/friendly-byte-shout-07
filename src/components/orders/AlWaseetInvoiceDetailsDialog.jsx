@@ -287,7 +287,7 @@ const LocalOrderCard = ({ order }) => {
             </div>
           </div>
           <div className="text-right">
-            <p className="font-semibold">{((order.final_amount || 0) + (order.delivery_fee || 0)).toLocaleString()} د.ع</p>
+            <p className="font-semibold">{(order.final_amount || 0).toLocaleString()} د.ع</p>
             <p className="text-sm text-muted-foreground">
               محلي: {order.tracking_number}
             </p>
