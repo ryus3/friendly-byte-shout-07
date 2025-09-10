@@ -367,25 +367,45 @@ const PendingProfitsDialog = ({
                               <div className="border-t pt-2">
                                 <p className="text-xs text-muted-foreground mb-2">المنتجات ({order.items.length}):</p>
                                 <div className="space-y-1 max-h-20 overflow-y-auto">
-                                   {order.items.map((item, index) => (
-                                     <div key={index} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
-                                       <span className="truncate flex-1">{item.product_name || item.name}</span>
-                                       <span className="ml-2 font-mono">x{item.quantity}</span>
-                                        <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
-                                        {calculateProfit && (
-                                        <span className="ml-2 text-xs font-medium">
-                                            {(() => {
-                                              const profit = calculateProfit(item, order.created_by) || 0;
-                                              if (profit > 0) {
-                                                return <span className="text-green-600">+{profit.toLocaleString()}</span>;
-                                              } else {
-                                                return <span className="text-muted-foreground">بلا ربح للموظف</span>;
-                                              }
-                                            })()}
-                                          </span>
-                                        )}
-                                     </div>
-                                   ))}
+                                   {order.items.map((item, index) => {
+                                     const itemPrice = Number(item.price || item.unit_price || item.selling_price || 0);
+                                     const totalItemPrice = itemPrice * Number(item.quantity || 1);
+                                     
+                                     // حساب الخصم المتناسب لهذا المنتج
+                                     const orderDiscount = Number(order.discount || 0);
+                                     const orderSubTotal = Number(order.sub_total || order.final_amount || 0);
+                                     const itemDiscountRatio = orderSubTotal > 0 ? totalItemPrice / orderSubTotal : 0;
+                                     const itemDiscountAmount = orderDiscount * itemDiscountRatio;
+                                     const priceAfterDiscount = totalItemPrice - itemDiscountAmount;
+                                     
+                                     return (
+                                       <div key={index} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
+                                         <span className="truncate flex-1">{item.product_name || item.name}</span>
+                                         <span className="ml-2 font-mono">x{item.quantity}</span>
+                                         <div className="ml-2 text-right">
+                                           {orderDiscount > 0 ? (
+                                             <div className="flex flex-col">
+                                               <span className="line-through text-muted-foreground text-xs">{totalItemPrice.toLocaleString()}</span>
+                                               <span className="font-medium text-blue-600">{Math.round(priceAfterDiscount).toLocaleString()} د.ع</span>
+                                             </div>
+                                           ) : (
+                                             <span className="font-medium">{totalItemPrice.toLocaleString()} د.ع</span>
+                                           )}
+                                         </div>
+                                         {/* إظهار ربح الموظف فقط للطلبات غير المنشأة من المدير وعند وجود ربح */}
+                                         {calculateProfit && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && (
+                                           <span className="ml-2 text-xs font-medium">
+                                             {(() => {
+                                               const profit = calculateProfit(item, order.created_by) || 0;
+                                               return profit > 0 ? (
+                                                 <span className="text-green-600">+{profit.toLocaleString()}</span>
+                                               ) : null;
+                                             })()}
+                                           </span>
+                                         )}
+                                       </div>
+                                     );
+                                   })}
                                 </div>
                               </div>
                             )}
