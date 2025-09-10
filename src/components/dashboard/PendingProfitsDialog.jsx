@@ -210,6 +210,14 @@ const PendingProfitsDialog = ({
             </Card>
           </div>
 
+          {/* توضيح نظام الخصومات */}
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border-l-4 border-primary">
+            <p className="text-sm text-muted-foreground">
+              <strong>ملاحظة عن الخصومات:</strong> عند تطبيق خصم على طلب يحتوي على عدة منتجات، يتم تطبيق الخصم على إجمالي ربح الموظف وليس على منتج محدد. 
+              الخصم يقلل من الربح الكلي للموظف وليس من سعر المنتجات الفردية.
+            </p>
+          </div>
+
           {/* أزرار التحكم */}
           <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
             <Button 
@@ -370,13 +378,13 @@ const PendingProfitsDialog = ({
                                        <span className="ml-2 font-mono">x{item.quantity}</span>
                                         <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
                                         {calculateProfit && (
-                                          <span className="ml-2 text-xs font-medium">
+                                        <span className="ml-2 text-xs font-medium">
                                             {(() => {
                                               const profit = calculateProfit(item, order.created_by) || 0;
                                               if (profit > 0) {
                                                 return <span className="text-green-600">+{profit.toLocaleString()}</span>;
                                               } else {
-                                                return <span className="text-amber-600">بلا قاعدة</span>;
+                                                return <span className="text-muted-foreground">بلا ربح للموظف</span>;
                                               }
                                             })()}
                                           </span>

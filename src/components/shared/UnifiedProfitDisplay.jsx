@@ -436,15 +436,21 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    // إضافة بطاقة الأرباح المعلقة فقط للجميع - حساب من جدول profits فقط لتجنب التضاعف
+    // إضافة بطاقة الأرباح المعلقة فقط للجميع - حساب صحيح بدون تضاعف
     if (canViewAll) {
-      // حساب الأرباح المعلقة من جدول profits فقط (تجنب العد المزدوج)
+      // الأرباح المعلقة من جدول profits (للطلبات المسلمة مع فواتير مستلمة)
       const pendingProfitsFromTable = allProfits
         .filter(p => {
           const isInDateRange = deliveredOrders.some(o => o.id === p.order_id);
           return p.status === 'pending' && isInDateRange;
         })
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+
+      console.log('🔍 الأرباح المعلقة الصحيحة:', {
+        pendingProfitsFromTable,
+        deliveredOrdersCount: deliveredOrders.length,
+        pendingProfitsCount: allProfits.filter(p => p.status === 'pending').length
+      });
 
       cards.push({
         key: 'pending-profit',
