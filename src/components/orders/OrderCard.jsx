@@ -477,20 +477,15 @@ const OrderCard = ({
                       </div>
                     )}
                     
-                    {/* السعر (بدون التوصيل) */}
+                    {/* السعر (شامل التوصيل) */}
                     <div className="flex items-center gap-1 justify-end">
                       <span className="text-xs text-primary/70 font-bold">د.ع</span>
                       <span className="font-bold text-lg text-primary">
-                        {(((order.sales_amount != null)
-                          ? (Number(order.sales_amount) || 0)
-                          : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
-                        )).toLocaleString()}
+                        {(Number(order.final_amount || order.total_amount || 0)).toLocaleString()}
                       </span>
-                      {Number(order.delivery_fee || 0) > 0 && (
-                        <span className="text-xs text-muted-foreground font-medium">
-                          بدون التوصيل
-                        </span>
-                      )}
+                      <span className="text-xs text-muted-foreground font-medium">
+                        شامل التوصيل
+                      </span>
                     </div>
                     
                     {/* حالة الدفع - فقط للطلبات المكتملة */}
