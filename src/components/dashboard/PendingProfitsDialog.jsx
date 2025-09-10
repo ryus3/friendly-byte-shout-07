@@ -373,7 +373,7 @@ const PendingProfitsDialog = ({
                                      
                                      // حساب الخصم المتناسب لهذا المنتج
                                      const orderDiscount = Number(order.discount || 0);
-                                     const orderSubTotal = Number(order.sub_total || order.final_amount || 0);
+                                     const orderSubTotal = Number(order.sub_total || order.total_amount || 0);
                                      const itemDiscountRatio = orderSubTotal > 0 ? totalItemPrice / orderSubTotal : 0;
                                      const itemDiscountAmount = orderDiscount * itemDiscountRatio;
                                      const priceAfterDiscount = totalItemPrice - itemDiscountAmount;
