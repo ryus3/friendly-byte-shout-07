@@ -52,71 +52,69 @@ const ManagerProfitsCard = ({
     }
   };
 
-  // حساب أرباح المدير من الموظفين - نفس منطق متابعة الموظفين بالضبط
+  // حساب أرباح المدير المعلقة - من جدول الأرباح فقط (بعد التوحيد)
   const managerProfitFromEmployees = useMemo(() => {
-    if (!finalOrders || !Array.isArray(finalOrders)) {
+    if (!finalProfits || !Array.isArray(finalProfits)) {
       return 0;
     }
 
-    // معرف المدير الرئيسي لاستبعاد طلباته
-    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-
-    // الطلبات المسلمة أو المكتملة للإحصائيات مع تطبيق فلتر الفترة
-    const deliveredOrders = finalOrders.filter(order => {
-      if (!order) return false;
-      // استبعاد طلبات المدير الرئيسي
-      if (order.created_by === ADMIN_ID) return false;
-      // فلتر الفترة الزمنية
-      if (!filterByTimePeriod(order)) return false;
-      // فقط الطلبات المسلمة أو المكتملة
-      return order.status === 'delivered' || order.status === 'completed';
+    console.log('🔍 ManagerProfitsCard: حساب أرباح المدير من جدول الأرباح:', {
+      totalProfits: finalProfits.length,
+      timePeriod
     });
 
-    console.log('🔍 ManagerProfitsCard: حساب أرباح المدير من الموظفين:', {
-      totalOrders: finalOrders.length,
-      deliveredOrders: deliveredOrders.length,
-      excludedAdminId: ADMIN_ID,
-      profitsCount: finalProfits?.length || 0
+    // فلتر الأرباح حسب الفترة الزمنية والحالة
+    const relevantProfits = finalProfits.filter(profit => {
+      if (!profit) return false;
+      
+      // فقط الأرباح المعلقة أو المستلمة الفواتير (غير المسوّاة)
+      const isPendingOrInvoiceReceived = profit.status === 'pending' || profit.status === 'invoice_received';
+      if (!isPendingOrInvoiceReceived) return false;
+
+      // استبعاد أرباح المدير الرئيسي (الذي له employee_percentage = 0)
+      if (profit.employee_percentage === 0) return false;
+
+      // فلتر الفترة الزمنية بناءً على created_at للربح
+      if (timePeriod && timePeriod !== 'all') {
+        const profitDate = new Date(profit.created_at);
+        const now = new Date();
+        
+        switch (timePeriod) {
+          case 'today':
+            if (profitDate.toDateString() !== now.toDateString()) return false;
+            break;
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            if (profitDate < weekAgo) return false;
+            break;
+          case 'month':
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            if (profitDate < monthAgo) return false;
+            break;
+          case '3months':
+            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            if (profitDate < threeMonthsAgo) return false;
+            break;
+        }
+      }
+
+      return true;
     });
 
-    // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
-    const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      // البحث عن سجل الربح الحقيقي
-      const profitRecord = finalProfits?.find(p => p.order_id === order.id);
-      if (profitRecord && (profitRecord.status === 'settled' || profitRecord.settled_at || order.is_archived)) {
-        // ربح النظام = إجمالي الربح - ربح الموظف
-        const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
-        return sum + systemProfit;
-      }
-
-      // 🔁 احتساب بديل في حال عدم وجود سجل أرباح - بدون فقدان بيانات
-      if (order.items && Array.isArray(order.items)) {
-        const totalProfit = order.items.reduce((acc, item) => {
-          const qty = item.quantity || 1;
-          const price = item.price ?? item.selling_price ?? 0;
-          const cost = item.cost_price ?? 0;
-          return acc + (price - cost) * qty;
-        }, 0);
-
-        const employeeProfit = typeof finalCalculateProfit === 'function'
-          ? order.items.reduce((acc, item) => acc + (finalCalculateProfit(item, order.created_by) || 0), 0)
-          : 0;
-
-        const systemProfit = totalProfit - employeeProfit;
-        return sum + Math.max(0, systemProfit);
-      }
-
-      return sum;
+    // حساب أرباح النظام المعلقة = إجمالي الربح - ربح الموظف
+    const totalManagerProfits = relevantProfits.reduce((sum, profit) => {
+      const systemProfit = (profit.profit_amount || 0) - (profit.employee_profit || 0);
+      return sum + Math.max(0, systemProfit);
     }, 0);
 
-    console.log('✅ ManagerProfitsCard: النتيجة النهائية:', {
+    console.log('✅ ManagerProfitsCard: النتيجة النهائية (من جدول الأرباح):', {
+      relevantProfitsCount: relevantProfits.length,
       managerProfitFromEmployees: totalManagerProfits,
-      deliveredOrdersCount: deliveredOrders.length,
-      usedProfitsRecords: finalProfits?.length || 0
+      timePeriod
     });
 
     return totalManagerProfits;
-  }, [finalOrders, finalProfits, timePeriod]);
+  }, [finalProfits, timePeriod]);
 
   return (
     <>

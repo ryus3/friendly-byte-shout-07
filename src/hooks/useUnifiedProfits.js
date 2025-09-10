@@ -208,29 +208,48 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         return order && order.receipt_received === true;
       }).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
 
-      // حساب أرباح المدير المعلقة من الطلبات المُسلّمة التي لم تُستلم فواتيرها
-      const managerPendingOrders = safeOrders.filter(o => {
-        const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
-        const isReceiptNotReceived = o.receipt_received === false || o.receipt_received === null;
-        const isManagerOrder = !o.created_by || o.created_by === currentUser?.id;
-        const isInDateRange = filterByDate(o.updated_at || o.created_at);
-        
-        return isDeliveredStatus && isReceiptNotReceived && isManagerOrder && isInDateRange;
-      });
+      // حساب أرباح المدير المعلقة من جدول الأرباح
+      const managerPendingProfits = profitsData.filter(profit => {
+        // فقط الأرباح المعلقة أو المستلمة الفواتير (غير المسوّاة)
+        const isPendingOrInvoiceReceived = profit.status === 'pending' || profit.status === 'invoice_received';
+        if (!isPendingOrInvoiceReceived) return false;
 
-      const managerPendingProfits = managerPendingOrders.reduce((sum, order) => {
-        if (!order.order_items || !Array.isArray(order.order_items)) return sum;
-        const orderProfit = order.order_items.reduce((itemSum, item) => {
-          const sellPrice = item.unit_price || 0;
-          const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-          const quantity = item.quantity || 0;
-          return itemSum + ((sellPrice - costPrice) * quantity);
-        }, 0);
-        return sum + orderProfit;
+        // فقط أرباح المدير (employee_percentage = 0)
+        if (profit.employee_percentage !== 0) return false;
+
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق)
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
+        
+        // قبول الطلبات المُسلّمة مع استلام الفاتورة، أو المُسلّمة بدون استلام فاتورة
+        return order || (orderFromAll && 
+          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed') &&
+          filterByDate(orderFromAll.updated_at || orderFromAll.created_at));
+      }).reduce((sum, profit) => sum + (profit.profit_amount || 0), 0);
+
+      // حساب أرباح النظام المعلقة من طلبات الموظفين
+      const employeeSystemPendingProfits = profitsData.filter(profit => {
+        // فقط الأرباح المعلقة أو المستلمة الفواتير (غير المسوّاة)
+        const isPendingOrInvoiceReceived = profit.status === 'pending' || profit.status === 'invoice_received';
+        if (!isPendingOrInvoiceReceived) return false;
+
+        // فقط أرباح الموظفين (employee_percentage > 0)
+        if (profit.employee_percentage === 0) return false;
+
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق)
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
+        
+        return order || (orderFromAll && 
+          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed') &&
+          filterByDate(orderFromAll.updated_at || orderFromAll.created_at));
+      }).reduce((sum, profit) => {
+        // ربح النظام = إجمالي الربح - ربح الموظف
+        return sum + ((profit.profit_amount || 0) - (profit.employee_profit || 0));
       }, 0);
 
       // إجمالي الأرباح المعلقة للنظام (موظفين + مدير)
-      const totalSystemPendingProfits = employeePendingDues + managerPendingProfits;
+      const totalSystemPendingProfits = employeePendingDues + managerPendingProfits + employeeSystemPendingProfits;
 
       // صافي الربح
       const netProfit = systemProfit - generalExpenses;
