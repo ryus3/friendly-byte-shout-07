@@ -163,7 +163,7 @@ const PendingProfitsDialog = ({
         <DialogHeader className="flex-shrink-0 p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
             <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-            الأرباح المعلقة - طلبات محلية
+            الأرباح المعلقة
           </DialogTitle>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1">
             الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية
