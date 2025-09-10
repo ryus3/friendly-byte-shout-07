@@ -2151,9 +2151,9 @@ export const SuperProvider = ({ children }) => {
       const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
       const employeeProfit = Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
       
-      // حساب الإيراد الإجمالي - أولوية لـ sales_amount للحصول على القيمة الصحيحة
+      // حساب الإيراد الإجمالي - خصم رسوم التوصيل دائماً للحصول على القيمة الصحيحة
       const revenueWithoutDelivery = Number(order.sales_amount || 0) > 0 
-        ? Number(order.sales_amount)
+        ? Number(order.sales_amount) - Number(order.delivery_fee || 0) // خصم رسوم التوصيل من sales_amount
         : Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0);
       
       // حساب التكلفة الإجمالية

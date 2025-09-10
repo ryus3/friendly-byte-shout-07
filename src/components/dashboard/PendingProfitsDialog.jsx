@@ -312,29 +312,31 @@ const PendingProfitsDialog = ({
 
                               {/* الأرباح والمعلومات المالية */}
                               <div className="space-y-2">
-                                {/* ربح الموظف المتوقع */}
-                                <div className={`rounded-lg p-2 ${
-                                  profitData.employeeProfit > 0 
-                                    ? 'bg-green-50 dark:bg-green-900/20' 
-                                    : 'bg-yellow-50 dark:bg-yellow-900/20'
-                                }`}>
-                                  <div className="text-center">
-                                    <p className={`text-sm sm:text-base font-bold ${
-                                      profitData.employeeProfit > 0 
-                                        ? 'text-green-600' 
-                                        : 'text-yellow-600'
-                                    }`}>
-                                      {profitData.employeeProfit.toLocaleString()} د.ع
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">ربح الموظف المتوقع</p>
-                                    {profitData.employeeProfit === 0 && (
-                                      <div className="flex items-center justify-center gap-1 mt-1">
-                                        <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                                        <span className="text-xs text-yellow-600">لا توجد قاعدة ربح</span>
-                                      </div>
-                                    )}
+                                {/* ربح الموظف المتوقع - إخفاء للطلبات المنشأة من المدير */}
+                                {order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && (
+                                  <div className={`rounded-lg p-2 ${
+                                    profitData.employeeProfit > 0 
+                                      ? 'bg-green-50 dark:bg-green-900/20' 
+                                      : 'bg-yellow-50 dark:bg-yellow-900/20'
+                                  }`}>
+                                    <div className="text-center">
+                                      <p className={`text-sm sm:text-base font-bold ${
+                                        profitData.employeeProfit > 0 
+                                          ? 'text-green-600' 
+                                          : 'text-yellow-600'
+                                      }`}>
+                                        {profitData.employeeProfit.toLocaleString()} د.ع
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">ربح الموظف المتوقع</p>
+                                      {profitData.employeeProfit === 0 && (
+                                        <div className="flex items-center justify-center gap-1 mt-1">
+                                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                          <span className="text-xs text-yellow-600">لا توجد قاعدة ربح</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
 
                                 {/* إجمالي المبيعات */}
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">
