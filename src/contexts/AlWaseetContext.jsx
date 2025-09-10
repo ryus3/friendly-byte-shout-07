@@ -47,6 +47,36 @@ export const AlWaseetProvider = ({ children }) => {
   }, []);
 
   // دالة مزامنة الطلبات المرئية بكفاءة (للطلبات الموجودة في الصفحة فقط)
+  // دالة إصلاح المخزون المتضرر للطلبات المُسلّمة
+  const fixDamagedAlWaseetStock = useCallback(async () => {
+    try {
+      toast({
+        title: "🔄 جاري إصلاح المخزون المتضرر...",
+        description: "فحص طلبات الوسيط وإصلاح المشاكل"
+      });
+
+      const { data: result, error } = await supabase.rpc('fix_all_damaged_alwaseet_orders');
+      
+      if (error) throw error;
+
+      toast({
+        title: "✅ تم إصلاح المخزون بنجاح",
+        description: `تم فحص ${result.total_orders_checked} طلب وإصلاح ${result.orders_fixed} طلب متضرر`,
+        variant: "default"
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ خطأ في إصلاح المخزون:', error);
+      toast({
+        title: "❌ خطأ في إصلاح المخزون",
+        description: error.message,
+        variant: "destructive"
+      });
+      throw error;
+    }
+  }, [toast]);
+
   const syncVisibleOrdersBatch = useCallback(async (visibleOrders, onProgress) => {
     if (!visibleOrders || visibleOrders.length === 0) {
       console.log('لا توجد طلبات مرئية للمزامنة');
@@ -2347,6 +2377,7 @@ export const AlWaseetProvider = ({ children }) => {
     correctionComplete,
     setCorrectionComplete,
     syncVisibleOrdersBatch,
+    fixDamagedAlWaseetStock,
   };
 
   // Export linkRemoteIdsForExistingOrders to window for SuperProvider access

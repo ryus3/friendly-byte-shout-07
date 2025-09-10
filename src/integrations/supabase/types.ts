@@ -4043,6 +4043,14 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: undefined
       }
+      fix_all_damaged_alwaseet_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      fix_alwaseet_order_stock: {
+        Args: { p_tracking_number: string }
+        Returns: Json
+      }
       fix_corrupted_invoice_data: {
         Args: Record<PropertyKey, never>
         Returns: Json

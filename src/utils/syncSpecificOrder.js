@@ -96,6 +96,22 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // تحديث حالة المخزون باستخدام النظام الجديد
+    try {
+      const { data: stockResult } = await supabase.rpc('update_order_reservation_status', {
+        p_order_id: localOrder.id,
+        p_new_status: correctLocalStatus,
+        p_new_delivery_status: standardizedDeliveryStatus,
+        p_delivery_partner: 'alwaseet'
+      });
+      
+      if (stockResult?.success) {
+        console.log(`✅ تم تحديث المخزون: ${stockResult.message}`);
+      }
+    } catch (stockErr) {
+      console.warn('⚠️ تحذير في تحديث المخزون:', stockErr);
+    }
+
     console.log(`✅ تم تحديث الطلب ${qrId} بنجاح:`);
     console.log(`   - الحالة: ${localOrder.status} → ${correctLocalStatus}`);
     console.log(`   - حالة التوصيل: ${localOrder.delivery_status} → ${standardizedDeliveryStatus}`);
