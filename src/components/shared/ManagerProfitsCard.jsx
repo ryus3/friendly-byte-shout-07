@@ -52,13 +52,13 @@ const ManagerProfitsCard = ({
     }
   };
 
-  // حساب أرباح المدير المعلقة - من جدول الأرباح فقط (بعد التوحيد)
-  const managerProfitFromEmployees = useMemo(() => {
+  // حساب أرباح النظام المعلقة - من جدول الأرباح
+  const systemPendingProfits = useMemo(() => {
     if (!finalProfits || !Array.isArray(finalProfits)) {
       return 0;
     }
 
-    console.log('🔍 ManagerProfitsCard: حساب أرباح المدير من جدول الأرباح:', {
+    console.log('🔍 ManagerProfitsCard: حساب أرباح النظام المعلقة:', {
       totalProfits: finalProfits.length,
       timePeriod
     });
@@ -70,9 +70,6 @@ const ManagerProfitsCard = ({
       // فقط الأرباح المعلقة أو المستلمة الفواتير (غير المسوّاة)
       const isPendingOrInvoiceReceived = profit.status === 'pending' || profit.status === 'invoice_received';
       if (!isPendingOrInvoiceReceived) return false;
-
-      // استبعاد أرباح المدير الرئيسي (الذي له employee_percentage = 0)
-      if (profit.employee_percentage === 0) return false;
 
       // فلتر الفترة الزمنية بناءً على created_at للربح
       if (timePeriod && timePeriod !== 'all') {
@@ -102,25 +99,25 @@ const ManagerProfitsCard = ({
     });
 
     // حساب أرباح النظام المعلقة = إجمالي الربح - ربح الموظف
-    const totalManagerProfits = relevantProfits.reduce((sum, profit) => {
+    const totalSystemProfits = relevantProfits.reduce((sum, profit) => {
       const systemProfit = (profit.profit_amount || 0) - (profit.employee_profit || 0);
       return sum + Math.max(0, systemProfit);
     }, 0);
 
-    console.log('✅ ManagerProfitsCard: النتيجة النهائية (من جدول الأرباح):', {
+    console.log('✅ ManagerProfitsCard: النتيجة النهائية (أرباح النظام المعلقة):', {
       relevantProfitsCount: relevantProfits.length,
-      managerProfitFromEmployees: totalManagerProfits,
+      systemPendingProfits: totalSystemProfits,
       timePeriod
     });
 
-    return totalManagerProfits;
+    return totalSystemProfits;
   }, [finalProfits, timePeriod]);
 
   return (
     <>
       <StatCard 
-        title="أرباحي من الموظفين" 
-        value={managerProfitFromEmployees} 
+        title="الأرباح المعلقة" 
+        value={systemPendingProfits} 
         icon={Users} 
         colors={['green-500', 'emerald-500']} 
         format="currency" 
@@ -136,7 +133,7 @@ const ManagerProfitsCard = ({
         calculateProfit={finalCalculateProfit}
         profits={finalProfits}
         managerId={user?.id}
-        stats={{ totalManagerProfits: managerProfitFromEmployees }}
+        stats={{ totalManagerProfits: systemPendingProfits }}
         timePeriod={timePeriod}
       />
     </>
