@@ -2151,10 +2151,10 @@ export const SuperProvider = ({ children }) => {
       const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
       const employeeProfit = Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
       
-      // حساب الإيراد الإجمالي من final_amount (بعد الخصم) - أجور التوصيل
-      const finalAmount = Number(order.final_amount || order.total_amount || 0);
-      const deliveryFee = Number(order.delivery_fee || 0);
-      const revenueWithoutDelivery = finalAmount - deliveryFee;
+      // حساب الإيراد الإجمالي - أولوية لـ sales_amount للحصول على القيمة الصحيحة
+      const revenueWithoutDelivery = Number(order.sales_amount || 0) > 0 
+        ? Number(order.sales_amount)
+        : Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0);
       
       // حساب التكلفة الإجمالية
       const totalCost = order.items.reduce((sum, item) => sum + ((item.cost_price || 0) * (item.quantity || 0)), 0);
