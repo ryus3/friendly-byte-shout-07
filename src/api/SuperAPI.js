@@ -414,24 +414,9 @@ return this.fetch('all_data', async () => {
     
     if (error) throw error;
     
-    // تحديث حالة المخزون إذا تغيرت حالة الطلب
-    if (updates.status) {
-      try {
-        console.log('🔄 تحديث حالة المخزون للطلب:', { orderId, newStatus: updates.status, deliveryStatus: updates.delivery_status });
-        
-        // استدعاء دالة Supabase لتحديث حالة الحجز
-        const { data: reservationResult } = await supabase.rpc('update_order_reservation_status', {
-          p_order_id: orderId,
-          p_new_status: updates.status,
-          p_new_delivery_status: updates.delivery_status || null,
-          p_delivery_partner: updates.delivery_partner || null
-        });
-        
-        console.log('✅ نتيجة تحديث المخزون:', reservationResult);
-      } catch (reservationError) {
-        console.error('❌ خطأ في تحديث حالة المخزون:', reservationError);
-      }
-    }
+    // تم إزالة استدعاء update_order_reservation_status من هنا
+    // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
+    console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
     
     this.invalidate('all_data');
     this.invalidate('orders_only');

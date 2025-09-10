@@ -15,20 +15,32 @@ export const syncSpecificOrder = async (qrId, token) => {
 
     console.log('📋 بيانات الطلب الحالية من الوسيط:', waseetOrder);
 
-    // تحديد الحالة المحلية الصحيحة بناء على نص الحالة
-    const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
-    const statusLower = String(waseetStatusText || '').toLowerCase();
+    // تحديد الحالة المحلية الصحيحة مع أولوية للمعرفات الرقمية
+    const statusId = waseetOrder.status_id || waseetOrder.state_id;
+    let standardizedDeliveryStatus;
     
+    // أولوية للمعرف الرقمي إن وجد
+    if (statusId) {
+      standardizedDeliveryStatus = String(statusId);
+    } else if (waseetOrder.status_text === 'تم التسليم للزبون') {
+      standardizedDeliveryStatus = '4';
+    } else if (waseetOrder.status_text === 'تم الارجاع الى التاجر') {
+      standardizedDeliveryStatus = '17';
+    } else {
+      standardizedDeliveryStatus = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+    }
+    
+    // تحديد الحالة المحلية بناءً على delivery_status المعياري
     let correctLocalStatus = 'pending';
-    if (statusLower.includes('تسليم') || statusLower.includes('مسلم')) {
+    if (standardizedDeliveryStatus === '4') {
       correctLocalStatus = 'delivered';
-    } else if (statusLower.includes('ملغي') || statusLower.includes('إلغاء') || statusLower.includes('رفض')) {
+    } else if (standardizedDeliveryStatus === '17') {
+      correctLocalStatus = 'returned_in_stock';
+    } else if (['31', '32'].includes(standardizedDeliveryStatus)) {
       correctLocalStatus = 'cancelled';
-    } else if (statusLower.includes('راجع')) {
-      correctLocalStatus = 'returned';
-    } else if (statusLower.includes('مندوب') || statusLower.includes('استلام')) {
+    } else if (['2', '3'].includes(standardizedDeliveryStatus)) {
       correctLocalStatus = 'shipped';
-    } else if (statusLower.includes('جاري') || statusLower.includes('توصيل') || statusLower.includes('في الطريق')) {
+    } else if (['14', '22', '23', '24', '42', '44'].includes(standardizedDeliveryStatus)) {
       correctLocalStatus = 'delivery';
     }
 
@@ -50,12 +62,12 @@ export const syncSpecificOrder = async (qrId, token) => {
     }
 
     console.log(`📊 الحالة المحلية الحالية: ${localOrder.status}, الحالة الصحيحة: ${correctLocalStatus}`);
-    console.log(`📊 حالة الوسيط الحالية: ${localOrder.delivery_status}, الحالة الجديدة: ${waseetStatusText}`);
+    console.log(`📊 حالة الوسيط الحالية: ${localOrder.delivery_status}, الحالة المعيارية الجديدة: ${standardizedDeliveryStatus}`);
 
-    // تحضير التحديثات
+    // تحضير التحديثات مع delivery_status المعياري
     const updates = {
       status: correctLocalStatus,
-      delivery_status: waseetStatusText,
+      delivery_status: standardizedDeliveryStatus,
       delivery_partner_order_id: String(waseetOrder.id),
       updated_at: new Date().toISOString()
     };
@@ -84,14 +96,19 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // تحديث حالة المخزون باستخدام النظام الجديد
+    // تم إزالة استدعاء update_order_reservation_status من هنا
+    // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
+    console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
+
     console.log(`✅ تم تحديث الطلب ${qrId} بنجاح:`);
     console.log(`   - الحالة: ${localOrder.status} → ${correctLocalStatus}`);
-    console.log(`   - حالة التوصيل: ${localOrder.delivery_status} → ${waseetStatusText}`);
+    console.log(`   - حالة التوصيل: ${localOrder.delivery_status} → ${standardizedDeliveryStatus}`);
     console.log(`   - معرف الوسيط: ${waseetOrder.id}`);
     
     return {
       success: true,
-      needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
+      needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== standardizedDeliveryStatus,
       updates,
       waseet_order: waseetOrder,
       local_order: { ...localOrder, ...updates }
