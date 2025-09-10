@@ -155,7 +155,7 @@ const OrdersPage = () => {
               <div className="space-y-1">
                 <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
                 <p><strong>العميل:</strong> {newOrder.customer_name}</p>
-                <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
+                <p><strong>المبلغ:</strong> {((newOrder.final_amount || 0) + (newOrder.delivery_fee || 0)).toLocaleString()} د.ع</p>
               </div>
             ),
             variant: "success",

@@ -405,10 +405,10 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                      <span className="text-destructive">-{(order.discount || 0).toLocaleString()} د.ع</span>
                    </div>
                  )}
-                 <div className="flex justify-between items-center pt-2 border-t">
-                   <span className="text-lg font-semibold text-foreground">المجموع الكلي</span>
-                   <span className="text-xl font-bold text-primary">{(order.final_amount || order.total || 0).toLocaleString()} د.ع</span>
-                 </div>
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-lg font-semibold text-foreground">المجموع الكلي</span>
+                    <span className="text-xl font-bold text-primary">{((order.final_amount || order.total || 0) + (order.delivery_fee || 0)).toLocaleString()} د.ع</span>
+                  </div>
                </div>
             </div>
             

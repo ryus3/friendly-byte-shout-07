@@ -308,7 +308,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
                 <div><strong>العميل:</strong> {foundOrder.customer_name}</div>
                 <div><strong>الهاتف:</strong> {foundOrder.customer_phone}</div>
                 <div><strong>الحالة:</strong> {getStatusLabel(foundOrder.status)}</div>
-                <div><strong>المبلغ:</strong> {foundOrder.final_amount?.toLocaleString()} د.ع</div>
+                <div><strong>المبلغ:</strong> {((foundOrder.final_amount || 0) + (foundOrder.delivery_fee || 0)).toLocaleString()} د.ع</div>
                 <div><strong>رقم التتبع:</strong> {foundOrder.tracking_number || foundOrder.order_number}</div>
                 {foundOrder.tracking_number && foundOrder.order_number !== foundOrder.tracking_number && (
                   <div><strong>رقم النظام:</strong> {foundOrder.order_number}</div>
