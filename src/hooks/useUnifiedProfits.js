@@ -124,7 +124,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
 
       const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date)); // فلترة المصاريف حسب الفترة
 
-      // حساب إجمالي الإيرادات (شامل التوصيل)
+      // حساب إجمالي الإيرادات
       const totalRevenue = deliveredOrders.reduce((sum, o) => {
         const amount = o.final_amount || o.total_amount || 0;
         return sum + amount;

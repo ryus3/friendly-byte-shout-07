@@ -55,7 +55,7 @@ export const filterByDateRange = (items, dateRange, dateField = 'created_at') =>
 };
 
 /**
- * حساب إجمالي الإيرادات من الطلبات المستلمة (المبلغ النهائي شامل التوصيل)
+ * حساب إجمالي الإيرادات من الطلبات المستلمة (بدون أجور التوصيل كما في ORD000004)
  */
 export const calculateTotalRevenue = (orders, dateRange) => {
   if (!orders || !Array.isArray(orders)) return 0;
@@ -67,9 +67,10 @@ export const calculateTotalRevenue = (orders, dateRange) => {
   const filteredOrders = filterByDateRange(deliveredOrders, dateRange, 'updated_at');
   
   return filteredOrders.reduce((sum, order) => {
-    // الإيراد = المبلغ النهائي شامل التوصيل
     const finalAmount = order.final_amount || order.total_amount || 0;
-    return sum + finalAmount;
+    const deliveryFee = order.delivery_fee || 0;
+    // الإيراد = المبلغ النهائي - أجور التوصيل (لتطبيق نفس آلية ORD000004 الناجح)
+    return sum + (finalAmount - deliveryFee);
   }, 0);
 };
 
@@ -210,8 +211,7 @@ export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PE
     // الحسابات الأساسية
     const totalRevenue = calculateTotalRevenue(orders, dateRange);
     const deliveryFees = calculateDeliveryFees(orders, dateRange);
-    // المبيعات بدون التوصيل = إجمالي الإيرادات - أجور التوصيل
-    const salesWithoutDelivery = totalRevenue - deliveryFees;
+    const salesWithoutDelivery = FINANCIAL_FORMULAS.SALES_WITHOUT_DELIVERY(totalRevenue, deliveryFees);
     const cogs = calculateCOGS(orders, dateRange);
     const grossProfit = FINANCIAL_FORMULAS.GROSS_PROFIT(salesWithoutDelivery, cogs);
     const generalExpenses = calculateGeneralExpenses(expenses, dateRange);
