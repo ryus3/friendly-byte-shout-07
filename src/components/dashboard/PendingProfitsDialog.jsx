@@ -210,6 +210,7 @@ const PendingProfitsDialog = ({
             </Card>
           </div>
 
+
           {/* أزرار التحكم */}
           <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
             <Button 
@@ -368,12 +369,19 @@ const PendingProfitsDialog = ({
                                      <div key={index} className="flex justify-between items-center text-xs bg-muted/30 rounded px-2 py-1">
                                        <span className="truncate flex-1">{item.product_name || item.name}</span>
                                        <span className="ml-2 font-mono">x{item.quantity}</span>
-                                       <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
-                                       {calculateProfit && (
-                                         <span className="ml-2 text-xs text-green-600 font-medium">
-                                           +{(calculateProfit(item, order.created_by) || 0).toLocaleString()}
-                                         </span>
-                                       )}
+                                        <span className="ml-2 font-medium">{(item.unit_price * item.quantity).toLocaleString()} د.ع</span>
+                                        {calculateProfit && (
+                                        <span className="ml-2 text-xs font-medium">
+                                            {(() => {
+                                              const profit = calculateProfit(item, order.created_by) || 0;
+                                              if (profit > 0) {
+                                                return <span className="text-green-600">+{profit.toLocaleString()}</span>;
+                                              } else {
+                                                return <span className="text-muted-foreground">بلا ربح للموظف</span>;
+                                              }
+                                            })()}
+                                          </span>
+                                        )}
                                      </div>
                                    ))}
                                 </div>
