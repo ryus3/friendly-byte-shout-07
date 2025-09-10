@@ -17,9 +17,10 @@ export const verifyOrderOwnership = (order, currentUser) => {
   const userUUID = getUserUUID(currentUser);
   const orderCreatedBy = order.created_by || order.user_id;
   
-  // Use role-based admin detection - admins own all orders
-  // This will be checked via RLS policies using can_view_all_orders()
-  return true; // Let RLS handle the actual verification
+  // المديرون يملكون الوصول لجميع الطلبات
+  if (currentUser.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604') {
+    return true;
+  }
   
   // الموظفون يملكون طلباتهم فقط
   return orderCreatedBy === userUUID;
@@ -35,9 +36,10 @@ export const createSecureOrderFilter = (user) => {
   
   const userUUID = getUserUUID(user);
   
-  // Use role-based admin detection - let RLS handle filtering
-  // Admins will see all orders through RLS policies
-  return {}; // Return empty filter, let RLS handle access control
+  // المديرون يرون جميع الطلبات
+  if (user.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604') {
+    return {}; // بدون قيود
+  }
   
   // الموظفون يرون طلباتهم فقط
   return { created_by: userUUID };
@@ -86,8 +88,7 @@ export const sanitizeUserId = (userId) => {
  */
 export const generateSecurityReport = (user) => {
   const userUUID = getUserUUID(user);
-  // Note: Admin detection now handled by role-based system and RLS policies
-  const isAdmin = false; // Placeholder - actual admin detection via roles
+  const isAdmin = user?.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604';
   
   return {
     userId: userUUID,

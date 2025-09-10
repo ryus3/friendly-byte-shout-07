@@ -12,50 +12,38 @@ import { ar } from 'date-fns/locale';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 /**
- * كارت الأرباح المعلقة - يعرض أرباح الموظف للموظفين وأرباح النظام للمديرين
+ * كارت الأرباح المعلقة للموظفين - مع إمكانية استلام الفاتورة
  */
 const PendingProfitsCard = () => {
   const { user } = useAuth();
   const { profits, orders, loading, calculateProfit } = useInventory();
-  const { canViewAllData } = useUnifiedPermissionsSystem();
+  const { isEmployee } = useUnifiedPermissionsSystem();
   
-  if (!user) return null;
+  // فقط للموظفين
+  if (!isEmployee) {
+    return null;
+  }
 
-  // الطلبات المسلمة بدون استلام فاتورة
+  // الطلبات المسلمة بدون استلام فاتورة (للموظف الحالي)
   const pendingInvoiceOrders = useMemo(() => {
     if (!orders || !user) return [];
     
-    if (canViewAllData) {
-      // المدير يرى جميع الطلبات المسلمة بدون فاتورة
-      return orders.filter(order => 
-        order.status === 'delivered' &&
-        !order.receipt_received
-      );
-    } else {
-      // الموظف يرى طلباته فقط
-      return orders.filter(order => 
-        order.created_by === user.id &&
-        order.status === 'delivered' &&
-        !order.receipt_received
-      );
-    }
-  }, [orders, user, canViewAllData]);
+    return orders.filter(order => 
+      order.created_by === user.id &&
+      order.status === 'delivered' &&
+      !order.receipt_received
+    );
+  }, [orders, user]);
 
-  // الأرباح المعلقة
+  // الأرباح المعلقة (للموظف الحالي)
   const pendingProfits = useMemo(() => {
     if (!profits || !user) return [];
     
-    if (canViewAllData) {
-      // المدير يرى جميع الأرباح المعلقة
-      return profits.filter(profit => profit.status === 'pending');
-    } else {
-      // الموظف يرى أرباحه فقط
-      return profits.filter(profit => 
-        profit.employee_id === user.id &&
-        profit.status === 'pending'
-      );
-    }
-  }, [profits, user, canViewAllData]);
+    return profits.filter(profit => 
+      profit.employee_id === user.id &&
+      profit.status === 'pending'
+    );
+  }, [profits, user]);
 
   const formatCurrency = (amount) => {
     return `${(amount || 0).toLocaleString()} د.ع`;
@@ -65,55 +53,20 @@ const PendingProfitsCard = () => {
     return format(new Date(dateString), 'dd/MM/yyyy', { locale: ar });
   };
 
-  // حساب الأرباح المعلقة الإجمالية - إصلاح جذري للحساب المضاعف
+  // حساب الأرباح المعلقة الإجمالية
   const totalPendingAmount = useMemo(() => {
-    const userType = canViewAllData ? 'مدير' : 'موظف';
-    console.log(`🔄 حساب الأرباح المعلقة - ${userType}:`, user?.id);
+    // أرباح محسوبة ومسجلة في profits
+    const settledProfits = pendingProfits.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
     
-    // 1. أرباح محسوبة ومسجلة في profits (معلقة)
-    const settledProfits = pendingProfits.reduce((sum, profit) => {
-      const amount = canViewAllData 
-        ? (profit.total_profit || 0) - (profit.employee_profit || 0) // للمدير: ربح النظام = إجمالي - موظف
-        : (profit.employee_profit || 0); // للموظف: ربحه فقط
-      return sum + amount;
-    }, 0);
-    console.log('💰 أرباح محسوبة ومعلقة:', settledProfits);
-    
-    // 2. أرباح متوقعة من الطلبات المسلمة بدون فاتورة
+    // أرباح متوقعة من الطلبات المسلمة بدون فاتورة
     const expectedProfits = pendingInvoiceOrders.reduce((sum, order) => {
-      // تحقق من أن هذا الطلب ليس له ربح محسوب مسبقاً
-      const hasExistingProfit = pendingProfits.some(profit => profit.order_id === order.id);
-      if (hasExistingProfit) {
-        console.log(`⚠️ تجاهل الطلب ${order.order_number} - له ربح محسوب مسبقاً`);
-        return sum; // تجنب الحساب المضاعف
-      }
-      
-      // نحسب ربح المستخدم الحالي من هذا الطلب
-      const orderProfit = calculateProfit ? calculateProfit(order, user.id) : 0;
-      
-      console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, {
-        orderId: order.id,
-        createdBy: order.created_by,
-        calculatedProfit: orderProfit,
-        userType,
-        hasExistingProfit
-      });
-      
-      return sum + orderProfit;
+      const employeeProfit = calculateProfit ? calculateProfit(order) : 0;
+      console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
+      return sum + employeeProfit;
     }, 0);
     
-    const total = settledProfits + expectedProfits;
-    console.log(`📊 ملخص الأرباح المعلقة - ${userType}:`, {
-      settledProfits,
-      expectedProfits,
-      total,
-      userCanViewAll: canViewAllData,
-      pendingProfitsCount: pendingProfits.length,
-      pendingInvoiceOrdersCount: pendingInvoiceOrders.length
-    });
-    
-    return total;
-  }, [pendingProfits, pendingInvoiceOrders, calculateProfit, user?.id, canViewAllData]);
+    return settledProfits + expectedProfits;
+  }, [pendingProfits, pendingInvoiceOrders, calculateProfit]);
 
   if (loading) {
     return (
@@ -135,7 +88,7 @@ const PendingProfitsCard = () => {
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5 text-amber-600" />
             <CardTitle className="text-lg font-semibold text-foreground">
-              {canViewAllData ? 'الأرباح المعلقة الإجمالية' : 'أرباحي المعلقة'}
+              أرباحي المعلقة
             </CardTitle>
           </div>
           {totalPendingAmount > 0 && (
@@ -158,8 +111,7 @@ const PendingProfitsCard = () => {
             </div>
             
             {pendingInvoiceOrders.slice(0, 3).map((order) => {
-              // نحسب ربح المستخدم الحالي من هذا الطلب
-              const expectedProfit = calculateProfit ? calculateProfit(order, user.id) : 0;
+              const expectedProfit = calculateProfit ? calculateProfit(order) : 0;
               const hasRule = expectedProfit > 0;
               
               return (
@@ -189,25 +141,22 @@ const PendingProfitsCard = () => {
                         المبلغ: {formatCurrency(order.final_amount)}
                       </p>
                       <p className={`text-xs font-medium ${hasRule ? 'text-blue-600' : 'text-muted-foreground'}`}>
-                        {canViewAllData ? 'الربح المتوقع' : 'ربحي المتوقع'}: {formatCurrency(expectedProfit)}
+                        ربحي المتوقع: {formatCurrency(expectedProfit)}
                       </p>
                     </div>
                   </div>
                   
-                  {/* إظهار زر استلام الفاتورة للطلبات التي ينشئها المستخدم أو للمدير */}
-                  {(order.created_by === user.id || canViewAllData) && (
-                    <ReceiveInvoiceButton 
-                      order={order}
-                      onSuccess={() => {
-                        // سيتم إعادة تحميل البيانات تلقائياً عبر الـ context
-                        toast({
-                          title: "✅ تم استلام الفاتورة",
-                          description: "سيتم حساب الأرباح تلقائياً",
-                          variant: "success",
-                        });
-                      }}
-                    />
-                  )}
+                  <ReceiveInvoiceButton 
+                    order={order}
+                    onSuccess={() => {
+                      // سيتم إعادة تحميل البيانات تلقائياً عبر الـ context
+                      toast({
+                        title: "✅ تم استلام الفاتورة",
+                        description: "سيتم حساب الأرباح تلقائياً",
+                        variant: "success",
+                      });
+                    }}
+                  />
                 </div>
               );
             })}
@@ -256,7 +205,7 @@ const PendingProfitsCard = () => {
                       {formatCurrency(profit.employee_profit)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {canViewAllData ? 'ربح الموظف' : 'ربحي'}
+                      ربحي
                     </p>
                   </div>
                 </div>

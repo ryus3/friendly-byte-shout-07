@@ -36,7 +36,7 @@ const AllEmployeesInvoicesView = () => {
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
-        .neq('user_id', 'exclude_main_admin'); // Use role-based filtering instead
+        .neq('user_id', '91484496-b887-44f7-9e5d-be9db5567604'); // استبعاد المدير
 
       if (empError) {
         console.error('خطأ في جلب الموظفين:', empError);
@@ -95,8 +95,8 @@ const AllEmployeesInvoicesView = () => {
           };
         })
         .filter(invoice => {
-          // Filter invoices based on role permissions
-          return true; // Let RLS handle filtering
+          // استبعاد فواتير المدير فقط
+          return invoice.owner_user_id !== '91484496-b887-44f7-9e5d-be9db5567604';
         });
 
       console.log('📊 معلومات الفواتير المحملة:', {
@@ -136,8 +136,10 @@ const AllEmployeesInvoicesView = () => {
   // فلترة الفواتير مع الفترة الزمنية (محسن)
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // Use role-based filtering - RLS handles access control
-      // No hardcoded admin filtering needed
+      // المدير يرى جميع فواتير الموظفين (استبعاد فواتيره الشخصية فقط)
+      if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
+        return false;
+      }
 
       const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
