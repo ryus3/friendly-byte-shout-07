@@ -97,7 +97,6 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
-    const { profitData: unifiedProfitData } = useUnifiedProfits('all');
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
