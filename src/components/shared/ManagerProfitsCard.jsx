@@ -116,8 +116,8 @@ const ManagerProfitsCard = ({
   return (
     <>
       <StatCard 
-        title="الأرباح المعلقة" 
-        value={systemPendingProfits} 
+        title="أرباحي من الموظفين" 
+        value={systemPendingProfits}
         icon={Users} 
         colors={['green-500', 'emerald-500']} 
         format="currency" 
