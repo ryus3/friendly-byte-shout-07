@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -22,6 +22,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const [password, setPassword] = useState('');
     const [userAccounts, setUserAccounts] = useState([]);
     const [selectedAccount, setSelectedAccount] = useState(null);
+    const [showAddForm, setShowAddForm] = useState(false);
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
@@ -67,26 +68,37 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         }
         
         // التبديل إلى حساب موجود
-        if (selectedAccount && !username && !password) {
+        if (selectedAccount && !username && !password && !showAddForm) {
             setActivePartner(selectedPartner);
+            // تحديث last_used_at للحساب المختار
+            await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
             toast({ 
                 title: "تم التبديل", 
-                description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name} - ${selectedAccount.account_label || selectedAccount.account_username}.`, 
+                description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name} - ${selectedAccount.partner_data?.username || selectedAccount.account_username}.`, 
                 variant: 'success' 
             });
             onOpenChange(false);
             return;
         }
         
-        // تسجيل دخول جديد
+        // تسجيل دخول جديد أو إضافة حساب
         const result = await login(username, password, selectedPartner);
         if (result.success) {
             onOpenChange(false);
             setUsername('');
             setPassword('');
+            setShowAddForm(false);
             // إعادة تحميل الحسابات بعد تسجيل الدخول
             const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
             setUserAccounts(accounts);
+            
+            if (showAddForm) {
+                toast({
+                    title: "تم إضافة الحساب",
+                    description: "تم إضافة الحساب الجديد بنجاح",
+                    variant: 'success'
+                });
+            }
         }
     };
 
@@ -119,6 +131,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         setSelectedAccount(null);
         setUsername('');
         setPassword('');
+        setShowAddForm(false);
     }
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
@@ -159,15 +172,15 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 <SelectTrigger>
                                     <SelectValue placeholder="اختر حساب..." />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    {userAccounts.map((account) => (
-                                        <SelectItem key={account.account_username} value={account.account_username}>
-                                            {account.account_label || account.account_username}
-                                            {account.is_default && ' (افتراضي)'}
-                                            {account.merchant_id && ` - ${account.merchant_id}`}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
+                                 <SelectContent>
+                                     {userAccounts.map((account) => (
+                                         <SelectItem key={account.account_username} value={account.account_username}>
+                                             {account.partner_data?.username || account.account_username}
+                                             {account.is_default && ' 🌟 (افتراضي)'}
+                                             {account.merchant_id && ` - ${account.merchant_id}`}
+                                         </SelectItem>
+                                     ))}
+                                 </SelectContent>
                             </Select>
                         </div>
                         
@@ -183,9 +196,33 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </Button>
                         )}
                         
-                        <div className="border-t pt-4">
-                            <p className="text-sm text-muted-foreground mb-2">أو سجل دخول بحساب جديد:</p>
-                            <div className="space-y-2">
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                type="button" 
+                                onClick={() => setShowAddForm(true)}
+                                className="flex-1"
+                            >
+                                <UserPlus className="w-4 h-4 ml-2" />
+                                إضافة حساب جديد
+                            </Button>
+                            
+                            <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                type="button" 
+                                onClick={handleLogout} 
+                                className="flex-1"
+                            >
+                                <LogOut className="w-4 h-4 ml-2" />
+                                تسجيل الخروج
+                            </Button>
+                        </div>
+                        
+                        {showAddForm && (
+                            <div className="border-t pt-4 space-y-2">
+                                <p className="text-sm text-muted-foreground mb-2">إضافة حساب جديد:</p>
                                 <Input 
                                     type="text" 
                                     value={username} 
@@ -198,19 +235,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     onChange={(e) => setPassword(e.target.value)} 
                                     placeholder="كلمة المرور" 
                                 />
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    type="button" 
+                                    onClick={() => {
+                                        setShowAddForm(false);
+                                        setUsername('');
+                                        setPassword('');
+                                    }}
+                                    className="w-full"
+                                >
+                                    إلغاء
+                                </Button>
                             </div>
-                        </div>
-
-                        <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            type="button" 
-                            onClick={handleLogout} 
-                            className="w-full"
-                        >
-                            <LogOut className="w-4 h-4 ml-2" />
-                            تسجيل خروج جميع الحسابات
-                        </Button>
+                        )}
                     </CardContent>
                 </Card>
             );
@@ -308,9 +347,11 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {selectedPartner === 'local' 
                                 ? 'تفعيل الوضع المحلي' 
-                                : selectedAccount && !username
-                                    ? `استخدام ${selectedAccount.account_label || selectedAccount.account_username}`
-                                    : 'تسجيل الدخول'
+                                : selectedAccount && !username && !showAddForm
+                                    ? `التبديل إلى ${selectedAccount.partner_data?.username || selectedAccount.account_username}`
+                                    : showAddForm 
+                                        ? 'إضافة الحساب الجديد'
+                                        : 'تسجيل الدخول'
                             }
                         </Button>
                     </DialogFooter>
