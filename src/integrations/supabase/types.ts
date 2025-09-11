@@ -1116,6 +1116,7 @@ export type Database = {
           is_default: boolean | null
           last_used_at: string | null
           merchant_id: string | null
+          normalized_username: string | null
           partner_data: Json | null
           partner_name: string
           token: string
@@ -1132,6 +1133,7 @@ export type Database = {
           is_default?: boolean | null
           last_used_at?: string | null
           merchant_id?: string | null
+          normalized_username?: string | null
           partner_data?: Json | null
           partner_name: string
           token: string
@@ -1148,6 +1150,7 @@ export type Database = {
           is_default?: boolean | null
           last_used_at?: string | null
           merchant_id?: string | null
+          normalized_username?: string | null
           partner_data?: Json | null
           partner_name?: string
           token?: string
