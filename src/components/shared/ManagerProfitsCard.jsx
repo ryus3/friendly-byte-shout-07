@@ -52,7 +52,7 @@ const ManagerProfitsCard = ({
     }
   };
 
-  // حساب إجمالي أرباح النظام من الموظفين - من جدول الأرباح
+  // حساب إجمالي أرباح النظام من الموظفين - من جدول الأرباح (استبعاد المدير الرئيسي)
   const systemPendingProfits = useMemo(() => {
     if (!finalProfits || !Array.isArray(finalProfits)) {
       return 0;
@@ -60,12 +60,21 @@ const ManagerProfitsCard = ({
 
     console.log('🔍 ManagerProfitsCard: حساب إجمالي أرباح النظام من الموظفين:', {
       totalProfits: finalProfits.length,
+      totalOrders: finalOrders.length,
       timePeriod
     });
 
-    // فلتر الأرباح حسب الفترة الزمنية فقط (جميع الحالات)
+    // فلتر الأرباح حسب الفترة الزمنية واستبعاد المدير الرئيسي
     const relevantProfits = finalProfits.filter(profit => {
       if (!profit) return false;
+
+      // البحث عن الطلب المرتبط بهذا الربح
+      const relatedOrder = finalOrders.find(order => order.id === profit.order_id);
+      if (!relatedOrder) return false;
+
+      // استبعاد طلبات المدير الرئيسي
+      const MAIN_MANAGER_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+      if (relatedOrder.created_by === MAIN_MANAGER_ID) return false;
 
       // فلتر الفترة الزمنية بناءً على created_at للربح
       if (timePeriod && timePeriod !== 'all') {
