@@ -6,6 +6,14 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { ProfileDialog } from '@/components/ProfileDialog';
+import { AppearanceDialog } from '@/components/AppearanceDialog';
+import { NotificationDialog } from '@/components/NotificationDialog';
+import { DeliveryPartnerDialog } from '@/components/DeliveryPartnerDialog';
+import { InventoryManagementDialog } from '@/components/InventoryManagementDialog';
+import { TelegramBotDialog } from '@/components/TelegramBotDialog';
+import { TelegramSettingsDialog } from '@/components/TelegramSettingsDialog';
+import { DeliveryManagementDialog } from '@/components/DeliveryManagementDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,472 +26,414 @@ import {
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
    BarChart, TrendingUp, Activity, Settings
 } from 'lucide-react';
-import ComprehensiveDeliveryManagementDialog from '@/components/delivery/ComprehensiveDeliveryManagementDialog';
-import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
-import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
-import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import EditProfileDialog from '@/components/settings/EditProfileDialog';
-
-import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
-import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
-import PermissionBasedStockSettings from '@/components/settings/PermissionBasedStockSettings';
-
-import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
-import AppearanceDialog from '@/components/settings/AppearanceDialog';
-
-import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
-import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
-import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
-const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
-  const Icon = icon;
-  const cardClasses = `
-    ${className} 
-    group relative overflow-hidden
-    ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-1' : ''}
-    bg-card border border-border/50 rounded-xl backdrop-blur-sm
-    transition-all duration-300 ease-out
-    shadow-lg hover:shadow-2xl
-    hover:border-primary/40
-  `;
-  
-  const handleClick = (e) => {
-    if (onClick) {
-      onClick(e);
-    }
-  };
-
+// Modern Card Component with icon and gradient background
+const ModernCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  children, 
+  footer, 
+  onClick, 
+  action, 
+  badge,
+  iconColor = "from-blue-500 to-blue-600"
+}) => {
   return (
-    <Card className={cardClasses} onClick={handleClick}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${iconColor} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+    <Card className="group relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-[1.02] cursor-pointer border-border/50 hover:border-primary/20 bg-card/50 backdrop-blur-sm" onClick={onClick}>
+      {/* Gradient background overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-      <CardHeader className="pb-4 relative">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl bg-gradient-to-br ${iconColor} shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-              <Icon className="w-6 h-6 text-white" />
+      <CardHeader className="relative pb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg bg-gradient-to-r ${iconColor} text-white shadow-lg`}>
+              <Icon className="w-5 h-5" />
             </div>
             <div>
-              <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
+              <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
                 {title}
               </CardTitle>
-              {description && (
-                <CardDescription className="mt-1 text-sm text-muted-foreground">
-                  {description}
-                </CardDescription>
-              )}
+              <CardDescription className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                {description}
+              </CardDescription>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {badge}
-            {onClick && (
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
-            )}
-          </div>
+          {badge && (
+            <div className="flex-shrink-0">
+              {badge}
+            </div>
+          )}
         </div>
       </CardHeader>
       
-      {children && <CardContent className="pt-0 relative">{children}</CardContent>}
-      {footer && <CardFooter className="pt-0 relative">{footer}</CardFooter>}
-      {action && (
-        <div className="absolute top-4 right-4">
-          {action}
-        </div>
+      {children && (
+        <CardContent className="relative pt-0">
+          {children}
+        </CardContent>
+      )}
+      
+      {(footer || action) && (
+        <CardFooter className="relative pt-3 border-t border-border/30">
+          <div className="flex items-center justify-between w-full">
+            {footer}
+            {action && (
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">
+                {action}
+                <ChevronRight className="w-4 h-4 mr-1" />
+              </Button>
+            )}
+          </div>
+        </CardFooter>
       )}
     </Card>
   );
 };
 
-const SectionHeader = ({ icon, title, description }) => {
-  const Icon = icon;
+// Section Header Component
+const SectionHeader = ({ icon: Icon, title, description }) => {
   return (
-    <div className="mb-8">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-          <Icon className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">{title}</h2>
-          {description && <p className="text-muted-foreground mt-1">{description}</p>}
-        </div>
+    <div className="space-y-2 mb-6">
+      <div className="flex items-center gap-2">
+        <Icon className="w-5 h-5 text-primary" />
+        <h2 className="text-xl font-bold text-foreground">{title}</h2>
       </div>
+      <p className="text-muted-foreground text-sm">{description}</p>
       <div className="h-px bg-gradient-to-r from-primary/50 via-primary/20 to-transparent" />
     </div>
   );
 };
 
-const SettingsPage = () => {
-  const { user, updateUser } = useAuth();
-  const { hasPermission } = usePermissions();
-  const { settings, updateSettings } = useInventory();
-  const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval } = useAlWaseet();
-  const { theme, setTheme } = useTheme();
+export function SettingsPage() {
   const navigate = useNavigate();
-  
-  // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
-  const {
-    isAdmin,
-    isSalesEmployee,
-    canManageEmployees,
-    canManageSettings,
-    canAccessDeliveryPartners,
-    canManageAccounting,
-    canManagePurchases,
-    canViewAllData
+  const { user, loading: userLoading } = useAuth();
+  const { 
+    isAdmin, 
+    canManageEmployees, 
+    canAccessDeliveryPartners, 
+    canViewAllData,
+    isEmployee,
+    isSuperAdmin 
   } = usePermissions();
-  
-  const [isStoreLoading, setIsStoreLoading] = useState(false);
-  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
-  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  
-  const [isCustomerSettingsOpen, setIsCustomerSettingsOpen] = useState(false);
-  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
-  
+  const { 
+    productStats,
+    stockAlerts
+  } = useInventory();
+  const { isLoggedIn: isAlWaseetLoggedIn } = useAlWaseet();
+  const { theme } = useTheme();
+
+  // State management for dialogs
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
-  const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isDeliveryPartnersOpen, setIsDeliveryPartnersOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
-  const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
-  const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
-  const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
-  const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
+  const [isTelegramSettingsOpen, setIsTelegramSettingsOpen] = useState(false);
   const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
+
+  // State for user data and settings
+  const [userSettings, setUserSettings] = useState({});
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
-  // جلب عدد رموز الموظفين من النظام الموحد
+  // Load user-specific data
   useEffect(() => {
-    const fetchEmployeeCodesCount = async () => {
-      if (!canViewAllData) return;
-      
-      // استخدام النظام الموحد بدلاً من استدعاء supabase مباشر
-      console.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
-      
-      // TODO: إضافة هذه البيانات لـ SuperAPI لاحقاً
-      // مؤقتاً: عرض رقم ثابت
-      setEmployeeCodes([{ id: 1 }, { id: 2 }, { id: 3 }]);
-    };
+    if (user?.id && canViewAllData) {
+      loadEmployeeCodes();
+    }
+  }, [user?.id, canViewAllData]);
 
-    fetchEmployeeCodesCount();
-  }, [canViewAllData]);
+  const loadEmployeeCodes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('telegram_employee_codes')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (!error) {
+        setEmployeeCodes(data || []);
+      }
+    } catch (error) {
+      console.error('Error loading employee codes:', error);
+    }
+  };
 
-  // Early return بعد جميع الـ hooks
-  if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (userLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>
       <Helmet>
-        <title>الإعدادات - نظام RYUS</title>
-        <meta name="description" content="إدارة إعدادات حسابك والمتجر." />
+        <title>الإعدادات - نظام إدارة المخازن</title>
+        <meta name="description" content="إدارة إعدادات النظام والحساب الشخصي وشركاء التوصيل والإشعارات" />
+        <meta name="keywords" content="إعدادات، حساب، شركاء التوصيل، إشعارات، نظام إدارة" />
       </Helmet>
-      
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
-        <div className="container mx-auto px-6 py-8 space-y-12">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              الإعدادات
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              قم بإدارة إعدادات حسابك وتخصيص تجربة استخدام النظام
-            </p>
+
+      <div className="container mx-auto px-4 py-6 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg">
+              <SettingsIcon className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">إعدادات النظام</h1>
+              <p className="text-muted-foreground">إدارة حسابك وإعدادات النظام</p>
+            </div>
           </div>
+        </div>
 
-          <SectionHeader 
-            icon={User} 
-            title="الحساب والأمان"
-            description="إدارة معلوماتك الشخصية وإعدادات الأمان"
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <ModernCard
-              icon={User}
-              title="الملف الشخصي والأمان"
-              description="إدارة معلوماتك الشخصية وإعدادات الأمان المتقدمة"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={() => setIsEditProfileOpen(true)}
+        <div className="space-y-8">
+          {/* Account & Security Section */}
+          <div>
+            <SectionHeader 
+              icon={Shield} 
+              title="الحساب والأمان" 
+              description="إدارة معلومات حسابك الشخصي وإعدادات الأمان والمظهر"
             />
-
-            <ModernCard
-              icon={Palette}
-              title="المظهر والثيم"
-              description="تخصيص مظهر التطبيق والألوان والخطوط والعرض"
-              iconColor="from-purple-500 to-purple-600"
-              onClick={() => setIsAppearanceOpen(true)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ModernCard
-              icon={Bell}
-              title="الإشعارات العامة والأصوات"
-              description="تخصيص إشعارات النظام العامة والأصوات والتنبيهات الأساسية"
-              iconColor="from-orange-500 to-orange-600"
-              onClick={() => setIsNotificationSettingsOpen(true)}
-            />
-
-            {canAccessDeliveryPartners && (
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* User Profile */}
               <ModernCard
-                icon={RefreshCw}
-                title="إعدادات المزامنة والإشعارات"
-                description="التحكم في مزامنة الطلبات مع شركة التوصيل وإشعارات تحديث الحالات"
-                iconColor="from-blue-500 to-cyan-500"
-                onClick={() => setIsSyncNotificationOpen(true)}
-              />
-            )}
+                icon={User}
+                title="الملف الشخصي"
+                description="إدارة معلوماتك الشخصية وإعدادات الحساب"
+                iconColor="from-blue-500 to-blue-600"
+                onClick={() => setIsProfileOpen(true)}
+              >
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الاسم</span>
+                    <span className="font-medium text-foreground">{user?.profile?.full_name || 'غير محدد'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">البريد الإلكتروني</span>
+                    <span className="font-medium text-foreground">{user?.profile?.email || 'غير محدد'}</span>
+                  </div>
+                </div>
+              </ModernCard>
 
-            {/* إشعارات المخزون - للموظفين حسب صلاحياتهم */}
-            {(isAdmin || canManageSettings || isSalesEmployee) && (
+              {/* Appearance Settings */}
               <ModernCard
-                icon={PackageX}
-                title="إشعارات المخزون المتقدمة"
-                description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
-                iconColor="from-red-500 to-red-600"
-                onClick={() => setIsStockSettingsOpen(true)}
-                badge={
-                  isSalesEmployee && !isAdmin ? (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                      عرض فقط
-                    </Badge>
-                  ) : null
-                }
-              />
-            )}
-          </div>
+                icon={Palette}
+                title="المظهر والواجهة"
+                description="تخصيص ألوان ومظهر النظام"
+                iconColor="from-purple-500 to-purple-600"
+                onClick={() => setIsAppearanceOpen(true)}
+              >
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">المظهر الحالي</span>
+                    <div className="flex items-center gap-2">
+                      {theme === 'light' && <Sun className="w-4 h-4 text-yellow-500" />}
+                      {theme === 'dark' && <Moon className="w-4 h-4 text-blue-500" />}
+                      {theme === 'system' && <Monitor className="w-4 h-4 text-gray-500" />}
+                      <span className="font-medium">
+                        {theme === 'light' ? 'فاتح' : theme === 'dark' ? 'داكن' : 'النظام'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </ModernCard>
 
-          <SectionHeader 
-            icon={Users} 
-            title="إدارة الموظفين والعملاء"
-            description="إدارة فريق العمل والعملاء وصلاحيات الوصول"
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* إدارة الموظفين - للمدراء فقط */}
-            {canManageEmployees && (
+              {/* Notifications */}
               <ModernCard
-                icon={Users}
-                title="إدارة الموظفين"
-                description="إدارة الموظفين وحساباتهم وحالة التفعيل"
-                iconColor="from-blue-500 to-purple-600"
-                onClick={() => navigate('/manage-employees')}
-              />
-            )}
-
-            {/* قواعد الأرباح للموظفين - للمدراء فقط */}
-            {canManageEmployees && (
-              <ModernCard
-                icon={DollarSign}
-                title="قواعد الأرباح للموظفين"
-                description="إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - النظام الجديد يحسب الأرباح عند استلام الفاتورة وليس التوصيل"
+                icon={Bell}
+                title="الإشعارات"
+                description="إدارة إشعارات النظام والتنبيهات"
                 iconColor="from-green-500 to-green-600"
-                onClick={() => setIsProfitsManagerOpen(true)}
-              />
-            )}
-
-
-            {/* إعدادات العملاء - للجميع */}
-            <ModernCard
-              icon={User}
-              title="إعدادات العملاء"
-              description="إدارة بيانات العملاء والفئات والعضويات"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={() => setIsCustomerSettingsOpen(true)}
-            />
+                onClick={() => setIsNotificationOpen(true)}
+              >
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الإشعارات الصوتية</span>
+                    <span className="font-bold text-green-600">مفعلة</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">إشعارات سطح المكتب</span>
+                    <span className="font-bold text-blue-600">مفعلة</span>
+                  </div>
+                </div>
+              </ModernCard>
+            </div>
           </div>
 
+          {/* Employee & Customer Management */}
+          <div>
+            <SectionHeader 
+              icon={Users} 
+              title="إدارة الموظفين والعملاء" 
+              description="إدارة الموظفين والعملاء وشركاء التوصيل"
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Delivery Partners */}
+              {canAccessDeliveryPartners && (
+                <ModernCard
+                  icon={Truck}
+                  title="شركاء التوصيل"
+                  description="إدارة حسابات شركات التوصيل والاتصال بواجهاتها البرمجية"
+                  iconColor="from-orange-500 to-orange-600"
+                  onClick={() => setIsDeliveryPartnersOpen(true)}
+                  badge={
+                    <Badge variant="outline" className={isAlWaseetLoggedIn ? "bg-green-50 text-green-700 border-green-300" : "bg-red-50 text-red-700 border-red-300"}>
+                      {isAlWaseetLoggedIn ? 'متصل' : 'غير متصل'}
+                    </Badge>
+                  }
+                >
+                  <div className="space-y-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الوسيط</span>
+                      <span className={`font-bold ${isAlWaseetLoggedIn ? 'text-green-600' : 'text-red-600'}`}>
+                        {isAlWaseetLoggedIn ? 'متصل' : 'غير متصل'}
+                      </span>
+                    </div>
+                  </div>
+                </ModernCard>
+              )}
+            </div>
+          </div>
 
-          <SectionHeader 
-            icon={Truck} 
-            title="الخدمات الخارجية"
-            description="إدارة الخدمات المتكاملة مع النظام"
-          />
+          {/* External Services */}
+          <div>
+            <SectionHeader 
+              icon={Activity} 
+              title="الخدمات الخارجية" 
+              description="إدارة الروبوتات والخدمات المتكاملة"
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Advanced Delivery Management - Admins Only */}
+              {isAdmin && (
+                <ModernCard
+                  icon={Settings}
+                  title="إدارة التوصيل المتقدمة"
+                  description="مزامنة شاملة للطلبات والفواتير وإدارة إعدادات التوصيل المتقدمة"
+                  iconColor="from-indigo-500 to-indigo-600"
+                  onClick={() => setIsDeliveryManagementOpen(true)}
+                  badge={
+                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+                      مدير فقط
+                    </Badge>
+                  }
+                >
+                  <div className="space-y-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">مزامنة تلقائية</span>
+                      <span className="font-bold text-green-600">مفعلة</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">آخر مزامنة شاملة</span>
+                      <span className="font-bold text-blue-600">منذ ساعة</span>
+                    </div>
+                  </div>
+                </ModernCard>
+              )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* إعدادات التوصيل - حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
+              {/* بوت التليغرام الذكي - للجميع مع رمز شخصي */}
               <ModernCard
-                icon={DollarSign}
-                title="أسعار وإعدادات التوصيل"
-                description="إدارة أسعار التوصيل وشركات الشحن المتكاملة"
-                iconColor="from-green-500 to-emerald-600"
-                onClick={() => setIsDeliverySettingsOpen(true)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">السعر الأساسي</span>
-                    <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">طلبات اليوم</span>
-                    <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
-                  </div>
-                </div>
-              </ModernCard>
-            )}
-
-            {/* شركات التوصيل - إجباري للجميع حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
-              <ModernCard
-                icon={Truck}
-                title="شركات التوصيل"
-                description="إدارة الاتصال مع شركات التوصيل المختلفة"
-                iconColor="from-amber-500 to-orange-600"
-                onClick={() => setIsLoginDialogOpen(true)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">الشركة النشطة</span>
-                    <span className="font-bold text-amber-600">{isWaseetLoggedIn ? 'الوسيط' : 'محلي'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">الحالة</span>
-                    <span className={`font-bold ${isWaseetLoggedIn ? 'text-green-600' : 'text-gray-600'}`}>
-                      {isWaseetLoggedIn ? 'متصل' : 'غير متصل'}
-                    </span>
-                  </div>
-                </div>
-              </ModernCard>
-            )}
-
-            {/* إدارة التوصيل المتقدمة - للمدير فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Settings}
-                title="إدارة التوصيل المتقدمة"
-                description="مزامنة شاملة للطلبات والفواتير وإدارة إعدادات التوصيل المتقدمة"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsDeliveryManagementOpen(true)}
+                icon={MessageCircle}
+                title="بوت التليغرام الذكي"
+                description={canViewAllData ? "إدارة بوت التليغرام ورموز الموظفين والإشعارات" : "رمزك الشخصي للاتصال مع بوت التليغرام"}
+                iconColor="from-blue-500 to-indigo-600"
+                onClick={() => setIsTelegramOpen(true)}
                 badge={
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
-                    مدير فقط
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                    متاح
                   </Badge>
                 }
               >
                 <div className="space-y-3 mt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">مزامنة تلقائية</span>
-                    <span className="font-bold text-green-600">مفعلة</span>
+                    <span className="text-sm text-muted-foreground">اسم البوت</span>
+                    <span className="font-bold text-blue-600">@Ryusiq_bot</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">آخر مزامنة شاملة</span>
-                    <span className="font-bold text-blue-600">منذ ساعة</span>
+                    <span className="text-sm text-muted-foreground">حالة الاتصال</span>
+                    <span className="font-bold text-green-600">نشط</span>
                   </div>
+                  {canViewAllData && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
+                      <span className="font-bold text-purple-600">{employeeCodes.length || '0'}</span>
+                    </div>
+                  )}
                 </div>
               </ModernCard>
-            )}
 
-            {/* بوت التليغرام الذكي - للجميع مع رمز شخصي */}
-            <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام الذكي"
-              description={canViewAllData ? "إدارة بوت التليغرام ورموز الموظفين والإشعارات والموافقة التلقائية" : "رمزك الشخصي للاتصال مع بوت التليغرام وإعدادات الموافقة التلقائية"}
-              iconColor="from-blue-500 to-indigo-600"
-              onClick={() => setIsTelegramOpen(true)}
-              badge={
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                  متاح
-                </Badge>
-              }
-            >
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">اسم البوت</span>
-                  <span className="font-bold text-blue-600">@Ryusiq_bot</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">حالة الاتصال</span>
-                  <span className="font-bold text-green-600">نشط</span>
-                </div>
-                {canViewAllData && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
-                    <span className="font-bold text-purple-600">{employeeCodes.length || '0'}</span>
-                  </div>
-                )}
-              </div>
-            </ModernCard>
-          </div>
-
-          <SectionHeader 
-            icon={Database} 
-            title="إدارة النظام والأمان"
-            description="النسخ الاحتياطي، الأمان، وصيانة النظام"
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* النسخ الاحتياطي - للمديرين فقط */}
-            {canManageSettings && (
+              {/* إعدادات التليغرام الشخصية */}
               <ModernCard
-                icon={Database}
-                title="النسخ الاحتياطي والاستعادة"
-                description="حماية شاملة لبياناتك مع إمكانية الاستعادة الفورية في حالات الطوارئ"
-                iconColor="from-green-500 to-emerald-600"
-                onClick={() => setIsBackupSystemOpen(true)}
+                icon={Settings}
+                title="إعدادات التليغرام الذكي"
+                description="الموافقة التلقائية للطلبات والوجهة الافتراضية"
+                iconColor="from-purple-500 to-purple-600"
+                onClick={() => setIsTelegramSettingsOpen(true)}
+                badge={
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">
+                    شخصي
+                  </Badge>
+                }
               >
                 <div className="space-y-3 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
-                      <div className="text-lg font-bold text-green-600">+20</div>
-                      <div className="text-xs text-muted-foreground">جدول محمي</div>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                      <div className="text-lg font-bold text-blue-600">100%</div>
-                      <div className="text-xs text-muted-foreground">استعادة آمنة</div>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الموافقة التلقائية</span>
+                    <span className="font-bold text-purple-600">معطلة</span>
                   </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-1 text-xs">
-                      <Download className="w-3 h-3 text-green-500" />
-                      <span>تصدير</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <Upload className="w-3 h-3 text-blue-500" />
-                      <span>استعادة</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <Shield className="w-3 h-3 text-purple-500" />
-                      <span>حماية</span>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الوجهة الافتراضية</span>
+                    <span className="font-bold text-blue-600">محلي</span>
                   </div>
                 </div>
               </ModernCard>
-            )}
-
-
-            {/* معلومات النظام */}
-            <ModernCard
-              icon={SettingsIcon}
-              title="معلومات النظام"
-              description="حالة النظام، الإحصائيات، والصيانة"
-              iconColor="from-gray-500 to-gray-600"
-            >
-              <div className="space-y-3 mt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">إصدار النظام:</span>
-                  <Badge variant="secondary">RYUS v2.0</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">حالة قاعدة البيانات:</span>
-                  <Badge variant="default" className="bg-green-500">متصلة</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">آخر نسخة احتياطية:</span>
-                  <span className="text-sm font-medium">تحقق من الصفحة</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">حالة النظام:</span>
-                  <Badge variant="default" className="bg-blue-500">نشط</Badge>
-                </div>
-              </div>
-            </ModernCard>
+            </div>
           </div>
 
+          {/* System Management */}
+          <div>
+            <SectionHeader 
+              icon={Database} 
+              title="إدارة النظام" 
+              description="المخزون والتقارير وإدارة البيانات"
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Inventory Management */}
+              <ModernCard
+                icon={Store}
+                title="إدارة المخزون"
+                description="إدارة المنتجات والفئات وتنبيهات المخزون"
+                iconColor="from-teal-500 to-teal-600"
+                onClick={() => setIsInventoryOpen(true)}
+              >
+                <div className="space-y-3 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">إجمالي المنتجات</span>
+                    <span className="font-bold text-teal-600">{productStats?.totalProducts || '0'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">تنبيهات المخزون</span>
+                    <span className={`font-bold ${stockAlerts?.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {stockAlerts?.length || '0'}
+                    </span>
+                  </div>
+                </div>
+              </ModernCard>
+            </div>
+          </div>
         </div>
       </div>
 
-      <ProfileSecurityDialog 
-        open={isEditProfileOpen} 
-        onOpenChange={setIsEditProfileOpen} 
+      {/* Dialogs */}
+      <ProfileDialog 
+        open={isProfileOpen} 
+        onOpenChange={setIsProfileOpen} 
       />
       
       <AppearanceDialog 
@@ -491,66 +441,35 @@ const SettingsPage = () => {
         onOpenChange={setIsAppearanceOpen} 
       />
       
-      <NotificationSettingsDialog
-        open={isNotificationSettingsOpen}
-        onOpenChange={setIsNotificationSettingsOpen}
+      <NotificationDialog 
+        open={isNotificationOpen} 
+        onOpenChange={setIsNotificationOpen} 
       />
-
-      {/* الحوارات - فلترة حسب الصلاحيات */}
-
-      <CustomerSettingsDialog
-        open={isCustomerSettingsOpen}
-        onOpenChange={setIsCustomerSettingsOpen}
+      
+      <DeliveryPartnerDialog 
+        open={isDeliveryPartnersOpen} 
+        onOpenChange={setIsDeliveryPartnersOpen} 
       />
-
-
-      <PermissionBasedStockSettings
-        open={isStockSettingsOpen}
-        onOpenChange={setIsStockSettingsOpen}
+      
+      <InventoryManagementDialog 
+        open={isInventoryOpen} 
+        onOpenChange={setIsInventoryOpen} 
       />
-
-      {canAccessDeliveryPartners && (
-        <DeliveryPartnerDialog
-          open={isLoginDialogOpen}
-          onOpenChange={setIsLoginDialogOpen}
-        />
-      )}
-
-
-      {canAccessDeliveryPartners && (
-        <DeliverySettingsDialog
-          open={isDeliverySettingsOpen}
-          onOpenChange={setIsDeliverySettingsOpen}
-        />
-      )}
-
-      <TelegramManagementDialog
-        open={isTelegramOpen}
-        onOpenChange={setIsTelegramOpen}
+      
+      <TelegramBotDialog 
+        open={isTelegramOpen} 
+        onOpenChange={setIsTelegramOpen} 
       />
-
-      <UnifiedEmployeeProfitsManager 
-        open={isProfitsManagerOpen} 
-        onOpenChange={setIsProfitsManagerOpen} 
+      
+      <TelegramSettingsDialog 
+        open={isTelegramSettingsOpen} 
+        onOpenChange={setIsTelegramSettingsOpen} 
       />
-
-      <BackupSystemDialog 
-        open={isBackupSystemOpen} 
-        onOpenChange={setIsBackupSystemOpen} 
-      />
-
-      <SyncNotificationSettings 
-        open={isSyncNotificationOpen} 
-        onOpenChange={setIsSyncNotificationOpen} 
-      />
-
-      <ComprehensiveDeliveryManagementDialog 
+      
+      <DeliveryManagementDialog 
         open={isDeliveryManagementOpen} 
         onOpenChange={setIsDeliveryManagementOpen} 
       />
-
     </>
   );
-};
-
-export default SettingsPage;
+}

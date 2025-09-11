@@ -1068,6 +1068,125 @@ async function parseProduct(productText: string) {
   };
 }
 
+// دالة إنشاء طلب توصيل تلقائي
+async function autoCreateDeliveryOrder(aiOrderId: string, profile: any, employee: any) {
+  console.log('Starting auto-creation for AI order:', aiOrderId);
+  
+  // جلب بيانات الطلب
+  const { data: aiOrder, error: orderError } = await supabaseAdmin
+    .from('ai_orders')
+    .select('*')
+    .eq('id', aiOrderId)
+    .single();
+
+  if (orderError || !aiOrder) {
+    console.error('Failed to fetch AI order:', orderError);
+    throw new Error('Failed to fetch AI order');
+  }
+
+  if (profile.default_ai_order_destination === 'alwaseet') {
+    // إنشاء طلب الوسيط
+    console.log('Creating AlWaseet order...');
+    
+    // جلب توكن الحساب الافتراضي
+    const { data: tokenData } = await supabaseAdmin
+      .from('delivery_partner_tokens')
+      .select('token, account_username')
+      .eq('user_id', employee.user_id)
+      .eq('partner_name', 'alwaseet')
+      .eq('is_active', true)
+      .not('token', 'is', null)
+      .order('is_default', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!tokenData?.token) {
+      throw new Error('No valid AlWaseet token found');
+    }
+
+    // استدعاء AlWaseet API
+    const orderPayload = {
+      endpoint: 'create-order',
+      method: 'POST',
+      token: tokenData.token,
+      payload: {
+        customer_name: aiOrder.customer_name,
+        customer_phone: aiOrder.customer_phone,
+        customer_address: aiOrder.customer_address,
+        customer_city: aiOrder.customer_city || 'بغداد',
+        total_amount: aiOrder.total_amount,
+        items: aiOrder.items
+      }
+    };
+
+    const alwaseetResponse = await supabaseAdmin.functions.invoke('alwaseet-proxy', {
+      body: orderPayload
+    });
+
+    if (alwaseetResponse.error) {
+      console.error('AlWaseet API error:', alwaseetResponse.error);
+      throw new Error('Failed to create AlWaseet order');
+    }
+
+    console.log('AlWaseet order created successfully:', alwaseetResponse.data);
+    
+    // إنشاء طلب محلي مرتبط
+    const { error: localOrderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        customer_name: aiOrder.customer_name,
+        customer_phone: aiOrder.customer_phone,
+        customer_address: aiOrder.customer_address,
+        customer_city: aiOrder.customer_city,
+        total_amount: aiOrder.total_amount,
+        final_amount: aiOrder.total_amount,
+        delivery_partner: 'alwaseet',
+        delivery_partner_order_id: alwaseetResponse.data?.order_id,
+        tracking_number: alwaseetResponse.data?.tracking_number,
+        status: 'pending',
+        delivery_status: 'فعال',
+        created_by: employee.user_id,
+        source: 'telegram_auto'
+      });
+
+    if (localOrderError) {
+      console.error('Failed to create local order:', localOrderError);
+      throw new Error('Failed to create local order');
+    }
+  } else {
+    // إنشاء طلب محلي
+    console.log('Creating local order...');
+    
+    const { error: localOrderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        customer_name: aiOrder.customer_name,
+        customer_phone: aiOrder.customer_phone,
+        customer_address: aiOrder.customer_address,
+        customer_city: aiOrder.customer_city,
+        total_amount: aiOrder.total_amount,
+        final_amount: aiOrder.total_amount,
+        delivery_partner: null,
+        status: 'pending',
+        created_by: employee.user_id,
+        source: 'telegram_auto'
+      });
+
+    if (localOrderError) {
+      console.error('Failed to create local order:', localOrderError);
+      throw new Error('Failed to create local order');
+    }
+  }
+
+  // حذف طلب الذكاء الاصطناعي المعالج
+  await supabaseAdmin
+    .from('ai_orders')
+    .delete()
+    .eq('id', aiOrderId);
+
+  console.log('Auto-creation completed successfully');
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {

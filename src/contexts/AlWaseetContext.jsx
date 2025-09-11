@@ -2538,7 +2538,7 @@ export const AlWaseetProvider = ({ children }) => {
           last_used_at: new Date().toISOString()
         })
         .eq('user_id', userId)
-        .eq('partner', partner === 'alwaseet' ? 'alwaseet' : partner)
+        .eq('partner_name', partner) // تصحيح اسم العمود
         .eq('account_username', accountUsername);
 
       if (error) {
@@ -2550,6 +2550,29 @@ export const AlWaseetProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error('Error in deleteDeliveryAccount:', error);
+      return false;
+    }
+  }, []);
+
+  // دالة حذف حساب التوصيل نهائياً
+  const permanentDeleteDeliveryAccount = useCallback(async (userId, partner, accountUsername) => {
+    try {
+      const { error } = await supabase
+        .from('delivery_partner_tokens')
+        .delete()
+        .eq('user_id', userId)
+        .eq('partner_name', partner)
+        .eq('account_username', accountUsername);
+
+      if (error) {
+        console.error('Error permanently deleting delivery account:', error);
+        return false;
+      }
+
+      console.log(`تم حذف حساب ${accountUsername} لشريك ${partner} نهائياً`);
+      return true;
+    } catch (error) {
+      console.error('Error in permanentDeleteDeliveryAccount:', error);
       return false;
     }
   }, []);
@@ -2569,6 +2592,7 @@ export const AlWaseetProvider = ({ children }) => {
     setDefaultDeliveryAccount,
     activateAccount,
     deleteDeliveryAccount,
+    permanentDeleteDeliveryAccount,
     isOrderOwner,
     canAutoDeleteOrder,
     setActivePartner,
