@@ -375,7 +375,7 @@ const SettingsPage = () => {
             <ModernCard
               icon={MessageCircle}
               title="بوت التليغرام الذكي"
-              description={canViewAllData ? "إدارة بوت التليغرام ورموز الموظفين والإشعارات والموافقة التلقائية" : "رمزك الشخصي للاتصال مع بوت التليغرام وإعدادات الموافقة التلقائية"}
+              description={canViewAllData ? "إدارة بوت التليغرام ورموز الموظفين والإشعارات" : "رمزك الشخصي للاتصال مع بوت التليغرام"}
               iconColor="from-blue-500 to-indigo-600"
               onClick={() => setIsTelegramOpen(true)}
               badge={

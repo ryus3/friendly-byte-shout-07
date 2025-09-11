@@ -500,8 +500,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
                       
                       try {
-                        // استخدام الوجهة الافتراضية المحفوظة في التفضيلات
-                        const res = await approveAiOrder?.(order.id, 'local', null);
+                        const res = await approveAiOrder?.(order.id);
                         if (res?.success) {
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                           toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });
