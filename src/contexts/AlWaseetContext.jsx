@@ -397,6 +397,19 @@ export const AlWaseetProvider = ({ children }) => {
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+  
+  // دالة للتحقق من وجود توكن صالح بدون تغيير activePartner
+  const hasValidToken = useCallback(async (partnerName = 'alwaseet') => {
+    if (!user?.id) return false;
+    
+    try {
+      const tokenData = await getTokenForUser(user.id);
+      return tokenData && tokenData.token && new Date(tokenData.expires_at) > new Date();
+    } catch (error) {
+      console.error('خطأ في التحقق من التوكن:', error);
+      return false;
+    }
+  }, [user?.id, getTokenForUser]);
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
   const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
 
@@ -570,7 +583,8 @@ export const AlWaseetProvider = ({ children }) => {
         setToken(data.token);
         setWaseetUser(data.partner_data);
         setIsLoggedIn(true);
-        setActivePartner('alwaseet');
+        // لا نغير activePartner تلقائياً - نتركه كما هو مضبوط من قبل المستخدم
+        // setActivePartner('alwaseet'); // تم تعطيل هذا السطر
       } else {
         if (data) {
             await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
@@ -2474,6 +2488,7 @@ export const AlWaseetProvider = ({ children }) => {
     setCorrectionComplete,
     syncVisibleOrdersBatch,
     fixDamagedAlWaseetStock,
+    hasValidToken,
   };
 
   // Export linkRemoteIdsForExistingOrders to window for SuperProvider access

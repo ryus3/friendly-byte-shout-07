@@ -15,7 +15,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
         login, loading, deliveryPartners, activePartner, setActivePartner, 
         isLoggedIn, logout: waseetLogout, waseetUser,
-        getUserDeliveryAccounts, setDefaultDeliveryAccount 
+        getUserDeliveryAccounts, setDefaultDeliveryAccount, hasValidToken 
     } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
@@ -294,10 +294,20 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </SelectTrigger>
                             <SelectContent className="bg-background border border-border">
                                 {Object.entries(availablePartners).map(([key, partner]) => {
-                                    const hasAccounts = key !== 'local' && userAccounts.length > 0;
-                                    const isCurrentActive = activePartner === key && isLoggedIn;
-                                    const isConnected = key === 'local' || hasAccounts || isCurrentActive;
-                                    const statusLabel = key === 'local' ? 'محلي' : (isConnected ? 'متصل' : 'غير متصل');
+                                    // تحسين منطق تحديد حالة الاتصال
+                                    let isConnected = false;
+                                    let statusLabel = 'غير متصل';
+                                    
+                                    if (key === 'local') {
+                                        isConnected = true;
+                                        statusLabel = 'محلي';
+                                    } else {
+                                        // للشركات الأخرى: التحقق من وجود حسابات محفوظة أو توكن صالح
+                                        const hasAccounts = userAccounts.length > 0;
+                                        const hasToken = isLoggedIn; // استخدام hasValidToken في المستقبل
+                                        isConnected = hasAccounts || hasToken;
+                                        statusLabel = isConnected ? 'متصل' : 'غير متصل';
+                                    }
                                     
                                     return (
                                         <SelectItem key={key} value={key}>

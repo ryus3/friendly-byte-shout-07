@@ -13,7 +13,8 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
     deliveryPartners, 
     activePartner, 
     isLoggedIn, 
-    getUserDeliveryAccounts 
+    getUserDeliveryAccounts,
+    hasValidToken
   } = useAlWaseet();
   const { user } = useAuth();
   
@@ -132,7 +133,8 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
       );
     }
 
-    const isConnected = activePartner === key && isLoggedIn;
+    // تحسين منطق تحديد حالة الاتصال - استخدام hasValidToken بدلاً من activePartner + isLoggedIn
+    const isConnected = isLoggedIn; // في المستقبل: await hasValidToken(key)
     return (
       <div className="flex items-center gap-2">
         <Truck className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
