@@ -180,7 +180,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             return (
                 <Card className="bg-green-500/10 border-green-500/30 text-foreground">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-500">
+                        <CardTitle className="flex items-center gap-2 text-green-600 dark:text-green-400">
                             <CheckCircle className="w-5 h-5"/> متصل - حسابات محفوظة
                         </CardTitle>
                     </CardHeader>
@@ -190,12 +190,12 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         </p>
                         
                         {selectedAccount && (
-                            <div className="bg-blue-50 p-3 rounded-lg">
-                                <p className="text-sm">
+                            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <p className="text-sm text-gray-800 dark:text-gray-200">
                                     <span className="font-medium">الحساب المختار:</span> {selectedAccount.account_label || selectedAccount.partner_data?.username || selectedAccount.account_username}
                                 </p>
                                 {selectedAccount.is_default && (
-                                    <p className="text-xs text-green-600 mt-1">🌟 الحساب الافتراضي</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">🌟 الحساب الافتراضي</p>
                                 )}
                             </div>
                         )}
@@ -252,7 +252,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         return (
             <Card className="bg-amber-500/10 border-amber-500/30 text-foreground">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-amber-600">
+                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                         <XCircle className="w-5 h-5"/> غير متصل
                     </CardTitle>
                 </CardHeader>
@@ -333,10 +333,10 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                         <SelectItem key={key} value={key}>
                                             <div className="flex items-center justify-between w-full">
                                                 <span>{partner.name}</span>
-                                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                <span className={`text-xs px-2 py-0.5 rounded ${
                                                     isConnected 
-                                                        ? 'bg-green-100 text-green-700' 
-                                                        : 'bg-gray-100 text-gray-500'
+                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                                                 }`}>
                                                     {statusLabel}
                                                 </span>

@@ -39,8 +39,8 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('partner_name', 'alwaseet');
       
       if (accountUsername) {
-        // البحث عن حساب محدد
-        query = query.eq('account_username', accountUsername);
+        // البحث عن حساب محدد مع المقارنة المطبعة
+        query = query.ilike('account_username', accountUsername.trim().toLowerCase());
       } else {
         // البحث عن الحساب الافتراضي أو الأحدث
         query = query.order('is_default', { ascending: false })
@@ -121,7 +121,7 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [user?.id, getTokenForUser]);
 
-  // دالة للحصول على جميع حسابات المستخدم لشركة معينة
+  // دالة للحصول على جميع حسابات المستخدم لشركة معينة مع إزالة التكرار
   const getUserDeliveryAccounts = useCallback(async (userId, partnerName = 'alwaseet') => {
     if (!userId) return [];
     
@@ -138,8 +138,22 @@ export const AlWaseetProvider = ({ children }) => {
         console.error('خطأ في جلب حسابات المستخدم:', error);
         return [];
       }
+
+      // إزالة الحسابات المكررة بناءً على اسم المستخدم المطبع
+      const accounts = data || [];
+      const uniqueAccounts = [];
+      const seenUsernames = new Set();
+
+      for (const account of accounts) {
+        const normalizedUsername = account.account_username?.trim()?.toLowerCase();
+        if (normalizedUsername && !seenUsernames.has(normalizedUsername)) {
+          seenUsernames.add(normalizedUsername);
+          uniqueAccounts.push(account);
+        }
+      }
       
-      return data || [];
+      console.log(`🔍 تم العثور على ${accounts.length} حساب، بعد إزالة التكرار: ${uniqueAccounts.length}`);
+      return uniqueAccounts;
     } catch (error) {
       console.error('خطأ في جلب حسابات المستخدم:', error);
       return [];
@@ -238,8 +252,8 @@ export const AlWaseetProvider = ({ children }) => {
       for (const [employeeId, employeeOrders] of ordersByEmployee) {
         try {
           // الحصول على توكن الموظف
-          const token = await getTokenForUser(employeeId);
-          if (!token) {
+          const employeeTokenData = await getTokenForUser(employeeId);
+          if (!employeeTokenData) {
             console.log(`⚠️ لا يوجد توكن صالح للموظف: ${employeeId}`);
             continue;
           }
@@ -247,7 +261,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId}`);
           
           // جلب جميع طلبات الموظف من الوسيط
-          const merchantOrders = await AlWaseetAPI.getMerchantOrders(token);
+          const merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
           
           if (!merchantOrders || !Array.isArray(merchantOrders)) {
             console.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
@@ -704,14 +718,17 @@ export const AlWaseetProvider = ({ children }) => {
       const merchantId = tokenData.merchant_id || null; // من API إذا كان متوفراً
       
       try {
-        // البحث عن حساب موجود أولاً
-        const { data: existingAccount } = await supabase
-          .from('delivery_partner_tokens')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('partner_name', partner)
-          .eq('account_username', accountUsername)
-          .maybeSingle();
+      // تطبيع اسم المستخدم لمنع التكرار
+      const normalizedUsername = accountUsername.trim().toLowerCase();
+      
+      // البحث عن حساب موجود أولاً مع المقارنة المطبعة
+      const { data: existingAccount } = await supabase
+        .from('delivery_partner_tokens')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('partner_name', partner)
+        .ilike('account_username', normalizedUsername)
+        .maybeSingle();
 
         if (existingAccount) {
           // تحديث الحساب الموجود
@@ -722,6 +739,7 @@ export const AlWaseetProvider = ({ children }) => {
               expires_at: expires_at.toISOString(),
               partner_data: partnerData,
               merchant_id: merchantId,
+              account_username: normalizedUsername, // حفظ النسخة المطبعة
               last_used_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
@@ -746,7 +764,7 @@ export const AlWaseetProvider = ({ children }) => {
             .insert({
               user_id: user.id,
               partner_name: partner,
-              account_username: accountUsername,
+              account_username: normalizedUsername, // حفظ النسخة المطبعة
               token: tokenData.token,
               expires_at: expires_at.toISOString(),
               partner_data: partnerData,
@@ -764,7 +782,7 @@ export const AlWaseetProvider = ({ children }) => {
           .update({ last_used_at: new Date().toISOString() })
           .eq('user_id', user.id)
           .eq('partner_name', partner)
-          .eq('account_username', accountUsername);
+          .ilike('account_username', normalizedUsername);
           
       } catch (error) {
         console.error('خطأ في حفظ التوكن:', error);
