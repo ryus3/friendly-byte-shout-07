@@ -17,6 +17,13 @@ export const useAlWaseet = () => useContext(AlWaseetContext);
 export const AlWaseetProvider = ({ children }) => {
   const { user } = useAuth();
   
+  // Declare core state early to avoid TDZ in callbacks
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState(null);
+  const [waseetUser, setWaseetUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+  
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
   
@@ -449,11 +456,8 @@ export const AlWaseetProvider = ({ children }) => {
     // NotificationsSystemProvider غير متاح بعد
     console.log('NotificationsSystem not ready yet');
   }
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [token, setToken] = useState(null);
-  const [waseetUser, setWaseetUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+// state moved earlier to avoid TDZ
+
   
   // دالة للتحقق من وجود توكن صالح بدون تغيير activePartner
   const hasValidToken = useCallback(async (partnerName = 'alwaseet') => {
