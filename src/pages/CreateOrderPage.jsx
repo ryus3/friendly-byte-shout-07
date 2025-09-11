@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, AlertTriangle, PackagePlus, Trash2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
+import { DeliveryPartnerDialog } from '@/components/DeliveryPartnerDialog';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const CreateOrderPage = () => {

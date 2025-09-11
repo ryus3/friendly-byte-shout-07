@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Loader2, CheckCircle } from 'lucide-react';
-import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
+import { DeliveryPartnerDialog } from '@/components/DeliveryPartnerDialog';
 import { motion } from 'framer-motion';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
