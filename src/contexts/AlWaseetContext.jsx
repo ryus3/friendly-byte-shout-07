@@ -57,6 +57,63 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, []);
 
+  // دالة لتفعيل حساب محدد وتسجيل الدخول الفعلي
+  const activateAccount = useCallback(async (accountUsername) => {
+    if (!user?.id || !accountUsername) return false;
+    
+    try {
+      setLoading(true);
+      
+      // جلب بيانات الحساب المحدد
+      const accountData = await getTokenForUser(user.id, accountUsername);
+      
+      if (!accountData) {
+        toast({
+          title: "خطأ في تسجيل الدخول",
+          description: "لم يتم العثور على بيانات صالحة للحساب المحدد",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // تحديث حالة السياق
+      setToken(accountData.token);
+      setWaseetUser({
+        username: accountData.account_username,
+        merchantId: accountData.merchant_id,
+        label: accountData.account_label
+      });
+      setIsLoggedIn(true);
+      setActivePartner('alwaseet');
+      
+      // تحديث last_used_at في قاعدة البيانات
+      await supabase
+        .from('delivery_partner_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('partner_name', 'alwaseet')
+        .eq('account_username', accountUsername);
+      
+      toast({
+        title: "✅ تم تسجيل الدخول بنجاح",
+        description: `تم تسجيل الدخول للحساب: ${accountData.account_label || accountData.account_username}`,
+        variant: "default"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('خطأ في تفعيل الحساب:', error);
+      toast({
+        title: "خطأ في تسجيل الدخول",
+        description: error.message,
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, getTokenForUser, setActivePartner]);
+
   // دالة للحصول على جميع حسابات المستخدم لشركة معينة
   const getUserDeliveryAccounts = useCallback(async (userId, partnerName = 'alwaseet') => {
     if (!userId) return [];
@@ -410,6 +467,39 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
   }, [user?.id, getTokenForUser]);
+  
+  // دالة جلب التوكن وتحديث حالة السياق
+  const fetchToken = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const tokenData = await getTokenForUser(user.id);
+      
+      if (tokenData) {
+        setToken(tokenData.token);
+        setWaseetUser({
+          username: tokenData.account_username,
+          merchantId: tokenData.merchant_id,
+          label: tokenData.account_label
+        });
+        setIsLoggedIn(true);
+        
+        // فقط إذا لم يكن هناك شريك نشط محدد
+        if (activePartner === 'local') {
+          setActivePartner('alwaseet');
+        }
+      } else {
+        setToken(null);
+        setWaseetUser(null);
+        setIsLoggedIn(false);
+      }
+    } catch (error) {
+      console.error('خطأ في جلب التوكن:', error);
+      setToken(null);
+      setWaseetUser(null);
+      setIsLoggedIn(false);
+    }
+  }, [user?.id, getTokenForUser, activePartner, setActivePartner]);
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
   const [orderStatusesMap, setOrderStatusesMap] = useState(new Map());
 
@@ -2397,6 +2487,13 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, syncOrderByQR]);
 
+  // تحميل التوكن عند تسجيل الدخول الأولي
+  useEffect(() => {
+    if (user?.id) {
+      fetchToken();
+    }
+  }, [user?.id, fetchToken]);
+
   // Auto-sync and repair on login
   useEffect(() => {
     if (!isLoggedIn || !token || activePartner === 'local') return;
@@ -2446,6 +2543,7 @@ export const AlWaseetProvider = ({ children }) => {
     getTokenForUser,
     getUserDeliveryAccounts,
     setDefaultDeliveryAccount,
+    activateAccount,
     isOrderOwner,
     canAutoDeleteOrder,
     setActivePartner,

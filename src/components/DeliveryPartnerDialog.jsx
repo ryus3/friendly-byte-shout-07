@@ -15,7 +15,8 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
         login, loading, deliveryPartners, activePartner, setActivePartner, 
         isLoggedIn, logout: waseetLogout, waseetUser,
-        getUserDeliveryAccounts, setDefaultDeliveryAccount, hasValidToken 
+        getUserDeliveryAccounts, setDefaultDeliveryAccount, hasValidToken,
+        activateAccount
     } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
@@ -89,17 +90,15 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             return;
         }
         
-        // التبديل إلى حساب موجود
+        // التبديل إلى حساب موجود وتسجيل الدخول الفعلي
         if (selectedAccount && !username && !password && !showAddForm) {
-            setActivePartner(selectedPartner);
-            // تحديث last_used_at للحساب المختار
-            await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
-            toast({ 
-                title: "تم التبديل", 
-                description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name} - ${selectedAccount.partner_data?.username || selectedAccount.account_username}.`, 
-                variant: 'success' 
-            });
-            onOpenChange(false);
+            // تفعيل الحساب المحفوظ وتسجيل الدخول الفعلي
+            const success = await activateAccount(selectedAccount.account_username);
+            if (success) {
+                // تحديث الحساب الافتراضي أيضاً
+                await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
+                onOpenChange(false);
+            }
             return;
         }
         
