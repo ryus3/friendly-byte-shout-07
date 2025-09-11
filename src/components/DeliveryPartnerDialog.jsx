@@ -14,8 +14,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
         login, loading, deliveryPartners, activePartner, setActivePartner, 
-        isLoggedIn, logout: waseetLogout, waseetUser, getUserDeliveryAccounts, 
-        setDefaultDeliveryAccount 
+        isLoggedIn, logout: waseetLogout, waseetUser,
+        getUserDeliveryAccounts, setDefaultDeliveryAccount 
     } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
@@ -33,39 +33,32 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const [selectedPartner, setSelectedPartner] = useState(activePartner || Object.keys(availablePartners)[0]);
 
+    // تحميل حسابات المستخدم عند فتح النافذة أو تغيير الشركة
     useEffect(() => {
+        const loadUserAccounts = async () => {
+            if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
+                const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+                setUserAccounts(accounts);
+                
+                // اختيار الحساب الافتراضي
+                const defaultAccount = accounts.find(acc => acc.is_default);
+                setSelectedAccount(defaultAccount || accounts[0] || null);
+            } else {
+                setUserAccounts([]);
+                setSelectedAccount(null);
+            }
+        };
+
         if (open) {
             const initialPartner = activePartner || Object.keys(availablePartners)[0];
             setSelectedPartner(initialPartner);
-            
-            // جلب حسابات المستخدم للشركة المختارة
-            if (user && initialPartner !== 'local') {
-                getUserDeliveryAccounts(user.id, initialPartner).then(accounts => {
-                    setUserAccounts(accounts);
-                    // اختيار الحساب الافتراضي إذا وجد
-                    const defaultAccount = accounts.find(acc => acc.is_default);
-                    setSelectedAccount(defaultAccount || accounts[0] || null);
-                });
-            }
+            loadUserAccounts();
         }
-    }, [activePartner, open, availablePartners, user, getUserDeliveryAccounts]);
-
-    // جلب حسابات المستخدم عند تغيير الشركة
-    useEffect(() => {
-        if (selectedPartner && selectedPartner !== 'local' && user) {
-            getUserDeliveryAccounts(user.id, selectedPartner).then(accounts => {
-                setUserAccounts(accounts);
-                const defaultAccount = accounts.find(acc => acc.is_default);
-                setSelectedAccount(defaultAccount || accounts[0] || null);
-            });
-        } else {
-            setUserAccounts([]);
-            setSelectedAccount(null);
-        }
-    }, [selectedPartner, user, getUserDeliveryAccounts]);
+    }, [activePartner, open, availablePartners, selectedPartner, user?.id, getUserDeliveryAccounts]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         if (selectedPartner === 'local') {
             setActivePartner('local');
             toast({ title: "تم تفعيل الوضع المحلي", description: "سيتم إنشاء الطلبات داخل النظام.", variant: 'success' });
@@ -73,49 +66,60 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             return;
         }
         
-        // إذا كان المستخدم مسجل دخول بالفعل في هذا الشريك، لا نحتاج لإدخال البيانات
-        if (isCurrentPartnerSelected && isLoggedIn) {
+        // التبديل إلى حساب موجود
+        if (selectedAccount && !username && !password) {
             setActivePartner(selectedPartner);
-            toast({ title: "تم التبديل", description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name}.`, variant: 'success' });
+            toast({ 
+                title: "تم التبديل", 
+                description: `تم التبديل إلى ${deliveryPartners[selectedPartner].name} - ${selectedAccount.account_label || selectedAccount.account_username}.`, 
+                variant: 'success' 
+            });
             onOpenChange(false);
             return;
         }
         
+        // تسجيل دخول جديد
         const result = await login(username, password, selectedPartner);
         if (result.success) {
-            // إعادة جلب الحسابات بعد تسجيل الدخول الناجح
-            const updatedAccounts = await getUserDeliveryAccounts(user.id, selectedPartner);
-            setUserAccounts(updatedAccounts);
-            
             onOpenChange(false);
             setUsername('');
             setPassword('');
+            // إعادة تحميل الحسابات بعد تسجيل الدخول
+            const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+            setUserAccounts(accounts);
+        }
+    };
+
+    const handleSetDefaultAccount = async () => {
+        if (!selectedAccount || !user?.id) return;
+        
+        const success = await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
+        if (success) {
+            toast({ 
+                title: "تم التحديث", 
+                description: "تم تعيين الحساب كافتراضي بنجاح", 
+                variant: 'success' 
+            });
+            // إعادة تحميل الحسابات
+            const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+            setUserAccounts(accounts);
+        } else {
+            toast({ 
+                title: "خطأ", 
+                description: "فشل في تعيين الحساب الافتراضي", 
+                variant: 'destructive' 
+            });
         }
     };
     
     const handleLogout = () => {
         waseetLogout();
+        // إعادة تعيين الحالة
+        setUserAccounts([]);
+        setSelectedAccount(null);
+        setUsername('');
+        setPassword('');
     }
-
-    const handleSetDefaultAccount = async () => {
-        if (selectedAccount && user) {
-            const success = await setDefaultDeliveryAccount(
-                user.id, 
-                selectedPartner, 
-                selectedAccount.account_username
-            );
-            if (success) {
-                toast({ 
-                    title: "تم التحديث", 
-                    description: "تم تعيين الحساب كافتراضي", 
-                    variant: "success" 
-                });
-                // إعادة جلب الحسابات لتحديث الحالة
-                const updatedAccounts = await getUserDeliveryAccounts(user.id, selectedPartner);
-                setUserAccounts(updatedAccounts);
-            }
-        }
-    };
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
 
@@ -128,6 +132,85 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                     </CardHeader>
                     <CardContent>
                         <p className="text-sm text-muted-foreground">سيتم إنشاء الطلبات وحفظها داخل النظام مباشرة.</p>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        // إظهار الحسابات المحفوظة إذا وُجدت
+        if (userAccounts.length > 0) {
+            return (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-500">
+                            <CheckCircle className="w-5 h-5"/> الحسابات المحفوظة
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>اختر الحساب</Label>
+                            <Select 
+                                value={selectedAccount?.account_username || ''} 
+                                onValueChange={(value) => {
+                                    const account = userAccounts.find(acc => acc.account_username === value);
+                                    setSelectedAccount(account);
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="اختر حساب..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {userAccounts.map((account) => (
+                                        <SelectItem key={account.account_username} value={account.account_username}>
+                                            {account.account_label || account.account_username}
+                                            {account.is_default && ' (افتراضي)'}
+                                            {account.merchant_id && ` - ${account.merchant_id}`}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        
+                        {selectedAccount && !selectedAccount.is_default && (
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={handleSetDefaultAccount}
+                                className="w-full"
+                            >
+                                تعيين كافتراضي
+                            </Button>
+                        )}
+                        
+                        <div className="border-t pt-4">
+                            <p className="text-sm text-muted-foreground mb-2">أو سجل دخول بحساب جديد:</p>
+                            <div className="space-y-2">
+                                <Input 
+                                    type="text" 
+                                    value={username} 
+                                    onChange={(e) => setUsername(e.target.value)} 
+                                    placeholder="اسم المستخدم الجديد" 
+                                />
+                                <Input 
+                                    type="password" 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    placeholder="كلمة المرور" 
+                                />
+                            </div>
+                        </div>
+
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            type="button" 
+                            onClick={handleLogout} 
+                            className="w-full"
+                        >
+                            <LogOut className="w-4 h-4 ml-2" />
+                            تسجيل خروج جميع الحسابات
+                        </Button>
                     </CardContent>
                 </Card>
             );
@@ -183,7 +266,16 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 <form onSubmit={handleSubmit} className="py-4 space-y-4">
                      <div className="space-y-2">
                         <Label>اختر شركة التوصيل</Label>
-                        <Select value={selectedPartner} onValueChange={setSelectedPartner} disabled={Object.keys(availablePartners).length === 1}>
+                        <Select 
+                            value={selectedPartner} 
+                            onValueChange={(value) => {
+                                setSelectedPartner(value);
+                                // إعادة تعيين البيانات عند تغيير الشركة
+                                setUsername('');
+                                setPassword('');
+                            }} 
+                            disabled={Object.keys(availablePartners).length === 1}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر شركة..." />
                             </SelectTrigger>
@@ -194,51 +286,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </SelectContent>
                         </Select>
                     </div>
-
-                    {/* اختيار الحساب - يظهر فقط للشركات غير المحلية */}
-                    {selectedPartner !== 'local' && userAccounts.length > 0 && (
-                        <div className="space-y-2 border-t pt-3">
-                            <Label>اختر الحساب</Label>
-                            <Select 
-                                value={selectedAccount?.account_username || ''} 
-                                onValueChange={(value) => {
-                                    const account = userAccounts.find(acc => acc.account_username === value);
-                                    setSelectedAccount(account);
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر حساب..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {userAccounts.map((account) => (
-                                        <SelectItem key={account.account_username} value={account.account_username}>
-                                            <div className="flex items-center gap-2">
-                                                <span>{account.account_username}</span>
-                                                {account.account_label && (
-                                                    <span className="text-xs text-muted-foreground">({account.account_label})</span>
-                                                )}
-                                                {account.is_default && (
-                                                    <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">افتراضي</span>
-                                                )}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            
-                            {selectedAccount && !selectedAccount.is_default && (
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={handleSetDefaultAccount}
-                                    className="w-full text-xs"
-                                >
-                                    تعيين كحساب افتراضي
-                                </Button>
-                            )}
-                        </div>
-                    )}
                 
                     <AnimatePresence mode="wait">
                         <motion.div
@@ -255,14 +302,14 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                      <DialogFooter>
                         <Button 
                             type="submit" 
-                            disabled={loading || (selectedPartner !== 'local' && !isCurrentPartnerSelected && !username) || (selectedPartner !== 'local' && !isCurrentPartnerSelected && !password)} 
+                            disabled={loading || (selectedPartner !== 'local' && !selectedAccount && !username)} 
                             className="w-full"
                         >
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {selectedPartner === 'local' 
                                 ? 'تفعيل الوضع المحلي' 
-                                : isCurrentPartnerSelected && isLoggedIn 
-                                    ? 'التبديل إلى هذا الوضع' 
+                                : selectedAccount && !username
+                                    ? `استخدام ${selectedAccount.account_label || selectedAccount.account_username}`
                                     : 'تسجيل الدخول'
                             }
                         </Button>
