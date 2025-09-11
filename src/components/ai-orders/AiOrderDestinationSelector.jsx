@@ -192,7 +192,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
                 {userAccounts.map((account) => (
                   <SelectItem key={account.account_username} value={account.account_username}>
                     <div className="flex items-center gap-2">
-                      <span>{account.partner_data?.username || account.account_username}</span>
+                      <span>{account.account_label || account.partner_data?.username || account.account_username}</span>
                       {account.is_default && (
                         <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">
                           افتراضي
@@ -220,7 +220,11 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
         ) : selectedAccount ? (
           <span>
             سيتم إنشاء الطلبات عبر {deliveryPartners[selectedDestination]?.name}
-            {selectedAccount && ` - الحساب: ${selectedAccount}`}
+            {selectedAccount && ` - الحساب: ${
+              userAccounts.find(acc => acc.account_username === selectedAccount)?.account_label ||
+              userAccounts.find(acc => acc.account_username === selectedAccount)?.partner_data?.username ||
+              selectedAccount
+            }`}
           </span>
         ) : (
           <span className="text-orange-600">
