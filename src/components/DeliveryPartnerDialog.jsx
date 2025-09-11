@@ -150,7 +150,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        // إذا كان المستخدم مسجل دخول بالحساب الحالي، عرض التصميم الأخضر
+        // عرض معلومات الاتصال مع إمكانية التبديل بين الشركات
         if (isCurrentPartnerSelected && isLoggedIn) {
             return (
                 <Card className="bg-green-500/10 border-green-500/30 text-foreground">
@@ -162,6 +162,16 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         <p className="text-sm font-medium text-foreground">اسم المستخدم: {waseetUser?.username}</p>
                         
                         <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                type="button" 
+                                onClick={() => setShowAddForm(true)}
+                                className="flex-1"
+                            >
+                                <UserPlus className="w-4 h-4 ml-2" />
+                                إضافة حساب
+                            </Button>
                             <Button 
                                 variant="destructive" 
                                 size="sm" 

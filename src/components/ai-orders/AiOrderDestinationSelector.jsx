@@ -38,9 +38,9 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
           setSelectedAccount(profile.selected_delivery_account || '');
         }
 
-        // جلب حسابات شركات التوصيل
-        if (activePartner && activePartner !== 'local') {
-          const accounts = await getUserDeliveryAccounts(user.user_id, activePartner);
+        // جلب حسابات شركات التوصيل للوجهة المختارة
+        if (selectedDestination && selectedDestination !== 'local') {
+          const accounts = await getUserDeliveryAccounts(user.user_id, selectedDestination);
           setUserAccounts(accounts);
           
           // إذا لم يكن هناك حساب محدد، استخدم الافتراضي
@@ -48,6 +48,9 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
             const defaultAccount = accounts.find(acc => acc.is_default) || accounts[0];
             setSelectedAccount(defaultAccount.account_username);
           }
+        } else {
+          setUserAccounts([]);
+          setSelectedAccount('');
         }
       } catch (error) {
         console.error('خطأ في تحميل بيانات المستخدم:', error);
@@ -55,7 +58,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
     };
 
     loadUserData();
-  }, [user?.user_id, activePartner, getUserDeliveryAccounts]);
+  }, [user?.user_id, selectedDestination, getUserDeliveryAccounts]);
 
   // حفظ التفضيلات في قاعدة البيانات
   const savePreferences = async (destination, account = selectedAccount) => {
@@ -90,7 +93,27 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
 
   const handleDestinationChange = async (newDestination) => {
     setSelectedDestination(newDestination);
-    await savePreferences(newDestination, selectedAccount);
+    
+    // إعادة تعيين الحساب المختار عند تغيير الوجهة
+    setSelectedAccount('');
+    setUserAccounts([]);
+    
+    // جلب حسابات الوجهة الجديدة
+    if (newDestination !== 'local') {
+      const accounts = await getUserDeliveryAccounts(user.user_id, newDestination);
+      setUserAccounts(accounts);
+      
+      // اختيار الحساب الافتراضي تلقائياً
+      if (accounts.length > 0) {
+        const defaultAccount = accounts.find(acc => acc.is_default) || accounts[0];
+        setSelectedAccount(defaultAccount.account_username);
+        await savePreferences(newDestination, defaultAccount.account_username);
+      } else {
+        await savePreferences(newDestination, '');
+      }
+    } else {
+      await savePreferences(newDestination, '');
+    }
   };
 
   const handleAccountChange = async (newAccount) => {
@@ -137,28 +160,55 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
       </div>
 
       {/* منسدلة الحسابات - تظهر فقط لشركات التوصيل */}
-      {selectedDestination !== 'local' && userAccounts.length > 0 && (
+      {selectedDestination !== 'local' && (
         <div className="space-y-2">
-          <Label className="text-sm font-medium">الحساب المستخدم</Label>
-          <Select value={selectedAccount} onValueChange={handleAccountChange}>
-            <SelectTrigger className="h-9">
-              <SelectValue placeholder="اختر حساب..." />
-            </SelectTrigger>
-            <SelectContent>
-              {userAccounts.map((account) => (
-                <SelectItem key={account.account_username} value={account.account_username}>
-                  <div className="flex items-center gap-2">
-                    <span>{account.partner_data?.username || account.account_username}</span>
-                    {account.is_default && (
-                      <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">
-                        افتراضي
-                      </span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">الحساب المستخدم</Label>
+            {userAccounts.length === 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  // فتح نافذة إدارة شركات التوصيل (يمكن تمريرها كخاصية)
+                  toast({
+                    title: "لا توجد حسابات محفوظة",
+                    description: "يرجى إضافة حساب في إدارة شركات التوصيل أولاً",
+                    variant: "destructive"
+                  });
+                }}
+                className="h-7 px-3 text-xs"
+              >
+                إدارة الحسابات
+              </Button>
+            )}
+          </div>
+          {userAccounts.length > 0 ? (
+            <Select value={selectedAccount} onValueChange={handleAccountChange}>
+              <SelectTrigger className="h-9">
+                <SelectValue placeholder="اختر حساب..." />
+              </SelectTrigger>
+              <SelectContent>
+                {userAccounts.map((account) => (
+                  <SelectItem key={account.account_username} value={account.account_username}>
+                    <div className="flex items-center gap-2">
+                      <span>{account.partner_data?.username || account.account_username}</span>
+                      {account.is_default && (
+                        <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">
+                          افتراضي
+                        </span>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm text-muted-foreground border border-dashed border-border rounded-lg p-3 text-center">
+              لا توجد حسابات محفوظة لـ {deliveryPartners[selectedDestination]?.name}
+              <br />
+              يرجى إضافة حساب في إدارة شركات التوصيل أولاً
+            </div>
+          )}
         </div>
       )}
 
@@ -166,10 +216,14 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
       <div className="text-xs text-muted-foreground">
         {selectedDestination === 'local' ? (
           <span>سيتم إنشاء الطلبات محلياً في النظام</span>
-        ) : (
+        ) : selectedAccount ? (
           <span>
             سيتم إنشاء الطلبات عبر {deliveryPartners[selectedDestination]?.name}
             {selectedAccount && ` - الحساب: ${selectedAccount}`}
+          </span>
+        ) : (
+          <span className="text-orange-600">
+            تم اختيار {deliveryPartners[selectedDestination]?.name} ولكن لا يوجد حساب محدد
           </span>
         )}
       </div>
