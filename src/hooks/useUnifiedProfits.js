@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
+import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays, startOfDay, endOfDay } from 'date-fns';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 /**
@@ -69,8 +69,8 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       
       switch (timePeriod) {
         case 'today':
-          dateFrom = subDays(now, 1);
-          dateTo = now;
+          dateFrom = startOfDay(now);
+          dateTo = endOfDay(now);
           break;
         case 'week':
           dateFrom = startOfWeek(now, { weekStartsOn: 1 });
@@ -203,9 +203,12 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         // استخدام دالة موحدة لفحص الحالات المعلقة
         if (!isPendingStatus(profit.status)) return false;
         
-        // التأكد من أن الطلب مسلم ومستلم الفاتورة
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة وضمن الفترة الزمنية
         const order = deliveredOrders.find(o => o.id === profit.order_id);
-        return order && order.receipt_received === true;
+        const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
+        const isInDateRange = orderFromAll && filterByDate(orderFromAll.updated_at || orderFromAll.created_at);
+        
+        return order && order.receipt_received === true && isInDateRange;
       }).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
 
       // حساب أرباح المدير المعلقة من جدول الأرباح
