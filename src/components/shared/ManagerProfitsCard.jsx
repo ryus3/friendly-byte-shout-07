@@ -52,24 +52,20 @@ const ManagerProfitsCard = ({
     }
   };
 
-  // حساب أرباح النظام المعلقة - من جدول الأرباح
+  // حساب إجمالي أرباح النظام من الموظفين - من جدول الأرباح
   const systemPendingProfits = useMemo(() => {
     if (!finalProfits || !Array.isArray(finalProfits)) {
       return 0;
     }
 
-    console.log('🔍 ManagerProfitsCard: حساب أرباح النظام المعلقة:', {
+    console.log('🔍 ManagerProfitsCard: حساب إجمالي أرباح النظام من الموظفين:', {
       totalProfits: finalProfits.length,
       timePeriod
     });
 
-    // فلتر الأرباح حسب الفترة الزمنية والحالة
+    // فلتر الأرباح حسب الفترة الزمنية فقط (جميع الحالات)
     const relevantProfits = finalProfits.filter(profit => {
       if (!profit) return false;
-      
-      // فقط الأرباح المعلقة أو المستلمة الفواتير (غير المسوّاة)
-      const isPendingOrInvoiceReceived = profit.status === 'pending' || profit.status === 'invoice_received';
-      if (!isPendingOrInvoiceReceived) return false;
 
       // فلتر الفترة الزمنية بناءً على created_at للربح
       if (timePeriod && timePeriod !== 'all') {
@@ -98,15 +94,15 @@ const ManagerProfitsCard = ({
       return true;
     });
 
-    // حساب أرباح النظام المعلقة = إجمالي الربح - ربح الموظف
+    // حساب إجمالي أرباح النظام من الموظفين = إجمالي الربح - ربح الموظف
     const totalSystemProfits = relevantProfits.reduce((sum, profit) => {
       const systemProfit = (profit.profit_amount || 0) - (profit.employee_profit || 0);
       return sum + Math.max(0, systemProfit);
     }, 0);
 
-    console.log('✅ ManagerProfitsCard: النتيجة النهائية (أرباح النظام المعلقة):', {
+    console.log('✅ ManagerProfitsCard: النتيجة النهائية (إجمالي أرباح النظام من الموظفين):', {
       relevantProfitsCount: relevantProfits.length,
-      systemPendingProfits: totalSystemProfits,
+      totalSystemProfits: totalSystemProfits,
       timePeriod
     });
 
