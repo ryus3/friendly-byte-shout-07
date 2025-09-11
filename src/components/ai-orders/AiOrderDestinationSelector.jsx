@@ -21,6 +21,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
   const [userAccounts, setUserAccounts] = useState([]);
   const [selectedDestination, setSelectedDestination] = useState(value || 'local');
   const [selectedAccount, setSelectedAccount] = useState('');
+  const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
 
   // تحميل حسابات المستخدم والتفضيلات
   useEffect(() => {
@@ -62,6 +63,24 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
     loadUserData();
   }, [user?.user_id, selectedDestination, getUserDeliveryAccounts]);
 
+  // حساب حالة الاتصال لكل شريك (مرة واحدة لكل تحميل/تغير المستخدم)
+  useEffect(() => {
+    if (!user?.user_id) return;
+    const computeConnections = async () => {
+      const entries = await Promise.all(
+        Object.keys(deliveryPartners).filter(k => k !== 'local').map(async (key) => {
+          try {
+            const ok = await hasValidToken(key);
+            return [key, !!ok];
+          } catch {
+            return [key, false];
+          }
+        })
+      );
+      setPartnerConnectedMap(Object.fromEntries(entries));
+    };
+    computeConnections();
+  }, [user?.user_id, deliveryPartners, hasValidToken]);
   // حفظ التفضيلات في قاعدة البيانات
   const savePreferences = async (destination, account = selectedAccount) => {
     if (!user?.user_id) return;
@@ -133,15 +152,15 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
       );
     }
 
-    // تحسين منطق تحديد حالة الاتصال - استخدام hasValidToken بدلاً من activePartner + isLoggedIn
-    const isConnected = isLoggedIn; // في المستقبل: await hasValidToken(key)
-    return (
-      <div className="flex items-center gap-2">
-        <Truck className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
-        <span>{partner.name}</span>
-        {isConnected && <CheckCircle className="w-3 h-3 text-green-500" />}
-      </div>
-    );
+  // تحسين منطق تحديد حالة الاتصال - استخدام خريطة الاتصال المحسوبة
+  const isConnected = !!partnerConnectedMap[key];
+  return (
+    <div className="flex items-center gap-2">
+      <Truck className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
+      <span>{partner.name}</span>
+      {isConnected && <CheckCircle className="w-3 h-3 text-green-500" />}
+    </div>
+  );
   };
 
   return (

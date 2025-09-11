@@ -34,14 +34,23 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const [selectedPartner, setSelectedPartner] = useState(activePartner || Object.keys(availablePartners)[0]);
 
-    // تحميل حسابات المستخدم عند فتح النافذة أو تغيير الشركة
+    // حالة اتصال الشركاء (محسوبة مسبقاً عند فتح النافذة)
+    const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
+
+    // تهيئة الشريك المختار مرة واحدة عند فتح النافذة فقط
+    useEffect(() => {
+        if (!open) return;
+        const keys = Object.keys(availablePartners);
+        const initialPartner = (activePartner && keys.includes(activePartner)) ? activePartner : keys[0];
+        setSelectedPartner((prev) => prev || initialPartner);
+    }, [open, activePartner, availablePartners]);
+
+    // تحميل حسابات المستخدم عند تغيير الشركة المختارة
     useEffect(() => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
                 const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
                 setUserAccounts(accounts);
-                
-                // اختيار الحساب الافتراضي
                 const defaultAccount = accounts.find(acc => acc.is_default);
                 setSelectedAccount(defaultAccount || accounts[0] || null);
             } else {
@@ -49,13 +58,26 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 setSelectedAccount(null);
             }
         };
+        loadUserAccounts();
+    }, [open, user?.id, selectedPartner, getUserDeliveryAccounts]);
 
-        if (open) {
-            const initialPartner = activePartner || Object.keys(availablePartners)[0];
-            setSelectedPartner(initialPartner);
-            loadUserAccounts();
-        }
-    }, [activePartner, open, availablePartners, selectedPartner, user?.id, getUserDeliveryAccounts]);
+    // حساب حالة الاتصال لكل شريك (باستخدام hasValidToken)
+    useEffect(() => {
+        if (!open) return;
+        const computeConnections = async () => {
+            const entries = await Promise.all(
+                Object.keys(availablePartners).filter(k => k !== 'local').map(async (key) => {
+                    try {
+                        const ok = await hasValidToken(key);
+                        return [key, !!ok];
+                    } catch { return [key, false]; }
+                })
+            );
+            const map = Object.fromEntries(entries);
+            setPartnerConnectedMap(map);
+        };
+        computeConnections();
+    }, [open, availablePartners, hasValidToken]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -294,7 +316,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </SelectTrigger>
                             <SelectContent className="bg-background border border-border">
                                 {Object.entries(availablePartners).map(([key, partner]) => {
-                                    // تحسين منطق تحديد حالة الاتصال
+                                    // تحسين منطق تحديد حالة الاتصال لكل شريك
                                     let isConnected = false;
                                     let statusLabel = 'غير متصل';
                                     
@@ -302,10 +324,9 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                         isConnected = true;
                                         statusLabel = 'محلي';
                                     } else {
-                                        // للشركات الأخرى: التحقق من وجود حسابات محفوظة أو توكن صالح
-                                        const hasAccounts = userAccounts.length > 0;
-                                        const hasToken = isLoggedIn; // استخدام hasValidToken في المستقبل
-                                        isConnected = hasAccounts || hasToken;
+                                        const tokenConnected = !!partnerConnectedMap[key];
+                                        const hasAccountsForThisKey = key === selectedPartner ? (userAccounts.length > 0) : false;
+                                        isConnected = tokenConnected || hasAccountsForThisKey;
                                         statusLabel = isConnected ? 'متصل' : 'غير متصل';
                                     }
                                     
