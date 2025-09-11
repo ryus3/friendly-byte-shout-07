@@ -723,62 +723,6 @@ useEffect(() => {
                       value={orderDestination}
                       onChange={setOrderDestination}
                     />
-                  </div>
-                      
-                      {/* زر الموافقة التلقائية */}
-                      <div className="flex flex-col gap-2">
-                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
-                          الموافقة التلقائية
-                        </label>
-                        <Button
-                          variant={autoApprovalEnabled ? "default" : "outline"}
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              const newValue = !autoApprovalEnabled;
-                              const { error } = await supabase
-                                .from('profiles')
-                                .update({ auto_approval_enabled: newValue })
-                                .eq('user_id', user.user_id);
-                              
-                              if (error) throw error;
-                              
-                              setAutoApprovalEnabled(newValue);
-                              toast({
-                                title: newValue ? "تم تفعيل الموافقة التلقائية" : "تم إلغاء الموافقة التلقائية",
-                                description: newValue 
-                                  ? "سيتم الموافقة على الطلبات الصحيحة تلقائياً" 
-                                  : "ستحتاج الطلبات إلى موافقة يدوية",
-                                variant: "success"
-                              });
-                            } catch (error) {
-                              console.error('خطأ في تحديث إعدادات الموافقة التلقائية:', error);
-                              toast({
-                                title: "خطأ",
-                                description: "فشل في تحديث الإعدادات",
-                                variant: "destructive"
-                              });
-                            }
-                          }}
-                          className={cn(
-                            "h-8 px-3 transition-all duration-200 flex items-center gap-2 min-w-[100px]",
-                            autoApprovalEnabled
-                              ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
-                              : "border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                          )}
-                        >
-                          <Zap className={cn(
-                            "w-3 h-3",
-                            autoApprovalEnabled ? "text-white" : "text-slate-500"
-                          )} />
-                          <span className="text-xs font-medium">
-                            {autoApprovalEnabled ? "مفعل" : "معطل"}
-                          </span>
-                         </Button>
-                      </div>
-                    </div>
-                  </div>
-
                   {filteredOrders.length > 0 && (
                     <>
                       <div className="flex items-center gap-2">
