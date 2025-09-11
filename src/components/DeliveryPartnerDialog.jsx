@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, Plus } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -22,7 +22,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const [password, setPassword] = useState('');
     const [userAccounts, setUserAccounts] = useState([]);
     const [selectedAccount, setSelectedAccount] = useState(null);
-    const [showAddNewAccount, setShowAddNewAccount] = useState(false);
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
@@ -163,17 +162,9 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 <SelectContent>
                                     {userAccounts.map((account) => (
                                         <SelectItem key={account.account_username} value={account.account_username}>
-                                            <div className="flex flex-col text-right">
-                                                <span className="font-medium">
-                                                    {account.account_username}
-                                                    {account.is_default && ' ⭐'}
-                                                </span>
-                                                {account.merchant_id && (
-                                                    <span className="text-xs text-muted-foreground">
-                                                        معرف التاجر: {account.merchant_id}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            {account.account_label || account.account_username}
+                                            {account.is_default && ' (افتراضي)'}
+                                            {account.merchant_id && ` - ${account.merchant_id}`}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -192,32 +183,9 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </Button>
                         )}
                         
-
-                        <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            type="button" 
-                            onClick={handleLogout} 
-                            className="w-full"
-                        >
-                            <LogOut className="w-4 h-4 ml-2" />
-                            تسجيل خروج جميع الحسابات
-                        </Button>
-                        
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            type="button" 
-                            onClick={() => setShowAddNewAccount(!showAddNewAccount)} 
-                            className="w-full"
-                        >
-                            <Plus className="w-4 h-4 ml-2" />
-                            إضافة حساب جديد
-                        </Button>
-                        
-                        {showAddNewAccount && (
-                            <div className="border-t pt-4 space-y-2">
-                                <p className="text-sm text-muted-foreground mb-2">بيانات الحساب الجديد:</p>
+                        <div className="border-t pt-4">
+                            <p className="text-sm text-muted-foreground mb-2">أو سجل دخول بحساب جديد:</p>
+                            <div className="space-y-2">
                                 <Input 
                                     type="text" 
                                     value={username} 
@@ -231,7 +199,18 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     placeholder="كلمة المرور" 
                                 />
                             </div>
-                        )}
+                        </div>
+
+                        <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            type="button" 
+                            onClick={handleLogout} 
+                            className="w-full"
+                        >
+                            <LogOut className="w-4 h-4 ml-2" />
+                            تسجيل خروج جميع الحسابات
+                        </Button>
                     </CardContent>
                 </Card>
             );
@@ -330,10 +309,8 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             {selectedPartner === 'local' 
                                 ? 'تفعيل الوضع المحلي' 
                                 : selectedAccount && !username
-                                    ? `استخدام ${selectedAccount.account_username}`
-                                    : showAddNewAccount || username
-                                        ? 'إضافة وتسجيل الدخول'
-                                        : 'تسجيل الدخول'
+                                    ? `استخدام ${selectedAccount.account_label || selectedAccount.account_username}`
+                                    : 'تسجيل الدخول'
                             }
                         </Button>
                     </DialogFooter>
