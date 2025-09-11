@@ -9,7 +9,9 @@ import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 
-const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
+const VariantSelector = ({ variants, onSelect, selectedVariantId, onQuickAdd }) => {
+  const [expandedColors, setExpandedColors] = useState(new Set());
+
   // تجميع المتغيرات حسب اللون مع ترتيب الألوان
   const variantsByColor = variants.reduce((acc, variant) => {
     if (!acc[variant.color]) {
@@ -66,47 +68,96 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
     });
   };
 
+  const toggleColor = (color) => {
+    const newExpanded = new Set(expandedColors);
+    if (newExpanded.has(color)) {
+      newExpanded.delete(color);
+    } else {
+      newExpanded.add(color);
+    }
+    setExpandedColors(newExpanded);
+  };
+
+  const handleSizeDoubleClick = (variant) => {
+    if (onQuickAdd) {
+      onQuickAdd(variant);
+    }
+  };
+
   return (
-    <div className="space-y-4 my-3">
+    <div className="space-y-3 my-3">
       {sortedColors.map(color => {
         // فلترة القياسات المتوفرة فقط (quantity > 0)
         const availableVariants = variantsByColor[color].filter(variant => variant.quantity > 0);
         const colorVariants = sortVariantsBySize(availableVariants);
+        const isExpanded = expandedColors.has(color);
         
         // تخطي الألوان التي لا تحتوي على قياسات متوفرة
         if (colorVariants.length === 0) return null;
+        
         return (
-          <div key={color} className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-            {/* عنوان اللون */}
-            <div className="flex items-center gap-3">
+          <div key={color} className="bg-muted/30 rounded-lg border overflow-hidden">
+            {/* عنوان اللون - قابل للنقر */}
+            <div 
+              className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => toggleColor(color)}
+            >
               <div 
-                className="w-5 h-5 rounded-full border-2 border-border shadow-sm" 
+                className="w-5 h-5 rounded-full border-2 border-border shadow-sm flex-shrink-0" 
                 style={{ 
                   backgroundColor: colorMap[color] || '#6b7280',
                   border: color === 'ابيض' ? '2px solid #e5e7eb' : 'none'
                 }}
               />
               <span className="text-sm font-bold text-foreground">{color}</span>
-              <span className="text-xs text-muted-foreground">({colorVariants.length} قياس متوفر)</span>
+              <span className="text-xs text-muted-foreground">({colorVariants.length} قياس)</span>
+              <div className="mr-auto">
+                {isExpanded ? 
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" /> : 
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                }
+              </div>
             </div>
-            {/* قياسات هذا اللون */}
-            <div className="flex flex-wrap gap-2 mr-8">
-              {colorVariants.map(variant => (
-                <Button
-                  key={variant.id}
-                  size="sm"
-                  variant={selectedVariantId === variant.id ? 'default' : 'outline'}
-                  onClick={() => onSelect(variant)}
-                  disabled={variant.quantity === 0}
-                  className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
+            
+            {/* قياسات هذا اللون - قابلة للتوسيع */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
                 >
-                  {variant.size}
-                  <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
-                    {variant.quantity}
-                  </span>
-                </Button>
-              ))}
-            </div>
+                  <div className="px-3 pb-3">
+                    <div className="bg-background/50 rounded-md p-3">
+                      <div className="flex flex-wrap gap-2">
+                        {colorVariants.map(variant => (
+                          <Button
+                            key={variant.id}
+                            size="sm"
+                            variant={selectedVariantId === variant.id ? 'default' : 'outline'}
+                            onClick={() => onSelect(variant)}
+                            onDoubleClick={() => handleSizeDoubleClick(variant)}
+                            disabled={variant.quantity === 0}
+                            className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
+                            title="نقر مزدوج للإضافة السريعة"
+                          >
+                            {variant.size}
+                            <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
+                              {variant.quantity}
+                            </span>
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        💡 نقر مزدوج على القياس للإضافة السريعة
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         );
       })}
@@ -151,6 +202,19 @@ const ProductItem = ({ product, onSelect }) => {
     setQuantity(1);
   };
 
+  const handleQuickAdd = (variant) => {
+    if (variant.quantity === 0) {
+      toast({ title: "غير متوفر", description: "هذا القياس غير متوفر حالياً", variant: "destructive" });
+      return;
+    }
+    onSelect(product, variant, 1);
+    toast({ 
+      title: "تمت الإضافة السريعة ✨", 
+      description: `${product.name} (${variant.size}, ${variant.color})`, 
+      variant: 'success' 
+    });
+  };
+
   return (
     <motion.div 
       layout
@@ -176,7 +240,12 @@ const ProductItem = ({ product, onSelect }) => {
             className="overflow-hidden"
           >
             <div className="pt-3">
-              <VariantSelector variants={product.variants} onSelect={setSelectedVariant} selectedVariantId={selectedVariant?.id} />
+              <VariantSelector 
+                variants={product.variants} 
+                onSelect={setSelectedVariant} 
+                selectedVariantId={selectedVariant?.id}
+                onQuickAdd={handleQuickAdd}
+              />
               {selectedVariant && (
                 <QuantityControl 
                   quantity={quantity} 
