@@ -30,6 +30,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import AiOrderCard from './AiOrderCard';
+import AiOrderDestinationSelector from '@/components/ai-orders/AiOrderDestinationSelector';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -133,6 +134,13 @@ useEffect(() => {
     ),
     [allUsers]
   );
+
+  // إعدادات وجهة الطلبات
+  const [orderDestination, setOrderDestination] = useState({
+    destination: 'local',
+    account: '',
+    partnerName: 'local'
+  });
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
@@ -312,8 +320,10 @@ useEffect(() => {
         setOrders(prev => prev.filter(o => !approvedIds.includes(o.id)));
         toast({ title: 'تتم المعالجة...', description: `جاري الموافقة على ${approvedIds.length} طلب`, variant: 'default' });
         
-        // المعالجة الفعلية في الخلفية
-        const results = await Promise.all(approvedIds.map(id => approveAiOrder?.(id)));
+        // المعالجة الفعلية في الخلفية مع تمرير وجهة الطلب
+        const results = await Promise.all(approvedIds.map(id => 
+          approveAiOrder?.(id, orderDestination.destination, orderDestination.account)
+        ));
         const successIds = approvedIds.filter((_, i) => results[i]?.success);
         const failedIds = approvedIds.filter((_, i) => !results[i]?.success);
         
@@ -622,6 +632,15 @@ useEffect(() => {
                       </Select>
                     </div>
                   )}
+
+                  {/* مكون اختيار وجهة الطلبات */}
+                  <div className="mb-4">
+                    <AiOrderDestinationSelector 
+                      value={orderDestination}
+                      onChange={setOrderDestination}
+                      className="max-w-sm"
+                    />
+                  </div>
 
                   {filteredOrders.length > 0 && (
                     <>

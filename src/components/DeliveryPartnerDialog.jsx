@@ -15,7 +15,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
         login, loading, deliveryPartners, activePartner, setActivePartner, 
         isLoggedIn, logout: waseetLogout, waseetUser,
-        getUserDeliveryAccounts, setDefaultDeliveryAccount 
+        getUserDeliveryAccounts, setDefaultDeliveryAccount, hasValidToken 
     } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
@@ -136,6 +136,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
 
+
     const renderPartnerContent = () => {
         if (selectedPartner === 'local') {
             return (
@@ -150,28 +151,56 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        // إذا كان المستخدم مسجل دخول بالحساب الحالي، عرض التصميم الأخضر
-        if (isCurrentPartnerSelected && isLoggedIn) {
+        // Check if we have saved accounts for this partner
+        const hasAccounts = userAccounts.length > 0;
+        
+        // If we have saved accounts, show account selection
+        if (userAccounts.length > 0) {
             return (
                 <Card className="bg-green-500/10 border-green-500/30 text-foreground">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل بشركة التوصيل</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-green-500">
+                            <CheckCircle className="w-5 h-5"/> متصل - حسابات محفوظة
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner]?.name}</span></p>
-                        <p className="text-sm font-medium text-foreground">اسم المستخدم: {waseetUser?.username}</p>
+                        <p className="text-sm text-muted-foreground">
+                            يمكنك اختيار حساب محفوظ أو إضافة حساب جديد لـ {deliveryPartners[selectedPartner]?.name}
+                        </p>
+                        
+                        {selectedAccount && (
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                                <p className="text-sm">
+                                    <span className="font-medium">الحساب المختار:</span> {selectedAccount.account_label || selectedAccount.partner_data?.username || selectedAccount.account_username}
+                                </p>
+                                {selectedAccount.is_default && (
+                                    <p className="text-xs text-green-600 mt-1">🌟 الحساب الافتراضي</p>
+                                )}
+                            </div>
+                        )}
                         
                         <div className="flex gap-2">
                             <Button 
-                                variant="destructive" 
+                                variant="outline" 
                                 size="sm" 
                                 type="button" 
-                                onClick={handleLogout} 
+                                onClick={() => setShowAddForm(!showAddForm)}
                                 className="flex-1"
                             >
-                                <LogOut className="w-4 h-4 ml-2" />
-                                تسجيل الخروج
+                                <UserPlus className="w-4 h-4 ml-2" />
+                                {showAddForm ? 'إلغاء' : 'إضافة حساب'}
                             </Button>
+                            {selectedAccount && !selectedAccount.is_default && (
+                                <Button 
+                                    variant="secondary" 
+                                    size="sm" 
+                                    type="button" 
+                                    onClick={handleSetDefaultAccount}
+                                    className="flex-1"
+                                >
+                                    تعيين كافتراضي
+                                </Button>
+                            )}
                         </div>
                         
                         {showAddForm && (
@@ -191,19 +220,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     placeholder="كلمة المرور" 
                                     className="h-8"
                                 />
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    type="button" 
-                                    onClick={() => {
-                                        setShowAddForm(false);
-                                        setUsername('');
-                                        setPassword('');
-                                    }}
-                                    className="w-full"
-                                >
-                                    إلغاء
-                                </Button>
                             </div>
                         )}
                     </CardContent>
@@ -211,82 +227,39 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        // إظهار معلومات الحساب المختار أو نموذج تسجيل الدخول
-        if (selectedAccount) {
-            return (
-                <Card className="bg-blue-500/10 border-blue-500/30 text-foreground">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-blue-600">
-                            <CheckCircle className="w-5 h-5"/> حساب محفوظ
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">الحساب المختار: <span className="font-bold text-foreground">{selectedAccount.partner_data?.username || selectedAccount.account_username}</span></p>
-                        {selectedAccount.is_default && (
-                            <p className="text-sm text-green-600">🌟 الحساب الافتراضي</p>
-                        )}
-                        
-                        {selectedAccount && !selectedAccount.is_default && (
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={handleSetDefaultAccount}
-                                className="w-full"
-                            >
-                                تعيين كافتراضي
-                            </Button>
-                        )}
-                        
-                        {showAddForm && (
-                            <div className="border-t pt-4 space-y-2">
-                                <p className="text-sm text-muted-foreground mb-2">إضافة حساب جديد:</p>
-                                <Input 
-                                    type="text" 
-                                    value={username} 
-                                    onChange={(e) => setUsername(e.target.value)} 
-                                    placeholder="اسم المستخدم الجديد" 
-                                />
-                                <Input 
-                                    type="password" 
-                                    value={password} 
-                                    onChange={(e) => setPassword(e.target.value)} 
-                                    placeholder="كلمة المرور" 
-                                />
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    type="button" 
-                                    onClick={() => {
-                                        setShowAddForm(false);
-                                        setUsername('');
-                                        setPassword('');
-                                    }}
-                                    className="w-full"
-                                >
-                                    إلغاء
-                                </Button>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            );
-        }
-
-        // نموذج تسجيل الدخول الجديد
+        // No saved accounts - show login form
         return (
-            <Card>
+            <Card className="bg-amber-500/10 border-amber-500/30 text-foreground">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive"><XCircle className="w-5 h-5"/> غير متصل</CardTitle>
+                    <CardTitle className="flex items-center gap-2 text-amber-600">
+                        <XCircle className="w-5 h-5"/> غير متصل
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        لا توجد حسابات محفوظة لـ {deliveryPartners[selectedPartner]?.name}. يرجى تسجيل الدخول:
+                    </p>
                     <div className="space-y-2">
                         <Label htmlFor="waseet-username">اسم المستخدم</Label>
-                        <Input id="waseet-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required placeholder="username" />
+                        <Input 
+                            id="waseet-username" 
+                            type="text" 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
+                            required 
+                            placeholder="username" 
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="waseet-password">كلمة المرور</Label>
-                        <Input id="waseet-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="password" />
+                        <Input 
+                            id="waseet-password" 
+                            type="password" 
+                            value={password} 
+                            onChange={(e) => setPassword(e.target.value)} 
+                            required 
+                            placeholder="password" 
+                        />
                     </div>
                 </CardContent>
             </Card>
@@ -320,9 +293,37 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 <SelectValue placeholder="اختر شركة..." />
                             </SelectTrigger>
                             <SelectContent className="bg-background border border-border">
-                                {Object.entries(availablePartners).map(([key, partner]) => (
-                                    <SelectItem key={key} value={key}>{partner.name}</SelectItem>
-                                ))}
+                                {Object.entries(availablePartners).map(([key, partner]) => {
+                                    // تحسين منطق تحديد حالة الاتصال
+                                    let isConnected = false;
+                                    let statusLabel = 'غير متصل';
+                                    
+                                    if (key === 'local') {
+                                        isConnected = true;
+                                        statusLabel = 'محلي';
+                                    } else {
+                                        // للشركات الأخرى: التحقق من وجود حسابات محفوظة أو توكن صالح
+                                        const hasAccounts = userAccounts.length > 0;
+                                        const hasToken = isLoggedIn; // استخدام hasValidToken في المستقبل
+                                        isConnected = hasAccounts || hasToken;
+                                        statusLabel = isConnected ? 'متصل' : 'غير متصل';
+                                    }
+                                    
+                                    return (
+                                        <SelectItem key={key} value={key}>
+                                            <div className="flex items-center justify-between w-full">
+                                                <span>{partner.name}</span>
+                                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                                    isConnected 
+                                                        ? 'bg-green-100 text-green-700' 
+                                                        : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                    {statusLabel}
+                                                </span>
+                                            </div>
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
                     </div>
@@ -356,8 +357,14 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 <SelectContent className="bg-background border border-border">
                                     {userAccounts.map((account) => (
                                         <SelectItem key={account.account_username} value={account.account_username}>
-                                            {account.partner_data?.username || account.account_username}
-                                            {account.is_default && ' 🌟'}
+                                            <div className="flex items-center gap-2">
+                                                <span>{account.account_label || account.partner_data?.username || account.account_username}</span>
+                                                {account.is_default && (
+                                                    <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">
+                                                        افتراضي
+                                                    </span>
+                                                )}
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
