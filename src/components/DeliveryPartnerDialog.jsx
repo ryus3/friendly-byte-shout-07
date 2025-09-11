@@ -161,44 +161,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         <p className="text-sm text-muted-foreground">مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner]?.name}</span></p>
                         <p className="text-sm font-medium text-foreground">اسم المستخدم: {waseetUser?.username}</p>
                         
-                        {/* إظهار منسدلة الحسابات المتعددة إذا وُجدت */}
-                        {userAccounts.length > 1 && (
-                            <div className="space-y-2">
-                                <Label className="text-xs">الحسابات المتاحة:</Label>
-                                <Select 
-                                    value={selectedAccount?.account_username || ''} 
-                                    onValueChange={(value) => {
-                                        const account = userAccounts.find(acc => acc.account_username === value);
-                                        setSelectedAccount(account);
-                                    }}
-                                >
-                                    <SelectTrigger className="h-8">
-                                        <SelectValue placeholder="اختر حساب..." />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-background border border-border">
-                                        {userAccounts.map((account) => (
-                                            <SelectItem key={account.account_username} value={account.account_username}>
-                                                {account.partner_data?.username || account.account_username}
-                                                {account.is_default && ' 🌟'}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
-                        
                         <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                type="button" 
-                                onClick={() => setShowAddForm(true)}
-                                className="flex-1"
-                            >
-                                <UserPlus className="w-4 h-4 ml-2" />
-                                إضافة حساب
-                            </Button>
-                            
                             <Button 
                                 variant="destructive" 
                                 size="sm" 
@@ -248,38 +211,20 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        // إظهار الحسابات المحفوظة إذا وُجدت ولم يكن المستخدم مسجل دخول
-        if (userAccounts.length > 0) {
+        // إظهار معلومات الحساب المختار أو نموذج تسجيل الدخول
+        if (selectedAccount) {
             return (
-                <Card className="bg-yellow-500/10 border-yellow-500/30 text-foreground">
+                <Card className="bg-blue-500/10 border-blue-500/30 text-foreground">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-yellow-600">
-                            <CheckCircle className="w-5 h-5"/> حسابات محفوظة
+                        <CardTitle className="flex items-center gap-2 text-blue-600">
+                            <CheckCircle className="w-5 h-5"/> حساب محفوظ
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>اختر الحساب</Label>
-                            <Select 
-                                value={selectedAccount?.account_username || ''} 
-                                onValueChange={(value) => {
-                                    const account = userAccounts.find(acc => acc.account_username === value);
-                                    setSelectedAccount(account);
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="اختر حساب..." />
-                                </SelectTrigger>
-                                <SelectContent className="bg-background border border-border">
-                                    {userAccounts.map((account) => (
-                                        <SelectItem key={account.account_username} value={account.account_username}>
-                                            {account.partner_data?.username || account.account_username}
-                                            {account.is_default && ' 🌟 (افتراضي)'}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">الحساب المختار: <span className="font-bold text-foreground">{selectedAccount.partner_data?.username || selectedAccount.account_username}</span></p>
+                        {selectedAccount.is_default && (
+                            <p className="text-sm text-green-600">🌟 الحساب الافتراضي</p>
+                        )}
                         
                         {selectedAccount && !selectedAccount.is_default && (
                             <Button 
@@ -292,17 +237,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 تعيين كافتراضي
                             </Button>
                         )}
-                        
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            type="button" 
-                            onClick={() => setShowAddForm(true)}
-                            className="w-full"
-                        >
-                            <UserPlus className="w-4 h-4 ml-2" />
-                            إضافة حساب جديد
-                        </Button>
                         
                         {showAddForm && (
                             <div className="border-t pt-4 space-y-2">
@@ -385,13 +319,51 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             <SelectTrigger>
                                 <SelectValue placeholder="اختر شركة..." />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-background border border-border">
                                 {Object.entries(availablePartners).map(([key, partner]) => (
                                     <SelectItem key={key} value={key}>{partner.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* منسدلة الحسابات - أسفل اختيار الشركة مباشرة */}
+                    {selectedPartner !== 'local' && userAccounts.length > 0 && (
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <Label>الحسابات المحفوظة</Label>
+                                <Button 
+                                    type="button" 
+                                    variant="secondary" 
+                                    size="sm" 
+                                    onClick={() => setShowAddForm(true)}
+                                    className="h-7 px-3 bg-blue-500/20 hover:bg-blue-500/30 text-blue-600 border-blue-500/30 shadow-sm"
+                                >
+                                    <UserPlus className="w-3 h-3 ml-1" />
+                                    إضافة حساب
+                                </Button>
+                            </div>
+                            <Select 
+                                value={selectedAccount?.account_username || ''} 
+                                onValueChange={(value) => {
+                                    const account = userAccounts.find(acc => acc.account_username === value);
+                                    setSelectedAccount(account);
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="اختر حساب..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border border-border">
+                                    {userAccounts.map((account) => (
+                                        <SelectItem key={account.account_username} value={account.account_username}>
+                                            {account.partner_data?.username || account.account_username}
+                                            {account.is_default && ' 🌟'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                 
                     <AnimatePresence mode="wait">
                         <motion.div
