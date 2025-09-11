@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
@@ -64,27 +64,8 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       setLoading(true);
       
-      // جلب بيانات الحساب المحدد مع معالجة اختلافات الكتابة والمسافات
-      const normalized = String(accountUsername).trim().toLowerCase();
-      let accountData = await getTokenForUser(user.id, accountUsername);
-
-      if (!accountData) {
-        // محاولة مطابقة مرنة (case-insensitive / trimmed) عبر جميع الحقول المعروفة
-        const { data: allAccounts } = await supabase
-          .from('delivery_partner_tokens')
-          .select('token, expires_at, account_username, merchant_id, account_label, partner_data')
-          .eq('user_id', user.id)
-          .eq('partner_name', 'alwaseet');
-
-        if (Array.isArray(allAccounts)) {
-          accountData = allAccounts.find(a => {
-            const u1 = (a.account_username || '').trim().toLowerCase();
-            const u2 = (a.partner_data?.username || '').trim().toLowerCase();
-            const u3 = (a.account_label || '').trim().toLowerCase();
-            return u1 === normalized || u2 === normalized || u3 === normalized;
-          }) || null;
-        }
-      }
+      // جلب بيانات الحساب المحدد
+      const accountData = await getTokenForUser(user.id, accountUsername);
       
       if (!accountData) {
         toast({
@@ -111,7 +92,7 @@ export const AlWaseetProvider = ({ children }) => {
         .update({ last_used_at: new Date().toISOString() })
         .eq('user_id', user.id)
         .eq('partner_name', 'alwaseet')
-        .eq('account_username', accountData.account_username);
+        .eq('account_username', accountUsername);
       
       toast({
         title: "✅ تم تسجيل الدخول بنجاح",
@@ -671,8 +652,44 @@ export const AlWaseetProvider = ({ children }) => {
     alwaseet: { name: "الوسيط", api: "https://api.alwaseet-iq.net/v1/merchant" },
   };
 
-// Duplicate fetchToken removed. Using the unified fetchToken defined earlier.
+  const fetchToken = useCallback(async () => {
+    if (user) {
+      const { data, error } = await supabase
+        .from('delivery_partner_tokens')
+        .select('token, expires_at, partner_data')
+        .eq('user_id', user.id)
+        .eq('partner_name', 'alwaseet')
+        .maybeSingle();
 
+      if (error) {
+        console.error('Error fetching Al-Waseet token:', error.message);
+        setToken(null);
+        setWaseetUser(null);
+        setIsLoggedIn(false);
+        return;
+      }
+
+      if (data && new Date(data.expires_at) > new Date()) {
+        setToken(data.token);
+        setWaseetUser(data.partner_data);
+        setIsLoggedIn(true);
+        // لا نغير activePartner تلقائياً - نتركه كما هو مضبوط من قبل المستخدم
+        // setActivePartner('alwaseet'); // تم تعطيل هذا السطر
+      } else {
+        if (data) {
+            await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
+            toast({ 
+              title: "انتهت صلاحية التوكن", 
+              description: "يجب تسجيل الدخول مرة أخرى لشركة التوصيل.", 
+              variant: "destructive" 
+            });
+        }
+        setToken(null);
+        setWaseetUser(null);
+        setIsLoggedIn(false);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchToken();

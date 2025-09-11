@@ -51,16 +51,9 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
                 const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
-                // إزالة التكرارات حسب الاسم/الوسم بشكل طبيعي
-                const seen = new Set();
-                const unique = [];
-                for (const acc of accounts) {
-                    const key = (acc.account_username || acc.partner_data?.username || acc.account_label || '').trim().toLowerCase();
-                    if (!seen.has(key)) { seen.add(key); unique.push(acc); }
-                }
-                setUserAccounts(unique);
-                const defaultAccount = unique.find(acc => acc.is_default);
-                setSelectedAccount(defaultAccount || unique[0] || null);
+                setUserAccounts(accounts);
+                const defaultAccount = accounts.find(acc => acc.is_default);
+                setSelectedAccount(defaultAccount || accounts[0] || null);
             } else {
                 setUserAccounts([]);
                 setSelectedAccount(null);
