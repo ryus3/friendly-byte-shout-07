@@ -136,18 +136,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
 
-    // Get connection status for any partner
-    const getPartnerConnectionStatus = (partnerKey) => {
-        if (partnerKey === 'local') return { connected: true, label: 'محلي' };
-        
-        const hasAccounts = userAccounts.length > 0;
-        const isCurrentActive = activePartner === partnerKey && isLoggedIn;
-        
-        return {
-            connected: hasAccounts || isCurrentActive,
-            label: hasAccounts || isCurrentActive ? 'متصل' : 'غير متصل'
-        };
-    };
 
     const renderPartnerContent = () => {
         if (selectedPartner === 'local') {
@@ -164,7 +152,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         }
 
         // Check if we have saved accounts for this partner
-        const connectionStatus = getPartnerConnectionStatus(selectedPartner);
+        const hasAccounts = userAccounts.length > 0;
         
         // If we have saved accounts, show account selection
         if (userAccounts.length > 0) {
@@ -306,17 +294,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </SelectTrigger>
                             <SelectContent className="bg-background border border-border">
                                 {Object.entries(availablePartners).map(([key, partner]) => {
-                                    const connectionStatus = getPartnerConnectionStatus(key);
+                                    const hasAccounts = key !== 'local' && userAccounts.length > 0;
+                                    const isCurrentActive = activePartner === key && isLoggedIn;
+                                    const isConnected = key === 'local' || hasAccounts || isCurrentActive;
+                                    const statusLabel = key === 'local' ? 'محلي' : (isConnected ? 'متصل' : 'غير متصل');
+                                    
                                     return (
                                         <SelectItem key={key} value={key}>
                                             <div className="flex items-center justify-between w-full">
                                                 <span>{partner.name}</span>
                                                 <span className={`text-xs px-2 py-0.5 rounded ${
-                                                    connectionStatus.connected 
+                                                    isConnected 
                                                         ? 'bg-green-100 text-green-700' 
                                                         : 'bg-gray-100 text-gray-500'
                                                 }`}>
-                                                    {connectionStatus.label}
+                                                    {statusLabel}
                                                 </span>
                                             </div>
                                         </SelectItem>
