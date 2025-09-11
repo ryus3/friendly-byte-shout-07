@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Search } from 'lucide-react';
@@ -23,7 +22,7 @@ const SearchableSelectFixed = ({
   const [isInDialog, setIsInDialog] = useState(false);
   const [isNavigatingWithKeyboard, setIsNavigatingWithKeyboard] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ left: 0, top: 0, width: 'auto' });
+  const [dropdownDirection, setDropdownDirection] = useState('down');
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -41,59 +40,24 @@ const SearchableSelectFixed = ({
   const displayText = selectedOption?.label || selectedOption?.name || 
     (value && !selectedOption && options.length === 0 ? `القيمة: ${value}` : placeholder);
   
-  // Detect touch device and dialog presence
+  // Detect touch device, dialog presence, and calculate dropdown direction
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
     if (buttonRef.current) {
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
       setIsInDialog(!!dialogContainer);
-    }
-  }, [open]);
-
-  // Update dropdown position on scroll and resize
-  useEffect(() => {
-    if (!open || !buttonRef.current) return;
-
-    const updatePosition = () => {
-      if (buttonRef.current) {
+      
+      // Calculate available space to determine dropdown direction
+      if (open) {
         const rect = buttonRef.current.getBoundingClientRect();
-        setDropdownPosition({
-          left: rect.left,
-          top: rect.bottom + 4,
-          width: rect.width
-        });
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
         
-        // Close dropdown if button is scrolled out of view
-        if (rect.bottom < 0 || rect.top > window.innerHeight) {
-          setOpen(false);
-        }
+        // If there's more space above and below is limited, open upward
+        setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
       }
-    };
-
-    // Throttle function to improve performance
-    let ticking = false;
-    const throttledUpdate = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          updatePosition();
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
-
-    // Add event listeners
-    window.addEventListener('scroll', throttledUpdate, { passive: true });
-    window.addEventListener('resize', throttledUpdate);
-    
-    // Update position immediately when opening
-    updatePosition();
-
-    return () => {
-      window.removeEventListener('scroll', throttledUpdate);
-      window.removeEventListener('resize', throttledUpdate);
-    };
+    }
   }, [open]);
 
   // Simplified interaction handling for better mobile support
@@ -358,39 +322,20 @@ const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Dropdown - Smart Portal Strategy */}
+      {/* Dropdown - Absolute Positioning Only (No Portal) */}
       {open && (
-        isInDialog ? (
-          // Inside Dialog: Use absolute positioning with enhanced z-index for regions
-          <div 
-            className="absolute z-[99999] mt-1 w-full"
-            style={{
-              direction: 'rtl',
-              position: 'absolute',
-              zIndex: 99999
-            }}
-          >
-            {renderDropdownContent()}
-          </div>
-        ) : (
-          // Outside Dialog: Use portal with dynamic positioning
-          createPortal(
-            <div 
-              className="fixed z-[999999]"
-              style={{ 
-                direction: 'rtl',
-                left: dropdownPosition.left,
-                top: dropdownPosition.top,
-                width: dropdownPosition.width,
-                zIndex: 999999,
-                position: 'fixed'
-              }}
-            >
-              {renderDropdownContent()}
-            </div>,
-            document.body
-          )
-        )
+        <div 
+          className={cn(
+            "absolute z-50 w-full",
+            dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+          )}
+          style={{
+            direction: 'rtl',
+            zIndex: 50
+          }}
+        >
+          {renderDropdownContent()}
+        </div>
       )}
     </div>
   );
