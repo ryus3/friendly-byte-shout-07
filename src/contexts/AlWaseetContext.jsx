@@ -27,6 +27,11 @@ export const AlWaseetProvider = ({ children }) => {
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
   
+  // Helper function to normalize username (declared early to avoid TDZ)
+  const normalizeUsername = useCallback((username) => {
+    return String(username || '').trim().toLowerCase();
+  }, []);
+  
   // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
   const getTokenForUser = useCallback(async (userId, accountUsername = null) => {
     if (!userId) return null;
@@ -679,11 +684,7 @@ export const AlWaseetProvider = ({ children }) => {
 
   // Auto-sync will be set up after functions are defined
 
-  // Helper function to normalize username
-  const normalizeUsername = useCallback((username) => {
-    return String(username || '').trim().toLowerCase();
-  }, []);
-
+  // normalizeUsername is declared earlier to avoid TDZ with dependency arrays
   const login = useCallback(async (username, password, partner = 'alwaseet') => {
     if (partner === 'local') {
         setActivePartner('local');
