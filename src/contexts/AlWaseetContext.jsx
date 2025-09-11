@@ -165,6 +165,8 @@ export const AlWaseetProvider = ({ children }) => {
     if (!userId || !accountUsername) return false;
     
     try {
+      const normalizedUsername = normalizeUsername(accountUsername);
+      
       // إزالة الافتراضي من جميع الحسابات الأخرى
       await supabase
         .from('delivery_partner_tokens')
@@ -172,7 +174,7 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('user_id', userId)
         .eq('partner_name', partnerName);
       
-      // تعيين الحساب الجديد كافتراضي
+      // تعيين الحساب الجديد كافتراضي باستخدام البحث المطبع
       const { error } = await supabase
         .from('delivery_partner_tokens')
         .update({ 
@@ -181,7 +183,7 @@ export const AlWaseetProvider = ({ children }) => {
         })
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
-        .eq('account_username', accountUsername);
+        .ilike('account_username', normalizedUsername);
       
       if (error) throw error;
       return true;
@@ -189,7 +191,7 @@ export const AlWaseetProvider = ({ children }) => {
       console.error('خطأ في تعيين الحساب الافتراضي:', error);
       return false;
     }
-  }, []);
+  }, [normalizeUsername]);
 
   // دالة مزامنة الطلبات المرئية بكفاءة (للطلبات الموجودة في الصفحة فقط)
   // دالة إصلاح المخزون المتضرر للطلبات المُسلّمة
@@ -677,6 +679,11 @@ export const AlWaseetProvider = ({ children }) => {
 
   // Auto-sync will be set up after functions are defined
 
+  // Helper function to normalize username
+  const normalizeUsername = useCallback((username) => {
+    return String(username || '').trim().toLowerCase();
+  }, []);
+
   const login = useCallback(async (username, password, partner = 'alwaseet') => {
     if (partner === 'local') {
         setActivePartner('local');
@@ -714,21 +721,32 @@ export const AlWaseetProvider = ({ children }) => {
       const partnerData = { username };
 
       // حفظ التوكن في قاعدة البيانات مع دعم تعدد الحسابات
-      const accountUsername = username; // استخدام اسم المستخدم كمعرف للحساب
-      const merchantId = tokenData.merchant_id || null; // من API إذا كان متوفراً
+      const normalizedUsername = normalizeUsername(username);
+      const merchantId = tokenData.merchant_id || null;
       
       try {
-      // تطبيع اسم المستخدم لمنع التكرار
-      const normalizedUsername = accountUsername.trim().toLowerCase();
-      
-      // البحث عن حساب موجود أولاً مع المقارنة المطبعة
-      const { data: existingAccount } = await supabase
-        .from('delivery_partner_tokens')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('partner_name', partner)
-        .ilike('account_username', normalizedUsername)
-        .maybeSingle();
+        // البحث عن حسابات موجودة بنفس اسم المستخدم المطبع
+        const { data: existingAccounts } = await supabase
+          .from('delivery_partner_tokens')
+          .select('id, created_at')
+          .eq('user_id', user.id)
+          .eq('partner_name', partner)
+          .ilike('account_username', normalizedUsername)
+          .order('created_at', { ascending: false });
+
+        // إذا وُجدت حسابات متعددة، احذف الزائدة واحتفظ بالأحدث
+        if (existingAccounts && existingAccounts.length > 1) {
+          const accountsToDelete = existingAccounts.slice(1); // احتفظ بالأول (الأحدث)
+          for (const account of accountsToDelete) {
+            await supabase
+              .from('delivery_partner_tokens')
+              .delete()
+              .eq('id', account.id);
+          }
+          console.log(`🧹 تم حذف ${accountsToDelete.length} حساب مكرر`);
+        }
+
+        const existingAccount = existingAccounts?.[0];
 
         if (existingAccount) {
           // تحديث الحساب الموجود
@@ -739,7 +757,7 @@ export const AlWaseetProvider = ({ children }) => {
               expires_at: expires_at.toISOString(),
               partner_data: partnerData,
               merchant_id: merchantId,
-              account_username: normalizedUsername, // حفظ النسخة المطبعة
+              account_username: normalizedUsername,
               last_used_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             })
@@ -757,14 +775,14 @@ export const AlWaseetProvider = ({ children }) => {
             .eq('is_default', true)
             .maybeSingle();
 
-          const isNewDefault = !defaultAccount; // إذا لم يوجد حساب افتراضي، يصبح هذا افتراضي
+          const isNewDefault = !defaultAccount;
 
           const { error } = await supabase
             .from('delivery_partner_tokens')
             .insert({
               user_id: user.id,
               partner_name: partner,
-              account_username: normalizedUsername, // حفظ النسخة المطبعة
+              account_username: normalizedUsername,
               token: tokenData.token,
               expires_at: expires_at.toISOString(),
               partner_data: partnerData,
@@ -775,14 +793,6 @@ export const AlWaseetProvider = ({ children }) => {
             
           if (error) throw error;
         }
-
-        // تحديث تاريخ آخر استخدام للحساب
-        await supabase
-          .from('delivery_partner_tokens')
-          .update({ last_used_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('partner_name', partner)
-          .ilike('account_username', normalizedUsername);
           
       } catch (error) {
         console.error('خطأ في حفظ التوكن:', error);
