@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
+import { useDeliveryOrderHandler } from './SuperProvider_DeliveryOrderHandler';
 
 const SuperContext = createContext();
 
@@ -1598,8 +1599,10 @@ export const SuperProvider = ({ children }) => {
     console.log('✅ تنظيف كاش مكتمل - Real-time سيحدث البيانات');
   }, []);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
-  const approveAiOrder = useCallback(async (orderId) => {
+  const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
     try {
+      console.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
+      
       // 1) جلب الطلب الذكي
       const { data: aiOrder, error: aiErr } = await supabase
         .from('ai_orders')
@@ -1611,6 +1614,11 @@ export const SuperProvider = ({ children }) => {
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
+
+      // إذا كان الوجهة شركة توصيل، استخدم createUnifiedOrder
+      if (destination !== 'local') {
+        return await handleDeliveryPartnerOrder(aiOrder, itemsInput, destination, selectedAccount);
+      }
 
       // 2) مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
       const products = Array.isArray(allData.products) ? allData.products : [];
@@ -1674,11 +1682,22 @@ export const SuperProvider = ({ children }) => {
       const normalizedItems = matchedItems.filter(Boolean);
       if (!normalizedItems.length) return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
 
-      // 3) إنشاء رقم طلب
+      return await createLocalOrder(aiOrder, normalizedItems, orderId);
+    } catch (err) {
+      console.error('❌ فشل تحويل الطلب الذكي:', err);
+      return { success: false, error: err.message };
+    }
+  }, [user, allData.products]);
+
+  // دالة إنشاء طلب محلي
+  const createLocalOrder = useCallback(async (aiOrder, normalizedItems, orderId) => {
+    try {
+
+      // إنشاء رقم طلب
       const { data: orderNumber, error: numErr } = await supabase.rpc('generate_order_number');
       if (numErr) throw numErr;
 
-      // 4) حجز المخزون لكل عنصر مع إمكانية التراجع
+      // حجز المخزون لكل عنصر مع إمكانية التراجع
       const reservedSoFar = [];
       for (const it of normalizedItems) {
         const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
@@ -1701,7 +1720,7 @@ export const SuperProvider = ({ children }) => {
         reservedSoFar.push(it);
       }
 
-      // 5) حساب المجاميع مع رسوم التوصيل الحقيقية
+      // حساب المجاميع مع رسوم التوصيل الحقيقية
       const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * (it.unit_price || 0), 0);
       const deliveryType = aiOrder?.order_data?.delivery_type || (aiOrder?.customer_address ? 'توصيل' : 'محلي');
       // جلب رسوم التوصيل من جدول الإعدادات مباشرة لضمان الدقة
@@ -1718,7 +1737,7 @@ export const SuperProvider = ({ children }) => {
       const discount = 0;
       const total = subtotal - discount + deliveryFee;
 
-      // 6) إنشاء طلب حقيقي
+      // إنشاء طلب حقيقي محلي
       const trackingNumber = `RYUS-${Date.now().toString().slice(-6)}`;
       const orderRow = {
         order_number: orderNumber,
@@ -1735,7 +1754,8 @@ export const SuperProvider = ({ children }) => {
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
-        delivery_partner: deliveryType === 'توصيل' ? 'شركة التوصيل' : 'محلي',
+        delivery_partner: deliveryType === 'توصيل' ? 'محلي' : 'محلي',
+        delivery_account_used: 'local',
         notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
         created_by: user?.user_id || user?.id,
       };
@@ -1756,7 +1776,7 @@ export const SuperProvider = ({ children }) => {
         throw createErr;
       }
 
-      // 7) إدراج عناصر الطلب
+      // إدراج عناصر الطلب
       const orderItemsRows = normalizedItems.map(it => ({
         order_id: createdOrder.id,
         product_id: it.product_id,
@@ -1778,7 +1798,7 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // 8) حذف الطلب الذكي نهائياً
+      // حذف الطلب الذكي نهائياً
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
       if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
 
@@ -1791,7 +1811,9 @@ export const SuperProvider = ({ children }) => {
       // إبطال الكاش
       superAPI.invalidate('all_data');
 
-      return { success: true, orderId: createdOrder.id, trackingNumber };
+      console.log('✅ تم تحويل الطلب الذكي بنجاح - محلي:', { orderId: createdOrder.id, trackingNumber });
+      return { success: true, orderId: createdOrder.id, trackingNumber, method: 'local' };
+
     } catch (err) {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };

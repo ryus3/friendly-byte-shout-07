@@ -2090,6 +2090,7 @@ export type Database = {
           customer_phone2: string | null
           customer_province: string | null
           delivery_account_code: string | null
+          delivery_account_used: string | null
           delivery_fee: number
           delivery_partner: string | null
           delivery_partner_invoice_date: string | null
@@ -2133,6 +2134,7 @@ export type Database = {
           customer_phone2?: string | null
           customer_province?: string | null
           delivery_account_code?: string | null
+          delivery_account_used?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -2176,6 +2178,7 @@ export type Database = {
           customer_phone2?: string | null
           customer_province?: string | null
           delivery_account_code?: string | null
+          delivery_account_used?: string | null
           delivery_fee?: number
           delivery_partner?: string | null
           delivery_partner_invoice_date?: string | null
@@ -2643,10 +2646,12 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          auto_approve_ai_orders: boolean | null
           avatar_url: string | null
           bio: string | null
           created_at: string
           customer_management_access: boolean | null
+          default_ai_order_destination: string | null
           default_customer_name: string | null
           default_page: string | null
           delivery_partner_access: boolean | null
@@ -2657,6 +2662,7 @@ export type Database = {
           is_active: boolean
           order_creation_mode: string | null
           phone: string | null
+          selected_delivery_account: string | null
           status: string
           updated_at: string
           user_id: string
@@ -2664,10 +2670,12 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           customer_management_access?: boolean | null
+          default_ai_order_destination?: string | null
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null
@@ -2678,6 +2686,7 @@ export type Database = {
           is_active?: boolean
           order_creation_mode?: string | null
           phone?: string | null
+          selected_delivery_account?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -2685,10 +2694,12 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
           customer_management_access?: boolean | null
+          default_ai_order_destination?: string | null
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null
@@ -2699,6 +2710,7 @@ export type Database = {
           is_active?: boolean
           order_creation_mode?: string | null
           phone?: string | null
+          selected_delivery_account?: string | null
           status?: string
           updated_at?: string
           user_id?: string
