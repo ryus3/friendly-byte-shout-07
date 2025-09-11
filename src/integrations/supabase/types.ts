@@ -1107,10 +1107,15 @@ export type Database = {
       }
       delivery_partner_tokens: {
         Row: {
+          account_label: string | null
+          account_username: string | null
           created_at: string
           expires_at: string | null
           id: string
           is_active: boolean
+          is_default: boolean | null
+          last_used_at: string | null
+          merchant_id: string | null
           partner_data: Json | null
           partner_name: string
           token: string
@@ -1118,10 +1123,15 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          account_label?: string | null
+          account_username?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean | null
+          last_used_at?: string | null
+          merchant_id?: string | null
           partner_data?: Json | null
           partner_name: string
           token: string
@@ -1129,10 +1139,15 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          account_label?: string | null
+          account_username?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_default?: boolean | null
+          last_used_at?: string | null
+          merchant_id?: string | null
           partner_data?: Json | null
           partner_name?: string
           token?: string

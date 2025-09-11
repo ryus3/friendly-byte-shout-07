@@ -12,10 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
-    const { login, loading, deliveryPartners, activePartner, setActivePartner, isLoggedIn, logout: waseetLogout, waseetUser } = useAlWaseet();
+    const { 
+        login, loading, deliveryPartners, activePartner, setActivePartner, 
+        isLoggedIn, logout: waseetLogout, waseetUser, getUserDeliveryAccounts, 
+        setDefaultDeliveryAccount 
+    } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [userAccounts, setUserAccounts] = useState([]);
+    const [selectedAccount, setSelectedAccount] = useState(null);
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
@@ -31,8 +37,32 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         if (open) {
             const initialPartner = activePartner || Object.keys(availablePartners)[0];
             setSelectedPartner(initialPartner);
+            
+            // جلب حسابات المستخدم للشركة المختارة
+            if (user && initialPartner !== 'local') {
+                getUserDeliveryAccounts(user.id, initialPartner).then(accounts => {
+                    setUserAccounts(accounts);
+                    // اختيار الحساب الافتراضي إذا وجد
+                    const defaultAccount = accounts.find(acc => acc.is_default);
+                    setSelectedAccount(defaultAccount || accounts[0] || null);
+                });
+            }
         }
-    }, [activePartner, open, availablePartners]);
+    }, [activePartner, open, availablePartners, user, getUserDeliveryAccounts]);
+
+    // جلب حسابات المستخدم عند تغيير الشركة
+    useEffect(() => {
+        if (selectedPartner && selectedPartner !== 'local' && user) {
+            getUserDeliveryAccounts(user.id, selectedPartner).then(accounts => {
+                setUserAccounts(accounts);
+                const defaultAccount = accounts.find(acc => acc.is_default);
+                setSelectedAccount(defaultAccount || accounts[0] || null);
+            });
+        } else {
+            setUserAccounts([]);
+            setSelectedAccount(null);
+        }
+    }, [selectedPartner, user, getUserDeliveryAccounts]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -53,6 +83,10 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         
         const result = await login(username, password, selectedPartner);
         if (result.success) {
+            // إعادة جلب الحسابات بعد تسجيل الدخول الناجح
+            const updatedAccounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+            setUserAccounts(updatedAccounts);
+            
             onOpenChange(false);
             setUsername('');
             setPassword('');
@@ -62,6 +96,26 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const handleLogout = () => {
         waseetLogout();
     }
+
+    const handleSetDefaultAccount = async () => {
+        if (selectedAccount && user) {
+            const success = await setDefaultDeliveryAccount(
+                user.id, 
+                selectedPartner, 
+                selectedAccount.account_username
+            );
+            if (success) {
+                toast({ 
+                    title: "تم التحديث", 
+                    description: "تم تعيين الحساب كافتراضي", 
+                    variant: "success" 
+                });
+                // إعادة جلب الحسابات لتحديث الحالة
+                const updatedAccounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+                setUserAccounts(updatedAccounts);
+            }
+        }
+    };
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
 
@@ -140,6 +194,51 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* اختيار الحساب - يظهر فقط للشركات غير المحلية */}
+                    {selectedPartner !== 'local' && userAccounts.length > 0 && (
+                        <div className="space-y-2 border-t pt-3">
+                            <Label>اختر الحساب</Label>
+                            <Select 
+                                value={selectedAccount?.account_username || ''} 
+                                onValueChange={(value) => {
+                                    const account = userAccounts.find(acc => acc.account_username === value);
+                                    setSelectedAccount(account);
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="اختر حساب..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {userAccounts.map((account) => (
+                                        <SelectItem key={account.account_username} value={account.account_username}>
+                                            <div className="flex items-center gap-2">
+                                                <span>{account.account_username}</span>
+                                                {account.account_label && (
+                                                    <span className="text-xs text-muted-foreground">({account.account_label})</span>
+                                                )}
+                                                {account.is_default && (
+                                                    <span className="text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">افتراضي</span>
+                                                )}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            
+                            {selectedAccount && !selectedAccount.is_default && (
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="sm" 
+                                    onClick={handleSetDefaultAccount}
+                                    className="w-full text-xs"
+                                >
+                                    تعيين كحساب افتراضي
+                                </Button>
+                            )}
+                        </div>
+                    )}
                 
                     <AnimatePresence mode="wait">
                         <motion.div

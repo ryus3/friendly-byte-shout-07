@@ -20,17 +20,28 @@ export const AlWaseetProvider = ({ children }) => {
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
   
-  // دالة للحصول على توكن المستخدم من النظام الأصلي
-  const getTokenForUser = useCallback(async (userId) => {
+  // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
+  const getTokenForUser = useCallback(async (userId, accountUsername = null) => {
     if (!userId) return null;
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('delivery_partner_tokens')
-        .select('token, expires_at')
+        .select('token, expires_at, account_username, merchant_id, account_label, is_default')
         .eq('user_id', userId)
-        .eq('partner_name', 'alwaseet')
-        .maybeSingle();
+        .eq('partner_name', 'alwaseet');
+      
+      if (accountUsername) {
+        // البحث عن حساب محدد
+        query = query.eq('account_username', accountUsername);
+      } else {
+        // البحث عن الحساب الافتراضي أو الأحدث
+        query = query.order('is_default', { ascending: false })
+                    .order('last_used_at', { ascending: false })
+                    .limit(1);
+      }
+      
+      const { data, error } = await query.maybeSingle();
       
       if (error || !data) return null;
       
@@ -39,10 +50,61 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
       
-      return data.token;
+      return data;
     } catch (error) {
       console.error('خطأ في الحصول على توكن المستخدم:', error);
       return null;
+    }
+  }, []);
+
+  // دالة للحصول على جميع حسابات المستخدم لشركة معينة
+  const getUserDeliveryAccounts = useCallback(async (userId, partnerName = 'alwaseet') => {
+    if (!userId) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('delivery_partner_tokens')
+        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at')
+        .eq('user_id', userId)
+        .eq('partner_name', partnerName)
+        .order('is_default', { ascending: false })
+        .order('last_used_at', { ascending: false });
+      
+      return data || [];
+    } catch (error) {
+      console.error('خطأ في جلب حسابات المستخدم:', error);
+      return [];
+    }
+  }, []);
+
+  // دالة لتعيين الحساب الافتراضي
+  const setDefaultDeliveryAccount = useCallback(async (userId, partnerName, accountUsername) => {
+    if (!userId || !accountUsername) return false;
+    
+    try {
+      // إزالة الافتراضي من جميع الحسابات الأخرى
+      await supabase
+        .from('delivery_partner_tokens')
+        .update({ is_default: false })
+        .eq('user_id', userId)
+        .eq('partner_name', partnerName);
+      
+      // تعيين الحساب الجديد كافتراضي
+      const { error } = await supabase
+        .from('delivery_partner_tokens')
+        .update({ 
+          is_default: true,
+          last_used_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('partner_name', partnerName)
+        .eq('account_username', accountUsername);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('خطأ في تعيين الحساب الافتراضي:', error);
+      return false;
     }
   }, []);
 
@@ -562,51 +624,76 @@ export const AlWaseetProvider = ({ children }) => {
 
       const partnerData = { username };
 
-      // حفظ التوكن في قاعدة البيانات مع معالجة تضارب المفاتيح
-      let dbError = null;
+      // حفظ التوكن في قاعدة البيانات مع دعم تعدد الحسابات
+      const accountUsername = username; // استخدام اسم المستخدم كمعرف للحساب
+      const merchantId = tokenData.merchant_id || null; // من API إذا كان متوفراً
       
       try {
-        const { error } = await supabase
+        // البحث عن حساب موجود أولاً
+        const { data: existingAccount } = await supabase
           .from('delivery_partner_tokens')
-          .upsert({
-            user_id: user.id,
-            partner_name: partner,
-            token: tokenData.token,
-            expires_at: expires_at.toISOString(),
-            partner_data: partnerData,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id, partner_name' });
-        dbError = error;
-      } catch (error) {
-        dbError = error;
-      }
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('partner_name', partner)
+          .eq('account_username', accountUsername)
+          .maybeSingle();
 
-      // في حالة وجود خطأ تضارب، احذف السجل القديم وأدرج الجديد
-      if (dbError && dbError.code === '23505') {
+        if (existingAccount) {
+          // تحديث الحساب الموجود
+          const { error } = await supabase
+            .from('delivery_partner_tokens')
+            .update({
+              token: tokenData.token,
+              expires_at: expires_at.toISOString(),
+              partner_data: partnerData,
+              merchant_id: merchantId,
+              last_used_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingAccount.id);
+            
+          if (error) throw error;
+        } else {
+          // إنشاء حساب جديد
+          // التحقق من وجود حساب افتراضي
+          const { data: defaultAccount } = await supabase
+            .from('delivery_partner_tokens')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('partner_name', partner)
+            .eq('is_default', true)
+            .maybeSingle();
+
+          const isNewDefault = !defaultAccount; // إذا لم يوجد حساب افتراضي، يصبح هذا افتراضي
+
+          const { error } = await supabase
+            .from('delivery_partner_tokens')
+            .insert({
+              user_id: user.id,
+              partner_name: partner,
+              account_username: accountUsername,
+              token: tokenData.token,
+              expires_at: expires_at.toISOString(),
+              partner_data: partnerData,
+              merchant_id: merchantId,
+              is_default: isNewDefault,
+              last_used_at: new Date().toISOString(),
+            });
+            
+          if (error) throw error;
+        }
+
+        // تحديث تاريخ آخر استخدام للحساب
         await supabase
           .from('delivery_partner_tokens')
-          .delete()
+          .update({ last_used_at: new Date().toISOString() })
           .eq('user_id', user.id)
-          .eq('partner_name', partner);
+          .eq('partner_name', partner)
+          .eq('account_username', accountUsername);
           
-        const { error: insertError } = await supabase
-          .from('delivery_partner_tokens')
-          .insert({
-            user_id: user.id,
-            partner_name: partner,
-            token: tokenData.token,
-            expires_at: expires_at.toISOString(),
-            partner_data: partnerData,
-            is_active: true
-          });
-          
-        if (insertError) {
-          console.error('خطأ في إدراج التوكن الجديد:', insertError);
-          throw new Error('فشل في حفظ بيانات تسجيل الدخول');
-        }
-      } else if (dbError) {
-        console.error('خطأ في حفظ التوكن:', dbError);
-        throw new Error('فشل في حفظ بيانات تسجيل الدخول: ' + dbError.message);
+      } catch (error) {
+        console.error('خطأ في حفظ التوكن:', error);
+        throw new Error('فشل في حفظ بيانات تسجيل الدخول: ' + error.message);
       }
 
       setToken(tokenData.token);
@@ -623,10 +710,11 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [setActivePartner, user, deliveryPartners]);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (deleteAccount = false) => {
     const partnerName = deliveryPartners[activePartner]?.name || 'شركة التوصيل';
     
-    if (user && activePartner !== 'local') {
+    // إذا طُلب حذف الحساب فقط احذفه من قاعدة البيانات
+    if (deleteAccount && user && activePartner !== 'local') {
       await supabase
         .from('delivery_partner_tokens')
         .delete()
@@ -634,6 +722,7 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('partner_name', activePartner);
     }
 
+    // تنظيف الحالة المحلية فقط
     setIsLoggedIn(false);
     setToken(null);
     setWaseetUser(null);
@@ -2334,8 +2423,10 @@ export const AlWaseetProvider = ({ children }) => {
     login,
     logout,
     activePartner,
-    // دوال النظام الأصلي المحسن
+    // دوال النظام الأصلي المحسن - دعم متعدد الحسابات
     getTokenForUser,
+    getUserDeliveryAccounts,
+    setDefaultDeliveryAccount,
     isOrderOwner,
     canAutoDeleteOrder,
     setActivePartner,
