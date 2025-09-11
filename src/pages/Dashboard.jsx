@@ -498,7 +498,12 @@ const Dashboard = () => {
         };
 
         const filteredTotalOrders = filterOrdersByPeriod(
-          visibleOrders.filter(o => !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock'), 
+          visibleOrders.filter(o => 
+            !o.isarchived && 
+            o.status !== 'completed' && 
+            o.status !== 'returned_in_stock' &&
+            (canViewAllData ? (o.created_by === user?.id || o.created_by === user?.user_id) : true)
+          ), 
           periods.totalOrders
         );
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed');

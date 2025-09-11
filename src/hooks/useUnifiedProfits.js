@@ -220,14 +220,14 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         // فقط أرباح المدير (employee_percentage = 0)
         if (profit.employee_percentage !== 0) return false;
 
-        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق)
-        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        // تطبيق فلترة الفترة الزمنية
         const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
+        const isInDateRange = orderFromAll && filterByDate(orderFromAll.updated_at || orderFromAll.created_at);
         
-        // قبول الطلبات المُسلّمة مع استلام الفاتورة، أو المُسلّمة بدون استلام فاتورة
-        return order || (orderFromAll && 
-          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed') &&
-          filterByDate(orderFromAll.updated_at || orderFromAll.created_at));
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق) وضمن الفترة الزمنية
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        return (order || (orderFromAll && 
+          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed'))) && isInDateRange;
       }).reduce((sum, profit) => sum + (profit.profit_amount || 0), 0);
 
       // حساب أرباح النظام المعلقة من طلبات الموظفين
@@ -239,13 +239,14 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         // فقط أرباح الموظفين (employee_percentage > 0)
         if (profit.employee_percentage === 0) return false;
 
-        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق)
-        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        // تطبيق فلترة الفترة الزمنية
         const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
+        const isInDateRange = orderFromAll && filterByDate(orderFromAll.updated_at || orderFromAll.created_at);
         
-        return order || (orderFromAll && 
-          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed') &&
-          filterByDate(orderFromAll.updated_at || orderFromAll.created_at));
+        // التأكد من أن الطلب مسلم ومستلم الفاتورة (أو معلق) وضمن الفترة الزمنية
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        return (order || (orderFromAll && 
+          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed'))) && isInDateRange;
       }).reduce((sum, profit) => {
         // ربح النظام = إجمالي الربح - ربح الموظف
         return sum + ((profit.profit_amount || 0) - (profit.employee_profit || 0));
