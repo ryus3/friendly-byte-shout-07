@@ -661,9 +661,38 @@ useEffect(() => {
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
                 <div dir="rtl">
-                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2 mb-3">
-                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                    قائمة الطلبات الذكية ({filteredOrders.length})
+                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4 text-blue-600" />
+                      قائمة الطلبات الذكية ({filteredOrders.length})
+                    </div>
+                    
+                    {/* زر الموافقة التلقائية مدمج في العنوان */}
+                    <Button
+                      variant={autoApprovalEnabled ? "default" : "outline"}
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const newValue = !autoApprovalEnabled;
+                          const { error } = await supabase
+                            .from('profiles')
+                            .update({ auto_approval_enabled: newValue })
+                            .eq('user_id', user.user_id);
+                          
+                          if (error) throw error;
+                          
+                          setAutoApprovalEnabled(newValue);
+                          toast.success(`تم ${newValue ? 'تفعيل' : 'إلغاء'} الموافقة التلقائية`);
+                        } catch (error) {
+                          console.error('Error updating auto approval:', error);
+                          toast.error('فشل في تحديث إعدادات الموافقة التلقائية');
+                        }
+                      }}
+                      className="h-7 px-3 text-xs gap-1.5"
+                    >
+                      <Zap className="w-3 h-3" />
+                      {autoApprovalEnabled ? 'مفعل' : 'معطل'}
+                    </Button>
                   </CardTitle>
                   
                   {(isAdmin || isDepartmentManager) && (
@@ -688,16 +717,13 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* مكون اختيار وجهة الطلبات والموافقة التلقائية */}
-                  <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-                      <div className="flex-1">
-                        <AiOrderDestinationSelector 
-                          value={orderDestination}
-                          onChange={setOrderDestination}
-                          className="max-w-sm"
-                        />
-                      </div>
+                  {/* مكون اختيار وجهة الطلبات */}
+                  <div className="mb-4">
+                    <AiOrderDestinationSelector 
+                      value={orderDestination}
+                      onChange={setOrderDestination}
+                    />
+                  </div>
                       
                       {/* زر الموافقة التلقائية */}
                       <div className="flex flex-col gap-2">
@@ -748,13 +774,7 @@ useEffect(() => {
                           <span className="text-xs font-medium">
                             {autoApprovalEnabled ? "مفعل" : "معطل"}
                           </span>
-                        </Button>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 text-center max-w-[100px] leading-tight">
-                          {autoApprovalEnabled 
-                            ? "قبول تلقائي للطلبات الصحيحة"
-                            : "موافقة يدوية مطلوبة"
-                          }
-                        </div>
+                         </Button>
                       </div>
                     </div>
                   </div>
