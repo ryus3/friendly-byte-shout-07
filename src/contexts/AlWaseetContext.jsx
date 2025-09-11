@@ -133,9 +133,11 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('delivery_partner_tokens')
-        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data')
+        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token')
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
+        .not('token', 'is', null)  // فقط الحسابات التي لديها توكن صالح
+        .neq('token', '')  // تجنب التوكنات الفارغة
         .order('is_default', { ascending: false })
         .order('last_used_at', { ascending: false });
       
@@ -2525,22 +2527,26 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair, performDeletionPassAfterStatusSync]);
 
-  // دالة حذف حساب توصيل
+  // دالة تسجيل خروج حساب التوصيل (إلغاء التفعيل بدلاً من الحذف)
   const deleteDeliveryAccount = useCallback(async (userId, partner, accountUsername) => {
     try {
       const { error } = await supabase
         .from('delivery_partner_tokens')
-        .delete()
+        .update({
+          token: null,
+          is_active: false,
+          last_used_at: new Date().toISOString()
+        })
         .eq('user_id', userId)
-        .eq('partner', partner)
+        .eq('partner', partner === 'alwaseet' ? 'alwaseet' : partner)
         .eq('account_username', accountUsername);
 
       if (error) {
-        console.error('Error deleting delivery account:', error);
+        console.error('Error logging out delivery account:', error);
         return false;
       }
 
-      console.log(`تم حذف حساب ${accountUsername} لشريك ${partner}`);
+      console.log(`تم تسجيل خروج حساب ${accountUsername} لشريك ${partner}`);
       return true;
     } catch (error) {
       console.error('Error in deleteDeliveryAccount:', error);

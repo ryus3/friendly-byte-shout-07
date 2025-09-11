@@ -51,9 +51,11 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
                 const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
-                setUserAccounts(accounts);
-                const defaultAccount = accounts.find(acc => acc.is_default);
-                setSelectedAccount(defaultAccount || accounts[0] || null);
+                // فلترة الحسابات لإظهار فقط الحسابات الصالحة التي لديها توكن
+                const validAccounts = accounts.filter(account => account.token && account.token.trim() !== '');
+                setUserAccounts(validAccounts);
+                const defaultAccount = validAccounts.find(acc => acc.is_default);
+                setSelectedAccount(defaultAccount || validAccounts[0] || null);
             } else {
                 setUserAccounts([]);
                 setSelectedAccount(null);
@@ -225,16 +227,6 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         )}
                         
                         <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                type="button" 
-                                onClick={() => setShowAddForm(!showAddForm)}
-                                className="flex-1"
-                            >
-                                <UserPlus className="w-4 h-4 ml-2" />
-                                {showAddForm ? 'إلغاء' : 'إضافة حساب'}
-                            </Button>
                             {selectedAccount && !selectedAccount.is_default && (
                                 <Button 
                                     variant="secondary" 
