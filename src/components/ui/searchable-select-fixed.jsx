@@ -23,6 +23,7 @@ const SearchableSelectFixed = ({
   const [isInDialog, setIsInDialog] = useState(false);
   const [isNavigatingWithKeyboard, setIsNavigatingWithKeyboard] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ left: 0, top: 0, width: 'auto' });
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -48,6 +49,51 @@ const SearchableSelectFixed = ({
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
       setIsInDialog(!!dialogContainer);
     }
+  }, [open]);
+
+  // Update dropdown position on scroll and resize
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          left: rect.left,
+          top: rect.bottom + 4,
+          width: rect.width
+        });
+        
+        // Close dropdown if button is scrolled out of view
+        if (rect.bottom < 0 || rect.top > window.innerHeight) {
+          setOpen(false);
+        }
+      }
+    };
+
+    // Throttle function to improve performance
+    let ticking = false;
+    const throttledUpdate = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          updatePosition();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('scroll', throttledUpdate, { passive: true });
+    window.addEventListener('resize', throttledUpdate);
+    
+    // Update position immediately when opening
+    updatePosition();
+
+    return () => {
+      window.removeEventListener('scroll', throttledUpdate);
+      window.removeEventListener('resize', throttledUpdate);
+    };
   }, [open]);
 
   // Simplified interaction handling for better mobile support
@@ -327,15 +373,15 @@ const SearchableSelectFixed = ({
             {renderDropdownContent()}
           </div>
         ) : (
-          // Outside Dialog: Use portal with enhanced z-index
+          // Outside Dialog: Use portal with dynamic positioning
           createPortal(
             <div 
               className="fixed z-[999999]"
               style={{ 
                 direction: 'rtl',
-                left: buttonRef.current?.getBoundingClientRect().left || 0,
-                top: (buttonRef.current?.getBoundingClientRect().bottom || 0) + 4,
-                width: buttonRef.current?.getBoundingClientRect().width || 'auto',
+                left: dropdownPosition.left,
+                top: dropdownPosition.top,
+                width: dropdownPosition.width,
                 zIndex: 999999,
                 position: 'fixed'
               }}
