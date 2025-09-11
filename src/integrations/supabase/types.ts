@@ -2649,6 +2649,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          auto_approval_enabled: boolean | null
           auto_approve_ai_orders: boolean | null
           avatar_url: string | null
           bio: string | null
@@ -2673,6 +2674,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_approval_enabled?: boolean | null
           auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null
@@ -2697,6 +2699,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_approval_enabled?: boolean | null
           auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null

@@ -56,7 +56,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   
   // مستمعات Real-time للتحديثات الفورية
   useEffect(() => {
-    const handleAiOrderCreated = (event) => {
+    const handleAiOrderCreated = async (event) => {
       const newOrder = event.detail;
       if (newOrder?.id) {
         setOrders(prev => {
@@ -64,6 +64,38 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           if (prev.some(o => o.id === newOrder.id)) return prev;
           return [newOrder, ...prev];
         });
+
+        // التحقق من إمكانية الموافقة التلقائية
+        if (autoApprovalEnabled && newOrder.status === 'pending') {
+          // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة)
+          const availability = availabilityOf(newOrder);
+          const needsReview = orderNeedsReview(newOrder);
+          
+          if (availability === 'available' && !needsReview) {
+            try {
+              console.log('Auto-approving order:', newOrder.id);
+              const result = await approveAiOrder?.(
+                newOrder.id, 
+                orderDestination.destination, 
+                orderDestination.account
+              );
+              
+              if (result?.success) {
+                // إزالة الطلب من القائمة المحلية فوراً
+                setOrders(prev => prev.filter(o => o.id !== newOrder.id));
+                toast({
+                  title: "تمت الموافقة التلقائية",
+                  description: `تم قبول الطلب رقم ${newOrder.id.slice(0, 8)} تلقائياً`,
+                  variant: "success"
+                });
+                // إشعار النظام بالموافقة
+                window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: newOrder.id } }));
+              }
+            } catch (error) {
+              console.error('Auto-approval failed:', error);
+            }
+          }
+        }
       }
     };
 
@@ -141,6 +173,29 @@ useEffect(() => {
     account: '',
     partnerName: 'local'
   });
+
+  // إعدادات الموافقة التلقائية
+  const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
+
+  // تحميل إعدادات الموافقة التلقائية
+  useEffect(() => {
+    const loadAutoApprovalSetting = async () => {
+      if (!user?.user_id) return;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('auto_approval_enabled')
+          .eq('user_id', user.user_id)
+          .single();
+        if (data) {
+          setAutoApprovalEnabled(data.auto_approval_enabled || false);
+        }
+      } catch (error) {
+        console.error('خطأ في تحميل إعدادات الموافقة التلقائية:', error);
+      }
+    };
+    loadAutoApprovalSetting();
+  }, [user?.user_id]);
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
@@ -633,13 +688,75 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* مكون اختيار وجهة الطلبات */}
-                  <div className="mb-4">
-                    <AiOrderDestinationSelector 
-                      value={orderDestination}
-                      onChange={setOrderDestination}
-                      className="max-w-sm"
-                    />
+                  {/* مكون اختيار وجهة الطلبات والموافقة التلقائية */}
+                  <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+                      <div className="flex-1">
+                        <AiOrderDestinationSelector 
+                          value={orderDestination}
+                          onChange={setOrderDestination}
+                          className="max-w-sm"
+                        />
+                      </div>
+                      
+                      {/* زر الموافقة التلقائية */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                          الموافقة التلقائية
+                        </label>
+                        <Button
+                          variant={autoApprovalEnabled ? "default" : "outline"}
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const newValue = !autoApprovalEnabled;
+                              const { error } = await supabase
+                                .from('profiles')
+                                .update({ auto_approval_enabled: newValue })
+                                .eq('user_id', user.user_id);
+                              
+                              if (error) throw error;
+                              
+                              setAutoApprovalEnabled(newValue);
+                              toast({
+                                title: newValue ? "تم تفعيل الموافقة التلقائية" : "تم إلغاء الموافقة التلقائية",
+                                description: newValue 
+                                  ? "سيتم الموافقة على الطلبات الصحيحة تلقائياً" 
+                                  : "ستحتاج الطلبات إلى موافقة يدوية",
+                                variant: "success"
+                              });
+                            } catch (error) {
+                              console.error('خطأ في تحديث إعدادات الموافقة التلقائية:', error);
+                              toast({
+                                title: "خطأ",
+                                description: "فشل في تحديث الإعدادات",
+                                variant: "destructive"
+                              });
+                            }
+                          }}
+                          className={cn(
+                            "h-8 px-3 transition-all duration-200 flex items-center gap-2 min-w-[100px]",
+                            autoApprovalEnabled
+                              ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
+                              : "border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          )}
+                        >
+                          <Zap className={cn(
+                            "w-3 h-3",
+                            autoApprovalEnabled ? "text-white" : "text-slate-500"
+                          )} />
+                          <span className="text-xs font-medium">
+                            {autoApprovalEnabled ? "مفعل" : "معطل"}
+                          </span>
+                        </Button>
+                        <div className="text-xs text-slate-500 dark:text-slate-400 text-center max-w-[100px] leading-tight">
+                          {autoApprovalEnabled 
+                            ? "قبول تلقائي للطلبات الصحيحة"
+                            : "موافقة يدوية مطلوبة"
+                          }
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   {filteredOrders.length > 0 && (
