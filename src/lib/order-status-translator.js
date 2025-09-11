@@ -74,6 +74,11 @@ const STATUS_TRANSLATIONS = {
     icon: XCircle,
     color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
+  '2': {
+    label: 'تم الاستلام من قبل المندوب',
+    icon: Truck,
+    color: 'bg-gradient-to-r from-orange-500 to-amber-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
   '17': {
     label: 'تم الإرجاع إلى التاجر',
     icon: Home,

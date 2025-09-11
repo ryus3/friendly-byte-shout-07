@@ -47,7 +47,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
 
   // الحالات النشطة - لا يمكن الحذف أو التعديل
   '2': {
-    text: 'تم الاستلام من قبل المندوب ( تم الشحن)',
+    text: 'تم الاستلام من قبل المندوب',
     icon: Truck,
     internalStatus: 'shipped',
     canDelete: false,

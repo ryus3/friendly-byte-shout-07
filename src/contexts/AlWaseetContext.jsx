@@ -2525,6 +2525,29 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair, performDeletionPassAfterStatusSync]);
 
+  // دالة حذف حساب توصيل
+  const deleteDeliveryAccount = useCallback(async (userId, partner, accountUsername) => {
+    try {
+      const { error } = await supabase
+        .from('delivery_partner_tokens')
+        .delete()
+        .eq('user_id', userId)
+        .eq('partner', partner)
+        .eq('account_username', accountUsername);
+
+      if (error) {
+        console.error('Error deleting delivery account:', error);
+        return false;
+      }
+
+      console.log(`تم حذف حساب ${accountUsername} لشريك ${partner}`);
+      return true;
+    } catch (error) {
+      console.error('Error in deleteDeliveryAccount:', error);
+      return false;
+    }
+  }, []);
+
   const value = {
     isLoggedIn,
     token,
@@ -2539,6 +2562,7 @@ export const AlWaseetProvider = ({ children }) => {
     getUserDeliveryAccounts,
     setDefaultDeliveryAccount,
     activateAccount,
+    deleteDeliveryAccount,
     isOrderOwner,
     canAutoDeleteOrder,
     setActivePartner,

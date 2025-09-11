@@ -16,7 +16,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         login, loading, deliveryPartners, activePartner, setActivePartner, 
         isLoggedIn, logout: waseetLogout, waseetUser,
         getUserDeliveryAccounts, setDefaultDeliveryAccount, hasValidToken,
-        activateAccount
+        activateAccount, deleteDeliveryAccount
     } = useAlWaseet();
     const { user } = useAuth();
     const [username, setUsername] = useState('');
@@ -153,6 +153,30 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         setUsername('');
         setPassword('');
         setShowAddForm(false);
+    };
+
+    const handleAccountLogout = async () => {
+        if (!selectedAccount || !user?.id) return;
+        
+        // حذف الحساب من قاعدة البيانات
+        const success = await deleteDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
+        if (success) {
+            toast({
+                title: "تم تسجيل الخروج",
+                description: "تم حذف الحساب وتسجيل الخروج بنجاح",
+                variant: 'success'
+            });
+            // إعادة تحميل الحسابات
+            const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+            setUserAccounts(accounts);
+            setSelectedAccount(accounts[0] || null);
+        } else {
+            toast({
+                title: "خطأ",
+                description: "فشل في حذف الحساب",
+                variant: 'destructive'
+            });
+        }
     }
 
     const isCurrentPartnerSelected = activePartner === selectedPartner;
@@ -220,6 +244,18 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     className="flex-1"
                                 >
                                     تعيين كافتراضي
+                                </Button>
+                            )}
+                            {selectedAccount && (
+                                <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    type="button" 
+                                    onClick={handleAccountLogout}
+                                    className="flex-1"
+                                >
+                                    <LogOut className="w-4 h-4 ml-2" />
+                                    تسجيل الخروج
                                 </Button>
                             )}
                         </div>
