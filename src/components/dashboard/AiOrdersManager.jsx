@@ -723,6 +723,7 @@ useEffect(() => {
                       value={orderDestination}
                       onChange={setOrderDestination}
                     />
+                  </div>
                   {filteredOrders.length > 0 && (
                     <>
                       <div className="flex items-center gap-2">
