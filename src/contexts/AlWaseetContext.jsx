@@ -112,7 +112,7 @@ export const AlWaseetProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, getTokenForUser, setActivePartner]);
+  }, [user?.id, getTokenForUser]);
 
   // دالة للحصول على جميع حسابات المستخدم لشركة معينة
   const getUserDeliveryAccounts = useCallback(async (userId, partnerName = 'alwaseet') => {
@@ -652,44 +652,6 @@ export const AlWaseetProvider = ({ children }) => {
     alwaseet: { name: "الوسيط", api: "https://api.alwaseet-iq.net/v1/merchant" },
   };
 
-  const fetchToken = useCallback(async () => {
-    if (user) {
-      const { data, error } = await supabase
-        .from('delivery_partner_tokens')
-        .select('token, expires_at, partner_data')
-        .eq('user_id', user.id)
-        .eq('partner_name', 'alwaseet')
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching Al-Waseet token:', error.message);
-        setToken(null);
-        setWaseetUser(null);
-        setIsLoggedIn(false);
-        return;
-      }
-
-      if (data && new Date(data.expires_at) > new Date()) {
-        setToken(data.token);
-        setWaseetUser(data.partner_data);
-        setIsLoggedIn(true);
-        // لا نغير activePartner تلقائياً - نتركه كما هو مضبوط من قبل المستخدم
-        // setActivePartner('alwaseet'); // تم تعطيل هذا السطر
-      } else {
-        if (data) {
-            await supabase.from('delivery_partner_tokens').delete().match({ user_id: user.id, partner_name: 'alwaseet' });
-            toast({ 
-              title: "انتهت صلاحية التوكن", 
-              description: "يجب تسجيل الدخول مرة أخرى لشركة التوصيل.", 
-              variant: "destructive" 
-            });
-        }
-        setToken(null);
-        setWaseetUser(null);
-        setIsLoggedIn(false);
-      }
-    }
-  }, [user]);
 
   useEffect(() => {
     fetchToken();
