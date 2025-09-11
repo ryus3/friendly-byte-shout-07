@@ -150,13 +150,111 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        // إظهار الحسابات المحفوظة إذا وُجدت
+        // إذا كان المستخدم مسجل دخول بالحساب الحالي، عرض التصميم الأخضر
+        if (isCurrentPartnerSelected && isLoggedIn) {
+            return (
+                <Card className="bg-green-500/10 border-green-500/30 text-foreground">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل بشركة التوصيل</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        <p className="text-sm text-muted-foreground">مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner]?.name}</span></p>
+                        <p className="text-sm font-medium text-foreground">اسم المستخدم: {waseetUser?.username}</p>
+                        
+                        {/* إظهار منسدلة الحسابات المتعددة إذا وُجدت */}
+                        {userAccounts.length > 1 && (
+                            <div className="space-y-2">
+                                <Label className="text-xs">الحسابات المتاحة:</Label>
+                                <Select 
+                                    value={selectedAccount?.account_username || ''} 
+                                    onValueChange={(value) => {
+                                        const account = userAccounts.find(acc => acc.account_username === value);
+                                        setSelectedAccount(account);
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8">
+                                        <SelectValue placeholder="اختر حساب..." />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-background border border-border">
+                                        {userAccounts.map((account) => (
+                                            <SelectItem key={account.account_username} value={account.account_username}>
+                                                {account.partner_data?.username || account.account_username}
+                                                {account.is_default && ' 🌟'}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                type="button" 
+                                onClick={() => setShowAddForm(true)}
+                                className="flex-1"
+                            >
+                                <UserPlus className="w-4 h-4 ml-2" />
+                                إضافة حساب
+                            </Button>
+                            
+                            <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                type="button" 
+                                onClick={handleLogout} 
+                                className="flex-1"
+                            >
+                                <LogOut className="w-4 h-4 ml-2" />
+                                تسجيل الخروج
+                            </Button>
+                        </div>
+                        
+                        {showAddForm && (
+                            <div className="border-t pt-4 space-y-2">
+                                <p className="text-sm text-muted-foreground mb-2">إضافة حساب جديد:</p>
+                                <Input 
+                                    type="text" 
+                                    value={username} 
+                                    onChange={(e) => setUsername(e.target.value)} 
+                                    placeholder="اسم المستخدم الجديد" 
+                                    className="h-8"
+                                />
+                                <Input 
+                                    type="password" 
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    placeholder="كلمة المرور" 
+                                    className="h-8"
+                                />
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    type="button" 
+                                    onClick={() => {
+                                        setShowAddForm(false);
+                                        setUsername('');
+                                        setPassword('');
+                                    }}
+                                    className="w-full"
+                                >
+                                    إلغاء
+                                </Button>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        // إظهار الحسابات المحفوظة إذا وُجدت ولم يكن المستخدم مسجل دخول
         if (userAccounts.length > 0) {
             return (
-                <Card>
+                <Card className="bg-yellow-500/10 border-yellow-500/30 text-foreground">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-500">
-                            <CheckCircle className="w-5 h-5"/> الحسابات المحفوظة
+                        <CardTitle className="flex items-center gap-2 text-yellow-600">
+                            <CheckCircle className="w-5 h-5"/> حسابات محفوظة
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -172,15 +270,14 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 <SelectTrigger>
                                     <SelectValue placeholder="اختر حساب..." />
                                 </SelectTrigger>
-                                 <SelectContent>
-                                     {userAccounts.map((account) => (
-                                         <SelectItem key={account.account_username} value={account.account_username}>
-                                             {account.partner_data?.username || account.account_username}
-                                             {account.is_default && ' 🌟 (افتراضي)'}
-                                             {account.merchant_id && ` - ${account.merchant_id}`}
-                                         </SelectItem>
-                                     ))}
-                                 </SelectContent>
+                                <SelectContent className="bg-background border border-border">
+                                    {userAccounts.map((account) => (
+                                        <SelectItem key={account.account_username} value={account.account_username}>
+                                            {account.partner_data?.username || account.account_username}
+                                            {account.is_default && ' 🌟 (افتراضي)'}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
                             </Select>
                         </div>
                         
@@ -196,29 +293,16 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </Button>
                         )}
                         
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
-                                type="button" 
-                                onClick={() => setShowAddForm(true)}
-                                className="flex-1"
-                            >
-                                <UserPlus className="w-4 h-4 ml-2" />
-                                إضافة حساب جديد
-                            </Button>
-                            
-                            <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                type="button" 
-                                onClick={handleLogout} 
-                                className="flex-1"
-                            >
-                                <LogOut className="w-4 h-4 ml-2" />
-                                تسجيل الخروج
-                            </Button>
-                        </div>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            type="button" 
+                            onClick={() => setShowAddForm(true)}
+                            className="w-full"
+                        >
+                            <UserPlus className="w-4 h-4 ml-2" />
+                            إضافة حساب جديد
+                        </Button>
                         
                         {showAddForm && (
                             <div className="border-t pt-4 space-y-2">
@@ -255,24 +339,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
             );
         }
 
-        if (isCurrentPartnerSelected && isLoggedIn) {
-            return (
-                <Card className="bg-green-500/10 border-green-500/30 text-foreground">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-green-500"><CheckCircle className="w-5 h-5"/> متصل</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <p className="text-sm text-muted-foreground">أنت مسجل الدخول في <span className="font-bold text-foreground">{deliveryPartners[activePartner].name}</span>.</p>
-                        <p className="text-xs text-muted-foreground">اسم المستخدم: {waseetUser?.username}</p>
-                        <Button variant="destructive" size="sm" type="button" onClick={handleLogout} className="w-full">
-                            <LogOut className="w-4 h-4 ml-2" />
-                            تسجيل الخروج
-                        </Button>
-                    </CardContent>
-                </Card>
-            );
-        }
-
+        // نموذج تسجيل الدخول الجديد
         return (
             <Card>
                 <CardHeader>

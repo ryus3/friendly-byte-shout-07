@@ -64,11 +64,16 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('delivery_partner_tokens')
-        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at')
+        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data')
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
         .order('is_default', { ascending: false })
         .order('last_used_at', { ascending: false });
+      
+      if (error) {
+        console.error('خطأ في جلب حسابات المستخدم:', error);
+        return [];
+      }
       
       return data || [];
     } catch (error) {
