@@ -124,6 +124,9 @@ const Dashboard = () => {
     // الآن يمكن استخدام periods بأمان
     const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
+    // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة
+    const { profitData: pendingProfitData, loading: pendingProfitLoading } = useUnifiedProfits(periods.pendingProfit);
+    
     // إضافة لوج لتتبع البيانات
     useEffect(() => {
         console.log('🔍 Dashboard - Unified Profit Data:', {
@@ -502,10 +505,10 @@ const Dashboard = () => {
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        // استخدام الأرباح المعلقة المناسبة حسب نوع المستخدم
+        // استخدام الأرباح المعلقة المناسبة حسب نوع المستخدم مع الفترة الزمنية الصحيحة
         const pendingProfit = canViewAllData 
-          ? (unifiedProfitData?.totalSystemPendingProfits || 0) // المدير يرى أرباح النظام ككل
-          : (unifiedProfitData?.employeePendingDues || 0); // الموظف يرى أرباحه فقط
+          ? (pendingProfitData?.totalSystemPendingProfits || 0) // المدير يرى أرباح النظام ككل
+          : (pendingProfitData?.employeePendingDues || 0); // الموظف يرى أرباحه فقط
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
