@@ -198,17 +198,22 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         return isApproved && isEmployeeDue;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // مستحقات الموظفين المعلقة من جدول الأرباح
+      // مستحقات الموظفين المعلقة من جدول الأرباح - للموظف الحالي فقط
       const employeePendingDues = profitsData.filter(profit => {
         // استخدام دالة موحدة لفحص الحالات المعلقة
         if (!isPendingStatus(profit.status)) return false;
         
-        // التأكد من أن الطلب مسلم ومستلم الفاتورة وضمن الفترة الزمنية
-        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        // فقط أرباح الموظف الحالي
+        if (profit.employee_id !== currentUser?.id && profit.employee_id !== currentUser?.user_id) return false;
+        
+        // تطبيق فلترة الفترة الزمنية
         const orderFromAll = safeOrders.find(o => o.id === profit.order_id);
         const isInDateRange = orderFromAll && filterByDate(orderFromAll.updated_at || orderFromAll.created_at);
         
-        return order && order.receipt_received === true && isInDateRange;
+        // التأكد من أن الطلب مسلم وضمن الفترة الزمنية
+        const order = deliveredOrders.find(o => o.id === profit.order_id);
+        return (order || (orderFromAll && 
+          (orderFromAll.status === 'delivered' || orderFromAll.status === 'completed'))) && isInDateRange;
       }).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
 
       // حساب أرباح المدير المعلقة من جدول الأرباح
