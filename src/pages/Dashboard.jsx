@@ -124,8 +124,8 @@ const Dashboard = () => {
     // الآن يمكن استخدام periods بأمان
     const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
-    // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة
-    const { profitData: pendingProfitData, loading: pendingProfitLoading } = useUnifiedProfits(periods.pendingProfit);
+    // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة - نحتاج allProfits للحساب المحلي
+    const { profitData: pendingProfitData, loading: pendingProfitLoading, allProfits } = useUnifiedProfits(periods.pendingProfit);
     
     // إضافة لوج لتتبع البيانات
     useEffect(() => {
@@ -510,10 +510,29 @@ const Dashboard = () => {
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        // استخدام الأرباح المعلقة المناسبة حسب نوع المستخدم مع الفترة الزمنية الصحيحة
-        const pendingProfit = canViewAllData 
-          ? (pendingProfitData?.totalSystemPendingProfits || 0) // المدير يرى أرباح النظام ككل
-          : (pendingProfitData?.employeePendingDues || 0); // الموظف يرى أرباحه فقط
+        // حساب الأرباح المعلقة محلياً من الطلبات المفلترة لضمان الفلترة الزمنية الصحيحة
+        const pendingProfit = filteredDeliveredOrders.reduce((sum, order) => {
+          if (canViewAllData) {
+            // للمدير: حساب أرباح النظام من جدول الأرباح
+            const orderProfit = allProfits?.find(p => p.order_id === order.id);
+            if (!orderProfit) return sum;
+            
+            if (orderProfit.employee_percentage === 0) {
+              // أرباح المدير المعلقة
+              return sum + (orderProfit.profit_amount || 0);
+            } else {
+              // ربح النظام من طلبات الموظفين = إجمالي الربح - ربح الموظف
+              return sum + ((orderProfit.profit_amount || 0) - (orderProfit.employee_profit || 0));
+            }
+          } else {
+            // للموظف: حساب أرباحه المعلقة فقط
+            const orderProfit = allProfits?.find(p => 
+              p.order_id === order.id && 
+              (p.employee_id === user?.id || p.employee_id === user?.user_id)
+            );
+            return sum + (orderProfit?.employee_profit || 0);
+          }
+        }, 0);
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
