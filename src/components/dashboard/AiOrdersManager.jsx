@@ -126,7 +126,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
     };
-  }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder, availabilityOf, orderNeedsReview]);
+  }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder]);
   
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [statFilter, setStatFilter] = useState('all'); // all | needs_review | telegram | ai_chat | store | pending
