@@ -1791,7 +1791,7 @@ export const SuperProvider = ({ children }) => {
         
         // جلب المدن والمناطق - تماماً كما في صفحة الطلب السريع
         console.log('🌆 جلب المدن من الوسيط...');
-        const citiesData = await getCities(alwaseetToken);
+        const citiesData = await getCities(accountData.token);
         const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
         
         if (!cities.length) {
@@ -1897,7 +1897,7 @@ export const SuperProvider = ({ children }) => {
 
         // جلب المناطق للمدينة المحددة
         console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
-        const regionsData = await getRegionsByCity(alwaseetToken, cityId);
+        const regionsData = await getRegionsByCity(accountData.token, cityId);
         const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
         
         let regionId = null;
@@ -2042,7 +2042,7 @@ export const SuperProvider = ({ children }) => {
 
         // إنشاء الطلب في الوسيط - استخدام نفس منطق QuickOrderContent مع retry محسن
         const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
-        const alwaseetResult = await createAlWaseetOrderApi(updatedPayload, alwaseetToken);
+        const alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
         
         console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
@@ -2062,7 +2062,7 @@ export const SuperProvider = ({ children }) => {
               await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
               
               const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
-              const recentOrders = await getMerchantOrders(alwaseetToken);
+              const recentOrders = await getMerchantOrders(accountData.token);
               
               // Advanced matching: by phone (last 10 digits), price, and recent creation
               const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);

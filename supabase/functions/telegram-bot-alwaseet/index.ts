@@ -375,6 +375,12 @@ function isValidCustomerName(name: string): boolean {
   if (/^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(trimmed)) return false
   // رفض الأسماء التي تحتوي على أرقام هواتف
   if (/07[5789]\d{8}/.test(trimmed)) return false
+  // رفض الأسماء التي تبدو مثل عناوين (تحتوي على مدن عراقية شائعة)
+  const addressWords = ['بغداد', 'البصرة', 'اربيل', 'دهوك', 'كربلاء', 'النجف', 'الانبار', 'نينوى', 'صلاح الدين', 'القادسية', 'بابل', 'واسط', 'ذي قار', 'المثنى', 'ميسان', 'الدورة', 'الكرادة', 'المنصور', 'الكاظمية', 'الاعظمية', 'الحلة', 'كركوك', 'تكريت', 'الرمادي', 'الفلوجة', 'الموصل', 'السماوة', 'الديوانية', 'العمارة', 'الناصرية']
+  const lowerName = trimmed.toLowerCase()
+  if (addressWords.some(word => lowerName.includes(word.toLowerCase()))) return false
+  // رفض الأسماء التي تحتوي على كلمات عناوين شائعة
+  if (/\b(شارع|حي|منطقة|قرب|مقابل|جانب|محلة|صحة|مستشفى|جامع|مدرسة|مول|سوق)\b/i.test(trimmed)) return false
   return true
 }
 
@@ -640,7 +646,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       }
     }
     
-    // Set defaults if not found
+    // Set defaults if not found - use default customer name if no valid name was found
     if (!customerName) customerName = defaultCustomerName
     if (!customerCity) customerCity = await getBaghdadCity()
     if (!customerRegion && customerCity) {
