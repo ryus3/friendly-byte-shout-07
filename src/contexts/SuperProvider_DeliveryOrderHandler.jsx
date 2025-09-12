@@ -9,9 +9,9 @@ export const useDeliveryOrderHandler = () => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
-      // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder مع تطبيق الاسم الافتراضي
+      // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder
       const customerInfo = {
-        customer_name: aiOrder.customer_name || accountData?.default_customer_name || 'زبون من التليغرام',
+        customer_name: aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         customer_address: aiOrder.customer_address,
         customer_city: aiOrder.customer_city,

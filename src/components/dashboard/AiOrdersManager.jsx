@@ -40,29 +40,17 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
-  // Local storage for processed order signatures to prevent reappearing
-  const [processedOrderSignatures, setProcessedOrderSignatures] = useLocalStorage('aiOrdersProcessedSignatures', []);
-  
-  // Helper function to create order signature
-  const createOrderSignature = useCallback((order) => {
-    return `${order.id}_${order.status}_${order.created_at}_${Date.now()}`;
-  }, []);
-  
-  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة والمحذوفة)
+  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة)
   const dedupedContextOrders = useMemo(() => {
     const map = new Map();
     for (const o of ordersFromContext) {
-      // فلترة الطلبات المعتمدة/المحذوفة لمنع إعادة ظهورها
+      // فلترة الطلبات المعتمدة لمنع إعادة ظهورها
       if (o && o.id && !map.has(o.id) && o.status !== 'approved') {
-        const signature = createOrderSignature(o);
-        // تحقق إذا كان الطلب تم معالجته مسبقاً
-        if (!processedOrderSignatures.includes(signature) && !processedOrderSignatures.some(sig => sig.startsWith(o.id + '_'))) {
-          map.set(o.id, o);
-        }
+        map.set(o.id, o);
       }
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [ordersFromContext, processedOrderSignatures, createOrderSignature]);
+  }, [ordersFromContext]);
   
   // تزامن مع البيانات من Context عند التحديث
   useEffect(() => {
@@ -448,15 +436,8 @@ useEffect(() => {
         const successIds = approvedIds.filter((_, i) => results[i]?.success);
         const failedIds = approvedIds.filter((_, i) => !results[i]?.success);
         
-        // تحديث حالة الطلبات المعتمدة لمنع إعادة ظهورها وحفظ التوقيعات
+        // تحديث حالة الطلبات المعتمدة لمنع إعادة ظهورها
         if (successIds.length > 0) {
-          const newSignatures = successIds.map(id => {
-            const order = ordersFromContext.find(o => o.id === id);
-            return order ? createOrderSignature({ ...order, status: 'approved' }) : null;
-          }).filter(Boolean);
-          
-          setProcessedOrderSignatures(prev => [...prev, ...newSignatures]);
-          
           await supabase
             .from('ai_orders')
             .update({ status: 'approved' })
@@ -498,16 +479,6 @@ useEffect(() => {
         
         const successIds = results.filter(r => r.success).map(r => r.id);
         const failedIds = results.filter(r => !r.success).map(r => r.id);
-        
-        // حفظ توقيعات الطلبات المحذوفة لمنع إعادة ظهورها
-        if (successIds.length > 0) {
-          const deletedSignatures = successIds.map(id => {
-            const order = ordersFromContext.find(o => o.id === id);
-            return order ? createOrderSignature({ ...order, status: 'deleted' }) : null;
-          }).filter(Boolean);
-          
-          setProcessedOrderSignatures(prev => [...prev, ...deletedSignatures]);
-        }
         
         // إضافة الطلبات الفاشلة للقائمة مرة أخرى
         if (failedIds.length > 0) {
