@@ -478,9 +478,16 @@ useEffect(() => {
         // إشعار النجاح والفشل
         if (successIds.length > 0) {
           successIds.forEach(id => {
-            try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
+            try { 
+              window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id, preventNavigation: true } })); 
+            } catch {}
           });
           toast({ title: 'تم الحذف', description: `تم حذف ${successIds.length} طلب بنجاح`, variant: 'success' });
+          
+          // إغلاق مدير الطلبات الذكية إذا لم تعد هناك طلبات
+          if (orders.length === 0 && onClose) {
+            setTimeout(() => onClose(), 500);
+          }
         }
         if (failedIds.length > 0) {
           toast({ title: 'تنبيه', description: `فشل في حذف ${failedIds.length} طلب`, variant: 'destructive' });
