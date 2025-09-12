@@ -79,7 +79,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
         // التحقق من إمكانية الموافقة التلقائية (فقط بعد تحميل التفضيلات)
         if (preferencesLoaded && autoApprovalEnabled && newOrder.status === 'pending') {
           // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة) - سيتم تعريف الدوال لاحقاً
-          setTimeout(() => {
+          setTimeout(async () => {
             const availability = availabilityOf(newOrder);
             const needsReview = orderNeedsReview(newOrder);
             
