@@ -26,6 +26,7 @@ export type Database = {
           id: string
           items: Json
           order_data: Json
+          original_text: string | null
           processed_at: string | null
           processed_by: string | null
           source: string
@@ -45,6 +46,7 @@ export type Database = {
           id?: string
           items?: Json
           order_data: Json
+          original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           source?: string
@@ -64,6 +66,7 @@ export type Database = {
           id?: string
           items?: Json
           order_data?: Json
+          original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           source?: string
@@ -3614,6 +3617,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_pending_selections: {
+        Row: {
+          chat_id: number
+          city_name: string | null
+          created_at: string
+          expires_at: string
+          options: Json
+          original_text: string | null
+          selection_type: string
+          updated_at: string
+        }
+        Insert: {
+          chat_id: number
+          city_name?: string | null
+          created_at?: string
+          expires_at: string
+          options?: Json
+          original_text?: string | null
+          selection_type?: string
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: number
+          city_name?: string | null
+          created_at?: string
+          expires_at?: string
+          options?: Json
+          original_text?: string | null
+          selection_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       telegram_processed_updates: {
         Row: {
           chat_id: number
@@ -4041,6 +4077,10 @@ export type Database = {
       cleanup_duplicate_notifications: {
         Args: { p_days_back?: number }
         Returns: Json
+      }
+      cleanup_expired_telegram_selections: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       cleanup_old_backups: {
         Args: Record<PropertyKey, never>
