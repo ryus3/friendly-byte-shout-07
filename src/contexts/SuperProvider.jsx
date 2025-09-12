@@ -1788,11 +1788,16 @@ export const SuperProvider = ({ children }) => {
 
         console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
         
-        // جلب المدن والمناطق لتحديد المعرفات الصحيحة
+        // جلب المدن والمناطق - تماماً كما في صفحة الطلب السريع
+        console.log('🌆 جلب المدن من الوسيط...');
         const citiesData = await getCities(alwaseetToken);
         const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
         
-        // تطبيع النصوص العربية للبحث
+        if (!cities.length) {
+          throw new Error('لم يتم جلب قائمة المدن من شركة التوصيل');
+        }
+        
+        // تطبيع النصوص العربية للبحث - نفس الطريقة الدقيقة من QuickOrderContent
         const normalizeArabic = (text) => {
           if (!text) return '';
           return text.toString().trim()
@@ -1802,13 +1807,37 @@ export const SuperProvider = ({ children }) => {
             .toLowerCase();
         };
         
-        // العثور على معرف المدينة
+        // استخراج المدينة والمنطقة من العنوان - نفس منطق QuickOrderContent
+        let cityToSearch = aiOrder.customer_city || '';
+        let regionToSearch = aiOrder.customer_province || '';
+        
+        // إذا لم توجد مدينة، استخرج من العنوان (أول كلمة)
+        if (!cityToSearch && aiOrder.customer_address) {
+          const addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
+          if (addressParts.length > 0) {
+            cityToSearch = addressParts[0];
+            console.log('🔍 استخراج المدينة من العنوان:', cityToSearch);
+          }
+          
+          // الكلمة الثانية كمنطقة محتملة
+          if (addressParts.length > 1 && !regionToSearch) {
+            regionToSearch = addressParts[1];
+            console.log('🔍 استخراج المنطقة من العنوان:', regionToSearch);
+          }
+        }
+        
+        // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
         let cityId = null;
         let foundCityName = '';
-        if (aiOrder.customer_city) {
-          const searchCity = normalizeArabic(aiOrder.customer_city);
+        
+        if (cityToSearch) {
+          const searchCity = normalizeArabic(cityToSearch);
+          console.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
+          
+          // مطابقة دقيقة أولاً
           let cityMatch = cities.find(city => normalizeArabic(city.name) === searchCity);
           
+          // مطابقة جزئية إذا لم نجد مطابقة دقيقة
           if (!cityMatch) {
             cityMatch = cities.find(city => 
               normalizeArabic(city.name).includes(searchCity) ||
@@ -1819,40 +1848,40 @@ export const SuperProvider = ({ children }) => {
           if (cityMatch) {
             cityId = cityMatch.id;
             foundCityName = cityMatch.name;
+            console.log('✅ تم العثور على المدينة:', { id: cityId, name: foundCityName });
           }
-          
-          console.log('🏙️ البحث عن المدينة:', { 
-            searchTerm: aiOrder.customer_city, 
-            normalized: searchCity,
-            found: foundCityName, 
-            cityId,
-            availableCities: cities.slice(0, 5).map(c => c.name)
-          });
         }
         
-        // إذا لم نجد المدينة، استخدم بغداد كافتراضي
+        // إذا لم نجد المدينة، استخدم بغداد كافتراضي (نفس منطق QuickOrderContent)
         if (!cityId) {
+          console.log('⚠️ لم يتم العثور على المدينة، البحث عن بغداد...');
           const baghdadCity = cities.find(city => normalizeArabic(city.name).includes('بغداد'));
           if (baghdadCity) {
             cityId = baghdadCity.id;
             foundCityName = baghdadCity.name;
-            console.log('⚠️ لم يتم العثور على المدينة، استخدام بغداد كافتراضي:', foundCityName);
+            console.log('✅ استخدام بغداد كافتراضي:', foundCityName);
           } else {
-            throw new Error(`لم يتم العثور على مدينة مطابقة: ${aiOrder.customer_city}. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
+            throw new Error(`لم يتم العثور على مدينة مطابقة أو بغداد. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
           }
         }
 
         // جلب المناطق للمدينة المحددة
+        console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
+        const regionsData = await getRegionsByCity(alwaseetToken, cityId);
+        const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
+        
         let regionId = null;
         let foundRegionName = '';
-        if (cityId) {
-          const regionsData = await getRegionsByCity(alwaseetToken, cityId);
-          const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
-          
-          if (aiOrder.customer_province && regions.length > 0) {
-            const searchRegion = normalizeArabic(aiOrder.customer_province);
+        
+        if (regions.length > 0) {
+          if (regionToSearch) {
+            const searchRegion = normalizeArabic(regionToSearch);
+            console.log('🔍 البحث عن المنطقة:', { original: regionToSearch, normalized: searchRegion });
+            
+            // مطابقة دقيقة أولاً
             let regionMatch = regions.find(region => normalizeArabic(region.name) === searchRegion);
             
+            // مطابقة جزئية إذا لم نجد مطابقة دقيقة
             if (!regionMatch) {
               regionMatch = regions.find(region => 
                 normalizeArabic(region.name).includes(searchRegion) ||
@@ -1863,77 +1892,102 @@ export const SuperProvider = ({ children }) => {
             if (regionMatch) {
               regionId = regionMatch.id;
               foundRegionName = regionMatch.name;
+              console.log('✅ تم العثور على المنطقة:', { id: regionId, name: foundRegionName });
             }
-            
-            console.log('🗺️ البحث عن المنطقة:', { 
-              searchTerm: aiOrder.customer_province, 
-              normalized: searchRegion,
-              found: foundRegionName, 
-              regionId,
-              availableRegions: regions.slice(0, 5).map(r => r.name)
-            });
           }
           
-          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة
-          if (!regionId && regions.length > 0) {
+          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة (نفس منطق QuickOrderContent)
+          if (!regionId) {
             regionId = regions[0].id;
             foundRegionName = regions[0].name;
-            console.log('⚠️ لم يتم العثور على المنطقة، استخدام أول منطقة متاحة:', foundRegionName);
-          }
-          
-          if (!regionId) {
-            throw new Error(`لم يتم العثور على منطقة مطابقة: ${aiOrder.customer_province}. المناطق المتاحة في ${foundCityName}: ${regions.slice(0, 10).map(r => r.name).join(', ')}`);
+            console.log('⚠️ استخدام أول منطقة متاحة:', foundRegionName);
           }
         }
-
-        // التحقق من وجود معرفات صحيحة
-        if (!cityId || !regionId) {
-          throw new Error(`لم يتم العثور على معرفات صحيحة للمدينة والمنطقة. المدينة: ${aiOrder.customer_city} (${foundCityName}), المنطقة: ${aiOrder.customer_province} (${foundRegionName})`);
+        
+        if (!regionId) {
+          throw new Error(`لم يتم العثور على أي منطقة للمدينة ${foundCityName}`);
         }
 
-        // تطبيع رقم الهاتف
+        // تطبيع رقم الهاتف - نفس الطريقة من QuickOrderContent
         const { normalizePhone } = await import('../utils/phoneUtils.js');
         const normalizedPhone = normalizePhone(aiOrder.customer_phone);
         if (!normalizedPhone) {
           throw new Error('رقم الهاتف غير صحيح');
         }
 
-        // تحديث البيانات بالمعرفات الصحيحة
+        // بناء type_name بنفس طريقة QuickOrderContent - اسم المنتج + اللون + المقاس
+        const productNames = enrichedItems.map(item => {
+          const product = products.find(p => p.id === item.product_id);
+          const variants = product?.variants || product?.product_variants || [];
+          const variant = variants.find(v => v.id === item.variant_id);
+          
+          let displayName = item.product_name;
+          const color = variant?.color || variant?.color_name || variant?.colors?.name;
+          const size = variant?.size || variant?.size_name || variant?.sizes?.name;
+          
+          // تركيب الاسم: المنتج + اللون + المقاس (تماماً كما في QuickOrderContent)
+          if (color) displayName += ` ${color}`;
+          if (size) displayName += ` ${size}`;
+          
+          return displayName;
+        });
+
+        // إعداد payload الوسيط - نفس البنية من QuickOrderContent
         const updatedPayload = {
-          ...alwaseetPayload,
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          client_name: aiOrder.customer_name || `زبون-${Date.now().toString().slice(-6)}`,
+          client_name: aiOrder.customer_name?.trim() || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
+          client_mobile2: '',
           location: aiOrder.customer_address || '',
-          type_name: enrichedItems.map(item => `${item.product_name} × ${item.quantity}`).join(' + '),
-          items_number: enrichedItems.reduce((sum, item) => sum + item.quantity, 0),
-          price: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+          type_name: productNames.join(' + '), // أسماء المنتجات كاملة مع الألوان والمقاسات
+          items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
+          price: enrichedItems.reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0),
           package_size: 1,
-          merchant_notes: `طلب من ${aiOrder.source || 'التليغرام'}`,
+          merchant_notes: `طلب من ${aiOrder.source || 'التليغرام'}${aiOrder.order_data?.note ? ` - ${aiOrder.order_data.note}` : ''}`,
           replacement: 0
         };
 
-        console.log('📋 بيانات الطلب المحدثة للوسيط:', updatedPayload);
+        console.log('📋 إرسال البيانات للوسيط:', updatedPayload);
 
-        // إنشاء الطلب في الوسيط
+        // إنشاء الطلب في الوسيط - تماماً كما في QuickOrderContent
         const alwaseetResult = await createAlWaseetOrder(updatedPayload, alwaseetToken);
         
-        if (!alwaseetResult?.qr_id) {
-          return { success: false, error: 'فشل في إنشاء الطلب لدى شركة التوصيل - لم يتم استلام رقم التتبع' };
+        console.log('📦 استجابة الوسيط:', alwaseetResult);
+        
+        // معالجة qr_id مع fallback - نفس منطق QuickOrderContent
+        let qrId = alwaseetResult?.qr_id;
+        
+        // إذا لم نحصل على qr_id، حاول استخراجه من استجابة أخرى
+        if (!qrId && alwaseetResult?.id) {
+          console.log('⚠️ لم نحصل على qr_id، محاولة fallback...');
+          try {
+            // استخدام getOrderByQR أو أي API آخر للحصول على qr_id
+            const { getOrderByQR } = await import('../lib/alwaseet-api.js');
+            const orderDetails = await getOrderByQR(alwaseetToken, alwaseetResult.id);
+            qrId = orderDetails?.qr_id || orderDetails?.tracking_number || alwaseetResult.id;
+            console.log('✅ تم استخراج qr_id من fallback:', qrId);
+          } catch (fallbackError) {
+            console.warn('⚠️ فشل fallback، استخدام ID كـ qr_id:', alwaseetResult.id);
+            qrId = alwaseetResult.id;
+          }
+        }
+        
+        if (!qrId) {
+          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل');
         }
 
-        console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alwaseetResult);
+        console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
         // إنشاء الطلب المحلي مع ربطه بالوسيط
-        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, orderId, {
+        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, qrId, {
           delivery_partner: 'alwaseet',
-          delivery_partner_order_id: String(alwaseetResult.id || alwaseetResult.qr_id),
-          qr_id: alwaseetResult.qr_id,
-          tracking_number: alwaseetResult.qr_id,
-          delivery_account_used: selectedAccount,
-          alwaseet_city_id: cityId,
-          alwaseet_region_id: regionId
+          delivery_partner_order_id: String(alwaseetResult.id || qrId),
+          qr_id: qrId,
+          tracking_number: qrId,
+          delivery_account_used: actualAccount,
+          alwaseet_city_id: parseInt(cityId),
+          alwaseet_region_id: parseInt(regionId)
         });
         } catch (err) {
           console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);

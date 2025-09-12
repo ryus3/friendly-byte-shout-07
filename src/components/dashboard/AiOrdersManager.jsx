@@ -394,6 +394,21 @@ useEffect(() => {
     
     // التحقق من صحة الوجهة والحساب قبل الموافقة
     if (action === 'approve') {
+      // فحص إذا كانت هناك طلبات تليغرام والوجهة شركة توصيل بدون حساب محدد
+      const hasTelegramOrders = selectedOrders.some(orderId => {
+        const order = orders.find(o => o.id === orderId);
+        return order?.source === 'telegram' || order?.order_data?.source === 'telegram';
+      });
+      
+      if (hasTelegramOrders && orderDestination?.destination !== 'local' && !orderDestination?.account) {
+        toast({
+          title: "حساب التوصيل مطلوب",
+          description: "طلبات التليغرام تتطلب تحديد حساب شركة التوصيل في إعدادات الوجهة",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       if (orderDestination.destination !== 'local' && !orderDestination.account) {
         toast({
           title: "خطأ في الإعدادات",

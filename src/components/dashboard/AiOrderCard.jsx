@@ -62,7 +62,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
       case 'telegram':
         return {
           icon: Send, // أيقونة مختلفة للتليغرام
-          label: 'تليغرام (توصيل فقط)'
+          label: 'تليغرام'
         };
       case 'ai_chat':
         return {
@@ -381,12 +381,6 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
               <div>
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-sm">{getSourceIcon(order.source).label}</h4>
-                  {/* مؤشر خاص للطلبات من التليغرام */}
-                  {(order.source === 'telegram' || order.order_data?.source === 'telegram') && (
-                    <div className="px-1.5 py-0.5 bg-blue-500/80 rounded text-[10px] font-medium">
-                      توصيل فقط
-                    </div>
-                  )}
                 </div>
                 <p className="text-xs opacity-90">بواسطة: {createdByName}</p>
               </div>
