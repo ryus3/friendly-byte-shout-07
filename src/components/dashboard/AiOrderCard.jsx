@@ -29,7 +29,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-const AiOrderCard = ({ order, isSelected, onSelect }) => {
+const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
@@ -500,8 +500,31 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
                       
                       try {
-                        // استخدام الوجهة الافتراضية المحفوظة في التفضيلات
-                        const res = await approveAiOrder?.(order.id, 'local', null);
+                        // تحقق من صحة الوجهة
+                        if (!orderDestination) {
+                          toast({
+                            title: "خطأ",
+                            description: 'لم يتم تحديد وجهة الطلب',
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+
+                        // تحقق من وجود حساب محدد للشركات غير المحلية
+                        if (orderDestination.destination !== 'local' && !orderDestination.account) {
+                          toast({
+                            title: "خطأ",
+                            description: 'يجب تحديد حساب شركة التوصيل قبل الموافقة',
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+
+                        const res = await approveAiOrder?.(
+                          order.id, 
+                          orderDestination.destination, 
+                          orderDestination.account
+                        );
                         if (res?.success) {
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                           toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });

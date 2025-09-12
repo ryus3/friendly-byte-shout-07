@@ -65,15 +65,19 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           return [newOrder, ...prev];
         });
 
-        // التحقق من إمكانية الموافقة التلقائية
-        if (autoApprovalEnabled && newOrder.status === 'pending') {
+        // التحقق من إمكانية الموافقة التلقائية (فقط بعد تحميل التفضيلات)
+        if (preferencesLoaded && autoApprovalEnabled && newOrder.status === 'pending') {
           // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة)
           const availability = availabilityOf(newOrder);
           const needsReview = orderNeedsReview(newOrder);
           
-          if (availability === 'available' && !needsReview) {
+          // تحقق من صحة الوجهة المحددة
+          const canAutoApprove = availability === 'available' && !needsReview && 
+            (orderDestination.destination === 'local' || orderDestination.account);
+          
+          if (canAutoApprove) {
             try {
-              console.log('Auto-approving order:', newOrder.id);
+              console.log('Auto-approving order:', newOrder.id, { destination: orderDestination.destination, account: orderDestination.account });
               const result = await approveAiOrder?.(
                 newOrder.id, 
                 orderDestination.destination, 
@@ -122,7 +126,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
     };
-  }, []);
+  }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder, availabilityOf, orderNeedsReview]);
   
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [statFilter, setStatFilter] = useState('all'); // all | needs_review | telegram | ai_chat | store | pending
@@ -173,28 +177,40 @@ useEffect(() => {
     account: '',
     partnerName: 'local'
   });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
 
-  // تحميل إعدادات الموافقة التلقائية
+  // تحميل إعدادات المستخدم (الوجهة والموافقة التلقائية)
   useEffect(() => {
-    const loadAutoApprovalSetting = async () => {
+    const loadUserPreferences = async () => {
       if (!user?.user_id) return;
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('auto_approval_enabled')
+          .select('auto_approval_enabled, order_destination, selected_delivery_account')
           .eq('user_id', user.user_id)
           .single();
+        
         if (data) {
           setAutoApprovalEnabled(data.auto_approval_enabled || false);
+          
+          if (data.order_destination && data.order_destination !== 'local') {
+            setOrderDestination({
+              destination: data.order_destination,
+              account: data.selected_delivery_account || '',
+              partnerName: data.order_destination
+            });
+          }
         }
       } catch (error) {
-        console.error('خطأ في تحميل إعدادات الموافقة التلقائية:', error);
+        console.error('خطأ في تحميل إعدادات المستخدم:', error);
+      } finally {
+        setPreferencesLoaded(true);
       }
     };
-    loadAutoApprovalSetting();
+    loadUserPreferences();
   }, [user?.user_id]);
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
@@ -800,6 +816,7 @@ useEffect(() => {
                       order={order}
                       isSelected={selectedOrders.includes(order.id) || (highlightId && order.id === highlightId)}
                       onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                      orderDestination={orderDestination}
                     />
                   ))
                 )}

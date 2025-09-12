@@ -1729,6 +1729,15 @@ export const SuperProvider = ({ children }) => {
           return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
         }
 
+        // إثراء العناصر بأسماء المنتجات الفعلية
+        const enrichedItems = normalizedItems.map(item => {
+          const product = products.find(p => p.id === item.product_id);
+          return {
+            ...item,
+            product_name: product?.name || 'منتج غير معروف'
+          };
+        });
+
         // إنشاء payload للوسيط
         const alwaseetPayload = {
           customer_name: aiOrder.customer_name,
@@ -1737,12 +1746,12 @@ export const SuperProvider = ({ children }) => {
           customer_city: aiOrder.customer_city,
           customer_province: aiOrder.customer_province,
           notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || '',
-          items: normalizedItems.map(item => ({
-            product_name: item.product_name || 'منتج',
+          items: enrichedItems.map(item => ({
+            product_name: item.product_name,
             quantity: item.quantity,
             price: item.unit_price
           })),
-          total_amount: normalizedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+          total_amount: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
         };
 
         console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
@@ -1767,11 +1776,9 @@ export const SuperProvider = ({ children }) => {
           });
         }
         
-        // إذا لم نجد المدينة، استخدم بغداد كافتراضي
+        // إذا لم نجد المدينة، فشل الطلب
         if (!cityId) {
-          const baghdadCity = cities.find(city => city.name === 'بغداد');
-          cityId = baghdadCity?.id || 1;
-          console.log('⚠️ استخدام بغداد كمدينة افتراضية:', cityId);
+          throw new Error(`لم يتم العثور على مدينة مطابقة: ${aiOrder.customer_city}. المدن المتاحة: ${cities.map(c => c.name).join(', ')}`);
         }
 
         // جلب المناطق للمدينة المحددة
@@ -1794,10 +1801,9 @@ export const SuperProvider = ({ children }) => {
             });
           }
           
-          // إذا لم نجد المنطقة، استخدم الأولى كافتراضي
-          if (!regionId && regions.length > 0) {
-            regionId = regions[0].id;
-            console.log('⚠️ استخدام المنطقة الافتراضية:', regions[0].name, regionId);
+          // إذا لم نجد المنطقة، فشل الطلب
+          if (!regionId) {
+            throw new Error(`لم يتم العثور على منطقة مطابقة: ${aiOrder.customer_province}. المناطق المتاحة في ${cities.find(c => c.id === cityId)?.name}: ${regions.map(r => r.name).join(', ')}`);
           }
         }
 
@@ -1821,9 +1827,9 @@ export const SuperProvider = ({ children }) => {
           client_name: aiOrder.customer_name || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
           location: aiOrder.customer_address || '',
-          type_name: normalizedItems.map(item => `${item.product_name || 'منتج'} × ${item.quantity}`).join(' + '),
-          items_number: normalizedItems.reduce((sum, item) => sum + item.quantity, 0),
-          price: normalizedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+          type_name: enrichedItems.map(item => `${item.product_name} × ${item.quantity}`).join(' + '),
+          items_number: enrichedItems.reduce((sum, item) => sum + item.quantity, 0),
+          price: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
           package_size: 1,
           merchant_notes: `طلب من ${aiOrder.source || 'التليغرام'}`,
           replacement: 0
@@ -1841,7 +1847,7 @@ export const SuperProvider = ({ children }) => {
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alwaseetResult);
 
         // إنشاء الطلب المحلي مع ربطه بالوسيط
-        return await createLocalOrderWithDeliveryPartner(aiOrder, normalizedItems, orderId, {
+        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, orderId, {
           delivery_partner: 'alwaseet',
           delivery_partner_order_id: String(alwaseetResult.id || alwaseetResult.qr_id),
           qr_id: alwaseetResult.qr_id,
