@@ -94,9 +94,15 @@ const EmployeeFollowUpPage = () => {
     return initialSelectedOrders;
   });
 
-  // سيتم تعريف دوال المزامنة (syncEmployeeOrders, syncAllEmployeesOrders, syncVisibleOrders) بعد تعريف filteredOrders لتجنب مشاكل التهيئة
-  
-  // تم نقل منطق المزامنة التلقائية بعد تعريف filteredOrders لتجنب أخطاء التهيئة
+  // State variables
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('orders');
+  const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
+  const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
+    localStorage.getItem('last-comprehensive-sync')
+  );
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -324,6 +330,88 @@ const filteredOrders = useMemo(() => {
   
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+
+// تعريف دوال المزامنة بعد تعريف filteredOrders لتجنب مشاكل التهيئة
+const syncEmployeeOrders = useCallback(async (employeeId, employeeName) => {
+  const result = await syncSpecificEmployee(employeeId, employeeName);
+  if (result.success) {
+    await refreshOrders();
+  }
+}, [syncSpecificEmployee, refreshOrders]);
+
+const syncAllEmployeesOrders = useCallback(async () => {
+  if (!isAdmin) return;
+  
+  const currentFilteredOrders = filteredOrders || [];
+  
+  toast({
+    title: "بدء المزامنة الشاملة",
+    description: `مزامنة ${currentFilteredOrders.length} طلب مرئي والفواتير الجديدة...`,
+    variant: "default"
+  });
+  
+  try {
+    const result = await comprehensiveSync(currentFilteredOrders, syncVisibleOrdersBatch);
+    if (result.success) {
+      await refreshOrders();
+      const syncTime = new Date().toISOString();
+      localStorage.setItem('last-comprehensive-sync', syncTime);
+      setLastComprehensiveSync(syncTime);
+    }
+  } catch (error) {
+    console.error('خطأ في المزامنة الشاملة:', error);
+    toast({
+      title: "خطأ في المزامنة الشاملة",
+      description: error.message,
+      variant: "destructive"
+    });
+  }
+}, [isAdmin, filteredOrders, comprehensiveSync, syncVisibleOrdersBatch, refreshOrders]);
+
+const syncVisibleOrders = useCallback(async () => {
+  const currentFilteredOrders = filteredOrders || [];
+  
+  if (currentFilteredOrders.length === 0) {
+    toast({
+      title: "لا توجد طلبات",
+      description: "لا توجد طلبات مرئية للمزامنة",
+      variant: "default"
+    });
+    return;
+  }
+
+  toast({
+    title: "بدء المزامنة الذكية",
+    description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
+    variant: "default"
+  });
+
+  try {
+    const result = await syncVisibleOrdersBatch(currentFilteredOrders);
+
+    if (result.success) {
+      await refreshOrders();
+      toast({
+        title: "تمت المزامنة بنجاح",
+        description: `تم تحديث ${result.data?.orders_updated || 0} طلب من ${currentFilteredOrders.length} طلب مرئي`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "خطأ في المزامنة",
+        description: result.error || "حدث خطأ غير متوقع",
+        variant: "destructive"
+      });
+    }
+  } catch (error) {
+    console.error('خطأ في مزامنة الطلبات المرئية:', error);
+    toast({
+      title: "خطأ في المزامنة",
+      description: error.message,
+      variant: "destructive"
+    });
+  }
+}, [filteredOrders, syncVisibleOrdersBatch, refreshOrders]);
 
 // تعريف المزامنة التلقائية بعد تعريف filteredOrders لتجنب مشاكل التهيئة
 const autoSyncVisibleOrders = useCallback(async () => {
