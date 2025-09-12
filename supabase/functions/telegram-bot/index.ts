@@ -334,7 +334,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     let items = [];
     let totalPrice = 0;
     let hasCustomPrice = false;
-    let deliveryType = 'توصيل'; // افتراضي: توصيل
+    let deliveryType = 'توصيل'; // طلبات التليغرام توصيل فقط
     let orderNotes = '';
     
     // الحصول على معلومات الموظف والإعدادات الافتراضية
@@ -390,14 +390,10 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       const line = lines[i].trim();
       const lowerLine = line.toLowerCase();
       
-      // التحقق من نوع التسليم
-      if (lowerLine.includes('محلي') || lowerLine.includes('تسليم محلي') || lowerLine.includes('استلام محلي')) {
-        deliveryType = 'محلي';
-        continue;
-      }
-      
-      if (lowerLine.includes('توصيل') || lowerLine.includes('شحن') || lowerLine.includes('ديليفري')) {
-        deliveryType = 'توصيل';
+      // طلبات التليغرام توصيل فقط - تجاهل تحليل نوع التسليم
+      if (lowerLine.includes('محلي') || lowerLine.includes('تسليم محلي') || lowerLine.includes('استلام محلي') ||
+          lowerLine.includes('توصيل') || lowerLine.includes('شحن') || lowerLine.includes('ديليفري')) {
+        // تجاهل هذه الكلمات - طلبات التليغرام توصيل فقط
         continue;
       }
       
@@ -729,16 +725,17 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
-    // إنشاء الطلب الذكي
+    // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
     const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
       p_order_data: {
         original_text: text,
         processed_at: new Date().toISOString(),
         telegram_user_id: chatId,
         employee_code: employeeCode,
-        delivery_type: deliveryType,
+        delivery_type: 'توصيل', // فرض التوصيل لجميع طلبات التليغرام
         parsing_method: 'advanced_v2',
-        items_count: items.length
+        items_count: items.length,
+        source: 'telegram' // إضافة مصدر الطلب
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,

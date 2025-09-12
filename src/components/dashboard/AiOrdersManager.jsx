@@ -761,14 +761,29 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* مكون اختيار وجهة الطلبات */}
-                  <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                    <AiOrderDestinationSelector 
-                      value={orderDestination}
-                      onChange={setOrderDestination}
-                      className="max-w-md"
-                    />
-                  </div>
+                  {/* مكون اختيار وجهة الطلبات - مخفي للطلبات من التليغرام */}
+                  {filteredOrders.some(order => order.source !== 'telegram' && order.order_data?.source !== 'telegram') && (
+                    <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                      <AiOrderDestinationSelector 
+                        value={orderDestination}
+                        onChange={setOrderDestination}
+                        className="max-w-md"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* رسالة للطلبات من التليغرام */}
+                  {filteredOrders.some(order => order.source === 'telegram' || order.order_data?.source === 'telegram') && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
+                      <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                        <Send className="w-4 h-4" />
+                        <span className="text-sm font-medium">طلبات التليغرام توصيل فقط</span>
+                      </div>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        جميع الطلبات الواردة من التليغرام سيتم توجيهها تلقائياً لشركة التوصيل المحددة في إعداداتك
+                      </p>
+                    </div>
+                  )}
 
                   {filteredOrders.length > 0 && (
                     <>
