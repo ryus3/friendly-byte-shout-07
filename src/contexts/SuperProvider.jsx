@@ -16,7 +16,6 @@ import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
-import { useDeliveryOrderHandler } from './SuperProvider_DeliveryOrderHandler';
 
 const SuperContext = createContext();
 
@@ -107,9 +106,6 @@ export const SuperProvider = ({ children }) => {
     setActivePartner,
     hasValidToken 
   } = useAlWaseet();
-  
-  // استدعاء useDeliveryOrderHandler
-  const { handleDeliveryPartnerOrder } = useDeliveryOrderHandler();
   
   // استدعاء useProducts في المكان الصحيح
   const {
@@ -1624,157 +1620,50 @@ export const SuperProvider = ({ children }) => {
     return '91484496-b887-44f7-9e5d-be9db5567604';
   }, [user]);
 
-  // معالجة الطلب المحلي
-  const handleLocalOrder = useCallback(async (aiOrder, itemsInput) => {
-    try {
-      console.log('🏠 بدء معالجة الطلب المحلي');
-
-      // تحويل بيانات الطلب الذكي إلى صيغة createOrder
-      const customerInfo = {
-        customer_name: aiOrder.customer_name,
-        customer_phone: aiOrder.customer_phone,
-        customer_address: aiOrder.customer_address,
-        customer_city: aiOrder.customer_city,
-        customer_province: aiOrder.customer_province,
-        delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
-      };
-
-      // تحويل العناصر إلى صيغة cart
-      const cart = itemsInput.map(item => ({
-        id: item.product_id || `temp-${Date.now()}-${Math.random()}`,
-        product_id: item.product_id,
-        variant_id: item.variant_id,
-        name: item.product_name || item.name,
-        color: item.color,
-        size: item.size,
-        quantity: Number(item.quantity || 1),
-        price: Number(item.unit_price || item.price || 0),
-        total: Number(item.quantity || 1) * Number(item.unit_price || item.price || 0)
-      }));
-
-      // إنشاء طلب محلي
-      const result = await createOrder(customerInfo, cart, 0, {
-        source: aiOrder.source || 'ai',
-        delivery_partner: 'محلي',
-        created_by: resolveCurrentUserUUID()
-      });
-
-      if (result.success) {
-        console.log('✅ تم إنشاء الطلب المحلي بنجاح:', result.orderId);
-        return {
-          success: true,
-          orderId: result.orderId,
-          method: 'local'
-        };
-      } else {
-        throw new Error(result.error || 'فشل في إنشاء الطلب المحلي');
-      }
-    } catch (error) {
-      console.error('❌ فشل في معالجة الطلب المحلي:', error);
-      return {
-        success: false,
-        error: error.message || 'فشل في إنشاء الطلب المحلي'
-      };
-    }
-  }, [resolveCurrentUserUUID, createOrder]);
-
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
-    console.log('🎯 بدء الموافقة على الطلب الذكي:', { orderId, destination, selectedAccount });
-    
     try {
-      // جلب الطلب الذكي
-      const { data: aiOrder, error: fetchError } = await supabase
+      console.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
+      
+      // التأكد من وجود مستخدم صالح
+      const createdBy = resolveCurrentUserUUID();
+      console.log('👤 معرف المستخدم المستخدم:', createdBy);
+      
+      // 1) جلب الطلب الذكي
+      const { data: aiOrder, error: aiErr } = await supabase
         .from('ai_orders')
         .select('*')
         .eq('id', orderId)
-        .single();
+        .maybeSingle();
+      if (aiErr) throw aiErr;
+      if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
 
-      if (fetchError) {
-        console.error('❌ خطأ في جلب الطلب الذكي:', fetchError);
-        return { success: false, error: 'فشل في جلب الطلب الذكي' };
-      }
-
-      if (!aiOrder) {
-        console.error('❌ الطلب الذكي غير موجود:', orderId);
-        return { success: false, error: 'الطلب غير موجود' };
-      }
-
-      console.log('✅ تم جلب الطلب الذكي:', aiOrder);
-
-      // تحليل العناصر
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
-      
-      if (itemsInput.length === 0) {
-        console.error('❌ لا توجد عناصر في الطلب الذكي');
-        return { success: false, error: 'لا توجد عناصر في الطلب' };
-      }
+      if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
 
-      console.log('📦 عناصر الطلب:', itemsInput);
-
-      // التحقق من الوجهة والمعالجة المناسبة
-      if (destination === 'local') {
-        console.log('🏠 إنشاء طلب محلي');
+      // إذا كان الوجهة شركة توصيل، استخدم AlWaseet مباشرة
+      if (destination !== 'local') {
+        console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
         
-        // معالجة محلية
-        const result = await handleLocalOrder(aiOrder, itemsInput);
-        
-        if (result.success) {
-          // حذف الطلب الذكي بعد النجاح
-          const { error: delErr } = await supabase
-            .from('ai_orders')
-            .delete()
-            .eq('id', orderId);
-          
-          if (delErr) {
-            console.warn('⚠️ تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+        // تفعيل الحساب المحدد وانتظار النتيجة
+        try {
+          console.log('🔄 تفعيل حساب التوصيل:', selectedAccount);
+          const accountActivated = await activateAccount(selectedAccount);
+          if (!accountActivated) {
+            throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
           }
-
-          console.log('✅ تم تحويل الطلب الذكي بنجاح - محلي:', result.orderId);
+          console.log('✅ تم تفعيل حساب التوصيل بنجاح');
           
-          return {
-            success: true,
-            orderId: result.orderId,
-            method: 'local'
-          };
-        } else {
-          throw new Error(result.error || 'فشل في إنشاء الطلب المحلي');
-        }
-      } else {
-        console.log('🚚 إنشاء طلب شركة توصيل:', destination);
-        
-        // التحقق من وجود الحساب إذا كانت الوجهة ليست محلية
-        if (!selectedAccount) {
-          console.error('❌ لم يتم تحديد حساب شركة التوصيل');
-          return { success: false, error: 'يجب تحديد حساب شركة التوصيل' };
-        }
-        
-        // معالجة شركة التوصيل
-        const result = await handleDeliveryPartnerOrder(aiOrder, itemsInput, destination, selectedAccount);
-        
-        if (result.success) {
-          console.log('✅ تم تحويل الطلب الذكي بنجاح - شركة توصيل:', {
-            orderId: result.orderId,
-            trackingNumber: result.trackingNumber,
-            partner: destination,
-            account: selectedAccount
-          });
+          // انتظار قصير للتأكد من تحديث التوكن
+          await new Promise(resolve => setTimeout(resolve, 500));
           
-          return result;
-        } else {
-          throw new Error(result.error || 'فشل في إنشاء الطلب عبر شركة التوصيل');
-        }
-      }
-    } catch (error) {
-      console.error('❌ فشل في معالجة الطلب الذكي:', error);
-      return {
-        success: false,
-        error: error.message || 'فشل في معالجة الطلب الذكي'
-      };
-    }
-  }, [handleLocalOrder, handleDeliveryPartnerOrder, resolveCurrentUserUUID]);
-
-  // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
+          // التحقق من وجود توكن صالح
+          if (!alwaseetToken) {
+            throw new Error('لا يوجد توكن صالح لشركة التوصيل بعد التفعيل');
+          }
+          console.log('✅ توكن صالح متوفر');
+          
+          setActivePartner('alwaseet');
           
           // مطابقة العناصر مع المنتجات الموجودة
           const products = Array.isArray(allData.products) ? allData.products : [];
