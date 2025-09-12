@@ -326,17 +326,15 @@ const OrderCard = ({
               )}
               
                <div className="flex items-center gap-3">
+                 {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
+                   <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
+                     ({order.delivery_account_used.toUpperCase()})
+                   </Badge>
+                 )}
                  <div className="text-right" dir="ltr">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
-                        {order.tracking_number || order.order_number}
-                      </h3>
-                      {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
-                        <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
-                          ({order.delivery_account_used.toUpperCase()})
-                        </Badge>
-                      )}
-                    </div>
+                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                      {order.tracking_number || order.order_number}
+                    </h3>
                  </div>
                 <Checkbox
                   checked={isSelected}
