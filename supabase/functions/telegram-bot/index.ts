@@ -461,13 +461,48 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       }
       
       // التحقق من العنوان (كلمات تدل على المكان)
-      if (lowerLine.includes('بغداد') || lowerLine.includes('البصرة') || lowerLine.includes('منطقة') || 
-          lowerLine.includes('شارع') || lowerLine.includes('حي') || lowerLine.includes('محافظة') ||
+      const cityVariants = {
+        'بغداد': ['بغداد', 'baghdad', 'بكداد'],
+        'البصرة': ['بصرة', 'بصره', 'البصرة', 'البصره', 'basra', 'basrah'],
+        'أربيل': ['أربيل', 'اربيل', 'erbil', 'hawler'],
+        'الموصل': ['موصل', 'الموصل', 'mosul'],
+        'كربلاء': ['كربلاء', 'كربلا', 'karbala'],
+        'النجف': ['نجف', 'النجف', 'najaf'],
+        'بابل': ['بابل', 'الحلة', 'babel', 'hilla'],
+        'ذي قار': ['ذي قار', 'ذيقار', 'الناصرية', 'nasiriyah'],
+        'ديالى': ['ديالى', 'ديالا', 'بعقوبة', 'diyala'],
+        'الأنبار': ['انبار', 'الانبار', 'الأنبار', 'الرمادي', 'anbar'],
+        'صلاح الدين': ['صلاح الدين', 'تكريت', 'tikrit'],
+        'واسط': ['واسط', 'الكوت', 'wasit'],
+        'المثنى': ['مثنى', 'المثنى', 'السماوة', 'samawah'],
+        'القادسية': ['قادسية', 'القادسية', 'الديوانية', 'diwaniyah'],
+        'كركوك': ['كركوك', 'kirkuk'],
+        'دهوك': ['دهوك', 'duhok'],
+        'السليمانية': ['سليمانية', 'السليمانية', 'sulaymaniyah'],
+        'ميسان': ['ميسان', 'العمارة', 'maysan']
+      };
+      
+      let foundCity = false;
+      for (const [city, variants] of Object.entries(cityVariants)) {
+        for (const variant of variants) {
+          if (lowerLine.includes(variant)) {
+            customerAddress = line;
+            deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
+            foundCity = true;
+            break;
+          }
+        }
+        if (foundCity) break;
+      }
+      
+      // كلمات أخرى تدل على العنوان
+      if (!foundCity && (lowerLine.includes('منطقة') || lowerLine.includes('شارع') || lowerLine.includes('حي') ||
+          lowerLine.includes('محافظة') || lowerLine.includes('قضاء') || lowerLine.includes('ناحية') ||
           lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
-          lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة')) {
+          lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة'))) {
         customerAddress = line;
         deliveryType = 'توصيل';
-        continue;
+        foundCity = true;
       }
       
       if (foundCity) continue;

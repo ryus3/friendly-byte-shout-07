@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -46,11 +46,11 @@ const EmployeeFollowUpPage = () => {
     syncSpecificEmployee, 
     syncSpecificEmployeeSmart,
     comprehensiveSync, 
-    syncOrdersOnly,
-    syncVisibleOrdersBatch
+    syncOrdersOnly 
   } = useSmartSync();
   
-  // سيتم تعريف autoSyncVisibleOrders بعد تعريف filteredOrders لتجنب مشاكل التهيئة المتغيرة
+  const { syncVisibleOrdersBatch } = useAlWaseet();
+  const { autoSyncVisibleOrders } = useUnifiedAutoSync();
   
   const { 
     orders, 
@@ -94,15 +94,107 @@ const EmployeeFollowUpPage = () => {
     return initialSelectedOrders;
   });
 
-  // State variables
+  // ربط الدوال بالواجهة القديمة
+  const syncEmployeeOrders = async (employeeId, employeeName) => {
+    const result = await syncSpecificEmployee(employeeId, employeeName);
+    if (result.success) {
+      await refreshOrders();
+    }
+  };
+
+  const syncAllEmployeesOrders = async () => {
+    if (!isAdmin) return;
+    
+    // الحصول على الطلبات المرئية الحالية
+    const currentFilteredOrders = filteredOrders || [];
+    
+    toast({
+      title: "بدء المزامنة الشاملة",
+      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي والفواتير الجديدة...`,
+      variant: "default"
+    });
+    
+    try {
+      // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
+      const result = await comprehensiveSync(currentFilteredOrders, syncVisibleOrdersBatch);
+      if (result.success) {
+        await refreshOrders();
+        const syncTime = new Date().toISOString();
+        localStorage.setItem('last-comprehensive-sync', syncTime);
+        setLastComprehensiveSync(syncTime);
+      }
+    } catch (error) {
+      console.error('خطأ في المزامنة الشاملة:', error);
+      toast({
+        title: "خطأ في المزامنة الشاملة",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // دالة مزامنة الطلبات المرئية الجديدة - سريعة وذكية
+  const syncVisibleOrders = async () => {
+    const currentFilteredOrders = filteredOrders || [];
+    
+    if (currentFilteredOrders.length === 0) {
+      toast({
+        title: "لا توجد طلبات",
+        description: "لا توجد طلبات مرئية للمزامنة",
+        variant: "default"
+      });
+      return;
+    }
+
+    toast({
+      title: "بدء المزامنة الذكية",
+      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
+      variant: "default"
+    });
+
+    try {
+      const result = await syncVisibleOrdersBatch(currentFilteredOrders, (progress) => {
+        console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
+      });
+
+      if (result.success) {
+        await refreshOrders();
+        toast({
+          title: "تمت المزامنة بنجاح",
+          description: `تم تحديث ${result.updatedCount} طلب من ${currentFilteredOrders.length} طلب مرئي`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "خطأ في المزامنة",
+          description: result.error || "حدث خطأ غير متوقع",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('خطأ في مزامنة الطلبات المرئية:', error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
   const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
+  // إزالة الحالة القديمة - استخدام النظام الجديد
   const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
     localStorage.getItem('last-comprehensive-sync')
   );
+  
+  // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - سيتم تحريكها بعد تعريف filteredOrders
+
+  // إزالة المزامنة التلقائية المزعجة عند فتح الصفحة
+  // سيتم الاعتماد على المزامنة اليدوية والمجدولة فقط
+  // فواتير المدير لها مكان منفصل ولا تظهر في متابعة الموظفين
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -330,110 +422,6 @@ const filteredOrders = useMemo(() => {
   
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
-
-// تعريف دوال المزامنة بعد تعريف filteredOrders لتجنب مشاكل التهيئة
-const syncEmployeeOrders = useCallback(async (employeeId, employeeName) => {
-  const result = await syncSpecificEmployee(employeeId, employeeName);
-  if (result.success) {
-    await refreshOrders();
-  }
-}, [syncSpecificEmployee, refreshOrders]);
-
-const syncAllEmployeesOrders = useCallback(async () => {
-  if (!isAdmin) return;
-  
-  const currentFilteredOrders = filteredOrders || [];
-  
-  toast({
-    title: "بدء المزامنة الشاملة",
-    description: `مزامنة ${currentFilteredOrders.length} طلب مرئي والفواتير الجديدة...`,
-    variant: "default"
-  });
-  
-  try {
-    const result = await comprehensiveSync(currentFilteredOrders, syncVisibleOrdersBatch);
-    if (result.success) {
-      await refreshOrders();
-      const syncTime = new Date().toISOString();
-      localStorage.setItem('last-comprehensive-sync', syncTime);
-      setLastComprehensiveSync(syncTime);
-    }
-  } catch (error) {
-    console.error('خطأ في المزامنة الشاملة:', error);
-    toast({
-      title: "خطأ في المزامنة الشاملة",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-}, [isAdmin, filteredOrders, comprehensiveSync, syncVisibleOrdersBatch, refreshOrders]);
-
-const syncVisibleOrders = useCallback(async () => {
-  const currentFilteredOrders = filteredOrders || [];
-  
-  if (currentFilteredOrders.length === 0) {
-    toast({
-      title: "لا توجد طلبات",
-      description: "لا توجد طلبات مرئية للمزامنة",
-      variant: "default"
-    });
-    return;
-  }
-
-  toast({
-    title: "بدء المزامنة الذكية",
-    description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
-    variant: "default"
-  });
-
-  try {
-    const result = await syncVisibleOrdersBatch(currentFilteredOrders);
-
-    if (result.success) {
-      await refreshOrders();
-      toast({
-        title: "تمت المزامنة بنجاح",
-        description: `تم تحديث ${result.data?.orders_updated || 0} طلب من ${currentFilteredOrders.length} طلب مرئي`,
-        variant: "default"
-      });
-    } else {
-      toast({
-        title: "خطأ في المزامنة",
-        description: result.error || "حدث خطأ غير متوقع",
-        variant: "destructive"
-      });
-    }
-  } catch (error) {
-    console.error('خطأ في مزامنة الطلبات المرئية:', error);
-    toast({
-      title: "خطأ في المزامنة",
-      description: error.message,
-      variant: "destructive"
-    });
-  }
-}, [filteredOrders, syncVisibleOrdersBatch, refreshOrders]);
-
-// تعريف المزامنة التلقائية بعد تعريف filteredOrders لتجنب مشاكل التهيئة
-const autoSyncVisibleOrders = useCallback(async () => {
-  if (!Array.isArray(filteredOrders) || filteredOrders.length === 0) {
-    console.log('⏭️ تجاهل المزامنة - لا توجد طلبات مرئية');
-    return;
-  }
-  console.log(`🔄 بدء المزامنة التلقائية للطلبات المرئية: ${filteredOrders.length} طلب`);
-  try {
-    await syncVisibleOrdersBatch(filteredOrders, false);
-  } catch (error) {
-    console.error('خطأ في المزامنة التلقائية:', error);
-  }
-}, [filteredOrders, syncVisibleOrdersBatch]);
-
-// تشغيل المزامنة التلقائية عند توفر طلبات مرئية
-useEffect(() => {
-  if (filteredOrders && Array.isArray(filteredOrders) && filteredOrders.length > 0) {
-    console.log('🔄 بدء المزامنة التلقائية للطلبات المرئية...');
-    autoSyncVisibleOrders();
-  }
-}, [filteredOrders, autoSyncVisibleOrders]);
 
 // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - مع منع التكرار
 const hasSentSyncSignal = useRef(false);
