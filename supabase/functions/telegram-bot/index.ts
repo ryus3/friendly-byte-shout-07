@@ -462,16 +462,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       
       // التحقق من العنوان (كلمات تدل على المكان)
       if (lowerLine.includes('بغداد') || lowerLine.includes('البصرة') || lowerLine.includes('منطقة') || 
-          lowerLine.includes('شارع') || lowerLine.includes('حي') || lowerLine.includes('محافظة')) {
+          lowerLine.includes('شارع') || lowerLine.includes('حي') || lowerLine.includes('محافظة') ||
+          lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
+          lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة')) {
         customerAddress = line;
         deliveryType = 'توصيل';
         continue;
-      }
-          lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
-          lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة'))) {
-        customerAddress = line;
-        deliveryType = 'توصيل';
-        foundCity = true;
       }
       
       if (foundCity) continue;
