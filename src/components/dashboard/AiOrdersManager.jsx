@@ -78,17 +78,16 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
 
         // التحقق من إمكانية الموافقة التلقائية (فقط بعد تحميل التفضيلات)
         if (preferencesLoaded && autoApprovalEnabled && newOrder.status === 'pending') {
-          // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة) - سيتم تعريف الدوال لاحقاً
-          setTimeout(async () => {
-            const availability = availabilityOf(newOrder);
-            const needsReview = orderNeedsReview(newOrder);
-            
-            // تحقق من صحة الوجهة المحددة
-            const canAutoApprove = availability === 'available' && !needsReview && 
-              (orderDestination.destination === 'local' || orderDestination.account);
-            
-            if (canAutoApprove) {
-              try {
+          // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة)
+          const availability = availabilityOf(newOrder);
+          const needsReview = orderNeedsReview(newOrder);
+          
+          // تحقق من صحة الوجهة المحددة
+          const canAutoApprove = availability === 'available' && !needsReview && 
+            (orderDestination.destination === 'local' || orderDestination.account);
+          
+          if (canAutoApprove) {
+            try {
               console.log('Auto-approving order:', newOrder.id, { destination: orderDestination.destination, account: orderDestination.account });
               const result = await approveAiOrder?.(
                 newOrder.id, 
@@ -108,11 +107,11 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
                 window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: newOrder.id } }));
               }
             } catch (error) {
-              console.error('خطأ في الموافقة التلقائية:', error);
+              console.error('Auto-approval failed:', error);
             }
           }
-          }, 100); // تأخير بسيط لضمان تحميل الدوال
         }
+      }
     };
 
     const handleAiOrderDeleted = (event) => {
@@ -190,20 +189,18 @@ useEffect(() => {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('auto_approval_enabled, default_ai_order_destination, selected_delivery_account')
+          .select('auto_approval_enabled, order_destination, selected_delivery_account')
           .eq('user_id', user.user_id)
           .single();
-        
-        console.log('🔄 AiOrdersManager: تحميل إعدادات المستخدم:', data);
         
         if (data) {
           setAutoApprovalEnabled(data.auto_approval_enabled || false);
           
-          if (data.default_ai_order_destination && data.default_ai_order_destination !== 'local') {
+          if (data.order_destination && data.order_destination !== 'local') {
             setOrderDestination({
-              destination: data.default_ai_order_destination,
+              destination: data.order_destination,
               account: data.selected_delivery_account || '',
-              partnerName: data.default_ai_order_destination
+              partnerName: data.order_destination
             });
           }
         }
@@ -760,7 +757,7 @@ useEffect(() => {
                   {/* مكون اختيار وجهة الطلبات */}
                   <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
                     <AiOrderDestinationSelector 
-                      value={orderDestination.destination}
+                      value={orderDestination}
                       onChange={setOrderDestination}
                       className="max-w-md"
                     />

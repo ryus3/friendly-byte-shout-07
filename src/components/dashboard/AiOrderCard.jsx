@@ -499,13 +499,6 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                       window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: { ...order, status: 'approved' } }));
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
                       
-                      console.log('🔄 AiOrderCard: بدء عملية الموافقة:', {
-                        orderId: order.id,
-                        orderDestination,
-                        destinationType: orderDestination?.destination,
-                        account: orderDestination?.account
-                      });
-                      
                       try {
                         // تحقق من صحة الوجهة
                         if (!orderDestination) {
@@ -526,13 +519,6 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           });
                           return;
                         }
-
-                        console.log('🚀 AiOrderCard: استدعاء approveAiOrder:', {
-                          orderId: order.id,
-                          destination: orderDestination.destination,
-                          account: orderDestination.account,
-                          orderData: order
-                        });
 
                         const res = await approveAiOrder?.(
                           order.id, 

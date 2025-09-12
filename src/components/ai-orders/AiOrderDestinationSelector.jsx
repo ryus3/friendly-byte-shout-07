@@ -19,19 +19,9 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
   const { user } = useAuth();
   
   const [userAccounts, setUserAccounts] = useState([]);
-  const [selectedDestination, setSelectedDestination] = useState(
-    typeof value === 'object' ? value.destination : value || 'local'
-  );
+  const [selectedDestination, setSelectedDestination] = useState(value || 'local');
   const [selectedAccount, setSelectedAccount] = useState('');
   const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
-
-  // مزامنة selectedDestination مع قيمة value من الخارج
-  useEffect(() => {
-    const newDestination = typeof value === 'object' ? value.destination : value || 'local';
-    if (newDestination !== selectedDestination) {
-      setSelectedDestination(newDestination);
-    }
-  }, [value]);
 
   // تحميل حسابات المستخدم والتفضيلات
   useEffect(() => {
@@ -47,10 +37,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
           .single();
 
         if (profile) {
-          // تجنب إعادة تعيين selectedDestination إذا كان value محدد من الخارج
-          if (!value) {
-            setSelectedDestination(profile.default_ai_order_destination || 'local');
-          }
+          setSelectedDestination(profile.default_ai_order_destination || 'local');
           setSelectedAccount(profile.selected_delivery_account || '');
         }
 
