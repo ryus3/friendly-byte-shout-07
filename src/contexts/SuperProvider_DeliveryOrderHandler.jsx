@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const useDeliveryOrderHandler = () => {
   const { createUnifiedOrder } = useUnifiedOrderCreator();
 
-  const handleDeliveryPartnerOrder = async (aiOrder, itemsInput, destination, selectedAccount) => {
+  const handleDeliveryPartnerOrder = async (aiOrder, itemsInput, destination, selectedAccount, accountData = null) => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
@@ -32,11 +32,12 @@ export const useDeliveryOrderHandler = () => {
         total: Number(item.quantity || 1) * Number(item.unit_price || item.price || 0)
       }));
 
-      // إنشاء طلب موحد عبر شركة التوصيل
+      // إنشاء طلب موحد عبر شركة التوصيل مع بيانات الحساب المحدد
       const result = await createUnifiedOrder(customerInfo, cart, 0, {
         id: aiOrder.id,
         source: aiOrder.source || 'ai',
-        selectedAccount: selectedAccount
+        selectedAccount: selectedAccount,
+        accountData: accountData  // تمرير بيانات الحساب مع التوكن
       });
 
       if (result.success) {

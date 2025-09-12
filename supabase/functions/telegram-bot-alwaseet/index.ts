@@ -364,6 +364,20 @@ ${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quanti
   }
 }
 
+// Helper function to validate customer name
+function isValidCustomerName(name: string): boolean {
+  const trimmed = name.trim()
+  // رفض الأسماء الفارغة أو القصيرة جداً
+  if (!trimmed || trimmed.length < 2) return false
+  // رفض الأسماء التي تحتوي على أرقام فقط
+  if (/^\d+$/.test(trimmed)) return false
+  // رفض الأسماء التي تحتوي على رموز غير مناسبة فقط
+  if (/^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(trimmed)) return false
+  // رفض الأسماء التي تحتوي على أرقام هواتف
+  if (/07[5789]\d{8}/.test(trimmed)) return false
+  return true
+}
+
 // Enhanced order processing with AlWaseet integration
 async function processOrderWithAlWaseet(text: string, chatId: number, employeeCode: string) {
   try {
@@ -417,11 +431,14 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       const line = lines[i].trim()
       const lowerLine = line.toLowerCase()
       
-      // Parse customer name - improved detection
+      // Parse customer name - improved detection with validation
       if ((lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل') || lowerLine.includes('الزبون')) && !customerName) {
-        customerName = line.replace(/^(اسم|زبون|عميل|الزبون)[:\s]*/i, '').trim()
-      } else if (i === 0 && !customerName && !line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج')) {
-        // First line as customer name if no phone number or product keyword
+        const extractedName = line.replace(/^(اسم|زبون|عميل|الزبون)[:\s]*/i, '').trim()
+        if (isValidCustomerName(extractedName)) {
+          customerName = extractedName
+        }
+      } else if (i === 0 && !customerName && !line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج') && isValidCustomerName(line)) {
+        // First line as customer name only if it's a valid name
         customerName = line.trim()
       }
       

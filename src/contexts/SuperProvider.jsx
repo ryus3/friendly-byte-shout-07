@@ -1677,39 +1677,23 @@ export const SuperProvider = ({ children }) => {
           };
         }
         
-        // تفعيل الحساب المحدد وانتظار النتيجة مع تسجيل مفصل
+        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
-          console.log('🔄 تفعيل حساب التوصيل المختار:', actualAccount);
-          console.log('📋 حالة السياق قبل التفعيل:', { 
-            activePartner, 
-            alwaseetToken: alwaseetToken ? 'موجود' : 'غير موجود',
-            destination 
-          });
+          console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
-          const accountActivated = await activateAccount(actualAccount);
-          if (!accountActivated) {
-            console.error('❌ فشل في تفعيل الحساب:', actualAccount);
-            throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
+          // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
+          const accountData = await getTokenForUser(createdBy, actualAccount);
+          if (!accountData?.token) {
+            console.error('❌ فشل في الحصول على توكن صالح للحساب:', actualAccount);
+            throw new Error('فشل في الحصول على توكن صالح للحساب المحدد');
           }
-          console.log('✅ تم تفعيل حساب التوصيل بنجاح:', actualAccount);
           
-          // انتظار أطول للتأكد من تحديث التوكن بعد التفعيل
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          console.log('📋 حالة السياق بعد التفعيل:', { 
-            activePartner, 
-            alwaseetToken: alwaseetToken ? 'موجود' : 'غير موجود',
-            actualAccount 
+          console.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
+          console.log('📋 بيانات الحساب:', { 
+            username: accountData.username,
+            hasToken: !!accountData.token,
+            expiresAt: accountData.expires_at
           });
-          
-          // انتظار قصير للتأكد من تحديث التوكن
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // التحقق من وجود توكن صالح
-          if (!alwaseetToken) {
-            throw new Error('لا يوجد توكن صالح لشركة التوصيل بعد التفعيل');
-          }
-          console.log('✅ توكن صالح متوفر');
           
           setActivePartner('alwaseet');
           

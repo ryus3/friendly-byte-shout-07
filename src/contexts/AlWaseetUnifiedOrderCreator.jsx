@@ -48,7 +48,16 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           };
 
           console.log('📦 إرسال للوسيط:', alWaseetPayload);
-          const alWaseetResult = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+          
+          // استخدام توكن الحساب المحدد إذا تم تمريره
+          const useToken = aiOrderData?.accountData?.token || waseetToken;
+          console.log('🔍 التوكن المستخدم:', { 
+            hasAccountToken: !!aiOrderData?.accountData?.token, 
+            hasContextToken: !!waseetToken,
+            selectedAccount: aiOrderData?.selectedAccount 
+          });
+          
+          const alWaseetResult = await createAlWaseetOrder(alWaseetPayload, useToken);
           
           if (alWaseetResult?.id) {
             console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResult);
