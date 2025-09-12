@@ -1930,7 +1930,7 @@ export const SuperProvider = ({ children }) => {
           if (size) displayName += ` ${size}`;
           
           return displayName;
-        });
+        }).filter(Boolean).join(' + ');
 
         // حساب السعر مع رسوم التوصيل (مطابق لـ QuickOrderContent)
         const subtotalPrice = enrichedItems.reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
@@ -1948,7 +1948,7 @@ export const SuperProvider = ({ children }) => {
 
         const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
 
-        // إعداد payload الوسيط - نفس البنية من QuickOrderContent
+        // إعداد payload الوسيط - نفس البنية من QuickOrderContent مع ملاحظات فارغة لطلبات التليغرام
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
@@ -1956,54 +1956,85 @@ export const SuperProvider = ({ children }) => {
           client_mobile: normalizedPhone,
           client_mobile2: '',
           location: aiOrder.customer_address || '',
-          type_name: productNames.join(' + '), // أسماء المنتجات كاملة مع الألوان والمقاسات
+          type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
           package_size: 1,
-          merchant_notes: '', // ملاحظات فارغة
+          merchant_notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
           replacement: 0
         };
 
         console.log('📋 بيانات الطلب النهائية المرسلة للوسيط:', updatedPayload);
         console.log('💰 السعر النهائي (مع رسوم التوصيل):', finalPrice);
 
-        // إنشاء الطلب في الوسيط - تماماً كما في QuickOrderContent
-        const alwaseetResult = await createAlWaseetOrder(updatedPayload, alwaseetToken);
+        // إنشاء الطلب في الوسيط - استخدام نفس منطق QuickOrderContent مع retry محسن
+        const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
+        const alwaseetResult = await createAlWaseetOrderApi(updatedPayload, alwaseetToken);
         
         console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
-        // معالجة qr_id مع fallback محسن - استخدام getMerchantOrders للبحث
+        // معالجة qr_id - الآن من المفترض أن يحتوي على qr_id من التحسينات
         let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
+        let orderId = alwaseetResult?.id || qrId;
         
-        // إذا لم نحصل على qr_id، استخدم getMerchantOrders للبحث عن الطلب الجديد
-        if (!qrId && alwaseetResult?.id) {
-          console.log('⚠️ لم نحصل على qr_id، محاولة fallback مع getMerchantOrders...');
-          try {
-            const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
-            const recentOrders = await getMerchantOrders(alwaseetToken);
-            const matchingOrder = recentOrders.find(order => 
-              order.id === alwaseetResult.id || 
-              order.client_name === updatedPayload.client_name
-            );
-            qrId = matchingOrder?.qr_id || matchingOrder?.id || alwaseetResult.id;
-            console.log('✅ تم استخراج qr_id من getMerchantOrders fallback:', qrId);
-          } catch (fallbackError) {
-            console.warn('⚠️ فشل fallback، استخدام ID كـ qr_id:', alwaseetResult.id);
-            qrId = alwaseetResult.id;
+        // Smart retry if qr_id is still missing - 3 attempts with proper delays
+        if (!qrId || qrId === 'undefined' || qrId === 'null') {
+          console.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
+          const maxRetries = 3;
+          const delayBetweenRetries = 1500; // 1.5 seconds
+          
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              console.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
+              await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
+              
+              const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
+              const recentOrders = await getMerchantOrders(alwaseetToken);
+              
+              // Advanced matching: by phone (last 10 digits), price, and recent creation
+              const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);
+              const candidates = recentOrders.filter(order => {
+                const orderPhone = (order?.client_mobile || '').replace(/\D/g, '').slice(-10);
+                return orderPhone === customerPhoneLast10;
+              });
+              
+              // Try exact price match first, then recent order
+              let matchingOrder = candidates.find(order => parseInt(order?.price) === finalPrice);
+              if (!matchingOrder && candidates.length > 0) {
+                // Sort by creation time and take the most recent
+                matchingOrder = candidates.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+              }
+              
+              if (matchingOrder) {
+                qrId = matchingOrder.qr_id || matchingOrder.tracking_number || matchingOrder.id;
+                orderId = matchingOrder.id || orderId;
+                console.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
+                break;
+              }
+              
+              console.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
+            } catch (retryError) {
+              console.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
+            }
+            
+            // If last attempt fails, log the issue
+            if (attempt === maxRetries) {
+              console.error('❌ فشل في جميع المحاولات للحصول على qr_id');
+            }
           }
         }
         
-        if (!qrId) {
-          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل');
+        if (!qrId || qrId === 'undefined' || qrId === 'null') {
+          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل بعد عدة محاولات');
         }
 
         console.log('🔍 qr_id المستخرج:', qrId);
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
-        // إنشاء الطلب المحلي مع ربطه بالوسيط
-        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, qrId, {
+        // إنشاء الطلب المحلي مع ربطه بالوسيط - استخدام orderId بدلاً من qrId
+        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, orderId, {
           delivery_partner: 'alwaseet',
-          delivery_partner_order_id: String(alwaseetResult.id || qrId),
+          delivery_partner_order_id: String(orderId || qrId),
           qr_id: qrId,
           tracking_number: qrId,
           delivery_account_used: actualAccount,
@@ -2152,17 +2183,17 @@ export const SuperProvider = ({ children }) => {
         customer_province: aiOrder.customer_province,
         total_amount: subtotal,
         discount,
-        delivery_fee: deliveryFee,
-        final_amount: total,
-        status: 'pending',
-        delivery_status: deliveryPartnerData.delivery_partner === 'alwaseet' ? '1' : 'pending',
-        payment_status: 'pending',
-        tracking_number: trackingNumber,
-        delivery_partner: deliveryPartnerData.delivery_partner || 'محلي',
-        delivery_partner_order_id: deliveryPartnerData.delivery_partner_order_id || null,
-        qr_id: deliveryPartnerData.qr_id || null,
-        delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
-        notes: '', // ملاحظات فارغة لطلبات التليغرام
+      delivery_fee: deliveryFee,
+      final_amount: total,
+      status: 'pending',
+      delivery_status: deliveryPartnerData.delivery_partner === 'alwaseet' ? '1' : 'pending',
+      payment_status: 'pending',
+      tracking_number: trackingNumber,
+      delivery_partner: deliveryPartnerData.delivery_partner || 'محلي',
+      delivery_partner_order_id: deliveryPartnerData.delivery_partner_order_id || null,
+      qr_id: deliveryPartnerData.qr_id || null,
+      delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
+      notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
         created_by: resolveCurrentUserUUID(),
       };
 
