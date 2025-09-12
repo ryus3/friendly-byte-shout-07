@@ -247,7 +247,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         phone: aiOrderData.customer_phone || '',
         city: parsedCity || 'بغداد',
         region: parsedRegion || '',
-        address: aiOrderData.customer_address || '',
+        address: aiOrderData.source === 'telegram' ? '' : (aiOrderData.customer_address || ''),
         notes: aiOrderData.order_data?.delivery_type ? `نوع التوصيل: ${aiOrderData.order_data.delivery_type}` : '',
         details: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.map(item => {

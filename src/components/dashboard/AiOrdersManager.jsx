@@ -40,17 +40,20 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
-  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة)
+  // LocalStorage للطلبات المعالجة (معتمدة أو محذوفة)
+  const [processedOrders, setProcessedOrders] = useLocalStorage('processedAiOrders', []);
+  
+  // إزالة التكرار وترتيب الأحدث أولاً من السياق مع فلترة الطلبات المعالجة
   const dedupedContextOrders = useMemo(() => {
     const map = new Map();
     for (const o of ordersFromContext) {
-      // فلترة الطلبات المعتمدة لمنع إعادة ظهورها
-      if (o && o.id && !map.has(o.id) && o.status !== 'approved') {
+      // فلترة الطلبات المعتمدة والمعالجة محلياً لمنع إعادة ظهورها
+      if (o && o.id && !map.has(o.id) && o.status !== 'approved' && !processedOrders.includes(o.id)) {
         map.set(o.id, o);
       }
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [ordersFromContext]);
+  }, [ordersFromContext, processedOrders]);
   
   // تزامن مع البيانات من Context عند التحديث
   useEffect(() => {
@@ -99,8 +102,9 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
               );
               
               if (result?.success) {
-                // إزالة الطلب من القائمة المحلية فوراً
+                // إزالة الطلب من القائمة المحلية وإضافته للمعالجة فوراً
                 setOrders(prev => prev.filter(o => o.id !== newOrder.id));
+                setProcessedOrders(prev => [...prev, newOrder.id]);
                 toast({
                   title: "تمت الموافقة التلقائية",
                   description: `تم قبول الطلب رقم ${newOrder.id.slice(0, 8)} تلقائياً`,
@@ -121,6 +125,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       const deletedId = event.detail?.id;
       if (deletedId) {
         setOrders(prev => prev.filter(o => o.id !== deletedId));
+        setProcessedOrders(prev => [...prev, deletedId]);
       }
     };
 
@@ -128,6 +133,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       const approvedId = event.detail?.id;
       if (approvedId) {
         setOrders(prev => prev.filter(o => o.id !== approvedId));
+        setProcessedOrders(prev => [...prev, approvedId]);
       }
     };
 
@@ -450,8 +456,9 @@ useEffect(() => {
           setOrders(prev => [...failedOrders, ...prev]);
         }
         
-        // إشعار النجاح والفشل
+        // إضافة الطلبات المعتمدة للمعالجة
         if (successIds.length > 0) {
+          setProcessedOrders(prev => [...prev, ...successIds]);
           successIds.forEach(id => {
             try { window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } })); } catch {}
           });
@@ -486,8 +493,9 @@ useEffect(() => {
           setOrders(prev => [...failedOrders, ...prev]);
         }
         
-        // إشعار النجاح والفشل
+        // إضافة الطلبات المحذوفة للمعالجة
         if (successIds.length > 0) {
+          setProcessedOrders(prev => [...prev, ...successIds]);
           successIds.forEach(id => {
             try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
           });

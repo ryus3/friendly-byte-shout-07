@@ -747,6 +747,11 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
+    // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
+    if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
+      customerName = defaultCustomerName || 'زبون من التليغرام';
+    }
+
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
     const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
       p_order_data: {
