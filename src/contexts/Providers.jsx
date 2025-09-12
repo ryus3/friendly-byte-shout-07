@@ -7,6 +7,7 @@ import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemConte
 import { SuperProvider } from '@/contexts/SuperProvider.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider, useAlWaseet } from '@/contexts/AlWaseetContext.jsx';
+import { UnifiedOrderCreatorProvider } from '@/contexts/AlWaseetUnifiedOrderCreator.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { GlobalSyncProgress } from '@/components/GlobalSyncProgress.jsx';
@@ -40,10 +41,11 @@ export const AppProviders = ({ children }) => {
         <UnifiedAuthProvider>
           <NotificationsSystemProvider>
             <AlWaseetProvider>
-              <NotificationsProvider>
-                <AiChatProvider>
-                  <ProfitsProvider>
-                    <SuperProvider>
+              <UnifiedOrderCreatorProvider>
+                <NotificationsProvider>
+                  <AiChatProvider>
+                    <ProfitsProvider>
+                      <SuperProvider>
                       <VariantsProvider>
                         <AppStartSync />
                         {children}
@@ -52,6 +54,7 @@ export const AppProviders = ({ children }) => {
                   </ProfitsProvider>
                 </AiChatProvider>
               </NotificationsProvider>
+              </UnifiedOrderCreatorProvider>
             </AlWaseetProvider>
           </NotificationsSystemProvider>
         </UnifiedAuthProvider>
