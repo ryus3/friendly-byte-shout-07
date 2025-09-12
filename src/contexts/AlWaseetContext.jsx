@@ -1627,62 +1627,136 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      // تحديد التوكن الفعّال: استخدم توكن صاحب الطلب إن كان المستخدم الحالي ليس المالك
-      let effectiveToken = token;
-      let tokenSource = 'current_user';
-      if (localOrder?.created_by && user?.id && localOrder.created_by !== user.id) {
-        try {
-          const employeeToken = await getTokenForUser(localOrder.created_by);
-          if (employeeToken) {
-            effectiveToken = employeeToken;
-            tokenSource = `employee:${localOrder.created_by}`;
-            console.log(`👤 استخدام توكن الموظف لطلب غير مملوك: owner=${localOrder.created_by}`);
-          } else {
-            console.warn('⚠️ تعذر الحصول على توكن الموظف، سيتم استخدام توكن المستخدم الحالي إن وجد');
-          }
-        } catch (e) {
-          console.warn('⚠️ فشل جلب توكن الموظف، سيتم استخدام توكن المستخدم الحالي إن وجد', e);
-        }
-      }
-
-      if (!effectiveToken) {
-        console.warn('❌ لا يوجد توكن صالح للمزامنة (لا توكن للمستخدم الحالي ولا لصاحب الطلب)');
-        return null;
-      }
-
-      // جلب الطلب من الوسيط باستخدام التوكن المناسب
-      const waseetOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
-      if (!waseetOrder) {
-        console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط (token_source=${tokenSource})`);
+      // دالة للحصول على التوكن الفعال مع دعم متعدد الحسابات
+      const getEffectiveTokenForOrder = async (order, fallbackToCurrentUser = true) => {
+        if (!order) return { token: null, source: 'no_order' };
         
-        // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
-        if (localOrder && canAutoDeleteOrder(localOrder, user)) {
-          console.log(`⚠️ التحقق من حذف الطلب ${qrId} - لم يُعثر عليه في الوسيط`);
+        const orderOwnerId = order.created_by;
+        console.log(`🔍 البحث عن توكن فعال للطلب ${order.tracking_number || order.id} (مالك: ${orderOwnerId})`);
+        
+        // جلب جميع حسابات مالك الطلب
+        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+        if (ownerAccounts.length > 0) {
+          console.log(`👤 وُجد ${ownerAccounts.length} حساب لمالك الطلب ${orderOwnerId}`);
           
-          // إعادة محاولة البحث للتأكد (قد يكون هناك تأخير في التزامن)
-          await new Promise(resolve => setTimeout(resolve, 2000)); // انتظار ثانيتين
-          const doubleCheckOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
-          
-          if (!doubleCheckOrder) {
-            console.log(`🗑️ تأكيد الحذف التلقائي للطلب ${qrId} - غير موجود فعلياً في الوسيط`);
-            const deleteResult = await performAutoDelete(localOrder);
-            if (deleteResult) {
+          // تجربة كل حساب على حدة
+          for (const account of ownerAccounts) {
+            if (account.token) {
+              console.log(`🔑 تجربة حساب: ${account.account_username} لمالك الطلب`);
               return { 
-                ...deleteResult, 
-                autoDeleted: true,
-                message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في شركة التوصيل`
+                token: account.token, 
+                source: `owner:${orderOwnerId}:${account.account_username}`,
+                accountUsername: account.account_username
               };
             }
-          } else {
-            console.log(`✅ الطلب ${qrId} موجود فعلياً - لن يُحذف`);
-            // معالجة الطلب الموجود
-            return await processWaseetOrderUpdate(localOrder, doubleCheckOrder);
           }
-        } else {
-          console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
         }
         
+        // إذا لم نجد توكن لمالك الطلب وكان المستخدم الحالي مختلف
+        if (fallbackToCurrentUser && user?.id && user.id !== orderOwnerId) {
+          console.log(`🔄 لم يوجد توكن لمالك الطلب، التراجع للمستخدم الحالي ${user.id}`);
+          const currentUserAccounts = await getUserDeliveryAccounts(user.id, 'alwaseet');
+          
+          for (const account of currentUserAccounts) {
+            if (account.token) {
+              console.log(`🔑 استخدام حساب المستخدم الحالي: ${account.account_username}`);
+              return { 
+                token: account.token, 
+                source: `current_user:${user.id}:${account.account_username}`,
+                accountUsername: account.account_username
+              };
+            }
+          }
+        }
+        
+        return { token: null, source: 'no_valid_token' };
+      };
+
+      // تحديد التوكن الفعّال للطلب
+      const { token: effectiveToken, source: tokenSource, accountUsername } = await getEffectiveTokenForOrder(localOrder, true);
+
+      if (!effectiveToken) {
+        console.warn(`❌ لا يوجد توكن صالح للمزامنة للطلب ${qrId} (مصدر: ${tokenSource})`);
         return null;
+      }
+
+      console.log(`🔑 استخدام توكن من: ${tokenSource} للطلب ${qrId}`);
+
+      // البحث المتقدم بجميع التوكنات المتاحة لمالك الطلب قبل اعتبار الطلب محذوف
+      const checkOrderWithAllTokens = async (orderId) => {
+        const orderOwnerId = localOrder?.created_by;
+        if (!orderOwnerId) return null;
+        
+        // جلب جميع حسابات مالك الطلب
+        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+        
+        console.log(`🔍 فحص الطلب ${orderId} بجميع التوكنات (${ownerAccounts.length} حساب)`);
+        
+        // تجربة كل توكن
+        for (const account of ownerAccounts) {
+          if (!account.token) continue;
+          
+          try {
+            console.log(`🔄 تجربة البحث بحساب: ${account.account_username}`);
+            const foundOrder = await AlWaseetAPI.getOrderByQR(account.token, orderId);
+            if (foundOrder) {
+              console.log(`✅ وُجد الطلب ${orderId} بحساب: ${account.account_username}`);
+              return foundOrder;
+            }
+          } catch (error) {
+            console.warn(`⚠️ فشل البحث بحساب ${account.account_username}:`, error.message);
+          }
+        }
+        
+        console.log(`❌ الطلب ${orderId} غير موجود في جميع حسابات المالك (${ownerAccounts.length} حساب)`);
+        return null;
+      };
+
+      // جلب الطلب من الوسيط باستخدام التوكن المناسب
+      let waseetOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
+      
+      if (!waseetOrder) {
+        console.warn(`❌ لم يتم العثور على الطلب ${qrId} بالتوكن الأولي (${tokenSource})`);
+        
+        // فحص متقدم بجميع التوكنات قبل الحذف
+        console.log(`🔍 بدء الفحص المتقدم بجميع التوكنات للطلب ${qrId}...`);
+        waseetOrder = await checkOrderWithAllTokens(qrId);
+        
+        if (!waseetOrder) {
+          console.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في جميع الحسابات`);
+          
+          // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
+          if (localOrder && canAutoDeleteOrder(localOrder, user)) {
+            console.log(`⚠️ التحقق من حذف الطلب ${qrId} - مؤكد عدم وجوده في جميع الحسابات`);
+            
+            // انتظار إضافي للتأكد (قد يكون هناك تأخير في التزامن)
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            const finalCheck = await checkOrderWithAllTokens(qrId);
+            
+            if (!finalCheck) {
+              console.log(`🗑️ تأكيد نهائي: حذف الطلب ${qrId} - غير موجود في جميع حسابات المالك`);
+              const deleteResult = await performAutoDelete(localOrder);
+              if (deleteResult) {
+                return { 
+                  ...deleteResult, 
+                  autoDeleted: true,
+                  message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات شركة التوصيل`
+                };
+              }
+            } else {
+              console.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
+              waseetOrder = finalCheck;
+            }
+          } else {
+            console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
+          }
+          
+          if (!waseetOrder) {
+            return null;
+          }
+        } else {
+          console.log(`✅ وُجد الطلب ${qrId} في أحد الحسابات الأخرى`);
+        }
       }
 
       console.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
