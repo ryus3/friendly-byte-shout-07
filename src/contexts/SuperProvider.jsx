@@ -1797,114 +1797,14 @@ export const SuperProvider = ({ children }) => {
           throw new Error('لم يتم جلب قائمة المدن من شركة التوصيل');
         }
         
-        // تطبيع النصوص العربية المحسن للبحث الذكي
+        // تطبيع النصوص العربية للبحث - نفس الطريقة الدقيقة من QuickOrderContent
         const normalizeArabic = (text) => {
           if (!text) return '';
           return text.toString().trim()
             .replace(/[أإآ]/g, 'ا')
             .replace(/[ة]/g, 'ه')
             .replace(/[ي]/g, 'ى')
-            .replace(/[ً ٌ ٍ َ ُ ِ ْ]/g, '') // إزالة التشكيل
             .toLowerCase();
-        };
-
-        // إزالة الكلمات الوقفية من العنوان
-        const removeStopWords = (text) => {
-          const stopWords = ['حي', 'منطقة', 'شارع', 'محلة', 'زقاق', 'كوت', 'عمارة', 'بناية', 'دار'];
-          let cleanText = text;
-          stopWords.forEach(word => {
-            cleanText = cleanText.replace(new RegExp(`\\b${word}\\b`, 'gi'), '');
-          });
-          return cleanText.trim().replace(/\s+/g, ' ');
-        };
-
-        // خوارزمية المطابقة الذكية للمناطق المحسنة مع أولوية السياق
-        const smartRegionMatching = (regions, searchTerm, contextWords = []) => {
-          const normalizedSearch = normalizeArabic(removeStopWords(searchTerm));
-          console.log('🔍 بحث ذكي عن المناطق:', { searchTerm, normalizedSearch, contextWords });
-          
-          const candidates = [];
-
-          regions.forEach(region => {
-            const normalizedRegion = normalizeArabic(region.name);
-            let score = 0;
-            let matchType = '';
-            let hasContextMatch = false;
-
-            // 1. مطابقة تامة
-            if (normalizedRegion === normalizedSearch) {
-              score = 100;
-              matchType = 'exact';
-            }
-            // 2. مطابقة جزئية - المنطقة تحتوي على البحث
-            else if (normalizedRegion.includes(normalizedSearch)) {
-              score = 80;
-              matchType = 'contains';
-            }
-            // 3. مطابقة جزئية - البحث يحتوي على المنطقة
-            else if (normalizedSearch.includes(normalizedRegion)) {
-              score = 70;
-              matchType = 'contained';
-            }
-            // 4. مطابقة جزئية بحروف مشتركة
-            else if (normalizedRegion.includes(normalizedSearch.substring(0, 3)) || 
-                     normalizedSearch.includes(normalizedRegion.substring(0, 3))) {
-              score = 40;
-              matchType = 'partial';
-            }
-
-            // 5. مطابقة كلمات السياق المحسنة (أولوية عالية)
-            if (contextWords && contextWords.length > 0) {
-              contextWords.forEach(contextWord => {
-                const normalizedContext = normalizeArabic(removeStopWords(contextWord));
-                if (normalizedContext.length > 1) {
-                  if (normalizedRegion.includes(normalizedContext) || normalizedContext.includes(normalizedRegion)) {
-                    score += 35; // نقاط إضافية عالية للسياق
-                    hasContextMatch = true;
-                    matchType = matchType ? `${matchType} + سياق` : 'سياق';
-                  }
-                }
-              });
-            }
-
-            // تعديل النقاط حسب طول الاسم (المناطق الأقصر أولوية أعلى)
-            if (score > 0) {
-              const lengthBonus = Math.max(0, 5 - Math.floor(normalizedRegion.length / 3));
-              score += lengthBonus;
-              
-              candidates.push({
-                region,
-                score,
-                matchType,
-                hasContextMatch,
-                originalSearch: searchTerm,
-                normalizedSearch,
-                normalizedRegion
-              });
-            }
-          });
-
-          // ترتيب محسن: أولوية للسياق ثم النقاط
-          candidates.sort((a, b) => {
-            // أولوية عالية للمطابقات التي تحتوي على السياق
-            if (a.hasContextMatch && !b.hasContextMatch) return -1;
-            if (!a.hasContextMatch && b.hasContextMatch) return 1;
-            // ثم بالنقاط
-            return b.score - a.score;
-          });
-          
-          console.log('🧠 نتائج المطابقة الذكية المحسنة:', {
-            searchTerm,
-            contextWords,
-            topCandidates: candidates.slice(0, 5).map(c => ({
-              name: c.region.name,
-              score: c.score,
-              matchType: c.matchType,
-              hasContext: c.hasContextMatch
-            }))
-          });
-
-          return candidates;
         };
         
         // استخراج المدينة والمنطقة من العنوان - نفس منطق QuickOrderContent
@@ -1993,85 +1893,29 @@ export const SuperProvider = ({ children }) => {
               );
             }
             
-            // المطابقة الذكية المحسنة مع أولوية قوية للسياق
-            if (!regionMatch) {
-              const contextWords = addressParts.slice(2).filter(part => part && part.length > 1); // كلمات السياق النظيفة
-              console.log('🔍 محاولة المطابقة الذكية:', { regionToSearch, contextWords, fullAddress: aiOrder.customer_address });
+            // إذا لم نجد مطابقة، حاول المطابقة الذكية باستخدام السياق من العنوان
+            if (!regionMatch && addressParts.length > 2) {
+              console.log('🧠 محاولة المطابقة الذكية باستخدام السياق...');
               
-              const candidates = smartRegionMatching(regions, regionToSearch, contextWords);
+              // استخراج الكلمات الإضافية من العنوان
+              const contextWords = addressParts.slice(2).map(part => normalizeArabic(part));
+              console.log('📝 كلمات السياق:', contextWords);
               
-              if (candidates.length > 0) {
-                // أولوية مطلقة للمرشحين الذين يحتوون على السياق
-                const contextCandidates = candidates.filter(c => c.hasContextMatch);
-                let finalCandidate = candidates[0]; // الافتراضي
+              // البحث عن منطقة تحتوي على إحدى كلمات السياق
+              for (const contextWord of contextWords) {
+                const smartMatch = regions.find(region => 
+                  normalizeArabic(region.name).includes(contextWord) ||
+                  contextWord.includes(normalizeArabic(region.name))
+                );
                 
-                if (contextCandidates.length > 0) {
-                  finalCandidate = contextCandidates[0];
-                  console.log('🎯 استخدام مرشح بناءً على السياق:', finalCandidate.region.name);
-                }
-                
-                // شروط الاختيار التلقائي المحسنة
-                if (finalCandidate.score >= 65 || finalCandidate.hasContextMatch) {
-                  regionMatch = finalCandidate.region;
-                  console.log('✅ تم اختيار أفضل مرشح تلقائياً:', {
-                    region: regionMatch.name,
-                    score: topCandidate.score,
-                    matchType: topCandidate.matchType
+                if (smartMatch) {
+                  regionMatch = smartMatch;
+                  console.log('🎯 تم العثور على مطابقة ذكية:', { 
+                    region: smartMatch.name, 
+                    contextWord: contextWord,
+                    originalWord: addressParts.find(part => normalizeArabic(part) === contextWord)
                   });
-                }
-                // إذا كان هناك عدة مرشحين متقاربين، احفظ للتليغرام
-                else if (candidates.length > 1 && candidates[1].score >= (topCandidate.score - 10)) {
-                  console.log('🤔 عدة مرشحين متقاربين - حفظ للمراجعة عبر التليغرام');
-                  
-                  // حفظ المرشحين في بيانات الطلب لعرضهم لاحقاً في التليغرام
-                  await supabase
-                    .from('ai_orders')
-                    .update({
-                      order_data: {
-                        ...aiOrder.order_data,
-                        region_candidates: candidates.slice(0, 5).map(c => ({
-                          id: c.region.id,
-                          name: c.region.name,
-                          score: c.score,
-                          matchType: c.matchType
-                        })),
-                        requires_region_confirmation: true,
-                        original_region_search: regionToSearch,
-                        context_words: contextWords
-                      }
-                    })
-                    .eq('id', aiOrder.id);
-                  
-                  // إرسال لوحة مفاتيح التحديد للتليغرام إذا كان المصدر تليغرام
-                  if (aiOrder.source === 'telegram' && aiOrder.telegram_chat_id) {
-                    try {
-                      console.log('📤 إرسال خيارات المناطق للتليغرام...', {
-                        chatId: aiOrder.telegram_chat_id,
-                        candidates: candidates.slice(0, 5).map(c => c.region.name)
-                      });
-                      
-                      await supabase.functions.invoke('telegram-bot-alwaseet', {
-                        body: { 
-                          action: 'send_region_selection',
-                          chat_id: aiOrder.telegram_chat_id,
-                          ai_order_id: aiOrder.id,
-                          candidates: candidates.slice(0, 5).map(c => ({
-                            id: c.region.id,
-                            name: c.region.name
-                          }))
-                        }
-                      });
-                    } catch (telegramError) {
-                      console.warn('⚠️ فشل في إرسال خيارات المناطق للتليغرام:', telegramError);
-                    }
-                  }
-                  
-                  // استخدم أفضل مرشح مؤقتاً
-                  regionMatch = topCandidate.region;
-                }
-                // إذا كان أفضل مرشح ضعيف، استخدم الافتراضي
-                else {
-                  console.log('⚠️ مطابقة ضعيفة، استخدام المنطقة الافتراضية');
+                  break;
                 }
               }
             }

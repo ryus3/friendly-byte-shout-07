@@ -32,24 +32,10 @@ interface TelegramMessage {
 interface TelegramUpdate {
   update_id: number
   message?: TelegramMessage
-  callback_query?: {
-    id: string
-    from: {
-      id: number
-      first_name: string
-    }
-    message: {
-      message_id: number
-      chat: {
-        id: number
-      }
-    }
-    data: string
-  }
 }
 
 // Send message to Telegram
-async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any) {
+async function sendTelegramMessage(chatId: number, text: string) {
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`
   const response = await fetch(url, {
     method: 'POST',
@@ -57,36 +43,7 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: a
     body: JSON.stringify({
       chat_id: chatId,
       text: text,
-      parse_mode: 'HTML',
-      reply_markup: replyMarkup
-    })
-  })
-  return response.json()
-}
-
-// Send inline keyboard for region selection
-async function sendRegionSelectionKeyboard(chatId: number, aiOrderId: string, candidates: any[]) {
-  const text = `🤔 تم العثور على عدة مناطق مشابهة لعنوانك.\nاختر المنطقة الصحيحة:`
-  
-  const keyboard = {
-    inline_keyboard: candidates.map(candidate => [{
-      text: `📍 ${candidate.name}`,
-      callback_data: `region_${aiOrderId}_${candidate.id}`
-    }])
-  }
-  
-  return await sendTelegramMessage(chatId, text, keyboard)
-}
-
-// Answer callback query
-async function answerCallbackQuery(callbackQueryId: string, text?: string) {
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/answerCallbackQuery`
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      callback_query_id: callbackQueryId,
-      text: text || 'تم التحديث ✅'
+      parse_mode: 'HTML'
     })
   })
   return response.json()
@@ -127,8 +84,7 @@ async function getRegionsByCity(cityId: number): Promise<any[]> {
       { id: 103, name: 'الكاظمية' },
       { id: 104, name: 'الأعظمية' },
       { id: 105, name: 'الصدر' },
-      { id: 106, name: 'الشعلة' },
-      { id: 107, name: 'دورة الصحة' }
+      { id: 106, name: 'الشعلة' }
     ],
     2: [ // Basra
       { id: 201, name: 'البصرة القديمة' },
@@ -235,15 +191,6 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       console.error('No employee found for chat ID:', chatId)
       return false
     }
-    
-    console.log('Processing order for employee:', employeeCode)
-    console.log('Employee found:', JSON.stringify({
-      user_id: employee.user_id,
-      full_name: employee.full_name,
-      role: employee.role,
-      role_title: employee.role_title,
-      employee_code: employee.employee_code
-    }, null, 2))
     
     const { data: profileData } = await supabase
       .from('profiles')
@@ -363,7 +310,6 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
           // Enhanced product search with variants and proper pricing
           let finalPrice = price
           let productId = null
-          let variantId = null
           
           // Search for exact product name first
           const { data: products } = await supabase
@@ -384,14 +330,11 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
             const product = products[0]
             productId = product.id
             
-            console.log(`Product found: ${product.name}, Price: ${product.base_price}, Variant ID: ${product.product_variants?.[0]?.id}`)
-            
             // Try to find price from variants first
             if (product.product_variants && product.product_variants.length > 0) {
               const activeVariants = product.product_variants.filter(v => v.is_active)
               if (activeVariants.length > 0) {
                 // Use first active variant price
-                variantId = activeVariants[0].id
                 finalPrice = price || activeVariants[0].price || product.base_price || 0
               } else {
                 finalPrice = price || product.base_price || 0
@@ -424,8 +367,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
             name: productName,
             quantity,
             price: finalPrice,
-            product_id: productId,
-            variant_id: variantId
+            product_id: productId
           })
         }
       }
@@ -514,8 +456,6 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
       p_employee_code: employee?.user_id || employeeCode
     })
     
-    console.log('Order creation result:', orderId)
-    
     if (orderId.error) {
       console.error('Database error:', orderId.error)
       await sendTelegramMessage(chatId, '❌ حدث خطأ في حفظ الطلب في النظام. يرجى المحاولة مرة أخرى.')
@@ -535,125 +475,65 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
 
 // Handle employee registration
 async function handleEmployeeRegistration(text: string, chatId: number) {
+  const codeMatch = text.match(/\/start\s+([A-Z0-9]+)/)
+  if (!codeMatch) {
+    await sendTelegramMessage(chatId, '❌ رمز الموظف غير صحيح!\n\nيرجى الحصول على رمز التفعيل من إدارة النظام.')
+    return false
+  }
+  
+  const employeeCode = codeMatch[1]
+  
   try {
-    const parts = text.split(' ')
-    if (parts.length < 2) {
-      await sendTelegramMessage(chatId, '❌ خطأ في التنسيق!\n\nاستخدم: /start [رمز_الموظف]\n\nمثال: /start EMP001')
-      return
-    }
-    
-    const employeeCode = parts[1].trim()
-    
-    // Call RPC to link telegram user
     const result = await supabase.rpc('link_telegram_user', {
       p_employee_code: employeeCode,
       p_telegram_chat_id: chatId
     })
     
-    if (result.error) {
-      console.error('Database error:', result.error)
-      await sendTelegramMessage(chatId, `❌ خطأ في التسجيل: ${result.error.message}`)
-      return
-    }
-    
-    if (result.data && result.data.success) {
-      const welcomeMessage = `🎉 مرحباً بك!
+    if (result.data) {
+      // Get employee info
+      const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+        p_telegram_chat_id: chatId 
+      })
+      const employee = employeeData.data?.[0]
+      
+      const welcomeMessage = `
+🎉 مرحباً ${employee?.full_name || 'بك'}!
 
 ✅ تم ربط حسابك بنجاح
-👤 الاسم: ${result.data.employee_name}
-🏢 المنصب: ${result.data.role_title}
-🔢 رمز الموظف: ${employeeCode}
+👤 الاسم: ${employee?.full_name || 'غير محدد'}
+🏷️ الدور: ${employee?.role || 'موظف'}
+🔑 رمز الموظف: ${employeeCode}
 
-🚀 يمكنك الآن البدء بإرسال الطلبات!
+📝 يمكنك الآن إرسال طلبات العملاء مباشرة إلى النظام
 
-📚 اكتب /help للحصول على دليل الاستخدام`
+📋 مثال على طلب:
+احمد علي
+07701234567
+بغداد
+شارع الخليج
+قميص أحمر 2 قطعة x 25000 د.ع
+بنطال أزرق 1 قطعة x 35000 د.ع
 
-      await sendTelegramMessage(chatId, welcomeMessage)
-    } else {
-      await sendTelegramMessage(chatId, `❌ فشل في التسجيل: ${result.data?.error || 'رمز الموظف غير صحيح أو مستخدم من قبل'}`)
-    }
-    
-  } catch (error) {
-    console.error('Error in employee registration:', error)
-    await sendTelegramMessage(chatId, '❌ حدث خطأ في عملية التسجيل. يرجى المحاولة مرة أخرى.')
-  }
-}
-
-// Handle callback queries for region selection
-async function handleCallbackQuery(callbackQuery: any) {
-  const { id: callbackId, data: callbackData, from, message } = callbackQuery
-  const chatId = message.chat.id
-  
-  console.log('📞 معالجة callback query:', { callbackId, callbackData, chatId })
-  
-  // Parse callback data: "region_aiOrderId_regionId"
-  if (callbackData.startsWith('region_')) {
-    const parts = callbackData.split('_')
-    if (parts.length === 3) {
-      const aiOrderId = parts[1]
-      const selectedRegionId = parseInt(parts[2])
+🔄 سيتم تحويل كل طلب تكتبه تلقائياً إلى النظام
+      `
       
-      try {
-        // Get current order data first
-        const { data: currentOrder, error: fetchError } = await supabase
-          .from('ai_orders')
-          .select('order_data')
-          .eq('id', aiOrderId)
-          .single()
-        
-        if (fetchError || !currentOrder) {
-          console.error('خطأ في جلب بيانات الطلب:', fetchError)
-          await answerCallbackQuery(callbackId, '❌ خطأ في جلب البيانات')
-          return
-        }
-        
-        // Get region name for display
-        const regionCandidates = currentOrder.order_data?.region_candidates || []
-        const selectedRegion = regionCandidates.find(r => r.id === selectedRegionId)
-        
-        // Update ai_order with selected region data
-        const updatedOrderData = {
-          ...currentOrder.order_data,
-          region_confirmed: true,
-          selected_region_id: selectedRegionId,
-          selected_region_name: selectedRegion?.name || 'منطقة محددة',
-          requires_region_confirmation: false
-        }
-        
-        const { error: updateError } = await supabase
-          .from('ai_orders')
-          .update({
-            order_data: updatedOrderData
-          })
-          .eq('id', aiOrderId)
-        
-        if (updateError) {
-          console.error('خطأ في تحديث منطقة الطلب:', updateError)
-          await answerCallbackQuery(callbackId, '❌ خطأ في التحديث')
-          return
-        }
-        
-        
-        // Send confirmation message
-        const confirmationText = `✅ تم تحديد المنطقة بنجاح!\n📍 المنطقة المحددة: ${selectedRegion?.name || 'غير معروف'}\n\n🚀 سيتم معالجة الطلب الآن...`
-        
-        await sendTelegramMessage(chatId, confirmationText)
-        await answerCallbackQuery(callbackId, 'تم التحديث بنجاح ✅')
-        
-        console.log('✅ تم تحديث منطقة الطلب الذكي:', { aiOrderId, selectedRegionId, regionName: selectedRegion?.name })
-        
-      } catch (error) {
-        console.error('خطأ في معالجة اختيار المنطقة:', error)
-        await answerCallbackQuery(callbackId, '❌ خطأ في المعالجة')
-      }
+      await sendTelegramMessage(chatId, welcomeMessage)
+      return true
+    } else {
+      await sendTelegramMessage(chatId, '❌ رمز الموظف غير صحيح أو منتهي الصلاحية!\n\nيرجى التواصل مع الإدارة للحصول على رمز جديد.')
+      return false
     }
+  } catch (error) {
+    console.error('Error linking employee:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في ربط الحساب. يرجى المحاولة مرة أخرى.')
+    return false
   }
 }
 
 // Main message handler
 async function handleMessage(message: TelegramMessage) {
   const chatId = message.chat.id
-  const text = message.text
+  const text = message.text?.trim()
   
   if (!text) return
   
@@ -691,7 +571,7 @@ async function handleMessage(message: TelegramMessage) {
 مثال:
 احمد علي
 07701234567
-بغداد الدورة حي الصحة
+بغداد
 شارع الخليج
 قميص أحمر 2 قطعة x 25000 د.ع
 بنطال أزرق 1 قطعة x 35000 د.ع
@@ -724,53 +604,25 @@ async function handleMessage(message: TelegramMessage) {
 
 // Main handler
 serve(async (req) => {
-  console.log('🔴 Telegram webhook called!')
-  console.log('Request URL:', req.url)
-  console.log('Request method:', req.method)
-
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
-
+  
   try {
     const body = await req.json()
-    console.log('Request body:', JSON.stringify(body, null, 2))
-
-    // Handle special actions from the app
-    if (body.action === 'send_region_selection') {
-      console.log('📤 إرسال خيارات المناطق للتليغرام...')
-      const { chat_id, ai_order_id, candidates } = body
-      
-      if (candidates && candidates.length > 1) {
-        await sendRegionSelectionKeyboard(chat_id, ai_order_id, candidates)
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-    }
-
-    // Handle regular Telegram updates
-    const update: TelegramUpdate = body
     
-    if (update.message) {
-      const message = update.message
-      console.log(`Processing message from chatId: ${message.chat.id}, text: "${message.text}"`)
-      await handleMessage(message)
+    // Handle Telegram webhook
+    if (body.message) {
+      await handleMessage(body.message)
     }
     
-    // Handle callback queries for region selection
-    if (update.callback_query) {
-      console.log('📞 معالجة callback query...')
-      await handleCallbackQuery(update.callback_query)
-    }
-
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
-
+    
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    console.error('Error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
