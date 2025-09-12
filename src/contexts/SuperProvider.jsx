@@ -1810,10 +1810,11 @@ export const SuperProvider = ({ children }) => {
         // استخراج المدينة والمنطقة من العنوان - نفس منطق QuickOrderContent
         let cityToSearch = aiOrder.customer_city || '';
         let regionToSearch = aiOrder.customer_province || '';
+        let addressParts = [];
         
         // إذا لم توجد مدينة، استخرج من العنوان (أول كلمة)
         if (!cityToSearch && aiOrder.customer_address) {
-          const addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
+          addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
           if (addressParts.length > 0) {
             cityToSearch = addressParts[0];
             console.log('🔍 استخراج المدينة من العنوان:', cityToSearch);
@@ -1824,6 +1825,9 @@ export const SuperProvider = ({ children }) => {
             regionToSearch = addressParts[1];
             console.log('🔍 استخراج المنطقة من العنوان:', regionToSearch);
           }
+        } else if (aiOrder.customer_address) {
+          // حفظ أجزاء العنوان للاستخدام لاحقاً في استخراج أقرب نقطة دالة
+          addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
         }
         
         // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
@@ -1889,6 +1893,33 @@ export const SuperProvider = ({ children }) => {
               );
             }
             
+            // إذا لم نجد مطابقة، حاول المطابقة الذكية باستخدام السياق من العنوان
+            if (!regionMatch && addressParts.length > 2) {
+              console.log('🧠 محاولة المطابقة الذكية باستخدام السياق...');
+              
+              // استخراج الكلمات الإضافية من العنوان
+              const contextWords = addressParts.slice(2).map(part => normalizeArabic(part));
+              console.log('📝 كلمات السياق:', contextWords);
+              
+              // البحث عن منطقة تحتوي على إحدى كلمات السياق
+              for (const contextWord of contextWords) {
+                const smartMatch = regions.find(region => 
+                  normalizeArabic(region.name).includes(contextWord) ||
+                  contextWord.includes(normalizeArabic(region.name))
+                );
+                
+                if (smartMatch) {
+                  regionMatch = smartMatch;
+                  console.log('🎯 تم العثور على مطابقة ذكية:', { 
+                    region: smartMatch.name, 
+                    contextWord: contextWord,
+                    originalWord: addressParts.find(part => normalizeArabic(part) === contextWord)
+                  });
+                  break;
+                }
+              }
+            }
+            
             if (regionMatch) {
               regionId = regionMatch.id;
               foundRegionName = regionMatch.name;
@@ -1948,6 +1979,17 @@ export const SuperProvider = ({ children }) => {
 
         const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
 
+        // استخراج أقرب نقطة دالة (الجزء المتبقي بعد المدينة والمنطقة)
+        let nearestLandmark = '';
+        if (addressParts.length > 2) {
+          // أخذ الكلمات المتبقية بعد المدينة والمنطقة
+          nearestLandmark = addressParts.slice(2).join(' ');
+          console.log('📍 استخراج أقرب نقطة دالة:', nearestLandmark);
+        } else if (aiOrder.customer_address && !addressParts.length) {
+          // إذا لم تكن هناك أجزاء عنوان، استخدم العنوان الكامل كـ fallback
+          nearestLandmark = aiOrder.customer_address;
+        }
+
         // إعداد payload الوسيط - نفس البنية من QuickOrderContent مع ملاحظات فارغة لطلبات التليغرام
         const updatedPayload = {
           city_id: parseInt(cityId),
@@ -1955,7 +1997,7 @@ export const SuperProvider = ({ children }) => {
           client_name: aiOrder.customer_name?.trim() || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          location: aiOrder.customer_address || '',
+          location: nearestLandmark, // أقرب نقطة دالة فقط، ليس العنوان الكامل
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
