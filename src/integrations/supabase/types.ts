@@ -4243,13 +4243,8 @@ export type Database = {
         Returns: string
       }
       get_employee_by_telegram_id: {
-        Args: { p_telegram_chat_id: number }
-        Returns: {
-          employee_code: string
-          full_name: string
-          role: string
-          user_id: string
-        }[]
+        Args: { p_chat_id: number }
+        Returns: Json
       }
       get_employee_last_sync: {
         Args: { p_employee_id: string }
@@ -4448,8 +4443,8 @@ export type Database = {
         Returns: boolean
       }
       link_telegram_user: {
-        Args: { p_employee_code: string; p_telegram_chat_id: number }
-        Returns: boolean
+        Args: { p_chat_id: number; p_employee_code: string }
+        Returns: Json
       }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }
