@@ -29,7 +29,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-const AiOrderCard = ({ order, isSelected, onSelect }) => {
+const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
@@ -500,8 +500,13 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
                       
                       try {
-                        // استخدام الوجهة الافتراضية المحفوظة في التفضيلات
-                        const res = await approveAiOrder?.(order.id, 'local', null);
+                        // استخدام الوجهة المحددة من المدير
+                        console.log('إرسال طلب للموافقة:', { 
+                          orderId: order.id, 
+                          destination: orderDestination?.destination || 'local', 
+                          account: orderDestination?.account 
+                        });
+                        const res = await approveAiOrder?.(order.id, orderDestination?.destination || 'local', orderDestination?.account);
                         if (res?.success) {
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                           toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });

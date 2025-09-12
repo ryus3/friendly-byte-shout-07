@@ -174,6 +174,30 @@ useEffect(() => {
     partnerName: 'local'
   });
 
+  // تحميل إعدادات الوجهة من ملف المستخدم
+  useEffect(() => {
+    const loadDestinationSettings = async () => {
+      if (!user?.user_id) return;
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('default_ai_order_destination, selected_delivery_account')
+          .eq('user_id', user.user_id)
+          .single();
+        if (data) {
+          setOrderDestination({
+            destination: data.default_ai_order_destination || 'local',
+            account: data.selected_delivery_account || '',
+            partnerName: data.default_ai_order_destination === 'local' ? 'local' : data.default_ai_order_destination || 'local'
+          });
+        }
+      } catch (error) {
+        console.error('خطأ في تحميل إعدادات الوجهة:', error);
+      }
+    };
+    loadDestinationSettings();
+  }, [user?.user_id]);
+
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
 
@@ -800,6 +824,7 @@ useEffect(() => {
                       order={order}
                       isSelected={selectedOrders.includes(order.id) || (highlightId && order.id === highlightId)}
                       onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                      orderDestination={orderDestination}
                     />
                   ))
                 )}
