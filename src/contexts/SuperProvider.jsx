@@ -2040,7 +2040,7 @@ export const SuperProvider = ({ children }) => {
           delivery_account_used: actualAccount,
           alwaseet_city_id: parseInt(cityId),
           alwaseet_region_id: parseInt(regionId)
-        });
+        }, foundCityName, foundRegionName);
         } catch (err) {
           console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
           return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
@@ -2117,15 +2117,15 @@ export const SuperProvider = ({ children }) => {
   }, [user, allData.products, activateAccount, createAlWaseetOrder, alwaseetToken, setActivePartner]);
 
   // دالة إنشاء طلب محلي
-  const createLocalOrder = useCallback(async (aiOrder, normalizedItems, orderId) => {
+  const createLocalOrder = useCallback(async (aiOrder, normalizedItems, orderId, cityName = null, regionName = null) => {
     return await createLocalOrderWithDeliveryPartner(aiOrder, normalizedItems, orderId, {
       delivery_partner: 'محلي',
       delivery_account_used: 'local'
-    });
+    }, cityName, regionName);
   }, []);
 
   // دالة إنشاء طلب محلي مع دعم شركة التوصيل
-  const createLocalOrderWithDeliveryPartner = useCallback(async (aiOrder, normalizedItems, orderId, deliveryPartnerData = {}) => {
+  const createLocalOrderWithDeliveryPartner = useCallback(async (aiOrder, normalizedItems, orderId, deliveryPartnerData = {}, cityName = null, regionName = null) => {
     try {
 
       // إنشاء رقم طلب
@@ -2179,8 +2179,8 @@ export const SuperProvider = ({ children }) => {
         customer_name: aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         customer_address: aiOrder.customer_address,
-        customer_city: foundCityName || aiOrder.customer_city,
-        customer_province: foundRegionName || aiOrder.customer_province,
+        customer_city: cityName || aiOrder.customer_city,
+        customer_province: regionName || aiOrder.customer_province,
         total_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
