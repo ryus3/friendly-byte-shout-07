@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
-import { useDeliveryOrderHandler } from './SuperProvider_DeliveryOrderHandler';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
 
 const SuperContext = createContext();
 
@@ -90,10 +90,21 @@ export const SuperProvider = ({ children }) => {
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   // أرباح وفواتير التسوية من السياق المتخصص (مع بقاء التوصيل عبر المزود الموحد)
+  // أرباح وفواتير التسوية من السياق المتخصص
   const { settlementInvoices, createSettlementRequest: profitsCreateSettlement } = useProfits() || { 
     settlementInvoices: [], 
     createSettlementRequest: () => Promise.resolve(null) 
   };
+  
+  // AlWaseet context للتعامل مع شركات التوصيل مباشرة
+  const { 
+    activateAccount, 
+    createAlWaseetOrder, 
+    token: alwaseetToken, 
+    activePartner, 
+    setActivePartner,
+    hasValidToken 
+  } = useAlWaseet();
   
   // استدعاء useProducts في المكان الصحيح
   const {
@@ -1615,9 +1626,122 @@ export const SuperProvider = ({ children }) => {
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
 
-      // إذا كان الوجهة شركة توصيل، استخدم createUnifiedOrder
+      // إذا كان الوجهة شركة توصيل، استخدم AlWaseet مباشرة
       if (destination !== 'local') {
-        return await handleDeliveryPartnerOrder(aiOrder, itemsInput, destination, selectedAccount);
+        console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
+        
+        // تفعيل الحساب المحدد
+        const accountActivated = await activateAccount(selectedAccount);
+        if (!accountActivated) {
+          return { success: false, error: 'فشل في تفعيل حساب شركة التوصيل المحدد' };
+        }
+        
+        // التحقق من وجود توكن صالح
+        if (!alwaseetToken) {
+          return { success: false, error: 'لا يوجد توكن صالح لشركة التوصيل' };
+        }
+        
+        setActivePartner('alwaseet');
+        
+        // مطابقة العناصر نفس المنطق المحلي
+        const products = Array.isArray(allData.products) ? allData.products : [];
+        const lowercase = (v) => (v || '').toString().trim().toLowerCase();
+        const notMatched = [];
+
+        const matchedItems = itemsInput.map((it) => {
+          const name = lowercase(it.product_name || it.name);
+          const color = lowercase(it.color);
+          const size = lowercase(it.size);
+          const qty = Number(it.quantity || 1);
+          const price = Number(it.unit_price || it.price || 0);
+
+          // إذا كانت المعرّفات موجودة بالفعل استخدمها مباشرة
+          if (it.product_id && it.variant_id) {
+            return {
+              product_id: it.product_id,
+              variant_id: it.variant_id,
+              quantity: qty,
+              unit_price: price,
+            };
+          }
+
+          // ابحث بالاسم
+          let product = products.find(p => lowercase(p.name) === name) 
+            || products.find(p => lowercase(p.name).includes(name));
+
+          if (!product) {
+            notMatched.push(it.product_name || it.name || 'منتج غير معروف');
+            return null;
+          }
+
+          // مطابقة المتغير (اللون/المقاس)
+          const variants = Array.isArray(product.variants) ? product.variants : (product.product_variants || []);
+          let variant = null;
+          if (variants.length === 1) {
+            variant = variants[0];
+          } else {
+            variant = variants.find(v => lowercase(v.color || v.color_name) === color && lowercase(v.size || v.size_name) === size)
+                   || variants.find(v => lowercase(v.color || v.color_name) === color)
+                   || variants.find(v => lowercase(v.size || v.size_name) === size);
+          }
+
+          if (!variant) {
+            notMatched.push(`${product.name}${it.color || it.size ? ` (${it.color || ''} ${it.size || ''})` : ''}`);
+            return null;
+          }
+
+          return {
+            product_id: product.id,
+            variant_id: variant.id,
+            quantity: qty,
+            unit_price: price || Number(variant.price || 0),
+          };
+        });
+
+        if (notMatched.length > 0) {
+          return { success: false, error: `تعذر مطابقة المنتجات التالية مع المخزون: ${notMatched.join('، ')}` };
+        }
+
+        const normalizedItems = matchedItems.filter(Boolean);
+        if (!normalizedItems.length) {
+          return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
+        }
+
+        // إنشاء payload للوسيط
+        const alwaseetPayload = {
+          customer_name: aiOrder.customer_name,
+          customer_phone: aiOrder.customer_phone,
+          customer_address: aiOrder.customer_address,
+          customer_city: aiOrder.customer_city,
+          customer_province: aiOrder.customer_province,
+          notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || '',
+          items: normalizedItems.map(item => ({
+            product_name: item.product_name || 'منتج',
+            quantity: item.quantity,
+            price: item.unit_price
+          })),
+          total_amount: normalizedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+        };
+
+        console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
+        
+        // إنشاء الطلب في الوسيط
+        const alwaseetResult = await createAlWaseetOrder(alwaseetPayload, alwaseetToken);
+        
+        if (!alwaseetResult?.qr_id) {
+          return { success: false, error: 'فشل في إنشاء الطلب لدى شركة التوصيل' };
+        }
+
+        console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alwaseetResult);
+
+        // إنشاء الطلب المحلي مع ربطه بالوسيط
+        return await createLocalOrderWithDeliveryPartner(aiOrder, normalizedItems, orderId, {
+          delivery_partner: 'alwaseet',
+          delivery_partner_order_id: alwaseetResult.id,
+          qr_id: alwaseetResult.qr_id,
+          tracking_number: alwaseetResult.qr_id,
+          delivery_account_used: selectedAccount
+        });
       }
 
       // 2) مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
@@ -1687,10 +1811,18 @@ export const SuperProvider = ({ children }) => {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
     }
-  }, [user, allData.products]);
+  }, [user, allData.products, activateAccount, createAlWaseetOrder, alwaseetToken, setActivePartner]);
 
   // دالة إنشاء طلب محلي
   const createLocalOrder = useCallback(async (aiOrder, normalizedItems, orderId) => {
+    return await createLocalOrderWithDeliveryPartner(aiOrder, normalizedItems, orderId, {
+      delivery_partner: 'محلي',
+      delivery_account_used: 'local'
+    });
+  }, []);
+
+  // دالة إنشاء طلب محلي مع دعم شركة التوصيل
+  const createLocalOrderWithDeliveryPartner = useCallback(async (aiOrder, normalizedItems, orderId, deliveryPartnerData = {}) => {
     try {
 
       // إنشاء رقم طلب
@@ -1737,8 +1869,8 @@ export const SuperProvider = ({ children }) => {
       const discount = 0;
       const total = subtotal - discount + deliveryFee;
 
-      // إنشاء طلب حقيقي محلي
-      const trackingNumber = `RYUS-${Date.now().toString().slice(-6)}`;
+      // إنشاء طلب حقيقي مع دعم شركة التوصيل
+      const trackingNumber = deliveryPartnerData.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`;
       const orderRow = {
         order_number: orderNumber,
         customer_name: aiOrder.customer_name,
@@ -1751,11 +1883,13 @@ export const SuperProvider = ({ children }) => {
         delivery_fee: deliveryFee,
         final_amount: total,
         status: 'pending',
-        delivery_status: 'pending',
+        delivery_status: deliveryPartnerData.delivery_partner === 'alwaseet' ? '1' : 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
-        delivery_partner: deliveryType === 'توصيل' ? 'محلي' : 'محلي',
-        delivery_account_used: 'local',
+        delivery_partner: deliveryPartnerData.delivery_partner || 'محلي',
+        delivery_partner_order_id: deliveryPartnerData.delivery_partner_order_id || null,
+        qr_id: deliveryPartnerData.qr_id || null,
+        delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
         notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
         created_by: user?.user_id || user?.id,
       };
@@ -1811,8 +1945,20 @@ export const SuperProvider = ({ children }) => {
       // إبطال الكاش
       superAPI.invalidate('all_data');
 
-      console.log('✅ تم تحويل الطلب الذكي بنجاح - محلي:', { orderId: createdOrder.id, trackingNumber });
-      return { success: true, orderId: createdOrder.id, trackingNumber, method: 'local' };
+      const method = deliveryPartnerData.delivery_partner === 'alwaseet' ? 'alwaseet' : 'local';
+      console.log(`✅ تم تحويل الطلب الذكي بنجاح - ${method}:`, { 
+        orderId: createdOrder.id, 
+        trackingNumber,
+        deliveryPartner: deliveryPartnerData.delivery_partner,
+        deliveryPartnerId: deliveryPartnerData.delivery_partner_order_id 
+      });
+      return { 
+        success: true, 
+        orderId: createdOrder.id, 
+        trackingNumber, 
+        method,
+        deliveryPartnerOrderId: deliveryPartnerData.delivery_partner_order_id 
+      };
 
     } catch (err) {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
