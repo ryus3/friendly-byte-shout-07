@@ -205,7 +205,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
           <SelectTrigger className="h-9">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="z-50 bg-popover border border-border">
+          <SelectContent className="bg-popover border border-border z-[100]">
             {Object.entries(deliveryPartners)
               .filter(([key]) => !hideLocal || key !== 'local')
               .map(([key, partner]) => (
@@ -245,7 +245,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="اختر حساب..." />
               </SelectTrigger>
-              <SelectContent className="z-50 bg-popover border border-border">
+              <SelectContent className="bg-popover border border-border z-[100]">
                 {userAccounts.map((account) => (
                   <SelectItem key={account.account_username} value={account.account_username}>
                     <div className="flex items-center gap-2">

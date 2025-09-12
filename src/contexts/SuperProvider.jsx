@@ -1788,6 +1788,21 @@ export const SuperProvider = ({ children }) => {
 
         console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
         
+        // جلب التوكن للحساب المحدد من قاعدة البيانات
+        const { data: tokenData } = await supabase
+          .from('delivery_partner_tokens')
+          .select('token')
+          .eq('user_id', user.user_id)
+          .eq('partner_name', 'alwaseet')
+          .eq('account_username', selectedAccount)
+          .single();
+        
+        if (!tokenData?.token) {
+          throw new Error(`لم يتم العثور على توكن للحساب: ${selectedAccount}`);
+        }
+        
+        const alwaseetToken = tokenData.token;
+        
         // جلب المدن والمناطق لتحديد المعرفات الصحيحة
         const citiesData = await getCities(alwaseetToken);
         const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
@@ -1919,8 +1934,36 @@ export const SuperProvider = ({ children }) => {
         // إنشاء الطلب في الوسيط
         const alwaseetResult = await createAlWaseetOrder(updatedPayload, alwaseetToken);
         
-        if (!alwaseetResult?.qr_id) {
-          return { success: false, error: 'فشل في إنشاء الطلب لدى شركة التوصيل - لم يتم استلام رقم التتبع' };
+        if (!alwaseetResult?.qr_id && !alwaseetResult?.id) {
+          console.error('❌ استجابة غير مكتملة من الوسيط:', alwaseetResult);
+          return { success: false, error: `فشل في إنشاء الطلب لدى شركة التوصيل: ${alwaseetResult?.message || 'استجابة غير صحيحة'}` };
+        }
+
+        let finalQrId = alwaseetResult.qr_id;
+        
+        // إذا لم نحصل على qr_id ولكن حصلنا على id، حاول جلب التفاصيل
+        if (!finalQrId && alwaseetResult.id) {
+          try {
+            console.log('⚠️ محاولة جلب تفاصيل الطلب للحصول على qr_id...');
+            const { getOrderById } = await import('../lib/alwaseet-api.js');
+            const orderDetails = await getOrderById(alwaseetToken, alwaseetResult.id);
+            
+            if (orderDetails?.qr_id) {
+              finalQrId = orderDetails.qr_id;
+              console.log('✅ تم الحصول على qr_id من تفاصيل الطلب:', finalQrId);
+            } else {
+              // استخدم tracking_number أو id كبديل
+              finalQrId = alwaseetResult.tracking_number || String(alwaseetResult.id);
+              console.log('⚠️ استخدام البديل كـ qr_id:', finalQrId);
+            }
+          } catch (fetchError) {
+            console.warn('⚠️ فشل في جلب تفاصيل الطلب، استخدام البديل:', fetchError);
+            finalQrId = alwaseetResult.tracking_number || String(alwaseetResult.id);
+          }
+        }
+        
+        if (!finalQrId) {
+          return { success: false, error: 'فشل في الحصول على رقم التتبع من شركة التوصيل' };
         }
 
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alwaseetResult);
@@ -1928,9 +1971,9 @@ export const SuperProvider = ({ children }) => {
         // إنشاء الطلب المحلي مع ربطه بالوسيط
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, orderId, {
           delivery_partner: 'alwaseet',
-          delivery_partner_order_id: String(alwaseetResult.id || alwaseetResult.qr_id),
-          qr_id: alwaseetResult.qr_id,
-          tracking_number: alwaseetResult.qr_id,
+          delivery_partner_order_id: String(alwaseetResult.id || finalQrId),
+          qr_id: finalQrId,
+          tracking_number: finalQrId,
           delivery_account_used: selectedAccount,
           alwaseet_city_id: cityId,
           alwaseet_region_id: regionId
