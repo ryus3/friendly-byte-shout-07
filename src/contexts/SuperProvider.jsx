@@ -2022,13 +2022,26 @@ export const SuperProvider = ({ children }) => {
         const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
 
         // إعداد payload الوسيط - نفس البنية من QuickOrderContent مع ملاحظات فارغة لطلبات التليغرام
+        // تحديد اسم العميل الافتراضي من إعدادات المستخدم الحالية
+        let clientName = (aiOrder.customer_name || '').trim();
+        try {
+          if (!clientName || clientName === 'زبون من التليغرام') {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('default_customer_name')
+              .eq('user_id', createdBy)
+              .maybeSingle();
+            if (prof?.default_customer_name) clientName = prof.default_customer_name;
+          }
+        } catch (_) {}
+
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          client_name: aiOrder.customer_name?.trim() || `زبون-${Date.now().toString().slice(-6)}`,
+          client_name: clientName || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          location: aiOrder.customer_address || '',
+          location: nearestPoint || '',
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل

@@ -243,7 +243,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       setFormData(prev => ({
         ...prev,
-        name: aiOrderData.customer_name || '',
+        name: (aiOrderData.source === 'telegram' && (!aiOrderData.customer_name || aiOrderData.customer_name === 'زبون من التليغرام'))
+          ? (defaultCustomerName || user?.default_customer_name || '')
+          : (aiOrderData.customer_name || ''),
         phone: aiOrderData.customer_phone || '',
         city: parsedCity || 'بغداد',
         region: parsedRegion || '',

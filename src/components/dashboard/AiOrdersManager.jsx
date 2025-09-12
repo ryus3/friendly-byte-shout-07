@@ -48,7 +48,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     const map = new Map();
     for (const o of ordersFromContext) {
       // فلترة الطلبات المعتمدة والمعالجة محلياً لمنع إعادة ظهورها
-      if (o && o.id && !map.has(o.id) && o.status !== 'approved' && !processedOrders.includes(o.id)) {
+      if (o && o.id && !map.has(o.id) && o.status !== 'approved' && o.status !== 'deleted' && !processedOrders.includes(o.id)) {
         map.set(o.id, o);
       }
     }
@@ -227,6 +227,32 @@ useEffect(() => {
       }
     };
     loadUserPreferences();
+
+    // عند تفعيل الموافقة التلقائية، معالجة الطلبات الحالية المؤهلة فوراً
+    // لتجنب الحاجة للموافقة اليدوية بعد التفعيل
+    if (preferencesLoaded && autoApprovalEnabled) {
+      (async () => {
+        const candidates = orders.filter(o => 
+          o.status === 'pending' && 
+          availabilityOf(o) === 'available' && 
+          !orderNeedsReview(o) &&
+          (orderDestination.destination === 'local' || orderDestination.account)
+        ).slice(0, 10); // حد أقصى لمنع الضغط
+
+        for (const o of candidates) {
+          try {
+            const res = await approveAiOrder?.(o.id, orderDestination.destination, orderDestination.account);
+            if (res?.success) {
+              setOrders(prev => prev.filter(x => x.id !== o.id));
+              setProcessedOrders(prev => [...prev, o.id]);
+              try { await supabase.from('ai_orders').update({ status: 'approved' }).eq('id', o.id); } catch {}
+            }
+          } catch (e) {
+            console.error('Auto-approve existing failed:', e);
+          }
+        }
+      })();
+    }
   }, [user?.user_id]);
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
@@ -486,6 +512,11 @@ useEffect(() => {
         
         const successIds = results.filter(r => r.success).map(r => r.id);
         const failedIds = results.filter(r => !r.success).map(r => r.id);
+        
+        // تحديث الحالة في قاعدة البيانات لمنع إعادة ظهورها
+        if (successIds.length > 0) {
+          try { await supabase.from('ai_orders').update({ status: 'deleted' }).in('id', successIds); } catch {}
+        }
         
         // إضافة الطلبات الفاشلة للقائمة مرة أخرى
         if (failedIds.length > 0) {

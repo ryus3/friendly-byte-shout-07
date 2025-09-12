@@ -367,7 +367,21 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
+    let defaultCustomerName = profileData?.default_customer_name || '';
+    // fallback إلى المدير الافتراضي إذا لم يكن هناك اسم افتراضي للمستخدم الحالي
+    if (!defaultCustomerName || defaultCustomerName.trim() === '') {
+      try {
+        const { data: adminProfile } = await supabase
+          .from('profiles')
+          .select('default_customer_name')
+          .eq('user_id', '91484496-b887-44f7-9e5d-be9db5567604')
+          .maybeSingle();
+        if (adminProfile?.default_customer_name) defaultCustomerName = adminProfile.default_customer_name;
+      } catch (_) {}
+    }
+    if (!defaultCustomerName || defaultCustomerName.trim() === '') {
+      defaultCustomerName = 'زبون';
+    }
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -1114,6 +1128,26 @@ serve(async (req) => {
     const chatId = update.message.chat.id;
     const text = update.message.text.trim();
     const userId = update.message.from.id;
+
+    // منع التكرار: تجاهل أي تحديث سبق معالجته
+    try {
+      const { data: existing } = await supabase
+        .from('telegram_processed_updates')
+        .select('update_id')
+        .eq('update_id', update.update_id)
+        .maybeSingle();
+      if (existing) {
+        console.log('⏭️ Duplicate update detected, skipping:', update.update_id);
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      }
+      await supabase.from('telegram_processed_updates').insert({
+        update_id: update.update_id,
+        chat_id: chatId,
+        message_id: update.message.message_id
+      });
+    } catch (e) {
+      console.warn('⚠️ Dedup check failed, continuing anyway:', e?.message || e);
+    }
     
     console.log(`Processing message from chatId: ${chatId}, text: "${text}"`);
 
