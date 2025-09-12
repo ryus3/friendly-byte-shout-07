@@ -392,6 +392,18 @@ useEffect(() => {
   const handleBulkAction = async (action) => {
     if (selectedOrders.length === 0) return;
     
+    // التحقق من صحة الوجهة والحساب قبل الموافقة
+    if (action === 'approve') {
+      if (orderDestination.destination !== 'local' && !orderDestination.account) {
+        toast({
+          title: "خطأ في الإعدادات",
+          description: `يجب تحديد حساب لشركة التوصيل ${orderDestination.destination} أولاً`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
     try {
       if (action === 'approve') {
         // تحديث فوري محلياً أولاً
@@ -761,19 +773,20 @@ useEffect(() => {
                     </div>
                   )}
 
-                  {/* مكون اختيار وجهة الطلبات - مخفي للطلبات من التليغرام */}
-                  {filteredOrders.some(order => order.source !== 'telegram' && order.order_data?.source !== 'telegram') && (
+                  {/* مكون اختيار وجهة الطلبات - يظهر دائماً */}
+                  {filteredOrders.length > 0 && (
                     <div className="mb-4 p-3 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
                       <AiOrderDestinationSelector 
                         value={orderDestination}
                         onChange={setOrderDestination}
                         className="max-w-md"
+                        hideLocal={filteredOrders.some(order => order.source === 'telegram' || order.order_data?.source === 'telegram')}
                       />
                     </div>
                   )}
                   
-                  {/* رسالة للطلبات من التليغرام */}
-                  {filteredOrders.some(order => order.source === 'telegram' || order.order_data?.source === 'telegram') && (
+                  {/* إزالة رسالة التليغرام */}
+                  {false && (
                     <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200/50 dark:border-blue-700/50">
                       <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                         <Send className="w-4 h-4" />

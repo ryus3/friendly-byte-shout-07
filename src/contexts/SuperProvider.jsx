@@ -1790,58 +1790,105 @@ export const SuperProvider = ({ children }) => {
         
         // جلب المدن والمناطق لتحديد المعرفات الصحيحة
         const citiesData = await getCities(alwaseetToken);
-        const cities = citiesData?.data || [];
+        const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
+        
+        // تطبيع النصوص العربية للبحث
+        const normalizeArabic = (text) => {
+          if (!text) return '';
+          return text.toString().trim()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/[ة]/g, 'ه')
+            .replace(/[ي]/g, 'ى')
+            .toLowerCase();
+        };
         
         // العثور على معرف المدينة
         let cityId = null;
+        let foundCityName = '';
         if (aiOrder.customer_city) {
-          const cityMatch = cities.find(city => 
-            city.name === aiOrder.customer_city || 
-            city.name.includes(aiOrder.customer_city) ||
-            aiOrder.customer_city.includes(city.name)
-          );
-          cityId = cityMatch?.id;
+          const searchCity = normalizeArabic(aiOrder.customer_city);
+          let cityMatch = cities.find(city => normalizeArabic(city.name) === searchCity);
+          
+          if (!cityMatch) {
+            cityMatch = cities.find(city => 
+              normalizeArabic(city.name).includes(searchCity) ||
+              searchCity.includes(normalizeArabic(city.name))
+            );
+          }
+          
+          if (cityMatch) {
+            cityId = cityMatch.id;
+            foundCityName = cityMatch.name;
+          }
+          
           console.log('🏙️ البحث عن المدينة:', { 
             searchTerm: aiOrder.customer_city, 
-            found: cityMatch?.name, 
-            cityId 
+            normalized: searchCity,
+            found: foundCityName, 
+            cityId,
+            availableCities: cities.slice(0, 5).map(c => c.name)
           });
         }
         
-        // إذا لم نجد المدينة، فشل الطلب
+        // إذا لم نجد المدينة، استخدم بغداد كافتراضي
         if (!cityId) {
-          throw new Error(`لم يتم العثور على مدينة مطابقة: ${aiOrder.customer_city}. المدن المتاحة: ${cities.map(c => c.name).join(', ')}`);
+          const baghdadCity = cities.find(city => normalizeArabic(city.name).includes('بغداد'));
+          if (baghdadCity) {
+            cityId = baghdadCity.id;
+            foundCityName = baghdadCity.name;
+            console.log('⚠️ لم يتم العثور على المدينة، استخدام بغداد كافتراضي:', foundCityName);
+          } else {
+            throw new Error(`لم يتم العثور على مدينة مطابقة: ${aiOrder.customer_city}. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
+          }
         }
 
         // جلب المناطق للمدينة المحددة
         let regionId = null;
+        let foundRegionName = '';
         if (cityId) {
           const regionsData = await getRegionsByCity(alwaseetToken, cityId);
-          const regions = regionsData?.data || [];
+          const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
           
-          if (aiOrder.customer_province) {
-            const regionMatch = regions.find(region => 
-              region.name === aiOrder.customer_province ||
-              region.name.includes(aiOrder.customer_province) ||
-              aiOrder.customer_province.includes(region.name)
-            );
-            regionId = regionMatch?.id;
+          if (aiOrder.customer_province && regions.length > 0) {
+            const searchRegion = normalizeArabic(aiOrder.customer_province);
+            let regionMatch = regions.find(region => normalizeArabic(region.name) === searchRegion);
+            
+            if (!regionMatch) {
+              regionMatch = regions.find(region => 
+                normalizeArabic(region.name).includes(searchRegion) ||
+                searchRegion.includes(normalizeArabic(region.name))
+              );
+            }
+            
+            if (regionMatch) {
+              regionId = regionMatch.id;
+              foundRegionName = regionMatch.name;
+            }
+            
             console.log('🗺️ البحث عن المنطقة:', { 
               searchTerm: aiOrder.customer_province, 
-              found: regionMatch?.name, 
-              regionId 
+              normalized: searchRegion,
+              found: foundRegionName, 
+              regionId,
+              availableRegions: regions.slice(0, 5).map(r => r.name)
             });
           }
           
-          // إذا لم نجد المنطقة، فشل الطلب
+          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة
+          if (!regionId && regions.length > 0) {
+            regionId = regions[0].id;
+            foundRegionName = regions[0].name;
+            console.log('⚠️ لم يتم العثور على المنطقة، استخدام أول منطقة متاحة:', foundRegionName);
+          }
+          
           if (!regionId) {
-            throw new Error(`لم يتم العثور على منطقة مطابقة: ${aiOrder.customer_province}. المناطق المتاحة في ${cities.find(c => c.id === cityId)?.name}: ${regions.map(r => r.name).join(', ')}`);
+            throw new Error(`لم يتم العثور على منطقة مطابقة: ${aiOrder.customer_province}. المناطق المتاحة في ${foundCityName}: ${regions.slice(0, 10).map(r => r.name).join(', ')}`);
           }
         }
 
         // التحقق من وجود معرفات صحيحة
         if (!cityId || !regionId) {
-          throw new Error(`لم يتم العثور على معرفات صحيحة للمدينة والمنطقة. المدينة: ${aiOrder.customer_city}, المنطقة: ${aiOrder.customer_province}`);
+          throw new Error(`لم يتم العثور على معرفات صحيحة للمدينة والمنطقة. المدينة: ${aiOrder.customer_city} (${foundCityName}), المنطقة: ${aiOrder.customer_province} (${foundRegionName})`);
         }
 
         // تطبيع رقم الهاتف

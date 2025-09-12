@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Truck, Server, CheckCircle } from 'lucide-react';
 
-const AiOrderDestinationSelector = ({ value, onChange, className }) => {
+const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = false }) => {
   const { 
     deliveryPartners, 
     activePartner, 
@@ -34,6 +34,16 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
       }
     }
   }, [value]);
+
+  // إذا كان 'local' مخفي والوجهة الحالية 'local'، اختر أول شريك توصيل
+  useEffect(() => {
+    if (hideLocal && selectedDestination === 'local') {
+      const firstDeliveryPartner = Object.keys(deliveryPartners).find(key => key !== 'local');
+      if (firstDeliveryPartner) {
+        handleDestinationChange(firstDeliveryPartner);
+      }
+    }
+  }, [hideLocal, selectedDestination, deliveryPartners]);
 
   // تحميل حسابات المستخدم والتفضيلات
   useEffect(() => {
@@ -195,12 +205,14 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
           <SelectTrigger className="h-9">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
-            {Object.entries(deliveryPartners).map(([key, partner]) => (
-              <SelectItem key={key} value={key}>
-                {renderDestinationOption(key, partner)}
-              </SelectItem>
-            ))}
+          <SelectContent className="z-50 bg-popover border border-border">
+            {Object.entries(deliveryPartners)
+              .filter(([key]) => !hideLocal || key !== 'local')
+              .map(([key, partner]) => (
+                <SelectItem key={key} value={key}>
+                  {renderDestinationOption(key, partner)}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
@@ -233,7 +245,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
               <SelectTrigger className="h-9">
                 <SelectValue placeholder="اختر حساب..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover border border-border">
                 {userAccounts.map((account) => (
                   <SelectItem key={account.account_username} value={account.account_username}>
                     <div className="flex items-center gap-2">
