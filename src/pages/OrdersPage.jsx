@@ -272,17 +272,10 @@ const OrdersPage = () => {
 
     const handleAiOrderDeleted = (event) => {
       const deletedAiOrderId = event.detail?.id;
-      const preventNavigation = event.detail?.preventNavigation;
-      
       if (deletedAiOrderId) {
-        console.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId, 'منع التنقل:', preventNavigation);
+        console.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
         deletedOrdersSet.current.add(deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
-        
-        // منع فتح نافذة مدير الطلبات الذكية عند الحذف
-        if (preventNavigation) {
-          setDialogs(prev => ({ ...prev, aiManager: false }));
-        }
       }
     };
 
@@ -302,16 +295,9 @@ const OrdersPage = () => {
 
     const handleAiOrderDeletedConfirmed = (event) => {
       const deletedAiOrderId = event.detail?.id;
-      const preventNavigation = event.detail?.preventNavigation;
-      
       if (deletedAiOrderId) {
-        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId, 'منع التنقل:', preventNavigation);
+        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
-        
-        // التأكد من إغلاق نافذة مدير الطلبات الذكية نهائياً
-        if (preventNavigation) {
-          setDialogs(prev => ({ ...prev, aiManager: false }));
-        }
       }
     };
 
