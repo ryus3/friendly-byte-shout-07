@@ -418,9 +418,9 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // حماية زمنية: عمر الطلب أكبر من 15 دقيقة
+    // حماية زمنية: عمر الطلب أكبر من دقيقة واحدة
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 15 * 60 * 1000; // 15 دقيقة بالميلي ثانية
+    const minAge = 1 * 60 * 1000; // دقيقة واحدة بالميلي ثانية
     if (orderAge < minAge) {
       console.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
       return false;

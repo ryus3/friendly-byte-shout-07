@@ -1804,25 +1804,54 @@ export const SuperProvider = ({ children }) => {
             .replace(/[أإآ]/g, 'ا')
             .replace(/[ة]/g, 'ه')
             .replace(/[ي]/g, 'ى')
-            .toLowerCase();
+            .toLowerCase()
+            // إزالة كلمات التوقف
+            .replace(/\b(حي|منطقة|محلة|شارع|زقاق|مقاطعة)\s*/g, '');
         };
         
-        // استخراج المدينة والمنطقة من العنوان - نفس منطق QuickOrderContent
+        // دالة لتوليد مرشحات متعددة الكلمات للمناطق
+        const generateRegionCandidates = (text) => {
+          if (!text) return [];
+          const words = text.split(/\s+/).filter(Boolean);
+          const candidates = [];
+          
+          // مرشحات بأطوال مختلفة (2-3 كلمات)
+          for (let len = 1; len <= Math.min(3, words.length); len++) {
+            for (let start = 0; start <= words.length - len; start++) {
+              const candidate = words.slice(start, start + len).join(' ');
+              if (candidate.length >= 2) {
+                candidates.push(candidate);
+              }
+            }
+          }
+          
+          return candidates;
+        };
+        
+        // استخراج المدينة والمنطقة من العنوان - محسن للعناوين المركبة
         let cityToSearch = aiOrder.customer_city || '';
         let regionToSearch = aiOrder.customer_province || '';
+        let nearestPoint = '';
         
-        // إذا لم توجد مدينة، استخرج من العنوان (أول كلمة)
+        // إذا لم توجد مدينة، استخرج من العنوان كاملاً
         if (!cityToSearch && aiOrder.customer_address) {
           const addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
           if (addressParts.length > 0) {
             cityToSearch = addressParts[0];
             console.log('🔍 استخراج المدينة من العنوان:', cityToSearch);
-          }
-          
-          // الكلمة الثانية كمنطقة محتملة
-          if (addressParts.length > 1 && !regionToSearch) {
-            regionToSearch = addressParts[1];
-            console.log('🔍 استخراج المنطقة من العنوان:', regionToSearch);
+            
+            // استخدام النص المتبقي للبحث عن المنطقة ونقطة الدلالة
+            if (addressParts.length > 1) {
+              const remainingText = addressParts.slice(1).join(' ');
+              console.log('🔍 النص المتبقي للتحليل:', remainingText);
+              
+              // توليد مرشحات للمناطق
+              const regionCandidates = generateRegionCandidates(remainingText);
+              console.log('🏘️ مرشحات المناطق:', regionCandidates);
+              
+              // البحث عن أفضل مطابقة للمنطقة (سيتم لاحقاً)
+              regionToSearch = regionCandidates[0] || addressParts[1];
+            }
           }
         }
         
@@ -1875,37 +1904,80 @@ export const SuperProvider = ({ children }) => {
         
         if (regions.length > 0) {
           if (regionToSearch) {
-            const searchRegion = normalizeArabic(regionToSearch);
-            console.log('🔍 البحث عن المنطقة:', { original: regionToSearch, normalized: searchRegion });
+            console.log('🔍 البحث عن المنطقة:', regionToSearch);
             
-            // مطابقة دقيقة أولاً
-            let regionMatch = regions.find(region => normalizeArabic(region.name) === searchRegion);
+            // توليد جميع المرشحات المحتملة من النص
+            const allCandidates = generateRegionCandidates(regionToSearch);
+            let bestMatch = null;
+            let bestScore = 0;
+            let matchedText = '';
             
-            // مطابقة جزئية إذا لم نجد مطابقة دقيقة
-            if (!regionMatch) {
-              regionMatch = regions.find(region => 
-                normalizeArabic(region.name).includes(searchRegion) ||
-                searchRegion.includes(normalizeArabic(region.name))
-              );
+            // البحث عن أفضل مطابقة
+            for (const candidate of allCandidates) {
+              const normalizedCandidate = normalizeArabic(candidate);
+              
+              // البحث في جميع المناطق
+              for (const region of regions) {
+                const normalizedRegion = normalizeArabic(region.name);
+                let score = 0;
+                
+                // مطابقة دقيقة (أعلى درجة)
+                if (normalizedRegion === normalizedCandidate) {
+                  score = 100;
+                } 
+                // مطابقة تحتوي على النص كاملاً
+                else if (normalizedRegion.includes(normalizedCandidate) && normalizedCandidate.length >= 3) {
+                  score = 80;
+                }
+                // مطابقة جزئية
+                else if (normalizedCandidate.includes(normalizedRegion) && normalizedRegion.length >= 3) {
+                  score = 60;
+                }
+                
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMatch = region;
+                  matchedText = candidate;
+                }
+              }
             }
             
-            if (regionMatch) {
-              regionId = regionMatch.id;
-              foundRegionName = regionMatch.name;
-              console.log('✅ تم العثور على المنطقة:', { id: regionId, name: foundRegionName });
+            if (bestMatch && bestScore >= 60) {
+              regionId = bestMatch.id;
+              foundRegionName = bestMatch.name;
+              console.log('✅ تم العثور على المنطقة:', { 
+                id: regionId, 
+                name: foundRegionName, 
+                score: bestScore,
+                matchedText 
+              });
+              
+              // حساب نقطة الدلالة المتبقية
+              const remainingText = regionToSearch.replace(matchedText, '').trim();
+              if (remainingText.length >= 3) {
+                nearestPoint = remainingText;
+                console.log('📍 نقطة الدلالة:', nearestPoint);
+              }
+            } else {
+              console.log('⚠️ لم يتم العثور على مطابقة جيدة للمنطقة');
             }
           }
           
-          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة (نفس منطق QuickOrderContent)
-          if (!regionId) {
+          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة فقط إذا لم يكن هناك نص منطقة محدد
+          if (!regionId && !regionToSearch) {
             regionId = regions[0].id;
             foundRegionName = regions[0].name;
-            console.log('⚠️ استخدام أول منطقة متاحة:', foundRegionName);
+            console.log('⚠️ استخدام أول منطقة متاحة (لعدم وجود نص منطقة):', foundRegionName);
+          } else if (!regionId && regionToSearch) {
+            console.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
           }
         }
         
-        if (!regionId) {
-          throw new Error(`لم يتم العثور على أي منطقة للمدينة ${foundCityName}`);
+        // لا نفشل العملية إذا لم نجد منطقة، بدلاً من ذلك نستخدم المدينة فقط
+        if (!regionId && regions.length > 0) {
+          regionId = regions[0].id;
+          foundRegionName = regions[0].name;
+          console.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
         }
 
         // تطبيع رقم الهاتف - نفس الطريقة من QuickOrderContent

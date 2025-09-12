@@ -49,110 +49,305 @@ async function sendTelegramMessage(chatId: number, text: string) {
   return response.json()
 }
 
-// Get cities from AlWaseet API (mock data for now)
-async function getCitiesFromAlWaseet(): Promise<any[]> {
-  // Mock Iraqi cities - replace with actual AlWaseet API call when available
-  return [
-    { id: 1, name: 'بغداد' },
-    { id: 2, name: 'البصرة' },
-    { id: 3, name: 'أربيل' },
-    { id: 4, name: 'الموصل' },
-    { id: 5, name: 'كربلاء' },
-    { id: 6, name: 'النجف' },
-    { id: 7, name: 'بابل' },
-    { id: 8, name: 'ذي قار' },
-    { id: 9, name: 'ديالى' },
-    { id: 10, name: 'الأنبار' },
-    { id: 11, name: 'صلاح الدين' },
-    { id: 12, name: 'واسط' },
-    { id: 13, name: 'المثنى' },
-    { id: 14, name: 'القادسية' },
-    { id: 15, name: 'كركوك' },
-    { id: 16, name: 'دهوك' },
-    { id: 17, name: 'السليمانية' },
-    { id: 18, name: 'ميسان' }
-  ]
+// Get cities from database (real data)
+async function getCitiesFromDatabase(): Promise<any[]> {
+  try {
+    const { data: cities, error } = await supabase
+      .from('cities')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching cities:', error)
+      return []
+    }
+    
+    return cities || []
+  } catch (error) {
+    console.error('Error in getCitiesFromDatabase:', error)
+    return []
+  }
 }
 
-// Get regions by city (mock data for now)
+// Get regions by city from database (real data)
 async function getRegionsByCity(cityId: number): Promise<any[]> {
-  // Mock regions - replace with actual AlWaseet API call when available
-  const regions: { [key: number]: any[] } = {
-    1: [ // Baghdad
-      { id: 101, name: 'الكرخ' },
-      { id: 102, name: 'الرصافة' },
-      { id: 103, name: 'الكاظمية' },
-      { id: 104, name: 'الأعظمية' },
-      { id: 105, name: 'الصدر' },
-      { id: 106, name: 'الشعلة' }
-    ],
-    2: [ // Basra
-      { id: 201, name: 'البصرة القديمة' },
-      { id: 202, name: 'الهارثة' },
-      { id: 203, name: 'أبو الخصيب' }
-    ]
+  try {
+    const { data: regions, error } = await supabase
+      .from('regions')
+      .select('id, name')
+      .eq('city_id', cityId)
+      .eq('is_active', true)
+      .order('name')
+    
+    if (error) {
+      console.error('Error fetching regions:', error)
+      return []
+    }
+    
+    return regions || []
+  } catch (error) {
+    console.error('Error in getRegionsByCity:', error)
+    return []
   }
-  return regions[cityId] || []
+}
+
+// Arabic text normalization for better matching
+function normalizeArabic(text: string): string {
+  if (!text) return ''
+  return text.toString().trim()
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/[ة]/g, 'ه')
+    .replace(/[ي]/g, 'ى')
+    .toLowerCase()
 }
 
 // Find city by name with intelligent matching
 async function findCityByName(cityName: string): Promise<any | null> {
-  const cities = await getCitiesFromAlWaseet()
-  const normalizedName = cityName.toLowerCase().trim()
+  const cities = await getCitiesFromDatabase()
+  const normalizedName = normalizeArabic(cityName)
+  
+  if (!cities.length) return null
   
   // Direct match first
   let foundCity = cities.find(city => 
-    city.name.toLowerCase() === normalizedName ||
-    city.name.toLowerCase().includes(normalizedName) ||
-    normalizedName.includes(city.name.toLowerCase())
+    normalizeArabic(city.name) === normalizedName ||
+    normalizeArabic(city.name).includes(normalizedName) ||
+    normalizedName.includes(normalizeArabic(city.name))
   )
-  
-  // If not found, try common variations
-  if (!foundCity) {
-    const cityVariants = {
-      'بغداد': ['بغداد', 'baghdad', 'بكداد'],
-      'البصرة': ['بصرة', 'بصره', 'البصرة', 'البصره', 'basra', 'basrah'],
-      'أربيل': ['أربيل', 'اربيل', 'erbil', 'hawler'],
-      'الموصل': ['موصل', 'الموصل', 'mosul'],
-      'كربلاء': ['كربلاء', 'كربلا', 'karbala'],
-      'النجف': ['نجف', 'النجف', 'najaf'],
-      'بابل': ['بابل', 'الحلة', 'babel', 'hilla'],
-      'ذي قار': ['ذي قار', 'ذيقار', 'الناصرية', 'nasiriyah'],
-      'ديالى': ['ديالى', 'ديالا', 'بعقوبة', 'diyala'],
-      'الأنبار': ['انبار', 'الانبار', 'الأنبار', 'الرمادي', 'anbar'],
-      'صلاح الدين': ['صلاح الدين', 'تكريت', 'tikrit'],
-      'واسط': ['واسط', 'الكوت', 'wasit'],
-      'المثنى': ['مثنى', 'المثنى', 'السماوة', 'samawah'],
-      'القادسية': ['قادسية', 'القادسية', 'الديوانية', 'diwaniyah'],
-      'كركوك': ['كركوك', 'kirkuk'],
-      'دهوك': ['دهوك', 'duhok'],
-      'السليمانية': ['سليمانية', 'السليمانية', 'sulaymaniyah'],
-      'ميسان': ['ميسان', 'العمارة', 'maysan']
-    }
-    
-    for (const [realCity, variants] of Object.entries(cityVariants)) {
-      if (variants.some(variant => 
-        variant.toLowerCase().includes(normalizedName) || 
-        normalizedName.includes(variant.toLowerCase())
-      )) {
-        foundCity = cities.find(city => 
-          city.name.toLowerCase().includes(realCity.toLowerCase())
-        )
-        if (foundCity) break
-      }
-    }
-  }
   
   return foundCity
 }
 
+// Find regions by partial name with disambiguation
+async function findRegionsByName(cityId: number, regionText: string): Promise<any[]> {
+  if (!regionText || !cityId) return []
+  
+  const regions = await getRegionsByCity(cityId)
+  const normalizedText = normalizeArabic(regionText)
+  
+  // Find all matching regions
+  const matchingRegions = regions.filter(region => {
+    const normalizedRegion = normalizeArabic(region.name)
+    return normalizedRegion.includes(normalizedText) || 
+           normalizedText.includes(normalizedRegion)
+  })
+  
+  return matchingRegions
+}
+
+// Parse single line address for city and region
+async function parseAddressLine(addressText: string): Promise<{
+  city: any | null,
+  regions: any[],
+  remainingText: string
+}> {
+  if (!addressText) return { city: null, regions: [], remainingText: '' }
+  
+  const parts = addressText.split(/[،,\s]+/).filter(Boolean)
+  
+  // First part should be city
+  const cityText = parts[0]
+  const city = await findCityByName(cityText)
+  
+  if (!city) {
+    return { city: null, regions: [], remainingText: addressText }
+  }
+  
+  // Try to find region from remaining parts
+  const remainingParts = parts.slice(1)
+  let regions: any[] = []
+  let nearestPointText = ''
+  
+  if (remainingParts.length > 0) {
+    // Try different combinations for multi-word regions
+    for (let i = 1; i <= Math.min(3, remainingParts.length); i++) {
+      const regionCandidate = remainingParts.slice(0, i).join(' ')
+      const foundRegions = await findRegionsByName(city.id, regionCandidate)
+      
+      if (foundRegions.length > 0) {
+        regions = foundRegions
+        // Rest becomes nearest point
+        if (remainingParts.length > i) {
+          nearestPointText = remainingParts.slice(i).join(' ')
+        }
+        break
+      }
+    }
+    
+    // If no region found, use remaining text as nearest point
+    if (regions.length === 0 && remainingParts.length > 0) {
+      nearestPointText = remainingParts.join(' ')
+    }
+  }
+  
+  return { 
+    city, 
+    regions, 
+    remainingText: nearestPointText.length >= 3 ? nearestPointText : '' 
+  }
+}
+
 // Get default Baghdad city
 async function getBaghdadCity(): Promise<any | null> {
-  const cities = await getCitiesFromAlWaseet()
+  const cities = await getCitiesFromDatabase()
   return cities.find(city => 
-    city.name.toLowerCase().includes('بغداد') || 
-    city.name.toLowerCase().includes('baghdad')
+    normalizeArabic(city.name).includes('بغداد')
   ) || null
+}
+
+// Send region selection menu
+async function sendRegionSelectionMenu(chatId: number, cityName: string, regions: any[], originalText: string): Promise<boolean> {
+  let message = `🏙️ المدينة: ${cityName}\n\n`
+  message += `🔍 وجدت عدة مناطق مشابهة:\n\n`
+  
+  regions.forEach((region, index) => {
+    message += `${index + 1}) ${region.name}\n`
+  })
+  
+  message += `\n📝 اكتب: المنطقة: [اسم المنطقة الصحيح]\n`
+  message += `مثال: المنطقة: ${regions[0].name}\n\n`
+  message += `📋 النص الأصلي: ${originalText}`
+  
+  await sendTelegramMessage(chatId, message)
+  return true
+}
+
+// Store pending order for region selection
+const pendingOrders = new Map()
+
+// Process region selection response
+async function processRegionSelection(text: string, chatId: number): Promise<boolean> {
+  const regionMatch = text.match(/المنطقة:\s*(.+)/i)
+  if (!regionMatch) return false
+  
+  const selectedRegionName = regionMatch[1].trim()
+  const pendingOrder = pendingOrders.get(chatId)
+  
+  if (!pendingOrder) {
+    await sendTelegramMessage(chatId, '❌ لا يوجد طلب في انتظار اختيار المنطقة')
+    return false
+  }
+  
+  // Find the selected region
+  const selectedRegion = pendingOrder.regions.find((r: any) => 
+    normalizeArabic(r.name) === normalizeArabic(selectedRegionName) ||
+    normalizeArabic(r.name).includes(normalizeArabic(selectedRegionName))
+  )
+  
+  if (!selectedRegion) {
+    await sendTelegramMessage(chatId, `❌ المنطقة "${selectedRegionName}" غير موجودة في القائمة. يرجى اختيار من القائمة المعروضة.`)
+    return false
+  }
+  
+  // Update pending order with selected region
+  pendingOrder.customerRegion = selectedRegion
+  pendingOrder.customerAddress = pendingOrder.remainingText || pendingOrder.customerAddress
+  
+  // Clear pending order and process
+  pendingOrders.delete(chatId)
+  
+  // Continue with order processing
+  return await completeOrderProcessing(pendingOrder, chatId)
+}
+
+// Complete order processing after region selection
+async function completeOrderProcessing(orderData: any, chatId: number): Promise<boolean> {
+  try {
+    const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+      p_telegram_chat_id: chatId 
+    })
+    const employee = employeeData.data?.[0]
+    
+    if (!employee) return false
+    
+    // Get delivery fee
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_fee')
+      .single()
+    
+    const defaultDeliveryFee = Number(settingsData?.value) || 5000
+    
+    // Calculate total
+    const totalPrice = orderData.items.reduce((sum: number, item: any) => 
+      sum + (item.price * item.quantity), 0)
+    
+    // Create order confirmation message
+    const employeeInfo = employee ? 
+      `${employee.full_name} (${employee.role}) - ${employee.employee_code}` : 
+      `@${employee.employee_code}`
+      
+    const orderSummary = `
+🔹 تأكيد الطلب الجديد 🔹
+
+👤 العميل: ${orderData.customerName}
+📱 الهاتف: ${orderData.customerPhone}${orderData.customerSecondaryPhone ? `\n📱 الهاتف الثاني: ${orderData.customerSecondaryPhone}` : ''}
+🏙️ المدينة: ${orderData.customerCity?.name || 'غير محدد'}
+📍 المنطقة: ${orderData.customerRegion?.name || 'غير محدد'}
+🏠 العنوان: ${orderData.customerAddress || ''}
+
+📦 المنتجات:
+${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quantity} - سعر: ${item.price.toLocaleString()} د.ع`).join('\n')}
+
+💰 المجموع: ${totalPrice.toLocaleString()} د.ع
+🚚 رسوم التوصيل: ${defaultDeliveryFee.toLocaleString()} د.ع
+💳 المبلغ الإجمالي: ${(totalPrice + defaultDeliveryFee).toLocaleString()} د.ع
+
+📋 المعرف: #TG_${Date.now().toString().slice(-6)}
+👨‍💼 بواسطة: ${employeeInfo}
+
+✅ تم حفظ الطلب بنجاح في النظام
+⏳ في انتظار مراجعة الإدارة للموافقة والإرسال
+    `.trim()
+    
+    // Save order to database
+    const orderId = await supabase.rpc('process_telegram_order', {
+      p_order_data: {
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        customer_secondary_phone: orderData.customerSecondaryPhone,
+        customer_address: orderData.customerAddress,
+        customer_city: orderData.customerCity?.name,
+        customer_region: orderData.customerRegion?.name,
+        items: orderData.items,
+        total_price: totalPrice,
+        delivery_fee: defaultDeliveryFee,
+        final_total: totalPrice + defaultDeliveryFee,
+        delivery_type: orderData.deliveryType,
+        order_notes: orderData.orderNotes,
+        employee_code: employee.employee_code,
+        employee_info: employeeInfo,
+        telegram_chat_id: chatId,
+        processed_at: new Date().toISOString()
+      },
+      p_customer_name: orderData.customerName,
+      p_customer_phone: orderData.customerPhone,
+      p_customer_address: orderData.customerAddress || '',
+      p_customer_city: orderData.customerCity?.name,
+      p_customer_province: orderData.customerCity?.name,
+      p_total_amount: totalPrice + defaultDeliveryFee,
+      p_items: orderData.items,
+      p_telegram_chat_id: chatId,
+      p_employee_code: employee?.user_id || employee.employee_code
+    })
+    
+    if (orderId.error) {
+      console.error('Database error:', orderId.error)
+      await sendTelegramMessage(chatId, '❌ حدث خطأ في حفظ الطلب في النظام. يرجى المحاولة مرة أخرى.')
+      return false
+    }
+    
+    // Send confirmation
+    await sendTelegramMessage(chatId, orderSummary)
+    return true
+    
+  } catch (error) {
+    console.error('Error completing order:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى.')
+    return false
+  }
 }
 
 // Enhanced order processing with AlWaseet integration
@@ -373,6 +568,43 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       }
     }
     
+    // Enhanced address parsing for single line input
+    if (!customerCity && !customerAddress && lines.length > 0) {
+      // Try to parse address from text like "بغداد الدورة حي الصحة"
+      for (const line of lines) {
+        if (!line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج') && line.length > 3) {
+          const addressResult = await parseAddressLine(line)
+          if (addressResult.city) {
+            customerCity = addressResult.city
+            customerAddress = addressResult.remainingText
+            
+            // Handle region disambiguation
+            if (addressResult.regions.length > 1) {
+              // Multiple regions found - need user selection
+              pendingOrders.set(chatId, {
+                customerName: customerName || defaultCustomerName,
+                customerPhone,
+                customerSecondaryPhone,
+                customerAddress,
+                customerCity,
+                regions: addressResult.regions,
+                remainingText: addressResult.remainingText,
+                items,
+                deliveryType,
+                orderNotes
+              })
+              
+              await sendRegionSelectionMenu(chatId, customerCity.name, addressResult.regions, line)
+              return true // Wait for user selection
+            } else if (addressResult.regions.length === 1) {
+              customerRegion = addressResult.regions[0]
+            }
+            break
+          }
+        }
+      }
+    }
+    
     // Set defaults if not found
     if (!customerName) customerName = defaultCustomerName
     if (!customerCity) customerCity = await getBaghdadCity()
@@ -543,6 +775,11 @@ async function handleMessage(message: TelegramMessage) {
       return await handleEmployeeRegistration(text, chatId)
     }
     
+    // Handle region selection
+    if (text.includes('المنطقة:')) {
+      return await processRegionSelection(text, chatId)
+    }
+    
     // Check if user is registered
     const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
       p_telegram_chat_id: chatId 
@@ -564,23 +801,31 @@ async function handleMessage(message: TelegramMessage) {
 📝 لإنشاء طلب جديد، اكتب:
 اسم العميل
 رقم الهاتف (07XXXXXXXX)
-المدينة/المحافظة
-العنوان
+المدينة المنطقة العنوان (سطر واحد)
 المنتجات (اسم المنتج + الكمية + السعر)
 
-مثال:
+مثال تقليدي:
 احمد علي
 07701234567
 بغداد
+الدورة
 شارع الخليج
 قميص أحمر 2 قطعة x 25000 د.ع
-بنطال أزرق 1 قطعة x 35000 د.ع
+
+مثال سطر واحد:
+احمد علي
+07701234567
+بغداد الدورة حي الصحة
+قميص أحمر 2 قطعة x 25000 د.ع
 
 💡 نصائح:
+• يمكن كتابة العنوان كامل في سطر واحد
+• إذا كانت هناك مناطق متشابهة، ستظهر قائمة للاختيار
 • يمكن كتابة عدة أرقام هواتف
 • السعر اختياري (سيتم البحث في قاعدة البيانات)
 • يمكن إضافة ملاحظات خاصة
 • استخدم كلمة "تبديل" للطلبات التبديلية
+• لاختيار منطقة: المنطقة: [اسم المنطقة]
 
 🔄 سيتم معالجة الطلب تلقائياً وإرساله للنظام
       `
