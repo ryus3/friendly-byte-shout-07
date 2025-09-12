@@ -1677,14 +1677,30 @@ export const SuperProvider = ({ children }) => {
           };
         }
         
-        // تفعيل الحساب المحدد وانتظار النتيجة
+        // تفعيل الحساب المحدد وانتظار النتيجة مع تسجيل مفصل
         try {
-          console.log('🔄 تفعيل حساب التوصيل:', actualAccount);
+          console.log('🔄 تفعيل حساب التوصيل المختار:', actualAccount);
+          console.log('📋 حالة السياق قبل التفعيل:', { 
+            activePartner, 
+            alwaseetToken: alwaseetToken ? 'موجود' : 'غير موجود',
+            destination 
+          });
+          
           const accountActivated = await activateAccount(actualAccount);
           if (!accountActivated) {
+            console.error('❌ فشل في تفعيل الحساب:', actualAccount);
             throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
           }
-          console.log('✅ تم تفعيل حساب التوصيل بنجاح');
+          console.log('✅ تم تفعيل حساب التوصيل بنجاح:', actualAccount);
+          
+          // انتظار أطول للتأكد من تحديث التوكن بعد التفعيل
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          console.log('📋 حالة السياق بعد التفعيل:', { 
+            activePartner, 
+            alwaseetToken: alwaseetToken ? 'موجود' : 'غير موجود',
+            actualAccount 
+          });
           
           // انتظار قصير للتأكد من تحديث التوكن
           await new Promise(resolve => setTimeout(resolve, 500));

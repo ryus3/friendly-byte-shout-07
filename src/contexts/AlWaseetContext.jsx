@@ -71,15 +71,20 @@ export const AlWaseetProvider = ({ children }) => {
 
   // دالة لتفعيل حساب محدد وتسجيل الدخول الفعلي
   const activateAccount = useCallback(async (accountUsername) => {
-    if (!user?.id || !accountUsername) return false;
+    if (!user?.id || !accountUsername) {
+      console.log('❌ activateAccount: فشل - بيانات مفقودة:', { userId: user?.id, accountUsername });
+      return false;
+    }
     
     try {
       setLoading(true);
+      console.log('🔄 activateAccount: بدء تفعيل الحساب:', accountUsername);
       
       // جلب بيانات الحساب المحدد
       const accountData = await getTokenForUser(user.id, accountUsername);
       
       if (!accountData) {
+        console.log('❌ activateAccount: فشل - لم يتم العثور على بيانات الحساب:', accountUsername);
         toast({
           title: "خطأ في تسجيل الدخول",
           description: "لم يتم العثور على بيانات صالحة للحساب المحدد",
@@ -87,6 +92,12 @@ export const AlWaseetProvider = ({ children }) => {
         });
         return false;
       }
+      
+      console.log('✅ activateAccount: تم جلب بيانات الحساب:', {
+        username: accountData.account_username,
+        merchantId: accountData.merchant_id,
+        tokenLength: accountData.token?.length || 0
+      });
       
       // تحديث حالة السياق
       setToken(accountData.token);
@@ -104,7 +115,13 @@ export const AlWaseetProvider = ({ children }) => {
         .update({ last_used_at: new Date().toISOString() })
         .eq('user_id', user.id)
         .eq('partner_name', 'alwaseet')
-        .eq('account_username', accountUsername);
+        .ilike('account_username', accountUsername.trim().toLowerCase());
+      
+      console.log('✅ activateAccount: تم تفعيل الحساب بنجاح:', {
+        username: accountData.account_username,
+        isLoggedIn: true,
+        activePartner: 'alwaseet'
+      });
       
       toast({
         title: "✅ تم تسجيل الدخول بنجاح",
@@ -114,7 +131,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('خطأ في تفعيل الحساب:', error);
+      console.error('❌ activateAccount: خطأ في تفعيل الحساب:', error);
       toast({
         title: "خطأ في تسجيل الدخول",
         description: error.message,
