@@ -525,9 +525,12 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           orderDestination.destination, 
                           orderDestination.account
                         );
+                        console.log('🔍 نتيجة الموافقة:', res);
                         if (res?.success) {
+                          console.log('✅ سيتم حذف الطلب من النافذة:', order.id);
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
-                          toast({ title: 'تمت الموافقة', description: 'تم تحويل الطلب الذكي إلى طلب عادي بنجاح', variant: 'success' });
+                          const orderTypeText = orderDestination.destination === 'local' ? 'طلب عادي' : 'طلب توصيل';
+                          toast({ title: 'تمت الموافقة', description: `تم تحويل الطلب الذكي إلى ${orderTypeText} بنجاح`, variant: 'success' });
                         } else {
                           // استرجاع البيانات في حالة الفشل
                           window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: order }));
