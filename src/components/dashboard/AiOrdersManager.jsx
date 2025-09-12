@@ -110,6 +110,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
             } catch (error) {
               console.error('خطأ في الموافقة التلقائية:', error);
             }
+          }
           }, 100); // تأخير بسيط لضمان تحميل الدوال
         }
     };
