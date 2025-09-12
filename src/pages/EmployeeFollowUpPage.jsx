@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -46,11 +46,25 @@ const EmployeeFollowUpPage = () => {
     syncSpecificEmployee, 
     syncSpecificEmployeeSmart,
     comprehensiveSync, 
-    syncOrdersOnly 
+    syncOrdersOnly,
+    syncVisibleOrdersBatch
   } = useSmartSync();
   
-  const { syncVisibleOrdersBatch } = useAlWaseet();
-  const { autoSyncVisibleOrders } = useUnifiedAutoSync();
+  // دالة المزامنة التلقائية للطلبات المرئية
+  const autoSyncVisibleOrders = useCallback(async () => {
+    if (!Array.isArray(filteredOrders) || filteredOrders.length === 0) {
+      console.log('⏭️ تجاهل المزامنة - لا توجد طلبات مرئية');
+      return;
+    }
+    
+    console.log(`🔄 بدء المزامنة التلقائية للطلبات المرئية: ${filteredOrders.length} طلب`);
+    
+    try {
+      await syncVisibleOrdersBatch(filteredOrders, false); // بدون toast للمزامنة التلقائية
+    } catch (error) {
+      console.error('خطأ في المزامنة التلقائية:', error);
+    }
+  }, [filteredOrders, syncVisibleOrdersBatch]);
   
   const { 
     orders, 
