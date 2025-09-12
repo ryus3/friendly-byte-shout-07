@@ -127,7 +127,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           city_id: aiOrderData.city_id || '',  // معرف المدينة للوسيط
           region: aiOrderData.customer_province || '',
           region_id: aiOrderData.region_id || '',  // معرف المنطقة للوسيط
-          address: aiOrderData.customer_address || '',
+          address: aiOrderData.source === 'telegram' ? '' : (aiOrderData.customer_address || ''),
           notes: aiOrderData.notes || '',
           price: aiOrderData.final_total || aiOrderData.total_amount || 0,
           delivery_fee: aiOrderData.delivery_fee || 0,
@@ -247,7 +247,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         phone: aiOrderData.customer_phone || '',
         city: parsedCity || 'بغداد',
         region: parsedRegion || '',
-        address: aiOrderData.customer_address || '',
+          address: aiOrderData.source === 'telegram' ? '' : (aiOrderData.customer_address || ''),
         notes: aiOrderData.order_data?.delivery_type ? `نوع التوصيل: ${aiOrderData.order_data.delivery_type}` : '',
         details: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.map(item => {
