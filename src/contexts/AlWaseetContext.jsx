@@ -2602,31 +2602,88 @@ export const AlWaseetProvider = ({ children }) => {
   }, [isLoggedIn, token, activePartner, correctionComplete, comprehensiveOrderCorrection, silentOrderRepair, performDeletionPassAfterStatusSync]);
 
   // دالة تسجيل خروج حساب التوصيل (إلغاء التفعيل بدلاً من الحذف)
-  const deleteDeliveryAccount = useCallback(async (userId, partner, accountUsername) => {
+  const deleteDeliveryAccount = useCallback(async (userId, partnerName, accountUsername) => {
+    if (!userId || !accountUsername) return false;
+    
     try {
-      const { error } = await supabase
+      const normalizedUsername = normalizeUsername(accountUsername);
+      
+      // جلب جميع الحسابات الصالحة للمستخدم أولاً
+      const { data: allAccounts, error: fetchError } = await supabase
         .from('delivery_partner_tokens')
-        .update({
-          token: null,
-          is_active: false,
-          last_used_at: new Date().toISOString()
-        })
+        .select('*')
         .eq('user_id', userId)
-        .eq('partner', partner === 'alwaseet' ? 'alwaseet' : partner)
-        .eq('account_username', accountUsername);
-
-      if (error) {
-        console.error('Error logging out delivery account:', error);
+        .eq('partner_name', partnerName)
+        .eq('is_active', true);
+      
+      if (fetchError) throw fetchError;
+      
+      // التحقق من عدم حذف الحساب الوحيد إذا كان افتراضياً
+      const activeAccounts = allAccounts || [];
+      const accountToDelete = activeAccounts.find(acc => 
+        normalizeUsername(acc.account_username) === normalizedUsername
+      );
+      
+      if (!accountToDelete) {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على الحساب المحدد",
+          variant: "destructive"
+        });
         return false;
       }
-
-      console.log(`تم تسجيل خروج حساب ${accountUsername} لشريك ${partner}`);
+      
+      // منع حذف الحساب الافتراضي إذا كان الوحيد المتبقي
+      if (accountToDelete.is_default && activeAccounts.length === 1) {
+        toast({
+          title: "تعذر الحذف",
+          description: "لا يمكن حذف الحساب الافتراضي الوحيد. أضف حساب آخر أولاً",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // حذف الحساب نهائياً من قاعدة البيانات
+      const { error: deleteError } = await supabase
+        .from('delivery_partner_tokens')
+        .delete()
+        .eq('user_id', userId)
+        .eq('partner_name', partnerName)
+        .ilike('account_username', normalizedUsername);
+      
+      if (deleteError) throw deleteError;
+      
+      // إذا كان الحساب المحذوف افتراضياً، تعيين حساب آخر كافتراضي
+      if (accountToDelete.is_default && activeAccounts.length > 1) {
+        const remainingAccounts = activeAccounts.filter(acc => 
+          normalizeUsername(acc.account_username) !== normalizedUsername
+        );
+        
+        if (remainingAccounts.length > 0) {
+          await supabase
+            .from('delivery_partner_tokens')
+            .update({ is_default: true })
+            .eq('id', remainingAccounts[0].id);
+        }
+      }
+      
+      toast({
+        title: "تم الحذف",
+        description: "تم حذف الحساب بشكل نهائي من النظام",
+        variant: "default"
+      });
+      
       return true;
     } catch (error) {
-      console.error('Error in deleteDeliveryAccount:', error);
+      console.error('خطأ في حذف حساب التوصيل:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف الحساب",
+        variant: "destructive"
+      });
       return false;
     }
-  }, []);
+  }, [normalizeUsername, toast]);
 
   const value = {
     isLoggedIn,

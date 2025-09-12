@@ -4,10 +4,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -160,13 +161,23 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const handleAccountLogout = async () => {
         if (!selectedAccount || !user?.id) return;
         
-        // حذف الحساب من قاعدة البيانات
-        const success = await deleteDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
-        if (success) {
+        // تسجيل خروج الحساب (إلغاء تفعيل مؤقت)
+        const { error } = await supabase
+            .from('delivery_partner_tokens')
+            .update({
+                token: null,
+                is_active: false,
+                last_used_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .eq('partner_name', selectedPartner)
+            .eq('account_username', selectedAccount.account_username);
+
+        if (!error) {
             toast({
                 title: "تم تسجيل الخروج",
-                description: "تم حذف الحساب وتسجيل الخروج بنجاح",
-                variant: 'success'
+                description: "تم تسجيل الخروج من الحساب بنجاح",
+                variant: 'default'
             });
             // إعادة تحميل الحسابات
             const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
@@ -175,9 +186,27 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         } else {
             toast({
                 title: "خطأ",
-                description: "فشل في حذف الحساب",
+                description: "فشل في تسجيل الخروج",
                 variant: 'destructive'
             });
+        }
+    }
+
+    const handleDeleteAccount = async () => {
+        if (!selectedAccount || !user?.id) return;
+        
+        // تأكيد حذف الحساب
+        if (!confirm(`هل أنت متأكد من حذف الحساب "${selectedAccount.account_label || selectedAccount.account_username}" نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+            return;
+        }
+        
+        // حذف الحساب نهائياً من قاعدة البيانات
+        const success = await deleteDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
+        if (success) {
+            // إعادة تحميل الحسابات
+            const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+            setUserAccounts(accounts);
+            setSelectedAccount(accounts[0] || null);
         }
     }
 
@@ -226,16 +255,28 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </div>
                         )}
                         
-                        <div className="flex gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             {selectedAccount && !selectedAccount.is_default && (
                                 <Button 
                                     variant="secondary" 
                                     size="sm" 
                                     type="button" 
                                     onClick={handleSetDefaultAccount}
-                                    className="flex-1"
+                                    className="w-full"
                                 >
                                     تعيين كافتراضي
+                                </Button>
+                            )}
+                            {selectedAccount && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    type="button" 
+                                    onClick={handleAccountLogout}
+                                    className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                                >
+                                    <LogOut className="w-4 h-4 ml-2" />
+                                    تسجيل الخروج
                                 </Button>
                             )}
                             {selectedAccount && (
@@ -243,11 +284,11 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     variant="destructive" 
                                     size="sm" 
                                     type="button" 
-                                    onClick={handleAccountLogout}
-                                    className="flex-1"
+                                    onClick={handleDeleteAccount}
+                                    className="w-full"
                                 >
-                                    <LogOut className="w-4 h-4 ml-2" />
-                                    تسجيل الخروج
+                                    <Trash2 className="w-4 h-4 ml-2" />
+                                    حذف الحساب
                                 </Button>
                             )}
                         </div>
