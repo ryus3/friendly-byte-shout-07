@@ -1932,6 +1932,22 @@ export const SuperProvider = ({ children }) => {
           return displayName;
         });
 
+        // حساب السعر مع رسوم التوصيل (مطابق لـ QuickOrderContent)
+        const subtotalPrice = enrichedItems.reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+        
+        // جلب رسوم التوصيل من الإعدادات
+        let deliveryFee = 5000; // القيمة الافتراضية
+        try {
+          const { data: ds } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'delivery_fee')
+            .maybeSingle();
+          deliveryFee = Number(ds?.value) || 5000;
+        } catch (_) {}
+
+        const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
+
         // إعداد payload الوسيط - نفس البنية من QuickOrderContent
         const updatedPayload = {
           city_id: parseInt(cityId),
@@ -1942,31 +1958,35 @@ export const SuperProvider = ({ children }) => {
           location: aiOrder.customer_address || '',
           type_name: productNames.join(' + '), // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
-          price: enrichedItems.reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0),
+          price: finalPrice, // السعر النهائي مع رسوم التوصيل
           package_size: 1,
-          merchant_notes: `طلب من ${aiOrder.source || 'التليغرام'}${aiOrder.order_data?.note ? ` - ${aiOrder.order_data.note}` : ''}`,
+          merchant_notes: '', // ملاحظات فارغة
           replacement: 0
         };
 
-        console.log('📋 إرسال البيانات للوسيط:', updatedPayload);
+        console.log('📋 بيانات الطلب النهائية المرسلة للوسيط:', updatedPayload);
+        console.log('💰 السعر النهائي (مع رسوم التوصيل):', finalPrice);
 
         // إنشاء الطلب في الوسيط - تماماً كما في QuickOrderContent
         const alwaseetResult = await createAlWaseetOrder(updatedPayload, alwaseetToken);
         
-        console.log('📦 استجابة الوسيط:', alwaseetResult);
+        console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
-        // معالجة qr_id مع fallback - نفس منطق QuickOrderContent
-        let qrId = alwaseetResult?.qr_id;
+        // معالجة qr_id مع fallback محسن - استخدام getMerchantOrders للبحث
+        let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
         
-        // إذا لم نحصل على qr_id، حاول استخراجه من استجابة أخرى
+        // إذا لم نحصل على qr_id، استخدم getMerchantOrders للبحث عن الطلب الجديد
         if (!qrId && alwaseetResult?.id) {
-          console.log('⚠️ لم نحصل على qr_id، محاولة fallback...');
+          console.log('⚠️ لم نحصل على qr_id، محاولة fallback مع getMerchantOrders...');
           try {
-            // استخدام getOrderByQR أو أي API آخر للحصول على qr_id
-            const { getOrderByQR } = await import('../lib/alwaseet-api.js');
-            const orderDetails = await getOrderByQR(alwaseetToken, alwaseetResult.id);
-            qrId = orderDetails?.qr_id || orderDetails?.tracking_number || alwaseetResult.id;
-            console.log('✅ تم استخراج qr_id من fallback:', qrId);
+            const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
+            const recentOrders = await getMerchantOrders(alwaseetToken);
+            const matchingOrder = recentOrders.find(order => 
+              order.id === alwaseetResult.id || 
+              order.client_name === updatedPayload.client_name
+            );
+            qrId = matchingOrder?.qr_id || matchingOrder?.id || alwaseetResult.id;
+            console.log('✅ تم استخراج qr_id من getMerchantOrders fallback:', qrId);
           } catch (fallbackError) {
             console.warn('⚠️ فشل fallback، استخدام ID كـ qr_id:', alwaseetResult.id);
             qrId = alwaseetResult.id;
@@ -1977,6 +1997,7 @@ export const SuperProvider = ({ children }) => {
           throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل');
         }
 
+        console.log('🔍 qr_id المستخرج:', qrId);
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
         // إنشاء الطلب المحلي مع ربطه بالوسيط
@@ -2141,7 +2162,7 @@ export const SuperProvider = ({ children }) => {
         delivery_partner_order_id: deliveryPartnerData.delivery_partner_order_id || null,
         qr_id: deliveryPartnerData.qr_id || null,
         delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
-        notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
+        notes: '', // ملاحظات فارغة لطلبات التليغرام
         created_by: resolveCurrentUserUUID(),
       };
 
