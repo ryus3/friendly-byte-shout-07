@@ -1765,27 +1765,16 @@ export const SuperProvider = ({ children }) => {
           throw new Error(result.error || 'فشل في إنشاء الطلب عبر شركة التوصيل');
         }
       }
-        console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
-        
-        // تفعيل الحساب المحدد وانتظار النتيجة
-        try {
-          console.log('🔄 تفعيل حساب التوصيل:', selectedAccount);
-          const accountActivated = await activateAccount(selectedAccount);
-          if (!accountActivated) {
-            throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
-          }
-          console.log('✅ تم تفعيل حساب التوصيل بنجاح');
-          
-          // انتظار قصير للتأكد من تحديث التوكن
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // التحقق من وجود توكن صالح
-          if (!alwaseetToken) {
-            throw new Error('لا يوجد توكن صالح لشركة التوصيل بعد التفعيل');
-          }
-          console.log('✅ توكن صالح متوفر');
-          
-          setActivePartner('alwaseet');
+    } catch (error) {
+      console.error('❌ فشل في معالجة الطلب الذكي:', error);
+      return {
+        success: false,
+        error: error.message || 'فشل في معالجة الطلب الذكي'
+      };
+    }
+  }, [handleLocalOrder, handleDeliveryPartnerOrder, resolveCurrentUserUUID]);
+
+  // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
           
           // مطابقة العناصر مع المنتجات الموجودة
           const products = Array.isArray(allData.products) ? allData.products : [];
