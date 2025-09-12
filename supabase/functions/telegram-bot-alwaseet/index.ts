@@ -607,18 +607,22 @@ async function handleCallbackQuery(callbackQuery: any) {
           return
         }
         
-        // Update ai_order with selected region
+        // Get region name for display
+        const regionCandidates = currentOrder.order_data?.region_candidates || []
+        const selectedRegion = regionCandidates.find(r => r.id === selectedRegionId)
+        
+        // Update ai_order with selected region data
         const updatedOrderData = {
           ...currentOrder.order_data,
           region_confirmed: true,
           selected_region_id: selectedRegionId,
+          selected_region_name: selectedRegion?.name || 'منطقة محددة',
           requires_region_confirmation: false
         }
         
         const { error: updateError } = await supabase
           .from('ai_orders')
           .update({
-            customer_region: selectedRegionId,
             order_data: updatedOrderData
           })
           .eq('id', aiOrderId)
@@ -629,9 +633,6 @@ async function handleCallbackQuery(callbackQuery: any) {
           return
         }
         
-        // Get region name for confirmation
-        const regionCandidates = currentOrder.order_data?.region_candidates || []
-        const selectedRegion = regionCandidates.find(r => r.id === selectedRegionId)
         
         // Send confirmation message
         const confirmationText = `✅ تم تحديد المنطقة بنجاح!\n📍 المنطقة المحددة: ${selectedRegion?.name || 'غير معروف'}\n\n🚀 سيتم معالجة الطلب الآن...`

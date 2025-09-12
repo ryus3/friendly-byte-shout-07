@@ -2369,15 +2369,49 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, []);
 
-  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات مع وضع المدير المحسن
   const performDeletionPassAfterStatusSync = useCallback(async () => {
-    if (!token) return;
-    
     try {
-      console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
+      console.log('🔍 فحص الطلبات للحذف التلقائي مع وضع المدير المحسن...');
       
-      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
-      // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
+      // تحديد ما إذا كان المستخدم مديراً لتمكين الوضع المتقدم
+      const { data: userProfile } = await supabase.auth.getUser();
+      const currentUserId = userProfile?.user?.id || user?.user_id;
+      const isAdminUser = currentUserId === '91484496-b887-44f7-9e5d-be9db5567604';
+      
+      if (isAdminUser && !token) {
+        console.log('👑 المدير: محاولة الحصول على رموز نشطة من جميع الموظفين...');
+        
+        // جلب جميع الرموز النشطة من الموظفين
+        const { data: activeTokens } = await supabase
+          .from('delivery_partner_tokens')
+          .select('token, user_id, account_username')
+          .eq('partner', 'alwaseet')
+          .eq('is_active', true)
+          .not('token', 'is', null);
+        
+        if (activeTokens && activeTokens.length > 0) {
+          console.log(`👑 المدير: تم العثور على ${activeTokens.length} رمز نشط للاستخدام`);
+          
+          // استخدام أول رمز نشط متاح للفحص
+          const adminToken = activeTokens[0].token;
+          console.log(`👑 المدير: استخدام رمز الموظف ${activeTokens[0].account_username} للفحص الشامل`);
+          
+          // تنفيذ الفحص بوضع المدير
+          return await performAdminDeletionPass(adminToken, currentUserId);
+        } else {
+          console.warn('👑 المدير: لا توجد رموز نشطة متاحة للفحص الشامل');
+          return;
+        }
+      } else if (!token) {
+        console.log('⚠️ لا يوجد رمز متاح للمزامنة');
+        return;
+      }
+      
+      // الوضع العادي: استخدام رمز المستخدم الحالي
+      console.log('👤 الوضع العادي: فحص طلبات المستخدم الحالي فقط');
+      
+      // جلب الطلبات المحلية المرشحة للحذف - طلبات المستخدم الحالي فقط
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
@@ -2385,7 +2419,7 @@ export const AlWaseetProvider = ({ children }) => {
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
           .or('tracking_number.not.is.null,qr_id.not.is.null'),
-        true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
+        true // restrictToOwnOrders = true
       ).limit(50);
       
       console.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
@@ -2483,6 +2517,98 @@ export const AlWaseetProvider = ({ children }) => {
       console.error('❌ خطأ في فحص الطلبات للحذف التلقائي:', error);
     }
   }, [token, syncOrderByQR]);
+
+  // دالة مساعدة للمدير: فحص شامل لجميع الطلبات
+  const performAdminDeletionPass = useCallback(async (adminToken, adminUserId) => {
+    try {
+      console.log('👑 المدير: بدء الفحص الشامل لجميع الطلبات...');
+      
+      // جلب جميع طلبات الوسيط بدون قيود على المستخدم
+      const { data: allOrders, error } = await supabase
+        .from('orders')
+        .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by')
+        .eq('delivery_partner', 'alwaseet')
+        .eq('receipt_received', false)
+        .or('tracking_number.not.is.null,qr_id.not.is.null')
+        .limit(100);
+      
+      if (error) {
+        console.error('❌ المدير: خطأ في جلب الطلبات:', error);
+        return;
+      }
+      
+      if (!allOrders?.length) {
+        console.log('✅ المدير: لا توجد طلبات للفحص');
+        return;
+      }
+      
+      console.log(`👑 المدير: سيتم فحص ${allOrders.length} طلب شامل...`);
+      
+      let checkedCount = 0;
+      let deletedCount = 0;
+      
+      // استخدام AlWaseetAPI مباشرة مع رمز المدير
+      const AlWaseetAPI = (await import('@/lib/alwaseet-api')).default;
+      
+      for (const localOrder of allOrders) {
+        const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
+        if (!trackingNumber) continue;
+        
+        checkedCount++;
+        
+        try {
+          // فحص الطلب في الوسيط مباشرة
+          const remoteOrder = await AlWaseetAPI.getOrderByQR(adminToken, trackingNumber);
+          
+          if (!remoteOrder || remoteOrder.error) {
+            console.log(`👑 المدير: طلب غير موجود في الوسيط، سيتم حذفه: ${trackingNumber}`);
+            
+            // حذف الطلب مباشرة من قاعدة البيانات
+            const { error: deleteError } = await supabase
+              .from('orders')
+              .delete()
+              .eq('id', localOrder.id);
+            
+            if (!deleteError) {
+              deletedCount++;
+              console.log(`✅ المدير: تم حذف الطلب ${localOrder.order_number} بنجاح`);
+              
+              // بث حدث الحذف للواجهة
+              try {
+                window.dispatchEvent(new CustomEvent('orderDeleted', { 
+                  detail: { id: localOrder.id, confirmed: true, final: true, adminMode: true } 
+                }));
+              } catch {}
+            } else {
+              console.error(`❌ المدير: فشل حذف الطلب ${localOrder.order_number}:`, deleteError);
+            }
+          }
+        } catch (checkError) {
+          console.warn(`⚠️ المدير: خطأ في فحص الطلب ${trackingNumber}:`, checkError);
+        }
+        
+        // تأخير قصير لتجنب إرهاق الخادم
+        if (checkedCount % 10 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log(`👑 المدير: تم فحص ${checkedCount} طلب وحذف ${deletedCount} طلب غير موجود`);
+      
+      if (deletedCount > 0) {
+        toast({
+          title: `👑 تنظيف شامل مكتمل`,
+          description: `تم حذف ${deletedCount} طلب غير موجود في شركة التوصيل من أصل ${checkedCount} طلب تم فحصه`,
+          variant: "success",
+          duration: 8000
+        });
+      }
+      
+      return { checkedCount, deletedCount };
+    } catch (error) {
+      console.error('❌ المدير: خطأ في الفحص الشامل:', error);
+    }
+  }, []);
 
   // تحميل التوكن عند تسجيل الدخول الأولي
   useEffect(() => {

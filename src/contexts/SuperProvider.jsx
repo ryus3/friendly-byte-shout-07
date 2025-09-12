@@ -1818,15 +1818,18 @@ export const SuperProvider = ({ children }) => {
           return cleanText.trim().replace(/\s+/g, ' ');
         };
 
-        // خوارزمية المطابقة الذكية للمناطق
+        // خوارزمية المطابقة الذكية للمناطق المحسنة مع أولوية السياق
         const smartRegionMatching = (regions, searchTerm, contextWords = []) => {
           const normalizedSearch = normalizeArabic(removeStopWords(searchTerm));
+          console.log('🔍 بحث ذكي عن المناطق:', { searchTerm, normalizedSearch, contextWords });
+          
           const candidates = [];
 
           regions.forEach(region => {
             const normalizedRegion = normalizeArabic(region.name);
             let score = 0;
             let matchType = '';
+            let hasContextMatch = false;
 
             // 1. مطابقة تامة
             if (normalizedRegion === normalizedSearch) {
@@ -1843,26 +1846,37 @@ export const SuperProvider = ({ children }) => {
               score = 70;
               matchType = 'contained';
             }
-            // 4. مطابقة كلمات السياق
-            else {
-              for (const contextWord of contextWords) {
+            // 4. مطابقة جزئية بحروف مشتركة
+            else if (normalizedRegion.includes(normalizedSearch.substring(0, 3)) || 
+                     normalizedSearch.includes(normalizedRegion.substring(0, 3))) {
+              score = 40;
+              matchType = 'partial';
+            }
+
+            // 5. مطابقة كلمات السياق المحسنة (أولوية عالية)
+            if (contextWords && contextWords.length > 0) {
+              contextWords.forEach(contextWord => {
                 const normalizedContext = normalizeArabic(removeStopWords(contextWord));
-                if (normalizedRegion.includes(normalizedContext) || normalizedContext.includes(normalizedRegion)) {
-                  score = Math.max(score, 60);
-                  matchType = 'context';
+                if (normalizedContext.length > 1) {
+                  if (normalizedRegion.includes(normalizedContext) || normalizedContext.includes(normalizedRegion)) {
+                    score += 35; // نقاط إضافية عالية للسياق
+                    hasContextMatch = true;
+                    matchType = matchType ? `${matchType} + سياق` : 'سياق';
+                  }
                 }
-              }
+              });
             }
 
             // تعديل النقاط حسب طول الاسم (المناطق الأقصر أولوية أعلى)
             if (score > 0) {
-              const lengthBonus = Math.max(0, 10 - normalizedRegion.length);
+              const lengthBonus = Math.max(0, 5 - Math.floor(normalizedRegion.length / 3));
               score += lengthBonus;
               
               candidates.push({
                 region,
                 score,
                 matchType,
+                hasContextMatch,
                 originalSearch: searchTerm,
                 normalizedSearch,
                 normalizedRegion
@@ -1870,16 +1884,23 @@ export const SuperProvider = ({ children }) => {
             }
           });
 
-          // ترتيب حسب النقاط
-          candidates.sort((a, b) => b.score - a.score);
+          // ترتيب محسن: أولوية للسياق ثم النقاط
+          candidates.sort((a, b) => {
+            // أولوية عالية للمطابقات التي تحتوي على السياق
+            if (a.hasContextMatch && !b.hasContextMatch) return -1;
+            if (!a.hasContextMatch && b.hasContextMatch) return 1;
+            // ثم بالنقاط
+            return b.score - a.score;
+          });
           
-          console.log('🧠 نتائج المطابقة الذكية:', {
+          console.log('🧠 نتائج المطابقة الذكية المحسنة:', {
             searchTerm,
             contextWords,
             topCandidates: candidates.slice(0, 5).map(c => ({
               name: c.region.name,
               score: c.score,
-              matchType: c.matchType
+              matchType: c.matchType,
+              hasContext: c.hasContextMatch
             }))
           });
 
@@ -1972,17 +1993,26 @@ export const SuperProvider = ({ children }) => {
               );
             }
             
-            // المطابقة الذكية المحسنة
+            // المطابقة الذكية المحسنة مع أولوية قوية للسياق
             if (!regionMatch) {
-              const contextWords = addressParts.slice(2); // كلمات السياق من العنوان
+              const contextWords = addressParts.slice(2).filter(part => part && part.length > 1); // كلمات السياق النظيفة
+              console.log('🔍 محاولة المطابقة الذكية:', { regionToSearch, contextWords, fullAddress: aiOrder.customer_address });
+              
               const candidates = smartRegionMatching(regions, regionToSearch, contextWords);
               
               if (candidates.length > 0) {
-                const topCandidate = candidates[0];
+                // أولوية مطلقة للمرشحين الذين يحتوون على السياق
+                const contextCandidates = candidates.filter(c => c.hasContextMatch);
+                let finalCandidate = candidates[0]; // الافتراضي
                 
-                // إذا كان المرشح الأول لديه نقاط عالية، استخدمه مباشرة
-                if (topCandidate.score >= 80) {
-                  regionMatch = topCandidate.region;
+                if (contextCandidates.length > 0) {
+                  finalCandidate = contextCandidates[0];
+                  console.log('🎯 استخدام مرشح بناءً على السياق:', finalCandidate.region.name);
+                }
+                
+                // شروط الاختيار التلقائي المحسنة
+                if (finalCandidate.score >= 65 || finalCandidate.hasContextMatch) {
+                  regionMatch = finalCandidate.region;
                   console.log('✅ تم اختيار أفضل مرشح تلقائياً:', {
                     region: regionMatch.name,
                     score: topCandidate.score,
