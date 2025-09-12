@@ -99,6 +99,22 @@ serve(async (req) => {
       }));
     }
 
+    // Normalize create-order response to always expose id and qr_id
+    if (endpoint === 'create-order') {
+      const d: any = responseData?.data ?? {};
+      const fromNested = (obj: any, key: string) => obj?.[key] ?? obj?.order?.[key] ?? obj?.data?.[key];
+      const normId = String(fromNested(d, 'id') ?? fromNested(d, 'order_id') ?? fromNested(d, 'qr_id') ?? '').trim();
+      const normQr = String(fromNested(d, 'qr_id') ?? fromNested(d, 'tracking_number') ?? fromNested(d, 'qrId') ?? normId).trim();
+      const normLink = fromNested(d, 'qr_link') ?? fromNested(d, 'qrUrl') ?? fromNested(d, 'link') ?? null;
+
+      responseData.data = {
+        ...(typeof d === 'object' && d ? d : {}),
+        id: normId || (responseData.data?.id ?? ''),
+        qr_id: normQr || (responseData.data?.qr_id ?? ''),
+        qr_link: normLink,
+      };
+    }
+
     // Handle merchant-orders endpoint
     if (endpoint === 'merchant-orders' && responseData.data) {
       // Normalize the orders data structure

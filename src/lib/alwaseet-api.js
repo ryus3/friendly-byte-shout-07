@@ -105,7 +105,35 @@ export const createAlWaseetOrder = async (orderData, token) => {
   formattedData.package_size = parseInt(formattedData.package_size) || 0;
   formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
-  return handleApiCall('create-order', 'POST', token, formattedData, { token });
+  // Call proxy
+  const createRes = await handleApiCall('create-order', 'POST', token, formattedData, { token });
+  
+  // Normalize and fallback if qr_id missing
+  let normalized = createRes || {};
+  let qrId = String(normalized?.qr_id || normalized?.tracking_number || normalized?.id || '').trim();
+  let id = String(normalized?.id || '').trim();
+
+  if (!qrId) {
+    try {
+      // Fetch recent orders and try to match by phone and price
+      const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+      const last10 = (formattedData.client_mobile || '').replace(/\D/g, '').slice(-10);
+      const candidates = (orders || []).filter((o) =>
+        String(o?.client_mobile || '').replace(/\D/g, '').endsWith(last10)
+      );
+      // Prefer exact price match
+      const exact = candidates.find(o => parseInt(o?.price) === formattedData.price) || candidates[0];
+      if (exact) {
+        qrId = String(exact.qr_id || exact.tracking_number || exact.id || '').trim();
+        id = String(exact.id || id || '').trim();
+        normalized = { ...exact, id, qr_id: qrId };
+      }
+    } catch (fbErr) {
+      console.warn('Fallback lookup for qr_id failed:', fbErr);
+    }
+  }
+
+  return { ...normalized, id: id || normalized?.id || null, qr_id: qrId || normalized?.qr_id || null };
 };
 
 // Helper function to map local field names to Al-Waseet API field names
