@@ -15,6 +15,7 @@ import superAPI from '@/api/SuperAPI';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 
 const SuperContext = createContext();
 
@@ -1612,7 +1613,7 @@ export const SuperProvider = ({ children }) => {
   // دالة مساعدة لضمان وجود created_by صالح
   const resolveCurrentUserUUID = useCallback(() => {
     // محاولة الحصول على معرف المستخدم الحالي
-    const currentUserId = user?.user_id || user?.id || auth?.uid();
+    const currentUserId = user?.user_id || user?.id;
     if (currentUserId) return currentUserId;
     
     // إذا لم نجد، استخدم المدير الافتراضي
@@ -1746,11 +1747,95 @@ export const SuperProvider = ({ children }) => {
 
         console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
         
+        // جلب المدن والمناطق لتحديد المعرفات الصحيحة
+        const citiesData = await getCities(alwaseetToken);
+        const cities = citiesData?.data || [];
+        
+        // العثور على معرف المدينة
+        let cityId = null;
+        if (aiOrder.customer_city) {
+          const cityMatch = cities.find(city => 
+            city.name === aiOrder.customer_city || 
+            city.name.includes(aiOrder.customer_city) ||
+            aiOrder.customer_city.includes(city.name)
+          );
+          cityId = cityMatch?.id;
+          console.log('🏙️ البحث عن المدينة:', { 
+            searchTerm: aiOrder.customer_city, 
+            found: cityMatch?.name, 
+            cityId 
+          });
+        }
+        
+        // إذا لم نجد المدينة، استخدم بغداد كافتراضي
+        if (!cityId) {
+          const baghdadCity = cities.find(city => city.name === 'بغداد');
+          cityId = baghdadCity?.id || 1;
+          console.log('⚠️ استخدام بغداد كمدينة افتراضية:', cityId);
+        }
+
+        // جلب المناطق للمدينة المحددة
+        let regionId = null;
+        if (cityId) {
+          const regionsData = await getRegionsByCity(alwaseetToken, cityId);
+          const regions = regionsData?.data || [];
+          
+          if (aiOrder.customer_province) {
+            const regionMatch = regions.find(region => 
+              region.name === aiOrder.customer_province ||
+              region.name.includes(aiOrder.customer_province) ||
+              aiOrder.customer_province.includes(region.name)
+            );
+            regionId = regionMatch?.id;
+            console.log('🗺️ البحث عن المنطقة:', { 
+              searchTerm: aiOrder.customer_province, 
+              found: regionMatch?.name, 
+              regionId 
+            });
+          }
+          
+          // إذا لم نجد المنطقة، استخدم الأولى كافتراضي
+          if (!regionId && regions.length > 0) {
+            regionId = regions[0].id;
+            console.log('⚠️ استخدام المنطقة الافتراضية:', regions[0].name, regionId);
+          }
+        }
+
+        // التحقق من وجود معرفات صحيحة
+        if (!cityId || !regionId) {
+          throw new Error(`لم يتم العثور على معرفات صحيحة للمدينة والمنطقة. المدينة: ${aiOrder.customer_city}, المنطقة: ${aiOrder.customer_province}`);
+        }
+
+        // تطبيع رقم الهاتف
+        const { normalizePhone } = await import('../utils/phoneUtils.js');
+        const normalizedPhone = normalizePhone(aiOrder.customer_phone);
+        if (!normalizedPhone) {
+          throw new Error('رقم الهاتف غير صحيح');
+        }
+
+        // تحديث البيانات بالمعرفات الصحيحة
+        const updatedPayload = {
+          ...alwaseetPayload,
+          city_id: parseInt(cityId),
+          region_id: parseInt(regionId),
+          client_name: aiOrder.customer_name || `زبون-${Date.now().toString().slice(-6)}`,
+          client_mobile: normalizedPhone,
+          location: aiOrder.customer_address || '',
+          type_name: normalizedItems.map(item => `${item.product_name || 'منتج'} × ${item.quantity}`).join(' + '),
+          items_number: normalizedItems.reduce((sum, item) => sum + item.quantity, 0),
+          price: normalizedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0),
+          package_size: 1,
+          merchant_notes: `طلب من ${aiOrder.source || 'التليغرام'}`,
+          replacement: 0
+        };
+
+        console.log('📋 بيانات الطلب المحدثة للوسيط:', updatedPayload);
+
         // إنشاء الطلب في الوسيط
-        const alwaseetResult = await createAlWaseetOrder(alwaseetPayload, alwaseetToken);
+        const alwaseetResult = await createAlWaseetOrder(updatedPayload, alwaseetToken);
         
         if (!alwaseetResult?.qr_id) {
-          return { success: false, error: 'فشل في إنشاء الطلب لدى شركة التوصيل' };
+          return { success: false, error: 'فشل في إنشاء الطلب لدى شركة التوصيل - لم يتم استلام رقم التتبع' };
         }
 
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alwaseetResult);
@@ -1758,10 +1843,12 @@ export const SuperProvider = ({ children }) => {
         // إنشاء الطلب المحلي مع ربطه بالوسيط
         return await createLocalOrderWithDeliveryPartner(aiOrder, normalizedItems, orderId, {
           delivery_partner: 'alwaseet',
-          delivery_partner_order_id: alwaseetResult.id,
+          delivery_partner_order_id: String(alwaseetResult.id || alwaseetResult.qr_id),
           qr_id: alwaseetResult.qr_id,
           tracking_number: alwaseetResult.qr_id,
-          delivery_account_used: selectedAccount
+          delivery_account_used: selectedAccount,
+          alwaseet_city_id: cityId,
+          alwaseet_region_id: regionId
         });
         } catch (err) {
           console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
