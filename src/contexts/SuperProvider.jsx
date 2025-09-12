@@ -105,9 +105,6 @@ export const SuperProvider = ({ children }) => {
     refreshProducts: dbRefetchProducts,
   } = useProducts();
   
-  // إضافة useDeliveryOrderHandler
-  const { handleDeliveryPartnerOrder } = useDeliveryOrderHandler();
-  
   // حالة البيانات الموحدة - نفس البنية القديمة بالضبط
   const [allData, setAllData] = useState({
     products: [],

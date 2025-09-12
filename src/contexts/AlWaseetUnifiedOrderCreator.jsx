@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { useSuper } from '@/contexts/SuperProvider';
+import { useInventory } from '@/contexts/InventoryContext';
 import { createAlWaseetOrder } from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircle } from 'lucide-react';
@@ -17,7 +17,7 @@ export const useUnifiedOrderCreator = () => {
 
 export const UnifiedOrderCreatorProvider = ({ children }) => {
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner } = useAlWaseet();
-  const { createOrder, updateOrder, settings } = useSuper();
+  const { createOrder, updateOrder, settings } = useInventory();
 
   // دالة موحدة لإنشاء الطلبات مع ضمان الربط الصحيح والتوحيد الكامل للأرقام
   const createUnifiedOrder = useCallback(async (customerInfo, cart, discount = 0, aiOrderData = null) => {
