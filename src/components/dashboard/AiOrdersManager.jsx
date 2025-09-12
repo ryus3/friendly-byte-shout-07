@@ -189,18 +189,25 @@ useEffect(() => {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('auto_approval_enabled, order_destination, selected_delivery_account')
+          .select('auto_approval_enabled, default_ai_order_destination, selected_delivery_account')
           .eq('user_id', user.user_id)
           .single();
         
         if (data) {
           setAutoApprovalEnabled(data.auto_approval_enabled || false);
           
-          if (data.order_destination && data.order_destination !== 'local') {
+          if (data.default_ai_order_destination && data.default_ai_order_destination !== 'local') {
             setOrderDestination({
-              destination: data.order_destination,
+              destination: data.default_ai_order_destination,
               account: data.selected_delivery_account || '',
-              partnerName: data.order_destination
+              partnerName: data.default_ai_order_destination
+            });
+          } else {
+            // Ensure local destination is properly set
+            setOrderDestination({
+              destination: 'local',
+              account: '',
+              partnerName: 'local'
             });
           }
         }

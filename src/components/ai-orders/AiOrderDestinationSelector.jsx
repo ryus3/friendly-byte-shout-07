@@ -19,9 +19,21 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
   const { user } = useAuth();
   
   const [userAccounts, setUserAccounts] = useState([]);
-  const [selectedDestination, setSelectedDestination] = useState(value || 'local');
+  const [selectedDestination, setSelectedDestination] = useState('local');
   const [selectedAccount, setSelectedAccount] = useState('');
   const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
+
+  // Sync with external value prop
+  useEffect(() => {
+    if (value) {
+      if (typeof value === 'string') {
+        setSelectedDestination(value);
+      } else if (typeof value === 'object' && value.destination) {
+        setSelectedDestination(value.destination);
+        setSelectedAccount(value.account || '');
+      }
+    }
+  }, [value]);
 
   // تحميل حسابات المستخدم والتفضيلات
   useEffect(() => {
@@ -37,8 +49,20 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
           .single();
 
         if (profile) {
-          setSelectedDestination(profile.default_ai_order_destination || 'local');
-          setSelectedAccount(profile.selected_delivery_account || '');
+          const destination = profile.default_ai_order_destination || 'local';
+          const account = profile.selected_delivery_account || '';
+          
+          setSelectedDestination(destination);
+          setSelectedAccount(account);
+          
+          // Fire onChange immediately with loaded preferences if no external value
+          if (!value) {
+            onChange?.({
+              destination,
+              account,
+              partnerName: destination === 'local' ? 'local' : activePartner
+            });
+          }
         }
 
         // جلب حسابات شركات التوصيل للوجهة المختارة
@@ -96,7 +120,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className }) => {
 
       if (error) throw error;
       
-      // إشعار التحديث للنظام
+      // إشعار التحديث للنظام فورا قبل الحفظ
       onChange?.({
         destination,
         account,

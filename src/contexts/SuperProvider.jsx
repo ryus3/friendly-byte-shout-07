@@ -1645,10 +1645,35 @@ export const SuperProvider = ({ children }) => {
       if (destination !== 'local') {
         console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
         
+        // التحقق من وجود الحساب أو جلبه من التفضيلات
+        let actualAccount = selectedAccount;
+        if (!actualAccount) {
+          console.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('selected_delivery_account')
+              .eq('user_id', createdBy)
+              .single();
+            
+            actualAccount = profile?.selected_delivery_account;
+            console.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
+          } catch (error) {
+            console.error('❌ فشل في جلب الحساب من التفضيلات:', error);
+          }
+        }
+
+        if (!actualAccount) {
+          return { 
+            success: false, 
+            error: `لا يوجد حساب محدد لشركة التوصيل ${destination}. يرجى تحديد حساب في إعدادات وجهة الطلب.` 
+          };
+        }
+        
         // تفعيل الحساب المحدد وانتظار النتيجة
         try {
-          console.log('🔄 تفعيل حساب التوصيل:', selectedAccount);
-          const accountActivated = await activateAccount(selectedAccount);
+          console.log('🔄 تفعيل حساب التوصيل:', actualAccount);
+          const accountActivated = await activateAccount(actualAccount);
           if (!accountActivated) {
             throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
           }
