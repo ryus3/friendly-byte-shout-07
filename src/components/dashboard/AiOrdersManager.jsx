@@ -40,12 +40,12 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
-  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة)
+  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة والمعالجة)
   const dedupedContextOrders = useMemo(() => {
     const map = new Map();
     for (const o of ordersFromContext) {
-      // فلترة الطلبات المعتمدة لمنع إعادة ظهورها
-      if (o && o.id && !map.has(o.id) && o.status !== 'approved') {
+      // فلترة الطلبات المعتمدة والمعالجة لمنع إعادة ظهورها
+      if (o && o.id && !map.has(o.id) && !['approved', 'processed'].includes(o.status)) {
         map.set(o.id, o);
       }
     }
