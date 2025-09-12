@@ -50,21 +50,7 @@ const EmployeeFollowUpPage = () => {
     syncVisibleOrdersBatch
   } = useSmartSync();
   
-  // دالة المزامنة التلقائية للطلبات المرئية
-  const autoSyncVisibleOrders = useCallback(async () => {
-    if (!Array.isArray(filteredOrders) || filteredOrders.length === 0) {
-      console.log('⏭️ تجاهل المزامنة - لا توجد طلبات مرئية');
-      return;
-    }
-    
-    console.log(`🔄 بدء المزامنة التلقائية للطلبات المرئية: ${filteredOrders.length} طلب`);
-    
-    try {
-      await syncVisibleOrdersBatch(filteredOrders, false); // بدون toast للمزامنة التلقائية
-    } catch (error) {
-      console.error('خطأ في المزامنة التلقائية:', error);
-    }
-  }, [filteredOrders, syncVisibleOrdersBatch]);
+  // سيتم تعريف autoSyncVisibleOrders بعد تعريف filteredOrders لتجنب مشاكل التهيئة المتغيرة
   
   const { 
     orders, 
@@ -204,13 +190,7 @@ const EmployeeFollowUpPage = () => {
     localStorage.getItem('last-comprehensive-sync')
   );
   
-  // المزامنة التلقائية للطلبات المرئية عند فتح الصفحة
-  useEffect(() => {
-    if (filteredOrders && Array.isArray(filteredOrders) && filteredOrders.length > 0) {
-      console.log('🔄 بدء المزامنة التلقائية للطلبات المرئية...');
-      autoSyncVisibleOrders();
-    }
-  }, [autoSyncVisibleOrders, filteredOrders]);
+  // تم نقل منطق المزامنة التلقائية بعد تعريف filteredOrders لتجنب أخطاء التهيئة
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -438,6 +418,28 @@ const filteredOrders = useMemo(() => {
   
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+
+// تعريف المزامنة التلقائية بعد تعريف filteredOrders لتجنب مشاكل التهيئة
+const autoSyncVisibleOrders = useCallback(async () => {
+  if (!Array.isArray(filteredOrders) || filteredOrders.length === 0) {
+    console.log('⏭️ تجاهل المزامنة - لا توجد طلبات مرئية');
+    return;
+  }
+  console.log(`🔄 بدء المزامنة التلقائية للطلبات المرئية: ${filteredOrders.length} طلب`);
+  try {
+    await syncVisibleOrdersBatch(filteredOrders, false);
+  } catch (error) {
+    console.error('خطأ في المزامنة التلقائية:', error);
+  }
+}, [filteredOrders, syncVisibleOrdersBatch]);
+
+// تشغيل المزامنة التلقائية عند توفر طلبات مرئية
+useEffect(() => {
+  if (filteredOrders && Array.isArray(filteredOrders) && filteredOrders.length > 0) {
+    console.log('🔄 بدء المزامنة التلقائية للطلبات المرئية...');
+    autoSyncVisibleOrders();
+  }
+}, [filteredOrders, autoSyncVisibleOrders]);
 
 // إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - مع منع التكرار
 const hasSentSyncSignal = useRef(false);
