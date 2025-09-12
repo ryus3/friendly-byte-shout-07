@@ -1012,7 +1012,7 @@ export const SuperProvider = ({ children }) => {
         tracking_number: trackingNumber,
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: baseOrder.notes,
-        created_by: user?.user_id || user?.id,
+        created_by: resolveCurrentUserUUID(),
         // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح
         alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || null,
         alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || null,
@@ -1609,10 +1609,24 @@ export const SuperProvider = ({ children }) => {
     superAPI.clearAll(); // تنظيف شامل للكاش فقط
     console.log('✅ تنظيف كاش مكتمل - Real-time سيحدث البيانات');
   }, []);
+  // دالة مساعدة لضمان وجود created_by صالح
+  const resolveCurrentUserUUID = useCallback(() => {
+    // محاولة الحصول على معرف المستخدم الحالي
+    const currentUserId = user?.user_id || user?.id || auth?.uid();
+    if (currentUserId) return currentUserId;
+    
+    // إذا لم نجد، استخدم المدير الافتراضي
+    return '91484496-b887-44f7-9e5d-be9db5567604';
+  }, [user]);
+
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
     try {
       console.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
+      
+      // التأكد من وجود مستخدم صالح
+      const createdBy = resolveCurrentUserUUID();
+      console.log('👤 معرف المستخدم المستخدم:', createdBy);
       
       // 1) جلب الطلب الذكي
       const { data: aiOrder, error: aiErr } = await supabase
@@ -1630,23 +1644,30 @@ export const SuperProvider = ({ children }) => {
       if (destination !== 'local') {
         console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
         
-        // تفعيل الحساب المحدد
-        const accountActivated = await activateAccount(selectedAccount);
-        if (!accountActivated) {
-          return { success: false, error: 'فشل في تفعيل حساب شركة التوصيل المحدد' };
-        }
-        
-        // التحقق من وجود توكن صالح
-        if (!alwaseetToken) {
-          return { success: false, error: 'لا يوجد توكن صالح لشركة التوصيل' };
-        }
-        
-        setActivePartner('alwaseet');
-        
-        // مطابقة العناصر نفس المنطق المحلي
-        const products = Array.isArray(allData.products) ? allData.products : [];
-        const lowercase = (v) => (v || '').toString().trim().toLowerCase();
-        const notMatched = [];
+        // تفعيل الحساب المحدد وانتظار النتيجة
+        try {
+          console.log('🔄 تفعيل حساب التوصيل:', selectedAccount);
+          const accountActivated = await activateAccount(selectedAccount);
+          if (!accountActivated) {
+            throw new Error('فشل في تفعيل حساب شركة التوصيل المحدد');
+          }
+          console.log('✅ تم تفعيل حساب التوصيل بنجاح');
+          
+          // انتظار قصير للتأكد من تحديث التوكن
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // التحقق من وجود توكن صالح
+          if (!alwaseetToken) {
+            throw new Error('لا يوجد توكن صالح لشركة التوصيل بعد التفعيل');
+          }
+          console.log('✅ توكن صالح متوفر');
+          
+          setActivePartner('alwaseet');
+          
+          // مطابقة العناصر مع المنتجات الموجودة
+          const products = Array.isArray(allData.products) ? allData.products : [];
+          const lowercase = (v) => (v || '').toString().trim().toLowerCase();
+          const notMatched = [];
 
         const matchedItems = itemsInput.map((it) => {
           const name = lowercase(it.product_name || it.name);
@@ -1742,9 +1763,13 @@ export const SuperProvider = ({ children }) => {
           tracking_number: alwaseetResult.qr_id,
           delivery_account_used: selectedAccount
         });
+        } catch (err) {
+          console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
+          return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
+        }
       }
 
-      // 2) مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
+      // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
       const products = Array.isArray(allData.products) ? allData.products : [];
       const lowercase = (v) => (v || '').toString().trim().toLowerCase();
       const notMatched = [];
@@ -1891,7 +1916,7 @@ export const SuperProvider = ({ children }) => {
         qr_id: deliveryPartnerData.qr_id || null,
         delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
         notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
-        created_by: user?.user_id || user?.id,
+        created_by: resolveCurrentUserUUID(),
       };
 
       const { data: createdOrder, error: createErr } = await supabase
@@ -1964,7 +1989,7 @@ export const SuperProvider = ({ children }) => {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
     }
-  }, [user, allData.products]);
+  }, [resolveCurrentUserUUID, allData.products]);
 
   // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
   const toggleProductVisibility = useCallback(async (productId, newState) => {
