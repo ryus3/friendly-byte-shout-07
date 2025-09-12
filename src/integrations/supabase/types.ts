@@ -26,7 +26,6 @@ export type Database = {
           id: string
           items: Json
           order_data: Json
-          original_text: string | null
           processed_at: string | null
           processed_by: string | null
           source: string
@@ -46,7 +45,6 @@ export type Database = {
           id?: string
           items?: Json
           order_data: Json
-          original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           source?: string
@@ -66,7 +64,6 @@ export type Database = {
           id?: string
           items?: Json
           order_data?: Json
-          original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           source?: string
@@ -3617,39 +3614,6 @@ export type Database = {
         }
         Relationships: []
       }
-      telegram_pending_selections: {
-        Row: {
-          chat_id: number
-          city_name: string | null
-          created_at: string
-          expires_at: string
-          options: Json
-          original_text: string | null
-          selection_type: string
-          updated_at: string
-        }
-        Insert: {
-          chat_id: number
-          city_name?: string | null
-          created_at?: string
-          expires_at: string
-          options?: Json
-          original_text?: string | null
-          selection_type?: string
-          updated_at?: string
-        }
-        Update: {
-          chat_id?: number
-          city_name?: string | null
-          created_at?: string
-          expires_at?: string
-          options?: Json
-          original_text?: string | null
-          selection_type?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       telegram_processed_updates: {
         Row: {
           chat_id: number
@@ -4078,10 +4042,6 @@ export type Database = {
         Args: { p_days_back?: number }
         Returns: Json
       }
-      cleanup_expired_telegram_selections: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       cleanup_old_backups: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -4243,8 +4203,13 @@ export type Database = {
         Returns: string
       }
       get_employee_by_telegram_id: {
-        Args: { p_chat_id: number }
-        Returns: Json
+        Args: { p_telegram_chat_id: number }
+        Returns: {
+          employee_code: string
+          full_name: string
+          role: string
+          user_id: string
+        }[]
       }
       get_employee_last_sync: {
         Args: { p_employee_id: string }
@@ -4443,8 +4408,8 @@ export type Database = {
         Returns: boolean
       }
       link_telegram_user: {
-        Args: { p_chat_id: number; p_employee_code: string }
-        Returns: Json
+        Args: { p_employee_code: string; p_telegram_chat_id: number }
+        Returns: boolean
       }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }

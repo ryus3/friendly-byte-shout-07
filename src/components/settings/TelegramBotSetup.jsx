@@ -19,7 +19,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [botInfo, setBotInfo] = useState(null);
 
-  const BOT_FUNCTION_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot-alwaseet`;
+  const BOT_FUNCTION_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot`;
 
   useEffect(() => {
     if (open) {
