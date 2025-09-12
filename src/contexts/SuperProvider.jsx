@@ -104,7 +104,8 @@ export const SuperProvider = ({ children }) => {
     token: alwaseetToken, 
     activePartner, 
     setActivePartner,
-    hasValidToken 
+    hasValidToken,
+    getTokenForUser
   } = useAlWaseet();
   
   // استدعاء useProducts في المكان الصحيح
