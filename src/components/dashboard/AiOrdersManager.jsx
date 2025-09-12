@@ -126,7 +126,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
     };
-  }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder]);
+  }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder, availabilityOf, orderNeedsReview]);
   
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [statFilter, setStatFilter] = useState('all'); // all | needs_review | telegram | ai_chat | store | pending
@@ -260,7 +260,7 @@ useEffect(() => {
     return v;
   }, [products]);
 
-  const availabilityOf = (order) => {
+  const availabilityOf = useCallback((order) => {
     const items = Array.isArray(order?.items) ? order.items : (order?.order_data?.items || []);
     if (!items.length) return 'unknown';
     const lower = (v) => (v || '').toString().trim().toLowerCase();
@@ -315,10 +315,10 @@ useEffect(() => {
     }
     if (!allMatched) return 'unknown';
     return allAvailable ? 'available' : 'out';
-  };
+  }, [variants]);
 
   // تحديد الحاجة للمراجعة بدقة (يشمل فقدان المقاس/اللون)
-  const orderNeedsReview = (order) => {
+  const orderNeedsReview = useCallback((order) => {
     const items = Array.isArray(order?.items) ? order.items : (order?.order_data?.items || []);
     const lower = (v) => (v || '').toString().trim().toLowerCase();
     const productHasAnyColor = (it) => {
@@ -339,7 +339,8 @@ useEffect(() => {
       if (!it?.size && productHasAnySize(it)) { missingAttr = true; break; }
     }
     return statusFlag || availFlag || missingAttr;
-  };
+  }, [variants, availabilityOf]);
+
 
   const totalCount = visibleOrders.length;
   const pendingCount = visibleOrders.filter(order => order.status === 'pending').length;
