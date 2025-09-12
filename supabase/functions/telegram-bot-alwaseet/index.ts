@@ -136,7 +136,7 @@ async function findRegionsByName(cityId: number, regionText: string): Promise<an
   return matchingRegions
 }
 
-// Parse single line address for city and region
+// Parse single line address for city and region with improved logic
 async function parseAddressLine(addressText: string): Promise<{
   city: any | null,
   regions: any[],
@@ -146,45 +146,59 @@ async function parseAddressLine(addressText: string): Promise<{
   
   const parts = addressText.split(/[،,\s]+/).filter(Boolean)
   
-  // First part should be city
-  const cityText = parts[0]
-  const city = await findCityByName(cityText)
+  // First try to extract city from first part
+  let cityText = parts[0]
+  let city = await findCityByName(cityText)
+  
+  // If no city found in first part and only region specified, default to Baghdad
+  if (!city && parts.length > 0) {
+    city = await getBaghdadCity()
+    // All parts become region candidates when no city specified
+    if (city) {
+      console.log(`🏙️ لم يتم تحديد مدينة، استخدام بغداد كافتراضي`)
+    }
+  }
   
   if (!city) {
     return { city: null, regions: [], remainingText: addressText }
   }
   
-  // Try to find region from remaining parts
-  const remainingParts = parts.slice(1)
+  // Determine region search parts
+  const regionParts = city === await getBaghdadCity() && !await findCityByName(parts[0]) 
+    ? parts  // All parts if Baghdad default
+    : parts.slice(1)  // Skip city part
+    
   let regions: any[] = []
   let nearestPointText = ''
   
-  if (remainingParts.length > 0) {
-    // Try different combinations for multi-word regions
-    for (let i = 1; i <= Math.min(3, remainingParts.length); i++) {
-      const regionCandidate = remainingParts.slice(0, i).join(' ')
+  if (regionParts.length > 0) {
+    // Try different combinations for multi-word regions (prioritize longer matches)
+    // Start with 3-word combinations, then 2-word, then single word
+    for (let wordCount = Math.min(3, regionParts.length); wordCount >= 1; wordCount--) {
+      const regionCandidate = regionParts.slice(0, wordCount).join(' ')
       const foundRegions = await findRegionsByName(city.id, regionCandidate)
       
       if (foundRegions.length > 0) {
         regions = foundRegions
-        // Rest becomes nearest point
-        if (remainingParts.length > i) {
-          nearestPointText = remainingParts.slice(i).join(' ')
+        // Rest becomes address details (no automatic "nearest point" filling)
+        if (regionParts.length > wordCount) {
+          nearestPointText = regionParts.slice(wordCount).join(' ')
         }
+        console.log(`✅ تم العثور على مطابقة للمنطقة: "${regionCandidate}" (${foundRegions.length} نتيجة)`)
         break
       }
     }
     
-    // If no region found, use remaining text as nearest point
-    if (regions.length === 0 && remainingParts.length > 0) {
-      nearestPointText = remainingParts.join(' ')
+    // If no region found and parts available, don't auto-fill anything
+    if (regions.length === 0) {
+      console.log(`⚠️ لم يتم العثور على منطقة مطابقة في: ${regionParts.join(' ')}`)
     }
   }
   
   return { 
     city, 
     regions, 
-    remainingText: nearestPointText.length >= 3 ? nearestPointText : '' 
+    remainingText: nearestPointText
   }
 }
 
@@ -578,7 +592,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
             customerCity = addressResult.city
             customerAddress = addressResult.remainingText
             
-            // Handle region disambiguation
+            // Handle region disambiguation - ensure we have a region for delivery orders
             if (addressResult.regions.length > 1) {
               // Multiple regions found - need user selection
               pendingOrders.set(chatId, {
@@ -598,6 +612,10 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
               return true // Wait for user selection
             } else if (addressResult.regions.length === 1) {
               customerRegion = addressResult.regions[0]
+            } else if (addressResult.regions.length === 0) {
+              // No region found - this is an error for delivery orders
+              await sendTelegramMessage(chatId, `❌ لم يتم العثور على منطقة صحيحة في: "${line}"\n\nيرجى تحديد المنطقة بوضوح مثل:\n• بغداد الدورة\n• بغداد الكرادة\n• بغداد الحبيبية`)
+              return false
             }
             break
           }
@@ -613,11 +631,24 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       if (regions.length > 0) customerRegion = regions[0]
     }
     
-    // Validate essential fields
-    if (!customerPhone || items.length === 0) {
-      const helpMessage = `❌ خطأ في الطلب!\n\n` +
-        `يجب أن يحتوي الطلب على:\n• رقم هاتف صحيح (07xxxxxxxxx)\n• منتج واحد على الأقل\n\n` +
-        `📋 مثال صحيح:\n` +
+    // Validate essential fields - ensure city and region for delivery orders
+    if (!customerPhone || items.length === 0 || !customerCity || !customerRegion) {
+      let errorMessage = `❌ خطأ في الطلب!\n\n`
+      
+      if (!customerPhone) {
+        errorMessage += `• رقم هاتف صحيح مطلوب (07xxxxxxxxx)\n`
+      }
+      if (items.length === 0) {
+        errorMessage += `• منتج واحد على الأقل مطلوب\n`
+      }
+      if (!customerCity) {
+        errorMessage += `• تحديد المدينة مطلوب\n`
+      }
+      if (!customerRegion) {
+        errorMessage += `• تحديد المنطقة مطلوب لشركات التوصيل\n`
+      }
+      
+      errorMessage += `\n📋 مثال صحيح:\n` +
         `احمد علي\n` +
         `07701234567\n` +
         `بغداد الدورة\n` +
@@ -625,7 +656,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
         `قميص أحمر 2 قطعة x 25000 د.ع\n` +
         `بنطال أزرق 1 قطعة x 35000 د.ع`
       
-      await sendTelegramMessage(chatId, helpMessage)
+      await sendTelegramMessage(chatId, errorMessage)
       return false
     }
     

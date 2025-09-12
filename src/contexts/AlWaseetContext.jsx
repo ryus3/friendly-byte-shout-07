@@ -257,19 +257,19 @@ export const AlWaseetProvider = ({ children }) => {
       let totalUpdated = 0;
       let processedEmployees = 0;
       
-      // معالجة كل موظف على حدة
+      // معالجة كل موظف على حدة باستخدام توكن منشئ الطلب
       for (const [employeeId, employeeOrders] of ordersByEmployee) {
         try {
-          // الحصول على توكن الموظف
+          // الحصول على توكن منشئ الطلب (وليس المدير الحالي)
           const employeeTokenData = await getTokenForUser(employeeId);
           if (!employeeTokenData) {
-            console.log(`⚠️ لا يوجد توكن صالح للموظف: ${employeeId}`);
+            console.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
             continue;
           }
 
-          console.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId}`);
+          console.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي`);
           
-          // جلب جميع طلبات الموظف من الوسيط
+          // جلب جميع طلبات الموظف من الوسيط باستخدام توكنه الشخصي
           const merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
           
           if (!merchantOrders || !Array.isArray(merchantOrders)) {

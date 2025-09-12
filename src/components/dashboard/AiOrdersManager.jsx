@@ -40,11 +40,14 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
-  // إزالة التكرار وترتيب الأحدث أولاً من السياق
+  // إزالة التكرار وترتيب الأحدث أولاً من السياق (فلترة الطلبات المعتمدة)
   const dedupedContextOrders = useMemo(() => {
     const map = new Map();
     for (const o of ordersFromContext) {
-      if (o && o.id && !map.has(o.id)) map.set(o.id, o);
+      // فلترة الطلبات المعتمدة لمنع إعادة ظهورها
+      if (o && o.id && !map.has(o.id) && o.status !== 'approved') {
+        map.set(o.id, o);
+      }
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [ordersFromContext]);
@@ -432,6 +435,14 @@ useEffect(() => {
         ));
         const successIds = approvedIds.filter((_, i) => results[i]?.success);
         const failedIds = approvedIds.filter((_, i) => !results[i]?.success);
+        
+        // تحديث حالة الطلبات المعتمدة لمنع إعادة ظهورها
+        if (successIds.length > 0) {
+          await supabase
+            .from('ai_orders')
+            .update({ status: 'approved' })
+            .in('id', successIds);
+        }
         
         // إضافة الطلبات الفاشلة للقائمة مرة أخرى
         if (failedIds.length > 0) {
