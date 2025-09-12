@@ -54,6 +54,17 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     setOrders(dedupedContextOrders);
   }, [dedupedContextOrders]);
   
+  // إعدادات وجهة الطلبات (تعريفها قبل استخدام أي تأثير يعتمد عليها لتفادي TDZ)
+  const [orderDestination, setOrderDestination] = useState({
+    destination: 'local',
+    account: '',
+    partnerName: 'local'
+  });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // إعدادات الموافقة التلقائية
+  const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
+  
   // مستمعات Real-time للتحديثات الفورية
   useEffect(() => {
     const handleAiOrderCreated = async (event) => {
@@ -170,17 +181,6 @@ useEffect(() => {
     ),
     [allUsers]
   );
-
-  // إعدادات وجهة الطلبات
-  const [orderDestination, setOrderDestination] = useState({
-    destination: 'local',
-    account: '',
-    partnerName: 'local'
-  });
-  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-
-  // إعدادات الموافقة التلقائية
-  const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
 
   // تحميل إعدادات المستخدم (الوجهة والموافقة التلقائية)
   useEffect(() => {
