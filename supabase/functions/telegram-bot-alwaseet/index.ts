@@ -637,6 +637,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
               }
             } else {
               customerAddress = addressResult.remainingText
+            }
             
             // Handle region disambiguation - ensure we have a region for delivery orders
             if (addressResult.regions.length > 1) {
