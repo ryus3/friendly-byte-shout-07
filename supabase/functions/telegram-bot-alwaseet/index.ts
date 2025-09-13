@@ -609,7 +609,7 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
     if (!customerCity && !customerAddress && lines.length > 0) {
       // Try to parse address from text like "نجف مناذرة ريان" -> نجف (city) + مناذرة (region) + ريان (nearest point)
       for (const line of lines) {
-        if (!line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج') && line.length > 3) {
+        if (!line.match(/07[5789]\d{8}/) && !line.toLowerCase().includes('منتج') && line.length > 3) {
           const addressResult = await parseAddressLine(line)
           if (addressResult.city) {
             customerCity = addressResult.city
