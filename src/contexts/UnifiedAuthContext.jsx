@@ -410,11 +410,16 @@ export const UnifiedAuthProvider = ({ children }) => {
         throw new Error('اسم المستخدم هذا موجود بالفعل.');
       }
       
+      // Use the correct production domain for email redirects
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/`
+        : 'https://pos.ryusbrand.com/';
+        
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
             username: username,
@@ -468,8 +473,13 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
     
     setLoading(true);
+    // Use the correct production domain
+    const redirectUrl = window.location.hostname === 'localhost' 
+      ? `${window.location.origin}/update-password`
+      : 'https://pos.ryusbrand.com/update-password';
+      
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
+      redirectTo: redirectUrl,
     });
     setLoading(false);
     
