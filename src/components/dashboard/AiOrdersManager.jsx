@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -254,6 +254,36 @@ useEffect(() => {
       })();
     }
   }, [user?.user_id]);
+
+  // Auto-approve newly arriving orders when conditions are met (no reliance on window events)
+  const autoProcessedRef = useRef(new Set());
+  useEffect(() => {
+    if (!preferencesLoaded || !autoApprovalEnabled || !orders?.length) return;
+    const candidates = orders
+      .filter(o => o?.status === 'pending' && !autoProcessedRef.current.has(o.id))
+      .filter(o => availabilityOf(o) === 'available' && !orderNeedsReview(o))
+      .slice(0, 5);
+    if (!candidates.length) return;
+    (async () => {
+      for (const o of candidates) {
+        try {
+          autoProcessedRef.current.add(o.id);
+          const res = await approveAiOrder?.(o.id, orderDestination.destination, orderDestination.account);
+          if (res?.success) {
+            setOrders(prev => prev.filter(x => x.id !== o.id));
+            setProcessedOrders(prev => [...prev, o.id]);
+            try { await supabase.from('ai_orders').update({ status: 'approved' }).eq('id', o.id); } catch {}
+            try { window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: o.id } })); } catch {}
+          } else {
+            autoProcessedRef.current.delete(o.id);
+          }
+        } catch (err) {
+          console.error('Auto-approve (orders change) failed:', err);
+          autoProcessedRef.current.delete(o.id);
+        }
+      }
+    })();
+  }, [orders, preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder, availabilityOf, orderNeedsReview]);
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
   const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();

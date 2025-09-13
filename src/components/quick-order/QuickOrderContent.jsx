@@ -1519,7 +1519,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const customerInfoPayload = {
         name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
         phone: normalizedPhone, // استخدام الرقم المطبع
-        address: `${formData.address}, ${region}, ${city}`,
+        address: (formData.address || "").trim(),
         city: city, 
         province: region, // ✅ الحل الجذري - حفظ المنطقة
         notes: formData.notes,
