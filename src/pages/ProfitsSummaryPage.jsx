@@ -339,8 +339,8 @@ const ProfitsSummaryPage = () => {
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
         
         console.log('📊 نتائج الحساب:', {
-            deliveredOrdersCount: deliveredOrders.length,
-            pendingOrdersCount: pendingDeliveredOrders.length,
+            deliveredOrdersCount: deliveredOrders?.length || 0,
+            pendingOrdersCount: pendingDeliveredOrders?.length || 0,
             detailedProfitsCount: detailedProfits.length,
             managerProfitFromEmployees,
             totalRevenue,
