@@ -182,7 +182,10 @@ const ProfitsSummaryPage = () => {
                 deliveryFees: 0,
                 cogs: 0,
                 generalExpenses: 0,
-                employeeSettledDues: 0
+                employeeSettledDues: 0,
+                deliveredOrders: [],
+                pendingDeliveredOrders: [],
+                generalExpensesFiltered: []
             };
         }
 
