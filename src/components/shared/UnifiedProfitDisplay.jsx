@@ -153,7 +153,7 @@ const UnifiedProfitDisplay = ({
 
     if (!canViewAll && currentUser?.id) {
       // طلبات الموظف المكتملة
-      const userDeliveredOrders = deliveredOrders.filter(o => o.created_by === currentUser.id);
+      const userDeliveredOrders = deliveredOrders?.filter(o => o.created_by === currentUser.id) || [];
       
       // حساب الأرباح الشخصية من جدول profits
       const userProfits = allProfits.filter(p => p.employee_id === currentUser.id);
@@ -216,14 +216,14 @@ const UnifiedProfitDisplay = ({
         personalSettledProfit: personalData.personalSettledProfit,
         personalPendingProfit: personalData.personalPendingProfit,
         archivedOrdersCount: personalData.archivedOrdersCount,
-        userDeliveredOrdersCount: userDeliveredOrders.length
+        userDeliveredOrdersCount: userDeliveredOrders?.length || 0
       });
     }
     
     const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
     
     // حساب إجمالي الإيرادات
-    const salesSum = deliveredOrders.reduce((sum, o) => {
+    const salesSum = (deliveredOrders || []).reduce((sum, o) => {
       const sales = (o.sales_amount != null)
         ? (Number(o.sales_amount) || 0)
         : (Number(o.final_amount || o.total_amount || 0) - Number(o.delivery_fee || 0));
@@ -232,7 +232,7 @@ const UnifiedProfitDisplay = ({
     const totalRevenue = salesSum;
     
     // حساب تكلفة البضاعة المباعة
-    const cogs = deliveredOrders.reduce((sum, o) => {
+    const cogs = (deliveredOrders || []).reduce((sum, o) => {
       if (!o.order_items || !Array.isArray(o.order_items)) return sum;
       
       const orderCogs = o.order_items.reduce((itemSum, item) => {
@@ -243,13 +243,13 @@ const UnifiedProfitDisplay = ({
       return sum + orderCogs;
     }, 0);
     
-    const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+    const deliveryFees = (deliveredOrders || []).reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
     const salesWithoutDelivery = salesSum;
     const grossProfit = salesWithoutDelivery - cogs;
     
     // حساب ربح النظام (نفس منطق AccountingPage)
-    const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === currentUser?.id);
-    const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
+    const managerOrdersInRange = (deliveredOrders || []).filter(o => !o.created_by || o.created_by === currentUser?.id);
+    const employeeOrdersInRange = (deliveredOrders || []).filter(o => o.created_by && o.created_by !== currentUser?.id);
     
     const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
       const orderProfit = (order.items || []).reduce((itemSum, item) => {
@@ -291,7 +291,7 @@ const UnifiedProfitDisplay = ({
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
-      .filter(p => deliveredOrders.some(o => o.id === p.order_id))
+      .filter(p => deliveredOrders?.some(o => o.id === p.order_id) || false)
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
     // المستحقات المدفوعة - نفس منطق متابعة الموظفين (من المصاريف المحاسبية)
@@ -315,7 +315,7 @@ const UnifiedProfitDisplay = ({
       generalExpenses,
       netProfit,
       totalEmployeeProfits,
-      deliveredOrdersCount: deliveredOrders.length,
+      deliveredOrdersCount: deliveredOrders?.length || 0,
       expensesCount: expensesInRange.length
     });
     
@@ -441,14 +441,14 @@ const UnifiedProfitDisplay = ({
       // الأرباح المعلقة من جدول profits (للطلبات المسلمة مع فواتير مستلمة)
       const pendingProfitsFromTable = allProfits
         .filter(p => {
-          const isInDateRange = deliveredOrders.some(o => o.id === p.order_id);
+          const isInDateRange = (deliveredOrders || []).some(o => o.id === p.order_id);
           return p.status === 'pending' && isInDateRange;
         })
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
       console.log('🔍 الأرباح المعلقة الصحيحة:', {
         pendingProfitsFromTable,
-        deliveredOrdersCount: deliveredOrders.length,
+        deliveredOrdersCount: deliveredOrders?.length || 0,
         pendingProfitsCount: allProfits.filter(p => p.status === 'pending').length
       });
 
