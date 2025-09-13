@@ -368,6 +368,8 @@ const ProfitsSummaryPage = () => {
             grossProfit: unifiedProfitData?.grossProfit || 0,
             generalExpenses: unifiedProfitData?.generalExpenses || 0,
             employeeSettledDues,
+            deliveredOrders: deliveredOrders || [],
+            pendingDeliveredOrders: pendingDeliveredOrders || [],
             generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
                 if (e.category === 'مستحقات الموظفين') return false;
