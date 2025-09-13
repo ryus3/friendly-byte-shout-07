@@ -2041,7 +2041,7 @@ export const SuperProvider = ({ children }) => {
           client_name: clientName || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          location: nearestPoint || '',
+          location: '', // منع الملء التلقائي لنقطة الدلالة (لا تملأ المدينة/المنطقة)
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل

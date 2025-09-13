@@ -911,6 +911,34 @@ serve(async (req) => {
   try {
     const body = await req.json()
     
+    // Telegram deduplication: ignore duplicate updates/messages
+    const update = body as any;
+    const msg = update?.message;
+    try {
+      if (update?.update_id && msg?.message_id && msg?.chat?.id) {
+        const { error: dupErr } = await supabase
+          .from('telegram_processed_updates')
+          .insert({
+            update_id: Number(update.update_id),
+            chat_id: Number(msg.chat.id),
+            message_id: Number(msg.message_id),
+            message_hash: typeof msg.text === 'string' ? msg.text.slice(0, 200) : null
+          });
+        if (dupErr) {
+          // If duplicate, exit early (Telegram may retry webhooks)
+          if (dupErr.code === '23505' || (dupErr.message || '').includes('duplicate key value')) {
+            console.log('🔁 Duplicate Telegram update ignored:', update.update_id);
+            return new Response(JSON.stringify({ ok: true, duplicate: true }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          console.warn('Dedup insert warning:', dupErr);
+        }
+      }
+    } catch (e) {
+      console.warn('Dedup check failed, continuing anyway:', e);
+    }
+    
     // Handle Telegram webhook
     if (body.message) {
       await handleMessage(body.message)
