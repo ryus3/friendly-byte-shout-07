@@ -70,6 +70,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
 
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
+  // بيانات المستخدم الموحدة لاستخدامها في تحديد ملكية الطلبات
+  const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
   
   // مستمعات Real-time للتحديثات الفورية مع موافقة تلقائية محسنة
   useEffect(() => {
@@ -90,11 +92,17 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           const availability = availabilityOf(newOrder);
           const needsReview = orderNeedsReview(newOrder);
           const isFromTelegram = newOrder.source === 'telegram' || newOrder.order_data?.source === 'telegram';
+          // تحقق من ملكية الطلب: الموافقة التلقائية تخص هذا المستخدم فقط
+          const by = newOrder?.created_by ?? newOrder?.user_id ?? newOrder?.created_by_employee_code ?? newOrder?.order_data?.created_by;
+          const byNorm = by ? String(by).toUpperCase() : '';
+          const candidates = [userUUID, employeeCode].filter(Boolean).map(v => String(v).toUpperCase());
+          const isMine = candidates.length > 0 && byNorm && candidates.includes(byNorm);
           
           console.log('📋 تقييم الطلب للموافقة التلقائية:', {
             availability,
             needsReview,
             isFromTelegram,
+            isMine,
             destination: orderDestination.destination,
             hasAccount: !!orderDestination.account
           });
@@ -104,6 +112,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
             availability === 'available' && 
             !needsReview && 
             isFromTelegram && // فقط طلبات التليغرام
+            isMine && // تخص هذا المستخدم فقط
             (orderDestination.destination === 'local' || 
              (orderDestination.destination !== 'local' && orderDestination.account))
           );
@@ -342,7 +351,6 @@ useEffect(() => {
   }, [orders, preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder, availabilityOf, orderNeedsReview]);
 
   // صلاحيات وهوية المستخدم + مطابقة الطلبات
-  const { isAdmin, userUUID, employeeCode } = useUnifiedUserData();
   const { isDepartmentManager } = usePermissions();
   const matchesCurrentUser = useCallback((order) => {
     const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
