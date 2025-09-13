@@ -758,7 +758,7 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
       p_customer_phone: customerPhone,
       p_customer_address: customerAddress, // Only nearest point, not full address
       p_customer_city: customerCity?.name,
-      p_customer_province: customerRegion?.name || customerCity?.name
+      p_customer_province: customerRegion?.name || customerCity?.name,
       p_total_amount: totalPrice + defaultDeliveryFee,
       p_items: items,
       p_telegram_chat_id: chatId,
