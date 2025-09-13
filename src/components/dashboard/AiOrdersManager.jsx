@@ -71,7 +71,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
   
-  // مستمعات Real-time للتحديثات الفورية
+  // مستمعات Real-time للتحديثات الفورية مع موافقة تلقائية محسنة
   useEffect(() => {
     const handleAiOrderCreated = async (event) => {
       const newOrder = event.detail;
@@ -82,19 +82,41 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           return [newOrder, ...prev];
         });
 
-        // التحقق من إمكانية الموافقة التلقائية (فقط بعد تحميل التفضيلات)
+        // الموافقة التلقائية المحسنة - تعمل فوراً عند وصول طلب جديد
         if (preferencesLoaded && autoApprovalEnabled && newOrder.status === 'pending') {
-          // فحص إذا كان الطلب صحيحاً (متوفر ولا يحتاج مراجعة)
+          console.log('🤖 بدء الموافقة التلقائية للطلب الجديد:', newOrder.id);
+          
+          // فحص شامل للطلب
           const availability = availabilityOf(newOrder);
           const needsReview = orderNeedsReview(newOrder);
+          const isFromTelegram = newOrder.source === 'telegram' || newOrder.order_data?.source === 'telegram';
           
-          // تحقق من صحة الوجهة المحددة
-          const canAutoApprove = availability === 'available' && !needsReview && 
-            (orderDestination.destination === 'local' || orderDestination.account);
+          console.log('📋 تقييم الطلب للموافقة التلقائية:', {
+            availability,
+            needsReview,
+            isFromTelegram,
+            destination: orderDestination.destination,
+            hasAccount: !!orderDestination.account
+          });
+          
+          // شروط الموافقة التلقائية المحسنة
+          const canAutoApprove = (
+            availability === 'available' && 
+            !needsReview && 
+            isFromTelegram && // فقط طلبات التليغرام
+            (orderDestination.destination === 'local' || 
+             (orderDestination.destination !== 'local' && orderDestination.account))
+          );
           
           if (canAutoApprove) {
             try {
-              console.log('Auto-approving order:', newOrder.id, { destination: orderDestination.destination, account: orderDestination.account });
+              console.log('✅ تنفيذ الموافقة التلقائية للطلب:', newOrder.id);
+              
+              // إزالة الطلب من القائمة فوراً لمنع ظهوره
+              setOrders(prev => prev.filter(o => o.id !== newOrder.id));
+              setProcessedOrders(prev => [...prev, newOrder.id]);
+              
+              // تنفيذ الموافقة في الخلفية
               const result = await approveAiOrder?.(
                 newOrder.id, 
                 orderDestination.destination, 
@@ -102,20 +124,37 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
               );
               
               if (result?.success) {
-                // إزالة الطلب من القائمة المحلية وإضافته للمعالجة فوراً
-                setOrders(prev => prev.filter(o => o.id !== newOrder.id));
-                setProcessedOrders(prev => [...prev, newOrder.id]);
                 toast({
-                  title: "تمت الموافقة التلقائية",
-                  description: `تم قبول الطلب رقم ${newOrder.id.slice(0, 8)} تلقائياً`,
+                  title: "✅ تمت الموافقة التلقائية",
+                  description: `طلب التليغرام تم إرساله لشركة التوصيل تلقائياً`,
                   variant: "success"
                 });
-                // إشعار النظام بالموافقة
+                
+                // تحديث حالة الطلب في قاعدة البيانات
+                try {
+                  await supabase.from('ai_orders').update({ 
+                    status: 'approved',
+                    processed_at: new Date().toISOString()
+                  }).eq('id', newOrder.id);
+                } catch (updateError) {
+                  console.warn('تحذير: فشل تحديث حالة الطلب:', updateError);
+                }
+                
                 window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: newOrder.id } }));
+              } else {
+                console.error('❌ فشلت الموافقة التلقائية:', result?.error);
+                // إعادة الطلب للقائمة في حالة الفشل
+                setOrders(prev => [newOrder, ...prev]);
+                setProcessedOrders(prev => prev.filter(id => id !== newOrder.id));
               }
             } catch (error) {
-              console.error('Auto-approval failed:', error);
+              console.error('❌ خطأ في الموافقة التلقائية:', error);
+              // إعادة الطلب للقائمة في حالة الخطأ
+              setOrders(prev => [newOrder, ...prev]);
+              setProcessedOrders(prev => prev.filter(id => id !== newOrder.id));
             }
+          } else {
+            console.log('⚠️ الطلب لا يستوفي شروط الموافقة التلقائية');
           }
         }
       }
@@ -124,16 +163,26 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     const handleAiOrderDeleted = (event) => {
       const deletedId = event.detail?.id;
       if (deletedId) {
+        console.log('📢 تم الإشعار بحذف الطلب:', deletedId);
         setOrders(prev => prev.filter(o => o.id !== deletedId));
-        setProcessedOrders(prev => [...prev, deletedId]);
+        setProcessedOrders(prev => {
+          const updated = [...prev, deletedId];
+          console.log('📝 تحديث قائمة الطلبات المحذوفة:', updated.length);
+          return updated;
+        });
       }
     };
 
     const handleAiOrderApproved = (event) => {
       const approvedId = event.detail?.id;
       if (approvedId) {
+        console.log('📢 تم الإشعار بموافقة الطلب:', approvedId);
         setOrders(prev => prev.filter(o => o.id !== approvedId));
-        setProcessedOrders(prev => [...prev, approvedId]);
+        setProcessedOrders(prev => {
+          const updated = [...prev, approvedId];
+          console.log('📝 تحديث قائمة الطلبات المعالجة:', updated.length);
+          return updated;
+        });
       }
     };
 
@@ -191,11 +240,12 @@ useEffect(() => {
     [allUsers]
   );
 
-  // تحميل إعدادات المستخدم (الوجهة والموافقة التلقائية)
+  // تحميل إعدادات المستخدم (الوجهة والموافقة التلقائية) مع تحسينات
   useEffect(() => {
     const loadUserPreferences = async () => {
       if (!user?.user_id) return;
       try {
+        console.log('📋 تحميل إعدادات المستخدم للموافقة التلقائية...');
         const { data } = await supabase
           .from('profiles')
           .select('auto_approval_enabled, default_ai_order_destination, selected_delivery_account')
@@ -203,83 +253,89 @@ useEffect(() => {
           .single();
         
         if (data) {
-          setAutoApprovalEnabled(data.auto_approval_enabled || false);
+          const autoApproval = data.auto_approval_enabled || false;
+          const destination = data.default_ai_order_destination || 'local';
+          const account = data.selected_delivery_account || '';
           
-          if (data.default_ai_order_destination && data.default_ai_order_destination !== 'local') {
+          console.log('⚙️ إعدادات المستخدم المحملة:', {
+            autoApproval,
+            destination,
+            hasAccount: !!account
+          });
+          
+          setAutoApprovalEnabled(autoApproval);
+          
+          if (destination && destination !== 'local') {
             setOrderDestination({
-              destination: data.default_ai_order_destination,
-              account: data.selected_delivery_account || '',
-              partnerName: data.default_ai_order_destination
+              destination: destination,
+              account: account,
+              partnerName: destination
             });
           } else {
-            // Ensure local destination is properly set
             setOrderDestination({
               destination: 'local',
               account: '',
               partnerName: 'local'
             });
           }
+          
+          console.log('✅ تم تحميل إعدادات الموافقة التلقائية بنجاح');
         }
       } catch (error) {
-        console.error('خطأ في تحميل إعدادات المستخدم:', error);
+        console.error('❌ خطأ في تحميل إعدادات المستخدم:', error);
       } finally {
         setPreferencesLoaded(true);
       }
     };
     loadUserPreferences();
-
-    // عند تفعيل الموافقة التلقائية، معالجة الطلبات الحالية المؤهلة فوراً
-    // لتجنب الحاجة للموافقة اليدوية بعد التفعيل
-    if (preferencesLoaded && autoApprovalEnabled) {
-      (async () => {
-        const candidates = orders.filter(o => 
-          o.status === 'pending' && 
-          availabilityOf(o) === 'available' && 
-          !orderNeedsReview(o) &&
-          (orderDestination.destination === 'local' || orderDestination.account)
-        ).slice(0, 10); // حد أقصى لمنع الضغط
-
-        for (const o of candidates) {
-          try {
-            const res = await approveAiOrder?.(o.id, orderDestination.destination, orderDestination.account);
-            if (res?.success) {
-              setOrders(prev => prev.filter(x => x.id !== o.id));
-              setProcessedOrders(prev => [...prev, o.id]);
-              try { await supabase.from('ai_orders').update({ status: 'approved' }).eq('id', o.id); } catch {}
-            }
-          } catch (e) {
-            console.error('Auto-approve existing failed:', e);
-          }
-        }
-      })();
-    }
   }, [user?.user_id]);
 
-  // Auto-approve newly arriving orders when conditions are met (no reliance on window events)
-  const autoProcessedRef = useRef(new Set());
+  // معالجة الطلبات الموجودة عند تفعيل الموافقة التلقائية
+  const processedExistingRef = useRef(false);
   useEffect(() => {
-    if (!preferencesLoaded || !autoApprovalEnabled || !orders?.length) return;
-    const candidates = orders
-      .filter(o => o?.status === 'pending' && !autoProcessedRef.current.has(o.id))
-      .filter(o => availabilityOf(o) === 'available' && !orderNeedsReview(o))
-      .slice(0, 5);
-    if (!candidates.length) return;
+    if (!preferencesLoaded || !autoApprovalEnabled || !orders?.length || processedExistingRef.current) return;
+    
+    console.log('🔄 معالجة الطلبات الموجودة للموافقة التلقائية...');
+    processedExistingRef.current = true;
+    
     (async () => {
+      const candidates = orders
+        .filter(o => o?.status === 'pending')
+        .filter(o => availabilityOf(o) === 'available' && !orderNeedsReview(o))
+        .filter(o => o.source === 'telegram' || o.order_data?.source === 'telegram')
+        .slice(0, 10); // حد أقصى لمنع الضغط
+      
+      console.log(`📦 وجد ${candidates.length} طلباً مؤهلاً للموافقة التلقائية`);
+      
       for (const o of candidates) {
         try {
-          autoProcessedRef.current.add(o.id);
+          console.log('🤖 معالجة طلب موجود:', o.id);
+          
+          // إزالة من القائمة فوراً
+          setOrders(prev => prev.filter(x => x.id !== o.id));
+          setProcessedOrders(prev => [...prev, o.id]);
+          
           const res = await approveAiOrder?.(o.id, orderDestination.destination, orderDestination.account);
           if (res?.success) {
-            setOrders(prev => prev.filter(x => x.id !== o.id));
-            setProcessedOrders(prev => [...prev, o.id]);
-            try { await supabase.from('ai_orders').update({ status: 'approved' }).eq('id', o.id); } catch {}
-            try { window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: o.id } })); } catch {}
+            console.log('✅ تمت موافقة الطلب الموجود:', o.id);
+            try { 
+              await supabase.from('ai_orders').update({ 
+                status: 'approved',
+                processed_at: new Date().toISOString()
+              }).eq('id', o.id); 
+            } catch {}
+            window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: o.id } }));
           } else {
-            autoProcessedRef.current.delete(o.id);
+            console.error('فشلت موافقة الطلب الموجود:', o.id, res?.error);
+            // إعادة للقائمة في حالة الفشل
+            setOrders(prev => [o, ...prev]);
+            setProcessedOrders(prev => prev.filter(id => id !== o.id));
           }
         } catch (err) {
-          console.error('Auto-approve (orders change) failed:', err);
-          autoProcessedRef.current.delete(o.id);
+          console.error('خطأ في موافقة الطلب الموجود:', o.id, err);
+          // إعادة للقائمة في حالة الخطأ
+          setOrders(prev => [o, ...prev]);
+          setProcessedOrders(prev => prev.filter(id => id !== o.id));
         }
       }
     })();

@@ -2321,11 +2321,26 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // حذف الطلب الذكي نهائياً
+      // حذف الطلب الذكي نهائياً مع ضمان الحذف
+      console.log('🗑️ حذف الطلب الذكي نهائياً:', orderId);
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
-      if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+      if (delErr) {
+        console.error('❌ فشل حذف الطلب الذكي:', delErr);
+        // محاولة تحديث الحالة بدلاً من الحذف
+        try {
+          await supabase.from('ai_orders').update({ 
+            status: 'approved',
+            processed_at: new Date().toISOString()
+          }).eq('id', orderId);
+          console.log('✅ تم تحديث حالة الطلب الذكي إلى approved');
+        } catch (updateErr) {
+          console.error('❌ فشل تحديث حالة الطلب الذكي:', updateErr);
+        }
+      } else {
+        console.log('✅ تم حذف الطلب الذكي بنجاح');
+      }
 
-      // تحديث الذاكرة
+      // تحديث الذاكرة المحلية فوراً
       setAllData(prev => ({
         ...prev,
         aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
@@ -2333,6 +2348,11 @@ export const SuperProvider = ({ children }) => {
 
       // إبطال الكاش
       superAPI.invalidate('all_data');
+      
+      // إشعار النظام بالموافقة لضمان إزالة الطلب من جميع النوافذ
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: orderId } }));
+      }, 100);
 
       const method = deliveryPartnerData.delivery_partner === 'alwaseet' ? 'alwaseet' : 'local';
       console.log(`✅ تم تحويل الطلب الذكي بنجاح - ${method}:`, { 
