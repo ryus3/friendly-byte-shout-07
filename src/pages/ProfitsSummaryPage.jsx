@@ -583,6 +583,14 @@ const ProfitsSummaryPage = () => {
     setFilters(prev => ({ ...prev, profitStatus: 'settled' }));
   };
 
+  // إضافة console.log للتحقق من البيانات
+  console.log('🔍 التحقق من بيانات profitData:', {
+    deliveredOrders: profitData?.deliveredOrders?.length || 0,
+    pendingDeliveredOrders: profitData?.pendingDeliveredOrders?.length || 0,
+    totalRevenue: profitData?.totalRevenue || 0,
+    netProfit: profitData?.netProfit || 0
+  });
+
   return (
     <>
       <Helmet>
