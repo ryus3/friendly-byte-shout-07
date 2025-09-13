@@ -1645,6 +1645,22 @@ export const SuperProvider = ({ children }) => {
         console.log('📱 طلب من التليغرام - فرض التوصيل عبر الوسيط');
         destination = 'alwaseet';
       }
+      
+      // تحسين العنوان لاستخراج أقرب نقطة دالة بشكل صحيح
+      let nearestPoint = '';
+      if (aiOrder.customer_address) {
+        const words = aiOrder.customer_address.trim().split(/\s+/);
+        if (words.length > 2) {
+          // أول كلمة = مدينة، ثاني كلمة = منطقة، الباقي = أقرب نقطة دالة
+          nearestPoint = words.slice(2).join(' ');
+          console.log('🗺️ استخراج أقرب نقطة دالة:', { 
+            originalAddress: aiOrder.customer_address,
+            nearestPoint 
+          });
+        } else {
+          nearestPoint = aiOrder.customer_address;
+        }
+      }
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };

@@ -107,12 +107,30 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
             hasAccount: !!orderDestination.account
           });
           
+          // تحقق من وجود معرفات المنتجات والمتغيرات (البوت حدد المنتجات بدقة)
+          const hasValidIds = newOrder.items && Array.isArray(newOrder.items) && 
+            newOrder.items.every(item => item && item.product_id && item.variant_id);
+          
+          // منطق محسن للموافقة التلقائية
+          const isValidForAutoApproval = isFromTelegram && isMine && (
+            (hasValidIds) || // البوت حدد المنتجات بدقة
+            (availability === 'available' && !needsReview) // أو المنتجات متاحة ولا تحتاج مراجعة
+          );
+          
+          console.log('📋 تقييم محسن للطلب:', {
+            availability,
+            needsReview,
+            isFromTelegram,
+            isMine,
+            hasValidIds,
+            isValidForAutoApproval,
+            destination: orderDestination.destination,
+            hasAccount: !!orderDestination.account
+          });
+          
           // شروط الموافقة التلقائية المحسنة
           const canAutoApprove = (
-            availability === 'available' && 
-            !needsReview && 
-            isFromTelegram && // فقط طلبات التليغرام
-            isMine && // تخص هذا المستخدم فقط
+            isValidForAutoApproval &&
             (orderDestination.destination === 'local' || 
              (orderDestination.destination !== 'local' && orderDestination.account))
           );
