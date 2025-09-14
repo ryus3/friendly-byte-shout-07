@@ -473,10 +473,10 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
     
     setLoading(true);
-    // Use the correct production domain
+    // Use the correct production domain with short reset path
     const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/update-password`
-      : 'https://pos.ryusbrand.com/update-password';
+      ? `${window.location.origin}/reset`
+      : 'https://pos.ryusbrand.com/reset';
       
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: redirectUrl,

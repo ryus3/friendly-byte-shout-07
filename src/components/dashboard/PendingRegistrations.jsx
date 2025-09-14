@@ -140,42 +140,37 @@ const PendingRegistrations = ({ onClose }) => {
       console.log('User ID:', userId);
       console.log('Approval data:', data);
       
-      // بيانات الموافقة المصححة - بدون أعمدة permissions أو role
-      const finalData = {
-        status: 'active',
-        ...data
-      };
+      // استخدام الدالة الجديدة لتفعيل الموظف وتعيين الدور وإنشاء رمز التليغرام
+      const { data: result, error } = await supabase.rpc('activate_employee_and_assign_role', {
+        p_user_id: userId,
+        p_role_name: 'sales_employee' // الدور الافتراضي
+      });
       
-      // إزالة أي حقول غير موجودة في جدول profiles
-      delete finalData.permissions;
-      delete finalData.role;
-      
-      console.log('Final approval data:', finalData);
-      
-      const result = await updateUser(userId, finalData);
-      console.log('Update result:', result);
-      
-      if (result?.success !== false) {
-        console.log('Approval successful');
-        
-        toast({
-          title: "تمت الموافقة ✅",
-          description: "تم تفعيل حساب الموظف بنجاح",
-          variant: "default"
-        });
-        
-        // تحديث فوري للقوائم
-        console.log('Refreshing admin data...');
-        await refetchAdminData();
-        
-        // إغلاق النوافذ
-        setShowUnifiedDialog(false);
-        setSelectedEmployee(null);
-        
-        console.log('=== APPROVAL PROCESS SUCCESS ===');
-      } else {
-        throw new Error(result?.error?.message || 'خطأ في الموافقة');
+      if (error) {
+        throw new Error(error.message);
       }
+      
+      if (!result?.success) {
+        throw new Error(result?.error || 'خطأ في تفعيل الموظف');
+      }
+      
+      console.log('Employee activated successfully:', result);
+      
+      toast({
+        title: "تمت الموافقة ✅",
+        description: `تم تفعيل حساب الموظف وإنشاء رمز التليغرام: ${result.employee_code}`,
+        variant: "default"
+      });
+      
+      // تحديث فوري للقوائم
+      console.log('Refreshing admin data...');
+      await refetchAdminData();
+      
+      // إغلاق النوافذ
+      setShowUnifiedDialog(false);
+      setSelectedEmployee(null);
+      
+      console.log('=== APPROVAL PROCESS SUCCESS ===');
     } catch (error) {
       console.error('=== APPROVAL PROCESS ERROR ===', error);
       toast({
