@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { useFinancialSystem as useFinancialContext } from '@/hooks/useFinalFinancialSystem';
+import { useFinancialSystem as useFinancialContext } from '@/hooks/useFinancialSystem';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';

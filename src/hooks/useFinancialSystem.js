@@ -1,243 +1,307 @@
 /**
- * النظام المالي الرئيسي الموحد
- * Hook شامل لجميع العمليات والحسابات المالية
+ * النظام المالي الرئيسي النهائي - استبدال كامل للنظام القديم
+ * يضمن عدم وجود temporal dead zone أو conflicting dependencies
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  calculateFinancialMetrics,
-  filterOrdersByPermissions,
-  filterExpensesByPermissions,
-  calculateDateRange
-} from '@/lib/financial-calculations';
-import { 
-  TIME_PERIODS, 
-  DEFAULT_FINANCIAL_VALUES,
-  FINANCIAL_ERROR_MESSAGES
-} from '@/lib/financial-constants';
 
-export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) => {
-  const { orders, accounting, loading: inventoryLoading } = useInventory();
+// دالة مساعدة لفلترة البيانات حسب الوقت
+const filterByTimePeriod = (items, timePeriod, getDate) => {
+  if (timePeriod === 'all') return items || [];
+  const now = new Date();
+  const toDate = (v) => {
+    const d = getDate(v);
+    return d ? new Date(d) : null;
+  };
+  
+  switch (timePeriod) {
+    case 'today':
+      return (items || []).filter(i => {
+        const d = toDate(i);
+        return d && d.toDateString() === now.toDateString();
+      });
+    case 'week': {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      return (items || []).filter(i => {
+        const d = toDate(i);
+        return d && d >= weekAgo;
+      });
+    }
+    case 'month': {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      return (items || []).filter(i => {
+        const d = toDate(i);
+        return d && d >= monthAgo;
+      });
+    }
+    case '3months': {
+      const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      return (items || []).filter(i => {
+        const d = toDate(i);
+        return d && d >= threeMonthsAgo;
+      });
+    }
+    default:
+      return items || [];
+  }
+};
+
+export const useFinancialSystem = (timePeriod = 'all', options = {}) => {
+  const { loading: inventoryLoading } = useInventory();
   const { user } = useAuth();
-  const { canViewAllData, hasPermission } = usePermissions();
+  const { canViewAllData } = usePermissions();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lastCalculationTime, setLastCalculationTime] = useState(null);
+  const [financialData, setFinancialData] = useState(null);
   
-  // الإعدادات
-  const {
-    enableCache = true,
-    enableDebugLogs = true,
-    forceRefresh = false
-  } = options;
-  
-  // حالة إضافية للبيانات المالية الموحدة
-  const [capitalAmount, setCapitalAmount] = useState(0);
-  const [totalPurchases, setTotalPurchases] = useState(0);
-  const [currentBalance, setCurrentBalance] = useState(0);
-  
-  // فلترة البيانات حسب الصلاحيات
-  const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-    return filterOrdersByPermissions(orders, canViewAllData, user?.id || user?.user_id);
-  }, [orders, canViewAllData, user?.id, user?.user_id]);
-  
-  const filteredExpenses = useMemo(() => {
-    if (!accounting?.expenses) return [];
-    return filterExpensesByPermissions(accounting.expenses, canViewAllData, user?.id || user?.user_id);
-  }, [accounting?.expenses, canViewAllData, user?.id, user?.user_id]);
-  
-  // حساب المؤشرات المالية بشكل آمن
-  const financialMetrics = useMemo(() => {
-    if (inventoryLoading) {
-      if (enableDebugLogs) {
-        console.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
-      }
-      return { ...DEFAULT_FINANCIAL_VALUES, loading: true };
-    }
-    
-    if (!filteredOrders || !filteredExpenses) {
-      if (enableDebugLogs) {
-        console.log('⚠️ النظام المالي: البيانات المفلترة غير متاحة');
-      }
-      return { 
-        ...DEFAULT_FINANCIAL_VALUES, 
-        error: 'البيانات المفلترة غير متاحة',
-        loading: false 
-      };
-    }
-    
-    if (!filteredOrders.length && !filteredExpenses.length) {
-      if (enableDebugLogs) {
-        console.log('⚠️ النظام المالي: لا توجد بيانات للحساب');
-      }
-      return { 
-        ...DEFAULT_FINANCIAL_VALUES, 
-        error: FINANCIAL_ERROR_MESSAGES.NO_DATA,
-        loading: false 
-      };
-    }
+  const { enableDebugLogs = true } = options;
+
+  // دالة جلب البيانات المالية
+  const fetchFinancialData = useCallback(async () => {
+    if (loading && financialData) return; // منع التداخل
     
     try {
-      if (enableDebugLogs) {
-        console.log('🔧 النظام المالي: بدء الحسابات...', {
-          ordersCount: filteredOrders.length,
-          expensesCount: filteredExpenses.length,
-          timePeriod,
-          userCanViewAll: canViewAllData
-        });
-      }
-      
-      const metrics = calculateFinancialMetrics(filteredOrders, filteredExpenses, timePeriod);
-      
-      if (enableDebugLogs) {
-        console.log('✅ النظام المالي: اكتملت الحسابات بنجاح', metrics);
-      }
-      
-      setLastCalculationTime(new Date());
+      setLoading(true);
       setError(null);
-      
-      return { ...metrics, loading: false };
-      
-    } catch (err) {
-      console.error('❌ النظام المالي: خطأ في الحسابات:', err);
-      setError(err.message);
-      
-      return { 
-        ...DEFAULT_FINANCIAL_VALUES, 
-        error: err.message,
-        loading: false 
-      };
-    }
-  }, [filteredOrders, filteredExpenses, timePeriod, inventoryLoading, canViewAllData, enableDebugLogs]);
-  
-  // جلب البيانات المالية الإضافية
-  useEffect(() => {
-    const fetchAdditionalFinancialData = async () => {
-      try {
-        // رأس المال من القاصة الرئيسية
-        const { data: cashData } = await supabase
+
+      if (enableDebugLogs) {
+        console.log('🔧 النظام المالي: بدء تحميل البيانات...');
+      }
+
+      // جلب البيانات بالتوازي
+      const [ordersRes, expensesRes, cashRes, inventoryRes] = await Promise.all([
+        supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              id,
+              quantity,
+              unit_price,
+              total_price,
+              product_variants (cost_price)
+            )
+          `)
+          .in('status', ['completed', 'delivered'])
+          .eq('receipt_received', true),
+        
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('status', 'approved'),
+        
+        supabase
           .from('cash_sources')
           .select('current_balance')
           .eq('name', 'القاصة الرئيسية')
-          .single();
+          .single(),
         
-        // إجمالي المشتريات
-        const { data: purchasesData } = await supabase
-          .from('purchases')
-          .select('total_amount')
-          .eq('status', 'approved');
-        
-        const totalPurchasesSum = purchasesData?.reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0) || 0;
-        
-        setCapitalAmount(cashData?.current_balance || 0);
-        setTotalPurchases(totalPurchasesSum);
-        setCurrentBalance(cashData?.current_balance || 0);
-        
-        if (enableDebugLogs) {
-          console.log('💰 البيانات المالية الإضافية:', {
-            capitalAmount: cashData?.current_balance || 0,
-            totalPurchases: totalPurchasesSum,
-            currentBalance: cashData?.current_balance || 0
-          });
-        }
-      } catch (error) {
-        console.error('❌ خطأ في جلب البيانات المالية الإضافية:', error);
-      }
-    };
-    
-    fetchAdditionalFinancialData();
-  }, [timePeriod, enableDebugLogs]);
+        supabase
+          .from('inventory')
+          .select(`
+            quantity,
+            product_variants (cost_price)
+          `)
+      ]);
 
-  // تحديث حالة التحميل
+      if (ordersRes.error) throw ordersRes.error;
+      if (expensesRes.error) throw expensesRes.error;
+      if (cashRes.error && cashRes.error.code !== 'PGRST116') throw cashRes.error;
+      if (inventoryRes.error) throw inventoryRes.error;
+
+      // فلترة البيانات
+      const filteredOrders = filterByTimePeriod(
+        ordersRes.data, 
+        timePeriod, 
+        (o) => o.created_at || o.delivered_at || o.updated_at
+      );
+      
+      const filteredExpenses = filterByTimePeriod(
+        expensesRes.data, 
+        timePeriod, 
+        (e) => e.created_at || e.transaction_date || e.date || e.expense_date
+      );
+
+      // حساب المؤشرات المالية
+      const totalRevenue = filteredOrders.reduce((sum, order) => {
+        return sum + (order.final_amount || order.total_amount || 0);
+      }, 0);
+
+      const deliveryFees = filteredOrders.reduce((sum, order) => {
+        return sum + (order.delivery_fee || 0);
+      }, 0);
+
+      const salesWithoutDelivery = totalRevenue - deliveryFees;
+
+      const cogs = filteredOrders.reduce((orderSum, order) => {
+        if (!order.order_items || !Array.isArray(order.order_items)) return orderSum;
+        
+        return orderSum + order.order_items.reduce((itemSum, item) => {
+          const costPrice = item.product_variants?.cost_price || 0;
+          const quantity = item.quantity || 0;
+          return itemSum + (costPrice * quantity);
+        }, 0);
+      }, 0);
+
+      const grossProfit = salesWithoutDelivery - cogs;
+
+      const generalExpenses = filteredExpenses.filter(expense => {
+        const isEmployeeDue = (
+          expense.category === 'مستحقات الموظفين' ||
+          expense.related_data?.category === 'مستحقات الموظفين' ||
+          expense.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isSystem = expense.expense_type === 'system';
+        const isPurchaseRelated = (
+          expense.related_data?.category === 'شراء بضاعة' ||
+          expense.metadata?.category === 'شراء بضاعة'
+        );
+        return !isSystem && !isEmployeeDue && !isPurchaseRelated;
+      }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+      const employeeDuesPaid = filteredExpenses.filter(expense => {
+        const isEmployeeDue = (
+          expense.category === 'مستحقات الموظفين' ||
+          expense.related_data?.category === 'مستحقات الموظفين' ||
+          expense.metadata?.category === 'مستحقات الموظفين'
+        );
+        return isEmployeeDue;
+      }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
+
+      const netProfit = grossProfit - generalExpenses;
+      const cashSurplus = totalRevenue - employeeDuesPaid;
+      const cashBalance = cashRes.data?.current_balance || 0;
+      
+      const inventoryTotalValue = inventoryRes.data?.reduce((sum, item) => {
+        const value = (item.quantity || 0) * (item.product_variants?.cost_price || 0);
+        return sum + value;
+      }, 0) || 0;
+      
+      const totalCapital = cashBalance + inventoryTotalValue;
+
+      const result = {
+        // الإيرادات
+        totalRevenue,
+        deliveryFees,
+        salesWithoutDelivery,
+        
+        // التكاليف والأرباح
+        cogs,
+        grossProfit,
+        generalExpenses,
+        employeeDuesPaid,
+        netProfit,
+        
+        // رأس المال
+        totalCapital,
+        cashBalance,
+        inventoryValue: inventoryTotalValue,
+        cashSurplus,
+        
+        // إحصائيات
+        ordersCount: filteredOrders.length,
+        avgOrderValue: filteredOrders.length > 0 ? totalRevenue / filteredOrders.length : 0,
+        profitMargin: salesWithoutDelivery > 0 ? ((netProfit / salesWithoutDelivery) * 100) : 0,
+        
+        // نظام
+        lastCalculated: new Date(),
+        timePeriod,
+        dataSource: 'unified_financial_system',
+        
+        // للتوافق مع النظام القديم
+        capitalAmount: totalCapital,
+        totalPurchases: 0,
+        currentBalance: cashBalance,
+        loading: false,
+        error: null,
+        isDataValid: true
+      };
+
+      if (enableDebugLogs) {
+        console.log('✅ النظام المالي: تم تحميل البيانات بنجاح', result);
+      }
+
+      setFinancialData(result);
+      setLoading(false);
+      setError(null);
+      
+      return result;
+
+    } catch (error) {
+      console.error('❌ خطأ في النظام المالي:', error);
+      setError(error.message);
+      setLoading(false);
+      return null;
+    }
+  }, [timePeriod, enableDebugLogs, canViewAllData, user?.id]);
+
+  // تحميل البيانات عند التهيئة
   useEffect(() => {
-    setLoading(inventoryLoading || financialMetrics.loading);
-  }, [inventoryLoading, financialMetrics.loading]);
-  
+    if (!inventoryLoading) {
+      fetchFinancialData();
+    }
+  }, [fetchFinancialData, inventoryLoading]);
+
+  // دوال التنسيق
+  const formatCurrency = useCallback((amount) => {
+    return new Intl.NumberFormat('ar-IQ', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0) + ' د.ع';
+  }, []);
+
+  const formatPercentage = useCallback((percentage) => {
+    return `${(percentage || 0).toFixed(1)}%`;
+  }, []);
+
   // دالة إعادة التحميل
   const refreshData = useCallback(() => {
-    if (enableDebugLogs) {
-      console.log('🔄 النظام المالي: إعادة تحميل البيانات...');
-    }
-    setError(null);
-    setLastCalculationTime(new Date());
-    // فقط تحديث الوقت، البيانات ستُحدث تلقائياً عبر useMemo
-  }, [enableDebugLogs]);
-  
-  // دالة تغيير الفترة الزمنية
-  const changePeriod = useCallback((newPeriod) => {
-    if (enableDebugLogs) {
-      console.log('📅 النظام المالي: تغيير الفترة الزمنية:', { from: timePeriod, to: newPeriod });
-    }
-  }, [timePeriod, enableDebugLogs]);
-  
-  // معلومات إضافية
-  const systemInfo = useMemo(() => ({
-    lastCalculationTime,
-    dateRange: calculateDateRange(timePeriod),
-    dataSource: {
-      ordersCount: filteredOrders.length,
-      expensesCount: filteredExpenses.length,
-      hasFullAccess: canViewAllData
-    },
-    permissions: {
-      canViewAllData,
-      canManageFinances: hasPermission('manage_finances'),
-      canViewReports: hasPermission('view_reports')
-    }
-  }), [lastCalculationTime, timePeriod, filteredOrders.length, filteredExpenses.length, canViewAllData, hasPermission]);
-  
+    return fetchFinancialData();
+  }, [fetchFinancialData]);
+
+  // إرجاع البيانات
   return {
-    // البيانات المالية الرئيسية
-    ...financialMetrics,
-    
-    // البيانات المالية الإضافية
-    capitalAmount,
-    totalPurchases,
-    currentBalance,
+    // البيانات الأساسية
+    ...financialData,
     
     // حالة النظام
-    loading,
+    loading: loading || inventoryLoading,
     error,
-    
-    // البيانات المفلترة
-    filteredOrders,
-    filteredExpenses,
-    
-    // معلومات النظام
-    systemInfo,
     
     // دوال التحكم
     refreshData,
-    changePeriod,
+    changePeriod: () => {}, // للتوافق مع النظام القديم
     
-    // دوال مساعدة للمكونات
-    formatCurrency: (amount) => {
-      return new Intl.NumberFormat('ar-IQ', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount || 0) + ' د.ع';
+    // دوال التنسيق
+    formatCurrency,
+    formatPercentage,
+    
+    // معلومات النظام
+    isDataValid: !error && !loading && financialData !== null,
+    lastUpdate: financialData?.lastCalculated,
+    
+    // للتوافق مع النظام القديم
+    filteredOrders: [],
+    filteredExpenses: [],
+    systemInfo: {
+      lastCalculationTime: financialData?.lastCalculated,
+      dataSource: {
+        ordersCount: financialData?.ordersCount || 0,
+        expensesCount: 0,
+        hasFullAccess: canViewAllData
+      }
     },
-    
-    formatPercentage: (percentage) => {
-      return `${(percentage || 0).toFixed(1)}%`;
-    },
-    
-    // التحقق من صحة البيانات
-    isDataValid: !error && !loading && (filteredOrders.length > 0 || filteredExpenses.length > 0),
-    
-    // إحصائيات سريعة
     quickStats: {
-      hasRevenue: financialMetrics.totalRevenue > 0,
-      hasProfits: financialMetrics.netProfit > 0,
-      hasExpenses: financialMetrics.generalExpenses > 0 || financialMetrics.employeeDuesPaid > 0,
-      profitabilityStatus: financialMetrics.netProfit > 0 ? 'profitable' : 
-                          financialMetrics.netProfit < 0 ? 'loss' : 'breakeven'
+      hasRevenue: (financialData?.totalRevenue || 0) > 0,
+      hasProfits: (financialData?.netProfit || 0) > 0,
+      hasExpenses: (financialData?.generalExpenses || 0) > 0,
+      profitabilityStatus: (financialData?.netProfit || 0) > 0 ? 'profitable' : 
+                          (financialData?.netProfit || 0) < 0 ? 'loss' : 'breakeven'
     }
   };
 };

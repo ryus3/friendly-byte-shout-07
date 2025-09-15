@@ -36,7 +36,7 @@ import { motion } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, BarChart, Bar, PieChart as RechartsPieChart, Legend } from 'recharts';
 import { cn } from '@/lib/utils';
-import { useFinancialSystem } from '@/hooks/useFinalFinancialSystem';
+import { useFinancialSystem } from '@/hooks/useFinancialSystem';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { TIME_PERIODS } from '@/lib/financial-constants';

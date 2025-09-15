@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFinancialSystem as useUnifiedFinancialSystem } from '@/hooks/useFinalFinancialSystem';
+import { useFinancialSystem as useUnifiedFinancialSystem } from '@/hooks/useFinancialSystem';
 import { 
   DollarSign, 
   Package, 
