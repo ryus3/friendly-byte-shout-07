@@ -319,7 +319,7 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
-    const aiOrdersCount = useMemo(() => {
+    console.log('🔍 TDZ Debug: Before aiOrdersCount useMemo');
         // Calculate directly without referencing userAiOrders to avoid TDZ
         let list;
         if (canViewAllData) {
@@ -619,9 +619,7 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData,
-        unifiedProfitData,
-        pendingProfitData
+        canViewAllData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
