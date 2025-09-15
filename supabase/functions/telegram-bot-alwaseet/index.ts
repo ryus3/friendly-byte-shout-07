@@ -605,15 +605,39 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       }
     }
     
-    // Enhanced address parsing for single line input
+    // Enhanced address parsing for single line input with proper separation
     if (!customerCity && !customerAddress && lines.length > 0) {
-      // Try to parse address from text like "بغداد الدورة حي الصحة"
+      // Try to parse address from text like "نجف مناذرة ريان" -> نجف (city) + مناذرة (region) + ريان (nearest point)
       for (const line of lines) {
-        if (!line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج') && line.length > 3) {
+        if (!line.match(/07[5789]\d{8}/) && !line.toLowerCase().includes('منتج') && line.length > 3) {
           const addressResult = await parseAddressLine(line)
           if (addressResult.city) {
             customerCity = addressResult.city
-            customerAddress = addressResult.remainingText
+            // Split remaining text into region and nearest point
+            const remainingParts = addressResult.remainingText.trim().split(/\s+/)
+            if (remainingParts.length >= 1 && remainingParts[0]) {
+              // First part is region, rest is nearest point
+              const regionName = remainingParts[0]
+              const nearestPoint = remainingParts.slice(1).join(' ').trim()
+              
+              // Find the region by name
+              const regions = await getRegionsByCity(customerCity.id)
+              const foundRegion = regions.find(r => 
+                r.name.toLowerCase().includes(regionName.toLowerCase()) ||
+                regionName.toLowerCase().includes(r.name.toLowerCase())
+              )
+              
+              if (foundRegion) {
+                customerRegion = foundRegion
+                customerAddress = nearestPoint || '' // Only nearest point, not city+region
+              } else {
+                // If region not found, use first available region and put all as nearest point
+                customerRegion = regions.length > 0 ? regions[0] : null
+                customerAddress = addressResult.remainingText
+              }
+            } else {
+              customerAddress = addressResult.remainingText
+            }
             
             // Handle region disambiguation - ensure we have a region for delivery orders
             if (addressResult.regions.length > 1) {
@@ -717,7 +741,7 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
         customer_name: customerName,
         customer_phone: customerPhone,
         customer_secondary_phone: customerSecondaryPhone,
-        customer_address: customerAddress,
+        customer_address: customerAddress, // Only nearest point
         customer_city: customerCity?.name,
         customer_region: customerRegion?.name,
         items: items,
@@ -733,9 +757,9 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone,
-      p_customer_address: customerAddress,
+      p_customer_address: customerAddress, // Only nearest point, not full address
       p_customer_city: customerCity?.name,
-      p_customer_province: customerCity?.name, // Using city as province for now
+      p_customer_province: customerRegion?.name || customerCity?.name,
       p_total_amount: totalPrice + defaultDeliveryFee,
       p_items: items,
       p_telegram_chat_id: chatId,
@@ -910,6 +934,34 @@ serve(async (req) => {
   
   try {
     const body = await req.json()
+    
+    // Telegram deduplication: ignore duplicate updates/messages
+    const update = body as any;
+    const msg = update?.message;
+    try {
+      if (update?.update_id && msg?.message_id && msg?.chat?.id) {
+        const { error: dupErr } = await supabase
+          .from('telegram_processed_updates')
+          .insert({
+            update_id: Number(update.update_id),
+            chat_id: Number(msg.chat.id),
+            message_id: Number(msg.message_id),
+            message_hash: typeof msg.text === 'string' ? msg.text.slice(0, 200) : null
+          });
+        if (dupErr) {
+          // If duplicate, exit early (Telegram may retry webhooks)
+          if (dupErr.code === '23505' || (dupErr.message || '').includes('duplicate key value')) {
+            console.log('🔁 Duplicate Telegram update ignored:', update.update_id);
+            return new Response(JSON.stringify({ ok: true, duplicate: true }), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          console.warn('Dedup insert warning:', dupErr);
+        }
+      }
+    } catch (e) {
+      console.warn('Dedup check failed, continuing anyway:', e);
+    }
     
     // Handle Telegram webhook
     if (body.message) {
