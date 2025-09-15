@@ -605,7 +605,6 @@ const Dashboard = () => {
         user?.id, 
         user?.user_id, 
         canViewAllData,
-        allProfits,
         unifiedProfitData?.netProfit
     ]);
 
