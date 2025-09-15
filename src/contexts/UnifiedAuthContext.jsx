@@ -410,16 +410,11 @@ export const UnifiedAuthProvider = ({ children }) => {
         throw new Error('اسم المستخدم هذا موجود بالفعل.');
       }
       
-      // Use the correct production domain for email redirects
-      const redirectUrl = window.location.hostname === 'localhost' 
-        ? `${window.location.origin}/`
-        : 'https://pos.ryusbrand.com/';
-        
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: fullName,
             username: username,
@@ -473,13 +468,8 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
     
     setLoading(true);
-    // Use the correct production domain with short reset path
-    const redirectUrl = window.location.hostname === 'localhost' 
-      ? `${window.location.origin}/reset`
-      : 'https://pos.ryusbrand.com/reset';
-      
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
+      redirectTo: `${window.location.origin}/update-password`,
     });
     setLoading(false);
     
@@ -608,7 +598,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     };
   }, [userRoles]);
 
-  const isAdmin = useMemo(() => userRoles.some(ur => ['super_admin', 'admin'].includes(ur.roles.name)), [userRoles]);
+  const isAdmin = useMemo(() => hasRole('super_admin') || hasRole('admin'), [hasRole]);
 
   // فلترة المنتجات حسب صلاحيات المستخدم - يدعم جميع أشكال العلاقات
   const filterProductsByPermissions = useMemo(() => {

@@ -43,21 +43,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   
-  // دالة استخراج أقرب نقطة دالة من النص المدخل
-  const parseCityRegionLandmark = useCallback((text) => {
-    const words = text.trim().split(/\s+/);
-    if (words.length < 2) {
-      return { city: '', region: '', address: text.trim() };
-    }
-    
-    const city = words[0] || '';
-    const region = words[1] || '';
-    const address = words.slice(2).join(' ') || '';
-    
-    console.log('🗺️ تحليل الموقع في الطلب السريع:', { originalText: text, city, region, address });
-    return { city, region, address };
-  }, []);
-  
   // Local storage for default customer name and delivery partner
   const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
   const [defaultDeliveryPartner, setDefaultDeliveryPartner] = useLocalStorage('defaultDeliveryPartner', activePartner || '');
@@ -1092,27 +1077,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    // معالجة خاصة لحقل العنوان لاستخراج أقرب نقطة دالة
-    if (name === 'address' && value.trim() && activePartner === 'local') {
-      const { city, region, address } = parseCityRegionLandmark(value);
-      
-      // تحديث المدينة والمنطقة إذا تم استخراجهما بنجاح
-      if (city) {
-        console.log('🗺️ تحديث المدينة من العنوان:', city);
-        setFormData(prev => ({ 
-          ...prev, 
-          [name]: address || value, // أقرب نقطة دالة فقط
-          city: city,
-          region: region || prev.region
-        }));
-      } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-    
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (name === 'name') {
       setNameTouched(true);
     }
