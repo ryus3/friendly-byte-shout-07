@@ -11,49 +11,11 @@ import { toast } from '@/components/ui/use-toast';
 import UnifiedEmployeePermissionsDialog from '../manage-employees/UnifiedEmployeePermissionsDialog';
 
 const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
-  // نستخدم toast مباشرة
-
   const handleDirectApprove = async () => {
     try {
-      // صلاحيات أساسية محسنة للموظف الجديد
-      const defaultPermissions = [
-        // صفحات التطبيق الأساسية
-        'view_dashboard',
-        'view_products_page', 
-        'view_orders_page',
-        'view_inventory_page',
-        'view_quick_order_page',
-        
-        // المنتجات والمخزن
-        'view_products',
-        'view_inventory',
-        'use_barcode_scanner',
-        
-        // الطلبات والمبيعات
-        'view_orders',
-        'view_own_orders',
-        'create_orders',
-        'quick_order',
-        'checkout_orders',
-        'view_order_details',
-        'print_invoices',
-        'print_receipts',
-        
-        // لوحة التحكم
-        'view_statistics',
-        'view_recent_activities',
-        
-        // الأرباح الخاصة
-        'view_own_profits',
-        
-        // إعدادات شخصية
-        'profile_settings'
-      ];
-      
+      // بيانات الموافقة المصححة - بدون عمود permissions
       const approvalData = {
-        status: 'active',
-        permissions: JSON.stringify(defaultPermissions),
-        role: 'employee'
+        status: 'active'
       };
       
       console.log('=== DIRECT APPROVAL START ===');
@@ -94,53 +56,55 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
       className="w-full"
     >
       <Card className="border border-muted hover:border-primary/20 transition-colors">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-3 space-x-reverse">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary">
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                   {user.full_name?.charAt(0) || user.username?.charAt(0) || 'م'}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm">{user.full_name}</h3>
-                  <Badge variant="secondary" className="text-xs">
-                    {user.role}
+              <div className="space-y-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <h3 className="font-medium text-sm truncate">{user.full_name}</h3>
+                  <Badge variant="secondary" className="text-xs w-fit">
+                    موظف
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p>المستخدم: {user.username}</p>
-                  <p>الإيميل: {user.email}</p>
+                  <p className="truncate">المستخدم: {user.username}</p>
+                  <p className="truncate">الإيميل: {user.email}</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onDetailedReview(user)}
-                className="text-xs"
+                className="text-xs h-8"
               >
-                <Settings className="w-3 h-3 ml-1" />
-                مراجعة تفصيلية
+                <Settings className="w-3 h-3 sm:ml-1" />
+                <span className="hidden sm:inline">مراجعة تفصيلية</span>
+                <span className="sm:hidden">مراجعة</span>
               </Button>
               <Button
                 size="sm"
                 onClick={handleDirectApprove}
-                className="text-xs bg-green-600 hover:bg-green-700"
+                className="text-xs h-8 bg-green-600 hover:bg-green-700"
               >
-                <UserCheck className="w-3 h-3 ml-1" />
-                موافقة سريعة
+                <UserCheck className="w-3 h-3 sm:ml-1" />
+                <span className="hidden sm:inline">موافقة سريعة</span>
+                <span className="sm:hidden">موافقة</span>
               </Button>
               <Button
                 size="sm"
                 variant="destructive"
                 onClick={handleDirectReject}
-                className="text-xs"
+                className="text-xs h-8"
               >
-                <UserX className="w-3 h-3 ml-1" />
+                <UserX className="w-3 h-3 sm:ml-1" />
                 رفض
               </Button>
             </div>
@@ -176,74 +140,37 @@ const PendingRegistrations = ({ onClose }) => {
       console.log('User ID:', userId);
       console.log('Approval data:', data);
       
-      // إضافة الصلاحيات الأساسية المحسنة إذا لم تكن موجودة
-      const defaultPermissions = [
-        // صفحات التطبيق الأساسية
-        'view_dashboard',
-        'view_products_page', 
-        'view_orders_page',
-        'view_inventory_page',
-        'view_quick_order_page',
-        
-        // المنتجات والمخزن
-        'view_products',
-        'view_inventory',
-        'use_barcode_scanner',
-        
-        // الطلبات والمبيعات
-        'view_orders',
-        'view_own_orders',
-        'create_orders',
-        'quick_order',
-        'checkout_orders',
-        'view_order_details',
-        'print_invoices',
-        'print_receipts',
-        
-        // لوحة التحكم
-        'view_statistics',
-        'view_recent_activities',
-        
-        // الأرباح الخاصة
-        'view_own_profits',
-        
-        // إعدادات شخصية
-        'profile_settings'
-      ];
+      // استخدام الدالة الجديدة لتفعيل الموظف وتعيين الدور وإنشاء رمز التليغرام
+      const { data: result, error } = await supabase.rpc('activate_employee_and_assign_role', {
+        p_user_id: userId,
+        p_role_name: 'sales_employee' // الدور الافتراضي
+      });
       
-      const finalData = {
-        status: 'active',
-        permissions: JSON.stringify(data?.permissions || defaultPermissions),
-        role: data?.role || 'employee',
-        ...data
-      };
-      
-      console.log('Final approval data:', finalData);
-      
-      const result = await updateUser(userId, finalData);
-      console.log('Update result:', result);
-      
-      if (result?.success !== false) {
-        console.log('Approval successful');
-        
-        toast({
-          title: "تمت الموافقة ✅",
-          description: "تم تفعيل حساب الموظف بنجاح",
-          variant: "default"
-        });
-        
-        // تحديث فوري للقوائم
-        console.log('Refreshing admin data...');
-        await refetchAdminData();
-        
-        // إغلاق النوافذ
-        setShowUnifiedDialog(false);
-        setSelectedEmployee(null);
-        
-        console.log('=== APPROVAL PROCESS SUCCESS ===');
-      } else {
-        throw new Error(result?.error?.message || 'خطأ في الموافقة');
+      if (error) {
+        throw new Error(error.message);
       }
+      
+      if (!result?.success) {
+        throw new Error(result?.error || 'خطأ في تفعيل الموظف');
+      }
+      
+      console.log('Employee activated successfully:', result);
+      
+      toast({
+        title: "تمت الموافقة ✅",
+        description: `تم تفعيل حساب الموظف وإنشاء رمز التليغرام: ${result.employee_code}`,
+        variant: "default"
+      });
+      
+      // تحديث فوري للقوائم
+      console.log('Refreshing admin data...');
+      await refetchAdminData();
+      
+      // إغلاق النوافذ
+      setShowUnifiedDialog(false);
+      setSelectedEmployee(null);
+      
+      console.log('=== APPROVAL PROCESS SUCCESS ===');
     } catch (error) {
       console.error('=== APPROVAL PROCESS ERROR ===', error);
       toast({
@@ -265,8 +192,7 @@ const PendingRegistrations = ({ onClose }) => {
       console.log('Rejecting user:', userId);
       
       const result = await updateUser(userId, { 
-        status: 'rejected', 
-        permissions: JSON.stringify([]) 
+        status: 'rejected'
       });
       
       console.log('Rejection result:', result);
@@ -306,33 +232,33 @@ const PendingRegistrations = ({ onClose }) => {
 
   if (!pendingRegistrations?.length) {
     return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-        onClick={onClose}
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-background rounded-lg shadow-xl w-full max-w-xs sm:max-w-md"
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          onClick={(e) => e.stopPropagation()}
-          className="bg-background rounded-lg shadow-xl max-w-md w-full"
-        >
-          <Card className="border-0">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium">طلبات التسجيل</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="h-8 w-8 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="text-center py-8">
+        <Card className="border-0">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg font-medium">طلبات التسجيل</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="text-center py-6 sm:py-8">
               <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">لا توجد طلبات تسجيل جديدة</p>
             </CardContent>
@@ -346,14 +272,14 @@ const PendingRegistrations = ({ onClose }) => {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+        className="bg-background rounded-lg shadow-xl w-full max-w-xs sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] overflow-hidden"
       >
         <Card className="border-0">
           <CardHeader className="pb-4">
@@ -371,7 +297,7 @@ const PendingRegistrations = ({ onClose }) => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto px-3 sm:px-6">
             <AnimatePresence>
               {pendingRegistrations.map(user => (
                 <UserCard

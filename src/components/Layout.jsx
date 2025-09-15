@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -19,7 +19,7 @@ import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
-import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
+import AiOrdersWindow from '@/components/ai-orders/AiOrdersWindow.jsx';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
 
@@ -355,7 +355,8 @@ const Layout = ({ children }) => {
         
         <AnimatePresence>
           {aiOrdersOpen && (
-            <AiOrdersManager 
+            <AiOrdersWindow
+              open={aiOrdersOpen}
               highlightId={aiOrderHighlightId}
               onClose={() => { setAiOrdersOpen(false); setAiOrderHighlightId(null); }} 
             />
