@@ -51,6 +51,10 @@ const filterByTimePeriod = (items, timePeriod, getDate) => {
 };
 
 export const useFinancialSystem = (timePeriod = 'all', options = {}) => {
+  // التحقق من صحة المدخلات
+  if (!timePeriod) timePeriod = 'all';
+  if (!options) options = {};
+  
   const { loading: inventoryLoading } = useInventory();
   const { user } = useAuth();
   const { canViewAllData } = usePermissions();
