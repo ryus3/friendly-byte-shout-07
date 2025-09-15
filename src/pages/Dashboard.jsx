@@ -626,7 +626,8 @@ const Dashboard = () => {
         user?.user_id, 
         canViewAllData,
         unifiedProfitData,
-        pendingProfitData
+        pendingProfitData,
+        allProfits
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
