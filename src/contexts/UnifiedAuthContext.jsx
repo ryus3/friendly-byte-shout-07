@@ -608,7 +608,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     };
   }, [userRoles]);
 
-  const isAdmin = useMemo(() => userRoles.some(ur => ['super_admin', 'admin'].includes(ur.roles.name)), [userRoles]);
+  const isAdmin = useMemo(() => hasRole('super_admin') || hasRole('admin'), [hasRole]);
 
   // فلترة المنتجات حسب صلاحيات المستخدم - يدعم جميع أشكال العلاقات
   const filterProductsByPermissions = useMemo(() => {

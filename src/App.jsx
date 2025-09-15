@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';

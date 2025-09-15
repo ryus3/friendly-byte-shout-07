@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils';
 import { useFinancialSystem } from '@/hooks/useFinancialSystem';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { TIME_PERIODS } from '@/lib/financial-constants';
 
 /**
  * نظام التحليلات الموحد المتصل بالنظام المالي
@@ -47,7 +48,7 @@ const UnifiedAnalyticsSystem = () => {
   const { products, orders, loading } = useInventory();
   const { allUsers } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [timePeriod, setTimePeriod] = useState('month');
+  const [timePeriod, setTimePeriod] = useState(TIME_PERIODS.MONTH);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState(null);
 
@@ -66,29 +67,29 @@ const UnifiedAnalyticsSystem = () => {
       const now = new Date();
       
       switch (timePeriod) {
-        case 'today':
+        case TIME_PERIODS.TODAY:
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const tomorrow = new Date(today);
           tomorrow.setDate(tomorrow.getDate() + 1);
           return orderDate >= today && orderDate < tomorrow;
           
-        case 'week':
+        case TIME_PERIODS.WEEK:
           const weekAgo = new Date();
           weekAgo.setDate(weekAgo.getDate() - 7);
           return orderDate >= weekAgo;
           
-        case 'month':
+        case TIME_PERIODS.MONTH:
           const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
           const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           return orderDate >= startMonth && orderDate <= endMonth;
           
-        case 'year':
+        case TIME_PERIODS.YEAR:
           const startYear = new Date(now.getFullYear(), 0, 1);
           const endYear = new Date(now.getFullYear(), 11, 31);
           return orderDate >= startYear && orderDate <= endYear;
           
-        case 'all':
+        case TIME_PERIODS.ALL:
         default:
           return true;
       }
@@ -151,10 +152,10 @@ const UnifiedAnalyticsSystem = () => {
 
   // أزرار الفترات السريعة
   const quickDateRanges = [
-    { label: 'اليوم', value: 'today' },
-    { label: 'آخر 7 أيام', value: 'week' },
-    { label: 'هذا الشهر', value: 'month' },
-    { label: 'هذا العام', value: 'year' },
+    { label: 'اليوم', value: TIME_PERIODS.TODAY },
+    { label: 'آخر 7 أيام', value: TIME_PERIODS.WEEK },
+    { label: 'هذا الشهر', value: TIME_PERIODS.MONTH },
+    { label: 'هذا العام', value: TIME_PERIODS.YEAR },
   ];
 
   // إضافة فعالية تغيير الفترة مع console log

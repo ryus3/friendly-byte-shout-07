@@ -8,14 +8,17 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-// ثوابت النظام المالي الداخلية
-const TIME_PERIODS = {
-  TODAY: 'today',
-  WEEK: 'week', 
-  MONTH: 'month',
-  YEAR: 'year',
-  ALL: 'all'
-};
+import { 
+  calculateFinancialMetrics,
+  filterOrdersByPermissions,
+  filterExpensesByPermissions,
+  calculateDateRange
+} from '@/lib/financial-calculations';
+import { 
+  TIME_PERIODS, 
+  DEFAULT_FINANCIAL_VALUES,
+  FINANCIAL_ERROR_MESSAGES
+} from '@/lib/financial-constants';
 
 export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();
@@ -38,17 +41,15 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [currentBalance, setCurrentBalance] = useState(0);
   
-  // فلترة البيانات حسب الصلاحيات - بدون دوال خارجية
+  // فلترة البيانات حسب الصلاحيات
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    if (canViewAllData) return orders;
-    return orders.filter(order => order.created_by === (user?.id || user?.user_id));
+    return filterOrdersByPermissions(orders, canViewAllData, user?.id || user?.user_id);
   }, [orders, canViewAllData, user?.id, user?.user_id]);
   
   const filteredExpenses = useMemo(() => {
     if (!accounting?.expenses) return [];
-    if (canViewAllData) return accounting.expenses;
-    return accounting.expenses.filter(expense => expense.created_by === (user?.id || user?.user_id));
+    return filterExpensesByPermissions(accounting.expenses, canViewAllData, user?.id || user?.user_id);
   }, [accounting?.expenses, canViewAllData, user?.id, user?.user_id]);
   
   // حساب المؤشرات المالية
@@ -57,7 +58,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
       if (enableDebugLogs) {
         console.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
       }
-      return { totalRevenue: 0, netProfit: 0, generalExpenses: 0, loading: true };
+      return { ...DEFAULT_FINANCIAL_VALUES, loading: true };
     }
     
     if (!filteredOrders.length && !filteredExpenses.length) {
@@ -65,10 +66,8 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
         console.log('⚠️ النظام المالي: لا توجد بيانات للحساب');
       }
       return { 
-        totalRevenue: 0, 
-        netProfit: 0, 
-        generalExpenses: 0,
-        error: 'لا توجد بيانات للحساب',
+        ...DEFAULT_FINANCIAL_VALUES, 
+        error: FINANCIAL_ERROR_MESSAGES.NO_DATA,
         loading: false 
       };
     }
@@ -83,21 +82,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
         });
       }
       
-      // حساب مبسط للمقاييس المالية
-      const completedOrders = filteredOrders.filter(o => ['completed', 'delivered'].includes(o.status));
-      const totalRevenue = completedOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
-      const approvedExpenses = filteredExpenses.filter(e => e.status === 'approved');
-      const generalExpenses = approvedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-      const netProfit = totalRevenue - generalExpenses;
-      
-      const metrics = {
-        totalRevenue,
-        netProfit,
-        generalExpenses,
-        employeeDuesPaid: 0,
-        ordersCount: completedOrders.length,
-        avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
-      };
+      const metrics = calculateFinancialMetrics(filteredOrders, filteredExpenses, timePeriod);
       
       if (enableDebugLogs) {
         console.log('✅ النظام المالي: اكتملت الحسابات بنجاح', metrics);
@@ -113,9 +98,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
       setError(err.message);
       
       return { 
-        totalRevenue: 0, 
-        netProfit: 0, 
-        generalExpenses: 0,
+        ...DEFAULT_FINANCIAL_VALUES, 
         error: err.message,
         loading: false 
       };
@@ -184,7 +167,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   // معلومات إضافية
   const systemInfo = useMemo(() => ({
     lastCalculationTime,
-    dateRange: timePeriod,
+    dateRange: calculateDateRange(timePeriod),
     dataSource: {
       ordersCount: filteredOrders.length,
       expensesCount: filteredExpenses.length,
@@ -197,19 +180,9 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     }
   }), [lastCalculationTime, timePeriod, filteredOrders.length, filteredExpenses.length, canViewAllData, hasPermission]);
   
-  // التأكد من أن financialMetrics موجود ومعرف قبل الاستخدام
-  const safeFinancialMetrics = financialMetrics || {
-    totalRevenue: 0,
-    netProfit: 0,
-    generalExpenses: 0,
-    employeeDuesPaid: 0,
-    ordersCount: 0,
-    avgOrderValue: 0
-  };
-
   return {
-    // البيانات المالية الرئيسية (آمنة)
-    ...safeFinancialMetrics,
+    // البيانات المالية الرئيسية
+    ...financialMetrics,
     
     // البيانات المالية الإضافية
     capitalAmount,
@@ -246,13 +219,13 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     // التحقق من صحة البيانات
     isDataValid: !error && !loading && (filteredOrders.length > 0 || filteredExpenses.length > 0),
     
-    // إحصائيات سريعة (آمنة)
+    // إحصائيات سريعة
     quickStats: {
-      hasRevenue: safeFinancialMetrics.totalRevenue > 0,
-      hasProfits: safeFinancialMetrics.netProfit > 0,
-      hasExpenses: safeFinancialMetrics.generalExpenses > 0 || safeFinancialMetrics.employeeDuesPaid > 0,
-      profitabilityStatus: safeFinancialMetrics.netProfit > 0 ? 'profitable' : 
-                          safeFinancialMetrics.netProfit < 0 ? 'loss' : 'breakeven'
+      hasRevenue: financialMetrics.totalRevenue > 0,
+      hasProfits: financialMetrics.netProfit > 0,
+      hasExpenses: financialMetrics.generalExpenses > 0 || financialMetrics.employeeDuesPaid > 0,
+      profitabilityStatus: financialMetrics.netProfit > 0 ? 'profitable' : 
+                          financialMetrics.netProfit < 0 ? 'loss' : 'breakeven'
     }
   };
 };

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import StatCard from '@/components/dashboard/StatCard';
 import PendingRegistrations from '@/components/dashboard/PendingRegistrations';
-
+import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
 import TopListCard from '@/components/dashboard/TopListCard';
 import TopProvincesDialog from '@/components/dashboard/TopProvincesDialog';
 import TopProductsDialog from '@/components/dashboard/TopProductsDialog';
@@ -319,27 +319,8 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
-    console.log('🔍 TDZ Debug: Before aiOrdersCount useMemo');
-        // Calculate directly without referencing userAiOrders to avoid TDZ
-        let list;
-        if (canViewAllData) {
-            list = Array.isArray(aiOrders) ? aiOrders : [];
-        } else {
-            if (!Array.isArray(aiOrders)) {
-                list = [];
-            } else {
-                const upper = (v) => (v ?? '').toString().trim().toUpperCase();
-                const candidates = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(upper);
-                if (!candidates.length) {
-                    list = [];
-                } else {
-                    list = aiOrders.filter((order) => {
-                        const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
-                        return by ? candidates.includes(upper(by)) : false;
-                    });
-                }
-            }
-        }
+    const aiOrdersCount = useMemo(() => {
+        const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
             if (!s) return '';
@@ -379,7 +360,7 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
+    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
@@ -619,7 +600,9 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData
+        canViewAllData,
+        unifiedProfitData,
+        pendingProfitData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -726,7 +709,7 @@ const Dashboard = () => {
             <Helmet><title>لوحة التحكم - RYUS</title></Helmet>
             <AnimatePresence>
                 {dialogs.pendingRegs && <PendingRegistrations onClose={() => setDialogs(d => ({ ...d, pendingRegs: false }))} />}
-                
+                {dialogs.aiOrders && <AiOrdersManager open={dialogs.aiOrders} onClose={() => setDialogs(d => ({ ...d, aiOrders: false }))} />}
                 {dialog.open && (
                     <SummaryDialog
                         open={dialog.open}
