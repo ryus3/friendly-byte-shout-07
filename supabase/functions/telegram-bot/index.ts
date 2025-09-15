@@ -343,21 +343,6 @@ async function getEmployeeByTelegramId(chatId: number) {
   return null;
 }
 
-// دالة استخراج أقرب نقطة دالة من النص المدخل
-function parseCityRegionLandmark(text: string): { city: string, region: string, address: string } {
-  const words = text.trim().split(/\s+/);
-  if (words.length < 2) {
-    return { city: '', region: '', address: text.trim() };
-  }
-  
-  const city = words[0] || '';
-  const region = words[1] || '';
-  const address = words.slice(2).join(' ') || '';
-  
-  console.log('🗺️ تحليل الموقع:', { originalText: text, city, region, address });
-  return { city, region, address };
-}
-
 async function processOrderText(text: string, chatId: number, employeeCode: string) {
   try {
     const lines = text.split('\n').filter(line => line.trim());
@@ -382,21 +367,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .eq('user_id', employee?.user_id)
       .single();
     
-    let defaultCustomerName = profileData?.default_customer_name || '';
-    // fallback إلى المدير الافتراضي إذا لم يكن هناك اسم افتراضي للمستخدم الحالي
-    if (!defaultCustomerName || defaultCustomerName.trim() === '') {
-      try {
-        const { data: adminProfile } = await supabase
-          .from('profiles')
-          .select('default_customer_name')
-          .eq('user_id', '91484496-b887-44f7-9e5d-be9db5567604')
-          .maybeSingle();
-        if (adminProfile?.default_customer_name) defaultCustomerName = adminProfile.default_customer_name;
-      } catch (_) {}
-    }
-    if (!defaultCustomerName || defaultCustomerName.trim() === '') {
-      defaultCustomerName = 'زبون';
-    }
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -1143,26 +1114,6 @@ serve(async (req) => {
     const chatId = update.message.chat.id;
     const text = update.message.text.trim();
     const userId = update.message.from.id;
-
-    // منع التكرار: تجاهل أي تحديث سبق معالجته
-    try {
-      const { data: existing } = await supabase
-        .from('telegram_processed_updates')
-        .select('update_id')
-        .eq('update_id', update.update_id)
-        .maybeSingle();
-      if (existing) {
-        console.log('⏭️ Duplicate update detected, skipping:', update.update_id);
-        return new Response('OK', { status: 200, headers: corsHeaders });
-      }
-      await supabase.from('telegram_processed_updates').insert({
-        update_id: update.update_id,
-        chat_id: chatId,
-        message_id: update.message.message_id
-      });
-    } catch (e) {
-      console.warn('⚠️ Dedup check failed, continuing anyway:', e?.message || e);
-    }
     
     console.log(`Processing message from chatId: ${chatId}, text: "${text}"`);
 
@@ -1400,52 +1351,7 @@ ${employee.role === 'admin' ?
       // Process order
       console.log('Processing order for employee:', employee.employee_code);
       // تم إلغاء رسالة الانتظار بناءً على طلبكم
-      const aiOrderId = await processOrderText(text, chatId, employee.employee_code);
-      
-      // تحديث العنوان لاستخراج أقرب نقطة دالة بعد إنشاء الطلب
-      if (aiOrderId && lines.length > 0) {
-        const firstLine = lines[0].trim();
-        console.log('🗺️ تحليل السطر الأول لاستخراج الموقع:', firstLine);
-        
-        // تجاهل الأسماء والهواتف واستخراج الموقع فقط
-        let locationText = firstLine;
-        
-        // إزالة الاسم (أول كلمة أو كلمتين)
-        const words = locationText.split(/\s+/);
-        if (words.length > 2) {
-          // تجاهل أول كلمة أو كلمتين كاسم
-          locationText = words.slice(1).join(' ');
-        }
-        
-        // إزالة أرقام الهواتف
-        locationText = locationText.replace(/\b0?\d{10,11}\b/g, '').trim();
-        
-        // استخراج المدينة والمنطقة وأقرب نقطة دالة
-        const { city, region, address } = parseCityRegionLandmark(locationText);
-        
-        if (city || region || address) {
-          console.log('🔄 تحديث العنوان للطلب:', { aiOrderId, city, region, address });
-          
-          try {
-            const { error: updateError } = await supabase
-              .from('ai_orders')
-              .update({
-                customer_city: city || null,
-                customer_province: region || null,
-                customer_address: address || locationText // استخدام أقرب نقطة دالة فقط
-              })
-              .eq('id', aiOrderId);
-            
-            if (updateError) {
-              console.error('❌ خطأ في تحديث العنوان:', updateError);
-            } else {
-              console.log('✅ تم تحديث العنوان بنجاح');
-            }
-          } catch (err) {
-            console.error('❌ خطأ في تحديث العنوان:', err);
-          }
-        }
-      }
+      await processOrderText(text, chatId, employee.employee_code);
     }
 
     return new Response('OK', { status: 200, headers: corsHeaders });

@@ -182,10 +182,7 @@ const ProfitsSummaryPage = () => {
                 deliveryFees: 0,
                 cogs: 0,
                 generalExpenses: 0,
-                employeeSettledDues: 0,
-                deliveredOrders: [],
-                pendingDeliveredOrders: [],
-                generalExpensesFiltered: []
+                employeeSettledDues: 0
             };
         }
 
@@ -342,8 +339,8 @@ const ProfitsSummaryPage = () => {
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
         
         console.log('📊 نتائج الحساب:', {
-            deliveredOrdersCount: deliveredOrders?.length || 0,
-            pendingOrdersCount: pendingDeliveredOrders?.length || 0,
+            deliveredOrdersCount: deliveredOrders.length,
+            pendingOrdersCount: pendingDeliveredOrders.length,
             detailedProfitsCount: detailedProfits.length,
             managerProfitFromEmployees,
             totalRevenue,
@@ -371,8 +368,6 @@ const ProfitsSummaryPage = () => {
             grossProfit: unifiedProfitData?.grossProfit || 0,
             generalExpenses: unifiedProfitData?.generalExpenses || 0,
             employeeSettledDues,
-            deliveredOrders: deliveredOrders || [],
-            pendingDeliveredOrders: pendingDeliveredOrders || [],
             generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
                 if (e.category === 'مستحقات الموظفين') return false;
@@ -582,14 +577,6 @@ const ProfitsSummaryPage = () => {
     // فلترة الطلبات المؤرشفة أو المدفوعة
     setFilters(prev => ({ ...prev, profitStatus: 'settled' }));
   };
-
-  // إضافة console.log للتحقق من البيانات
-  console.log('🔍 التحقق من بيانات profitData:', {
-    deliveredOrders: profitData?.deliveredOrders?.length || 0,
-    pendingDeliveredOrders: profitData?.pendingDeliveredOrders?.length || 0,
-    totalRevenue: profitData?.totalRevenue || 0,
-    netProfit: profitData?.netProfit || 0
-  });
 
   return (
     <>

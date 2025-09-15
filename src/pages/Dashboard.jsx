@@ -127,9 +127,6 @@ const Dashboard = () => {
     // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة - نحتاج allProfits للحساب المحلي
     const { profitData: pendingProfitData, loading: pendingProfitLoading, allProfits } = useUnifiedProfits(periods.pendingProfit);
     
-    // إضافة console.log للتأكد من تعريف allProfits
-    console.log('🔍 allProfits تم تعريفه:', allProfits ? 'نعم' : 'لا', { allProfits });
-    
     // إضافة لوج لتتبع البيانات
     useEffect(() => {
         console.log('🔍 Dashboard - Unified Profit Data:', {
@@ -485,7 +482,6 @@ const Dashboard = () => {
         return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
     }, [periods.netProfit, visibleOrders, accounting, products]);
 
-    // تعريف dashboardData بعد التأكد من توفر جميع dependencies
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {
             totalOrdersCount: 0,
@@ -605,7 +601,8 @@ const Dashboard = () => {
         user?.id, 
         user?.user_id, 
         canViewAllData,
-        unifiedProfitData?.netProfit
+        unifiedProfitData,
+        pendingProfitData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -630,11 +627,11 @@ const Dashboard = () => {
             };
         }
         
-        const allLocalProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
+        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         const userProfits = canViewAllData 
-            ? allLocalProfits 
-            : allLocalProfits.filter(profit => {
+            ? allProfits 
+            : allProfits.filter(profit => {
                 const employeeId = profit.employee_id;
                 return employeeId === user?.id || employeeId === user?.user_id;
             });
