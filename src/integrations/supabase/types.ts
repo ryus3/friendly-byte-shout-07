@@ -3923,10 +3923,6 @@ export type Database = {
       }
     }
     Functions: {
-      activate_employee_and_assign_role: {
-        Args: { p_role_name?: string; p_user_id: string }
-        Returns: Json
-      }
       add_purchase_cost_record: {
         Args: {
           p_product_id: string

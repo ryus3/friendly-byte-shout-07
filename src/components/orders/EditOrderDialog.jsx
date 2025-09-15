@@ -93,7 +93,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       customer_phone2: order.customer_phone2 || order.second_phone || '',
       customer_city: order.customer_city || order.city || '',
       customer_province: order.customer_province || order.region || order.province || '',
-      customer_address: order.customer_address || order.address || '', // العنوان كما هو مخزن
+      customer_address: order.customer_address || order.address || '',
       
       // معرفات المدينة والمنطقة للوسيط (ضمان عدم التكرار)
       city_id: city_id || order.city_id || '',
