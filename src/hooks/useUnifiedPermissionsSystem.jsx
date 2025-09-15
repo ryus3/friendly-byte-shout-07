@@ -10,10 +10,49 @@ import { UnifiedPermissionsContext } from '@/contexts/UnifiedPermissionsProvider
  * Hook موحد للصلاحيات - يستخدم السياق العالمي
  */
 export const useUnifiedPermissionsSystem = () => {
-  const context = useContext(UnifiedPermissionsContext);
+  try {
+    const context = useContext(UnifiedPermissionsContext);
   
   // إذا لم يكن هناك سياق، نعيد قيم افتراضية آمنة
   if (!context) {
+    return {
+      // بيانات أساسية
+      user: null,
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      error: null,
+
+      // فحص الأدوار
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      isEmployee: false,
+      hasRole: () => false,
+
+      // فحص الصلاحيات
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      canManageProducts: false,
+      canManageAccounting: false,
+      canManagePurchases: false,
+      canAccessDeliveryPartners: false,
+
+      // فلترة البيانات
+      filterDataByUser: (data) => data || [],
+      filterProductsByPermissions: (products) => products || [],
+      filterNotificationsByUser: (notifications) => notifications || [],
+      getEmployeeStats: () => ({ total: 0, personal: 0 })
+    };
+  }
+
+  // التأكد من وجود context وأنه object صالح
+  if (!context || typeof context !== 'object') {
     return {
       // بيانات أساسية
       user: null,
@@ -234,6 +273,44 @@ export const useUnifiedPermissionsSystem = () => {
     filterNotificationsByUser,
     getEmployeeStats
   };
+  } catch (error) {
+    console.error('Error in useUnifiedPermissionsSystem:', error);
+    // إرجاع قيم افتراضية آمنة في حالة الخطأ
+    return {
+      // بيانات أساسية
+      user: null,
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      error: 'خطأ في تحميل الصلاحيات',
+
+      // فحص الأدوار
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      isEmployee: false,
+      hasRole: () => false,
+
+      // فحص الصلاحيات
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      canManageProducts: false,
+      canManageAccounting: false,
+      canManagePurchases: false,
+      canAccessDeliveryPartners: false,
+
+      // فلترة البيانات
+      filterDataByUser: (data) => data || [],
+      filterProductsByPermissions: (products) => products || [],
+      filterNotificationsByUser: (notifications) => notifications || [],
+      getEmployeeStats: () => ({ total: 0, personal: 0 })
+    };
+  }
 };
 
 export default useUnifiedPermissionsSystem;
