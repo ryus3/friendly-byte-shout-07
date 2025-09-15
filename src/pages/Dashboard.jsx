@@ -360,7 +360,7 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
+    }, [aiOrders, canViewAllData, userEmployeeCode, userAiOrders]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
