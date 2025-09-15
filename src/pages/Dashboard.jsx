@@ -98,15 +98,17 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
     
-    // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
+    // إضافة console.log لمراقبة البيانات الواردة من SuperProvider
     useEffect(() => {
-        console.log('🔥 Dashboard - البيانات من InventoryContext:', {
+        console.log('🔥 Dashboard - البيانات من SuperProvider:', {
             ordersCount: orders?.length || 0,
-            orders: orders,
+            aiOrdersCount: aiOrders?.length || 0,
+            aiOrders: aiOrders,
             firstOrder: orders?.[0],
+            firstAiOrder: aiOrders?.[0],
             loading: inventoryLoading
         });
-    }, [orders, inventoryLoading]);
+    }, [orders, aiOrders, inventoryLoading]);
     
     const { profits: profitsData } = useProfits();
     const navigate = useNavigate();
@@ -150,31 +152,38 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
-    // إضافة listener للتحديثات اللحظية للطلبات الذكية
+    // إضافة listener للتحديثات اللحظية للطلبات الذكية مع التحديث الفوري
     useEffect(() => {
         const handleAiOrderCreated = (event) => {
-            console.log('🔥 AI Order Created Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            console.log('🔥 Dashboard - AI Order Created Event:', event.detail);
+            // لا حاجة لتحديث يدوي - SuperProvider يتولى التحديث تلقائياً
         };
 
         const handleAiOrderUpdated = (event) => {
-            console.log('🔥 AI Order Updated Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            console.log('🔥 Dashboard - AI Order Updated Event:', event.detail);
+            // لا حاجة لتحديث يدوي - SuperProvider يتولى التحديث تلقائياً
         };
 
         const handleAiOrderDeleted = (event) => {
-            console.log('🔥 AI Order Deleted Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            console.log('🔥 Dashboard - AI Order Deleted Event:', event.detail);
+            // لا حاجة لتحديث يدوي - SuperProvider يتولى التحديث تلقائياً
+        };
+
+        const handleAiOrderApproved = (event) => {
+            console.log('🔥 Dashboard - AI Order Approved Event:', event.detail);
+            // لا حاجة لتحديث يدوي - SuperProvider يتولى التحديث تلقائياً
         };
 
         window.addEventListener('aiOrderCreated', handleAiOrderCreated);
         window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
         window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+        window.addEventListener('aiOrderApproved', handleAiOrderApproved);
 
         return () => {
             window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
             window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
             window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+            window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
         };
     }, []);
     
@@ -307,6 +316,7 @@ const Dashboard = () => {
         fetchEmployeeCode();
     }, [user?.user_id, canViewAllData]);
 
+    // حساب AI Orders للمستخدم مع مراعاة الصلاحيات
     const userAiOrders = useMemo(() => {
         if (!Array.isArray(aiOrders)) return [];
         if (canViewAllData) return aiOrders;
@@ -319,8 +329,21 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
+    // حساب عدد طلبات الذكاء الاصطناعي مع تجنب التكرار
     const aiOrdersCount = useMemo(() => {
-        const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
+        const availableOrders = Array.isArray(aiOrders) ? aiOrders : [];
+        const relevantOrders = canViewAllData ? availableOrders : userAiOrders;
+        
+        console.log('🧮 Dashboard - حساب عدد AI Orders:', {
+            aiOrdersOriginal: aiOrders?.length || 0,
+            availableOrders: availableOrders.length,
+            userAiOrders: userAiOrders?.length || 0,
+            canViewAllData,
+            relevantOrders: relevantOrders?.length || 0
+        });
+        
+        if (!Array.isArray(relevantOrders)) return 0;
+        
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
             if (!s) return '';
@@ -341,8 +364,9 @@ const Dashboard = () => {
             if (str.includes('x')) return 'xl';
             return str;
         };
+        
         const keys = new Set();
-        for (const o of list) {
+        for (const o of relevantOrders) {
             const idKey = o?.id ?? o?.order_id ?? o?.uuid;
             let key = idKey ? `id:${idKey}` : '';
             if (!key) {
@@ -360,7 +384,7 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
+    }, [aiOrders, userAiOrders, canViewAllData]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
