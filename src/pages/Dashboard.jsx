@@ -631,11 +631,11 @@ const Dashboard = () => {
             };
         }
         
-        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
+        const allLocalProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         const userProfits = canViewAllData 
-            ? allProfits 
-            : allProfits.filter(profit => {
+            ? allLocalProfits 
+            : allLocalProfits.filter(profit => {
                 const employeeId = profit.employee_id;
                 return employeeId === user?.id || employeeId === user?.user_id;
             });
