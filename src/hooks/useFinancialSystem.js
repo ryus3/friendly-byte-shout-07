@@ -8,17 +8,14 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  calculateFinancialMetrics,
-  filterOrdersByPermissions,
-  filterExpensesByPermissions,
-  calculateDateRange
-} from '@/lib/financial-calculations';
-import { 
-  TIME_PERIODS, 
-  DEFAULT_FINANCIAL_VALUES,
-  FINANCIAL_ERROR_MESSAGES
-} from '@/lib/financial-constants';
+// ثوابت النظام المالي الداخلية
+const TIME_PERIODS = {
+  TODAY: 'today',
+  WEEK: 'week', 
+  MONTH: 'month',
+  YEAR: 'year',
+  ALL: 'all'
+};
 
 export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();
@@ -41,15 +38,17 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   const [totalPurchases, setTotalPurchases] = useState(0);
   const [currentBalance, setCurrentBalance] = useState(0);
   
-  // فلترة البيانات حسب الصلاحيات
+  // فلترة البيانات حسب الصلاحيات - بدون دوال خارجية
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return filterOrdersByPermissions(orders, canViewAllData, user?.id || user?.user_id);
+    if (canViewAllData) return orders;
+    return orders.filter(order => order.created_by === (user?.id || user?.user_id));
   }, [orders, canViewAllData, user?.id, user?.user_id]);
   
   const filteredExpenses = useMemo(() => {
     if (!accounting?.expenses) return [];
-    return filterExpensesByPermissions(accounting.expenses, canViewAllData, user?.id || user?.user_id);
+    if (canViewAllData) return accounting.expenses;
+    return accounting.expenses.filter(expense => expense.created_by === (user?.id || user?.user_id));
   }, [accounting?.expenses, canViewAllData, user?.id, user?.user_id]);
   
   // حساب المؤشرات المالية
@@ -58,7 +57,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
       if (enableDebugLogs) {
         console.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
       }
-      return { ...DEFAULT_FINANCIAL_VALUES, loading: true };
+      return { totalRevenue: 0, netProfit: 0, generalExpenses: 0, loading: true };
     }
     
     if (!filteredOrders.length && !filteredExpenses.length) {
@@ -66,8 +65,10 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
         console.log('⚠️ النظام المالي: لا توجد بيانات للحساب');
       }
       return { 
-        ...DEFAULT_FINANCIAL_VALUES, 
-        error: FINANCIAL_ERROR_MESSAGES.NO_DATA,
+        totalRevenue: 0, 
+        netProfit: 0, 
+        generalExpenses: 0,
+        error: 'لا توجد بيانات للحساب',
         loading: false 
       };
     }
@@ -82,7 +83,21 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
         });
       }
       
-      const metrics = calculateFinancialMetrics(filteredOrders, filteredExpenses, timePeriod);
+      // حساب مبسط للمقاييس المالية
+      const completedOrders = filteredOrders.filter(o => ['completed', 'delivered'].includes(o.status));
+      const totalRevenue = completedOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+      const approvedExpenses = filteredExpenses.filter(e => e.status === 'approved');
+      const generalExpenses = approvedExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+      const netProfit = totalRevenue - generalExpenses;
+      
+      const metrics = {
+        totalRevenue,
+        netProfit,
+        generalExpenses,
+        employeeDuesPaid: 0,
+        ordersCount: completedOrders.length,
+        avgOrderValue: completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0
+      };
       
       if (enableDebugLogs) {
         console.log('✅ النظام المالي: اكتملت الحسابات بنجاح', metrics);
@@ -98,7 +113,9 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
       setError(err.message);
       
       return { 
-        ...DEFAULT_FINANCIAL_VALUES, 
+        totalRevenue: 0, 
+        netProfit: 0, 
+        generalExpenses: 0,
         error: err.message,
         loading: false 
       };
@@ -167,7 +184,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   // معلومات إضافية
   const systemInfo = useMemo(() => ({
     lastCalculationTime,
-    dateRange: calculateDateRange(timePeriod),
+    dateRange: timePeriod,
     dataSource: {
       ordersCount: filteredOrders.length,
       expensesCount: filteredExpenses.length,
