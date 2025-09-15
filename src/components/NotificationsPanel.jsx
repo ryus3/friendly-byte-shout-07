@@ -24,7 +24,7 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useSuper } from '@/contexts/SuperProvider';
 import PendingRegistrations from './dashboard/PendingRegistrations';
-import AiOrdersManager from './dashboard/AiOrdersManager';
+import AiOrdersWindow from '@/components/ai-orders/AiOrdersWindow';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
@@ -986,7 +986,7 @@ const NotificationsPanel = () => {
         <PendingRegistrations onClose={() => setShowPendingRegistrations(false)} />
       )}
       {showAiOrdersManager && (
-        <AiOrdersManager onClose={() => setShowAiOrdersManager(false)} />
+        <AiOrdersWindow open={showAiOrdersManager} onClose={() => setShowAiOrdersManager(false)} />
       )}
     </AnimatePresence>
     </>
