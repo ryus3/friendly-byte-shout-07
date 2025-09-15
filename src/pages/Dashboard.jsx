@@ -277,13 +277,6 @@ const Dashboard = () => {
         setDialog({ open: false, type: '', orders: [] });
     }, [navigate, periods.totalOrders]);
 
-    const visibleOrders = useMemo(() => {
-        if (!orders) return [];
-        
-        return canViewAllData 
-            ? orders 
-            : orders.filter(order => order.created_by === getUserUUID(user));
-    }, [orders, canViewAllData, user?.id, user?.user_id]);
     
     const [userEmployeeCode, setUserEmployeeCode] = useState(null);
 
@@ -361,6 +354,14 @@ const Dashboard = () => {
         }
         return keys.size;
     }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
+
+    const visibleOrders = useMemo(() => {
+        if (!orders) return [];
+        
+        return canViewAllData 
+            ? orders 
+            : orders.filter(order => order.created_by === getUserUUID(user));
+    }, [orders, canViewAllData, user?.id, user?.user_id]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
