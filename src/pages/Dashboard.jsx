@@ -602,8 +602,7 @@ const Dashboard = () => {
         user?.user_id, 
         canViewAllData,
         unifiedProfitData,
-        pendingProfitData,
-        allProfits
+        pendingProfitData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -628,11 +627,11 @@ const Dashboard = () => {
             };
         }
         
-        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
+        const localAllProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         const userProfits = canViewAllData 
-            ? allProfits 
-            : allProfits.filter(profit => {
+            ? localAllProfits 
+            : localAllProfits.filter(profit => {
                 const employeeId = profit.employee_id;
                 return employeeId === user?.id || employeeId === user?.user_id;
             });
