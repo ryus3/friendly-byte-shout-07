@@ -377,10 +377,7 @@ const Dashboard = () => {
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
-        // فلترة الطلبات حسب صلاحيات المستخدم
-        const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
-            order.created_by === getUserUUID(user)
-        )) : [];
+        // استخدام visibleOrders المُعرّف خارجياً مباشرة
         
         console.log('🔥 Dashboard - Orders for Analysis:', {
             totalOrders: orders?.length || 0,
