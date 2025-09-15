@@ -1166,7 +1166,7 @@ export const AlWaseetProvider = ({ children }) => {
       if (source === 'fastSync') {
         toast({
           title: "حذف طلب تلقائي",
-          description: `${orderToDelete.tracking_number || orderToDelete.order_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
+          description: `تم حذف الطلب ${orderToDelete.tracking_number} وتم تحرير المخزون المحجوز تلقائياً`,
           variant: "default"
         });
       }
