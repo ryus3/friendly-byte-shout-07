@@ -89,162 +89,115 @@ export const useUnifiedPermissionsSystem = () => {
     };
   }
 
-  const { user, userRoles, userPermissions, productPermissions, loading, error } = context;
+  // التأكد من أن البيانات متاحة
+  const safeUserRoles = userRoles || [];
+  const safeUserPermissions = userPermissions || [];
+  const safeProductPermissions = productPermissions || {};
 
-  // === فحص الأدوار (محسن بـ useMemo) ===
-  const isAdmin = useMemo(() => {
-    return userRoles?.some(role => ['super_admin', 'admin'].includes(role.name)) || false;
-  }, [userRoles]);
+  // === فحص الأدوار (مبسط بدون useMemo) ===
+  const isAdmin = safeUserRoles.some(role => ['super_admin', 'admin'].includes(role.name)) || false;
+  const isDepartmentManager = safeUserRoles.some(role => ['department_manager', 'deputy_manager'].includes(role.name)) || false;
+  const isSalesEmployee = safeUserRoles.some(role => role.name === 'sales_employee') || false;
+  const isWarehouseEmployee = safeUserRoles.some(role => role.name === 'warehouse_employee') || false;
+  const isCashier = safeUserRoles.some(role => role.name === 'cashier') || false;
+  const isEmployee = safeUserRoles.length > 0 && !isAdmin;
 
-  const isDepartmentManager = useMemo(() => {
-    return userRoles?.some(role => ['department_manager', 'deputy_manager'].includes(role.name)) || false;
-  }, [userRoles]);
+  // دوال مبسطة
+  const hasRole = (roleName) => safeUserRoles.some(role => role.name === roleName) || false;
+  const hasPermission = (permissionName) => {
+    if (isAdmin) return true;
+    return safeUserPermissions.some(perm => perm.name === permissionName) || false;
+  };
 
-  const isSalesEmployee = useMemo(() => {
-    return userRoles?.some(role => role.name === 'sales_employee') || false;
-  }, [userRoles]);
+  // === فحص الصلاحيات (مبسط) ===
+  const canViewAllData = isAdmin || isDepartmentManager;
+  const canManageEmployees = isAdmin || hasPermission('manage_employees');
+  const canManageFinances = isAdmin || hasPermission('manage_finances');
+  const canManageProducts = isAdmin || isDepartmentManager || hasPermission('manage_products');
+  const canManageAccounting = isAdmin || isDepartmentManager || hasPermission('manage_accounting');
+  const canManagePurchases = isAdmin || isDepartmentManager || isWarehouseEmployee || hasPermission('manage_purchases');
+  const canAccessDeliveryPartners = user?.delivery_partner_access === true;
 
-  const isWarehouseEmployee = useMemo(() => {
-    return userRoles?.some(role => role.name === 'warehouse_employee') || false;
-  }, [userRoles]);
+  // === فلترة البيانات (دوال مبسطة) ===
+  const filterDataByUser = (data, userIdField = 'created_by') => {
+    if (!data) return [];
+    if (canViewAllData) return data;
+    return data.filter(item => {
+      const itemUserId = item[userIdField];
+      return itemUserId === user?.user_id || itemUserId === user?.id;
+    });
+  };
 
-  const isCashier = useMemo(() => {
-    return userRoles?.some(role => role.name === 'cashier') || false;
-  }, [userRoles]);
+  const filterProductsByPermissions = (products) => {
+    if (!products) return [];
+    if (isAdmin) return products;
 
-  // إضافة isEmployee - كل من له دور فعال وليس مديراً
-  const isEmployee = useMemo(() => {
-    return userRoles?.length > 0 && !isAdmin;
-  }, [userRoles, isAdmin]);
-
-  const hasRole = useMemo(() => {
-    return (roleName) => userRoles?.some(role => role.name === roleName) || false;
-  }, [userRoles]);
-
-  // === فحص الصلاحيات (محسن بـ useMemo) ===
-  const hasPermission = useMemo(() => {
-    return (permissionName) => {
-      if (isAdmin) return true; // المدير له كل الصلاحيات
-      return userPermissions?.some(perm => perm.name === permissionName) || false;
-    };
-  }, [userPermissions, isAdmin]);
-
-  const canViewAllData = useMemo(() => {
-    return isAdmin || isDepartmentManager;
-  }, [isAdmin, isDepartmentManager]);
-
-  const canManageEmployees = useMemo(() => {
-    return isAdmin || hasPermission('manage_employees');
-  }, [isAdmin, hasPermission]);
-
-  const canManageFinances = useMemo(() => {
-    return isAdmin || hasPermission('manage_finances');
-  }, [isAdmin, hasPermission]);
-
-  const canManageProducts = useMemo(() => {
-    return isAdmin || isDepartmentManager || hasPermission('manage_products');
-  }, [isAdmin, isDepartmentManager, hasPermission]);
-
-  const canManageAccounting = useMemo(() => {
-    return isAdmin || isDepartmentManager || hasPermission('manage_accounting');
-  }, [isAdmin, isDepartmentManager, hasPermission]);
-
-  const canManagePurchases = useMemo(() => {
-    return isAdmin || isDepartmentManager || isWarehouseEmployee || hasPermission('manage_purchases');
-  }, [isAdmin, isDepartmentManager, isWarehouseEmployee, hasPermission]);
-
-  const canAccessDeliveryPartners = useMemo(() => {
-    return user?.delivery_partner_access === true;
-  }, [user?.delivery_partner_access]);
-
-  // === فلترة البيانات (محسن بـ useMemo) ===
-  const filterDataByUser = useMemo(() => {
-    return (data, userIdField = 'created_by') => {
-      if (!data) return [];
-      if (canViewAllData) return data;
-      return data.filter(item => {
-        const itemUserId = item[userIdField];
-        return itemUserId === user?.user_id || itemUserId === user?.id;
-      });
-    };
-  }, [canViewAllData, user?.user_id, user?.id]);
-
-  const filterProductsByPermissions = useMemo(() => {
-    return (products) => {
-      if (!products) return [];
-      if (isAdmin) return products; // المدير يرى كل شيء
-
-      return products.filter(product => {
-        // فحص التصنيفات
-        const categoryPerm = productPermissions.category;
-        if (categoryPerm && !categoryPerm.has_full_access) {
-          if (product.categories?.length > 0) {
-            const hasAllowedCategory = product.categories.some(cat => 
-              categoryPerm.allowed_items.includes(cat.id)
-            );
-            if (!hasAllowedCategory) return false;
-          }
+    return products.filter(product => {
+      // فحص التصنيفات
+      const categoryPerm = safeProductPermissions.category;
+      if (categoryPerm && !categoryPerm.has_full_access) {
+        if (product.categories?.length > 0) {
+          const hasAllowedCategory = product.categories.some(cat => 
+            categoryPerm.allowed_items.includes(cat.id)
+          );
+          if (!hasAllowedCategory) return false;
         }
+      }
 
-        // فحص الأقسام  
-        const departmentPerm = productPermissions.department;
-        if (departmentPerm && !departmentPerm.has_full_access) {
-          if (product.departments?.length > 0) {
-            const hasAllowedDepartment = product.departments.some(dept => 
-              departmentPerm.allowed_items.includes(dept.id)
-            );
-            if (!hasAllowedDepartment) return false;
-          }
+      // فحص الأقسام  
+      const departmentPerm = safeProductPermissions.department;
+      if (departmentPerm && !departmentPerm.has_full_access) {
+        if (product.departments?.length > 0) {
+          const hasAllowedDepartment = product.departments.some(dept => 
+            departmentPerm.allowed_items.includes(dept.id)
+          );
+          if (!hasAllowedDepartment) return false;
         }
+      }
 
+      return true;
+    });
+  };
+
+  const filterNotificationsByUser = (notifications) => {
+    if (!notifications) return [];
+    
+    return notifications.filter(notification => {
+      // الإشعارات الشخصية
+      const notificationUserId = notification.user_id;
+      if (notificationUserId === user?.user_id || notificationUserId === user?.id) {
         return true;
-      });
-    };
-  }, [isAdmin, productPermissions]);
+      }
+      
+      // الإشعارات العامة - للمديرين فقط
+      if (notificationUserId === null) {
+        return isAdmin || isDepartmentManager;
+      }
+      
+      return false;
+    });
+  };
 
-  const filterNotificationsByUser = useMemo(() => {
-    return (notifications) => {
-      if (!notifications) return [];
-      
-      return notifications.filter(notification => {
-        // الإشعارات الشخصية
-        const notificationUserId = notification.user_id;
-        if (notificationUserId === user?.user_id || notificationUserId === user?.id) {
-          return true;
-        }
-        
-        // الإشعارات العامة - للمديرين فقط
-        if (notificationUserId === null) {
-          return isAdmin || isDepartmentManager;
-        }
-        
-        return false;
-      });
-    };
-  }, [user?.id, user?.user_id, isAdmin, isDepartmentManager]);
-
-  const getEmployeeStats = useMemo(() => {
-    return (data) => {
-      if (!data) return { total: 0, personal: 0 };
-      
-      const total = data.length;
-      const personal = data.filter(item => 
-        item.created_by === user?.user_id || 
-        item.created_by === user?.id ||
-        item.employee_id === user?.user_id ||
-        item.employee_id === user?.id
-      ).length;
-      
-      return { total, personal };
-    };
-  }, [user?.user_id, user?.id]);
+  const getEmployeeStats = (data) => {
+    if (!data) return { total: 0, personal: 0 };
+    
+    const total = data.length;
+    const personal = data.filter(item => 
+      item.created_by === user?.user_id || 
+      item.created_by === user?.id ||
+      item.employee_id === user?.user_id ||
+      item.employee_id === user?.id
+    ).length;
+    
+    return { total, personal };
+  };
 
   return {
     // بيانات أساسية
     user,
-    userRoles,
-    userPermissions,
-    productPermissions,
+    userRoles: safeUserRoles,
+    userPermissions: safeUserPermissions,
+    productPermissions: safeProductPermissions,
     loading,
     error,
 
