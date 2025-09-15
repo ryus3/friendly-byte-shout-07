@@ -33,7 +33,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSummary';
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
-import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
+// UnifiedFinancialDisplay تم حذفه نهائياً
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
