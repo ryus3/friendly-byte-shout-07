@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import StatCard from '@/components/dashboard/StatCard';
 import PendingRegistrations from '@/components/dashboard/PendingRegistrations';
-import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
+
 import TopListCard from '@/components/dashboard/TopListCard';
 import TopProvincesDialog from '@/components/dashboard/TopProvincesDialog';
 import TopProductsDialog from '@/components/dashboard/TopProductsDialog';
@@ -709,7 +709,7 @@ const Dashboard = () => {
             <Helmet><title>لوحة التحكم - RYUS</title></Helmet>
             <AnimatePresence>
                 {dialogs.pendingRegs && <PendingRegistrations onClose={() => setDialogs(d => ({ ...d, pendingRegs: false }))} />}
-                {dialogs.aiOrders && <AiOrdersManager open={dialogs.aiOrders} onClose={() => setDialogs(d => ({ ...d, aiOrders: false }))} />}
+                
                 {dialog.open && (
                     <SummaryDialog
                         open={dialog.open}
