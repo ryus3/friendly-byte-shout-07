@@ -155,6 +155,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     }
     setError(null);
     setLastCalculationTime(new Date());
+    // فقط تحديث الوقت، البيانات ستُحدث تلقائياً عبر useMemo
   }, [enableDebugLogs]);
   
   // دالة تغيير الفترة الزمنية

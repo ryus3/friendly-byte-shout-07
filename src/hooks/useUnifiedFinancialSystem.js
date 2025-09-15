@@ -26,6 +26,8 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
 
   // حساب البيانات المالية الموحدة
   const calculateUnifiedFinancials = useCallback(async () => {
+    if (loading) return; // منع التداخل
+    
     try {
       setLoading(true);
       setError(null);
@@ -246,15 +248,22 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
 
   // تشغيل الحسابات عند تحميل البيانات
   useEffect(() => {
-    if (!inventoryLoading) {
+    if (!inventoryLoading && !loading) {
       calculateUnifiedFinancials();
     }
-  }, [calculateUnifiedFinancials, inventoryLoading]);
+  }, [timePeriod, inventoryLoading, user?.id, canViewAllData]);
 
   // دالة إعادة التحميل
-  const refreshData = useCallback(() => {
-    return calculateUnifiedFinancials();
-  }, [calculateUnifiedFinancials]);
+  const refreshData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await calculateUnifiedFinancials();
+    } catch (error) {
+      console.error('❌ خطأ في إعادة تحميل البيانات المالية:', error);
+      setError(error.message);
+    }
+  }, [timePeriod, enableDebugLogs, canViewAllData, user?.id]);
 
   // دوال التنسيق
   const formatCurrency = useCallback((amount) => {
