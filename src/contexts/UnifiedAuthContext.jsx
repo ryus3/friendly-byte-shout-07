@@ -469,7 +469,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
+      redirectTo: "https://pos.ryusbrand.com/update-password",
     });
     setLoading(false);
     
