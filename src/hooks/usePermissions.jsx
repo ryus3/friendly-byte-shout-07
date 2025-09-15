@@ -9,6 +9,8 @@ import { UnifiedPermissionsContext } from '@/contexts/UnifiedPermissionsProvider
 export const usePermissions = () => {
   const context = useContext(UnifiedPermissionsContext);
   
+  
+  
   // إذا لم يكن هناك سياق، نعيد قيم افتراضية آمنة
   if (!context) {
     console.warn('usePermissions: لم يتم العثور على سياق الصلاحيات');
