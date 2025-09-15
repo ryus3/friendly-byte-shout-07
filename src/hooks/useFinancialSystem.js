@@ -197,9 +197,19 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     }
   }), [lastCalculationTime, timePeriod, filteredOrders.length, filteredExpenses.length, canViewAllData, hasPermission]);
   
+  // التأكد من أن financialMetrics موجود ومعرف قبل الاستخدام
+  const safeFinancialMetrics = financialMetrics || {
+    totalRevenue: 0,
+    netProfit: 0,
+    generalExpenses: 0,
+    employeeDuesPaid: 0,
+    ordersCount: 0,
+    avgOrderValue: 0
+  };
+
   return {
-    // البيانات المالية الرئيسية
-    ...financialMetrics,
+    // البيانات المالية الرئيسية (آمنة)
+    ...safeFinancialMetrics,
     
     // البيانات المالية الإضافية
     capitalAmount,
@@ -236,13 +246,13 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     // التحقق من صحة البيانات
     isDataValid: !error && !loading && (filteredOrders.length > 0 || filteredExpenses.length > 0),
     
-    // إحصائيات سريعة
+    // إحصائيات سريعة (آمنة)
     quickStats: {
-      hasRevenue: financialMetrics.totalRevenue > 0,
-      hasProfits: financialMetrics.netProfit > 0,
-      hasExpenses: financialMetrics.generalExpenses > 0 || financialMetrics.employeeDuesPaid > 0,
-      profitabilityStatus: financialMetrics.netProfit > 0 ? 'profitable' : 
-                          financialMetrics.netProfit < 0 ? 'loss' : 'breakeven'
+      hasRevenue: safeFinancialMetrics.totalRevenue > 0,
+      hasProfits: safeFinancialMetrics.netProfit > 0,
+      hasExpenses: safeFinancialMetrics.generalExpenses > 0 || safeFinancialMetrics.employeeDuesPaid > 0,
+      profitabilityStatus: safeFinancialMetrics.netProfit > 0 ? 'profitable' : 
+                          safeFinancialMetrics.netProfit < 0 ? 'loss' : 'breakeven'
     }
   };
 };
