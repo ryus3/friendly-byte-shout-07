@@ -317,10 +317,9 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
     return reasons;
   }, [items, products]);
 
-  const needsReviewAny = useMemo(() => needsReview || reviewReasons.length > 0, [needsReview, reviewReasons.length]);
-
   const primaryReason = useMemo(() => {
-    if (!needsReviewAny) return '';
+    const isReviewNeeded = needsReview || reviewReasons.length > 0;
+    if (!isReviewNeeded) return '';
     const unique = Array.from(new Set(reviewReasons));
     const priority = [
       /المقاس نافذ/i,
@@ -336,15 +335,16 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
       if (hit) return hit;
     }
     return unique[0] || 'هذا الطلب يحتاج مراجعة';
-  }, [reviewReasons, needsReviewAny]);
+  }, [reviewReasons, needsReview]);
 
   const gradientToUse = useMemo(() => {
+    const reviewNeeded = needsReview || reviewReasons.length > 0;
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
-    if (availability === 'available' && !needsReviewAny) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
-    if (needsReviewAny) return 'bg-gradient-to-br from-red-500 to-red-700';
+    if (availability === 'available' && !reviewNeeded) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
+    if (reviewNeeded) return 'bg-gradient-to-br from-red-500 to-red-700';
     const statusConfig = getUnifiedStatusForOrder(order);
     return statusConfig.color.includes('gradient') ? statusConfig.color : 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700';
-  }, [availability, needsReviewAny, order]);
+  }, [availability, needsReview, reviewReasons.length, order]);
 
   const isProblematic = availability !== 'available' || needsReview;
 
@@ -397,7 +397,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
             </div>
           </div>
           {/* Alerts */}
-          {needsReviewAny && (
+          {(needsReview || reviewReasons.length > 0) && (
             <div className="mb-2 p-2 rounded-md bg-white/15 border border-white/30 flex gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="text-xs">
@@ -481,7 +481,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={needsReviewAny || availability !== 'available'}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={(needsReview || reviewReasons.length > 0) || availability !== 'available'}>
                   <CheckCircle2 className="w-3 h-3" />
                   موافقة
                 </Button>
