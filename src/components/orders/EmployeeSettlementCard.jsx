@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/hooks/use-toast';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
@@ -19,7 +19,7 @@ const EmployeeSettlementCard = ({
   calculateProfit 
 }) => {
   const { settleEmployeeProfits, profits } = useInventory();
-  const { canManageEmployees, isAdmin } = useUnifiedPermissionsSystem();
+  const { canManageEmployees, isAdmin } = usePermissions();
   const [isSettling, setIsSettling] = useState(false);
 
   // التحقق من صلاحية المدير لدفع المستحقات
