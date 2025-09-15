@@ -52,12 +52,19 @@ const UnifiedAnalyticsSystem = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState(null);
 
-  // جلب البيانات المالية الموحدة
-  const financialData = useFinancialSystem(timePeriod);
+  // جلب البيانات المالية الموحدة مع حماية من الأخطاء
+  let financialData;
+  try {
+    financialData = useFinancialSystem(timePeriod);
+  } catch (error) {
+    console.error('خطأ في تحميل النظام المالي:', error);
+    financialData = { loading: true, error: error.message };
+  }
 
-  // معالجة البيانات للرسوم البيانية مع فلترة صحيحة
+  // معالجة البيانات للرسوم البيانية مع فلترة صحيحة وحماية من null
   const analyticsData = useMemo(() => {
-    if (!orders || loading || financialData.loading) return null;
+    // التحقق من توفر البيانات المالية قبل المتابعة
+    if (!financialData || typeof financialData !== 'object') return null;
 
     console.log('🔍 فلترة البيانات للفترة:', timePeriod);
     
@@ -162,7 +169,9 @@ const UnifiedAnalyticsSystem = () => {
   const handlePeriodChange = (newPeriod) => {
     console.log('🔄 تغيير الفترة من', timePeriod, 'إلى', newPeriod);
     setTimePeriod(newPeriod);
-    financialData.refreshData();
+    if (financialData?.refreshData) {
+      financialData.refreshData();
+    }
   };
 
   if (loading || !analyticsData || financialData.loading) {
