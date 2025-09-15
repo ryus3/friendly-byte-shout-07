@@ -36,7 +36,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
-  console.log('🤖 AiOrdersManager تم تحميله بنجاح');
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
