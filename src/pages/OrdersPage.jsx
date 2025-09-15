@@ -23,7 +23,7 @@ import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import EditOrderDialog from '@/components/orders/EditOrderDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
-import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
+
 import StatCard from '@/components/dashboard/StatCard';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { Card, CardContent } from '@/components/ui/card';
@@ -840,11 +840,6 @@ const OrdersPage = () => {
           }}
         />
         
-        <AnimatePresence>
-          {dialogs.aiManager && (
-            <AiOrdersManager onClose={() => setDialogs(d => ({ ...d, aiManager: false }))} />
-          )}
-        </AnimatePresence>
 
         <AlertDialog open={dialogs.deleteAlert} onOpenChange={(open) => setDialogs(d => ({...d, deleteAlert: open}))}>
             <AlertDialogTrigger asChild><span/></AlertDialogTrigger>
