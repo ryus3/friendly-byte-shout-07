@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, Package, Wallet } from 'lucide-react';
-import { useUnifiedFinancialSystem } from '@/hooks/useUnifiedFinancialSystem';
+import { useFinancialSystem as useUnifiedFinancialSystem } from '@/hooks/useFinalFinancialSystem';
 
 /**
  * رأس مالي موحد يعرض الأرقام الصحيحة

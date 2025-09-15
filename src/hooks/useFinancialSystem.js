@@ -52,13 +52,24 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     return filterExpensesByPermissions(accounting.expenses, canViewAllData, user?.id || user?.user_id);
   }, [accounting?.expenses, canViewAllData, user?.id, user?.user_id]);
   
-  // حساب المؤشرات المالية
+  // حساب المؤشرات المالية بشكل آمن
   const financialMetrics = useMemo(() => {
     if (inventoryLoading) {
       if (enableDebugLogs) {
         console.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
       }
       return { ...DEFAULT_FINANCIAL_VALUES, loading: true };
+    }
+    
+    if (!filteredOrders || !filteredExpenses) {
+      if (enableDebugLogs) {
+        console.log('⚠️ النظام المالي: البيانات المفلترة غير متاحة');
+      }
+      return { 
+        ...DEFAULT_FINANCIAL_VALUES, 
+        error: 'البيانات المفلترة غير متاحة',
+        loading: false 
+      };
     }
     
     if (!filteredOrders.length && !filteredExpenses.length) {
