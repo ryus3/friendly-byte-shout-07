@@ -1,5 +1,5 @@
 import React from 'react';
-import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
+import { usePermissions } from '@/hooks/usePermissions';
 import SettlementRequest from './SettlementRequest';
 
 /**
@@ -8,7 +8,7 @@ import SettlementRequest from './SettlementRequest';
  * الموظفون: يرون طلبات التسوية الخاصة بهم فقط
  */
 const UnifiedSettlementRequest = (props) => {
-  const { hasPermission, canViewAllData, isEmployee } = useUnifiedPermissionsSystem();
+  const { hasPermission, canViewAllData, isEmployee } = usePermissions();
   
   // فحص صلاحية إنشاء طلبات التسوية - الموظفون يمكنهم طلب التسوية
   const canRequestSettlement = isEmployee || 

@@ -6,7 +6,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
@@ -1644,6 +1644,22 @@ export const SuperProvider = ({ children }) => {
       if (isFromTelegram) {
         console.log('📱 طلب من التليغرام - فرض التوصيل عبر الوسيط');
         destination = 'alwaseet';
+      }
+      
+      // تحسين العنوان لاستخراج أقرب نقطة دالة بشكل صحيح
+      let nearestPoint = '';
+      if (aiOrder.customer_address) {
+        const words = aiOrder.customer_address.trim().split(/\s+/);
+        if (words.length > 2) {
+          // أول كلمة = مدينة، ثاني كلمة = منطقة، الباقي = أقرب نقطة دالة
+          nearestPoint = words.slice(2).join(' ');
+          console.log('🗺️ استخراج أقرب نقطة دالة:', { 
+            originalAddress: aiOrder.customer_address,
+            nearestPoint 
+          });
+        } else {
+          nearestPoint = aiOrder.customer_address;
+        }
       }
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];

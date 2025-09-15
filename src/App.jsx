@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
-import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { usePermissions } from '@/hooks/usePermissions';
 import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
@@ -18,6 +18,7 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage.jsx'));
 const Dashboard = lazy(() => import('@/pages/Dashboard.jsx'));
 const ProductsPage = lazy(() => import('@/pages/ProductsPage.jsx'));
 const ManageProductsPage = lazy(() => import('@/pages/ManageProductsPage.jsx'));
@@ -117,8 +118,9 @@ function AppContent() {
       <ScrollToTop />
       <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/update-password" element={<UpdatePasswordPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/update-password" element={<UpdatePasswordPage />} />
+            <Route path="/reset" element={<ResetPasswordPage />} />
            <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
           
           <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />
