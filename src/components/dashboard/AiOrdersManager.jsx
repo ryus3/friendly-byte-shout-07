@@ -518,7 +518,7 @@ useEffect(() => {
       default:
         return visibleOrders;
     }
-  }, [visibleOrders, statFilter]);
+  }, [visibleOrders, statFilter, orderNeedsReview]);
 
   const handleSelectAll = (checked) => {
     if (checked) {
