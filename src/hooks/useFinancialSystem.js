@@ -61,8 +61,8 @@ export const useFinancialSystem = (timePeriod = 'all', options = {}) => {
   
   const { enableDebugLogs = true } = options;
 
-  // دالة جلب البيانات المالية
-  const fetchFinancialData = useCallback(async () => {
+  // دالة جلب البيانات المالية - مبسطة بدون useCallback لتجنب التداخل
+  const fetchFinancialData = async () => {
     if (loading && financialData) return; // منع التداخل
     
     try {
@@ -238,14 +238,14 @@ export const useFinancialSystem = (timePeriod = 'all', options = {}) => {
       setLoading(false);
       return null;
     }
-  }, [timePeriod, enableDebugLogs, canViewAllData, user?.id]);
+  };
 
-  // تحميل البيانات عند التهيئة
+  // تحميل البيانات عند التهيئة - مبسط
   useEffect(() => {
     if (!inventoryLoading) {
       fetchFinancialData();
     }
-  }, [fetchFinancialData, inventoryLoading]);
+  }, [inventoryLoading, timePeriod]);  // فقط التبعيات الأساسية
 
   // دوال التنسيق
   const formatCurrency = useCallback((amount) => {
@@ -259,10 +259,10 @@ export const useFinancialSystem = (timePeriod = 'all', options = {}) => {
     return `${(percentage || 0).toFixed(1)}%`;
   }, []);
 
-  // دالة إعادة التحميل
-  const refreshData = useCallback(() => {
+  // دالة إعادة التحميل - مبسطة
+  const refreshData = () => {
     return fetchFinancialData();
-  }, [fetchFinancialData]);
+  };
 
   // إرجاع البيانات
   return {
