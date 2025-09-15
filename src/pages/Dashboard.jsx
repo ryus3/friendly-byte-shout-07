@@ -86,6 +86,7 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 }
 
 const Dashboard = () => {
+    console.log('🔥 Dashboard render start');
     const { user, pendingRegistrations } = useAuth();
     // استخدام hook واحد فقط للصلاحيات لتجنب التعارض
     const { 
@@ -97,7 +98,7 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
-    
+    console.log('🔥 Dashboard hooks initialized');
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
         console.log('🔥 Dashboard - البيانات من InventoryContext:', {
@@ -355,6 +356,7 @@ const Dashboard = () => {
         return keys.size;
     }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
 
+    console.log('🔥 Before visibleOrders definition');
     const visibleOrders = useMemo(() => {
         if (!orders) return [];
         
@@ -365,6 +367,7 @@ const Dashboard = () => {
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
+    console.log('🔥 Before financialSummary definition');
     const financialSummary = useMemo(() => {
         const periodKey = periods.netProfit;
         const now = new Date();
@@ -480,6 +483,7 @@ const Dashboard = () => {
         return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
     }, [periods.netProfit, visibleOrders, accounting, products]);
 
+    console.log('🔥 Before dashboardData definition');
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {
             totalOrdersCount: 0,
