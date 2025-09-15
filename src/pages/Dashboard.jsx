@@ -513,24 +513,15 @@ const Dashboard = () => {
         // حساب الأرباح المعلقة محلياً من الطلبات المفلترة لضمان الفلترة الزمنية الصحيحة
         const pendingProfit = filteredDeliveredOrders.reduce((sum, order) => {
           if (canViewAllData) {
-            // للمدير: حساب أرباح النظام من جدول الأرباح
-            const orderProfit = pendingProfitData?.find(p => p.order_id === order.id);
-            if (!orderProfit) return sum;
-            
-            if (orderProfit.employee_percentage === 0) {
-              // أرباح المدير المعلقة
-              return sum + (orderProfit.profit_amount || 0);
-            } else {
-              // ربح النظام من طلبات الموظفين = إجمالي الربح - ربح الموظف
-              return sum + ((orderProfit.profit_amount || 0) - (orderProfit.employee_profit || 0));
-            }
+            // للمدير: حساب الربح الأساسي من الطلب
+            const profit = calculateManagerProfit ? 
+              calculateManagerProfit(order) : 
+              calculateProfit(order);
+            return sum + (profit || 0);
           } else {
-            // للموظف: حساب أرباحه المعلقة فقط
-            const orderProfit = pendingProfitData?.find(p => 
-              p.order_id === order.id && 
-              (p.employee_id === user?.id || p.employee_id === user?.user_id)
-            );
-            return sum + (orderProfit?.employee_profit || 0);
+            // للموظف: حساب ربحه من الطلب
+            const profit = calculateProfit(order);
+            return sum + (profit || 0);
           }
         }, 0);
         
