@@ -86,34 +86,34 @@ export const usePermissions = () => {
     };
   }, [userPermissions, isAdmin]);
 
-  // Permission-based capabilities
+  // Permission-based capabilities - calculated directly to avoid TDZ issues
   const canViewAllData = useMemo(() => {
-    return isAdmin || hasPermission('view_all_data');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'view_all_data') || false;
+  }, [isAdmin, userPermissions]);
 
   const canManageEmployees = useMemo(() => {
-    return isAdmin || hasPermission('manage_employees');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'manage_employees') || false;
+  }, [isAdmin, userPermissions]);
 
   const canManageFinances = useMemo(() => {
-    return isAdmin || hasPermission('manage_finances');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'manage_finances') || false;
+  }, [isAdmin, userPermissions]);
 
   const canManageProducts = useMemo(() => {
-    return isAdmin || hasPermission('manage_products');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'manage_products') || false;
+  }, [isAdmin, userPermissions]);
 
   const canManageAccounting = useMemo(() => {
-    return isAdmin || hasPermission('manage_accounting');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'manage_accounting') || false;
+  }, [isAdmin, userPermissions]);
 
   const canManagePurchases = useMemo(() => {
-    return isAdmin || hasPermission('manage_purchases');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'manage_purchases') || false;
+  }, [isAdmin, userPermissions]);
 
   const canAccessDeliveryPartners = useMemo(() => {
-    return isAdmin || hasPermission('access_delivery_partners');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || userPermissions?.some(permission => permission.name === 'access_delivery_partners') || false;
+  }, [isAdmin, userPermissions]);
 
   // Data filtering functions
   const filterDataByUser = useMemo(() => {
