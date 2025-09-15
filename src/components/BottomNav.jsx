@@ -5,7 +5,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import CartDialog from '@/components/orders/CartDialog';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useAiChat } from '@/contexts/AiChatContext';
 import { cn } from '@/lib/utils';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
