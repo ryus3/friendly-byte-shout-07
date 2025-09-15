@@ -514,7 +514,7 @@ const Dashboard = () => {
         const pendingProfit = filteredDeliveredOrders.reduce((sum, order) => {
           if (canViewAllData) {
             // للمدير: حساب أرباح النظام من جدول الأرباح
-            const orderProfit = allProfits?.find(p => p.order_id === order.id);
+            const orderProfit = pendingProfitData?.find(p => p.order_id === order.id);
             if (!orderProfit) return sum;
             
             if (orderProfit.employee_percentage === 0) {
@@ -526,7 +526,7 @@ const Dashboard = () => {
             }
           } else {
             // للموظف: حساب أرباحه المعلقة فقط
-            const orderProfit = allProfits?.find(p => 
+            const orderProfit = pendingProfitData?.find(p => 
               p.order_id === order.id && 
               (p.employee_id === user?.id || p.employee_id === user?.user_id)
             );
