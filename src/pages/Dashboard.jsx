@@ -320,7 +320,26 @@ const Dashboard = () => {
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
     const aiOrdersCount = useMemo(() => {
-        const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
+        // Calculate directly without referencing userAiOrders to avoid TDZ
+        let list;
+        if (canViewAllData) {
+            list = Array.isArray(aiOrders) ? aiOrders : [];
+        } else {
+            if (!Array.isArray(aiOrders)) {
+                list = [];
+            } else {
+                const upper = (v) => (v ?? '').toString().trim().toUpperCase();
+                const candidates = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(upper);
+                if (!candidates.length) {
+                    list = [];
+                } else {
+                    list = aiOrders.filter((order) => {
+                        const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
+                        return by ? candidates.includes(upper(by)) : false;
+                    });
+                }
+            }
+        }
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
             if (!s) return '';
