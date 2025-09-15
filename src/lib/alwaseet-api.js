@@ -147,7 +147,7 @@ const mapToAlWaseetFields = (orderData) => {
     client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
     city_id: parseInt(orderData.customer_city_id || orderData.city_id || 0),
     region_id: parseInt(orderData.customer_region_id || orderData.region_id || 0),
-    location: orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '',
+    location: (Object.prototype.hasOwnProperty.call(orderData, 'location') ? (orderData.location || '') : (orderData.customer_address || orderData.address || orderData.client_address || '')),
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
     price: parseInt(orderData.price || orderData.final_total || orderData.total_amount || 0),

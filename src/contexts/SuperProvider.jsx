@@ -1645,6 +1645,22 @@ export const SuperProvider = ({ children }) => {
         console.log('📱 طلب من التليغرام - فرض التوصيل عبر الوسيط');
         destination = 'alwaseet';
       }
+      
+      // تحسين العنوان لاستخراج أقرب نقطة دالة بشكل صحيح
+      let nearestPoint = '';
+      if (aiOrder.customer_address) {
+        const words = aiOrder.customer_address.trim().split(/\s+/);
+        if (words.length > 2) {
+          // أول كلمة = مدينة، ثاني كلمة = منطقة، الباقي = أقرب نقطة دالة
+          nearestPoint = words.slice(2).join(' ');
+          console.log('🗺️ استخراج أقرب نقطة دالة:', { 
+            originalAddress: aiOrder.customer_address,
+            nearestPoint 
+          });
+        } else {
+          nearestPoint = aiOrder.customer_address;
+        }
+      }
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
@@ -2022,13 +2038,26 @@ export const SuperProvider = ({ children }) => {
         const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
 
         // إعداد payload الوسيط - نفس البنية من QuickOrderContent مع ملاحظات فارغة لطلبات التليغرام
+        // تحديد اسم العميل الافتراضي من إعدادات المستخدم الحالية
+        let clientName = (aiOrder.customer_name || '').trim();
+        try {
+          if (!clientName || clientName === 'زبون من التليغرام') {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('default_customer_name')
+              .eq('user_id', createdBy)
+              .maybeSingle();
+            if (prof?.default_customer_name) clientName = prof.default_customer_name;
+          }
+        } catch (_) {}
+
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          client_name: aiOrder.customer_name?.trim() || `زبون-${Date.now().toString().slice(-6)}`,
+          client_name: clientName || `زبون-${Date.now().toString().slice(-6)}`,
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          location: aiOrder.customer_address || '',
+          location: '', // منع الملء التلقائي لنقطة الدلالة (لا تملأ المدينة/المنطقة)
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
@@ -2308,11 +2337,26 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // حذف الطلب الذكي نهائياً
+      // حذف الطلب الذكي نهائياً مع ضمان الحذف
+      console.log('🗑️ حذف الطلب الذكي نهائياً:', orderId);
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
-      if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+      if (delErr) {
+        console.error('❌ فشل حذف الطلب الذكي:', delErr);
+        // محاولة تحديث الحالة بدلاً من الحذف
+        try {
+          await supabase.from('ai_orders').update({ 
+            status: 'approved',
+            processed_at: new Date().toISOString()
+          }).eq('id', orderId);
+          console.log('✅ تم تحديث حالة الطلب الذكي إلى approved');
+        } catch (updateErr) {
+          console.error('❌ فشل تحديث حالة الطلب الذكي:', updateErr);
+        }
+      } else {
+        console.log('✅ تم حذف الطلب الذكي بنجاح');
+      }
 
-      // تحديث الذاكرة
+      // تحديث الذاكرة المحلية فوراً
       setAllData(prev => ({
         ...prev,
         aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
@@ -2320,6 +2364,11 @@ export const SuperProvider = ({ children }) => {
 
       // إبطال الكاش
       superAPI.invalidate('all_data');
+      
+      // إشعار النظام بالموافقة لضمان إزالة الطلب من جميع النوافذ
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id: orderId } }));
+      }, 100);
 
       const method = deliveryPartnerData.delivery_partner === 'alwaseet' ? 'alwaseet' : 'local';
       console.log(`✅ تم تحويل الطلب الذكي بنجاح - ${method}:`, { 
