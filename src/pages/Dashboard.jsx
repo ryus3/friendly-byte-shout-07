@@ -652,11 +652,11 @@ const Dashboard = () => {
             };
         }
         
-        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
+        const localProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         const userProfits = canViewAllData 
-            ? allProfits 
-            : allProfits.filter(profit => {
+            ? localProfits 
+            : localProfits.filter(profit => {
                 const employeeId = profit.employee_id;
                 return employeeId === user?.id || employeeId === user?.user_id;
             });
