@@ -335,6 +335,7 @@ async function getEmployeeByTelegramId(chatId: number) {
           full_name: profile.full_name,
           role,
           role_title,
+          // إعطاء الأولوية لـ employee_code من جدول profiles
           employee_code: profile.employee_code || empCode
         };
       }
@@ -1505,6 +1506,7 @@ ${employee.role === 'admin' ?
     } else {
       // Process order
       console.log('Processing order for employee:', employee.employee_code);
+      console.log('Full employee data:', JSON.stringify(employee, null, 2));
       
       // جلب الاسم الافتراضي للزبون من إعدادات الموظف
       const { data: profileData } = await supabase
