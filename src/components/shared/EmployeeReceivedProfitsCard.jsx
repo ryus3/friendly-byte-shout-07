@@ -19,7 +19,7 @@ const EmployeeReceivedProfitsCard = ({
   const { period, dateRange, periodLabels } = useEmployeeReceivedPeriod();
   const [invoices, setInvoices] = useState([]);
 
-  // جلب فواتير التسوية المكتملة بالمعرف الصغير للموظف
+  // جلب فواتير التسوية المكتملة والمعتمدة بالمعرف الصغير للموظف
   useEffect(() => {
     const fetchInvoices = async () => {
       if (!user?.employee_code) return setInvoices([]);
@@ -27,12 +27,13 @@ const EmployeeReceivedProfitsCard = ({
         .from('settlement_invoices')
         .select('*')
         .eq('employee_code', user.employee_code)
-        .eq('status', 'completed')
+        .in('status', ['completed', 'approved']) // شمل الفواتير المعتمدة أيضاً
         .order('settlement_date', { ascending: false });
       if (error) {
         console.error('❌ خطأ في جلب فواتير أرباحي المستلمة:', error);
         setInvoices([]);
       } else {
+        console.log('✅ تم جلب الفواتير بنجاح:', data?.length, 'فاتورة');
         setInvoices(data || []);
       }
     };
