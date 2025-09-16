@@ -482,7 +482,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       }
       
       // التحقق من العنوان (كلمات تدل على المكان)
-      const cityVariants = {
+      const localCityVariants = {
         'بغداد': ['بغداد', 'baghdad', 'بكداد'],
         'البصرة': ['بصرة', 'بصره', 'البصرة', 'البصره', 'basra', 'basrah'],
         'أربيل': ['أربيل', 'اربيل', 'erbil', 'hawler'],
@@ -504,16 +504,22 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       };
       
       let foundCity = false;
-      for (const [city, variants] of Object.entries(cityVariants)) {
+      for (const [city, variants] of Object.entries(localCityVariants)) {
         for (const variant of variants) {
           if (lowerLine.includes(variant)) {
-            // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
-            const addressParts = await parseAddressLine(line);
-            if (addressParts.city) {
-              // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
-              customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
-            } else {
-              // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
+            try {
+              // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
+              const addressParts = await parseAddressLine(line);
+              if (addressParts.city) {
+                // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
+                customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+              } else {
+                // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
+                customerAddress = line;
+              }
+            } catch (error) {
+              console.error('خطأ في تحليل العنوان:', error);
+              // في حالة الخطأ، احفظ السطر كاملاً
               customerAddress = line;
             }
             deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
@@ -879,6 +885,47 @@ await sendTelegramMessage(chatId, message, 'HTML');
     return orderId;
   } catch (error) {
     console.error('Error processing order:', error);
+    console.error('Error details:', error.message, error.stack);
+    
+    // إرسال رسالة خطأ مفصلة للمستخدم
+    try {
+      let errorMessage = '';
+      
+      if (error.message?.includes('cityVariants') || error.message?.includes('address-parser')) {
+        errorMessage = `
+⚠️ <b>خطأ في تحليل العنوان</b>
+
+<b>السبب:</b> لم نتمكن من فهم العنوان المرسل
+
+<b>يرجى إعادة إرسال الطلب بصيغة واضحة مثل:</b>
+بغداد - الكرادة
+07901234567
+تيشرت أحمر كبير
+        `.trim();
+      } else if (error.message?.includes('duplicate') || error.message?.includes('موجود')) {
+        errorMessage = `
+⚠️ <b>طلب مكرر</b>
+
+تم إرسال نفس الطلب مسبقاً. يرجى المراجعة أو التواصل مع الإدارة.
+        `.trim();
+      } else {
+        errorMessage = `
+⚠️ <b>حدث خطأ في معالجة الطلب</b>
+
+<b>يرجى التأكد من:</b>
+• كتابة العنوان بوضوح
+• تضمين رقم الهاتف
+• كتابة اسم المنتج والمواصفات صحيحاً
+
+<b>أو التواصل مع الإدارة للمساعدة</b>
+        `.trim();
+      }
+      
+      await sendTelegramMessage(chatId, errorMessage, 'HTML');
+    } catch (notificationError) {
+      console.error('Failed to send error notification to user:', notificationError);
+    }
+    
     return false;
   }
 }
@@ -1375,6 +1422,31 @@ ${employee.role === 'admin' ?
   } catch (error) {
     console.error('Error in webhook:', error);
     console.error('Error details:', error.message, error.stack);
+    
+    // إرسال رسالة خطأ للمستخدم في حالة فشل معالجة الطلب
+    if (chatId && text && !text.startsWith('/')) {
+      try {
+        await sendTelegramMessage(chatId, `
+⚠️ <b>حدث خطأ في معالجة طلبك</b>
+
+<b>المشكلة:</b> فشل في تحليل البيانات المرسلة
+
+<b>الحل:</b>
+• تأكد من كتابة العنوان بوضوح
+• تأكد من تضمين رقم الهاتف
+• تأكد من كتابة اسم المنتج صحيحاً
+
+<b>مثال صحيح:</b>
+بغداد - الكرادة
+07901234567
+تيشرت أحمر ميديم
+
+يرجى المحاولة مرة أخرى أو التواصل مع الإدارة.
+        `.trim(), 'HTML');
+      } catch (notificationError) {
+        console.error('Failed to send error notification:', notificationError);
+      }
+    }
     
     // تأكد من إرجاع رد مناسب حتى لو حدث خطأ
     return new Response(JSON.stringify({ error: 'Internal server error' }), { 
