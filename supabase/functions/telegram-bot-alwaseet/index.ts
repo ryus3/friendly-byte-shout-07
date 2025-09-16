@@ -331,20 +331,12 @@ ${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quanti
         final_total: totalPrice + defaultDeliveryFee,
         delivery_type: orderData.deliveryType,
         order_notes: orderData.orderNotes,
-        employee_code: employee.employee_code,
-        employee_info: employeeInfo,
         telegram_chat_id: chatId,
-        processed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        original_text: `${orderData.customerName}\n${orderData.customerPhone}\n${orderData.items.map(i => i.name).join(', ')}`
       },
-      p_customer_name: orderData.customerName,
-      p_customer_phone: orderData.customerPhone,
-      p_customer_address: orderData.customerAddress || '',
-      p_customer_city: orderData.customerCity?.name,
-      p_customer_province: orderData.customerCity?.name,
-      p_total_amount: totalPrice + defaultDeliveryFee,
-      p_items: orderData.items,
-      p_telegram_chat_id: chatId,
-      p_employee_code: employee?.user_id || employee.employee_code
+      p_employee_code: employee.employee_code,
+      p_chat_id: chatId
     })
     
     if (orderId.error) {
@@ -726,20 +718,12 @@ ${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${i
         final_total: totalPrice + defaultDeliveryFee,
         delivery_type: deliveryType,
         order_notes: orderNotes,
-        employee_code: employeeCode,
-        employee_info: employeeInfo,
         telegram_chat_id: chatId,
-        processed_at: new Date().toISOString()
+        processed_at: new Date().toISOString(),
+        original_text: `${customerName}\n${customerPhone}\n${items.map(i => i.name).join(', ')}`
       },
-      p_customer_name: customerName,
-      p_customer_phone: customerPhone,
-      p_customer_address: customerAddress,
-      p_customer_city: customerCity?.name,
-      p_customer_province: customerCity?.name, // Using city as province for now
-      p_total_amount: totalPrice + defaultDeliveryFee,
-      p_items: items,
-      p_telegram_chat_id: chatId,
-      p_employee_code: employee?.user_id || employeeCode
+      p_employee_code: employeeCode,
+      p_chat_id: chatId
     })
     
     if (orderId.error) {
