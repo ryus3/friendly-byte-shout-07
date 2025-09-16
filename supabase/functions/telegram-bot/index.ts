@@ -828,7 +828,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
     // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات فقط عند الحاجة
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
-      customerName = defaultCustomerName || 'زبون جديد';
+      customerName = defaultCustomerName || null; // استخدام null بدلاً من 'زبون جديد'
     }
 
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط

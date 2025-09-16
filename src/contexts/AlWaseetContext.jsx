@@ -1983,6 +1983,16 @@ export const AlWaseetProvider = ({ children }) => {
         } 
       }));
       
+      // إشعار الحذف التلقائي مع تأخير قصير
+      setTimeout(() => {
+        console.log('📢 عرض إشعار الحذف التلقائي...');
+        toast({
+          title: "🗑️ تم حذف طلب تلقائياً",
+          description: `الطلب: ${order.tracking_number || order.order_number || order.id}\nالسبب: محذوف من شركة التوصيل`,
+          variant: "destructive"
+        });
+      }, 500);
+      
       return { 
         success: true, 
         autoDeleted: true,
