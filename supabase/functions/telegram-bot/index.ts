@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
+import { parseAddressLine } from './address-parser.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -506,7 +507,15 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       for (const [city, variants] of Object.entries(cityVariants)) {
         for (const variant of variants) {
           if (lowerLine.includes(variant)) {
-            customerAddress = line;
+            // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
+            const addressParts = await parseAddressLine(line);
+            if (addressParts.city) {
+              // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
+              customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+            } else {
+              // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
+              customerAddress = line;
+            }
             deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
             foundCity = true;
             break;
@@ -515,12 +524,20 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         if (foundCity) break;
       }
       
-      // كلمات أخرى تدل على العنوان
+      // كلمات أخرى تدل على العنوان - فقط حفظ في حقل العنوان بدون ملء تلقائي لحقل "اقرب نقطة دالة"
       if (!foundCity && (lowerLine.includes('منطقة') || lowerLine.includes('شارع') || lowerLine.includes('حي') ||
           lowerLine.includes('محافظة') || lowerLine.includes('قضاء') || lowerLine.includes('ناحية') ||
           lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
           lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة'))) {
-        customerAddress = line;
+        // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
+        const addressParts = await parseAddressLine(line);
+        if (addressParts.city) {
+          // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
+          customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+        } else {
+          // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
+          customerAddress = line;
+        }
         deliveryType = 'توصيل';
         foundCity = true;
       }

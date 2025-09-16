@@ -1335,8 +1335,36 @@ export const SuperProvider = ({ children }) => {
           orders: (prev.orders || []).filter(o => !orderIds.includes(o.id))
         }));
         
-        // STEP 3: حذف من قاعدة البيانات
+        // STEP 3: حذف من قاعدة البيانات + تنظيف ai_orders المرتبطة
         console.log('🗑️ محاولة حذف من قاعدة البيانات:', orderIds);
+        
+        // أولاً: حذف ai_orders المرتبطة بهذه الطلبات إن وجدت
+        for (const orderId of orderIds) {
+          try {
+            // البحث عن ai_orders مرتبطة بهذا الطلب عبر معرف الطلب أو البيانات
+            const { data: relatedAiOrders } = await supabase
+              .from('ai_orders')
+              .select('id')
+              .or(`id.eq.${orderId},order_data->order_id.eq.${orderId}`);
+            
+            if (relatedAiOrders && relatedAiOrders.length > 0) {
+              const aiOrderIds = relatedAiOrders.map(ai => ai.id);
+              await supabase.from('ai_orders').delete().in('id', aiOrderIds);
+              console.log(`🗑️ تم حذف ${aiOrderIds.length} طلب ذكي مرتبط بالطلب ${orderId}`);
+              
+              // تحديث الحالة المحلية أيضاً
+              aiOrderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
+              setAllData(prev => ({
+                ...prev,
+                aiOrders: (prev.aiOrders || []).filter(o => !aiOrderIds.includes(o.id))
+              }));
+            }
+          } catch (aiCleanupError) {
+            console.warn(`⚠️ فشل تنظيف ai_orders للطلب ${orderId}:`, aiCleanupError);
+          }
+        }
+        
+        // ثانياً: حذف الطلبات العادية
         const { error } = await supabase.from('orders').delete().in('id', orderIds);
         if (error) {
           console.error('❌ فشل حذف orders:', error);
