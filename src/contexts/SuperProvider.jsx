@@ -16,6 +16,7 @@ import { useProducts } from '@/hooks/useProducts.jsx';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
+import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 
 const SuperContext = createContext();
 
@@ -96,6 +97,9 @@ export const SuperProvider = ({ children }) => {
     settlementInvoices: [], 
     createSettlementRequest: () => Promise.resolve(null) 
   };
+  
+  // hook تنظيف الطلبات الذكية
+  const { deleteAiOrderWithLink, cleanupOrphanedAiOrders } = useAiOrdersCleanup();
   
   // AlWaseet context للتعامل مع شركات التوصيل مباشرة
   const { 
@@ -301,6 +305,14 @@ export const SuperProvider = ({ children }) => {
     try {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
+      
+      // تنظيف الطلبات الذكية المتبقية في الخلفية
+      setTimeout(async () => {
+        const result = await cleanupOrphanedAiOrders();
+        if (result.success && result.deletedCount > 0) {
+          console.log(`✅ تم تنظيف ${result.deletedCount} طلب ذكي متبقي`);
+        }
+      }, 3000); // تأخير 3 ثوانٍ لعدم تأثير على أداء التحميل الأولي
       
       const data = await superAPI.getAllData();
       
@@ -2336,31 +2348,8 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // ربط الطلب الذكي بالطلب الحقيقي قبل الحذف النهائي
-      try {
-        // ربط الطلب الذكي بالطلب الحقيقي للتتبع
-        await supabase
-          .from('ai_orders')
-          .update({ related_order_id: createdOrder.id })
-          .eq('id', orderId);
-        
-        // حذف الطلب الذكي باستخدام الدالة الآمنة
-        const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
-          p_ai_order_id: orderId
-        });
-        
-        if (delErr || !deleteResult) {
-          console.error('⚠️ فشل حذف الطلب الذكي بعد التحويل:', delErr);
-          // إضافة محاولة حذف مباشرة كـ fallback
-          await supabase.from('ai_orders').delete().eq('id', orderId);
-        } else {
-          console.log('✅ تم حذف الطلب الذكي بنجاح');
-        }
-      } catch (linkError) {
-        console.error('⚠️ خطأ في ربط/حذف الطلب الذكي:', linkError);
-        // محاولة حذف مباشرة في حالة الفشل
-        await supabase.from('ai_orders').delete().eq('id', orderId);
-      }
+      // حذف الطلب الذكي بأمان مع الربط
+      await deleteAiOrderWithLink(orderId, createdOrder.id);
 
       // تحديث الذاكرة
       setAllData(prev => ({

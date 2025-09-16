@@ -29,6 +29,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
+  const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
@@ -1429,15 +1430,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       try {
         const result = await createOrder(orderData);
         if (result.success) {
-          // ربط الطلب الذكي بالطلب الحقيقي ثم حذفه بأمان
-          try {
-            if (result.orderId) {
-              await supabase
-                .from('ai_orders')
-                .update({ related_order_id: result.orderId })
-                .eq('id', aiOrderData.id);
-            }
-            
+          // حذف الطلب الذكي بأمان مع الربط
+          await deleteAiOrderWithLink(aiOrderData.id, result.orderId);
             const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
               p_ai_order_id: aiOrderData.id
             });

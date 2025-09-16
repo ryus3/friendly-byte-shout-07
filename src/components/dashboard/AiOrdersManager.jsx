@@ -34,10 +34,12 @@ import AiOrderDestinationSelector from '@/components/ai-orders/AiOrderDestinatio
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import AiOrderCleanupButton from './AiOrderCleanupButton';
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
+  const { cleanupOrphanedAiOrders } = useAiOrdersCleanup();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   

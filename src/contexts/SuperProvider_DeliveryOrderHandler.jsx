@@ -1,9 +1,11 @@
 import { useUnifiedOrderCreator } from '@/contexts/AlWaseetUnifiedOrderCreator';
 import { supabase } from '@/integrations/supabase/client';
+import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 
 // دالة التعامل مع طلبات شركات التوصيل
 export const useDeliveryOrderHandler = () => {
   const { createUnifiedOrder } = useUnifiedOrderCreator();
+  const { deleteAiOrderWithLink } = useAiOrdersCleanup();
 
   const handleDeliveryPartnerOrder = async (aiOrder, itemsInput, destination, selectedAccount, accountData = null) => {
     try {
@@ -41,33 +43,8 @@ export const useDeliveryOrderHandler = () => {
       });
 
       if (result.success) {
-        // ربط الطلب الذكي بالطلب الحقيقي ثم حذفه بأمان
-        try {
-          // ربط الطلب الذكي بالطلب الحقيقي للتتبع
-          if (result.orderId) {
-            await supabase
-              .from('ai_orders')
-              .update({ related_order_id: result.orderId })
-              .eq('id', aiOrder.id);
-          }
-          
-          // حذف الطلب الذكي باستخدام الدالة الآمنة
-          const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
-            p_ai_order_id: aiOrder.id
-          });
-          
-          if (delErr || !deleteResult) {
-            console.warn('⚠️ فشل حذف الطلب الذكي بالدالة الآمنة:', delErr);
-            // محاولة حذف مباشرة كـ fallback
-            await supabase.from('ai_orders').delete().eq('id', aiOrder.id);
-          } else {
-            console.log('✅ تم حذف الطلب الذكي بنجاح من معالج التوصيل');
-          }
-        } catch (linkError) {
-          console.error('⚠️ خطأ في ربط/حذف الطلب الذكي:', linkError);
-          // محاولة حذف مباشرة في حالة الفشل
-          await supabase.from('ai_orders').delete().eq('id', aiOrder.id);
-        }
+        // حذف الطلب الذكي بأمان مع الربط
+        await deleteAiOrderWithLink(aiOrder.id, result.orderId);
 
         // تحديث الطلب المنشأ لإضافة معلومات الحساب المستخدم
         if (result.orderId && selectedAccount) {
