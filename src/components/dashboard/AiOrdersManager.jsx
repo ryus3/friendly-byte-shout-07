@@ -35,7 +35,7 @@ import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
-import AiOrderCleanupButton from './AiOrderCleanupButton';
+
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
@@ -738,9 +738,6 @@ useEffect(() => {
                      <div className="flex items-center gap-2">
                        <MessageSquare className="w-4 h-4 text-blue-600" />
                        قائمة الطلبات الذكية ({filteredOrders.length})
-                     </div>
-                     <div className="flex items-center gap-2">
-                       <AiOrderCleanupButton onCleanupComplete={refreshAll} />
                      </div>
                     
                     {/* زر الموافقة التلقائية - مدمج مع العنوان */}
