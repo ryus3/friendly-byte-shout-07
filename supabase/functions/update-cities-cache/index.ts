@@ -198,6 +198,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // متغيرات تتبع الأداء
+  const startTime = new Date();
+  let syncId: string | null = null;
+
   try {
     const { token, user_id } = await req.json();
 
@@ -208,91 +212,156 @@ serve(async (req) => {
       );
     }
 
-    console.log('🔄 بدء تحديث cache المدن والمناطق...');
+    console.log('🚀 بدء مزامنة محسنة للمدن والمناطق للمستخدم:', user_id);
+
+    // تسجيل بداية المزامنة
+    try {
+      const { data: syncData } = await supabase.rpc('log_cities_regions_sync_start');
+      syncId = syncData;
+    } catch (error) {
+      console.warn('⚠️ فشل تسجيل بداية المزامنة:', error);
+    }
 
     // جلب المدن من الوسيط
     const cities = await fetchCitiesFromAlWaseet(token);
-    
+    console.log(`📦 تم جلب ${cities.length} مدينة من الوسيط`);
+
     // تحديث cache المدن
     const citiesUpdated = await updateCitiesCache(cities);
-    console.log(`✅ تم تحديث ${citiesUpdated} مدينة`);
+    console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الـ cache`);
 
-    // جلب وتحديث المناطق لكل مدينة
     let totalRegionsUpdated = 0;
     let processedCities = 0;
 
-    for (const city of cities) {
-      try {
-        console.log(`🔄 معالجة المدينة: ${city.name} (AlWaseet ID: ${city.id})`);
-        
-        const regions = await fetchRegionsFromAlWaseet(token, city.id);
-        
-        if (regions.length > 0) {
-          // ربط المناطق بـ alwaseet_id مباشرة (وليس id الداخلي)
-          const regionsWithCorrectCityId = regions.map(region => ({
+    // جلب المناطق لكل مدينة بشكل متوازي (مجموعات صغيرة)
+    const batchSize = 5; // معالجة 5 مدن في كل مرة
+    for (let i = 0; i < cities.length; i += batchSize) {
+      const cityBatch = cities.slice(i, i + batchSize);
+      
+      const batchPromises = cityBatch.map(async (city) => {
+        try {
+          const regions = await fetchRegionsFromAlWaseet(token, city.id);
+          console.log(`📦 استخراج ${regions.length} منطقة للمدينة ${city.id} (${city.name})`);
+          
+          // معالجة وتحديث المناطق مع التأكد من استخدام alwaseet_id
+          const processedRegions = regions.map(region => ({
             ...region,
-            city_id: city.id // استخدم alwaseet_id مباشرة
+            city_id: city.id // استخدام معرف المدينة من الوسيط مباشرة
           }));
           
-          const regionsUpdated = await updateRegionsCache(regionsWithCorrectCityId);
-          console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name} (AlWaseet ID: ${city.id})`);
-          totalRegionsUpdated += regionsUpdated;
-        } else {
-          console.log(`⚠️ لا توجد مناطق للمدينة ${city.name}`);
+          const regionsUpdated = await updateRegionsCache(processedRegions);
+          console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name}`);
+          
+          return { regionsUpdated, cityProcessed: 1 };
+        } catch (error) {
+          console.error(`❌ خطأ في معالجة مناطق المدينة ${city.id} (${city.name}):`, error);
+          return { regionsUpdated: 0, cityProcessed: 0 };
         }
-        
-        processedCities++;
+      });
 
-        // انتظار قصير بين المدن لتجنب Rate Limiting
-        if (processedCities % 5 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
-      } catch (error) {
-        console.error(`❌ خطأ في معالجة مناطق المدينة ${city.name}:`, error);
+      const batchResults = await Promise.all(batchPromises);
+      
+      // جمع النتائج
+      batchResults.forEach(result => {
+        totalRegionsUpdated += result.regionsUpdated;
+        processedCities += result.cityProcessed;
+      });
+
+      // استراحة قصيرة بين المجموعات
+      if (i + batchSize < cities.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
-    console.log(`✅ تم تحديث ${totalRegionsUpdated} منطقة من ${processedCities} مدينة`);
+    const endTime = new Date();
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000;
 
-    // تسجيل عملية التحديث
-    if (user_id) {
-      await supabase
-        .from('auto_sync_log')
-        .insert({
-          sync_type: 'cities_regions_cache',
-          triggered_by: user_id,
-          success: true,
-          results: {
-            cities_updated: citiesUpdated,
-            regions_updated: totalRegionsUpdated,
-            cities_processed: processedCities
-          },
-          completed_at: new Date().toISOString()
+    // تسجيل نهاية المزامنة الناجحة
+    if (syncId) {
+      try {
+        await supabase.rpc('log_cities_regions_sync_end', {
+          p_sync_id: syncId,
+          p_start_time: startTime.toISOString(),
+          p_cities_count: citiesUpdated,
+          p_regions_count: totalRegionsUpdated,
+          p_success: true
         });
+      } catch (error) {
+        console.warn('⚠️ فشل تسجيل نهاية المزامنة:', error);
+      }
+    }
+
+    // تسجيل عملية التحديث في auto_sync_log
+    if (user_id) {
+      try {
+        await supabase
+          .from('auto_sync_log')
+          .insert({
+            sync_type: 'cities_regions_cache',
+            triggered_by: user_id,
+            success: true,
+            results: {
+              cities_updated: citiesUpdated,
+              regions_updated: totalRegionsUpdated,
+              cities_processed: processedCities,
+              duration_seconds: duration
+            },
+            completed_at: endTime.toISOString()
+          });
+      } catch (error) {
+        console.warn('⚠️ فشل تسجيل العملية في auto_sync_log:', error);
+      }
+    }
+
+    const responseData = {
+      success: true,
+      message: 'تم تحديث المدن والمناطق بنجاح',
+      cities_updated: citiesUpdated,
+      regions_updated: totalRegionsUpdated,
+      cities_processed: processedCities,
+      duration_seconds: duration,
+      timestamp: endTime.toISOString(),
+      last_sync_at: endTime.toISOString()
+    };
+
+    console.log(`🎉 مزامنة محسنة مكتملة في ${duration} ثانية:`, responseData);
+
+    return new Response(JSON.stringify(responseData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    const endTime = new Date();
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000;
+    
+    console.error('❌ خطأ في مزامنة المدن والمناطق:', error);
+
+    // تسجيل فشل المزامنة
+    if (syncId) {
+      try {
+        await supabase.rpc('log_cities_regions_sync_end', {
+          p_sync_id: syncId,
+          p_start_time: startTime.toISOString(),
+          p_cities_count: 0,
+          p_regions_count: 0,
+          p_success: false,
+          p_error_message: error.message
+        });
+      } catch (logError) {
+        console.warn('⚠️ فشل تسجيل خطأ المزامنة:', logError);
+      }
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        cities_updated: citiesUpdated,
-        regions_updated: totalRegionsUpdated,
-        cities_processed: processedCities,
-        message: `تم تحديث ${citiesUpdated} مدينة و ${totalRegionsUpdated} منطقة بنجاح`
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
-  } catch (error) {
-    console.error('❌ خطأ في تحديث cache المدن والمناطق:', error);
-    
-    return new Response(
       JSON.stringify({ 
-        error: 'فشل تحديث cache المدن والمناطق', 
-        details: error.message 
+        success: false, 
+        error: error.message,
+        duration_seconds: duration,
+        timestamp: endTime.toISOString()
       }),
       { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }

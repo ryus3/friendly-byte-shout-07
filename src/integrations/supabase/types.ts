@@ -417,6 +417,42 @@ export type Database = {
         }
         Relationships: []
       }
+      cities_regions_sync_log: {
+        Row: {
+          cities_count: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          last_sync_at: string
+          regions_count: number | null
+          success: boolean | null
+          sync_duration_seconds: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          cities_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string
+          regions_count?: number | null
+          success?: boolean | null
+          sync_duration_seconds?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          cities_count?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_sync_at?: string
+          regions_count?: number | null
+          success?: boolean | null
+          sync_duration_seconds?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: []
+      }
       city_benefit_usage: {
         Row: {
           applied_at: string
@@ -4423,6 +4459,10 @@ export type Database = {
           total_variants: number
         }[]
       }
+      get_last_cities_regions_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -4592,6 +4632,21 @@ export type Database = {
       link_telegram_user: {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
+      }
+      log_cities_regions_sync_end: {
+        Args: {
+          p_cities_count?: number
+          p_error_message?: string
+          p_regions_count?: number
+          p_start_time: string
+          p_success?: boolean
+          p_sync_id: string
+        }
+        Returns: undefined
+      }
+      log_cities_regions_sync_start: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }

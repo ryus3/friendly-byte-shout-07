@@ -8,6 +8,7 @@ export const useCitiesCache = () => {
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [syncInfo, setSyncInfo] = useState(null);
   const { token } = useAlWaseet();
 
   // جلب المدن من cache
@@ -74,6 +75,20 @@ export const useCitiesCache = () => {
     }
   };
 
+  // جلب معلومات آخر مزامنة
+  const fetchSyncInfo = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_last_cities_regions_sync');
+      if (error) throw error;
+      setSyncInfo(data);
+      if (data?.last_sync_at) {
+        setLastUpdated(data.last_sync_at);
+      }
+    } catch (error) {
+      console.error('خطأ في جلب معلومات المزامنة:', error);
+    }
+  };
+
   // تحديث cache من شركة التوصيل
   const updateCache = async () => {
     if (!token) {
@@ -87,8 +102,13 @@ export const useCitiesCache = () => {
 
     setLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke('update-cities-cache', {
-        body: { token }
+        body: { 
+          token,
+          user_id: session?.user?.id 
+        }
       });
 
       if (error) throw error;
@@ -98,14 +118,23 @@ export const useCitiesCache = () => {
         // تحديث قائمة المدن والمناطق بعد التحديث الناجح
         await fetchCities();
         await fetchAllRegions();
-        setLastUpdated(new Date());
+        await fetchSyncInfo(); // جلب معلومات المزامنة المحدثة
+        
         toast({
           title: "نجح التحديث",
           description: data.message || "تم تحديث cache المدن والمناطق بنجاح",
           variant: "default"
         });
+        
+        return {
+          success: true,
+          cities_updated: data.cities_updated || 0,
+          regions_updated: data.regions_updated || 0,
+          duration_seconds: data.duration_seconds || 0,
+          timestamp: data.timestamp
+        };
       }
-      return success;
+      return { success: false };
     } catch (error) {
       console.error('❌ خطأ في تحديث cache:', error);
       toast({
@@ -113,7 +142,7 @@ export const useCitiesCache = () => {
         description: error.message || "حدث خطأ أثناء تحديث cache المدن والمناطق",
         variant: "destructive"
       });
-      return false;
+      return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
@@ -127,6 +156,7 @@ export const useCitiesCache = () => {
     const loadCacheData = async () => {
       await fetchCities();
       await fetchAllRegions();
+      await fetchSyncInfo();
     };
     loadCacheData();
   }, []);
@@ -136,10 +166,12 @@ export const useCitiesCache = () => {
     regions,
     loading,
     lastUpdated,
+    syncInfo,
     fetchCities,
     fetchRegionsByCity,
     fetchAllRegions,
     updateCache,
+    fetchSyncInfo,
     isCacheEmpty
   };
 };

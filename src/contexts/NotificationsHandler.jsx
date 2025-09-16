@@ -109,7 +109,7 @@ const NotificationsHandler = () => {
         async (payload) => {
           try {
             // محاولة جلب اسم الموظف مع معالجة حالة created_by = null
-            let employeeName = 'موظف تليغرام';
+            let employeeName = 'طلب تليغرام';
             
             if (payload.new?.created_by) {
               const { data: emp } = await supabase
@@ -120,7 +120,13 @@ const NotificationsHandler = () => {
               
               if (emp?.full_name) {
                 employeeName = emp.full_name;
+              } else {
+                // إذا لم يتم العثور على اسم الموظف
+                employeeName = 'موظف غير معروف';
               }
+            } else {
+              // للطلبات الواردة من التليغرام بدون created_by
+              employeeName = 'طلب تليغرام';
             }
             
             console.log('🔔 إرسال إشعار طلب ذكي:', { 
