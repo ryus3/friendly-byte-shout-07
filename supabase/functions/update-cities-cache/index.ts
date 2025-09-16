@@ -225,27 +225,17 @@ serve(async (req) => {
       try {
         console.log(`🔄 معالجة المدينة: ${city.name} (AlWaseet ID: ${city.id})`);
         
-        // جلب أولاً معرف المدينة الداخلي من cities_cache
-        const { data: cachedCity } = await supabase
-          .from('cities_cache')
-          .select('id')
-          .eq('alwaseet_id', city.id)
-          .single();
-        
-        const internalCityId = cachedCity?.id;
-        console.log(`📍 معرف المدينة الداخلي: ${internalCityId} للمدينة ${city.name}`);
-        
         const regions = await fetchRegionsFromAlWaseet(token, city.id);
         
         if (regions.length > 0) {
-          // تأكد من ربط المناطق بمعرف المدينة الداخلي الصحيح
+          // ربط المناطق بـ alwaseet_id مباشرة (وليس id الداخلي)
           const regionsWithCorrectCityId = regions.map(region => ({
             ...region,
-            city_id: internalCityId || city.id // استخدم المعرف الداخلي أو الخارجي
+            city_id: city.id // استخدم alwaseet_id مباشرة
           }));
           
           const regionsUpdated = await updateRegionsCache(regionsWithCorrectCityId);
-          console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name} (ID: ${internalCityId})`);
+          console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name} (AlWaseet ID: ${city.id})`);
           totalRegionsUpdated += regionsUpdated;
         } else {
           console.log(`⚠️ لا توجد مناطق للمدينة ${city.name}`);

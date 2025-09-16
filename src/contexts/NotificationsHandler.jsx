@@ -52,21 +52,29 @@ const NotificationsHandler = () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
-          // جلب اسم المستخدم صاحب الطلب
+          // جلب اسم المستخدم صاحب الطلب مع معالجة حالة created_by = null
           const getUserName = async () => {
             try {
-              const { data: userData } = await supabase
-                .from('profiles')
-                .select('full_name')
-                .eq('user_id', payload.new.created_by)
-                .single();
+              let userName = 'مستخدم غير معروف';
               
-              const userName = userData?.full_name || 'مستخدم غير معروف';
+              // إذا كان created_by موجود، جلب اسم المستخدم
+              if (payload.new.created_by) {
+                const { data: userData } = await supabase
+                  .from('profiles')
+                  .select('full_name')
+                  .eq('user_id', payload.new.created_by)
+                  .maybeSingle(); // استخدام maybeSingle بدلاً من single
+                
+                userName = userData?.full_name || 'موظف غير معروف';
+              } else {
+                // إذا كان created_by فارغ، هذا طلب من التليغرام
+                userName = 'طلب من التليغرام';
+              }
               
               addNotification({
                 type: 'new_order',
                 title: 'طلب جديد',
-                message: `طلب رقم ${payload.new.order_number} من ${userName}`,
+                message: `طلب رقم ${payload.new.order_number} بواسطة ${userName}`,
                 icon: 'ShoppingCart',
                 color: 'blue',
                 data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
@@ -74,10 +82,11 @@ const NotificationsHandler = () => {
               });
             } catch (error) {
               console.error('Error fetching user name:', error);
+              // fallback notification
               addNotification({
                 type: 'new_order',
                 title: 'طلب جديد',
-                message: `طلب رقم ${payload.new.order_number}`,
+                message: `طلب رقم ${payload.new.order_number} بواسطة مستخدم غير معروف`,
                 icon: 'ShoppingCart',
                 color: 'blue',
                 data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
@@ -99,29 +108,55 @@ const NotificationsHandler = () => {
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
         async (payload) => {
           try {
-            // محاولة جلب اسم الموظف
-            let employeeName = 'موظف';
+            // محاولة جلب اسم الموظف مع معالجة حالة created_by = null
+            let employeeName = 'موظف تليغرام';
+            
             if (payload.new?.created_by) {
               const { data: emp } = await supabase
                 .from('profiles')
                 .select('full_name')
                 .eq('user_id', payload.new.created_by)
-                .single();
-              if (emp?.full_name) employeeName = emp.full_name;
+                .maybeSingle(); // استخدام maybeSingle بدلاً من single
+              
+              if (emp?.full_name) {
+                employeeName = emp.full_name;
+              }
             }
+            
+            console.log('🔔 إرسال إشعار طلب ذكي:', { 
+              ai_order_id: payload.new?.id, 
+              employee: employeeName,
+              created_by: payload.new?.created_by 
+            });
+            
             addNotification({
               type: 'new_ai_order',
-              title: 'طلب جديد من تليجرام',
-              message: `تم استلام طلب جديد من ${employeeName}`,
+              title: 'طلب ذكي جديد من تليغرام',
+              message: `تم استلام طلب ذكي جديد من ${employeeName}`,
               icon: 'MessageSquare',
               color: 'amber',
               data: { ai_order_id: payload.new?.id || null },
               user_id: null,
             });
+            
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
-            try { window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new })); } catch {}
+            try { 
+              window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
+                detail: { ...payload.new, employeeName } 
+              })); 
+            } catch {}
           } catch (e) {
             console.error('AI order notification error:', e);
+            // إشعار احتياطي في حالة الخطأ
+            addNotification({
+              type: 'new_ai_order',
+              title: 'طلب ذكي جديد',
+              message: 'تم استلام طلب ذكي جديد من التليغرام',
+              icon: 'MessageSquare',
+              color: 'amber',
+              data: { ai_order_id: payload.new?.id || null },
+              user_id: null,
+            });
           }
         }
       )

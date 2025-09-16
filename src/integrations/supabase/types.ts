@@ -4310,6 +4310,10 @@ export type Database = {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
       }
+      fix_regions_cities_linking: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       generate_customer_promo_code: {
         Args: { customer_id_param: string }
         Returns: string
