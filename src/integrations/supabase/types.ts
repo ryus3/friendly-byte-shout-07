@@ -3956,7 +3956,7 @@ export type Database = {
         Returns: undefined
       }
       approve_employee_complete: {
-        Args: { p_full_name?: string; p_user_id: string }
+        Args: { p_full_name: string; p_user_id: string }
         Returns: Json
       }
       auth_with_username: {
