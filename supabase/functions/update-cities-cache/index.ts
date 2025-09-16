@@ -75,6 +75,7 @@ async function fetchCitiesFromAlWaseet(token: string): Promise<AlWaseetCity[]> {
 
 async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<AlWaseetRegion[]> {
   try {
+    console.log(`🔄 طلب مناطق المدينة ${cityId} من الوسيط...`);
     const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
       body: { 
         endpoint: 'regions', 
@@ -96,24 +97,33 @@ async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<
     if (data && typeof data === 'object' && !Array.isArray(data)) {
       if (data.data && Array.isArray(data.data)) {
         regionsData = data.data;
+        console.log(`📦 استخراج ${regionsData.length} منطقة للمدينة ${cityId}`);
       } else {
-        console.log(`⚠️ لا توجد مناطق للمدينة ${cityId}`);
+        console.log(`⚠️ لا توجد مناطق للمدينة ${cityId} - البيانات:`, data);
         return [];
       }
     }
 
     if (!regionsData || !Array.isArray(regionsData)) {
-      console.log(`⚠️ لا توجد مناطق للمدينة ${cityId}`);
+      console.log(`⚠️ لا توجد مناطق للمدينة ${cityId} - بيانات غير صحيحة:`, regionsData);
       return [];
     }
 
-    return regionsData.map(region => ({
-      id: parseInt(region.id) || region.id,
-      city_id: parseInt(region.city_id) || cityId, // استخدم city_id من الاستجابة أولاً
-      name: region.name,
-      name_ar: region.name_ar || region.name,
-      name_en: region.name_en || null
-    }));
+    // تأكد من أن كل منطقة مرتبطة بالمدينة الصحيحة
+    const processedRegions = regionsData.map(region => {
+      const processedRegion = {
+        id: parseInt(region.id) || region.id,
+        city_id: cityId, // فرض ربط المنطقة بالمدينة المطلوبة
+        name: region.name,
+        name_ar: region.name_ar || region.name,
+        name_en: region.name_en || null
+      };
+      console.log(`✅ معالجة منطقة: ${processedRegion.name} -> مدينة ${cityId}`);
+      return processedRegion;
+    });
+
+    console.log(`✅ تم معالجة ${processedRegions.length} منطقة للمدينة ${cityId}`);
+    return processedRegions;
   } catch (error) {
     console.error(`❌ خطأ في جلب مناطق المدينة ${cityId}:`, error);
     return [];
@@ -213,23 +223,39 @@ serve(async (req) => {
 
     for (const city of cities) {
       try {
-        console.log(`🔄 جلب مناطق المدينة: ${city.name} (ID: ${city.id})`);
+        console.log(`🔄 معالجة المدينة: ${city.name} (AlWaseet ID: ${city.id})`);
+        
+        // جلب أولاً معرف المدينة الداخلي من cities_cache
+        const { data: cachedCity } = await supabase
+          .from('cities_cache')
+          .select('id')
+          .eq('alwaseet_id', city.id)
+          .single();
+        
+        const internalCityId = cachedCity?.id;
+        console.log(`📍 معرف المدينة الداخلي: ${internalCityId} للمدينة ${city.name}`);
+        
         const regions = await fetchRegionsFromAlWaseet(token, city.id);
         
-        // تأكد من أن city_id صحيح لكل منطقة
-        const regionsWithCorrectCityId = regions.map(region => ({
-          ...region,
-          city_id: city.id // تأكد من ربط المنطقة بالمدينة الصحيحة
-        }));
+        if (regions.length > 0) {
+          // تأكد من ربط المناطق بمعرف المدينة الداخلي الصحيح
+          const regionsWithCorrectCityId = regions.map(region => ({
+            ...region,
+            city_id: internalCityId || city.id // استخدم المعرف الداخلي أو الخارجي
+          }));
+          
+          const regionsUpdated = await updateRegionsCache(regionsWithCorrectCityId);
+          console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name} (ID: ${internalCityId})`);
+          totalRegionsUpdated += regionsUpdated;
+        } else {
+          console.log(`⚠️ لا توجد مناطق للمدينة ${city.name}`);
+        }
         
-        const regionsUpdated = await updateRegionsCache(regionsWithCorrectCityId);
-        console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name}`);
-        totalRegionsUpdated += regionsUpdated;
         processedCities++;
 
         // انتظار قصير بين المدن لتجنب Rate Limiting
-        if (processedCities % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+        if (processedCities % 5 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       } catch (error) {
         console.error(`❌ خطأ في معالجة مناطق المدينة ${city.name}:`, error);

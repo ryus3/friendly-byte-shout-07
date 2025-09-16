@@ -9,10 +9,13 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 const CitiesCacheManager = () => {
   const { 
     cities, 
+    regions,
     loading, 
     lastUpdated, 
     updateCache, 
-    isCacheEmpty 
+    isCacheEmpty,
+    fetchCities,
+    fetchRegionsByCity
   } = useCitiesCache();
   const { isLoggedIn, activePartner, waseetUser } = useAlWaseet();
 
@@ -89,11 +92,17 @@ const CitiesCacheManager = () => {
       <CardContent className="space-y-4">
         
         {/* معلومات Cache الحالي */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-muted-foreground">عدد المدن:</span>
             <Badge variant="secondary">{cities.length}</Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-orange-500" />
+            <span className="text-sm text-muted-foreground">عدد المناطق:</span>
+            <Badge variant="secondary">{regions?.length || 0}</Badge>
           </div>
           
           <div className="flex items-center gap-2">
@@ -112,6 +121,31 @@ const CitiesCacheManager = () => {
             </Badge>
           </div>
         </div>
+
+        {/* عرض توزيع المناطق حسب المدن */}
+        {!isCacheEmpty() && cities.length > 0 && (
+          <div className="mt-4 p-4 bg-secondary/30 rounded-lg">
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              توزيع المناطق حسب المدن (أول 5 مدن):
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+              {cities.slice(0, 5).map((city) => (
+                <div key={city.id} className="flex items-center justify-between p-2 bg-background rounded border">
+                  <span className="font-medium truncate">{city.name}</span>
+                  <Badge variant="outline" className="text-xs">
+                    {regions?.filter(r => r.city_id === city.id).length || 0} منطقة
+                  </Badge>
+                </div>
+              ))}
+              {cities.length > 5 && (
+                <div className="text-muted-foreground p-2">
+                  و {cities.length - 5} مدن أخرى...
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* تنبيه حسب نوع شركة التوصيل */}
         {activePartner === 'local' && (
