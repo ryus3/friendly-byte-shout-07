@@ -35,16 +35,15 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
     'ميسان': ['ميسان', 'العمارة', 'maysan']
   };
 
-  // قاموس المناطق الشائعة لكل مدينة مع أولويات (الأطول أولاً)
+  // قاموس المناطق الشائعة لكل مدينة مع أولويات
   const regionPatterns = {
     'بغداد': [
-      // مناطق مركبة طويلة (أولوية عالية جداً)
-      'دورة حي الصحة', 'دورة صحة', 'كرادة داخل', 'كرادة خارج', 
+      // مناطق مركبة (أولوية أعلى)
+      'دورة صحة', 'دورة حي الصحة', 'كرادة داخل', 'كرادة خارج', 
       'مدينة الصدر', 'حي الصدر', 'مدينة العمال', 'شارع فلسطين',
       'حي العدل', 'حي الجامعة', 'حي البياع', 'حي الغدير',
       'حي الأطباء', 'حي الصالحية', 'حي الكريمات', 'حي الجزائر',
-      'الدورة اسكان', 'الدورة الصحة', 'كفتئات الصحة',
-      // مناطق مفردة (أولوية أقل)
+      // مناطق مفردة
       'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور', 
       'الرصافة', 'الكرخ', 'الشعلة', 'البياع', 'الغدير',
       'الصدر', 'العدل', 'الجامعة', 'الصالحية', 'الكريمات'
@@ -77,88 +76,50 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
     if (detectedCity) break;
   }
 
-  // إذا وُجدت المدينة، ابحث عن المنطقة بذكاء
+  // إذا وُجدت المدينة، ابحث عن المنطقة
   if (detectedCity && regionPatterns[detectedCity]) {
     const regions = regionPatterns[detectedCity];
-    const fullText = text.toLowerCase();
+    const textAfterCity = words.slice(cityIndex + 1).join(' ').toLowerCase();
     
-    // خوارزمية ذكية للبحث عن أفضل مطابقة
-    let bestMatch = null;
-    let bestScore = 0;
-    
+    // البحث عن المناطق المركبة أولاً (أولوية أعلى)
     for (const region of regions) {
-      const regionLower = region.toLowerCase();
-      const regionWords = regionLower.split(/\s+/);
+      const regionWords = region.split(/\s+/);
       
-      // البحث عن مطابقة كاملة أولاً
-      if (fullText.includes(regionLower)) {
-        const score = regionLower.length; // المنطقة الأطول لها نقاط أكثر
-        if (score > bestScore) {
-          bestMatch = region;
-          bestScore = score;
-          
-          // العثور على موقع المنطقة في النص
-          const startPos = fullText.indexOf(regionLower);
-          const beforeText = fullText.substring(0, startPos);
-          const wordsBefore = beforeText.split(/\s+/).length - 1;
-          regionStartIndex = Math.max(0, wordsBefore);
-          regionEndIndex = regionStartIndex + regionWords.length - 1;
+      // البحث عن مطابقة كاملة للمنطقة المركبة
+      for (let i = cityIndex + 1; i <= words.length - regionWords.length; i++) {
+        const candidateRegion = words.slice(i, i + regionWords.length).join(' ').toLowerCase();
+        if (candidateRegion === region.toLowerCase()) {
+          detectedRegion = region;
+          regionStartIndex = i;
+          regionEndIndex = i + regionWords.length - 1;
+          break;
         }
       }
-      // البحث عن مطابقة جزئية ذكية للمناطق المركبة
-      else if (regionWords.length > 1) {
-        let foundWordsCount = 0;
-        for (const word of regionWords) {
-          if (fullText.includes(word)) {
-            foundWordsCount++;
-          }
-        }
-        // إذا وُجدت معظم كلمات المنطقة
-        if (foundWordsCount >= Math.ceil(regionWords.length * 0.7)) {
-          const score = foundWordsCount * regionLower.length * 0.5; // نقاط أقل للمطابقة الجزئية
-          if (score > bestScore) {
-            bestMatch = region;
-            bestScore = score;
-            regionStartIndex = cityIndex + 1;
-            regionEndIndex = cityIndex + 1;
-          }
-        }
-      }
+      
+      if (detectedRegion) break;
     }
-    
-    detectedRegion = bestMatch;
   }
 
-  // تحديد النص المتبقي (أقرب نقطة دالة) بطريقة ذكية
-  let remainingText = text;
+  // تحديد النص المتبقي (اقرب نقطة دالة)
+  let remainingWords = [...words];
   
-  // إزالة المدينة المكتشفة
-  if (detectedCity) {
-    const cityVariants = cityVariants[detectedCity] || [detectedCity];
-    for (const variant of cityVariants) {
-      const regex = new RegExp(`\\b${variant}\\b`, 'gi');
-      remainingText = remainingText.replace(regex, '').trim();
+  // إزالة المدينة
+  if (cityIndex !== -1) {
+    remainingWords.splice(cityIndex, 1);
+    // تعديل فهارس المنطقة بعد إزالة المدينة
+    if (regionStartIndex > cityIndex) {
+      regionStartIndex--;
+      regionEndIndex--;
     }
   }
   
-  // إزالة المنطقة المكتشفة
-  if (detectedRegion) {
-    const regex = new RegExp(`\\b${detectedRegion.replace(/\s+/g, '\\s+')}\\b`, 'gi');
-    remainingText = remainingText.replace(regex, '').trim();
+  // إزالة المنطقة إن وُجدت
+  if (regionStartIndex !== -1 && regionEndIndex !== -1) {
+    const regionLength = regionEndIndex - regionStartIndex + 1;
+    remainingWords.splice(regionStartIndex, regionLength);
   }
-  
-  // إزالة أرقام الهواتف العراقية
-  remainingText = remainingText.replace(/\b07[5789]\d{8}\b/g, '').trim();
-  
-  // إزالة كلمات لا تصلح كأقرب نقطة دالة
-  const unwantedWords = ['استلام', 'محلي', 'توصيل', 'طلب', 'زبون', 'من', 'في', 'على', 'عند', 'قرب', 'مقابل'];
-  for (const word of unwantedWords) {
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    remainingText = remainingText.replace(regex, '').trim();
-  }
-  
-  // تنظيف المسافات الزائدة والرموز
-  remainingText = remainingText.replace(/\s+/g, ' ').replace(/[,،\-\s]+$/, '').trim();
+
+  const remainingText = remainingWords.join(' ').trim();
 
   return {
     city: detectedCity,
@@ -173,10 +134,9 @@ export function findRegionsByName(cityName: string, regionText: string): string[
 
   const regionPatterns = {
     'بغداد': [
-      'دورة حي الصحة', 'دورة صحة', 'كرادة داخل', 'كرادة خارج', 
+      'دورة صحة', 'دورة حي الصحة', 'كرادة داخل', 'كرادة خارج', 
       'مدينة الصدر', 'حي الصدر', 'مدينة العمال', 'شارع فلسطين',
       'حي العدل', 'حي الجامعة', 'حي البياع', 'حي الغدير',
-      'الدورة اسكان', 'الدورة الصحة', 'كفتئات الصحة',
       'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور'
     ]
   };

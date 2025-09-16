@@ -1924,7 +1924,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
           
           // إشعار المدير
-        toast({
+        showToast({
           title: "حذف طلب تلقائي",
           description: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
           variant: "destructive"
