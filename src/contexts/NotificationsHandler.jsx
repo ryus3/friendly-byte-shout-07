@@ -10,15 +10,23 @@ const NotificationsHandler = () => {
   useEffect(() => {
     // التحقق من الشروط الأساسية
     if (!supabase || !user || !addNotification) {
+      console.log('❌ NotificationsHandler: Missing requirements', { 
+        supabase: !!supabase, 
+        user: !!user, 
+        addNotification: !!addNotification 
+      });
       return;
     }
     
-    // فحص إذا كان المستخدم مدير - تبسيط الفحص
-    const isAdmin = user.role === 'admin';
+    console.log('🔄 NotificationsHandler: Setting up notifications for user:', {
+      userId: user.id,
+      role: user.role,
+      employeeCode: user.employee_code,
+      isAdmin: user.role === 'admin'
+    });
     
-    if (!isAdmin) {
-      return; // إشعارات المدير فقط
-    }
+    // فحص إذا كان المستخدم مدير
+    const isAdmin = user.role === 'admin';
     
     // ADMIN ONLY NOTIFICATIONS - These create notifications directly
     
@@ -100,73 +108,111 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
-    // إشعارات طلبات تليجرام (AI Orders) - للمدير فوراً
+    // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين
     const aiOrdersChannel = supabase
-      .channel('ai-orders-notifications-handler-admin')
+      .channel('ai-orders-notifications-handler-all-users')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
         async (payload) => {
+          console.log('🔥 AI Orders Real-time INSERT detected:', {
+            payload: payload.new,
+            currentUser: user.id,
+            userRole: user.role,
+            userEmployeeCode: user.employee_code,
+            orderCreatedBy: payload.new?.created_by
+          });
+
           try {
-            // محاولة جلب اسم الموظف مع معالجة حالة created_by = null
+            // محاولة جلب بيانات الموظف الذي أنشأ الطلب
             let employeeName = 'طلب تليغرام';
+            let employeeProfile = null;
             
             if (payload.new?.created_by) {
+              // البحث بـ employee_code في جدول profiles  
               const { data: emp } = await supabase
                 .from('profiles')
-                .select('full_name')
-                .eq('user_id', payload.new.created_by)
-                .maybeSingle(); // استخدام maybeSingle بدلاً من single
+                .select('user_id, full_name, employee_code')
+                .eq('employee_code', payload.new.created_by)
+                .maybeSingle();
+              
+              console.log('👤 Employee profile lookup result:', emp);
               
               if (emp?.full_name) {
                 employeeName = emp.full_name;
+                employeeProfile = emp;
               } else {
-                // إذا لم يتم العثور على اسم الموظف
-                employeeName = 'موظف غير معروف';
+                employeeName = `موظف ${payload.new.created_by}`;
               }
-            } else {
-              // للطلبات الواردة من التليغرام بدون created_by
-              employeeName = 'طلب تليغرام';
             }
             
-            console.log('🔔 إرسال إشعار طلب ذكي:', { 
-              ai_order_id: payload.new?.id, 
-              employee: employeeName,
-              created_by: payload.new?.created_by 
-            });
-            
-            addNotification({
-              type: 'new_ai_order',
-              title: 'طلب ذكي جديد من تليغرام',
-              message: `تم استلام طلب ذكي جديد من ${employeeName}`,
-              icon: 'MessageSquare',
-              color: 'amber',
-              data: { ai_order_id: payload.new?.id || null },
-              user_id: null,
-            });
+            // إشعار للموظف الذي أنشأ الطلب
+            if (employeeProfile && user.employee_code === payload.new.created_by) {
+              console.log('✅ Adding notification for employee who created the order');
+              addNotification({
+                type: 'new_ai_order',
+                title: `طلب ذكي جديد - ${payload.new.customer_name}`,
+                message: `تم إنشاء طلب ذكي جديد من ${payload.new.customer_name} بقيمة ${payload.new.total_amount} دينار`,
+                icon: 'MessageSquare',
+                color: 'green',
+                data: { 
+                  ai_order_id: payload.new.id,
+                  customer_name: payload.new.customer_name,
+                  total_amount: payload.new.total_amount,
+                  source: payload.new.source,
+                  created_by: payload.new.created_by
+                },
+                user_id: user.id,
+              });
+            }
+
+            // إشعار للمديرين (بغض النظر عن من أنشأ الطلب)
+            if (isAdmin) {
+              console.log('✅ Adding admin notification for AI order');
+              addNotification({
+                type: 'new_ai_order',
+                title: 'طلب ذكي جديد من تليغرام',
+                message: `طلب ذكي جديد من ${employeeName} - ${payload.new.customer_name} بقيمة ${payload.new.total_amount} دينار`,
+                icon: 'MessageSquare',
+                color: 'amber',
+                data: { 
+                  ai_order_id: payload.new.id,
+                  customer_name: payload.new.customer_name,
+                  total_amount: payload.new.total_amount,
+                  source: payload.new.source,
+                  created_by: payload.new.created_by,
+                  employee_name: employeeName
+                },
+                user_id: null, // Admin notification
+              });
+            }
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
-            try { 
-              window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
-                detail: { ...payload.new, employeeName } 
-              })); 
-            } catch {}
+            console.log('🔄 Dispatching aiOrderCreated event');
+            window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
+              detail: { ...payload.new, employeeName } 
+            })); 
+            
           } catch (e) {
-            console.error('AI order notification error:', e);
+            console.error('❌ AI order notification error:', e);
             // إشعار احتياطي في حالة الخطأ
-            addNotification({
-              type: 'new_ai_order',
-              title: 'طلب ذكي جديد',
-              message: 'تم استلام طلب ذكي جديد من التليغرام',
-              icon: 'MessageSquare',
-              color: 'amber',
-              data: { ai_order_id: payload.new?.id || null },
-              user_id: null,
-            });
+            if (isAdmin) {
+              addNotification({
+                type: 'new_ai_order',
+                title: 'طلب ذكي جديد',
+                message: 'تم استلام طلب ذكي جديد من التليغرام',
+                icon: 'MessageSquare',
+                color: 'amber',
+                data: { ai_order_id: payload.new?.id || null },
+                user_id: null,
+              });
+            }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔄 AI Orders Real-time subscription status:', status);
+      });
 
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
 

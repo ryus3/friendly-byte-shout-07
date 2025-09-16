@@ -37,24 +37,37 @@ export const setupRealtime = () => {
     })
     .subscribe();
 
-  // تشغيل الإشعارات الفورية للطلبات الذكية مع debouncing
+  // تشغيل الإشعارات الفورية للطلبات الذكية مع debouncing وتسجيل مفصل
   const aiOrdersChannel = supabase
-    .channel('ai-orders-realtime')
+    .channel('ai-orders-realtime-setup')
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
       table: 'ai_orders'
     }, (payload) => {
+      console.log('🔥 realtime-setup.js: AI Orders event received:', {
+        eventType: payload.eventType,
+        table: payload.table,
+        schema: payload.schema,
+        new: payload.new,
+        old: payload.old
+      });
+      
       const type = payload.eventType;
       if (type === 'INSERT') {
+        console.log('✅ realtime-setup.js: Dispatching aiOrderCreated event');
         debouncedDispatch('aiOrderCreated', payload.new, 150);
       } else if (type === 'UPDATE') {
+        console.log('✅ realtime-setup.js: Dispatching aiOrderUpdated event');
         debouncedDispatch('aiOrderUpdated', payload.new, 200);
       } else if (type === 'DELETE') {
+        console.log('✅ realtime-setup.js: Dispatching aiOrderDeleted event');
         debouncedDispatch('aiOrderDeleted', payload.old, 150);
       }
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('🔄 realtime-setup.js: AI Orders subscription status:', status);
+    });
 
   // تشغيل الإشعارات الفورية للإشعارات مع debouncing
   const notificationsChannel = supabase
