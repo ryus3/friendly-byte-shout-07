@@ -368,7 +368,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
+    const actualDefaultCustomerName = profileData?.default_customer_name || defaultCustomerName || 'زبون من التليغرام';
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -568,6 +568,40 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     // تعيين القيم الافتراضية - استخدام اسم الزبون الافتراضي إذا لم يكن هناك اسم صحيح
     if (!customerName) customerName = defaultCustomerName;
     
+    // معالجة العنوان باستخدام cache المدن والمناطق
+    let cityId = null;
+    let regionId = null;
+    let parsedCity = '';
+    let parsedRegion = '';
+    
+    if (customerAddress && deliveryType === 'توصيل') {
+      try {
+        // استخدام cache لتحليل العنوان
+        const { data: addressParts } = await supabase.rpc('parse_address_using_cache', {
+          p_address_text: customerAddress
+        });
+        
+        if (addressParts && addressParts.city_id) {
+          cityId = addressParts.city_id;
+          regionId = addressParts.region_id;
+          parsedCity = addressParts.city_name || '';
+          parsedRegion = addressParts.region_name || '';
+          
+          console.log('✅ تم تحليل العنوان باستخدام cache:', {
+            original: customerAddress,
+            city_id: cityId,
+            region_id: regionId,
+            city_name: parsedCity,
+            region_name: parsedRegion
+          });
+        } else {
+          console.log('⚠️ لم يتم العثور على مطابقة في cache للعنوان:', customerAddress);
+        }
+      } catch (error) {
+        console.error('❌ خطأ في تحليل العنوان:', error);
+      }
+    }
+    
     // إذا لم يذكر عنوان وكان النوع توصيل، اجعله محلي
     if (!customerAddress && deliveryType === 'توصيل') {
       deliveryType = 'محلي';
@@ -766,7 +800,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
     // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
-      customerName = defaultCustomerName || 'زبون من التليغرام';
+      customerName = actualDefaultCustomerName || 'زبون من التليغرام';
     }
 
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
@@ -779,11 +813,19 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         delivery_type: 'توصيل', // فرض التوصيل لجميع طلبات التليغرام
         parsing_method: 'cache_based_v3',
         items_count: items.length,
-        source: 'telegram' // إضافة مصدر الطلب
+        source: 'telegram', // إضافة مصدر الطلب
+        city_id: cityId, // معرف المدينة من cache
+        region_id: regionId, // معرف المنطقة من cache
+        parsed_city: parsedCity, // اسم المدينة المحللة
+        parsed_region: parsedRegion // اسم المنطقة المحللة
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
       p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
+      p_customer_city: parsedCity || null, // المدينة المحللة
+      p_customer_region: parsedRegion || null, // المنطقة المحللة
+      p_city_id: cityId, // معرف المدينة للوسيط
+      p_region_id: regionId, // معرف المنطقة للوسيط
       p_total_amount: totalPrice,
       p_items: items,
       p_telegram_chat_id: chatId,

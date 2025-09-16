@@ -41,13 +41,32 @@ async function fetchCitiesFromAlWaseet(token: string): Promise<AlWaseetCity[]> {
       throw new Error(`فشل جلب المدن: ${error.message}`);
     }
 
-    if (!data || !Array.isArray(data)) {
-      console.error('❌ البيانات المستلمة غير صحيحة:', data);
+    // معالجة structure الاستجابة الصحيح من alwaseet-proxy
+    let citiesData = data;
+    
+    // إذا كانت الاستجابة object مع خاصية data، استخرجها
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      if (data.data && Array.isArray(data.data)) {
+        citiesData = data.data;
+        console.log('📦 تم استخراج البيانات من الكائن:', { originalStructure: Object.keys(data) });
+      } else {
+        console.error('❌ البيانات المستلمة غير صحيحة:', data);
+        throw new Error('البيانات المستلمة من الوسيط غير صحيحة');
+      }
+    }
+
+    if (!citiesData || !Array.isArray(citiesData)) {
+      console.error('❌ البيانات المستلمة غير صحيحة:', citiesData);
       throw new Error('البيانات المستلمة من الوسيط غير صحيحة');
     }
 
-    console.log(`✅ تم جلب ${data.length} مدينة من الوسيط`);
-    return data;
+    console.log(`✅ تم جلب ${citiesData.length} مدينة من الوسيط`);
+    return citiesData.map(city => ({
+      id: parseInt(city.id) || city.id,
+      name: city.name,
+      name_ar: city.name_ar || city.name,
+      name_en: city.name_en || null
+    }));
   } catch (error) {
     console.error('❌ خطأ في الاتصال بواجهة الوسيط:', error);
     throw error;
@@ -70,14 +89,30 @@ async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<
       return []; // لا نفشل التحديث بسبب مدينة واحدة
     }
 
-    if (!data || !Array.isArray(data)) {
+    // معالجة structure الاستجابة الصحيح من alwaseet-proxy
+    let regionsData = data;
+    
+    // إذا كانت الاستجابة object مع خاصية data، استخرجها
+    if (data && typeof data === 'object' && !Array.isArray(data)) {
+      if (data.data && Array.isArray(data.data)) {
+        regionsData = data.data;
+      } else {
+        console.log(`⚠️ لا توجد مناطق للمدينة ${cityId}`);
+        return [];
+      }
+    }
+
+    if (!regionsData || !Array.isArray(regionsData)) {
       console.log(`⚠️ لا توجد مناطق للمدينة ${cityId}`);
       return [];
     }
 
-    return data.map(region => ({
-      ...region,
-      city_id: cityId
+    return regionsData.map(region => ({
+      id: parseInt(region.id) || region.id,
+      city_id: cityId,
+      name: region.name,
+      name_ar: region.name_ar || region.name,
+      name_en: region.name_en || null
     }));
   } catch (error) {
     console.error(`❌ خطأ في جلب مناطق المدينة ${cityId}:`, error);
