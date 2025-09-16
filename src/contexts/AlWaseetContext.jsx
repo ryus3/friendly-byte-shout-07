@@ -1160,7 +1160,7 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
-      console.log(`✅ تم حذف الطلب ${orderToDelete.order_number || orderId} تلقائياً من ${source}`);
+      console.log(`✅ تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number || orderId} تلقائياً من ${source}`);
       
       // 4. إشعار المستخدم عند الحذف التلقائي
       if (source === 'fastSync') {
@@ -1924,7 +1924,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
           
           // إشعار المدير
-        showToast({
+        toast({
           title: "حذف طلب تلقائي",
           description: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
           variant: "destructive"
