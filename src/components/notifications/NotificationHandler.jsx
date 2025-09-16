@@ -70,6 +70,12 @@ export const useNotificationHandler = () => {
       }
     }
     
+    // معالجة إشعارات الطلبات الذكية
+    else if (notification.type === 'new_ai_order') {
+      // التوجه لصفحة طلبات الذكاء الاصطناعي
+      navigate('/ai-orders');
+    }
+    
     // معالجة أنواع إشعارات أخرى...
     else {
       console.log('نوع إشعار غير معروف:', notification.type);

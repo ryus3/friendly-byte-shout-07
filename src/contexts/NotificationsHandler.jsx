@@ -151,15 +151,12 @@ const NotificationsHandler = () => {
               console.log('✅ Adding notification for employee who created the order');
               addNotification({
                 type: 'new_ai_order',
-                title: `طلب ذكي جديد - ${payload.new.customer_name}`,
-                message: `تم إنشاء طلب ذكي جديد من ${payload.new.customer_name} بقيمة ${payload.new.total_amount} دينار`,
+                title: 'طلب ذكي جديد',
+                message: `طلب ذكي جديد بواسطة ${employeeName}`,
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
                   ai_order_id: payload.new.id,
-                  customer_name: payload.new.customer_name,
-                  total_amount: payload.new.total_amount,
-                  source: payload.new.source,
                   created_by: payload.new.created_by
                 },
                 user_id: user.id,
@@ -171,15 +168,12 @@ const NotificationsHandler = () => {
               console.log('✅ Adding admin notification for AI order');
               addNotification({
                 type: 'new_ai_order',
-                title: 'طلب ذكي جديد من تليغرام',
-                message: `طلب ذكي جديد من ${employeeName} - ${payload.new.customer_name} بقيمة ${payload.new.total_amount} دينار`,
+                title: 'طلب ذكي جديد',
+                message: `طلب ذكي جديد بواسطة ${employeeName}`,
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 
                   ai_order_id: payload.new.id,
-                  customer_name: payload.new.customer_name,
-                  total_amount: payload.new.total_amount,
-                  source: payload.new.source,
                   created_by: payload.new.created_by,
                   employee_name: employeeName
                 },
