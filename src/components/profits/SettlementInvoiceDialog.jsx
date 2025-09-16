@@ -9,6 +9,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { MobileTable, MobileTableBody, MobileTableRow, MobileTableCell } from '@/components/ui/mobile-table';
 
 const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const IRAQ_TIMEZONE = 'Asia/Baghdad'; // المنطقة الزمنية العراقية
@@ -18,6 +19,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [realOrdersData, setRealOrdersData] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [realInvoiceData, setRealInvoiceData] = useState(null);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Add null check for invoice
     if (!invoice) {
@@ -83,6 +85,18 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
             setLoadingOrders(false);
         }
     };
+
+    // التحقق من حجم الشاشة
+    React.useEffect(() => {
+        const checkIsMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+        
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+        
+        return () => window.removeEventListener('resize', checkIsMobile);
+    }, []);
 
     // جلب البيانات عند فتح النافذة
     React.useEffect(() => {
@@ -215,98 +229,175 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                         </h3>
                                     </div>
                                     
-                                    <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-1 shadow-2xl">
-                                        <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden">
-                                            {/* Header */}
-                                            <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
-                                            <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
-                                                    <div className="text-blue-300">رقم الطلب</div>
-                                                    <div className="text-slate-300">تاريخ الطلب</div>
-                                                    <div className="text-green-300">العميل</div>
-                                                    <div className="text-orange-300">المبلغ</div>
-                                                    <div className="text-purple-300">الإجراءات</div>
+{(() => {
+                                        
+                                        if (isMobile) {
+                                            // عرض للهاتف - استخدام MobileTable
+                                            return (
+                                                <MobileTable className="space-y-4">
+                                                    <MobileTableBody>
+                                                        {loadingOrders ? (
+                                                            <div className="text-center py-8 text-slate-500">
+                                                                <p className="text-lg">جاري تحميل بيانات الطلبات الحقيقية...</p>
+                                                            </div>
+                                                        ) : finalOrdersDetails.length === 0 ? (
+                                                            <div className="text-center py-8 text-slate-500">
+                                                                <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
+                                                            </div>
+                                                        ) : (
+                                                            finalOrdersDetails.map((order) => (
+                                                                <MobileTableRow key={order.id}>
+                                                                    {/* رقم الطلب بشكل بارز */}
+                                                                    <MobileTableCell primary>
+                                                                        <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-2 rounded-xl shadow-lg text-base">
+                                                                            #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                        </span>
+                                                                    </MobileTableCell>
+                                                                    
+                                                                    {/* معلومات الطلب */}
+                                                                    <MobileTableCell label="تاريخ الطلب">
+                                                                        {(() => {
+                                                                            if (order.created_at) {
+                                                                                try {
+                                                                                    const d = parseISO(order.created_at);
+                                                                                    if (isNaN(d.getTime())) return 'تاريخ غير صحيح';
+                                                                                    return formatInTimeZone(d, IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
+                                                                                } catch (error) {
+                                                                                    return 'تاريخ غير صحيح';
+                                                                                }
+                                                                            }
+                                                                            return 'غير محدد';
+                                                                        })()}
+                                                                    </MobileTableCell>
+                                                                    
+                                                                    <MobileTableCell label="العميل">
+                                                                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                                                            {order.customer_name || order.customerinfo?.name || 'غير محدد'}
+                                                                        </span>
+                                                                    </MobileTableCell>
+                                                                    
+                                                                    <MobileTableCell label="المبلغ">
+                                                                        <div className="text-right">
+                                                                            <div className="text-xl font-black text-green-600 dark:text-green-400">
+                                                                                {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
+                                                                            </div>
+                                                                            <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
+                                                                        </div>
+                                                                    </MobileTableCell>
+                                                                    
+                                                                    {/* زر عرض التفاصيل */}
+                                                                    <MobileTableCell actions>
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm"
+                                                                            onClick={() => handleViewOrder(order)}
+                                                                            className="gap-2 hover:bg-blue-50 hover:border-blue-300"
+                                                                        >
+                                                                            <Eye className="w-4 h-4" />
+                                                                            عرض التفاصيل
+                                                                        </Button>
+                                                                    </MobileTableCell>
+                                                                </MobileTableRow>
+                                                            ))
+                                                        )}
+                                                    </MobileTableBody>
+                                                </MobileTable>
+                                            );
+                                        }
+                                        
+                                        // عرض للحاسوب - التصميم الأصلي
+                                        return (
+                                            <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-1 shadow-2xl">
+                                                <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden">
+                                                    {/* Header */}
+                                                    <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
+                                                        <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
+                                                            <div className="text-blue-300">رقم الطلب</div>
+                                                            <div className="text-slate-300">تاريخ الطلب</div>
+                                                            <div className="text-green-300">العميل</div>
+                                                            <div className="text-orange-300">المبلغ</div>
+                                                            <div className="text-purple-300">الإجراءات</div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {/* Orders List */}
+                                                    <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                        {loadingOrders ? (
+                                                            <div className="text-center py-8 text-slate-500">
+                                                                <p className="text-lg">جاري تحميل بيانات الطلبات الحقيقية...</p>
+                                                            </div>
+                                                        ) : finalOrdersDetails.length === 0 ? (
+                                                            <div className="text-center py-8 text-slate-500">
+                                                                <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
+                                                            </div>
+                                                        ) : (
+                                                            finalOrdersDetails.map((order, index) => (
+                                                                <div 
+                                                                    key={order.id} 
+                                                                    className={`grid grid-cols-5 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
+                                                                        index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
+                                                                    }`}
+                                                                >
+                                                                    {/* رقم الطلب */}
+                                                                    <div className="flex items-center justify-center">
+                                                                        <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
+                                                                            #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                    {/* تاريخ الطلب */}
+                                                                    <div className="flex items-center justify-center">
+                                                                        <div className="text-base text-slate-700 dark:text-slate-300">
+                                                                            {(() => {
+                                                                                if (order.created_at) {
+                                                                                    try {
+                                                                                        const d = parseISO(order.created_at);
+                                                                                        if (isNaN(d.getTime())) return 'تاريخ غير صحيح';
+                                                                                        return formatInTimeZone(d, IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
+                                                                                    } catch (error) {
+                                                                                        return 'تاريخ غير صحيح';
+                                                                                    }
+                                                                                }
+                                                                                return 'غير محدد';
+                                                                            })()}
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* العميل */}
+                                                                    <div className="flex items-center justify-center">
+                                                                        <div className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                                                                            {order.customer_name || order.customerinfo?.name || 'غير محدد'}
+                                                                        </div>
+                                                                    </div>
+                                                                    
+                                                                    {/* المبلغ */}
+                                                                    <div className="flex flex-col items-center justify-center">
+                                                                        <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
+                                                                            {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
+                                                                        </div>
+                                                                        <div className="text-sm text-green-500 font-semibold">د.ع</div>
+                                                                    </div>
+                                                                    
+                                                                    {/* الإجراءات */}
+                                                                    <div className="flex items-center justify-center">
+                                                                        <Button 
+                                                                            variant="outline" 
+                                                                            size="sm"
+                                                                            onClick={() => handleViewOrder(order)}
+                                                                            className="gap-2 hover:bg-blue-50 hover:border-blue-300"
+                                                                        >
+                                                                            <Eye className="w-4 h-4" />
+                                                                            عرض التفاصيل
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                            
-                                             {/* Orders List */}
-                                             <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                 {loadingOrders ? (
-                                                     <div className="text-center py-8 text-slate-500">
-                                                         <p className="text-lg">جاري تحميل بيانات الطلبات الحقيقية...</p>
-                                                     </div>
-                                                 ) : finalOrdersDetails.length === 0 ? (
-                                                     <div className="text-center py-8 text-slate-500">
-                                                         <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
-                                                     </div>
-                                                ) : (
-                                                    finalOrdersDetails.map((order, index) => (
-                                                        <div 
-                                                            key={order.id} 
-                                                            className={`grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-6 py-4 md:py-6 px-4 md:px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
-                                                                index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
-                                                            }`}
-                                                        >
-                                                             {/* رقم الطلب - متوافق مع الهاتف */}
-                                                             <div className="flex flex-col items-center justify-center gap-2">
-                                                                 <span className="text-xs md:hidden text-slate-500">رقم الطلب:</span>
-                                                                 <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-3 py-2 md:px-4 md:py-3 rounded-xl shadow-lg text-sm md:text-lg hover:scale-105 transition-transform">
-                                                                     #{order.order_number || order.trackingnumber || 'غير محدد'}
-                                                                 </span>
-                                                             </div>
-                                                             {/* تاريخ الطلب - عمود مستقل */}
-                                                             <div className="flex flex-col items-center justify-center">
-                                                                 <span className="text-xs md:hidden text-slate-500 mb-1">تاريخ الطلب:</span>
-                                                                 <div className="text-sm md:text-base text-slate-700 dark:text-slate-300">
-                                                                     {(() => {
-                                                                         if (order.created_at) {
-                                                                             try {
-                                                                                 const d = parseISO(order.created_at);
-                                                                                 if (isNaN(d.getTime())) return 'تاريخ غير صحيح';
-                                                                                 return formatInTimeZone(d, IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
-                                                                             } catch (error) {
-                                                                                 return 'تاريخ غير صحيح';
-                                                                             }
-                                                                         }
-                                                                         return 'غير محدد';
-                                                                     })()}
-                                                                 </div>
-                                                             </div>
-                                                             
-                                                            {/* العميل - متوافق مع الهاتف */}
-                                                            <div className="flex flex-col items-center justify-center">
-                                                                <span className="text-xs md:hidden text-slate-500 mb-1">العميل:</span>
-                                                                <div className="text-sm md:text-lg font-bold text-slate-700 dark:text-slate-300">
-                                                                    {order.customer_name || order.customerinfo?.name || 'غير محدد'}
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            {/* المبلغ - متوافق مع الهاتف */}
-                                                            <div className="flex flex-col items-center justify-center">
-                                                                <span className="text-xs md:hidden text-slate-500 mb-1">المبلغ:</span>
-                                                                <div className="text-xl md:text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                                                    {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
-                                                                </div>
-                                                                <div className="text-xs md:text-sm text-green-500 font-semibold">د.ع</div>
-                                                            </div>
-                                                            
-                                                            {/* الإجراءات - متوافق مع الهاتف */}
-                                                            <div className="flex items-center justify-center mt-2 md:mt-0">
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="sm"
-                                                                    onClick={() => handleViewOrder(order)}
-                                                                    className="gap-2 hover:bg-blue-50 hover:border-blue-300 text-xs md:text-sm"
-                                                                >
-                                                                    <Eye className="w-3 h-3 md:w-4 md:h-4" />
-                                                                    عرض التفاصيل
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                 </CardContent>
                             </Card>
 
