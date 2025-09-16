@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
-import { parseAddressLine } from './address-parser.ts';
+import { parseAddressWithCache } from './address-cache-parser.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -344,7 +344,7 @@ async function getEmployeeByTelegramId(chatId: number) {
   return null;
 }
 
-async function processOrderText(text: string, chatId: number, employeeCode: string) {
+async function processOrderText(text: string, chatId: number, employeeCode: string, defaultCustomerName?: string) {
   try {
     const lines = text.split('\n').filter(line => line.trim());
     
@@ -777,7 +777,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         telegram_user_id: chatId,
         employee_code: employeeCode,
         delivery_type: 'توصيل', // فرض التوصيل لجميع طلبات التليغرام
-        parsing_method: 'advanced_v2',
+        parsing_method: 'cache_based_v3',
         items_count: items.length,
         source: 'telegram' // إضافة مصدر الطلب
       },
@@ -1367,8 +1367,19 @@ ${employee.role === 'admin' ?
     } else {
       // Process order
       console.log('Processing order for employee:', employee.employee_code);
+      
+      // جلب الاسم الافتراضي للزبون من إعدادات الموظف
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('default_customer_name')
+        .eq('user_id', employee.user_id)
+        .single();
+      
+      const defaultCustomerName = profileData?.default_customer_name;
+      console.log(`📝 الاسم الافتراضي للزبون: ${defaultCustomerName || 'غير محدد'}`);
+      
       // تم إلغاء رسالة الانتظار بناءً على طلبكم
-      await processOrderText(text, chatId, employee.employee_code);
+      await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
     }
 
     return new Response('OK', { status: 200, headers: corsHeaders });

@@ -21,6 +21,7 @@ import {
 import ComprehensiveDeliveryManagementDialog from '@/components/delivery/ComprehensiveDeliveryManagementDialog';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
+import CitiesCacheManager from '@/components/cities-cache/CitiesCacheManager';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
@@ -402,6 +403,21 @@ const SettingsPage = () => {
               </div>
             </ModernCard>
           </div>
+
+          {/* إدارة cache المدن والمناطق - للمديرين */}
+          {canAccessDeliveryPartners && (
+            <>
+              <SectionHeader 
+                icon={Database} 
+                title="إدارة بيانات المدن والمناطق"
+                description="نظام cache المدن والمناطق لضمان دقة العناوين في بوت التليغرام"
+              />
+              
+              <div className="mb-8">
+                <CitiesCacheManager />
+              </div>
+            </>
+          )}
 
           <SectionHeader 
             icon={Database} 
