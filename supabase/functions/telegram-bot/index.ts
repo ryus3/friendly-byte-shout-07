@@ -368,7 +368,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون جديد';
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -511,11 +511,27 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
               const addressParts = await parseAddressLine(line);
               if (addressParts.city) {
-                // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
-                customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+                // تنظيف أقرب نقطة دالة من الكلمات المحجوزة
+                let cleanAddress = addressParts.remainingText.trim();
+                
+                // إزالة الكلمات المحجوزة من أقرب نقطة دالة
+                const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي', 'تسليم', 'استلام'];
+                reservedWords.forEach(word => {
+                  cleanAddress = cleanAddress.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+                });
+                
+                // تنظيف المسافات الزائدة والفواصل
+                cleanAddress = cleanAddress.replace(/\s+/g, ' ').replace(/^[,،\s]+|[,،\s]+$/g, '').trim();
+                
+                customerAddress = cleanAddress || null;
               } else {
-                // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
-                customerAddress = line;
+                // إذا لم تُحلل بنجاح، احفظ السطر كاملاً بعد تنظيفه
+                let cleanLine = line;
+                const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي'];
+                reservedWords.forEach(word => {
+                  cleanLine = cleanLine.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+                });
+                customerAddress = cleanLine.replace(/\s+/g, ' ').trim() || null;
               }
             } catch (error) {
               console.error('خطأ في تحليل العنوان:', error);
@@ -538,11 +554,27 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
         const addressParts = await parseAddressLine(line);
         if (addressParts.city) {
-          // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
-          customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+          // تنظيف أقرب نقطة دالة من الكلمات المحجوزة
+          let cleanAddress = addressParts.remainingText.trim();
+          
+          // إزالة الكلمات المحجوزة من أقرب نقطة دالة
+          const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي', 'تسليم', 'استلام'];
+          reservedWords.forEach(word => {
+            cleanAddress = cleanAddress.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+          });
+          
+          // تنظيف المسافات الزائدة والفواصل
+          cleanAddress = cleanAddress.replace(/\s+/g, ' ').replace(/^[,،\s]+|[,،\s]+$/g, '').trim();
+          
+          customerAddress = cleanAddress || null;
         } else {
-          // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
-          customerAddress = line;
+          // إذا لم تُحلل بنجاح، احفظ السطر كاملاً بعد تنظيفه
+          let cleanLine = line;
+          const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي'];
+          reservedWords.forEach(word => {
+            cleanLine = cleanLine.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
+          });
+          customerAddress = cleanLine.replace(/\s+/g, ' ').trim() || null;
         }
         deliveryType = 'توصيل';
         foundCity = true;
@@ -772,7 +804,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
     // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
-      customerName = defaultCustomerName || 'زبون من التليغرام';
+      customerName = defaultCustomerName;
     }
 
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
@@ -789,7 +821,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
-      p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
+      p_customer_address: customerAddress || null,
       p_total_amount: totalPrice,
       p_items: items,
       p_telegram_chat_id: chatId,
