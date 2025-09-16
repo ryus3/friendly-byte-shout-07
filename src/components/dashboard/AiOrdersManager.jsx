@@ -58,8 +58,13 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [ordersFromContext, processedOrders]);
   
-  // تزامن مع البيانات من Context عند التحديث
+  // تزامن مع البيانات من Context عند التحديث مع logging للتشخيص
   useEffect(() => {
+    console.log('🔄 AiOrdersManager: تحديث الطلبات من Context', {
+      contextOrders: ordersFromContext.length,
+      dedupedOrders: dedupedContextOrders.length,
+      processedOrders: processedOrders.length
+    });
     setOrders(dedupedContextOrders);
   }, [dedupedContextOrders]);
   
@@ -78,10 +83,15 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   useEffect(() => {
     const handleAiOrderCreated = async (event) => {
       const newOrder = event.detail;
+      console.log('🎯 AiOrdersManager: استلام طلب جديد', newOrder?.id);
       if (newOrder?.id) {
         setOrders(prev => {
           // تجنب التكرار
-          if (prev.some(o => o.id === newOrder.id)) return prev;
+          if (prev.some(o => o.id === newOrder.id)) {
+            console.log('⚠️ طلب مكرر، تم تجاهله:', newOrder.id);
+            return prev;
+          }
+          console.log('✅ إضافة طلب جديد للقائمة:', newOrder.id);
           return [newOrder, ...prev];
         });
 

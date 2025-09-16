@@ -2069,7 +2069,11 @@ export const SuperProvider = ({ children }) => {
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          client_name: aiOrder.customer_name?.trim() || `زبون-${Date.now().toString().slice(-6)}`,
+          client_name: (aiOrder.customer_name && 
+            aiOrder.customer_name !== 'زبون من تليغرام' && 
+            aiOrder.customer_name.trim() !== '') 
+            ? aiOrder.customer_name 
+            : (profile?.default_customer_name || `زبون-${Date.now().toString().slice(-6)}`),
           client_mobile: normalizedPhone,
           client_mobile2: '',
           location: aiOrder.customer_address || '',
