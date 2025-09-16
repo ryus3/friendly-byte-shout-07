@@ -135,7 +135,7 @@ async function getRoleDisplayName(userId: string, fallbackRole: 'admin' | 'manag
   return fallbackRole === 'admin' ? 'مدير عام' : fallbackRole === 'manager' ? 'مشرف' : 'موظف مبيعات';
 }
 
-// Helper function to validate customer name
+// Helper function to validate customer name with smart Arabic name detection
 function isValidCustomerName(name: string): boolean {
   const trimmed = name.trim()
   // رفض الأسماء الفارغة أو القصيرة جداً
@@ -146,13 +146,29 @@ function isValidCustomerName(name: string): boolean {
   if (/^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(trimmed)) return false
   // رفض الأسماء التي تحتوي على أرقام هواتف
   if (/07[5789]\d{8}/.test(trimmed)) return false
+  
+  // قبول الأسماء العربية الصحيحة (حروف عربية مع مسافات)
+  if (/^[\u0600-\u06FF\s]+$/.test(trimmed)) {
+    const words = trimmed.split(/\s+/).filter(word => word.length >= 2);
+    // إذا كان هناك 1-4 كلمات عربية، فهو اسم صحيح
+    if (words.length >= 1 && words.length <= 4) return true;
+  }
+  
+  // قبول الأسماء اللاتينية الصحيحة
+  if (/^[a-zA-Z\s]+$/.test(trimmed)) {
+    const words = trimmed.split(/\s+/).filter(word => word.length >= 2);
+    if (words.length >= 1 && words.length <= 4) return true;
+  }
+  
   // رفض الأسماء التي تبدو مثل عناوين (تحتوي على مدن عراقية شائعة)
-  const addressWords = ['بغداد', 'البصرة', 'اربيل', 'دهوك', 'كربلاء', 'النجف', 'الانبار', 'نينوى', 'صلاح الدين', 'القادسية', 'بابل', 'واسط', 'ذي قار', 'المثنى', 'ميسان', 'الدورة', 'الكرادة', 'المنصور', 'الكاظمية', 'الاعظمية', 'الحلة', 'كركوك', 'تكريت', 'الرمادي', 'الفلوجة', 'الموصل', 'السماوة', 'الديوانية', 'العمارة', 'الناصرية']
+  const addressWords = ['بغداد', 'البصرة', 'اربيل', 'دهوك', 'كربلاء', 'النجف', 'الانبار', 'نينوى', 'صلاح الدين', 'القادسية', 'بابل', 'واسط', 'ذي قار', 'المثنى', 'ميسان', 'الدورة', 'الكرادة', 'المنصور', 'الكاظمية', 'الاعظمية']
   const lowerName = trimmed.toLowerCase()
   if (addressWords.some(word => lowerName.includes(word.toLowerCase()))) return false
+  
   // رفض الأسماء التي تحتوي على كلمات عناوين شائعة
-  if (/\b(شارع|حي|منطقة|قرب|مقابل|جانب|محلة|صحة|مستشفى|جامع|مدرسة|مول|سوق)\b/i.test(trimmed)) return false
-  return true
+  if (/\b(شارع|حي|منطقة|قرب|مقابل|جانب|محلة|مستشفى|جامع|مدرسة|مول|سوق)\b/i.test(trimmed)) return false
+  
+  return false; // رفض الحالات الأخرى
 }
 
 // توحيد سجل الموظف القادم من أي استعلام
@@ -545,12 +561,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       if (foundCity) continue;
       
 // إذا لم يكن رقم أو سعر أو عنوان، فقد يكون اسم زبون أو منتج
-      if (!phoneFound && i === 0 && !priceMatch && !line.includes('+')) {
+      if (!customerName && i === 0 && !priceMatch && !line.includes('+')) {
         // السطر الأول اسم الزبون إذا لم نجد رقم بعد وكان اسماً صحيحاً
         if (isValidCustomerName(line)) {
           customerName = line;
+          continue;
         }
-        continue;
       }
       
       // وإلا فهو منتج أو ملاحظة
