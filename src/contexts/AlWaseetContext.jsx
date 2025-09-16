@@ -1757,7 +1757,7 @@ export const AlWaseetProvider = ({ children }) => {
                 return { 
                   ...deleteResult, 
                   autoDeleted: true,
-                  message: `تم حذف الطلب ${qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات شركة التوصيل`
+                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات شركة التوصيل`
                 };
               }
             } else {
