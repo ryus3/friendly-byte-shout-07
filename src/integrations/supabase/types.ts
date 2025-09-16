@@ -16,7 +16,6 @@ export type Database = {
     Tables: {
       ai_orders: {
         Row: {
-          city_id: number | null
           created_at: string
           created_by: string | null
           customer_address: string | null
@@ -30,7 +29,6 @@ export type Database = {
           original_text: string | null
           processed_at: string | null
           processed_by: string | null
-          region_id: number | null
           related_order_id: string | null
           source: string
           status: string
@@ -39,7 +37,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          city_id?: number | null
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
@@ -53,7 +50,6 @@ export type Database = {
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
-          region_id?: number | null
           related_order_id?: string | null
           source?: string
           status?: string
@@ -62,7 +58,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          city_id?: number | null
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
@@ -76,7 +71,6 @@ export type Database = {
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
-          region_id?: number | null
           related_order_id?: string | null
           source?: string
           status?: string
@@ -381,75 +375,6 @@ export type Database = {
           name?: string
           type?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      cities_cache: {
-        Row: {
-          alwaseet_id: number
-          created_at: string | null
-          id: number
-          is_active: boolean | null
-          name: string
-          name_ar: string | null
-          name_en: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          alwaseet_id: number
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          name: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          alwaseet_id?: number
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          name?: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      cities_regions_sync_log: {
-        Row: {
-          cities_count: number | null
-          created_at: string | null
-          error_message: string | null
-          id: string
-          last_sync_at: string
-          regions_count: number | null
-          success: boolean | null
-          sync_duration_seconds: number | null
-          triggered_by: string | null
-        }
-        Insert: {
-          cities_count?: number | null
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          last_sync_at?: string
-          regions_count?: number | null
-          success?: boolean | null
-          sync_duration_seconds?: number | null
-          triggered_by?: string | null
-        }
-        Update: {
-          cities_count?: number | null
-          created_at?: string | null
-          error_message?: string | null
-          id?: string
-          last_sync_at?: string
-          regions_count?: number | null
-          success?: boolean | null
-          sync_duration_seconds?: number | null
-          triggered_by?: string | null
         }
         Relationships: []
       }
@@ -3139,50 +3064,6 @@ export type Database = {
           },
         ]
       }
-      regions_cache: {
-        Row: {
-          alwaseet_id: number
-          city_id: number
-          created_at: string | null
-          id: number
-          is_active: boolean | null
-          name: string
-          name_ar: string | null
-          name_en: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          alwaseet_id: number
-          city_id: number
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          name: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          alwaseet_id?: number
-          city_id?: number
-          created_at?: string | null
-          id?: number
-          is_active?: boolean | null
-          name?: string
-          name_ar?: string | null
-          name_en?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regions_cache_city_id_fkey"
-            columns: ["city_id"]
-            isOneToOne: false
-            referencedRelation: "cities_cache"
-            referencedColumns: ["alwaseet_id"]
-          },
-        ]
-      }
       role_permissions: {
         Row: {
           granted_at: string
@@ -4314,22 +4195,6 @@ export type Database = {
           | { p_quantity: number; p_variant_id: string }
         Returns: boolean
       }
-      find_city_in_cache: {
-        Args: { p_city_text: string }
-        Returns: {
-          alwaseet_id: number
-          name: string
-          similarity_score: number
-        }[]
-      }
-      find_region_in_cache: {
-        Args: { p_city_id: number; p_region_text: string }
-        Returns: {
-          alwaseet_id: number
-          name: string
-          similarity_score: number
-        }[]
-      }
       fix_all_damaged_alwaseet_orders: {
         Args: Record<PropertyKey, never>
         Returns: Json
@@ -4345,10 +4210,6 @@ export type Database = {
       fix_existing_purchase_shipping: {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
-      }
-      fix_regions_cities_linking: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       generate_customer_promo_code: {
         Args: { customer_id_param: string }
@@ -4458,10 +4319,6 @@ export type Database = {
           total_products: number
           total_variants: number
         }[]
-      }
-      get_last_cities_regions_sync: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
@@ -4633,21 +4490,6 @@ export type Database = {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
       }
-      log_cities_regions_sync_end: {
-        Args: {
-          p_cities_count?: number
-          p_error_message?: string
-          p_regions_count?: number
-          p_start_time: string
-          p_success?: boolean
-          p_sync_id: string
-        }
-        Returns: undefined
-      }
-      log_cities_regions_sync_start: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }
         Returns: undefined
@@ -4683,10 +4525,6 @@ export type Database = {
         Args: { phone_input: string }
         Returns: string
       }
-      parse_address_using_cache: {
-        Args: { p_address_text: string }
-        Returns: Json
-      }
       pay_employee_dues_with_invoice: {
         Args: {
           p_amount: number
@@ -4699,44 +4537,16 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args:
-          | { p_chat_id?: number; p_employee_code: string; p_order_data: Json }
-          | {
-              p_city_id?: number
-              p_customer_address?: string
-              p_customer_city?: string
-              p_customer_name: string
-              p_customer_phone?: string
-              p_customer_region?: string
-              p_employee_code?: string
-              p_items?: Json
-              p_order_data: Json
-              p_region_id?: number
-              p_telegram_chat_id?: number
-              p_total_amount?: number
-            }
-          | {
-              p_city_id?: number
-              p_customer_address?: string
-              p_customer_name: string
-              p_customer_phone?: string
-              p_employee_code?: string
-              p_items?: Json
-              p_order_data: Json
-              p_region_id?: number
-              p_telegram_chat_id?: number
-              p_total_amount?: number
-            }
-          | {
-              p_customer_address?: string
-              p_customer_name: string
-              p_customer_phone?: string
-              p_employee_code?: string
-              p_items?: Json
-              p_order_data: Json
-              p_telegram_chat_id?: number
-              p_total_amount?: number
-            }
+        Args: {
+          p_customer_address?: string
+          p_customer_name: string
+          p_customer_phone?: string
+          p_employee_code?: string
+          p_items?: Json
+          p_order_data: Json
+          p_telegram_chat_id?: number
+          p_total_amount?: number
+        }
         Returns: string
       }
       prune_delivery_invoices_for_user: {
