@@ -535,7 +535,11 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
           let finalPrice = price
           let productId = null
           
-          // Search for exact product name first
+          // Normalize product name for better search
+          const normalizedProductName = normalizeArabic(productName)
+          console.log(`🔍 Searching for product: "${productName}" -> normalized: "${normalizedProductName}"`)
+          
+          // Search for exact product name first with normalized Arabic
           const { data: products } = await supabase
             .from('products')
             .select(`
@@ -546,41 +550,97 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
                 sizes (name)
               )
             `)
-            .or(`name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
+            .or(`name.ilike.%${normalizedProductName}%,name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
             .eq('is_active', true)
-            .limit(5)
+            .limit(10)
           
           if (products && products.length > 0) {
-            const product = products[0]
-            productId = product.id
+            // Find best match using normalized comparison
+            let bestMatch = products[0]
+            let bestScore = 0
+            
+            for (const product of products) {
+              const normalizedDbName = normalizeArabic(product.name)
+              let score = 0
+              
+              // Exact match gets highest score
+              if (normalizedDbName === normalizedProductName) {
+                score = 100
+              } else if (normalizedDbName.includes(normalizedProductName)) {
+                score = 80
+              } else if (normalizedProductName.includes(normalizedDbName)) {
+                score = 70
+              } else {
+                // Calculate similarity for partial matches
+                const words1 = normalizedProductName.split(' ')
+                const words2 = normalizedDbName.split(' ')
+                const commonWords = words1.filter(word => words2.includes(word))
+                score = (commonWords.length / Math.max(words1.length, words2.length)) * 60
+              }
+              
+              if (score > bestScore) {
+                bestScore = score
+                bestMatch = product
+              }
+            }
+            
+            console.log(`✅ Best match found: "${bestMatch.name}" (score: ${bestScore})`)
+            productId = bestMatch.id
             
             // Try to find price from variants first
-            if (product.product_variants && product.product_variants.length > 0) {
-              const activeVariants = product.product_variants.filter(v => v.is_active)
+            if (bestMatch.product_variants && bestMatch.product_variants.length > 0) {
+              const activeVariants = bestMatch.product_variants.filter(v => v.is_active)
               if (activeVariants.length > 0) {
                 // Use first active variant price
-                finalPrice = price || activeVariants[0].price || product.base_price || 0
+                finalPrice = price || activeVariants[0].price || bestMatch.base_price || 0
               } else {
-                finalPrice = price || product.base_price || 0
+                finalPrice = price || bestMatch.base_price || 0
               }
             } else {
               // Use base price if no variants
-              finalPrice = price || product.base_price || 0
+              finalPrice = price || bestMatch.base_price || 0
             }
           }
           
           if (finalPrice === 0 && !price) {
-            // Try one more search with relaxed criteria
+            // Try one more search with relaxed criteria using normalized text
+            const searchTerms = normalizedProductName.split(' ').join(' | ')
             const { data: fallbackProducts } = await supabase
               .from('products')
               .select('id, name, base_price')
-              .textSearch('name', productName.split(' ').join(' | '))
+              .textSearch('name', searchTerms)
               .eq('is_active', true)
-              .limit(1)
+              .limit(3)
             
             if (fallbackProducts && fallbackProducts.length > 0) {
-              productId = fallbackProducts[0].id
-              finalPrice = fallbackProducts[0].base_price || 0
+              // Find best match in fallback results
+              let bestFallback = fallbackProducts[0]
+              let bestFallbackScore = 0
+              
+              for (const product of fallbackProducts) {
+                const normalizedFallbackName = normalizeArabic(product.name)
+                let score = 0
+                
+                if (normalizedFallbackName.includes(normalizedProductName)) {
+                  score = 60
+                } else if (normalizedProductName.includes(normalizedFallbackName)) {
+                  score = 50
+                } else {
+                  const words1 = normalizedProductName.split(' ')
+                  const words2 = normalizedFallbackName.split(' ')
+                  const commonWords = words1.filter(word => words2.includes(word))
+                  score = (commonWords.length / Math.max(words1.length, words2.length)) * 40
+                }
+                
+                if (score > bestFallbackScore) {
+                  bestFallbackScore = score
+                  bestFallback = product
+                }
+              }
+              
+              console.log(`🔄 Fallback match: "${bestFallback.name}" (score: ${bestFallbackScore})`)
+              productId = bestFallback.id
+              finalPrice = bestFallback.base_price || 0
             }
           }
           

@@ -108,19 +108,20 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
-    // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين
+    // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين مع تسجيل مفصل
     const aiOrdersChannel = supabase
-      .channel('ai-orders-notifications-handler-all-users')
+      .channel('ai-orders-notifications-handler-fixed')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
         async (payload) => {
-          console.log('🔥 AI Orders Real-time INSERT detected:', {
+          console.log('🔥 NotificationsHandler: AI Orders Real-time INSERT detected:', {
             payload: payload.new,
             currentUser: user.id,
             userRole: user.role,
             userEmployeeCode: user.employee_code,
-            orderCreatedBy: payload.new?.created_by
+            orderCreatedBy: payload.new?.created_by,
+            orderSource: payload.new?.source
           });
 
           try {
@@ -129,12 +130,18 @@ const NotificationsHandler = () => {
             let employeeProfile = null;
             
             if (payload.new?.created_by) {
+              console.log('🔍 Looking up employee with code:', payload.new.created_by);
+              
               // البحث بـ employee_code في جدول profiles  
-              const { data: emp } = await supabase
+              const { data: emp, error: empError } = await supabase
                 .from('profiles')
                 .select('user_id, full_name, employee_code')
                 .eq('employee_code', payload.new.created_by)
                 .maybeSingle();
+              
+              if (empError) {
+                console.error('❌ Error fetching employee profile:', empError);
+              }
               
               console.log('👤 Employee profile lookup result:', emp);
               
@@ -146,10 +153,12 @@ const NotificationsHandler = () => {
               }
             }
             
-            // إشعار للموظف الذي أنشأ الطلب
+            console.log('📝 Final employee name for notification:', employeeName);
+            
+            // إشعار للموظف الذي أنشأ الطلب (إذا كان مسجل دخول حالياً)
             if (employeeProfile && user.employee_code === payload.new.created_by) {
-              console.log('✅ Adding notification for employee who created the order');
-              addNotification({
+              console.log('✅ Creating notification for employee who created the order');
+              const employeeNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
                 message: `طلب ذكي جديد بواسطة ${employeeName}`,
@@ -157,16 +166,20 @@ const NotificationsHandler = () => {
                 color: 'green',
                 data: { 
                   ai_order_id: payload.new.id,
-                  created_by: payload.new.created_by
+                  created_by: payload.new.created_by,
+                  source: payload.new.source
                 },
                 user_id: user.id,
-              });
+                is_read: false
+              };
+              console.log('📤 Employee notification data:', employeeNotification);
+              addNotification(employeeNotification);
             }
 
             // إشعار للمديرين (بغض النظر عن من أنشأ الطلب)
             if (isAdmin) {
-              console.log('✅ Adding admin notification for AI order');
-              addNotification({
+              console.log('✅ Creating admin notification for AI order');
+              const adminNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
                 message: `طلب ذكي جديد بواسطة ${employeeName}`,
@@ -175,22 +188,27 @@ const NotificationsHandler = () => {
                 data: { 
                   ai_order_id: payload.new.id,
                   created_by: payload.new.created_by,
-                  employee_name: employeeName
+                  employee_name: employeeName,
+                  source: payload.new.source
                 },
                 user_id: null, // Admin notification
-              });
+                is_read: false
+              };
+              console.log('📤 Admin notification data:', adminNotification);
+              addNotification(adminNotification);
             }
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
-            console.log('🔄 Dispatching aiOrderCreated event');
+            console.log('🔄 Dispatching aiOrderCreated browser event');
             window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
               detail: { ...payload.new, employeeName } 
             })); 
             
           } catch (e) {
             console.error('❌ AI order notification error:', e);
-            // إشعار احتياطي في حالة الخطأ
+            // إشعار احتياطي في حالة الخطأ للمديرين فقط
             if (isAdmin) {
+              console.log('⚠️ Creating fallback admin notification due to error');
               addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
@@ -199,13 +217,19 @@ const NotificationsHandler = () => {
                 color: 'amber',
                 data: { ai_order_id: payload.new?.id || null },
                 user_id: null,
+                is_read: false
               });
             }
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔄 AI Orders Real-time subscription status:', status);
+        console.log('📊 NotificationsHandler: AI Orders Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to AI orders Real-time updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error in AI orders Real-time subscription');
+        }
       });
 
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
