@@ -701,20 +701,20 @@ const OrdersPage = () => {
                 globalPeriod={filters.period}
              />
            </div>
-             {hasPermission('view_all_data') && (
-               <div className="col-span-1 lg:col-span-1">
-                 <StatCard 
-                   title="صافي ربح النظام"
-                   value={userActualProfits || myProfits}
-                   format="currency"
-                   icon={DollarSign} 
-                   colors={['green-500', 'emerald-500']}
-                   onClick={() => navigate(profitsPagePath)}
-                   periods={{ all: 'الطلبات المكتملة' }}
-                   currentPeriod="all"
-                 />
-               </div>
-             )}
+              {hasPermission('view_all_data') && user?.id !== '91484496-b887-44f7-9e5d-be9db5567604' && (
+                <div className="col-span-1 lg:col-span-1">
+                  <StatCard 
+                    title="صافي ربح النظام"
+                    value={userActualProfits || myProfits}
+                    format="currency"
+                    icon={DollarSign} 
+                    colors={['green-500', 'emerald-500']}
+                    onClick={() => navigate(profitsPagePath)}
+                    periods={{ all: 'الطلبات المكتملة' }}
+                    currentPeriod="all"
+                  />
+                </div>
+              )}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
