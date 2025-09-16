@@ -119,6 +119,14 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
             break;
           }
           
+          // مطابقة أكثر ذكاءً للمناطق العادية
+          if (candidateText.includes(regionLower)) {
+            detectedRegion = region;
+            regionStartIndex = i;
+            regionEndIndex = Math.min(i + regionWords.length - 1, words.length - 1);
+            break;
+          }
+          
           // مطابقة للمناطق التي تحتوي على "حي"
           if (regionLower.includes('حي') && candidateText.includes(regionLower.replace(/حي\s*/, '').trim())) {
             detectedRegion = region;
@@ -167,7 +175,7 @@ export function findRegionsByName(cityName: string, regionText: string): string[
 
   const regionPatterns = {
     'بغداد': [
-      'دورة صحة', 'دورة حي الصحة', 'كرادة داخل', 'كرادة خارج', 
+      'دورة حي الصحة', 'دورة صحة', 'كرادة داخل', 'كرادة خارج', 
       'مدينة الصدر', 'حي الصدر', 'مدينة العمال', 'شارع فلسطين',
       'حي العدل', 'حي الجامعة', 'حي البياع', 'حي الغدير',
       'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور'

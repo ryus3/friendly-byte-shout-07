@@ -255,12 +255,28 @@ async function getEmployeeByTelegramId(chatId: number) {
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
       p_telegram_chat_id: chatId
     });
+    
+    console.log(`🔍 جلب بيانات الموظف لـ chatId: ${chatId}`, {
+      found: !error && data && data.length > 0,
+      error: error?.message,
+      data_length: data?.length || 0
+    });
+    
     if (!error && data && data.length > 0) {
       const raw = data[0];
       const norm = normalizeEmployeeRecord(raw);
       if (norm) {
         const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
         const role_title = await getRoleDisplayName(norm.user_id, finalRole);
+        
+        console.log(`✅ تم العثور على الموظف:`, {
+          user_id: norm.user_id,
+          employee_code: norm.employee_code,
+          full_name: norm.full_name,
+          role: finalRole,
+          chat_id: chatId
+        });
+        
         return { ...norm, role: finalRole, role_title };
       }
     }
@@ -362,13 +378,21 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const employeeData = await supabase.rpc('get_employee_by_telegram_id', { p_telegram_chat_id: chatId });
     const employee = employeeData.data?.[0];
     
+    // تسجيل تفصيلي لتتبع المستخدم
+    console.log(`📝 معالجة طلب من chatId: ${chatId} للموظف: ${employee?.employee_code || 'غير محدد'}`, {
+      chatId,
+      employee_user_id: employee?.user_id,
+      employee_code: employee?.employee_code,
+      employee_name: employee?.full_name
+    });
+    
     const { data: profileData } = await supabase
       .from('profiles')
       .select('default_customer_name')
       .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = profileData?.default_customer_name || 'زبون جديد';
+    const defaultCustomerName = profileData?.default_customer_name || null;
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -802,9 +826,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
-    // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
+    // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات فقط عند الحاجة
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
-      customerName = defaultCustomerName;
+      customerName = defaultCustomerName || 'زبون جديد';
     }
 
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
