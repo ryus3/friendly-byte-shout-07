@@ -837,19 +837,17 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         city_id: cityId, // معرف المدينة من cache
         region_id: regionId, // معرف المنطقة من cache
         parsed_city: parsedCity || parsedCityName, // اسم المدينة المحللة
-        parsed_region: parsedRegion || parsedRegionName // اسم المنطقة المحللة
+        parsed_region: parsedRegion || parsedRegionName, // اسم المنطقة المحللة
+        customer_name: customerName,
+        customer_phone: customerPhone || null,
+        customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
+        customer_city: parsedCity || parsedCityName || null, // المدينة المحللة
+        customer_province: parsedRegion || parsedRegionName || null, // المنطقة المحللة
+        total_amount: totalPrice,
+        items: items
       },
-      p_customer_name: customerName,
-      p_customer_phone: customerPhone || null,
-      p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
-      p_customer_city: parsedCity || parsedCityName || null, // المدينة المحللة
-      p_customer_region: parsedRegion || parsedRegionName || null, // المنطقة المحللة
-      p_city_id: cityId, // معرف المدينة للوسيط
-      p_region_id: regionId, // معرف المنطقة للوسيط
-      p_total_amount: totalPrice,
-      p_items: items,
-      p_telegram_chat_id: chatId,
-      p_employee_code: employeeCode
+      p_employee_code: employeeCode,
+      p_chat_id: chatId
     });
 
     console.log('Order creation result:', { orderId, error });
