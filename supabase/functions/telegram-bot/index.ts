@@ -255,28 +255,12 @@ async function getEmployeeByTelegramId(chatId: number) {
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
       p_telegram_chat_id: chatId
     });
-    
-    console.log(`🔍 جلب بيانات الموظف لـ chatId: ${chatId}`, {
-      found: !error && data && data.length > 0,
-      error: error?.message,
-      data_length: data?.length || 0
-    });
-    
     if (!error && data && data.length > 0) {
       const raw = data[0];
       const norm = normalizeEmployeeRecord(raw);
       if (norm) {
         const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
         const role_title = await getRoleDisplayName(norm.user_id, finalRole);
-        
-        console.log(`✅ تم العثور على الموظف:`, {
-          user_id: norm.user_id,
-          employee_code: norm.employee_code,
-          full_name: norm.full_name,
-          role: finalRole,
-          chat_id: chatId
-        });
-        
         return { ...norm, role: finalRole, role_title };
       }
     }
@@ -378,21 +362,13 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const employeeData = await supabase.rpc('get_employee_by_telegram_id', { p_telegram_chat_id: chatId });
     const employee = employeeData.data?.[0];
     
-    // تسجيل تفصيلي لتتبع المستخدم
-    console.log(`📝 معالجة طلب من chatId: ${chatId} للموظف: ${employee?.employee_code || 'غير محدد'}`, {
-      chatId,
-      employee_user_id: employee?.user_id,
-      employee_code: employee?.employee_code,
-      employee_name: employee?.full_name
-    });
-    
     const { data: profileData } = await supabase
       .from('profiles')
       .select('default_customer_name')
       .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = profileData?.default_customer_name || null;
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -506,7 +482,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       }
       
       // التحقق من العنوان (كلمات تدل على المكان)
-      const localCityVariants = {
+      const cityVariants = {
         'بغداد': ['بغداد', 'baghdad', 'بكداد'],
         'البصرة': ['بصرة', 'بصره', 'البصرة', 'البصره', 'basra', 'basrah'],
         'أربيل': ['أربيل', 'اربيل', 'erbil', 'hawler'],
@@ -528,38 +504,16 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       };
       
       let foundCity = false;
-      for (const [city, variants] of Object.entries(localCityVariants)) {
+      for (const [city, variants] of Object.entries(cityVariants)) {
         for (const variant of variants) {
           if (lowerLine.includes(variant)) {
-            try {
-              // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
-              const addressParts = await parseAddressLine(line);
-              if (addressParts.city) {
-                // تنظيف أقرب نقطة دالة من الكلمات المحجوزة
-                let cleanAddress = addressParts.remainingText.trim();
-                
-                // إزالة الكلمات المحجوزة من أقرب نقطة دالة
-                const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي', 'تسليم', 'استلام'];
-                reservedWords.forEach(word => {
-                  cleanAddress = cleanAddress.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-                });
-                
-                // تنظيف المسافات الزائدة والفواصل
-                cleanAddress = cleanAddress.replace(/\s+/g, ' ').replace(/^[,،\s]+|[,،\s]+$/g, '').trim();
-                
-                customerAddress = cleanAddress || null;
-              } else {
-                // إذا لم تُحلل بنجاح، احفظ السطر كاملاً بعد تنظيفه
-                let cleanLine = line;
-                const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي'];
-                reservedWords.forEach(word => {
-                  cleanLine = cleanLine.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-                });
-                customerAddress = cleanLine.replace(/\s+/g, ' ').trim() || null;
-              }
-            } catch (error) {
-              console.error('خطأ في تحليل العنوان:', error);
-              // في حالة الخطأ، احفظ السطر كاملاً
+            // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
+            const addressParts = await parseAddressLine(line);
+            if (addressParts.city) {
+              // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
+              customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+            } else {
+              // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
               customerAddress = line;
             }
             deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
@@ -578,27 +532,11 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
         const addressParts = await parseAddressLine(line);
         if (addressParts.city) {
-          // تنظيف أقرب نقطة دالة من الكلمات المحجوزة
-          let cleanAddress = addressParts.remainingText.trim();
-          
-          // إزالة الكلمات المحجوزة من أقرب نقطة دالة
-          const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي', 'تسليم', 'استلام'];
-          reservedWords.forEach(word => {
-            cleanAddress = cleanAddress.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-          });
-          
-          // تنظيف المسافات الزائدة والفواصل
-          cleanAddress = cleanAddress.replace(/\s+/g, ' ').replace(/^[,،\s]+|[,،\s]+$/g, '').trim();
-          
-          customerAddress = cleanAddress || null;
+          // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
+          customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
         } else {
-          // إذا لم تُحلل بنجاح، احفظ السطر كاملاً بعد تنظيفه
-          let cleanLine = line;
-          const reservedWords = ['توصيل', 'شحن', 'ديليفري', 'محلي', 'استلام محلي', 'تسليم محلي'];
-          reservedWords.forEach(word => {
-            cleanLine = cleanLine.replace(new RegExp(`\\b${word}\\b`, 'gi'), '').trim();
-          });
-          customerAddress = cleanLine.replace(/\s+/g, ' ').trim() || null;
+          // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
+          customerAddress = line;
         }
         deliveryType = 'توصيل';
         foundCity = true;
@@ -826,9 +764,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
-    // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات فقط عند الحاجة
+    // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
-      customerName = defaultCustomerName || null; // استخدام null بدلاً من 'زبون جديد'
+      customerName = defaultCustomerName || 'زبون من التليغرام';
     }
 
     // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
@@ -845,7 +783,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
-      p_customer_address: customerAddress || null,
+      p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
       p_total_amount: totalPrice,
       p_items: items,
       p_telegram_chat_id: chatId,
@@ -941,47 +879,6 @@ await sendTelegramMessage(chatId, message, 'HTML');
     return orderId;
   } catch (error) {
     console.error('Error processing order:', error);
-    console.error('Error details:', error.message, error.stack);
-    
-    // إرسال رسالة خطأ مفصلة للمستخدم
-    try {
-      let errorMessage = '';
-      
-      if (error.message?.includes('cityVariants') || error.message?.includes('address-parser')) {
-        errorMessage = `
-⚠️ <b>خطأ في تحليل العنوان</b>
-
-<b>السبب:</b> لم نتمكن من فهم العنوان المرسل
-
-<b>يرجى إعادة إرسال الطلب بصيغة واضحة مثل:</b>
-بغداد - الكرادة
-07901234567
-تيشرت أحمر كبير
-        `.trim();
-      } else if (error.message?.includes('duplicate') || error.message?.includes('موجود')) {
-        errorMessage = `
-⚠️ <b>طلب مكرر</b>
-
-تم إرسال نفس الطلب مسبقاً. يرجى المراجعة أو التواصل مع الإدارة.
-        `.trim();
-      } else {
-        errorMessage = `
-⚠️ <b>حدث خطأ في معالجة الطلب</b>
-
-<b>يرجى التأكد من:</b>
-• كتابة العنوان بوضوح
-• تضمين رقم الهاتف
-• كتابة اسم المنتج والمواصفات صحيحاً
-
-<b>أو التواصل مع الإدارة للمساعدة</b>
-        `.trim();
-      }
-      
-      await sendTelegramMessage(chatId, errorMessage, 'HTML');
-    } catch (notificationError) {
-      console.error('Failed to send error notification to user:', notificationError);
-    }
-    
     return false;
   }
 }
@@ -1478,31 +1375,6 @@ ${employee.role === 'admin' ?
   } catch (error) {
     console.error('Error in webhook:', error);
     console.error('Error details:', error.message, error.stack);
-    
-    // إرسال رسالة خطأ للمستخدم في حالة فشل معالجة الطلب
-    if (chatId && text && !text.startsWith('/')) {
-      try {
-        await sendTelegramMessage(chatId, `
-⚠️ <b>حدث خطأ في معالجة طلبك</b>
-
-<b>المشكلة:</b> فشل في تحليل البيانات المرسلة
-
-<b>الحل:</b>
-• تأكد من كتابة العنوان بوضوح
-• تأكد من تضمين رقم الهاتف
-• تأكد من كتابة اسم المنتج صحيحاً
-
-<b>مثال صحيح:</b>
-بغداد - الكرادة
-07901234567
-تيشرت أحمر ميديم
-
-يرجى المحاولة مرة أخرى أو التواصل مع الإدارة.
-        `.trim(), 'HTML');
-      } catch (notificationError) {
-        console.error('Failed to send error notification:', notificationError);
-      }
-    }
     
     // تأكد من إرجاع رد مناسب حتى لو حدث خطأ
     return new Response(JSON.stringify({ error: 'Internal server error' }), { 

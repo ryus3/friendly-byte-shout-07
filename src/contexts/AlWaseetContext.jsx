@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
@@ -1924,7 +1924,7 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
           
           // إشعار المدير
-        toast({
+        showToast({
           title: "حذف طلب تلقائي",
           description: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
           variant: "destructive"
@@ -1982,16 +1982,6 @@ export const AlWaseetProvider = ({ children }) => {
           order_number: order.order_number 
         } 
       }));
-      
-      // إشعار الحذف التلقائي مع تأخير قصير
-      setTimeout(() => {
-        console.log('📢 عرض إشعار الحذف التلقائي...');
-        toast({
-          title: "🗑️ تم حذف طلب تلقائياً",
-          description: `الطلب: ${order.tracking_number || order.order_number || order.id}\nالسبب: محذوف من شركة التوصيل`,
-          variant: "destructive"
-        });
-      }, 500);
       
       return { 
         success: true, 

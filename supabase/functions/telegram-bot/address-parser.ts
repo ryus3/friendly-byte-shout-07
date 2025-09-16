@@ -35,31 +35,25 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
     'ميسان': ['ميسان', 'العمارة', 'maysan']
   };
 
-  // قاموس المناطق الشائعة لكل مدينة مع أولويات ومتغيرات ذكية
+  // قاموس المناطق الشائعة لكل مدينة مع أولويات
   const regionPatterns = {
     'بغداد': [
-      // مناطق مركبة (أولوية أعلى للمطابقات الطويلة والدقيقة)
-      'دورة حي الصحة', 'الدورة حي الصحة', 'دورة الصحة', 'الدورة الصحة',
-      'كرادة داخل', 'الكرادة داخل', 'كرادة خارج', 'الكرادة خارج',
-      'مدينة الصدر', 'حي الصدر', 'الصدر الاولى', 'الصدر الثانية',
-      'مدينة العمال', 'حي العمال', 'شارع فلسطين', 'فلسطين',
+      // مناطق مركبة (أولوية أعلى)
+      'دورة صحة', 'دورة حي الصحة', 'كرادة داخل', 'كرادة خارج', 
+      'مدينة الصدر', 'حي الصدر', 'مدينة العمال', 'شارع فلسطين',
       'حي العدل', 'حي الجامعة', 'حي البياع', 'حي الغدير',
       'حي الأطباء', 'حي الصالحية', 'حي الكريمات', 'حي الجزائر',
-      'حي الجهاد', 'حي الشهداء', 'حي الوحدة', 'حي السلام',
-      // مناطق مفردة (أولوية أقل)
-      'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور',
+      // مناطق مفردة
+      'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور', 
       'الرصافة', 'الكرخ', 'الشعلة', 'البياع', 'الغدير',
-      'الصدر', 'العدل', 'الجامعة', 'الصالحية', 'الكريمات',
-      'الجهاد', 'الوحدة', 'السلام', 'الشهداء'
+      'الصدر', 'العدل', 'الجامعة', 'الصالحية', 'الكريمات'
     ],
     'البصرة': [
       'الجمهورية', 'الأسماك', 'العشار', 'المعقل', 'الفيحاء',
-      'كرمة علي', 'حي الحسين', 'حي الجزائر', 'الطويسة',
-      'أبو الخصيب', 'الزبير', 'صفوان'
+      'كرمة علي', 'حي الحسين', 'حي الجزائر'
     ],
     'أربيل': [
-      'عنكاوا', 'شورش', 'باختياري', 'قلاوري', 'تايران',
-      'دارا تو', 'شاخوان'
+      'عنكاوا', 'شورش', 'باختياري', 'قلاوري'
     ]
   };
 
@@ -87,13 +81,11 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
     const regions = regionPatterns[detectedCity];
     const textAfterCity = words.slice(cityIndex + 1).join(' ').toLowerCase();
     
-  // البحث عن المناطق بطريقة ذكية - المناطق الأطول أولاً
-    const sortedRegions = regions.sort((a, b) => b.length - a.length);
-    
-    for (const region of sortedRegions) {
+    // البحث عن المناطق المركبة أولاً (أولوية أعلى)
+    for (const region of regions) {
       const regionWords = region.split(/\s+/);
       
-      // البحث عن مطابقة كاملة للمنطقة
+      // البحث عن مطابقة كاملة للمنطقة المركبة
       for (let i = cityIndex + 1; i <= words.length - regionWords.length; i++) {
         const candidateRegion = words.slice(i, i + regionWords.length).join(' ').toLowerCase();
         if (candidateRegion === region.toLowerCase()) {
@@ -101,39 +93,6 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
           regionStartIndex = i;
           regionEndIndex = i + regionWords.length - 1;
           break;
-        }
-      }
-      
-      // إذا لم نجد مطابقة كاملة، ابحث عن مطابقة جزئية ذكية
-      if (!detectedRegion) {
-        for (let i = cityIndex + 1; i < words.length; i++) {
-          const candidateText = words.slice(i).join(' ').toLowerCase();
-          const regionLower = region.toLowerCase();
-          
-          // مطابقة ذكية للمناطق المركبة مثل "دورة حي الصحة" مع "دورة صحة"
-          if (regionLower.includes('دورة') && regionLower.includes('صحة') && 
-              candidateText.includes('دورة') && candidateText.includes('صحة')) {
-            detectedRegion = region;
-            regionStartIndex = i;
-            regionEndIndex = Math.min(i + 2, words.length - 1); // أخذ كلمتين كحد أقصى
-            break;
-          }
-          
-          // مطابقة أكثر ذكاءً للمناطق العادية
-          if (candidateText.includes(regionLower)) {
-            detectedRegion = region;
-            regionStartIndex = i;
-            regionEndIndex = Math.min(i + regionWords.length - 1, words.length - 1);
-            break;
-          }
-          
-          // مطابقة للمناطق التي تحتوي على "حي"
-          if (regionLower.includes('حي') && candidateText.includes(regionLower.replace(/حي\s*/, '').trim())) {
-            detectedRegion = region;
-            regionStartIndex = i;
-            regionEndIndex = Math.min(i + 1, words.length - 1);
-            break;
-          }
         }
       }
       
@@ -160,14 +119,7 @@ export async function parseAddressLine(addressText: string): Promise<AddressPart
     remainingWords.splice(regionStartIndex, regionLength);
   }
 
-  // تنظيف النص المتبقي من الكلمات المحجوزة والعبارات غير المرغوبة
-  const reservedWords = ['استلام', 'محلي', 'توصيل', 'خدمة', 'العلاوة', 'اضافية'];
-  const cleanedWords = remainingWords.filter(word => {
-    const cleanWord = word.trim().toLowerCase();
-    return !reservedWords.includes(cleanWord) && cleanWord !== '';
-  });
-
-  const remainingText = cleanedWords.join(' ').trim();
+  const remainingText = remainingWords.join(' ').trim();
 
   return {
     city: detectedCity,
@@ -182,7 +134,7 @@ export function findRegionsByName(cityName: string, regionText: string): string[
 
   const regionPatterns = {
     'بغداد': [
-      'دورة حي الصحة', 'دورة صحة', 'كرادة داخل', 'كرادة خارج', 
+      'دورة صحة', 'دورة حي الصحة', 'كرادة داخل', 'كرادة خارج', 
       'مدينة الصدر', 'حي الصدر', 'مدينة العمال', 'شارع فلسطين',
       'حي العدل', 'حي الجامعة', 'حي البياع', 'حي الغدير',
       'الدورة', 'الكرادة', 'الكاظمية', 'الأعظمية', 'المنصور'
