@@ -3955,6 +3955,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      approve_employee_complete: {
+        Args: { p_full_name?: string; p_user_id: string }
+        Returns: Json
+      }
       auth_with_username: {
         Args: { password_input: string; username_input: string }
         Returns: {
@@ -4228,6 +4232,10 @@ export type Database = {
       }
       generate_telegram_code: {
         Args: { user_id_input: string; username_input: string }
+        Returns: string
+      }
+      generate_unified_telegram_code: {
+        Args: { p_full_name: string }
         Returns: string
       }
       get_available_stock: {

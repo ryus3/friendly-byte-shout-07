@@ -15,53 +15,15 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 
   const handleDirectApprove = async () => {
     try {
-      // صلاحيات أساسية محسنة للموظف الجديد
-      const defaultPermissions = [
-        // صفحات التطبيق الأساسية
-        'view_dashboard',
-        'view_products_page', 
-        'view_orders_page',
-        'view_inventory_page',
-        'view_quick_order_page',
-        
-        // المنتجات والمخزن
-        'view_products',
-        'view_inventory',
-        'use_barcode_scanner',
-        
-        // الطلبات والمبيعات
-        'view_orders',
-        'view_own_orders',
-        'create_orders',
-        'quick_order',
-        'checkout_orders',
-        'view_order_details',
-        'print_invoices',
-        'print_receipts',
-        
-        // لوحة التحكم
-        'view_statistics',
-        'view_recent_activities',
-        
-        // الأرباح الخاصة
-        'view_own_profits',
-        
-        // إعدادات شخصية
-        'profile_settings'
-      ];
-      
-      const approvalData = {
-        status: 'active',
-        permissions: JSON.stringify(defaultPermissions),
-        role: 'employee'
-      };
-      
       console.log('=== DIRECT APPROVAL START ===');
       console.log('Target user:', user);
       console.log('User ID being approved:', user.user_id);
-      console.log('Approval data being sent:', approvalData);
       
-      await onApprove(user.user_id, approvalData);
+      // استخدام function قاعدة البيانات الجديد للموافقة الكاملة
+      await onApprove(user.user_id, { 
+        useCompleteApproval: true,
+        full_name: user.full_name 
+      });
     } catch (error) {
       console.error('Direct approval error:', error);
       toast({
@@ -95,54 +57,56 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
     >
       <Card className="border border-muted hover:border-primary/20 transition-colors">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center space-x-3 space-x-reverse">
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-12 w-12 md:h-10 md:w-10">
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {user.full_name?.charAt(0) || user.username?.charAt(0) || 'م'}
                 </AvatarFallback>
               </Avatar>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm">{user.full_name}</h3>
-                  <Badge variant="secondary" className="text-xs">
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
+                  <h3 className="font-medium text-sm truncate">{user.full_name}</h3>
+                  <Badge variant="secondary" className="text-xs w-fit">
                     {user.role}
                   </Badge>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-1">
-                  <p>المستخدم: {user.username}</p>
-                  <p>الإيميل: {user.email}</p>
+                  <p className="truncate">المستخدم: {user.username}</p>
+                  <p className="truncate">الإيميل: {user.email}</p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => onDetailedReview(user)}
-                className="text-xs"
+                className="text-xs w-full md:w-auto"
               >
                 <Settings className="w-3 h-3 ml-1" />
                 مراجعة تفصيلية
               </Button>
-              <Button
-                size="sm"
-                onClick={handleDirectApprove}
-                className="text-xs bg-green-600 hover:bg-green-700"
-              >
-                <UserCheck className="w-3 h-3 ml-1" />
-                موافقة سريعة
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleDirectReject}
-                className="text-xs"
-              >
-                <UserX className="w-3 h-3 ml-1" />
-                رفض
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleDirectApprove}
+                  className="text-xs bg-green-600 hover:bg-green-700 flex-1 md:flex-none"
+                >
+                  <UserCheck className="w-3 h-3 ml-1" />
+                  موافقة سريعة
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleDirectReject}
+                  className="text-xs flex-1 md:flex-none"
+                >
+                  <UserX className="w-3 h-3 ml-1" />
+                  رفض
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -176,51 +140,7 @@ const PendingRegistrations = ({ onClose }) => {
       console.log('User ID:', userId);
       console.log('Approval data:', data);
       
-      // إضافة الصلاحيات الأساسية المحسنة إذا لم تكن موجودة
-      const defaultPermissions = [
-        // صفحات التطبيق الأساسية
-        'view_dashboard',
-        'view_products_page', 
-        'view_orders_page',
-        'view_inventory_page',
-        'view_quick_order_page',
-        
-        // المنتجات والمخزن
-        'view_products',
-        'view_inventory',
-        'use_barcode_scanner',
-        
-        // الطلبات والمبيعات
-        'view_orders',
-        'view_own_orders',
-        'create_orders',
-        'quick_order',
-        'checkout_orders',
-        'view_order_details',
-        'print_invoices',
-        'print_receipts',
-        
-        // لوحة التحكم
-        'view_statistics',
-        'view_recent_activities',
-        
-        // الأرباح الخاصة
-        'view_own_profits',
-        
-        // إعدادات شخصية
-        'profile_settings'
-      ];
-      
-      const finalData = {
-        status: 'active',
-        permissions: JSON.stringify(data?.permissions || defaultPermissions),
-        role: data?.role || 'employee',
-        ...data
-      };
-      
-      console.log('Final approval data:', finalData);
-      
-      const result = await updateUser(userId, finalData);
+      const result = await updateUser(userId, data);
       console.log('Update result:', result);
       
       if (result?.success !== false) {
@@ -353,7 +273,7 @@ const PendingRegistrations = ({ onClose }) => {
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-background rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+        className="bg-background rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] md:max-h-[80vh] overflow-hidden mx-4"
       >
         <Card className="border-0">
           <CardHeader className="pb-4">
@@ -371,7 +291,7 @@ const PendingRegistrations = ({ onClose }) => {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <CardContent className="space-y-4 max-h-[70vh] md:max-h-[60vh] overflow-y-auto px-4 md:px-6">
             <AnimatePresence>
               {pendingRegistrations.map(user => (
                 <UserCard

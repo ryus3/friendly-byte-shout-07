@@ -499,6 +499,39 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
     
     try {
+      // إذا كان data يحتوي على useCompleteApproval، استخدم دالة الموافقة الكاملة
+      if (data?.useCompleteApproval) {
+        console.log('Using complete approval function for user:', userId);
+        
+        const { data: approvalResult, error: approvalError } = await supabase
+          .rpc('approve_employee_complete', {
+            p_user_id: userId,
+            p_full_name: data.full_name
+          });
+        
+        if (approvalError) {
+          console.error('Complete approval error:', approvalError);
+          toast({ 
+            title: 'خطأ في الموافقة', 
+            description: `فشل في تفعيل الموظف: ${approvalError.message}`, 
+            variant: 'destructive' 
+          });
+          return { success: false, error: approvalError };
+        }
+        
+        console.log('Complete approval result:', approvalResult);
+        toast({ 
+          title: 'تمت الموافقة ✅', 
+          description: 'تم تفعيل الموظف بنجاح مع دور مبيعات ورمز تليغرام',
+          variant: 'default' 
+        });
+        
+        // تحديث البيانات المحلية
+        await fetchAdminData();
+        return { success: true };
+      }
+      
+      // الطريقة العادية للتحديث (للتوافق مع الكود القديم)
       const { data: result, error } = await supabase
         .from('profiles')
         .update(data)
