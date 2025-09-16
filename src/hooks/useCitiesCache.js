@@ -33,24 +33,6 @@ export const useCitiesCache = () => {
     }
   };
 
-  // جلب جميع المناطق من cache
-  const fetchAllRegions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('regions_cache')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setRegions(data || []);
-      return data || [];
-    } catch (error) {
-      console.error('❌ خطأ في جلب المناطق من cache:', error);
-      return [];
-    }
-  };
-
   // جلب المناطق لمدينة معينة من cache
   const fetchRegionsByCity = async (cityId) => {
     try {
@@ -93,24 +75,19 @@ export const useCitiesCache = () => {
 
       if (error) throw error;
 
-      const success = data?.success;
-      if (success) {
-        // تحديث قائمة المدن والمناطق بعد التحديث الناجح
-        await fetchCities();
-        await fetchAllRegions();
-        setLastUpdated(new Date());
-        toast({
-          title: "نجح التحديث",
-          description: data.message || "تم تحديث cache المدن والمناطق بنجاح",
-          variant: "default"
-        });
-      }
-      return success;
+      toast({
+        title: "تم التحديث بنجاح",
+        description: data.message || "تم تحديث cache المدن والمناطق",
+      });
+
+      setLastUpdated(new Date());
+      await fetchCities();
+      return true;
     } catch (error) {
       console.error('❌ خطأ في تحديث cache:', error);
       toast({
-        title: "فشل التحديث", 
-        description: error.message || "حدث خطأ أثناء تحديث cache المدن والمناطق",
+        title: "خطأ في التحديث",
+        description: error.message || "فشل تحديث cache المدن والمناطق",
         variant: "destructive"
       });
       return false;
@@ -122,13 +99,9 @@ export const useCitiesCache = () => {
   // فحص إذا كان cache فارغ أو قديم
   const isCacheEmpty = () => cities.length === 0;
 
-  // جلب المدن والمناطق عند التحميل الأولي
+  // جلب المدن عند التحميل الأول
   useEffect(() => {
-    const loadCacheData = async () => {
-      await fetchCities();
-      await fetchAllRegions();
-    };
-    loadCacheData();
+    fetchCities();
   }, []);
 
   return {
@@ -138,7 +111,6 @@ export const useCitiesCache = () => {
     lastUpdated,
     fetchCities,
     fetchRegionsByCity,
-    fetchAllRegions,
     updateCache,
     isCacheEmpty
   };

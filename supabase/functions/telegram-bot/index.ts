@@ -590,9 +590,10 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     if (!customerName) customerName = defaultCustomerName;
     
     // معالجة العنوان باستخدام cache المدن والمناطق
-    // متغيرات cityId و regionId معرفة مسبقاً في بداية الدالة
-    let parsedCityName = '';
-    let parsedRegionName = '';
+    let cityId = null;
+    let regionId = null;
+    let parsedCity = '';
+    let parsedRegion = '';
     
     if (customerAddress && deliveryType === 'توصيل') {
       try {
@@ -604,15 +605,15 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         if (addressParts && addressParts.city_id) {
           cityId = addressParts.city_id;
           regionId = addressParts.region_id;
-          parsedCityName = addressParts.city_name || '';
-          parsedRegionName = addressParts.region_name || '';
+          parsedCity = addressParts.city_name || '';
+          parsedRegion = addressParts.region_name || '';
           
           console.log('✅ تم تحليل العنوان باستخدام cache:', {
             original: customerAddress,
             city_id: cityId,
             region_id: regionId,
-            city_name: parsedCityName,
-            region_name: parsedRegionName
+            city_name: parsedCity,
+            region_name: parsedRegion
           });
         } else {
           console.log('⚠️ لم يتم العثور على مطابقة في cache للعنوان:', customerAddress);
@@ -836,14 +837,14 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         source: 'telegram', // إضافة مصدر الطلب
         city_id: cityId, // معرف المدينة من cache
         region_id: regionId, // معرف المنطقة من cache
-        parsed_city: parsedCity || parsedCityName, // اسم المدينة المحللة
-        parsed_region: parsedRegion || parsedRegionName // اسم المنطقة المحللة
+        parsed_city: parsedCity, // اسم المدينة المحللة
+        parsed_region: parsedRegion // اسم المنطقة المحللة
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
       p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
-      p_customer_city: parsedCity || parsedCityName || null, // المدينة المحللة
-      p_customer_region: parsedRegion || parsedRegionName || null, // المنطقة المحللة
+      p_customer_city: parsedCity || null, // المدينة المحللة
+      p_customer_region: parsedRegion || null, // المنطقة المحللة
       p_city_id: cityId, // معرف المدينة للوسيط
       p_region_id: regionId, // معرف المنطقة للوسيط
       p_total_amount: totalPrice,
