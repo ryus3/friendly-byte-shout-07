@@ -110,7 +110,7 @@ const NotificationsHandler = () => {
 
     // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين مع تسجيل مفصل
     const aiOrdersChannel = supabase
-      .channel('ai-orders-notifications-handler-fixed')
+      .channel(`ai-orders-notifications-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
@@ -155,19 +155,19 @@ const NotificationsHandler = () => {
             
             console.log('📝 Final employee name for notification:', employeeName);
             
-            // إشعار للموظف الذي أنشأ الطلب (إذا كان مسجل دخول حالياً)
+            // إشعار للموظف الذي أنشأ الطلب (دائماً إذا كان الموظف الحالي)
             if (employeeProfile && user.employee_code === payload.new.created_by) {
               console.log('✅ Creating notification for employee who created the order');
               const employeeNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `طلب ذكي جديد بواسطة ${employeeName}`,
+                message: `تم إنشاء طلب ذكي جديد بنجاح`,
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
                   ai_order_id: payload.new.id,
                   created_by: payload.new.created_by,
-                  source: payload.new.source
+                  source: payload.new.source || 'telegram'
                 },
                 user_id: user.id,
                 is_read: false
@@ -176,7 +176,7 @@ const NotificationsHandler = () => {
               addNotification(employeeNotification);
             }
 
-            // إشعار للمديرين (بغض النظر عن من أنشأ الطلب)
+            // إشعار للمديرين (دائماً بغض النظر عن من أنشأ الطلب)
             if (isAdmin) {
               console.log('✅ Creating admin notification for AI order');
               const adminNotification = {
@@ -189,7 +189,7 @@ const NotificationsHandler = () => {
                   ai_order_id: payload.new.id,
                   created_by: payload.new.created_by,
                   employee_name: employeeName,
-                  source: payload.new.source
+                  source: payload.new.source || 'telegram'
                 },
                 user_id: null, // Admin notification
                 is_read: false
@@ -197,6 +197,19 @@ const NotificationsHandler = () => {
               console.log('📤 Admin notification data:', adminNotification);
               addNotification(adminNotification);
             }
+
+            // إشعار عام إضافي للتأكد من الوصول فوراً
+            setTimeout(() => {
+              console.log('🔔 Dispatching immediate notification event for UI refresh');
+              window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
+                detail: { 
+                  orderId: payload.new.id,
+                  employeeName,
+                  createdBy: payload.new.created_by,
+                  timestamp: new Date().toISOString()
+                } 
+              }));
+            }, 100);
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
             console.log('🔄 Dispatching aiOrderCreated browser event');
@@ -206,20 +219,18 @@ const NotificationsHandler = () => {
             
           } catch (e) {
             console.error('❌ AI order notification error:', e);
-            // إشعار احتياطي في حالة الخطأ للمديرين فقط
-            if (isAdmin) {
-              console.log('⚠️ Creating fallback admin notification due to error');
-              addNotification({
-                type: 'new_ai_order',
-                title: 'طلب ذكي جديد',
-                message: 'تم استلام طلب ذكي جديد من التليغرام',
-                icon: 'MessageSquare',
-                color: 'amber',
-                data: { ai_order_id: payload.new?.id || null },
-                user_id: null,
-                is_read: false
-              });
-            }
+            // إشعار احتياطي في حالة الخطأ
+            console.log('⚠️ Creating fallback notification due to error');
+            addNotification({
+              type: 'new_ai_order',
+              title: 'طلب ذكي جديد',
+              message: 'تم استلام طلب ذكي جديد من التليغرام',
+              icon: 'MessageSquare',
+              color: 'amber',
+              data: { ai_order_id: payload.new?.id || null },
+              user_id: isAdmin ? null : user.id,
+              is_read: false
+            });
           }
         }
       )

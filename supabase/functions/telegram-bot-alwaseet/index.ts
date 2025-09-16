@@ -92,14 +92,29 @@ async function getRegionsByCity(cityId: number): Promise<any[]> {
   }
 }
 
-// Arabic text normalization for better matching
+// Arabic text normalization for better matching with flexible ة/ه handling
 function normalizeArabic(text: string): string {
   if (!text) return ''
   return text.toString().trim()
     .replace(/[أإآ]/g, 'ا')
     .replace(/[ة]/g, 'ه')
+    .replace(/[ه]/g, 'ة') // Allow reverse mapping too
     .replace(/[ي]/g, 'ى')
     .toLowerCase()
+}
+
+// Enhanced flexible product search that handles both ة and ه
+function createFlexibleSearchTerms(productName: string): string[] {
+  const normalized = normalizeArabic(productName)
+  const terms = [
+    productName,
+    normalized,
+    productName.replace(/ة/g, 'ه'),
+    productName.replace(/ه/g, 'ة'),
+    normalized.replace(/ة/g, 'ه'),
+    normalized.replace(/ه/g, 'ة')
+  ]
+  return [...new Set(terms)] // Remove duplicates
 }
 
 // Find city by name with intelligent matching
@@ -535,11 +550,18 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
           let finalPrice = price
           let productId = null
           
-          // Normalize product name for better search
-          const normalizedProductName = normalizeArabic(productName)
-          console.log(`🔍 Searching for product: "${productName}" -> normalized: "${normalizedProductName}"`)
+          // Enhanced flexible product search with both ة and ه variations
+          const searchTerms = createFlexibleSearchTerms(productName)
+          console.log(`🔍 Searching for product: "${productName}" with terms:`, searchTerms)
           
-          // Search for exact product name first with normalized Arabic
+          // Build comprehensive search query for all variations
+          const orConditions = []
+          for (const term of searchTerms) {
+            orConditions.push(`name.ilike.%${term}%`)
+            orConditions.push(`name.ilike.%${term.replace(/\s+/g, '%')}%`)
+          }
+          
+          // Search for product with all possible variations
           const { data: products } = await supabase
             .from('products')
             .select(`
@@ -550,12 +572,12 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
                 sizes (name)
               )
             `)
-            .or(`name.ilike.%${normalizedProductName}%,name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
+            .or(orConditions.join(','))
             .eq('is_active', true)
-            .limit(10)
+            .limit(15)
           
           if (products && products.length > 0) {
-            // Find best match using normalized comparison
+            // Enhanced smart matching with flexible ة/ه scoring
             let bestMatch = products[0]
             let bestScore = 0
             
@@ -563,19 +585,28 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
               const normalizedDbName = normalizeArabic(product.name)
               let score = 0
               
-              // Exact match gets highest score
-              if (normalizedDbName === normalizedProductName) {
-                score = 100
-              } else if (normalizedDbName.includes(normalizedProductName)) {
-                score = 80
-              } else if (normalizedProductName.includes(normalizedDbName)) {
-                score = 70
-              } else {
-                // Calculate similarity for partial matches
-                const words1 = normalizedProductName.split(' ')
+              // Test exact matches with all search variations
+              for (const searchTerm of searchTerms) {
+                const normalizedSearchTerm = normalizeArabic(searchTerm)
+                
+                if (normalizedDbName === normalizedSearchTerm) {
+                  score = Math.max(score, 100)
+                } else if (normalizedDbName.includes(normalizedSearchTerm)) {
+                  score = Math.max(score, 90)
+                } else if (normalizedSearchTerm.includes(normalizedDbName)) {
+                  score = Math.max(score, 85)
+                }
+              }
+              
+              // Additional scoring for partial word matches
+              if (score < 90) {
+                const words1 = searchTerms[0].toLowerCase().split(' ')
                 const words2 = normalizedDbName.split(' ')
-                const commonWords = words1.filter(word => words2.includes(word))
-                score = (commonWords.length / Math.max(words1.length, words2.length)) * 60
+                const commonWords = words1.filter(word => 
+                  words2.some(dbWord => dbWord.includes(word) || word.includes(dbWord))
+                )
+                const partialScore = (commonWords.length / Math.max(words1.length, words2.length)) * 75
+                score = Math.max(score, partialScore)
               }
               
               if (score > bestScore) {
