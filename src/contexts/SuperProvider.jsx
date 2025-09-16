@@ -2133,7 +2133,7 @@ export const SuperProvider = ({ children }) => {
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
         // إنشاء الطلب المحلي مع ربطه بالوسيط - استخدام orderId بدلاً من qrId
-        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, orderId, {
+        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
           delivery_partner: 'alwaseet',
           delivery_partner_order_id: String(orderId || qrId),
           qr_id: qrId,
@@ -2210,7 +2210,7 @@ export const SuperProvider = ({ children }) => {
       const normalizedItems = matchedItems.filter(Boolean);
       if (!normalizedItems.length) return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
 
-      return await createLocalOrder(aiOrder, normalizedItems, orderId);
+      return await createLocalOrder(aiOrder, normalizedItems, aiOrder.id);
     } catch (err) {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
@@ -2336,9 +2336,31 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // حذف الطلب الذكي نهائياً
-      const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
-      if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+      // ربط الطلب الذكي بالطلب الحقيقي قبل الحذف النهائي
+      try {
+        // ربط الطلب الذكي بالطلب الحقيقي للتتبع
+        await supabase
+          .from('ai_orders')
+          .update({ related_order_id: createdOrder.id })
+          .eq('id', orderId);
+        
+        // حذف الطلب الذكي باستخدام الدالة الآمنة
+        const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
+          p_ai_order_id: orderId
+        });
+        
+        if (delErr || !deleteResult) {
+          console.error('⚠️ فشل حذف الطلب الذكي بعد التحويل:', delErr);
+          // إضافة محاولة حذف مباشرة كـ fallback
+          await supabase.from('ai_orders').delete().eq('id', orderId);
+        } else {
+          console.log('✅ تم حذف الطلب الذكي بنجاح');
+        }
+      } catch (linkError) {
+        console.error('⚠️ خطأ في ربط/حذف الطلب الذكي:', linkError);
+        // محاولة حذف مباشرة في حالة الفشل
+        await supabase.from('ai_orders').delete().eq('id', orderId);
+      }
 
       // تحديث الذاكرة
       setAllData(prev => ({

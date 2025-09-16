@@ -41,14 +41,32 @@ export const useDeliveryOrderHandler = () => {
       });
 
       if (result.success) {
-        // حذف الطلب الذكي بعد النجاح
-        const { error: delErr } = await supabase
-          .from('ai_orders')
-          .delete()
-          .eq('id', aiOrder.id);
-        
-        if (delErr) {
-          console.warn('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+        // ربط الطلب الذكي بالطلب الحقيقي ثم حذفه بأمان
+        try {
+          // ربط الطلب الذكي بالطلب الحقيقي للتتبع
+          if (result.orderId) {
+            await supabase
+              .from('ai_orders')
+              .update({ related_order_id: result.orderId })
+              .eq('id', aiOrder.id);
+          }
+          
+          // حذف الطلب الذكي باستخدام الدالة الآمنة
+          const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
+            p_ai_order_id: aiOrder.id
+          });
+          
+          if (delErr || !deleteResult) {
+            console.warn('⚠️ فشل حذف الطلب الذكي بالدالة الآمنة:', delErr);
+            // محاولة حذف مباشرة كـ fallback
+            await supabase.from('ai_orders').delete().eq('id', aiOrder.id);
+          } else {
+            console.log('✅ تم حذف الطلب الذكي بنجاح من معالج التوصيل');
+          }
+        } catch (linkError) {
+          console.error('⚠️ خطأ في ربط/حذف الطلب الذكي:', linkError);
+          // محاولة حذف مباشرة في حالة الفشل
+          await supabase.from('ai_orders').delete().eq('id', aiOrder.id);
         }
 
         // تحديث الطلب المنشأ لإضافة معلومات الحساب المستخدم

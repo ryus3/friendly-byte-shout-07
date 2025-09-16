@@ -29,6 +29,7 @@ export type Database = {
           original_text: string | null
           processed_at: string | null
           processed_by: string | null
+          related_order_id: string | null
           source: string
           status: string
           telegram_chat_id: number | null
@@ -49,6 +50,7 @@ export type Database = {
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          related_order_id?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
@@ -69,6 +71,7 @@ export type Database = {
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
+          related_order_id?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
@@ -82,6 +85,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ai_orders_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_orders_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "ai_orders_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4102,6 +4126,10 @@ export type Database = {
         Args: { p_days?: number }
         Returns: number
       }
+      cleanup_orphaned_ai_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       cleanup_reserved_stock: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -4142,6 +4170,10 @@ export type Database = {
       delete_ai_order_safe: {
         Args: { p_order_id: string }
         Returns: Json
+      }
+      delete_ai_order_safely: {
+        Args: { p_ai_order_id: string }
+        Returns: boolean
       }
       delete_purchase_completely: {
         Args: { p_purchase_id: string }

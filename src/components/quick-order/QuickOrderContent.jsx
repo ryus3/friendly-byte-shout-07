@@ -1429,8 +1429,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       try {
         const result = await createOrder(orderData);
         if (result.success) {
-          // حذف الطلب الذكي بعد الموافقة عليه
-          await approveAiOrder(aiOrderData.id);
+          // ربط الطلب الذكي بالطلب الحقيقي ثم حذفه بأمان
+          try {
+            if (result.orderId) {
+              await supabase
+                .from('ai_orders')
+                .update({ related_order_id: result.orderId })
+                .eq('id', aiOrderData.id);
+            }
+            
+            const { data: deleteResult, error: delErr } = await supabase.rpc('delete_ai_order_safely', {
+              p_ai_order_id: aiOrderData.id
+            });
+            
+            if (delErr || !deleteResult) {
+              console.warn('⚠️ فشل حذف الطلب الذكي بالدالة الآمنة:', delErr);
+              await supabase.from('ai_orders').delete().eq('id', aiOrderData.id);
+            }
+          } catch (linkError) {
+            console.error('⚠️ خطأ في ربط/حذف الطلب الذكي:', linkError);
+            await supabase.from('ai_orders').delete().eq('id', aiOrderData.id);
+          }
           
           toast({
             title: "تم بنجاح!",
