@@ -352,6 +352,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     let customerPhone = '';
     let customerSecondaryPhone = '';
     let customerAddress = '';
+    let customerCity = '';
+    let customerRegion = '';
+    let cityId = null;
+    let regionId = null;
+    let parsedCity = null;
+    let parsedRegion = null;
     let items = [];
     let totalPrice = 0;
     let hasCustomPrice = false;
@@ -507,14 +513,21 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       for (const [city, variants] of Object.entries(cityVariants)) {
         for (const variant of variants) {
           if (lowerLine.includes(variant)) {
-            // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
-            const addressParts = await parseAddressLine(line);
+            // تحليل العنوان بذكاء لفصل المدينة والمنطقة باستخدام cache
+            const addressParts = await parseAddressWithCache(line);
             if (addressParts.city) {
+              customerCity = addressParts.city.name;
+              cityId = addressParts.city.id;
+              if (addressParts.region) {
+                customerRegion = addressParts.region.name;
+                regionId = addressParts.region.id;
+              }
               // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
-              customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+              customerAddress = addressParts.remainingText.trim() || null;
             } else {
               // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
               customerAddress = line;
+              customerCity = city; // استخدم المدينة التي تم اكتشافها
             }
             deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
             foundCity = true;
@@ -530,10 +543,18 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
           lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
           lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة'))) {
         // تحليل العنوان بذكاء لفصل المدينة والمنطقة عن اقرب نقطة دالة
-        const addressParts = await parseAddressLine(line);
+        const addressParts = await parseAddressWithCache(line);
         if (addressParts.city) {
+          customerCity = addressParts.city.name;
+          cityId = addressParts.city.id;
+          parsedCity = addressParts.city.name;
+          if (addressParts.region) {
+            customerRegion = addressParts.region.name;
+            regionId = addressParts.region.id;
+            parsedRegion = addressParts.region.name;
+          }
           // إذا عُرفت المدينة والمنطقة، فقط الباقي يُحفظ في customer_address
-          customerAddress = addressParts.remainingText.trim() || null; // فقط نقطة الدلالة الحقيقية
+          customerAddress = addressParts.remainingText.trim() || null;
         } else {
           // إذا لم تُحلل بنجاح، احفظ السطر كاملاً
           customerAddress = line;
@@ -934,6 +955,84 @@ function calculateSimilarity(str1: string, str2: string): number {
   
   const editDistance = levenshteinDistance(longer, shorter);
   return (longer.length - editDistance) / longer.length;
+}
+
+// دالة تحليل العنوان باستخدام cache
+async function parseAddressWithCache(addressText: string): Promise<any> {
+  try {
+    const cleanText = addressText.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0621-\u064A\u0660-\u0669a-zA-Z0-9\s]/g, ' ')
+                                  .replace(/\s+/g, ' ')
+                                  .trim();
+    
+    // البحث عن المدينة في cache
+    const { data: cities } = await supabase
+      .from('cities_cache')
+      .select('*')
+      .eq('is_active', true);
+    
+    let bestCityMatch = null;
+    let bestScore = 0;
+    
+    for (const city of cities || []) {
+      const cityNames = [city.name, city.name_ar, city.name_en].filter(Boolean);
+      for (const cityName of cityNames) {
+        if (cleanText.toLowerCase().includes(cityName.toLowerCase())) {
+          const score = calculateSimilarity(cityName.toLowerCase(), cleanText.toLowerCase());
+          if (score > bestScore) {
+            bestScore = score;
+            bestCityMatch = { id: city.alwaseet_id, name: city.name };
+          }
+        }
+      }
+    }
+    
+    let bestRegionMatch = null;
+    if (bestCityMatch) {
+      // البحث عن المنطقة في cache
+      const { data: regions } = await supabase
+        .from('regions_cache')
+        .select('*')
+        .eq('city_id', bestCityMatch.id)
+        .eq('is_active', true);
+      
+      let regionScore = 0;
+      for (const region of regions || []) {
+        const regionNames = [region.name, region.name_ar, region.name_en].filter(Boolean);
+        for (const regionName of regionNames) {
+          if (cleanText.toLowerCase().includes(regionName.toLowerCase())) {
+            const score = calculateSimilarity(regionName.toLowerCase(), cleanText.toLowerCase());
+            if (score > regionScore) {
+              regionScore = score;
+              bestRegionMatch = { id: region.alwaseet_id, name: region.name };
+            }
+          }
+        }
+      }
+    }
+    
+    // إزالة المدينة والمنطقة من النص للحصول على الباقي
+    let remainingText = cleanText;
+    if (bestCityMatch) {
+      remainingText = remainingText.replace(new RegExp(bestCityMatch.name, 'gi'), '').trim();
+    }
+    if (bestRegionMatch) {
+      remainingText = remainingText.replace(new RegExp(bestRegionMatch.name, 'gi'), '').trim();
+    }
+    
+    return {
+      city: bestCityMatch,
+      region: bestRegionMatch,
+      remainingText: remainingText || addressText
+    };
+    
+  } catch (error) {
+    console.error('خطأ في تحليل العنوان:', error);
+    return {
+      city: null,
+      region: null,
+      remainingText: addressText
+    };
+  }
 }
 
 function levenshteinDistance(str1: string, str2: string): number {
@@ -1420,8 +1519,17 @@ ${employee.role === 'admin' ?
       const defaultCustomerName = profileData?.default_customer_name;
       console.log(`📝 الاسم الافتراضي للزبون: ${defaultCustomerName || 'غير محدد'}`);
       
-      // تم إلغاء رسالة الانتظار بناءً على طلبكم
-      await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
+      try {
+        // معالجة الطلب وإرسال رد للمستخدم
+        await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
+        
+        // إرسال رسالة تأكيد للمستخدم
+        await sendTelegramMessage(chatId, `✅ تم استلام طلبك بنجاح!\n\n📋 سيتم معالجة الطلب وإرساله للتوصيل قريباً.\n\n🔔 ستصلك إشعارات تحديث الحالة تلقائياً.`);
+        
+      } catch (error) {
+        console.error('Error processing order:', error);
+        await sendTelegramMessage(chatId, `❌ عذراً، حدث خطأ في معالجة الطلب.\n\nالرجاء المحاولة مرة أخرى أو التواصل مع الإدارة.`);
+      }
     }
 
     return new Response('OK', { status: 200, headers: corsHeaders });

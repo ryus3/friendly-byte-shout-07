@@ -44,8 +44,21 @@ const CitiesCacheManager = () => {
     }).format(date) : 'غير محدد';
   };
 
-  const handleUpdateCache = async () => {
-    await updateCache();
+  const handleUpdateCache = async (e) => {
+    if (e) {
+      e.preventDefault(); // منع تحديث الصفحة
+      e.stopPropagation(); // منع انتشار الحدث
+    }
+    
+    try {
+      const success = await updateCache();
+      if (success) {
+        // تحديث قائمة المدن بعد التحديث الناجح
+        await fetchCities();
+      }
+    } catch (error) {
+      console.error('خطأ في تحديث cache:', error);
+    }
   };
 
   return (

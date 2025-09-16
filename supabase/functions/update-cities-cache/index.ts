@@ -109,7 +109,7 @@ async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<
 
     return regionsData.map(region => ({
       id: parseInt(region.id) || region.id,
-      city_id: cityId,
+      city_id: parseInt(region.city_id) || cityId, // استخدم city_id من الاستجابة أولاً
       name: region.name,
       name_ar: region.name_ar || region.name,
       name_en: region.name_en || null
@@ -213,8 +213,17 @@ serve(async (req) => {
 
     for (const city of cities) {
       try {
+        console.log(`🔄 جلب مناطق المدينة: ${city.name} (ID: ${city.id})`);
         const regions = await fetchRegionsFromAlWaseet(token, city.id);
-        const regionsUpdated = await updateRegionsCache(regions);
+        
+        // تأكد من أن city_id صحيح لكل منطقة
+        const regionsWithCorrectCityId = regions.map(region => ({
+          ...region,
+          city_id: city.id // تأكد من ربط المنطقة بالمدينة الصحيحة
+        }));
+        
+        const regionsUpdated = await updateRegionsCache(regionsWithCorrectCityId);
+        console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name}`);
         totalRegionsUpdated += regionsUpdated;
         processedCities++;
 
