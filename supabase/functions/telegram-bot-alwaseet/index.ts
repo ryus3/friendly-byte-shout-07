@@ -92,13 +92,11 @@ async function getRegionsByCity(cityId: number): Promise<any[]> {
   }
 }
 
-// Arabic text normalization for better matching with flexible ة/ه handling
+// Arabic text normalization for better matching
 function normalizeArabic(text: string): string {
   if (!text) return ''
   return text.toString().trim()
     .replace(/[أإآ]/g, 'ا')
-    .replace(/[ة]/g, 'ه')
-    .replace(/[ه]/g, 'ة') // Allow reverse mapping too
     .replace(/[ي]/g, 'ى')
     .toLowerCase()
 }

@@ -130,13 +130,13 @@ const NotificationsHandler = () => {
             let employeeProfile = null;
             
             if (payload.new?.created_by) {
-              console.log('🔍 Looking up employee with code:', payload.new.created_by);
+              console.log('🔍 Looking up employee with user_id:', payload.new.created_by);
               
-              // البحث بـ employee_code في جدول profiles  
+              // البحث بـ user_id في جدول profiles  
               const { data: emp, error: empError } = await supabase
                 .from('profiles')
                 .select('user_id, full_name, employee_code')
-                .eq('employee_code', payload.new.created_by)
+                .eq('user_id', payload.new.created_by)
                 .maybeSingle();
               
               if (empError) {
@@ -156,7 +156,7 @@ const NotificationsHandler = () => {
             console.log('📝 Final employee name for notification:', employeeName);
             
             // إشعار للموظف الذي أنشأ الطلب (دائماً إذا كان الموظف الحالي)
-            if (employeeProfile && user.employee_code === payload.new.created_by) {
+            if (employeeProfile && user.id === payload.new.created_by) {
               console.log('✅ Creating notification for employee who created the order');
               const employeeNotification = {
                 type: 'new_ai_order',
