@@ -4624,6 +4624,10 @@ export type Database = {
         Args: { phone_input: string }
         Returns: string
       }
+      parse_address_using_cache: {
+        Args: { p_address_text: string }
+        Returns: Json
+      }
       pay_employee_dues_with_invoice: {
         Args: {
           p_amount: number
