@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { RefreshCw, Database, MapPin, Clock, Building2 } from 'lucide-react';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 
 const CitiesCacheManager = () => {
+  const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0, message: '' });
+  
   const { 
     cities, 
     regions,
@@ -38,13 +41,24 @@ const CitiesCacheManager = () => {
   const currentPartner = getCurrentDeliveryPartner();
 
   const formatDate = (date) => {
-    return date ? new Intl.DateTimeFormat('ar-IQ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date) : 'غير محدد';
+    if (!date) return 'غير محدد';
+    
+    try {
+      // التأكد من أن التاريخ صالح
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return 'غير محدد';
+      
+      return new Intl.DateTimeFormat('ar-IQ', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObj);
+    } catch (error) {
+      console.error('خطأ في تنسيق التاريخ:', error);
+      return 'غير محدد';
+    }
   };
 
   const handleUpdateCache = async (e) => {
@@ -54,13 +68,24 @@ const CitiesCacheManager = () => {
     }
     
     try {
-      const success = await updateCache();
-      if (success) {
+      setUpdateProgress({ current: 0, total: 100, message: 'بدء تحديث المدن والمناطق...' });
+      
+      const result = await updateCache();
+      
+      if (result?.success) {
+        setUpdateProgress({ current: 100, total: 100, message: 'اكتمل التحديث بنجاح' });
         // تحديث قائمة المدن بعد التحديث الناجح
         await fetchCities();
+        // إخفاء شريط التقدم بعد ثانيتين
+        setTimeout(() => {
+          setUpdateProgress({ current: 0, total: 0, message: '' });
+        }, 2000);
+      } else {
+        setUpdateProgress({ current: 0, total: 0, message: '' });
       }
     } catch (error) {
       console.error('خطأ في تحديث cache:', error);
+      setUpdateProgress({ current: 0, total: 0, message: '' });
     }
   };
 
@@ -186,12 +211,12 @@ const CitiesCacheManager = () => {
           </div>
         )}
 
-        {/* زر التحديث */}
-        <div className="flex gap-2">
+        {/* زر التحديث مع شريط التقدم */}
+        <div className="space-y-4">
           <Button 
             onClick={handleUpdateCache}
             disabled={loading || !isLoggedIn || activePartner === 'local'}
-            className="flex-1"
+            className="w-full"
           >
             {loading ? (
               <>
@@ -208,6 +233,20 @@ const CitiesCacheManager = () => {
               </>
             )}
           </Button>
+
+          {/* شريط التقدم */}
+          {updateProgress.total > 0 && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{updateProgress.message}</span>
+                <span>{Math.round((updateProgress.current / updateProgress.total) * 100)}%</span>
+              </div>
+              <Progress 
+                value={(updateProgress.current / updateProgress.total) * 100} 
+                className="w-full"
+              />
+            </div>
+          )}
         </div>
 
         {/* معلومات إضافية */}

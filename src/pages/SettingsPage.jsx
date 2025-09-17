@@ -126,6 +126,7 @@ const SettingsPage = () => {
   // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
+    isDepartmentManager,
     isSalesEmployee,
     canManageEmployees,
     canManageSettings,
@@ -404,8 +405,8 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          {/* إدارة cache المدن والمناطق - للمديرين */}
-          {canAccessDeliveryPartners && (
+          {/* إدارة cache المدن والمناطق - للمديرين والنواب فقط */}
+          {(isAdmin || isDepartmentManager) && (
             <>
               <SectionHeader 
                 icon={Database} 
