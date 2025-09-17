@@ -22,11 +22,11 @@ const NotificationsHandler = () => {
       userId: user.id,
       role: user.role,
       employeeCode: user.employee_code,
-      isAdmin: user.role === 'admin'
+      isAdmin: user.role === 'super_admin'
     });
     
     // فحص إذا كان المستخدم مدير
-    const isAdmin = user.role === 'admin';
+    const isAdmin = user.role === 'super_admin';
     
     // ADMIN ONLY NOTIFICATIONS - These create notifications directly
     
