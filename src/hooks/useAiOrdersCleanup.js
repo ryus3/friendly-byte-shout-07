@@ -10,35 +10,18 @@ export const useAiOrdersCleanup = () => {
   // حذف طلب ذكي واحد بأمان
   const deleteAiOrderSafely = useCallback(async (aiOrderId) => {
     try {
-      console.log('🗑️ بدء حذف الطلب الذكي:', aiOrderId);
-      
       const { data: result, error } = await supabase.rpc('delete_ai_order_safely', {
         p_ai_order_id: aiOrderId
       });
       
       if (error) {
         console.error('❌ فشل حذف الطلب الذكي بالدالة الآمنة:', error);
-        
-        // آلية احتياطية: حذف مباشر إذا فشلت الدالة
-        console.log('🔄 محاولة حذف مباشر كآلية احتياطية...');
-        const { error: directError } = await supabase
-          .from('ai_orders')
-          .delete()
-          .eq('id', aiOrderId);
-          
-        if (directError) {
-          console.error('❌ فشل الحذف المباشر أيضاً:', directError);
-          return { success: false, error: directError.message };
-        }
-        
-        console.log('✅ تم الحذف المباشر بنجاح');
-        return { success: true, method: 'direct' };
+        return { success: false, error: error.message };
       }
       
-      console.log('✅ تم حذف الطلب الذكي بنجاح بالدالة الآمنة:', aiOrderId);
-      return { success: result || true, method: 'function' };
+      return { success: !!result };
     } catch (err) {
-      console.error('❌ خطأ عام في حذف الطلب الذكي:', err);
+      console.error('❌ خطأ في حذف الطلب الذكي:', err);
       return { success: false, error: err.message };
     }
   }, []);
@@ -79,25 +62,6 @@ export const useAiOrdersCleanup = () => {
     }
   }, [linkAiOrderToRealOrder, deleteAiOrderSafely]);
 
-  // تنظيف جميع الطلبات الذكية المتبقية
-  const cleanupOrphanedAiOrders = useCallback(async () => {
-    try {
-      console.log('🧹 بدء تنظيف الطلبات الذكية المتبقية...');
-      
-      const { data: deletedCount, error } = await supabase.rpc('cleanup_orphaned_ai_orders');
-      
-      if (error) {
-        console.error('❌ فشل تنظيف الطلبات الذكية:', error);
-        return { success: false, error: error.message, deletedCount: 0 };
-      }
-      
-      console.log(`✅ تم حذف ${deletedCount || 0} طلب ذكي متبقي`);
-      return { success: true, deletedCount: deletedCount || 0 };
-    } catch (err) {
-      console.error('❌ خطأ في تنظيف الطلبات الذكية:', err);
-      return { success: false, error: err.message, deletedCount: 0 };
-    }
-  }, []);
 
   // التحقق من وجود طلبات ذكية متبقية
   const checkOrphanedAiOrders = useCallback(async () => {
@@ -124,7 +88,6 @@ export const useAiOrdersCleanup = () => {
     deleteAiOrderSafely,
     linkAiOrderToRealOrder,
     deleteAiOrderWithLink,
-    cleanupOrphanedAiOrders,
     checkOrphanedAiOrders
   };
 };

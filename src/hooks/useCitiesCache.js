@@ -79,33 +79,16 @@ export const useCitiesCache = () => {
   const fetchSyncInfo = async () => {
     try {
       const { data, error } = await supabase.rpc('get_last_cities_regions_sync');
-      if (error) {
-        console.error('خطأ في دالة get_last_cities_regions_sync:', error);
-        // إذا فشلت الدالة، نجلب البيانات من جداول مباشرة
-        const { data: citiesData } = await supabase
-          .from('cities_cache')
-          .select('created_at')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (citiesData?.created_at) {
-          const fallbackData = {
-            last_sync_at: citiesData.created_at,
-            cities_count: cities.length,
-            regions_count: regions.length,
-            success: true
-          };
-          setSyncInfo(fallbackData);
-          setLastUpdated(citiesData.created_at);
-        }
-        return;
-      }
+      if (error) throw error;
       
+      console.log('🔍 fetchSyncInfo نتيجة:', data);
       setSyncInfo(data);
+      
       if (data?.last_sync_at) {
         setLastUpdated(data.last_sync_at);
       }
+      
+      return data;
     } catch (error) {
       console.error('خطأ في جلب معلومات المزامنة:', error);
     }
@@ -137,10 +120,12 @@ export const useCitiesCache = () => {
 
       const success = data?.success;
       if (success) {
-        // تحديث قائمة المدن والمناطق بعد التحديث الناجح
+        // تحديث معلومات المزامنة أولاً
+        await fetchSyncInfo();
+        
+        // ثم تحديث قائمة المدن والمناطق
         await fetchCities();
         await fetchAllRegions();
-        await fetchSyncInfo(); // جلب معلومات المزامنة المحدثة
         
         toast({
           title: "نجح التحديث",

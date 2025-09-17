@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const setupRealtime = () => {
   let debounceTimers = new Map();
   
-  const debouncedDispatch = (eventName, detail, delay = 200) => {
+  const debouncedDispatch = (eventName, detail, delay = 25) => {
     const existingTimer = debounceTimers.get(eventName);
     if (existingTimer) {
       clearTimeout(existingTimer);
@@ -30,7 +30,7 @@ export const setupRealtime = () => {
       if (type === 'INSERT') {
         debouncedDispatch('orderCreated', payload.new, 25);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('orderUpdated', payload.new, 50);
+        debouncedDispatch('orderUpdated', payload.new, 25);
       } else if (type === 'DELETE') {
         debouncedDispatch('orderDeleted', payload.old, 25);
       }
@@ -64,7 +64,7 @@ export const setupRealtime = () => {
       if (type === 'INSERT') {
         debouncedDispatch('invoiceCreated', payload.new, 25);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('invoiceUpdated', payload.new, 50);
+        debouncedDispatch('invoiceUpdated', payload.new, 25);
         // تشغيل sync للفواتير المستلمة تلقائياً
         if (payload.new.received === true && payload.old?.received !== true) {
           debouncedDispatch('invoiceReceived', payload.new, 25);
