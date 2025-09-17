@@ -771,51 +771,52 @@ useEffect(() => {
                        
                        {/* زر الموافقة التلقائية - مدمج مع العنوان */}
                        <Button
-                      variant={autoApprovalEnabled ? "default" : "outline"}
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          const newValue = !autoApprovalEnabled;
-                          const { error } = await supabase
-                            .from('profiles')
-                            .update({ auto_approval_enabled: newValue })
-                            .eq('user_id', user.user_id);
-                          
-                          if (error) throw error;
-                          
-                          setAutoApprovalEnabled(newValue);
-                          toast({
-                            title: newValue ? "تم تفعيل الموافقة التلقائية" : "تم إلغاء الموافقة التلقائية",
-                            description: newValue 
-                              ? "سيتم الموافقة على الطلبات الصحيحة تلقائياً" 
-                              : "ستحتاج الطلبات إلى موافقة يدوية",
-                            variant: "success"
-                          });
-                        } catch (error) {
-                          console.error('خطأ في تحديث إعدادات الموافقة التلقائية:', error);
-                          toast({
-                            title: "خطأ",
-                            description: "فشل في تحديث الإعدادات",
-                            variant: "destructive"
-                          });
-                        }
-                      }}
-                      className={cn(
-                        "h-7 px-2 transition-all duration-200 flex items-center gap-1.5 text-xs",
-                        autoApprovalEnabled
-                          ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
-                          : "border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                      )}
-                    >
-                      <Zap className={cn(
-                        "w-3 h-3",
-                        autoApprovalEnabled ? "text-white" : "text-slate-500"
-                      )} />
-                      <span className="font-medium">
-                        {autoApprovalEnabled ? "مفعل" : "معطل"}
-                      </span>
-                    </Button>
-                  </CardTitle>
+                         variant={autoApprovalEnabled ? "default" : "outline"}
+                         size="sm"
+                         onClick={async () => {
+                           try {
+                             const newValue = !autoApprovalEnabled;
+                             const { error } = await supabase
+                               .from('profiles')
+                               .update({ auto_approval_enabled: newValue })
+                               .eq('user_id', user.user_id);
+                             
+                             if (error) throw error;
+                             
+                             setAutoApprovalEnabled(newValue);
+                             toast({
+                               title: newValue ? "تم تفعيل الموافقة التلقائية" : "تم إلغاء الموافقة التلقائية",
+                               description: newValue 
+                                 ? "سيتم الموافقة على الطلبات الصحيحة تلقائياً" 
+                                 : "ستحتاج الطلبات إلى موافقة يدوية",
+                               variant: "success"
+                             });
+                           } catch (error) {
+                             console.error('خطأ في تحديث إعدادات الموافقة التلقائية:', error);
+                             toast({
+                               title: "خطأ",
+                               description: "فشل في تحديث الإعدادات",
+                               variant: "destructive"
+                             });
+                           }
+                         }}
+                         className={cn(
+                           "h-7 px-2 transition-all duration-200 flex items-center gap-1.5 text-xs",
+                           autoApprovalEnabled
+                             ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-md"
+                             : "border border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                         )}
+                       >
+                         <Zap className={cn(
+                           "w-3 h-3",
+                           autoApprovalEnabled ? "text-white" : "text-slate-500"
+                         )} />
+                         <span className="font-medium">
+                           {autoApprovalEnabled ? "مفعل" : "معطل"}
+                         </span>
+                       </Button>
+                     </div>
+                   </CardTitle>
                   
                   {(isAdmin || isDepartmentManager) && (
                     <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
