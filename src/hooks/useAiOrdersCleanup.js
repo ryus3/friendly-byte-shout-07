@@ -62,7 +62,7 @@ export const useAiOrdersCleanup = () => {
     }
   }, [linkAiOrderToRealOrder, deleteAiOrderSafely]);
 
-  // تنظيف جميع الطلبات الذكية المتبقية
+  // تنظيف جميع الطلبات الذكية المتبقية - النسخة المحسنة
   const cleanupOrphanedAiOrders = useCallback(async () => {
     try {
       console.log('🧹 بدء تنظيف الطلبات الذكية المتبقية...');
@@ -73,6 +73,11 @@ export const useAiOrdersCleanup = () => {
         console.error('❌ فشل تنظيف الطلبات الذكية:', error);
         return { success: false, error: error.message, deletedCount: 0 };
       }
+      
+      // إرسال إشعار للنافذة بتحديث البيانات
+      window.dispatchEvent(new CustomEvent('aiOrdersCleanedUp', { 
+        detail: { deletedCount: deletedCount || 0 } 
+      }));
       
       console.log(`✅ تم حذف ${deletedCount || 0} طلب ذكي متبقي`);
       return { success: true, deletedCount: deletedCount || 0 };

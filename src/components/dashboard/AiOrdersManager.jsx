@@ -35,6 +35,7 @@ import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
+import SmartOrdersCleanupButton from '@/components/smart-orders/SmartOrdersCleanupButton';
 
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
@@ -753,14 +754,23 @@ useEffect(() => {
             <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
               <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
                 <div dir="rtl">
-                   <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-3">
+                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="w-4 h-4 text-blue-600" />
+                        قائمة الطلبات الذكية ({filteredOrders.length})
+                      </div>
+                     
                      <div className="flex items-center gap-2">
-                       <MessageSquare className="w-4 h-4 text-blue-600" />
-                       قائمة الطلبات الذكية ({filteredOrders.length})
-                     </div>
-                    
-                    {/* زر الموافقة التلقائية - مدمج مع العنوان */}
-                    <Button
+                       {/* زر تنظيف الطلبات المتبقية */}
+                       <SmartOrdersCleanupButton 
+                         onCleanupComplete={() => {
+                           refreshAll();
+                           setOrders(ordersFromContext);
+                         }}
+                       />
+                       
+                       {/* زر الموافقة التلقائية - مدمج مع العنوان */}
+                       <Button
                       variant={autoApprovalEnabled ? "default" : "outline"}
                       size="sm"
                       onClick={async () => {
