@@ -99,7 +99,7 @@ export const SuperProvider = ({ children }) => {
   };
   
   // hook تنظيف الطلبات الذكية
-  const { deleteAiOrderWithLink, cleanupOrphanedAiOrders } = useAiOrdersCleanup();
+  const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
   // AlWaseet context للتعامل مع شركات التوصيل مباشرة
   const { 
@@ -305,14 +305,6 @@ export const SuperProvider = ({ children }) => {
     try {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
-      
-      // تنظيف الطلبات الذكية المتبقية في الخلفية
-      setTimeout(async () => {
-        const result = await cleanupOrphanedAiOrders();
-        if (result.success && result.deletedCount > 0) {
-          console.log(`✅ تم تنظيف ${result.deletedCount} طلب ذكي متبقي`);
-        }
-      }, 3000); // تأخير 3 ثوانٍ لعدم تأثير على أداء التحميل الأولي
       
       const data = await superAPI.getAllData();
       
