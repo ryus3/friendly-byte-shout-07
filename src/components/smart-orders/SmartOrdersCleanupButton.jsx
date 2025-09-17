@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Trash2, Loader2 } from 'lucide-react';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * زر تنظيف الطلبات الذكية المتبقية مع تأكيد
@@ -12,6 +12,7 @@ const SmartOrdersCleanupButton = ({ onCleanupComplete }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { cleanupOrphanedAiOrders, checkOrphanedAiOrders } = useAiOrdersCleanup();
+  const { toast } = useToast();
 
   const handleCleanup = async () => {
     setIsLoading(true);
@@ -21,7 +22,10 @@ const SmartOrdersCleanupButton = ({ onCleanupComplete }) => {
       const checkResult = await checkOrphanedAiOrders();
       
       if (!checkResult.success || checkResult.orders.length === 0) {
-        toast.success('لا توجد طلبات ذكية متبقية للحذف');
+        toast({
+          title: 'لا توجد طلبات ذكية متبقية للحذف',
+          variant: "default"
+        });
         setShowConfirm(false);
         setIsLoading(false);
         return;
@@ -31,14 +35,23 @@ const SmartOrdersCleanupButton = ({ onCleanupComplete }) => {
       const result = await cleanupOrphanedAiOrders();
       
       if (result.success) {
-        toast.success(`تم حذف ${result.deletedCount} طلب ذكي متبقي بنجاح`);
+        toast({
+          title: `تم حذف ${result.deletedCount} طلب ذكي متبقي بنجاح`,
+          variant: "default"
+        });
         onCleanupComplete?.();
       } else {
-        toast.error(`فشل في تنظيف الطلبات الذكية: ${result.error}`);
+        toast({
+          title: `فشل في تنظيف الطلبات الذكية: ${result.error}`,
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('خطأ في تنظيف الطلبات الذكية:', error);
-      toast.error('حدث خطأ أثناء تنظيف الطلبات الذكية');
+      toast({
+        title: 'حدث خطأ أثناء تنظيف الطلبات الذكية',
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
       setShowConfirm(false);
