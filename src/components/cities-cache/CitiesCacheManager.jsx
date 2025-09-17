@@ -38,13 +38,24 @@ const CitiesCacheManager = () => {
   const currentPartner = getCurrentDeliveryPartner();
 
   const formatDate = (date) => {
-    return date ? new Intl.DateTimeFormat('ar-IQ', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date) : 'غير محدد';
+    if (!date) return 'غير محدد';
+    
+    try {
+      // التأكد من أن التاريخ صالح
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) return 'غير محدد';
+      
+      return new Intl.DateTimeFormat('ar-IQ', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObj);
+    } catch (error) {
+      console.error('خطأ في تنسيق التاريخ:', error);
+      return 'غير محدد';
+    }
   };
 
   const handleUpdateCache = async (e) => {
