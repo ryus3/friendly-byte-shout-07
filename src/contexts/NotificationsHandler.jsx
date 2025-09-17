@@ -157,18 +157,16 @@ const NotificationsHandler = () => {
               addNotification(adminNotification);
             }
 
-            // إشعار عام إضافي للتأكد من الوصول فوراً
-            setTimeout(() => {
-              console.log('🔔 Dispatching immediate notification event for UI refresh');
-              window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
-                detail: { 
-                  orderId: payload.new.id,
-                  employeeName,
-                  createdBy: payload.new.created_by,
-                  timestamp: new Date().toISOString()
-                } 
-              }));
-            }, 100);
+            // إشعار فوري بدون تأخير
+            console.log('🔔 Dispatching immediate notification event for UI refresh');
+            window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
+              detail: { 
+                orderId: payload.new.id,
+                employeeName,
+                createdBy: payload.new.created_by,
+                timestamp: new Date().toISOString()
+              } 
+            }));
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
             console.log('🔄 Dispatching aiOrderCreated browser event');
