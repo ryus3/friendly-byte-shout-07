@@ -162,35 +162,61 @@ async function updateCitiesCache(cities: AlWaseetCity[]): Promise<number> {
 }
 
 async function updateRegionsCache(regions: AlWaseetRegion[]): Promise<number> {
-  let updatedCount = 0;
+  if (regions.length === 0) return 0;
   
-  for (const region of regions) {
-    try {
-      const { error } = await supabase
-        .from('regions_cache')
-        .upsert({
-          alwaseet_id: region.id,
-          city_id: region.city_id,
-          name: region.name,
-          name_ar: region.name_ar || region.name,
-          name_en: region.name_en || null,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'alwaseet_id'
-        });
+  try {
+    // محاولة bulk insert محسنة
+    const regionsData = regions.map(region => ({
+      alwaseet_id: region.id,
+      city_id: region.city_id,
+      name: region.name,
+      name_ar: region.name_ar || region.name,
+      name_en: region.name_en || null,
+      is_active: true,
+      updated_at: new Date().toISOString()
+    }));
 
-      if (error) {
-        console.error(`❌ خطأ في تحديث المنطقة ${region.name}:`, error);
-      } else {
-        updatedCount++;
+    const { error } = await supabase
+      .from('regions_cache')
+      .upsert(regionsData, {
+        onConflict: 'alwaseet_id'
+      });
+
+    if (error) {
+      console.error('❌ خطأ في bulk update للمناطق:', error);
+      // fallback إلى التحديث الفردي
+      let updatedCount = 0;
+      for (const region of regions) {
+        try {
+          const { error: individualError } = await supabase
+            .from('regions_cache')
+            .upsert({
+              alwaseet_id: region.id,
+              city_id: region.city_id,
+              name: region.name,
+              name_ar: region.name_ar || region.name,
+              name_en: region.name_en || null,
+              is_active: true,
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'alwaseet_id'
+            });
+
+          if (!individualError) {
+            updatedCount++;
+          }
+        } catch (individualError) {
+          console.error(`❌ خطأ في تحديث المنطقة ${region.name}:`, individualError);
+        }
       }
-    } catch (error) {
-      console.error(`❌ خطأ في معالجة المنطقة ${region.name}:`, error);
+      return updatedCount;
     }
-  }
 
-  return updatedCount;
+    return regions.length;
+  } catch (error) {
+    console.error('❌ خطأ في تحديث cache المناطق:', error);
+    return 0;
+  }
 }
 
 serve(async (req) => {
@@ -233,8 +259,10 @@ serve(async (req) => {
     let totalRegionsUpdated = 0;
     let processedCities = 0;
 
-    // جلب المناطق لكل مدينة بشكل متوازي (مجموعات صغيرة)
-    const batchSize = 5; // معالجة 5 مدن في كل مرة
+    // جلب المناطق لكل مدينة بشكل متوازي (مجموعات أصغر مع timeout محسن)
+    const batchSize = 3; // تقليل حجم المجموعة إلى 3 مدن لتجنب الـ timeout
+    const maxRegionsPerBatch = 100; // الحد الأقصى للمناطق في كل batch
+    
     for (let i = 0; i < cities.length; i += batchSize) {
       const cityBatch = cities.slice(i, i + batchSize);
       
@@ -243,15 +271,25 @@ serve(async (req) => {
           const regions = await fetchRegionsFromAlWaseet(token, city.id);
           console.log(`📦 استخراج ${regions.length} منطقة للمدينة ${city.id} (${city.name})`);
           
-          // معالجة وتحديث المناطق مع التأكد من استخدام alwaseet_id
-          const processedRegions = regions.map(region => ({
-            ...region,
-            city_id: city.id // استخدام معرف المدينة من الوسيط مباشرة
-          }));
+          // معالجة المناطق في مجموعات صغيرة لتجنب الـ timeout
+          let regionsUpdated = 0;
+          for (let j = 0; j < regions.length; j += maxRegionsPerBatch) {
+            const regionsBatch = regions.slice(j, j + maxRegionsPerBatch);
+            const processedRegions = regionsBatch.map(region => ({
+              ...region,
+              city_id: city.id
+            }));
+            
+            const batchUpdated = await updateRegionsCache(processedRegions);
+            regionsUpdated += batchUpdated;
+            
+            // استراحة قصيرة بين batches المناطق
+            if (j + maxRegionsPerBatch < regions.length) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+          }
           
-          const regionsUpdated = await updateRegionsCache(processedRegions);
           console.log(`✅ تم تحديث ${regionsUpdated} منطقة للمدينة ${city.name}`);
-          
           return { regionsUpdated, cityProcessed: 1 };
         } catch (error) {
           console.error(`❌ خطأ في معالجة مناطق المدينة ${city.id} (${city.name}):`, error);
@@ -267,10 +305,13 @@ serve(async (req) => {
         processedCities += result.cityProcessed;
       });
 
-      // استراحة قصيرة بين المجموعات
+      // استراحة أطول بين مجموعات المدن
       if (i + batchSize < cities.length) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
+      
+      // تحديث real-time للتقدم
+      console.log(`🔄 تقدم المزامنة: ${Math.min(i + batchSize, cities.length)}/${cities.length} مدن`);
     }
 
     const endTime = new Date();

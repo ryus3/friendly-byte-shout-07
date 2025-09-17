@@ -26,10 +26,11 @@ import { cn } from '@/lib/utils';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
-import { supabase } from '@/integrations/supabase/client';
+import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
+  const { deleteAiOrderSafely } = useAiOrdersCleanup();
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
@@ -580,23 +581,28 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={async () => {
-                      // تحديث فوري optimistic
-                      window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
-                      toast({ title: 'جاري الحذف...', description: 'تم حذف الطلب الذكي', variant: 'default' });
-                      
                       try {
-                        const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: order.id });
-                        if (rpcErr || rpcRes?.success === false) {
-                          // استرجاع البيانات في حالة الفشل
-                          window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: order }));
-                          toast({ title: 'فشل الحذف', description: rpcErr?.message || rpcRes?.error || 'تعذر حذف الطلب الذكي', variant: 'destructive' });
+                        toast({ title: 'جاري الحذف...', description: 'يتم حذف الطلب الذكي', variant: 'default' });
+                        
+                        const result = await deleteAiOrderSafely(order.id);
+                        
+                        if (result.success) {
+                          window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
+                          toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'default' });
                         } else {
-                          toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
+                          toast({ 
+                            title: 'فشل الحذف', 
+                            description: result.error || 'تعذر حذف الطلب الذكي', 
+                            variant: 'destructive' 
+                          });
                         }
                       } catch (error) {
-                        // استرجاع البيانات في حالة الخطأ
-                        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: order }));
-                        toast({ title: 'خطأ في الشبكة', description: 'تعذر الاتصال بالخادم', variant: 'destructive' });
+                        console.error('خطأ في حذف الطلب الذكي:', error);
+                        toast({ 
+                          title: 'خطأ في الشبكة', 
+                          description: 'تعذر الاتصال بالخادم', 
+                          variant: 'destructive' 
+                        });
                       }
                     }}
                   >

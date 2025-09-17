@@ -404,8 +404,8 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          {/* إدارة cache المدن والمناطق - للمديرين */}
-          {canAccessDeliveryPartners && (
+          {/* إدارة cache المدن والمناطق - للمديرين والنواب فقط */}
+          {(isAdmin || isDeputy) && (
             <>
               <SectionHeader 
                 icon={Database} 
