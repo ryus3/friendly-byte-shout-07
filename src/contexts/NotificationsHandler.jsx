@@ -21,12 +21,13 @@ const NotificationsHandler = () => {
     console.log('🔄 NotificationsHandler: Setting up notifications for user:', {
       userId: user.id,
       role: user.role,
+      roles: user.roles,
       employeeCode: user.employee_code,
-      isAdmin: user.role === 'super_admin'
+      isAdmin: user.roles?.includes('super_admin')
     });
     
-    // فحص إذا كان المستخدم مدير
-    const isAdmin = user.role === 'super_admin';
+    // فحص إذا كان المستخدم مدير - استخدام user.roles بدلاً من user.role
+    const isAdmin = user.roles?.includes('super_admin');
     
     // ADMIN ONLY NOTIFICATIONS - These create notifications directly
     
