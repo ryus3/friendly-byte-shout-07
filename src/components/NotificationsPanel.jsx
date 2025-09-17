@@ -414,9 +414,14 @@ const NotificationsPanel = () => {
       navigate('/customers-management?tab=city-discounts');
     } else if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
-    } else if (notification.type === 'ai_order') {
+    } else if (notification.type === 'ai_order' || notification.type === 'new_ai_order') {
       // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم مع تحديد الطلب
       const aiOrderId = notification?.data?.ai_order_id || notification?.data?.id || notification?.related_entity_id;
+      console.log('🔔 NotificationsPanel: Opening AI Orders Manager for notification:', {
+        type: notification.type,
+        aiOrderId: aiOrderId,
+        data: notification.data
+      });
       window.dispatchEvent(new CustomEvent('openAiOrdersManager', { detail: { aiOrderId } }));
       setIsOpen(false);
       return;
