@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/integrations/supabase/client';
-import { notificationService } from '@/utils/NotificationService';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
@@ -115,8 +114,8 @@ const NotificationsHandler = () => {
             
             console.log('📝 Final employee name for notification:', employeeName);
             
-            // إنشاء إشعار للموظف إذا لم يكن المدير
-            if (payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
+            // إشعار للموظف الذي أنشأ الطلب (دائماً إذا كان الموظف الحالي)
+            if (employeeProfile && user.id === payload.new.created_by) {
               console.log('✅ Creating notification for employee who created the order');
               const employeeNotification = {
                 type: 'new_ai_order',
@@ -136,12 +135,12 @@ const NotificationsHandler = () => {
               addNotification(employeeNotification);
             }
 
-            // إنشاء إشعار للمدير فقط إذا كان الطلب من موظف (ليس من المدير نفسه)
-            if (isAdmin && payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
-              console.log('✅ Creating admin notification for AI order from employee');
+            // إشعار للمديرين (دائماً بغض النظر عن من أنشأ الطلب)
+            if (isAdmin) {
+              console.log('✅ Creating admin notification for AI order');
               const adminNotification = {
                 type: 'new_ai_order',
-                title: 'طلب ذكي جديد من موظف',
+                title: 'طلب ذكي جديد',
                 message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'amber',
@@ -156,49 +155,20 @@ const NotificationsHandler = () => {
               };
               console.log('📤 Admin notification data:', adminNotification);
               addNotification(adminNotification);
-            } else if (payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
-              // إشعار واحد فقط للمدير عندما ينشئ طلب بنفسه
-              console.log('✅ Creating single notification for manager self-created order');
-              const managerSelfNotification = {
-                type: 'new_ai_order',
-                title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
-                icon: 'MessageSquare',
-                color: 'green',
-                data: { 
-                  ai_order_id: payload.new.id,
-                  created_by: payload.new.created_by,
-                  source: payload.new.source || 'telegram'
-                },
-                user_id: '91484496-b887-44f7-9e5d-be9db5567604',
-                is_read: false
-              };
-              console.log('📤 Manager self notification data:', managerSelfNotification);
-              addNotification(managerSelfNotification);
             }
 
-            // إشعار فوري بدون تأخير للوصول الفوري
-            console.log('🔔 Dispatching immediate notification event for UI refresh');
-            window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
-              detail: { 
-                orderId: payload.new.id,
-                employeeName,
-                createdBy: payload.new.created_by,
-                timestamp: new Date().toISOString()
-              } 
-            }));
-
-            // إشعار متصفح فوري للطلبات الذكية
-            if (payload.new?.id) {
-              notificationService.notifyAiOrder({
-                id: payload.new.id,
-                source: payload.new.source || 'telegram',
-                employee_name: employeeName,
-                created_by: payload.new.created_by
-              }).catch(error => {
-                console.log('⚠️ Browser notification not available:', error);
-              });
-            }
+            // إشعار عام إضافي للتأكد من الوصول فوراً
+            setTimeout(() => {
+              console.log('🔔 Dispatching immediate notification event for UI refresh');
+              window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
+                detail: { 
+                  orderId: payload.new.id,
+                  employeeName,
+                  createdBy: payload.new.created_by,
+                  timestamp: new Date().toISOString()
+                } 
+              }));
+            }, 100);
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
             console.log('🔄 Dispatching aiOrderCreated browser event');

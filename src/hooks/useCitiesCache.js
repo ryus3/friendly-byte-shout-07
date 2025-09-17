@@ -80,10 +80,7 @@ export const useCitiesCache = () => {
     try {
       const { data, error } = await supabase.rpc('get_last_cities_regions_sync');
       if (error) throw error;
-      
-      console.log('🔍 fetchSyncInfo نتيجة:', data);
       setSyncInfo(data);
-      
       if (data?.last_sync_at) {
         setLastUpdated(data.last_sync_at);
       }
@@ -118,12 +115,10 @@ export const useCitiesCache = () => {
 
       const success = data?.success;
       if (success) {
-        // تحديث معلومات المزامنة أولاً
-        await fetchSyncInfo();
-        
-        // ثم تحديث قائمة المدن والمناطق
+        // تحديث قائمة المدن والمناطق بعد التحديث الناجح
         await fetchCities();
         await fetchAllRegions();
+        await fetchSyncInfo(); // جلب معلومات المزامنة المحدثة
         
         toast({
           title: "نجح التحديث",
