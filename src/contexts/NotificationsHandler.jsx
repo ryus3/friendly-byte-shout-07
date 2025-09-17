@@ -54,60 +54,18 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
-    // New order notifications for admin
-    const ordersChannel = supabase
-      .channel('orders-notifications-handler-admin')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload) => {
-          // جلب اسم المستخدم صاحب الطلب مع معالجة حالة created_by = null
-          const getUserName = async () => {
-            try {
-              let userName = 'مستخدم غير معروف';
-              
-              // إذا كان created_by موجود، جلب اسم المستخدم
-              if (payload.new.created_by) {
-                const { data: userData } = await supabase
-                  .from('profiles')
-                  .select('full_name')
-                  .eq('user_id', payload.new.created_by)
-                  .maybeSingle(); // استخدام maybeSingle بدلاً من single
-                
-                userName = userData?.full_name || 'موظف غير معروف';
-              } else {
-                // إذا كان created_by فارغ، هذا طلب من التليغرام
-                userName = 'طلب من التليغرام';
-              }
-              
-              addNotification({
-                type: 'new_order',
-                title: 'طلب جديد',
-                message: `طلب رقم ${payload.new.order_number} بواسطة ${userName}`,
-                icon: 'ShoppingCart',
-                color: 'blue',
-                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
-                user_id: null, // Admin only
-              });
-            } catch (error) {
-              console.error('Error fetching user name:', error);
-              // fallback notification
-              addNotification({
-                type: 'new_order',
-                title: 'طلب جديد',
-                message: `طلب رقم ${payload.new.order_number} بواسطة مستخدم غير معروف`,
-                icon: 'ShoppingCart',
-                color: 'blue',
-                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
-                user_id: null, // Admin only
-              });
-            }
-          };
-          
-          getUserName();
-        }
-      )
-      .subscribe();
+    // إشعارات الطلبات الجديدة معطلة نهائياً لتجنب الإزعاج
+    // const ordersChannel = supabase
+    //   .channel('orders-notifications-handler-admin')
+    //   .on(
+    //     'postgres_changes',
+    //     { event: 'INSERT', schema: 'public', table: 'orders' },
+    //     (payload) => {
+    //       // إشعارات new_order معطلة نهائياً بناءً على طلب المستخدم
+    //       console.log('🔕 إشعار طلب جديد معطل:', payload.new.order_number);
+    //     }
+    //   )
+    //   .subscribe();
 
     // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين مع تسجيل مفصل
     const aiOrdersChannel = supabase
@@ -199,18 +157,16 @@ const NotificationsHandler = () => {
               addNotification(adminNotification);
             }
 
-            // إشعار عام إضافي للتأكد من الوصول فوراً
-            setTimeout(() => {
-              console.log('🔔 Dispatching immediate notification event for UI refresh');
-              window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
-                detail: { 
-                  orderId: payload.new.id,
-                  employeeName,
-                  createdBy: payload.new.created_by,
-                  timestamp: new Date().toISOString()
-                } 
-              }));
-            }, 100);
+            // إشعار فوري بدون تأخير
+            console.log('🔔 Dispatching immediate notification event for UI refresh');
+            window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
+              detail: { 
+                orderId: payload.new.id,
+                employeeName,
+                createdBy: payload.new.created_by,
+                timestamp: new Date().toISOString()
+              } 
+            }));
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
             console.log('🔄 Dispatching aiOrderCreated browser event');
@@ -249,7 +205,7 @@ const NotificationsHandler = () => {
 
     return () => {
       supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(ordersChannel);
+      // ordersChannel معطل
       supabase.removeChannel(aiOrdersChannel);
     };
     
