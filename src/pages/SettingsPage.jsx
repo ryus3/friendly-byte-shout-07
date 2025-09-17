@@ -22,7 +22,6 @@ import ComprehensiveDeliveryManagementDialog from '@/components/delivery/Compreh
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import CitiesCacheManager from '@/components/cities-cache/CitiesCacheManager';
-import AiOrdersCleanupManager from '@/components/ai-orders/AiOrdersCleanupManager';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
@@ -417,15 +416,6 @@ const SettingsPage = () => {
               
               <div className="mb-8">
                 <CitiesCacheManager />
-              </div>
-              
-              <SectionHeader 
-                icon={Database} 
-                title="تنظيف الطلبات الذكية" 
-                description="إدارة وحذف الطلبات الذكية المتبقية"
-              />
-              <div className="mb-8">
-                <AiOrdersCleanupManager />
               </div>
             </>
           )}

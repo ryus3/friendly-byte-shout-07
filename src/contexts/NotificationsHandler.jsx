@@ -54,16 +54,57 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
-    // New order notifications for admin - تم إيقاف هذا النوع من الإشعارات لتجنب الإزعاج
+    // New order notifications for admin
     const ordersChannel = supabase
       .channel('orders-notifications-handler-admin')
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
-          // تم إيقاف إشعارات الطلبات الجديدة للتقليل من الإزعاج
-          // يمكن للمدير متابعة الطلبات من خلال واجهة الطلبات مباشرة
-          console.log('🔇 تم تجاهل إشعار طلب جديد:', payload.new.order_number);
+          // جلب اسم المستخدم صاحب الطلب مع معالجة حالة created_by = null
+          const getUserName = async () => {
+            try {
+              let userName = 'مستخدم غير معروف';
+              
+              // إذا كان created_by موجود، جلب اسم المستخدم
+              if (payload.new.created_by) {
+                const { data: userData } = await supabase
+                  .from('profiles')
+                  .select('full_name')
+                  .eq('user_id', payload.new.created_by)
+                  .maybeSingle(); // استخدام maybeSingle بدلاً من single
+                
+                userName = userData?.full_name || 'موظف غير معروف';
+              } else {
+                // إذا كان created_by فارغ، هذا طلب من التليغرام
+                userName = 'طلب من التليغرام';
+              }
+              
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number} بواسطة ${userName}`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            } catch (error) {
+              console.error('Error fetching user name:', error);
+              // fallback notification
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number} بواسطة مستخدم غير معروف`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            }
+          };
+          
+          getUserName();
         }
       )
       .subscribe();

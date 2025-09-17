@@ -11,7 +11,6 @@ import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
-import NotificationCleanup from './components/notifications/NotificationCleanup';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
 
@@ -152,7 +151,6 @@ function AppContent() {
       <Toaster />
       <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
-      {user && <NotificationCleanup />}
     </div>
   )
 }
