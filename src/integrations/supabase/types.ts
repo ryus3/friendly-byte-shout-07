@@ -4286,10 +4286,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
-      delete_ai_order_safe: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
       delete_ai_order_safely: {
         Args: { p_ai_order_id: string }
         Returns: boolean

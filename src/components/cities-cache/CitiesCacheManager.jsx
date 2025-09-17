@@ -15,10 +15,12 @@ const CitiesCacheManager = () => {
     regions,
     loading, 
     lastUpdated, 
+    syncInfo,
     updateCache, 
     isCacheEmpty,
     fetchCities,
-    fetchRegionsByCity
+    fetchRegionsByCity,
+    fetchSyncInfo
   } = useCitiesCache();
   const { isLoggedIn, activePartner, waseetUser } = useAlWaseet();
 
@@ -74,8 +76,11 @@ const CitiesCacheManager = () => {
       
       if (result?.success) {
         setUpdateProgress({ current: 100, total: 100, message: 'اكتمل التحديث بنجاح' });
-        // تحديث قائمة المدن بعد التحديث الناجح
-        await fetchCities();
+        // تحديث قائمة المدن والمناطق ومعلومات المزامنة بعد التحديث الناجح
+        await Promise.all([
+          fetchCities(),
+          fetchSyncInfo()
+        ]);
         // إخفاء شريط التقدم بعد ثانيتين
         setTimeout(() => {
           setUpdateProgress({ current: 0, total: 0, message: '' });
@@ -134,18 +139,43 @@ const CitiesCacheManager = () => {
             <Clock className="h-4 w-4 text-green-500" />
             <span className="text-sm text-muted-foreground">آخر تحديث:</span>
             <span className="text-xs text-muted-foreground">
-              {formatDate(lastUpdated)}
+              {syncInfo?.last_sync_at ? formatDate(syncInfo.last_sync_at) : formatDate(lastUpdated)}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
             <span className="text-sm text-muted-foreground">الحالة:</span>
-            <Badge variant={isCacheEmpty() ? "destructive" : "default"}>
-              {isCacheEmpty() ? "فارغ" : "محدث"}
+            <Badge variant={isCacheEmpty() ? "destructive" : syncInfo?.success === false ? "warning" : "default"}>
+              {isCacheEmpty() ? "فارغ" : syncInfo?.success === false ? "خطأ في آخر تحديث" : "محدث"}
             </Badge>
           </div>
         </div>
+
+        {/* عرض تفاصيل إضافية عن آخر مزامنة */}
+        {syncInfo && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-secondary/20 rounded-lg">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-blue-500" />
+              <span className="text-sm text-muted-foreground">مدن مزامنة:</span>
+              <Badge variant="outline">{syncInfo.cities_count || 0}</Badge>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-orange-500" />
+              <span className="text-sm text-muted-foreground">مناطق مزامنة:</span>
+              <Badge variant="outline">{syncInfo.regions_count || 0}</Badge>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-purple-500" />
+              <span className="text-sm text-muted-foreground">مدة المزامنة:</span>
+              <span className="text-xs text-muted-foreground">
+                {syncInfo.sync_duration_seconds ? `${Math.round(syncInfo.sync_duration_seconds)}ث` : 'غير محدد'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* عرض توزيع المناطق حسب المدن */}
         {!isCacheEmpty() && cities.length > 0 && (
