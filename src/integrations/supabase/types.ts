@@ -4679,6 +4679,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      normalize_arabic_text: {
+        Args: { input_text: string }
+        Returns: string
+      }
       normalize_phone_number: {
         Args: { phone_input: string }
         Returns: string
