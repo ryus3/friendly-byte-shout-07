@@ -48,13 +48,34 @@ const CitiesCacheManager = () => {
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) return 'غير محدد';
       
-      return new Intl.DateTimeFormat('ar-IQ', {
+      // حساب الفرق الزمني
+      const now = new Date();
+      const timeDiff = now - dateObj;
+      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+      
+      let timeAgo = '';
+      if (daysDiff > 0) {
+        timeAgo = `قبل ${daysDiff} يوم`;
+      } else if (hoursDiff > 0) {
+        timeAgo = `قبل ${hoursDiff} ساعة`;
+      } else if (minutesDiff > 0) {
+        timeAgo = `قبل ${minutesDiff} دقيقة`;
+      } else {
+        timeAgo = 'منذ قليل';
+      }
+      
+      const formattedDate = new Intl.DateTimeFormat('ar-IQ', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        second: '2-digit'
       }).format(dateObj);
+      
+      return `${formattedDate} (${timeAgo})`;
     } catch (error) {
       console.error('خطأ في تنسيق التاريخ:', error);
       return 'غير محدد';
@@ -130,10 +151,10 @@ const CitiesCacheManager = () => {
             <Badge variant="secondary">{regions?.length || 0}</Badge>
           </div>
           
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-muted-foreground">آخر تحديث:</span>
-            <span className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock className="h-4 w-4 text-green-500 shrink-0" />
+            <span className="text-sm text-muted-foreground shrink-0">آخر تحديث:</span>
+            <span className="text-xs text-muted-foreground truncate" title={formatDate(lastUpdated)}>
               {formatDate(lastUpdated)}
             </span>
           </div>
