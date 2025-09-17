@@ -182,7 +182,7 @@ const NotificationsHandler = () => {
               const adminNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `طلب ذكي جديد بواسطة ${employeeName}`,
+                message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 

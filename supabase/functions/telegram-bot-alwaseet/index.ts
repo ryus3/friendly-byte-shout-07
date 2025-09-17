@@ -92,16 +92,17 @@ async function getRegionsByCity(cityId: number): Promise<any[]> {
   }
 }
 
-// Arabic text normalization for better matching
+// Arabic text normalization for better matching with ة/ه conversion
 function normalizeArabic(text: string): string {
   if (!text) return ''
   return text.toString().trim()
     .replace(/[أإآ]/g, 'ا')
+    .replace(/[ة]/g, 'ه')
     .replace(/[ي]/g, 'ى')
     .toLowerCase()
 }
 
-// Enhanced flexible product search that handles both ة and ه
+// Enhanced flexible product search that handles both ة and ه with detailed logging
 function createFlexibleSearchTerms(productName: string): string[] {
   const normalized = normalizeArabic(productName)
   const terms = [
@@ -112,7 +113,17 @@ function createFlexibleSearchTerms(productName: string): string[] {
     normalized.replace(/ة/g, 'ه'),
     normalized.replace(/ه/g, 'ة')
   ]
-  return [...new Set(terms)] // Remove duplicates
+  
+  // Add partial matching for single words
+  const words = productName.split(/\s+/);
+  if (words.length === 1 && words[0].length >= 3) {
+    terms.push(words[0]);
+    terms.push(normalizeArabic(words[0]));
+  }
+  
+  const uniqueTerms = [...new Set(terms)]
+  console.log(`🔍 Search terms for "${productName}":`, uniqueTerms)
+  return uniqueTerms
 }
 
 // Find city by name with intelligent matching
