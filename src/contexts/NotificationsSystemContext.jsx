@@ -143,7 +143,21 @@ export const NotificationsSystemProvider = ({ children }) => {
     }
   }, []);
 
-  // إشعارات الطلبات - تم حذف notifyOrderCreated لمنع التضارب مع NotificationsHandler
+  // إشعارات الطلبات
+  const notifyOrderCreated = useCallback(async (order, createdBy) => {
+    // إشعار للمدير
+    if (hasPermission('manage_orders')) {
+      await createNotification({
+        title: 'طلب جديد',
+        message: `تم إنشاء طلب جديد #${order.trackingnumber} بواسطة ${createdBy.name}`,
+        type: 'info',
+        target_role: 'manager',
+        related_entity_type: 'order',
+        related_entity_id: order.id,
+        priority: 'normal'
+      });
+    }
+  }, [createNotification, hasPermission]);
 
   // تم إلغاء دالة notifyOrderStatusChanged نهائياً لمنع التكرار
   // جميع إشعارات تغيير حالة الطلبات تأتي الآن من database trigger فقط
@@ -351,6 +365,7 @@ export const NotificationsSystemProvider = ({ children }) => {
     notifications: userNotifications,
     unreadCount,
     createNotification,
+    notifyOrderCreated,
     notifySettlementRequested,
     notifySettlementApproved,
     notifySettlementRejected,

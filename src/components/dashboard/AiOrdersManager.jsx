@@ -482,16 +482,17 @@ useEffect(() => {
         }
         
       } else if (action === 'delete') {
+        // تحديث فوري محلياً أولاً
         const deletedIds = [...selectedOrders];
+        setOrders(prev => prev.filter(o => !deletedIds.includes(o.id)));
         toast({ title: 'تتم المعالجة...', description: `جاري حذف ${deletedIds.length} طلب`, variant: 'default' });
         
-        // الحذف الفعلي باستخدام الدالة المحدثة
+        // الحذف الفعلي في الخلفية
         const results = await Promise.all(deletedIds.map(async (id) => {
           try {
-            const result = await deleteAiOrderSafely(id);
-            return { id, success: result.success };
-          } catch (error) {
-            console.error(`خطأ في حذف الطلب ${id}:`, error);
+            const { data, error } = await supabase.rpc('delete_ai_order_safe', { p_order_id: id });
+            return { id, success: !error && data?.success !== false };
+          } catch {
             return { id, success: false };
           }
         }));
@@ -499,32 +500,22 @@ useEffect(() => {
         const successIds = results.filter(r => r.success).map(r => r.id);
         const failedIds = results.filter(r => !r.success).map(r => r.id);
         
-        // تحديث القائمة بناءً على النتائج
-        setOrders(prev => prev.filter(o => !successIds.includes(o.id)));
+        // إضافة الطلبات الفاشلة للقائمة مرة أخرى
+        if (failedIds.length > 0) {
+          const failedOrders = ordersFromContext.filter(o => failedIds.includes(o.id));
+          setOrders(prev => [...failedOrders, ...prev]);
+        }
         
         // إضافة الطلبات المحذوفة للمعالجة
         if (successIds.length > 0) {
           setProcessedOrders(prev => [...prev, ...successIds]);
           successIds.forEach(id => {
-            try { 
-              window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); 
-            } catch (error) {
-              console.warn('خطأ في إرسال حدث الحذف:', error);
-            }
+            try { window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); } catch {}
           });
-          toast({ 
-            title: 'تم الحذف', 
-            description: `تم حذف ${successIds.length} طلب بنجاح`, 
-            variant: 'default' 
-          });
+          toast({ title: 'تم الحذف', description: `تم حذف ${successIds.length} طلب بنجاح`, variant: 'success' });
         }
-        
         if (failedIds.length > 0) {
-          toast({ 
-            title: 'تنبيه', 
-            description: `فشل في حذف ${failedIds.length} طلب`, 
-            variant: 'destructive' 
-          });
+          toast({ title: 'تنبيه', description: `فشل في حذف ${failedIds.length} طلب`, variant: 'destructive' });
         }
       }
     } catch (e) {

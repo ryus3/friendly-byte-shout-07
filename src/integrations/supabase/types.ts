@@ -4245,6 +4245,10 @@ export type Database = {
         Args: { p_days?: number }
         Returns: number
       }
+      cleanup_orphaned_ai_orders: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       cleanup_reserved_stock: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -4282,6 +4286,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      delete_ai_order_safe: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       delete_ai_order_safely: {
         Args: { p_ai_order_id: string }
         Returns: boolean
@@ -4304,7 +4312,7 @@ export type Database = {
         Args:
           | { p_product_id: string; p_quantity: number; p_variant_id: string }
           | { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+        Returns: boolean
       }
       find_city_in_cache: {
         Args: { p_city_text: string }
@@ -4453,13 +4461,7 @@ export type Database = {
       }
       get_last_cities_regions_sync: {
         Args: Record<PropertyKey, never>
-        Returns: {
-          cities_count: number
-          last_sync_at: string
-          regions_count: number
-          success: boolean
-          sync_duration_seconds: number
-        }[]
+        Returns: Json
       }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>

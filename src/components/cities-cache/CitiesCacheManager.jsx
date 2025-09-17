@@ -1,26 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { RefreshCw, Database, MapPin, Clock, Building2 } from 'lucide-react';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 
 const CitiesCacheManager = () => {
-  const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0, message: '' });
-  
   const { 
     cities, 
     regions,
     loading, 
     lastUpdated, 
-    syncInfo,
     updateCache, 
     isCacheEmpty,
     fetchCities,
-    fetchRegionsByCity,
-    fetchSyncInfo
+    fetchRegionsByCity
   } = useCitiesCache();
   const { isLoggedIn, activePartner, waseetUser } = useAlWaseet();
 
@@ -43,24 +38,13 @@ const CitiesCacheManager = () => {
   const currentPartner = getCurrentDeliveryPartner();
 
   const formatDate = (date) => {
-    if (!date) return 'غير محدد';
-    
-    try {
-      // التأكد من أن التاريخ صالح
-      const dateObj = new Date(date);
-      if (isNaN(dateObj.getTime())) return 'غير محدد';
-      
-      return new Intl.DateTimeFormat('ar-IQ', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(dateObj);
-    } catch (error) {
-      console.error('خطأ في تنسيق التاريخ:', error);
-      return 'غير محدد';
-    }
+    return date ? new Intl.DateTimeFormat('ar-IQ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date) : 'غير محدد';
   };
 
   const handleUpdateCache = async (e) => {
@@ -70,27 +54,13 @@ const CitiesCacheManager = () => {
     }
     
     try {
-      setUpdateProgress({ current: 0, total: 100, message: 'بدء تحديث المدن والمناطق...' });
-      
-      const result = await updateCache();
-      
-      if (result?.success) {
-        setUpdateProgress({ current: 100, total: 100, message: 'اكتمل التحديث بنجاح' });
-        // تحديث قائمة المدن والمناطق ومعلومات المزامنة بعد التحديث الناجح
-        await Promise.all([
-          fetchCities(),
-          fetchSyncInfo()
-        ]);
-        // إخفاء شريط التقدم بعد ثانيتين
-        setTimeout(() => {
-          setUpdateProgress({ current: 0, total: 0, message: '' });
-        }, 2000);
-      } else {
-        setUpdateProgress({ current: 0, total: 0, message: '' });
+      const success = await updateCache();
+      if (success) {
+        // تحديث قائمة المدن بعد التحديث الناجح
+        await fetchCities();
       }
     } catch (error) {
       console.error('خطأ في تحديث cache:', error);
-      setUpdateProgress({ current: 0, total: 0, message: '' });
     }
   };
 
@@ -126,7 +96,7 @@ const CitiesCacheManager = () => {
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-muted-foreground">عدد المدن:</span>
-            <Badge variant="secondary">{cities?.length || 0}</Badge>
+            <Badge variant="secondary">{cities.length}</Badge>
           </div>
           
           <div className="flex items-center gap-2">
@@ -139,44 +109,18 @@ const CitiesCacheManager = () => {
             <Clock className="h-4 w-4 text-green-500" />
             <span className="text-sm text-muted-foreground">آخر تحديث:</span>
             <span className="text-xs text-muted-foreground">
-              {syncInfo?.last_sync_at ? formatDate(new Date(syncInfo.last_sync_at)) : 
-               lastUpdated ? formatDate(lastUpdated) : 'غير متوفر'}
+              {formatDate(lastUpdated)}
             </span>
           </div>
           
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
             <span className="text-sm text-muted-foreground">الحالة:</span>
-            <Badge variant={isCacheEmpty() ? "destructive" : syncInfo?.success === false ? "warning" : "default"}>
-              {isCacheEmpty() ? "فارغ" : syncInfo?.success === false ? "خطأ في آخر تحديث" : "محدث"}
+            <Badge variant={isCacheEmpty() ? "destructive" : "default"}>
+              {isCacheEmpty() ? "فارغ" : "محدث"}
             </Badge>
           </div>
         </div>
-
-        {/* عرض تفاصيل إضافية عن آخر مزامنة */}
-        {syncInfo && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-secondary/20 rounded-lg">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-blue-500" />
-              <span className="text-sm text-muted-foreground">مدن مزامنة:</span>
-              <Badge variant="outline">{syncInfo.cities_count || 0}</Badge>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-orange-500" />
-              <span className="text-sm text-muted-foreground">مناطق مزامنة:</span>
-              <Badge variant="outline">{syncInfo.regions_count || 0}</Badge>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-purple-500" />
-              <span className="text-sm text-muted-foreground">مدة المزامنة:</span>
-              <span className="text-xs text-muted-foreground">
-                {syncInfo.sync_duration_seconds ? `${Math.round(syncInfo.sync_duration_seconds)}ث` : 'غير محدد'}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* عرض توزيع المناطق حسب المدن */}
         {!isCacheEmpty() && cities.length > 0 && (
@@ -242,12 +186,12 @@ const CitiesCacheManager = () => {
           </div>
         )}
 
-        {/* زر التحديث مع شريط التقدم */}
-        <div className="space-y-4">
+        {/* زر التحديث */}
+        <div className="flex gap-2">
           <Button 
             onClick={handleUpdateCache}
             disabled={loading || !isLoggedIn || activePartner === 'local'}
-            className="w-full"
+            className="flex-1"
           >
             {loading ? (
               <>
@@ -264,20 +208,6 @@ const CitiesCacheManager = () => {
               </>
             )}
           </Button>
-
-          {/* شريط التقدم */}
-          {updateProgress.total > 0 && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>{updateProgress.message}</span>
-                <span>{Math.round((updateProgress.current / updateProgress.total) * 100)}%</span>
-              </div>
-              <Progress 
-                value={(updateProgress.current / updateProgress.total) * 100} 
-                className="w-full"
-              />
-            </div>
-          )}
         </div>
 
         {/* معلومات إضافية */}

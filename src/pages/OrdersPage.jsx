@@ -162,7 +162,36 @@ const OrdersPage = () => {
             duration: 5000
           });
 
-          // تم حذف كود الإشعارات المتضارب - الإشعارات تأتي الآن من NotificationsHandler.jsx فقط
+          // إضافة إشعار للمدير عند إنشاء طلب من قبل موظف
+          if (newOrder.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
+            const createNotification = async () => {
+              try {
+                // جلب اسم الموظف
+                const employeeName = usersMap.get(newOrder.created_by) || 'موظف غير معروف';
+                
+                await supabase.from('notifications').insert({
+                  title: `طلب جديد بواسطة ${employeeName}`,
+                  message: `طلب جديد ${newOrder.qr_id || newOrder.order_number} بواسطة ${employeeName}`,
+                  type: 'order_created',
+                  priority: 'high',
+                  data: {
+                    order_id: newOrder.id,
+                    tracking_number: newOrder.tracking_number,
+                    order_qr: newOrder.qr_id,
+                    customer_name: newOrder.customer_name,
+                    amount: newOrder.final_amount,
+                    employee_id: newOrder.created_by,
+                    employee_name: employeeName,
+                    redirect_url: `/employee-follow-up?employee=${newOrder.created_by}&highlight=${newOrder.id}`
+                  },
+                  user_id: null // إشعار عام للمديرين
+                });
+              } catch (error) {
+                console.error('Error creating notification:', error);
+              }
+            };
+            createNotification();
+          }
         }
       )
       .on(

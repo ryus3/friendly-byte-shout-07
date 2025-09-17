@@ -54,18 +54,60 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
-    // إشعارات الطلبات الجديدة معطلة نهائياً لتجنب الإزعاج
-    // const ordersChannel = supabase
-    //   .channel('orders-notifications-handler-admin')
-    //   .on(
-    //     'postgres_changes',
-    //     { event: 'INSERT', schema: 'public', table: 'orders' },
-    //     (payload) => {
-    //       // إشعارات new_order معطلة نهائياً بناءً على طلب المستخدم
-    //       console.log('🔕 إشعار طلب جديد معطل:', payload.new.order_number);
-    //     }
-    //   )
-    //   .subscribe();
+    // New order notifications for admin
+    const ordersChannel = supabase
+      .channel('orders-notifications-handler-admin')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          // جلب اسم المستخدم صاحب الطلب مع معالجة حالة created_by = null
+          const getUserName = async () => {
+            try {
+              let userName = 'مستخدم غير معروف';
+              
+              // إذا كان created_by موجود، جلب اسم المستخدم
+              if (payload.new.created_by) {
+                const { data: userData } = await supabase
+                  .from('profiles')
+                  .select('full_name')
+                  .eq('user_id', payload.new.created_by)
+                  .maybeSingle(); // استخدام maybeSingle بدلاً من single
+                
+                userName = userData?.full_name || 'موظف غير معروف';
+              } else {
+                // إذا كان created_by فارغ، هذا طلب من التليغرام
+                userName = 'طلب من التليغرام';
+              }
+              
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number} بواسطة ${userName}`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            } catch (error) {
+              console.error('Error fetching user name:', error);
+              // fallback notification
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number} بواسطة مستخدم غير معروف`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            }
+          };
+          
+          getUserName();
+        }
+      )
+      .subscribe();
 
     // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين مع تسجيل مفصل
     const aiOrdersChannel = supabase
@@ -114,8 +156,8 @@ const NotificationsHandler = () => {
             
             console.log('📝 Final employee name for notification:', employeeName);
             
-            // إنشاء إشعار للموظف إذا لم يكن المدير
-            if (payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
+            // إشعار للموظف الذي أنشأ الطلب (دائماً إذا كان الموظف الحالي)
+            if (employeeProfile && user.id === payload.new.created_by) {
               console.log('✅ Creating notification for employee who created the order');
               const employeeNotification = {
                 type: 'new_ai_order',
@@ -135,12 +177,12 @@ const NotificationsHandler = () => {
               addNotification(employeeNotification);
             }
 
-            // إنشاء إشعار للمدير فقط إذا كان الطلب من موظف (ليس من المدير نفسه)
-            if (isAdmin && payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
-              console.log('✅ Creating admin notification for AI order from employee');
+            // إشعار للمديرين (دائماً بغض النظر عن من أنشأ الطلب)
+            if (isAdmin) {
+              console.log('✅ Creating admin notification for AI order');
               const adminNotification = {
                 type: 'new_ai_order',
-                title: 'طلب ذكي جديد من موظف',
+                title: 'طلب ذكي جديد',
                 message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'amber',
@@ -155,25 +197,6 @@ const NotificationsHandler = () => {
               };
               console.log('📤 Admin notification data:', adminNotification);
               addNotification(adminNotification);
-            } else if (payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
-              // إشعار واحد فقط للمدير عندما ينشئ طلب بنفسه
-              console.log('✅ Creating single notification for manager self-created order');
-              const managerSelfNotification = {
-                type: 'new_ai_order',
-                title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
-                icon: 'MessageSquare',
-                color: 'green',
-                data: { 
-                  ai_order_id: payload.new.id,
-                  created_by: payload.new.created_by,
-                  source: payload.new.source || 'telegram'
-                },
-                user_id: '91484496-b887-44f7-9e5d-be9db5567604',
-                is_read: false
-              };
-              console.log('📤 Manager self notification data:', managerSelfNotification);
-              addNotification(managerSelfNotification);
             }
 
             // إشعار عام إضافي للتأكد من الوصول فوراً
@@ -226,7 +249,7 @@ const NotificationsHandler = () => {
 
     return () => {
       supabase.removeChannel(profilesChannel);
-      // ordersChannel معطل
+      supabase.removeChannel(ordersChannel);
       supabase.removeChannel(aiOrdersChannel);
     };
     
