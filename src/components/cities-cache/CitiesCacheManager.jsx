@@ -121,7 +121,7 @@ const CitiesCacheManager = () => {
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-muted-foreground">عدد المدن:</span>
-            <Badge variant="secondary">{cities.length}</Badge>
+            <Badge variant="secondary">{cities?.length || 0}</Badge>
           </div>
           
           <div className="flex items-center gap-2">
