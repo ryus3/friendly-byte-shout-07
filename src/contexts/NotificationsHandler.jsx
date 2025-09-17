@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/utils/NotificationService';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
@@ -176,18 +177,28 @@ const NotificationsHandler = () => {
               addNotification(managerSelfNotification);
             }
 
-            // إشعار عام إضافي للتأكد من الوصول فوراً
-            setTimeout(() => {
-              console.log('🔔 Dispatching immediate notification event for UI refresh');
-              window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
-                detail: { 
-                  orderId: payload.new.id,
-                  employeeName,
-                  createdBy: payload.new.created_by,
-                  timestamp: new Date().toISOString()
-                } 
-              }));
-            }, 100);
+            // إشعار فوري بدون تأخير للوصول الفوري
+            console.log('🔔 Dispatching immediate notification event for UI refresh');
+            window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
+              detail: { 
+                orderId: payload.new.id,
+                employeeName,
+                createdBy: payload.new.created_by,
+                timestamp: new Date().toISOString()
+              } 
+            }));
+
+            // إشعار متصفح فوري للطلبات الذكية
+            if (payload.new?.id) {
+              notificationService.notifyAiOrder({
+                id: payload.new.id,
+                source: payload.new.source || 'telegram',
+                employee_name: employeeName,
+                created_by: payload.new.created_by
+              }).catch(error => {
+                console.log('⚠️ Browser notification not available:', error);
+              });
+            }
             
             // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
             console.log('🔄 Dispatching aiOrderCreated browser event');

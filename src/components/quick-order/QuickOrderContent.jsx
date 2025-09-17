@@ -21,6 +21,7 @@ import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
+import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {

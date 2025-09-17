@@ -31,6 +31,8 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const { deleteAiOrderSafely } = useAiOrdersCleanup();
+  const { settings } = useSuper(); // إضافة settings للحصول على رسوم التوصيل
+  
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
   };
@@ -348,6 +350,35 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   }, [availability, needsReviewAny, order]);
 
   const isProblematic = availability !== 'available' || needsReview;
+  
+  // حساب السعر الإجمالي مع رسوم التوصيل كما في الطلبات العادية
+  const calculateTotalAmount = useMemo(() => {
+    const baseAmount = order.final_amount || order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
+    const deliveryFee = settings?.deliveryFee || 0;
+    
+    // التحقق من نوع التوصيل - إذا لم يكن محلي، أضف رسوم التوصيل
+    const isLocalDelivery = order.delivery_partner === 'محلي';
+    
+    if (isLocalDelivery) {
+      return baseAmount + deliveryFee;
+    }
+    
+    return baseAmount;
+  }, [order, settings]);
+  
+  // حساب التفاصيل للعرض
+  const priceDetails = useMemo(() => {
+    const baseAmount = order.final_amount || order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
+    const deliveryFee = settings?.deliveryFee || 0;
+    const isLocalDelivery = order.delivery_partner === 'محلي';
+    
+    return {
+      baseAmount,
+      deliveryFee: isLocalDelivery ? deliveryFee : 0,
+      total: calculateTotalAmount,
+      showDeliveryFee: isLocalDelivery && deliveryFee > 0
+    };
+  }, [order, settings, calculateTotalAmount]);
 
   return (
     <Card id={`ai-order-${order.id}`} className={cn(
@@ -462,13 +493,23 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                   </p>
                 )}
                 
-                {/* Total Amount */}
-                {(order.final_amount || order.order_data.total_amount || order.order_data.total || order.total_amount) && (
-                  <div className="mt-2 pt-2 border-t border-white/20">
+                {/* Total Amount with Delivery Fee */}
+                {priceDetails.baseAmount > 0 && (
+                  <div className="mt-2 pt-2 border-t border-white/20 space-y-1">
                     <div className="flex justify-between items-center">
-                      <span className="text-xs font-medium">المجموع:</span>
+                      <span className="text-xs font-medium">سعر المنتجات:</span>
+                      <span className="text-xs">{priceDetails.baseAmount} د.ع</span>
+                    </div>
+                    {priceDetails.showDeliveryFee && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium">رسوم التوصيل:</span>
+                        <span className="text-xs">{priceDetails.deliveryFee} د.ع</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center pt-1 border-t border-white/10">
+                      <span className="text-xs font-bold">المجموع الكلي:</span>
                       <span className="text-sm font-bold">
-                        {order.final_amount || order.order_data.total_amount || order.order_data.total || order.total_amount} د.ع
+                        {priceDetails.total} د.ع
                       </span>
                     </div>
                   </div>
