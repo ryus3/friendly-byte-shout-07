@@ -161,7 +161,7 @@ const NotificationsHandler = () => {
               const employeeNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `تم إنشاء طلب ذكي جديد بنجاح`,
+                message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
@@ -182,7 +182,7 @@ const NotificationsHandler = () => {
               const adminNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `طلب ذكي جديد بواسطة ${employeeName} يحتاج للمراجعة`,
+                message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 
