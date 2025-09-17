@@ -4245,10 +4245,6 @@ export type Database = {
         Args: { p_days?: number }
         Returns: number
       }
-      cleanup_orphaned_ai_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       cleanup_reserved_stock: {
         Args: Record<PropertyKey, never>
         Returns: number
