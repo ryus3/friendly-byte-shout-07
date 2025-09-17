@@ -563,14 +563,11 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
           const searchTerms = createFlexibleSearchTerms(productName)
           console.log(`🔍 Searching for product: "${productName}" with terms:`, searchTerms)
           
-          // Build comprehensive search query for all variations
-          const orConditions = []
-          for (const term of searchTerms) {
-            orConditions.push(`name.ilike.%${term}%`)
-            orConditions.push(`name.ilike.%${term.replace(/\s+/g, '%')}%`)
-          }
+          // Build comprehensive search query using normalize_arabic_text function
+          const normalizedSearch = normalizeArabic(productName)
+          console.log(`🔍 Normalized search term: "${normalizedSearch}" from original: "${productName}"`)
           
-          // Search for product with all possible variations
+          // Use the database function for normalized matching
           const { data: products } = await supabase
             .from('products')
             .select(`
@@ -581,9 +578,11 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
                 sizes (name)
               )
             `)
-            .or(orConditions.join(','))
+            .or(`normalize_arabic_text(name).ilike.%${normalizedSearch}%,name.ilike.%${productName}%,name.ilike.%${normalizedSearch.replace(/\s+/g, '%')}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
             .eq('is_active', true)
             .limit(15)
+          
+          console.log(`🔍 Found ${products?.length || 0} products for search: "${productName}"`)
           
           if (products && products.length > 0) {
             // Enhanced smart matching with flexible ة/ه scoring
