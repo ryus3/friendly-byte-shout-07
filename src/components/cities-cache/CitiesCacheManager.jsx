@@ -139,7 +139,8 @@ const CitiesCacheManager = () => {
             <Clock className="h-4 w-4 text-green-500" />
             <span className="text-sm text-muted-foreground">آخر تحديث:</span>
             <span className="text-xs text-muted-foreground">
-              {syncInfo?.last_sync_at ? formatDate(syncInfo.last_sync_at) : formatDate(lastUpdated)}
+              {syncInfo?.last_sync_at ? formatDate(new Date(syncInfo.last_sync_at)) : 
+               lastUpdated ? formatDate(lastUpdated) : 'غير متوفر'}
             </span>
           </div>
           
