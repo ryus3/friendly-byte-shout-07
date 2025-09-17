@@ -28,11 +28,11 @@ export const setupRealtime = () => {
     }, (payload) => {
       const type = payload.eventType;
       if (type === 'INSERT') {
-        debouncedDispatch('orderCreated', payload.new, 25);
+        debouncedDispatch('orderCreated', payload.new, 150);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('orderUpdated', payload.new, 50);
+        debouncedDispatch('orderUpdated', payload.new, 200);
       } else if (type === 'DELETE') {
-        debouncedDispatch('orderDeleted', payload.old, 25);
+        debouncedDispatch('orderDeleted', payload.old, 150);
       }
     })
     .subscribe();
@@ -48,7 +48,7 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'notifications'
     }, (payload) => {
-      debouncedDispatch('notificationCreated', payload.new, 25);
+      debouncedDispatch('notificationCreated', payload.new, 100);
     })
     .subscribe();
 
@@ -62,12 +62,12 @@ export const setupRealtime = () => {
     }, (payload) => {
       const type = payload.eventType;
       if (type === 'INSERT') {
-        debouncedDispatch('invoiceCreated', payload.new, 25);
+        debouncedDispatch('invoiceCreated', payload.new, 150);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('invoiceUpdated', payload.new, 50);
+        debouncedDispatch('invoiceUpdated', payload.new, 200);
         // تشغيل sync للفواتير المستلمة تلقائياً
         if (payload.new.received === true && payload.old?.received !== true) {
-          debouncedDispatch('invoiceReceived', payload.new, 25);
+          debouncedDispatch('invoiceReceived', payload.new, 100);
         }
       }
     })

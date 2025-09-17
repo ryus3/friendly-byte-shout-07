@@ -135,13 +135,13 @@ const CitiesCacheManager = () => {
             <Badge variant="secondary">{regions?.length || 0}</Badge>
           </div>
           
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">آخر تحديث:</span>
-              <span className="text-xs text-muted-foreground">
-                {syncInfo?.last_sync_at ? formatDate(syncInfo.last_sync_at) : (lastUpdated ? formatDate(lastUpdated) : 'غير محدد')}
-              </span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-green-500" />
+            <span className="text-sm text-muted-foreground">آخر تحديث:</span>
+            <span className="text-xs text-muted-foreground">
+              {syncInfo?.last_sync_at ? formatDate(syncInfo.last_sync_at) : formatDate(lastUpdated)}
+            </span>
+          </div>
           
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
