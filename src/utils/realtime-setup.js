@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export const setupRealtime = () => {
   let debounceTimers = new Map();
   
-  const debouncedDispatch = (eventName, detail, delay = 25) => {
+  const debouncedDispatch = (eventName, detail, delay = 50) => {
     const existingTimer = debounceTimers.get(eventName);
     if (existingTimer) {
       clearTimeout(existingTimer);
@@ -28,11 +28,11 @@ export const setupRealtime = () => {
     }, (payload) => {
       const type = payload.eventType;
       if (type === 'INSERT') {
-        debouncedDispatch('orderCreated', payload.new, 25);
+        debouncedDispatch('orderCreated', payload.new, 50);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('orderUpdated', payload.new, 25);
+        debouncedDispatch('orderUpdated', payload.new, 50);
       } else if (type === 'DELETE') {
-        debouncedDispatch('orderDeleted', payload.old, 25);
+        debouncedDispatch('orderDeleted', payload.old, 50);
       }
     })
     .subscribe();
@@ -48,7 +48,7 @@ export const setupRealtime = () => {
       schema: 'public',
       table: 'notifications'
     }, (payload) => {
-      debouncedDispatch('notificationCreated', payload.new, 25);
+      debouncedDispatch('notificationCreated', payload.new, 50);
     })
     .subscribe();
 
@@ -62,12 +62,12 @@ export const setupRealtime = () => {
     }, (payload) => {
       const type = payload.eventType;
       if (type === 'INSERT') {
-        debouncedDispatch('invoiceCreated', payload.new, 25);
+        debouncedDispatch('invoiceCreated', payload.new, 50);
       } else if (type === 'UPDATE') {
-        debouncedDispatch('invoiceUpdated', payload.new, 25);
+        debouncedDispatch('invoiceUpdated', payload.new, 50);
         // تشغيل sync للفواتير المستلمة تلقائياً
         if (payload.new.received === true && payload.old?.received !== true) {
-          debouncedDispatch('invoiceReceived', payload.new, 25);
+          debouncedDispatch('invoiceReceived', payload.new, 50);
         }
       }
     })

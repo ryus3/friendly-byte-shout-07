@@ -87,8 +87,6 @@ export const useCitiesCache = () => {
       if (data?.last_sync_at) {
         setLastUpdated(data.last_sync_at);
       }
-      
-      return data;
     } catch (error) {
       console.error('خطأ في جلب معلومات المزامنة:', error);
     }
