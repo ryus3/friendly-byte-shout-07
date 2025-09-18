@@ -92,45 +92,86 @@ async function getRegionsByCity(cityId: number): Promise<any[]> {
   }
 }
 
-// Enhanced Arabic text normalization for better city matching
+// Enhanced Arabic text normalization for superior matching capabilities
 function normalizeArabic(text: string): string {
   if (!text) return ''
   
   return text.toString().trim()
     // Remove common prefixes and suffixes
-    .replace(/^(ال|محافظة|مدينة)\s+/g, '')
-    .replace(/\s+(محافظة|قضاء)$/g, '')
-    // Normalize common Arabic letters
+    .replace(/^(ال|محافظة|مدينة|قضاء|ناحية)\s+/g, '')
+    .replace(/\s+(محافظة|قضاء|ناحية)$/g, '')
+    // Enhanced Arabic letter normalization
     .replace(/[أإآ]/g, 'ا')
-    .replace(/[ة]/g, 'ه')
-    .replace(/[ي]/g, 'ى')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[يى]/g, 'ي')
     .replace(/[ؤ]/g, 'و')
     .replace(/[ئ]/g, 'ي')
-    // Handle diacritics
-    .replace(/[\u064B-\u065F]/g, '')
+    .replace(/[ء]/g, '')
+    // Handle diacritics completely
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
     // Remove extra spaces and punctuation
-    .replace(/[.,،]/g, ' ')
+    .replace(/[.,،؛:]/g, ' ')
     .replace(/\s+/g, ' ')
+    .trim()
     .toLowerCase()
 }
 
-// Comprehensive city name variations dictionary for all 18 Iraqi cities
+// Calculate string similarity for fuzzy matching
+function calculateSimilarity(str1: string, str2: string): number {
+  const longer = str1.length > str2.length ? str1 : str2
+  const shorter = str1.length > str2.length ? str2 : str1
+  
+  if (longer.length === 0) return 1.0
+  
+  // Exact match
+  if (longer === shorter) return 1.0
+  
+  // Contains check
+  if (longer.includes(shorter) || shorter.includes(longer)) {
+    return 0.8 + (shorter.length / longer.length) * 0.2
+  }
+  
+  // Levenshtein distance
+  const matrix = Array(longer.length + 1).fill(null).map(() => Array(shorter.length + 1).fill(null))
+  
+  for (let i = 0; i <= longer.length; i++) matrix[i][0] = i
+  for (let j = 0; j <= shorter.length; j++) matrix[0][j] = j
+  
+  for (let i = 1; i <= longer.length; i++) {
+    for (let j = 1; j <= shorter.length; j++) {
+      const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      )
+    }
+  }
+  
+  const distance = matrix[longer.length][shorter.length]
+  return 1.0 - (distance / longer.length)
+}
+
+// Import the smart cache parser
+import { parseAddressWithCache } from '../telegram-bot/address-cache-parser.ts'
+
+// Comprehensive city name variations for all 18 Iraqi cities with smart matching
 const cityNameVariations: { [key: string]: string[] } = {
-  'الديوانية - القادسية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah'],
-  'بغداد': ['بغداد', 'Baghdad', 'baghdad', 'بغدد'],
+  'الديوانية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah'],
+  'بغداد': ['بغداد', 'Baghdad', 'baghdad', 'بغدد', 'بقداد'],
   'البصرة': ['البصره', 'بصرة', 'بصره', 'البصرة', 'basrah', 'basra'],
-  'اربيل': ['أربيل', 'اربيل', 'أربيل', 'اربل', 'Erbil', 'erbil'],
+  'اربيل': ['أربيل', 'اربيل', 'أربيل', 'اربل', 'Erbil', 'erbil', 'هولير'],
   'دهوك': ['دهوك', 'دهك', 'Dohuk', 'dohuk', 'dahuk'],
   'كربلاء': ['كربلاء', 'كربلا', 'كربله', 'Karbala', 'karbala'],
   'النجف': ['النجف', 'نجف', 'نجاف', 'Najaf', 'najaf'],
-  'نينوى - الموصل': ['نينوى', 'نينوا', 'الموصل', 'موصل', 'نينوه', 'Nineveh', 'nineveh', 'mosul'],
-  'صلاح الدين - تكريت': ['صلاح الدين', 'صلاحدين', 'تكريت', 'تكرت', 'salahuddin', 'tikrit'],
-  'الأنبار - الرمادي': ['الأنبار', 'الانبار', 'انبار', 'أنبار', 'الرمادي', 'رمادي', 'anbar', 'ramadi'],
-  'بابل - الحلة': ['بابل', 'الحلة', 'حلة', 'حله', 'babylon', 'hillah', 'hilla'],
-  'واسط - الكوت': ['واسط', 'الكوت', 'كوت', 'كت', 'Wasit', 'wasit', 'kut'],
-  'ذي قار - الناصرية': ['ذي قار', 'ذيقار', 'الناصرية', 'ناصرية', 'ناصريه', 'thi qar', 'nasiriyah'],
-  'المثنى - السماوة': ['المثنى', 'مثنى', 'السماوة', 'سماوة', 'سماوه', 'muthanna', 'samawah'],
-  'ميسان - العمارة': ['ميسان', 'العمارة', 'عمارة', 'عماره', 'Maysan', 'maysan', 'amarah'],
+  'نينوى': ['نينوى', 'نينوا', 'الموصل', 'موصل', 'نينوه', 'Nineveh', 'nineveh', 'mosul'],
+  'صلاح الدين': ['صلاح الدين', 'صلاحدين', 'تكريت', 'تكرت', 'salahuddin', 'tikrit'],
+  'الأنبار': ['الأنبار', 'الانبار', 'انبار', 'أنبار', 'الرمادي', 'رمادي', 'anbar', 'ramadi'],
+  'بابل': ['بابل', 'الحلة', 'حلة', 'حله', 'babylon', 'hillah', 'hilla'],
+  'واسط': ['واسط', 'الكوت', 'كوت', 'كت', 'Wasit', 'wasit', 'kut'],
+  'ذي قار': ['ذي قار', 'ذيقار', 'الناصرية', 'ناصرية', 'ناصريه', 'thi qar', 'nasiriyah'],
+  'المثنى': ['المثنى', 'مثنى', 'السماوة', 'سماوة', 'سماوه', 'muthanna', 'samawah'],
+  'ميسان': ['ميسان', 'العمارة', 'عمارة', 'عماره', 'Maysan', 'maysan', 'amarah'],
   'كركوك': ['كركوك', 'كركك', 'Kirkuk', 'kirkuk'],
   'السليمانية': ['السليمانية', 'سليمانية', 'سليمانيه', 'Sulaymaniyah', 'sulaymaniyah'],
   'حلبجة': ['حلبجة', 'حلبجه', 'halabja', 'halabcha']
@@ -160,111 +201,156 @@ function createFlexibleSearchTerms(productName: string): string[] {
   return uniqueTerms
 }
 
-// Enhanced city finder with variations support and error feedback
-async function findCityByName(cityName: string): Promise<{ city: any | null, suggestions: any[] }> {
-  const cities = await getCitiesFromCache()
-  const normalizedName = normalizeArabic(cityName)
-  
-  if (!cities.length) {
-    return { city: null, suggestions: [] }
-  }
-  
-  // First try direct match
-  let foundCity = cities.find(city => {
-    const cityNormalized = normalizeArabic(city.name)
-    return cityNormalized === normalizedName ||
-           cityNormalized.includes(normalizedName) ||
-           normalizedName.includes(cityNormalized)
-  })
-  
-  if (foundCity) {
-    return { city: foundCity, suggestions: [] }
-  }
-  
-  // Try variations dictionary with improved matching
-  for (const [standardName, variations] of Object.entries(cityNameVariations)) {
-    if (variations.some(variant => {
-      const normalizedVariant = normalizeArabic(variant)
-      return normalizedVariant === normalizedName || 
-             normalizedVariant.includes(normalizedName) || 
-             normalizedName.includes(normalizedVariant)
-    })) {
-      foundCity = cities.find(city => {
-        const cityNormalized = normalizeArabic(city.name)
-        const standardNormalized = normalizeArabic(standardName)
-        return cityNormalized.includes(standardNormalized) || 
-               standardNormalized.includes(cityNormalized) ||
-               cityNormalized === standardNormalized
-      })
-      if (foundCity) {
-        console.log(`✅ تم العثور على المدينة عبر القاموس: ${cityName} → ${foundCity.name}`)
-        return { city: foundCity, suggestions: [] }
+// Smart city finder using cache system with fuzzy matching
+async function findCityByNameSmart(cityName: string): Promise<{ city: any | null, suggestions: any[], confidence: number }> {
+  try {
+    // Use the smart cache system for primary search
+    const { data: cityMatches, error } = await supabase.rpc('find_city_in_cache', {
+      p_city_text: cityName
+    })
+    
+    if (!error && cityMatches && cityMatches.length > 0) {
+      const bestMatch = cityMatches[0]
+      if (bestMatch.similarity_score >= 0.7) {
+        console.log(`🏙️ وجدت مدينة ذكية: ${bestMatch.name} (${bestMatch.similarity_score})`)
+        return { 
+          city: { id: bestMatch.alwaseet_id, name: bestMatch.name, original_id: bestMatch.alwaseet_id }, 
+          suggestions: [], 
+          confidence: bestMatch.similarity_score 
+        }
       }
     }
-  }
-  
-  // Find similar cities for suggestions with enhanced fuzzy matching
-  const suggestions = cities.filter(city => {
-    const cityNormalized = normalizeArabic(city.name)
-    // Enhanced similarity checking
-    const minLength = Math.min(normalizedName.length, cityNormalized.length)
-    const searchLength = Math.max(2, Math.floor(minLength * 0.6))
     
-    return cityNormalized.includes(normalizedName.substring(0, searchLength)) ||
-           normalizedName.includes(cityNormalized.substring(0, searchLength)) ||
-           // Check against variations as well
-           Object.values(cityNameVariations).some(variations =>
-             variations.some(variant => {
-               const variantNorm = normalizeArabic(variant)
-               return variantNorm.includes(normalizedName.substring(0, searchLength)) ||
-                      normalizedName.includes(variantNorm.substring(0, searchLength))
-             })
-           )
-  }).slice(0, 5)
-  
-  return { city: null, suggestions }
+    // Fallback to local cache
+    const cities = await getCitiesFromCache()
+    const normalizedName = normalizeArabic(cityName)
+    
+    if (!cities.length) {
+      return { city: null, suggestions: [], confidence: 0 }
+    }
+    
+    let bestCity = null
+    let bestScore = 0
+    const allMatches = []
+    
+    // Direct and variation matching with scoring
+    for (const city of cities) {
+      const cityNormalized = normalizeArabic(city.name)
+      let score = calculateSimilarity(normalizedName, cityNormalized)
+      
+      // Check variations
+      for (const [standardName, variations] of Object.entries(cityNameVariations)) {
+        if (variations.some(variant => {
+          const normalizedVariant = normalizeArabic(variant)
+          const variantScore = calculateSimilarity(normalizedName, normalizedVariant)
+          if (variantScore > score) score = variantScore
+          return variantScore >= 0.7
+        })) {
+          const standardNormalized = normalizeArabic(standardName)
+          if (cityNormalized.includes(standardNormalized) || standardNormalized.includes(cityNormalized)) {
+            score = Math.max(score, 0.9)
+          }
+        }
+      }
+      
+      if (score >= 0.7) {
+        allMatches.push({ city, score })
+        if (score > bestScore) {
+          bestScore = score
+          bestCity = city
+        }
+      } else if (score >= 0.5) {
+        // Lower confidence suggestions
+        allMatches.push({ city, score })
+      }
+    }
+    
+    if (bestCity && bestScore >= 0.7) {
+      console.log(`✅ عثر على مدينة: ${cityName} → ${bestCity.name} (${bestScore.toFixed(2)})`)
+      return { city: bestCity, suggestions: [], confidence: bestScore }
+    }
+    
+    // Return suggestions if no good match
+    const suggestions = allMatches
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(m => m.city)
+    
+    return { city: null, suggestions, confidence: bestScore }
+    
+  } catch (error) {
+    console.error('خطأ في البحث الذكي عن المدينة:', error)
+    return { city: null, suggestions: [], confidence: 0 }
+  }
 }
 
-// Enhanced neighborhood to city mapping for smart default city detection
+// Comprehensive neighborhood to city mapping for smart default city detection
 const neighborhoodToCityMap: { [key: string]: string } = {
-  // بغداد neighborhoods
-  'الاعظمية': 'بغداد',
-  'الكرادة': 'بغداد', 
-  'الدورة': 'بغداد',
-  'المنصور': 'بغداد',
-  'الكاظمية': 'بغداد',
-  'الشعلة': 'بغداد',
-  'حي الجهاد': 'بغداد',
-  'الجهاد': 'بغداد',
-  'البياع': 'بغداد',
-  'الغدير': 'بغداد',
-  'الزعفرانية': 'بغداد',
-  'النهروان': 'بغداد',
-  'ابو غريب': 'بغداد',
-  'التاجي': 'بغداد',
-  'الحرية': 'بغداد',
-  'الرسالة': 'بغداد',
-  'الشعب': 'بغداد',
-  'الصدر': 'بغداد',
-  'الثورة': 'بغداد',
-  'المسبح': 'بغداد',
-  'الكفاح': 'بغداد',
-  'الجامعة': 'بغداد',
-  'العامرية': 'بغداد',
-  'الدولعي': 'بغداد',
-  'الجزائر': 'بغداد',
-  'البيجية': 'بغداد',
-  'المشتل': 'بغداد',
-  'الشلجية': 'بغداد',
-  'الكاتب': 'بغداد',
-  'البلديات': 'بغداد',
-  'الجادرية': 'بغداد',
-  'الزوراء': 'بغداد',
-  'الاندلس': 'بغداد',
-  // مدن أخرى
-  'الصدر': 'البصرة',
-  'المعقل': 'البصرة',
-  'التنومة': 'البصرة'
+  // بغداد - شامل جميع الأحياء الرئيسية
+  'الاعظمية': 'بغداد', 'اعظمية': 'بغداد',
+  'الكرادة': 'بغداد', 'كرادة': 'بغداد', 'كراده': 'بغداد',
+  'الدورة': 'بغداد', 'دورة': 'بغداد', 'دوره': 'بغداد',
+  'المنصور': 'بغداد', 'منصور': 'بغداد',
+  'الكاظمية': 'بغداد', 'كاظمية': 'بغداد', 'كاظميه': 'بغداد',
+  'الشعلة': 'بغداد', 'شعلة': 'بغداد', 'شعله': 'بغداد',
+  'الجهاد': 'بغداد', 'جهاد': 'بغداد', 'حي الجهاد': 'بغداد',
+  'البياع': 'بغداد', 'بياع': 'بغداد',
+  'الغدير': 'بغداد', 'غدير': 'بغداد',
+  'الزعفرانية': 'بغداد', 'زعفرانية': 'بغداد', 'زعفرانيه': 'بغداد',
+  'النهروان': 'بغداد', 'نهروان': 'بغداد',
+  'ابو غريب': 'بغداد', 'أبو غريب': 'بغداد',
+  'التاجي': 'بغداد', 'تاجي': 'بغداد',
+  'الحرية': 'بغداد', 'حرية': 'بغداد', 'حريه': 'بغداد',
+  'الرسالة': 'بغداد', 'رسالة': 'بغداد', 'رساله': 'بغداد',
+  'الشعب': 'بغداد', 'شعب': 'بغداد',
+  'الصدر': 'بغداد', 'صدر': 'بغداد', 'مدينة الصدر': 'بغداد',
+  'الثورة': 'بغداد', 'ثورة': 'بغداد', 'ثوره': 'بغداد',
+  'المسبح': 'بغداد', 'مسبح': 'بغداد',
+  'الكفاح': 'بغداد', 'كفاح': 'بغداد',
+  'الجامعة': 'بغداد', 'جامعة': 'بغداد', 'جامعه': 'بغداد', 'حي الجامعة': 'بغداد',
+  'العامرية': 'بغداد', 'عامرية': 'بغداد', 'عامريه': 'بغداد',
+  'الدولعي': 'بغداد', 'دولعي': 'بغداد',
+  'الجزائر': 'بغداد', 'جزائر': 'بغداد',
+  'البيجية': 'بغداد', 'بيجية': 'بغداد', 'بيجيه': 'بغداد',
+  'المشتل': 'بغداد', 'مشتل': 'بغداد',
+  'الشلجية': 'بغداد', 'شلجية': 'بغداد', 'شلجيه': 'بغداد',
+  'الكاتب': 'بغداد', 'كاتب': 'بغداد',
+  'البلديات': 'بغداد', 'بلديات': 'بغداد',
+  'الجادرية': 'بغداد', 'جادرية': 'بغداد', 'جادريه': 'بغداد',
+  'الزوراء': 'بغداد', 'زوراء': 'بغداد',
+  'الاندلس': 'بغداد', 'اندلس': 'بغداد', 'أندلس': 'بغداد',
+  'العدل': 'بغداد', 'عدل': 'بغداد', 'حي العدل': 'بغداد',
+  'الصالحية': 'بغداد', 'صالحية': 'بغداد', 'صالحيه': 'بغداد',
+  'الكريمات': 'بغداد', 'كريمات': 'بغداد',
+  'الرصافة': 'بغداد', 'رصافة': 'بغداد', 'رصافه': 'بغداد',
+  'الكرخ': 'بغداد', 'كرخ': 'بغداد',
+  'الأطباء': 'بغداد', 'اطباء': 'بغداد', 'أطباء': 'بغداد', 'حي الأطباء': 'بغداد',
+  
+  // البصرة
+  'العشار': 'البصرة', 'عشار': 'البصرة',
+  'المعقل': 'البصرة', 'معقل': 'البصرة',
+  'التنومة': 'البصرة', 'تنومة': 'البصرة', 'تنومه': 'البصرة',
+  'الأسماك': 'البصرة', 'اسماك': 'البصرة', 'أسماك': 'البصرة',
+  'الفيحاء': 'البصرة', 'فيحاء': 'البصرة',
+  'كرمة علي': 'البصرة', 'كرمه علي': 'البصرة',
+  'الجمهورية': 'البصرة', 'جمهورية': 'البصرة', 'جمهوريه': 'البصرة',
+  
+  // أربيل
+  'عنكاوا': 'اربيل', 'عنكاوه': 'اربيل',
+  'شورش': 'اربيل',
+  'باختياري': 'اربيل',
+  'قلاوري': 'اربيل',
+  
+  // كربلاء
+  'الحر': 'كربلاء', 'حر': 'كربلاء',
+  'الجديدة': 'كربلاء', 'جديدة': 'كربلاء', 'جديده': 'كربلاء',
+  
+  // النجف
+  'الكوفة': 'النجف', 'كوفة': 'النجف', 'كوفه': 'النجف',
+  'الحيدرية': 'النجف', 'حيدرية': 'النجف', 'حيدريه': 'النجف',
+  
+  // Catch-all for unrecognized neighborhoods → default to Baghdad
+  'غماس': 'الديوانية'
 }
 
 // Find regions by partial name with disambiguation
@@ -284,139 +370,236 @@ async function findRegionsByName(cityId: number, regionText: string): Promise<an
   return matchingRegions
 }
 
-// Enhanced address parsing with smart city detection
-async function parseAddressLine(addressText: string): Promise<{
+// Enhanced smart address parsing using cache system
+async function parseAddressLineSmart(addressText: string): Promise<{
+  customerName?: string,
   city: any | null,
-  regions: any[],
+  region: any | null,
   remainingText: string,
   isDefaultCity: boolean,
-  errors: string[]
+  errors: string[],
+  suggestions: { cities?: any[], regions?: any[] }
 }> {
-  if (!addressText) {
-    return { city: null, regions: [], remainingText: '', isDefaultCity: false, errors: ['لا يوجد نص عنوان'] }
+  console.log(`🧠 تحليل ذكي للعنوان: "${addressText}"`)
+  
+  if (!addressText || addressText.trim().length === 0) {
+    return { 
+      city: null, region: null, remainingText: '', isDefaultCity: false, 
+      errors: ['لا يوجد نص عنوان صالح'], suggestions: {} 
+    }
   }
   
-  const parts = addressText.split(/[،,\s]+/).filter(Boolean)
   const errors: string[] = []
   let isDefaultCity = false
+  let city = null
+  let region = null
+  let customerName = ''
+  let suggestions: { cities?: any[], regions?: any[] } = {}
   
-  // Check if first part contains a known neighborhood
-  const firstPart = parts[0]
-  const normalizedFirst = normalizeArabic(firstPart)
-  
-  // Look for known neighborhoods first
-  let defaultCityName = null
-  for (const [neighborhood, cityName] of Object.entries(neighborhoodToCityMap)) {
-    if (normalizedFirst.includes(normalizeArabic(neighborhood))) {
-      defaultCityName = cityName
-      isDefaultCity = true
-      console.log(`🏘️ تم اكتشاف حي "${neighborhood}" - سيتم استخدام مدينة ${cityName} كافتراضي`)
-      break
-    }
-  }
-  
-  // Try to find city from first part
-  let cityResult = await findCityByName(parts[0])
-  let city = cityResult.city
-  
-  // If no city found and we have a default from neighborhood, use it
-  if (!city && defaultCityName) {
-    const defaultResult = await findCityByName(defaultCityName)
-    city = defaultResult.city
-    if (city) {
-      console.log(`✅ تم استخدام مدينة ${city.name} كافتراضي بناءً على الحي المكتشف`)
-    }
-  }
-  
-  // If still no city and parts available, default to Baghdad
-  if (!city && parts.length > 0) {
-    const baghdadResult = await findCityByName('بغداد')
-    city = baghdadResult.city
-    isDefaultCity = true
-    if (city) {
-      console.log(`🏙️ لم يتم تحديد مدينة، استخدام بغداد كافتراضي`)
-    }
-  }
-  
-  if (!city) {
-    // Try to suggest similar cities
-    if (cityResult.suggestions.length > 0) {
-      const suggestedNames = cityResult.suggestions.map(s => s.name).join('، ')
-      errors.push(`المدينة "${parts[0]}" غير موجودة. هل تقصد: ${suggestedNames}؟`)
-    } else {
-      errors.push(`لم يتم العثور على مدينة "${parts[0]}"`)
-    }
-    return { city: null, regions: [], remainingText: addressText, isDefaultCity: false, errors }
-  }
-  
-  // Determine region search parts
-  const regionParts = isDefaultCity && !await findCityByName(parts[0]) 
-    ? parts  // All parts if Baghdad default and first part isn't a city
-    : parts.slice(1)  // Skip city part
+  try {
+    // Use the smart cache system first
+    const cacheResult = await parseAddressWithCache(addressText)
+    console.log('🎯 نتيجة Cache الذكية:', cacheResult)
     
-  let regions: any[] = []
-  let nearestPointText = ''
-  
-  if (regionParts.length > 0) {
-    // Try different combinations for multi-word regions (prioritize longer matches)
-    for (let wordCount = Math.min(3, regionParts.length); wordCount >= 1; wordCount--) {
-      const regionCandidate = regionParts.slice(0, wordCount).join(' ')
-      const foundRegions = await findRegionsByName(city.id, regionCandidate)
+    customerName = cacheResult.customer_name || ''
+    
+    if (cacheResult.city_id && cacheResult.city_name) {
+      city = { 
+        id: cacheResult.city_id, 
+        name: cacheResult.city_name, 
+        original_id: cacheResult.city_id 
+      }
+      console.log(`✅ مدينة من Cache: ${city.name}`)
+    }
+    
+    if (cacheResult.region_id && cacheResult.region_name) {
+      region = {
+        id: cacheResult.region_id,
+        name: cacheResult.region_name,
+        original_id: cacheResult.region_id
+      }
+      console.log(`✅ منطقة من Cache: ${region.name}`)
+    }
+    
+    // If no city found via cache, try smart fallback
+    if (!city) {
+      const addressParts = addressText.split(/[\s،,]+/).filter(Boolean)
+      console.log('🔍 أجزاء العنوان:', addressParts)
       
-      if (foundRegions.length > 0) {
-        regions = foundRegions
-        // Rest becomes address details
-        if (regionParts.length > wordCount) {
-          nearestPointText = regionParts.slice(wordCount).join(' ')
+      // Check for neighborhoods to determine default city
+      for (const part of addressParts) {
+        const normalizedPart = normalizeArabic(part)
+        
+        for (const [neighborhood, cityName] of Object.entries(neighborhoodToCityMap)) {
+          const normalizedNeighborhood = normalizeArabic(neighborhood)
+          
+          if (normalizedPart.includes(normalizedNeighborhood) || 
+              normalizedNeighborhood.includes(normalizedPart) ||
+              calculateSimilarity(normalizedPart, normalizedNeighborhood) >= 0.8) {
+            
+            console.log(`🏘️ اكتشف حي: "${neighborhood}" → مدينة: ${cityName}`)
+            
+            const defaultCityResult = await findCityByNameSmart(cityName)
+            if (defaultCityResult.city) {
+              city = defaultCityResult.city
+              isDefaultCity = true
+              console.log(`✅ استخدام مدينة افتراضية: ${city.name}`)
+              break
+            }
+          }
         }
-        console.log(`✅ تم العثور على مطابقة للمنطقة: "${regionCandidate}" (${foundRegions.length} نتيجة)`)
-        break
+        if (city) break
+      }
+      
+      // If still no city, try to find from first part
+      if (!city && addressParts.length > 0) {
+        const firstPartResult = await findCityByNameSmart(addressParts[0])
+        
+        if (firstPartResult.city && firstPartResult.confidence >= 0.7) {
+          city = firstPartResult.city
+          console.log(`✅ مدينة من الجزء الأول: ${city.name}`)
+        } else if (firstPartResult.suggestions.length > 0) {
+          suggestions.cities = firstPartResult.suggestions
+          errors.push(`المدينة "${addressParts[0]}" غير واضحة. هل تقصد إحدى هذه المدن؟`)
+        }
+      }
+      
+      // Ultimate fallback to Baghdad if region detected but no city
+      if (!city && addressParts.length > 0) {
+        const baghdadResult = await findCityByNameSmart('بغداد')
+        if (baghdadResult.city) {
+          city = baghdadResult.city
+          isDefaultCity = true
+          console.log(`🏙️ استخدام بغداد كافتراضي نهائي`)
+        }
       }
     }
     
-    // If no region found, add to errors
-    if (regions.length === 0) {
-      const regionText = regionParts.join(' ')
-      errors.push(`لم يتم العثور على منطقة "${regionText}" في مدينة ${city.name}`)
-      console.log(`⚠️ لم يتم العثور على منطقة مطابقة في: ${regionText}`)
+    // If no region found via cache, try manual search
+    if (city && !region) {
+      const addressParts = addressText.split(/[\s،,]+/).filter(Boolean)
+      const startIndex = isDefaultCity ? 0 : 1 // Skip city name if not default
+      
+      for (let i = startIndex; i < addressParts.length; i++) {
+        for (let j = i; j < Math.min(i + 3, addressParts.length); j++) {
+          const regionCandidate = addressParts.slice(i, j + 1).join(' ')
+          
+          try {
+            const { data: regionMatches, error } = await supabase.rpc('find_region_in_cache', {
+              p_city_id: city.id,
+              p_region_text: regionCandidate
+            })
+            
+            if (!error && regionMatches && regionMatches.length > 0) {
+              const bestMatch = regionMatches[0]
+              if (bestMatch.similarity_score >= 0.7) {
+                region = {
+                  id: bestMatch.alwaseet_id,
+                  name: bestMatch.name,
+                  original_id: bestMatch.alwaseet_id
+                }
+                console.log(`✅ منطقة من البحث اليدوي: ${region.name}`)
+                break
+              }
+            }
+          } catch (e) {
+            console.error('خطأ في البحث عن المنطقة:', e)
+          }
+        }
+        if (region) break
+      }
+      
+      if (!region && addressParts.length > (isDefaultCity ? 1 : 2)) {
+        const regionText = addressParts.slice(isDefaultCity ? 1 : 1).join(' ')
+        errors.push(`لم يتم العثور على منطقة "${regionText}" في مدينة ${city.name}`)
+      }
     }
-  }
-  
-  return { 
-    city, 
-    regions, 
-    remainingText: nearestPointText,
-    isDefaultCity,
-    errors
+    
+    return {
+      customerName: customerName || undefined,
+      city,
+      region,
+      remainingText: cacheResult.remaining_text || '',
+      isDefaultCity,
+      errors,
+      suggestions
+    }
+    
+  } catch (error) {
+    console.error('❌ خطأ في التحليل الذكي:', error)
+    errors.push('حدث خطأ في تحليل العنوان')
+    
+    return {
+      city: null, region: null, remainingText: addressText, 
+      isDefaultCity: false, errors, suggestions: {}
+    }
   }
 }
 
-// Send enhanced error message with suggestions
-async function sendErrorMessageWithSuggestions(chatId: number, originalText: string, errors: string[], suggestions?: any[]): Promise<void> {
-  let message = `❌ خطأ في معالجة الطلب:\n\n`
+// Send comprehensive error message with smart suggestions
+async function sendEnhancedErrorMessage(
+  chatId: number, 
+  originalText: string, 
+  errors: string[], 
+  suggestions: { cities?: any[], regions?: any[] },
+  detectedData?: { city?: any, region?: any, isDefaultCity?: boolean }
+): Promise<void> {
+  let message = `❌ تحليل الطلب:\n\n`
   
-  errors.forEach((error, index) => {
-    message += `${index + 1}. ${error}\n`
-  })
+  // Show what was detected successfully
+  if (detectedData?.city) {
+    message += `✅ المدينة: ${detectedData.city.name}`
+    if (detectedData.isDefaultCity) {
+      message += ` (تم اختيارها تلقائياً)`
+    }
+    message += `\n`
+  }
   
-  if (suggestions && suggestions.length > 0) {
-    message += `\n💡 اقتراحات لتصحيح المدينة:\n`
-    suggestions.forEach((suggestion, index) => {
-      message += `${index + 1}. ${suggestion.name}\n`
+  if (detectedData?.region) {
+    message += `✅ المنطقة: ${detectedData.region.name}\n`
+  }
+  
+  // Show errors
+  if (errors.length > 0) {
+    message += `\n⚠️ مشاكل في الطلب:\n`
+    errors.forEach((error, index) => {
+      message += `${index + 1}. ${error}\n`
+    })
+  }
+  
+  // Show city suggestions
+  if (suggestions.cities && suggestions.cities.length > 0) {
+    message += `\n🏙️ هل تقصد إحدى هذه المدن؟\n`
+    suggestions.cities.slice(0, 5).forEach((city, index) => {
+      message += `${index + 1}. ${city.name}\n`
+    })
+  }
+  
+  // Show region suggestions  
+  if (suggestions.regions && suggestions.regions.length > 0) {
+    message += `\n🏘️ مناطق مقترحة:\n`
+    suggestions.regions.slice(0, 5).forEach((region, index) => {
+      message += `${index + 1}. ${region.name}\n`
     })
   }
   
   message += `\n📝 النص الأصلي:\n${originalText}\n\n`
-  message += `🔧 لتصحيح الطلب، يرجى إعادة كتابته بالشكل التالي:\n`
-  message += `اسم العميل\n`
+  message += `🔧 تنسيق الطلب الصحيح:\n`
+  message += `اسم الزبون\n`
   message += `رقم الهاتف (07xxxxxxxxx)\n`
-  message += `المدينة المنطقة (مثال: بغداد الكرادة)\n`
-  message += `اسم المنتج\n\n`
+  message += `المدينة المنطقة (أو المنطقة فقط للبغداد)\n`
+  message += `اسم المنتج اللون المقاس\n\n`
+  
   message += `مثال صحيح:\n`
   message += `أحمد علي\n`
   message += `07701234567\n`
-  message += `بغداد الكرادة\n`
-  message += `برشلونة ازرق ميديم`
+  if (detectedData?.city) {
+    message += `${detectedData.city.name} `
+    message += detectedData.region ? detectedData.region.name : 'اسم المنطقة'
+  } else {
+    message += `بغداد الكرادة`
+  }
+  message += `\nبرشلونة أزرق XL`
   
   await sendTelegramMessage(chatId, message)
 }
@@ -637,7 +820,40 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
     let phoneFound = false
     let cityFound = false
     
-    // Parse order text
+    // Enhanced smart parsing of entire order text first
+    console.log(`🧠 بدء التحليل الذكي الشامل للطلب`)
+    const globalSmartResult = await parseAddressLineSmart(text)
+    
+    // Use global smart result if we found comprehensive data
+    if (globalSmartResult.city && globalSmartResult.customerName) {
+      customerName = globalSmartResult.customerName
+      customerCity = globalSmartResult.city
+      isDefaultCity = globalSmartResult.isDefaultCity
+      if (globalSmartResult.region) {
+        customerRegion = globalSmartResult.region
+      }
+      customerAddress = globalSmartResult.remainingText
+      
+      console.log(`✅ نتيجة التحليل الذكي الشامل:`, {
+        name: customerName,
+        city: customerCity.name,
+        region: customerRegion?.name,
+        isDefault: isDefaultCity
+      })
+      
+      if (globalSmartResult.errors.length > 0 && globalSmartResult.suggestions.cities) {
+        await sendEnhancedErrorMessage(
+          chatId, 
+          text, 
+          globalSmartResult.errors, 
+          globalSmartResult.suggestions,
+          { city: customerCity, region: customerRegion, isDefaultCity }
+        )
+        return true
+      }
+    }
+    
+    // Parse order text line by line for additional details
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       const lowerLine = line.toLowerCase()
@@ -662,63 +878,77 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
         phoneFound = true
       }
       
-      // Parse address with enhanced city detection
+      // Parse address with enhanced city detection (if not already found globally)
       if ((lowerLine.includes('عنوان') || lowerLine.includes('منطقة') || lowerLine.includes('محلة')) && !customerAddress) {
         customerAddress = line.replace(/^(عنوان|منطقة|محلة)[:\s]*/i, '').trim()
       }
       
-      // Parse city explicitly
-      if ((lowerLine.includes('مدينة') || lowerLine.includes('محافظة')) && !cityFound) {
+      // Parse city explicitly (if not already found globally)
+      if ((lowerLine.includes('مدينة') || lowerLine.includes('محافظة')) && !cityFound && !customerCity) {
         const cityText = line.replace(/^(مدينة|محافظة)[:\s]*/i, '').trim()
-        const cityResult = await findCityByName(cityText)
+        const cityResult = await findCityByNameSmart(cityText)
         customerCity = cityResult.city
         
         if (!customerCity && cityResult.suggestions.length > 0) {
-          orderErrors.push(`المدينة "${cityText}" غير موجودة. هل تقصد: ${cityResult.suggestions.map(s => s.name).join('، ')}؟`)
+          await sendEnhancedErrorMessage(
+            chatId, 
+            text, 
+            [`المدينة "${cityText}" غير واضحة`], 
+            { cities: cityResult.suggestions }
+          )
+          return true
         }
         cityFound = true
       }
       
-      // Smart address parsing without explicit city/region labels
+      // Smart address parsing with enhanced intelligence
       if (!cityFound && !customerAddress && !phoneMatches && !lowerLine.includes('منتج') && 
           !isValidCustomerName(line) && line.length > 3) {
         
-        const addressResult = await parseAddressLine(line)
+        console.log(`🧠 تحليل ذكي للسطر: "${line}"`)
+        const smartResult = await parseAddressLineSmart(line)
         
-        if (addressResult.city) {
-          customerCity = addressResult.city
-          isDefaultCity = addressResult.isDefaultCity
+        if (smartResult.city) {
+          customerCity = smartResult.city
+          isDefaultCity = smartResult.isDefaultCity
           
-          if (addressResult.regions.length === 1) {
-            customerRegion = addressResult.regions[0]
-            customerAddress = addressResult.remainingText || line
-            console.log(`✅ تم تحليل العنوان تلقائياً: مدينة ${customerCity.name}, منطقة ${customerRegion.name}`)
-          } else if (addressResult.regions.length > 1) {
-            // Multiple regions found - need user to clarify
-            pendingOrders.set(chatId, {
-              customerName: customerName || defaultCustomerName,
-              customerPhone,
-              customerSecondaryPhone,
-              customerAddress: line,
-              customerCity,
-              regions: addressResult.regions,
-              remainingText: addressResult.remainingText,
-              items: [],
-              deliveryType,
-              orderNotes
-            })
-            
-            await sendRegionSelectionMenu(chatId, customerCity.name, addressResult.regions, text)
-            return true
+          if (smartResult.region) {
+            customerRegion = smartResult.region
+            customerAddress = smartResult.remainingText || line
+            console.log(`✅ تحليل ذكي كامل: ${customerCity.name} - ${customerRegion.name}`)
+          } else {
+            customerAddress = smartResult.remainingText || line
+            console.log(`✅ تحليل ذكي للمدينة فقط: ${customerCity.name}`)
+          }
+          
+          if (smartResult.customerName && !customerName) {
+            customerName = smartResult.customerName
+            console.log(`👤 اسم الزبون من التحليل الذكي: ${customerName}`)
           }
           
           if (isDefaultCity) {
-            console.log(`🏙️ تم استخدام مدينة افتراضية: ${customerCity.name}`)
+            console.log(`🏙️ تم استخدام مدينة افتراضية بذكاء: ${customerCity.name}`)
           }
         }
         
-        // Add parsing errors to the list
-        orderErrors.push(...addressResult.errors)
+        // Handle errors with smart suggestions
+        if (smartResult.errors.length > 0) {
+          console.log(`⚠️ أخطاء في التحليل الذكي:`, smartResult.errors)
+          orderErrors.push(...smartResult.errors)
+          
+          // If we have suggestions, this means there were issues that need user clarification
+          if (smartResult.suggestions.cities && smartResult.suggestions.cities.length > 0) {
+            await sendEnhancedErrorMessage(
+              chatId, 
+              text, 
+              smartResult.errors, 
+              smartResult.suggestions,
+              { city: smartResult.city, region: smartResult.region, isDefaultCity: smartResult.isDefaultCity }
+            )
+            return true // Stop processing this order due to errors
+          }
+        }
+        
         cityFound = true
       }
       
@@ -759,11 +989,32 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       }
     }
     
-    // Validation and error handling
+    // Enhanced validation and error handling
     if (!customerName) customerName = defaultCustomerName
     
     if (!customerPhone) {
       orderErrors.push('لم يتم العثور على رقم هاتف صالح (يجب أن يبدأ بـ 07)')
+    }
+    
+    if (!customerCity) {
+      orderErrors.push('لم يتم تحديد المدينة بوضوح')
+    }
+    
+    if (items.length === 0) {
+      orderErrors.push('لم يتم العثور على أي منتجات في الطلب')
+    }
+    
+    // If there are critical errors, send enhanced error message
+    if (orderErrors.length > 0) {
+      console.log('❌ أخطاء في الطلب:', orderErrors)
+      await sendEnhancedErrorMessage(
+        chatId, 
+        text, 
+        orderErrors, 
+        {},
+        { city: customerCity, region: customerRegion, isDefaultCity }
+      )
+      return true
     }
     
     if (!customerCity) {
