@@ -30,13 +30,13 @@ const RegionDistribution = ({ cities }) => {
           return;
         }
 
-        // معالجة البيانات لإحصاء المناطق
+        // معالجة البيانات لإحصاء المناطق لجميع المدن
         const cityRegionCounts = await Promise.all(
-          cities.slice(0, 5).map(async (city) => {
+          cities.map(async (city) => {
             const { count, error } = await supabase
               .from('regions_cache')
               .select('*', { count: 'exact', head: true })
-              .eq('city_id', city.id)
+              .eq('city_id', city.alwaseet_id)
               .eq('is_active', true);
 
             if (error) {
@@ -74,22 +74,17 @@ const RegionDistribution = ({ cities }) => {
     <div className="mt-4 p-4 bg-secondary/30 rounded-lg">
       <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
         <MapPin className="h-4 w-4" />
-        توزيع المناطق حسب المدن (أول 5 مدن):
+        توزيع المناطق حسب المدن (جميع المدن الـ18):
       </h4>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs max-h-80 overflow-y-auto">
         {citiesWithRegions.map((city) => (
           <div key={city.id} className="flex items-center justify-between p-2 bg-background rounded border">
-            <span className="font-medium truncate">{city.name}</span>
+            <span className="font-medium truncate" title={city.name}>{city.name}</span>
             <Badge variant="outline" className="text-xs">
               {city.regionCount} منطقة
             </Badge>
           </div>
         ))}
-        {cities.length > 5 && (
-          <div className="text-muted-foreground p-2">
-            و {cities.length - 5} مدن أخرى...
-          </div>
-        )}
       </div>
     </div>
   );

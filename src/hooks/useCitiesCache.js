@@ -82,15 +82,19 @@ export const useCitiesCache = () => {
       if (error) throw error;
       
       console.log('🔍 fetchSyncInfo نتيجة:', data);
-      setSyncInfo(data);
       
-      if (data?.last_sync_at) {
-        setLastUpdated(data.last_sync_at);
+      // Handle array response from RPC function
+      const syncData = Array.isArray(data) ? data[0] : data;
+      setSyncInfo(syncData);
+      
+      if (syncData?.last_sync_at) {
+        setLastUpdated(syncData.last_sync_at);
       }
       
-      return data;
+      return syncData;
     } catch (error) {
       console.error('خطأ في جلب معلومات المزامنة:', error);
+      return null;
     }
   };
 

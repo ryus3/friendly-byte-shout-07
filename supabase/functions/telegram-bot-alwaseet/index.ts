@@ -97,36 +97,43 @@ function normalizeArabic(text: string): string {
   if (!text) return ''
   
   return text.toString().trim()
-    // Remove common prefixes
+    // Remove common prefixes and suffixes
     .replace(/^(ال|محافظة|مدينة)\s+/g, '')
+    .replace(/\s+(محافظة|قضاء)$/g, '')
     // Normalize common Arabic letters
     .replace(/[أإآ]/g, 'ا')
     .replace(/[ة]/g, 'ه')
     .replace(/[ي]/g, 'ى')
-    // Remove extra spaces
+    .replace(/[ؤ]/g, 'و')
+    .replace(/[ئ]/g, 'ي')
+    // Handle diacritics
+    .replace(/[\u064B-\u065F]/g, '')
+    // Remove extra spaces and punctuation
+    .replace(/[.,،]/g, ' ')
     .replace(/\s+/g, ' ')
     .toLowerCase()
 }
 
-// City name variations dictionary for better matching
+// Comprehensive city name variations dictionary for all 18 Iraqi cities
 const cityNameVariations: { [key: string]: string[] } = {
-  'ديوانية': ['الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه'],
-  'بغداد': ['بغداد', 'Baghdad', 'baghdad'],
-  'البصرة': ['البصره', 'بصرة', 'بصره', 'البصرة'],
-  'اربيل': ['أربيل', 'اربيل', 'Erbil', 'erbil'],
-  'دهوك': ['دهوك', 'Dohuk', 'dohuk'],
-  'كربلاء': ['كربلاء', 'كربلا', 'Karbala', 'karbala'],
-  'النجف': ['النجف', 'نجف', 'Najaf', 'najaf'],
-  'نينوى': ['نينوى', 'نينوا', 'الموصل', 'موصل', 'Nineveh', 'nineveh'],
-  'صلاح الدين': ['صلاح الدين', 'صلاحدين', 'تكريت'],
-  'الانبار': ['الأنبار', 'الانبار', 'انبار', 'أنبار', 'الرمادي'],
-  'بابل': ['بابل', 'الحلة', 'حلة', 'Babylon', 'babylon'],
-  'واسط': ['واسط', 'الكوت', 'كوت', 'Wasit', 'wasit'],
-  'ذي قار': ['ذي قار', 'ذيقار', 'الناصرية', 'ناصرية'],
-  'المثنى': ['المثنى', 'مثنى', 'السماوة', 'سماوة'],
-  'ميسان': ['ميسان', 'العمارة', 'عمارة', 'Maysan', 'maysan'],
-  'كركوك': ['كركوك', 'Kirkuk', 'kirkuk'],
-  'السليمانية': ['السليمانية', 'سليمانية', 'Sulaymaniyah', 'sulaymaniyah']
+  'الديوانية - القادسية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah'],
+  'بغداد': ['بغداد', 'Baghdad', 'baghdad', 'بغدد'],
+  'البصرة': ['البصره', 'بصرة', 'بصره', 'البصرة', 'basrah', 'basra'],
+  'اربيل': ['أربيل', 'اربيل', 'أربيل', 'اربل', 'Erbil', 'erbil'],
+  'دهوك': ['دهوك', 'دهك', 'Dohuk', 'dohuk', 'dahuk'],
+  'كربلاء': ['كربلاء', 'كربلا', 'كربله', 'Karbala', 'karbala'],
+  'النجف': ['النجف', 'نجف', 'نجاف', 'Najaf', 'najaf'],
+  'نينوى - الموصل': ['نينوى', 'نينوا', 'الموصل', 'موصل', 'نينوه', 'Nineveh', 'nineveh', 'mosul'],
+  'صلاح الدين - تكريت': ['صلاح الدين', 'صلاحدين', 'تكريت', 'تكرت', 'salahuddin', 'tikrit'],
+  'الأنبار - الرمادي': ['الأنبار', 'الانبار', 'انبار', 'أنبار', 'الرمادي', 'رمادي', 'anbar', 'ramadi'],
+  'بابل - الحلة': ['بابل', 'الحلة', 'حلة', 'حله', 'babylon', 'hillah', 'hilla'],
+  'واسط - الكوت': ['واسط', 'الكوت', 'كوت', 'كت', 'Wasit', 'wasit', 'kut'],
+  'ذي قار - الناصرية': ['ذي قار', 'ذيقار', 'الناصرية', 'ناصرية', 'ناصريه', 'thi qar', 'nasiriyah'],
+  'المثنى - السماوة': ['المثنى', 'مثنى', 'السماوة', 'سماوة', 'سماوه', 'muthanna', 'samawah'],
+  'ميسان - العمارة': ['ميسان', 'العمارة', 'عمارة', 'عماره', 'Maysan', 'maysan', 'amarah'],
+  'كركوك': ['كركوك', 'كركك', 'Kirkuk', 'kirkuk'],
+  'السليمانية': ['السليمانية', 'سليمانية', 'سليمانيه', 'Sulaymaniyah', 'sulaymaniyah'],
+  'حلبجة': ['حلبجة', 'حلبجه', 'halabja', 'halabcha']
 }
 
 // Enhanced flexible product search that handles both ة and ه with detailed logging
@@ -174,29 +181,53 @@ async function findCityByName(cityName: string): Promise<{ city: any | null, sug
     return { city: foundCity, suggestions: [] }
   }
   
-  // Try variations dictionary
+  // Try variations dictionary with improved matching
   for (const [standardName, variations] of Object.entries(cityNameVariations)) {
-    if (variations.some(variant => normalizeArabic(variant) === normalizedName)) {
-      foundCity = cities.find(city => normalizeArabic(city.name).includes(normalizeArabic(standardName)))
+    if (variations.some(variant => {
+      const normalizedVariant = normalizeArabic(variant)
+      return normalizedVariant === normalizedName || 
+             normalizedVariant.includes(normalizedName) || 
+             normalizedName.includes(normalizedVariant)
+    })) {
+      foundCity = cities.find(city => {
+        const cityNormalized = normalizeArabic(city.name)
+        const standardNormalized = normalizeArabic(standardName)
+        return cityNormalized.includes(standardNormalized) || 
+               standardNormalized.includes(cityNormalized) ||
+               cityNormalized === standardNormalized
+      })
       if (foundCity) {
+        console.log(`✅ تم العثور على المدينة عبر القاموس: ${cityName} → ${foundCity.name}`)
         return { city: foundCity, suggestions: [] }
       }
     }
   }
   
-  // Find similar cities for suggestions
+  // Find similar cities for suggestions with enhanced fuzzy matching
   const suggestions = cities.filter(city => {
     const cityNormalized = normalizeArabic(city.name)
-    // Check if city name contains part of the search term or vice versa
-    return cityNormalized.includes(normalizedName.substring(0, 3)) ||
-           normalizedName.includes(cityNormalized.substring(0, 3))
+    // Enhanced similarity checking
+    const minLength = Math.min(normalizedName.length, cityNormalized.length)
+    const searchLength = Math.max(2, Math.floor(minLength * 0.6))
+    
+    return cityNormalized.includes(normalizedName.substring(0, searchLength)) ||
+           normalizedName.includes(cityNormalized.substring(0, searchLength)) ||
+           // Check against variations as well
+           Object.values(cityNameVariations).some(variations =>
+             variations.some(variant => {
+               const variantNorm = normalizeArabic(variant)
+               return variantNorm.includes(normalizedName.substring(0, searchLength)) ||
+                      normalizedName.includes(variantNorm.substring(0, searchLength))
+             })
+           )
   }).slice(0, 5)
   
   return { city: null, suggestions }
 }
 
-// Known neighborhoods and their default cities for smart detection
+// Enhanced neighborhood to city mapping for smart default city detection
 const neighborhoodToCityMap: { [key: string]: string } = {
+  // بغداد neighborhoods
   'الاعظمية': 'بغداد',
   'الكرادة': 'بغداد', 
   'الدورة': 'بغداد',
@@ -204,12 +235,36 @@ const neighborhoodToCityMap: { [key: string]: string } = {
   'الكاظمية': 'بغداد',
   'الشعلة': 'بغداد',
   'حي الجهاد': 'بغداد',
+  'الجهاد': 'بغداد',
   'البياع': 'بغداد',
   'الغدير': 'بغداد',
   'الزعفرانية': 'بغداد',
   'النهروان': 'بغداد',
   'ابو غريب': 'بغداد',
-  'التاجي': 'بغداد'
+  'التاجي': 'بغداد',
+  'الحرية': 'بغداد',
+  'الرسالة': 'بغداد',
+  'الشعب': 'بغداد',
+  'الصدر': 'بغداد',
+  'الثورة': 'بغداد',
+  'المسبح': 'بغداد',
+  'الكفاح': 'بغداد',
+  'الجامعة': 'بغداد',
+  'العامرية': 'بغداد',
+  'الدولعي': 'بغداد',
+  'الجزائر': 'بغداد',
+  'البيجية': 'بغداد',
+  'المشتل': 'بغداد',
+  'الشلجية': 'بغداد',
+  'الكاتب': 'بغداد',
+  'البلديات': 'بغداد',
+  'الجادرية': 'بغداد',
+  'الزوراء': 'بغداد',
+  'الاندلس': 'بغداد',
+  // مدن أخرى
+  'الصدر': 'البصرة',
+  'المعقل': 'البصرة',
+  'التنومة': 'البصرة'
 }
 
 // Find regions by partial name with disambiguation
