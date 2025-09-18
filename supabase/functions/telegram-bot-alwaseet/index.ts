@@ -152,9 +152,6 @@ function calculateSimilarity(str1: string, str2: string): number {
   return 1.0 - (distance / longer.length)
 }
 
-// Import the smart cache parser
-import { parseAddressWithCache } from '../telegram-bot/address-cache-parser.ts'
-
 // Comprehensive city name variations for all 18 Iraqi cities with smart matching
 const cityNameVariations: { [key: string]: string[] } = {
   'الديوانية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah'],
@@ -370,7 +367,151 @@ async function findRegionsByName(cityId: number, regionText: string): Promise<an
   return matchingRegions
 }
 
-// Enhanced smart address parsing using cache system
+// Integrated smart cache address parsing (self-contained)
+async function parseAddressWithCacheSmart(addressText: string): Promise<{
+  customer_name?: string;
+  city_id?: number;
+  city_name?: string;
+  region_id?: number;
+  region_name?: string;
+  remaining_text: string;
+}> {
+  console.log(`🔍 تحليل العنوان بالذكاء الاصطناعي: "${addressText}"`);
+  
+  // Clean and normalize text
+  const cleanedText = addressText
+    .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0621-\u064A\u0660-\u0669a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  console.log(`🧹 النص المنظف: "${cleanedText}"`);
+
+  // Extract customer name (simple pattern)
+  const words = cleanedText.split(/\s+/);
+  let customerName: string | undefined;
+  let textWithoutName = cleanedText;
+  
+  // Simple name extraction - first Arabic word
+  const namePattern = /^([\u0621-\u064A]{2,})/;
+  const nameMatch = cleanedText.match(namePattern);
+  if (nameMatch && nameMatch[1].length >= 3) {
+    customerName = nameMatch[1];
+    textWithoutName = words.slice(1).join(' ');
+    console.log(`👤 اسم الزبون: ${customerName}`);
+  }
+
+  const remainingWords = textWithoutName.split(/\s+/).filter(word => word.length > 1);
+  
+  let cityMatch: any = null;
+  let regionMatch: any = null;
+  let usedWordIndices: Set<number> = new Set();
+
+  // Search for city using cache system
+  for (let i = 0; i < remainingWords.length; i++) {
+    if (usedWordIndices.has(i)) continue;
+
+    // Try single word
+    try {
+      const { data, error } = await supabase.rpc('find_city_in_cache', {
+        p_city_text: remainingWords[i]
+      });
+      
+      if (!error && data && data.length > 0) {
+        const bestMatch = data[0];
+        if (bestMatch.similarity_score >= 0.7) {
+          cityMatch = bestMatch;
+          usedWordIndices.add(i);
+          console.log(`✅ وجدت مدينة بكلمة واحدة: ${cityMatch.name}`);
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('خطأ في البحث عن المدينة:', e);
+    }
+
+    // Try two words
+    if (i < remainingWords.length - 1) {
+      const twoWords = `${remainingWords[i]} ${remainingWords[i + 1]}`;
+      try {
+        const { data, error } = await supabase.rpc('find_city_in_cache', {
+          p_city_text: twoWords
+        });
+        
+        if (!error && data && data.length > 0) {
+          const bestMatch = data[0];
+          if (bestMatch.similarity_score >= 0.7) {
+            cityMatch = bestMatch;
+            usedWordIndices.add(i);
+            usedWordIndices.add(i + 1);
+            console.log(`✅ وجدت مدينة بكلمتين: ${cityMatch.name}`);
+            break;
+          }
+        }
+      } catch (e) {
+        console.error('خطأ في البحث عن المدينة:', e);
+      }
+    }
+  }
+
+  // Search for region if city found
+  if (cityMatch) {
+    const remainingWordsFiltered = remainingWords.filter((_, index) => !usedWordIndices.has(index));
+    
+    for (let i = 0; i < remainingWordsFiltered.length; i++) {
+      // Try different combinations
+      for (let wordCount = Math.min(3, remainingWordsFiltered.length - i); wordCount >= 1; wordCount--) {
+        const regionCandidate = remainingWordsFiltered.slice(i, i + wordCount).join(' ');
+        
+        try {
+          const { data, error } = await supabase.rpc('find_region_in_cache', {
+            p_city_id: cityMatch.alwaseet_id,
+            p_region_text: regionCandidate
+          });
+          
+          if (!error && data && data.length > 0) {
+            const bestMatch = data[0];
+            if (bestMatch.similarity_score >= 0.7) {
+              regionMatch = bestMatch;
+              // Mark used indices
+              for (let j = 0; j < wordCount; j++) {
+                const originalIndex = remainingWords.indexOf(remainingWordsFiltered[i + j]);
+                if (originalIndex !== -1) usedWordIndices.add(originalIndex);
+              }
+              console.log(`✅ وجدت منطقة: ${regionMatch.name}`);
+              break;
+            }
+          }
+        } catch (e) {
+          console.error('خطأ في البحث عن المنطقة:', e);
+        }
+      }
+      if (regionMatch) break;
+    }
+  }
+
+  // Calculate remaining text
+  const finalRemainingWords = remainingWords.filter((_, index) => !usedWordIndices.has(index));
+  const remainingText = finalRemainingWords.join(' ').trim();
+
+  const result = {
+    customer_name: customerName,
+    city_id: cityMatch?.alwaseet_id,
+    city_name: cityMatch?.name,
+    region_id: regionMatch?.alwaseet_id,
+    region_name: regionMatch?.name,
+    remaining_text: remainingText || textWithoutName
+  };
+
+  console.log('🎯 نتيجة التحليل:', {
+    customer_name: result.customer_name,
+    city: result.city_name,
+    region: result.region_name,
+    remaining: result.remaining_text
+  });
+
+  return result;
+}
+// Enhanced smart address parsing using integrated cache system
 async function parseAddressLineSmart(addressText: string): Promise<{
   customerName?: string,
   city: any | null,
@@ -397,8 +538,8 @@ async function parseAddressLineSmart(addressText: string): Promise<{
   let suggestions: { cities?: any[], regions?: any[] } = {}
   
   try {
-    // Use the smart cache system first
-    const cacheResult = await parseAddressWithCache(addressText)
+    // Use the integrated smart cache system
+    const cacheResult = await parseAddressWithCacheSmart(addressText)
     console.log('🎯 نتيجة Cache الذكية:', cacheResult)
     
     customerName = cacheResult.customer_name || ''
