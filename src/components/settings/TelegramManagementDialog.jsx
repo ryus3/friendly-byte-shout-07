@@ -392,6 +392,9 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-sm sm:text-lg text-white truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                              <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                                رمز التليغرام: <span className="font-mono bg-black/30 px-2 py-1 rounded text-green-400 font-bold">{employeeCode.employee_code}</span>
+                              </p>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {isCurrentUser && (
                                   <Badge className="bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white border-0 text-xs">
