@@ -4261,6 +4261,10 @@ export type Database = {
         Args: { p_variant_id: string }
         Returns: number
       }
+      create_invoice_cash_movement: {
+        Args: { p_amount: number; p_description?: string; p_order_id: string }
+        Returns: string
+      }
       create_order_deletion_notification: {
         Args: {
           p_employee_id?: string
@@ -4932,6 +4936,16 @@ export type Database = {
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
+      }
+      validate_cash_source_balances: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          calculated_balance: number
+          cash_source_name: string
+          difference: number
+          is_valid: boolean
+          recorded_balance: number
+        }[]
       }
       validate_invoice_data_integrity: {
         Args: Record<PropertyKey, never>
