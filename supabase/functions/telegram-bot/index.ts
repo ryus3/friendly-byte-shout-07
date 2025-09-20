@@ -2,6 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 import { parseAddressWithCache } from './address-cache-parser.ts';
 
+// Gemini AI Configuration
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -29,6 +33,195 @@ interface TelegramUpdate {
     date: number;
   };
 }
+
+// ============= GEMINI AI FUNCTIONS =============
+
+// دالة تحسين النص باستخدام Gemini AI
+async function enhanceOrderWithAI(originalText: string, employeeInfo: any): Promise<{
+  enhancedText: string;
+  suggestions: string[];
+  confidence: number;
+  warnings: string[];
+}> {
+  if (!GEMINI_API_KEY) {
+    console.log('Gemini API key not configured, skipping AI enhancement');
+    return {
+      enhancedText: originalText,
+      suggestions: [],
+      confidence: 0.5,
+      warnings: ['الذكاء الاصطناعي غير مفعل']
+    };
+  }
+
+  try {
+    const prompt = `
+أنت مساعد ذكي متخصص في معالجة طلبات المبيعات العراقية. مهمتك تحليل وتحسين النص التالي:
+
+النص الأصلي:
+${originalText}
+
+معلومات الموظف:
+- الاسم: ${employeeInfo?.full_name || 'غير محدد'}
+- الدور: ${employeeInfo?.role_title || 'موظف مبيعات'}
+- رمز الموظف: ${employeeInfo?.employee_code || 'غير محدد'}
+
+قم بالمهام التالية:
+1. تصحيح الأخطاء الإملائية والنحوية
+2. توحيد أسماء المنتجات (مثل: بنطلون، بنطال، شورت، تيشرت، قميص)
+3. توحيد المقاسات (S, M, L, XL, XXL, او الأرقام 38, 40, 42...)
+4. تنظيم الألوان بشكل واضح
+5. التأكد من وجود رقم الهاتف والعنوان
+6. اقتراح تحسينات إضافية
+
+أجب بتنسيق JSON فقط:
+{
+  "enhancedText": "النص المحسن هنا",
+  "suggestions": ["اقتراح 1", "اقتراح 2"],
+  "confidence": 0.85,
+  "warnings": ["تحذير 1 إن وجد"]
+}`;
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 1000,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!aiResponse) {
+      throw new Error('No response from Gemini');
+    }
+
+    // استخراج JSON من النص
+    const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const aiResult = JSON.parse(jsonMatch[0]);
+      return {
+        enhancedText: aiResult.enhancedText || originalText,
+        suggestions: aiResult.suggestions || [],
+        confidence: aiResult.confidence || 0.7,
+        warnings: aiResult.warnings || []
+      };
+    }
+
+    return {
+      enhancedText: originalText,
+      suggestions: ['تم تحليل النص بالذكاء الاصطناعي'],
+      confidence: 0.7,
+      warnings: []
+    };
+
+  } catch (error) {
+    console.error('AI enhancement error:', error);
+    return {
+      enhancedText: originalText,
+      suggestions: [],
+      confidence: 0.5,
+      warnings: ['خطأ في المعالجة الذكية: ' + error.message]
+    };
+  }
+}
+
+// دالة إنشاء رد ذكي للمستخدم
+async function generateSmartResponse(orderResult: any, aiAnalysis: any, employeeInfo: any): Promise<string> {
+  if (!GEMINI_API_KEY) {
+    // رد افتراضي إذا لم يكن AI مفعل
+    if (orderResult.success) {
+      return `✅ تم إنشاء الطلب بنجاح!\n📦 رقم الطلب: ${orderResult.orderNumber}\n💰 المبلغ الإجمالي: ${orderResult.total?.toLocaleString()} دينار`;
+    } else {
+      return `❌ فشل في إنشاء الطلب: ${orderResult.error}`;
+    }
+  }
+
+  try {
+    const prompt = `
+أنت مساعد ذكي ودود في نظام إدارة المبيعات. قم بإنشاء رد طبيعي ومفيد للموظف.
+
+نتيجة معالجة الطلب:
+${JSON.stringify(orderResult, null, 2)}
+
+التحليل الذكي:
+${JSON.stringify(aiAnalysis, null, 2)}
+
+معلومات الموظف:
+- الاسم: ${employeeInfo?.full_name}
+- الدور: ${employeeInfo?.role_title}
+
+قم بإنشاء رد:
+1. ودود وطبيعي باللغة العربية
+2. يتضمن معلومات مهمة عن الطلب
+3. يقدم نصائح أو اقتراحات مفيدة
+4. يستخدم الرموز التعبيرية المناسبة
+5. لا يزيد عن 300 كلمة
+
+أجب بالنص مباشرة بدون JSON.`;
+
+    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 500,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (aiResponse && aiResponse.trim()) {
+      return aiResponse.trim();
+    }
+
+    // Fallback response
+    if (orderResult.success) {
+      return `✅ تم إنشاء الطلب بنجاح يا ${employeeInfo?.full_name}!\n📦 رقم الطلب: ${orderResult.orderNumber}\n💰 المبلغ الإجمالي: ${orderResult.total?.toLocaleString()} دينار`;
+    } else {
+      return `❌ عذراً ${employeeInfo?.full_name}، فشل في إنشاء الطلب: ${orderResult.error}`;
+    }
+
+  } catch (error) {
+    console.error('Smart response generation error:', error);
+    // Fallback response
+    if (orderResult.success) {
+      return `✅ تم إنشاء الطلب بنجاح!\n📦 رقم الطلب: ${orderResult.orderNumber}\n💰 المبلغ الإجمالي: ${orderResult.total?.toLocaleString()} دينار`;
+    } else {
+      return `❌ فشل في إنشاء الطلب: ${orderResult.error}`;
+    }
+  }
+}
+
+// ============= END AI FUNCTIONS =============
 
 // Get bot token from database settings with env fallback
 async function getBotToken(): Promise<string | null> {
@@ -1703,13 +1896,19 @@ ${userRole.permissions.map(p => `• ${p}`).join('\n')}
 بنطال جينز أزرق - متوسط - 1
 حذاء رياضي - 42 - 1</i>
 
+<b>🤖 الذكاء الاصطناعي المدمج:</b>
+• تصحيح الأخطاء الإملائية تلقائياً
+• توحيد أسماء المنتجات والمقاسات
+• اقتراحات ذكية لتحسين الطلبات
+• ردود طبيعية ومخصصة لكل موظف
+
 <b>📌 نصائح مهمة:</b>
 • السطر الأول: معلومات الزبون والتوصيل
 • باقي الأسطر: تفاصيل المنتجات
 • استخدم أحجام واضحة ومفهومة
 • اذكر اللون والنوع للوضوح
 
-<b>🎊 نحن هنا لمساعدتك في تحقيق أفضل النتائج!</b>
+<b>🎊 البوت الذكي هنا لمساعدتك في تحقيق أفضل النتائج!</b>
       `);
       
     } else if (text === '/stats') {
@@ -1789,17 +1988,45 @@ ${employee.role === 'admin' ?
       console.log(`📝 الاسم الافتراضي للزبون: ${defaultCustomerName || 'غير محدد'}`);
       
       try {
+        // === المعالجة الذكية للطلب باستخدام AI ===
+        console.log('🤖 بدء المعالجة الذكية للطلب...');
+        const aiAnalysis = await enhanceOrderWithAI(text, employee);
+        
+        // استخدام النص المحسن إذا كان أفضل من الأصلي
+        const finalText = aiAnalysis.confidence > 0.7 ? aiAnalysis.enhancedText : text;
+        console.log('🤖 تحليل AI:', JSON.stringify(aiAnalysis, null, 2));
+        
         // === التحقق الذكي من الطلب قبل المعالجة ===
-        const preValidation = await validateOrderText(text);
+        const preValidation = await validateOrderText(finalText);
         if (!preValidation.isValid) {
           await sendEnhancedErrorMessage(chatId, preValidation.errorType, preValidation.context);
           return;
         }
         
+        // إرسال رسالة تفيد بالمعالجة مع معلومات AI
+        if (aiAnalysis.suggestions.length > 0) {
+          await sendTelegramMessage(chatId, `🤖 <b>تحليل ذكي للطلب...</b>\n${aiAnalysis.suggestions.slice(0, 2).join('\n')}\n\n⚙️ <i>جاري المعالجة...</i>`);
+        }
+        
         // معالجة الطلب وإرسال رد للمستخدم
-        const result = await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
-        if (!result) {
+        const result = await processOrderText(finalText, chatId, employee.employee_code, defaultCustomerName);
+        
+        if (result) {
+          // إنشاء رد ذكي مخصص
+          const smartResponse = await generateSmartResponse(result, aiAnalysis, employee);
+          
+          // إرسال الرد الذكي
+          await sendTelegramMessage(chatId, smartResponse);
+          
+          // إضافة اقتراحات إضافية إذا وجدت
+          if (aiAnalysis.warnings.length > 0) {
+            const warningsText = aiAnalysis.warnings.map(w => `⚠️ ${w}`).join('\n');
+            await sendTelegramMessage(chatId, `<b>ملاحظات ذكية:</b>\n${warningsText}`);
+          }
+          
+        } else {
           console.log('❌ فشل في معالجة الطلب - تم إيقاف المعالجة مسبقاً');
+          await sendTelegramMessage(chatId, `❌ عذراً ${employee.full_name}، فشل في معالجة الطلب. يرجى التحقق من التفاصيل والمحاولة مرة أخرى.`);
         }
         
       } catch (error) {
