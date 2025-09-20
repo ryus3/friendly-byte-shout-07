@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 import { parseAddressWithCache } from './address-cache-parser.ts';
 
+// Bot Configuration - AI temporarily disabled for stability
+
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -11,6 +13,19 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// منع الرسائل المكررة - تخزين مؤقت للرسائل الأخيرة
+const recentMessages = new Map<string, number>();
+
+// تنظيف التخزين المؤقت كل 5 دقائق
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, timestamp] of recentMessages.entries()) {
+    if (now - timestamp > 300000) { // 5 دقائق
+      recentMessages.delete(key);
+    }
+  }
+}, 300000);
 
 interface TelegramUpdate {
   update_id: number;
@@ -29,6 +44,26 @@ interface TelegramUpdate {
     date: number;
   };
 }
+
+// ============= SIMPLE RESPONSE FUNCTIONS =============
+
+// دالة إنشاء رد بسيط للمستخدم بدون AI
+function generateSimpleResponse(orderResult: any, employeeInfo: any): string {
+  if (orderResult.success) {
+    return `✅ تم إنشاء الطلب بنجاح يا ${employeeInfo?.full_name || 'عزيزي'}!
+📦 رقم الطلب: ${orderResult.orderNumber}
+💰 المبلغ الإجمالي: ${orderResult.total?.toLocaleString() || '0'} دينار
+
+شكراً لك على استخدام النظام 🙏`;
+  } else {
+    return `❌ عذراً ${employeeInfo?.full_name || 'عزيزي'}، فشل في إنشاء الطلب.
+السبب: ${orderResult.error || 'خطأ غير معروف'}
+
+يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني 📞`;
+  }
+}
+
+// ============= END SIMPLE FUNCTIONS =============
 
 // Get bot token from database settings with env fallback
 async function getBotToken(): Promise<string | null> {
@@ -1703,13 +1738,19 @@ ${userRole.permissions.map(p => `• ${p}`).join('\n')}
 بنطال جينز أزرق - متوسط - 1
 حذاء رياضي - 42 - 1</i>
 
+                <b>🚀 نظام المعالجة المحسن:</b>
+                • معالجة الطلبات بشكل موثوق وسريع
+                • فحص صحة البيانات تلقائياً
+                • إشعارات فورية لحالة الطلب
+                • ردود واضحة ومفصلة
+
 <b>📌 نصائح مهمة:</b>
 • السطر الأول: معلومات الزبون والتوصيل
 • باقي الأسطر: تفاصيل المنتجات
 • استخدم أحجام واضحة ومفهومة
 • اذكر اللون والنوع للوضوح
 
-<b>🎊 نحن هنا لمساعدتك في تحقيق أفضل النتائج!</b>
+<b>🎊 البوت الذكي هنا لمساعدتك في تحقيق أفضل النتائج!</b>
       `);
       
     } else if (text === '/stats') {
@@ -1788,18 +1829,40 @@ ${employee.role === 'admin' ?
       const defaultCustomerName = profileData?.default_customer_name;
       console.log(`📝 الاسم الافتراضي للزبون: ${defaultCustomerName || 'غير محدد'}`);
       
+      // منع الرسائل المكررة خلال دقيقة واحدة لنفس المستخدم
+      const messageKey = `user_${chatId}_${text.slice(0, 50)}`;
+      const lastProcessTime = recentMessages.get(messageKey);
+      if (lastProcessTime && (Date.now() - lastProcessTime) < 60000) {
+        console.log(`تم تجاهل رسالة مكررة من ${chatId}`);
+        return new Response('OK', { status: 200, headers: corsHeaders });
+      }
+      recentMessages.set(messageKey, Date.now());
+      
       try {
-        // === التحقق الذكي من الطلب قبل المعالجة ===
+        // === التحقق من الطلب قبل المعالجة ===
+        console.log('📝 معالجة الطلب...');
         const preValidation = await validateOrderText(text);
         if (!preValidation.isValid) {
           await sendEnhancedErrorMessage(chatId, preValidation.errorType, preValidation.context);
-          return;
+          return new Response('OK', { status: 200, headers: corsHeaders });
         }
+        
+        // إرسال رسالة تفيد بالمعالجة
+        await sendTelegramMessage(chatId, `⚙️ <i>جاري معالجة الطلب...</i>`);
         
         // معالجة الطلب وإرسال رد للمستخدم
         const result = await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
-        if (!result) {
+        
+        if (result) {
+          // إنشاء رد بسيط
+          const simpleResponse = generateSimpleResponse(result, employee);
+          
+          // إرسال الرد
+          await sendTelegramMessage(chatId, simpleResponse);
+          
+        } else {
           console.log('❌ فشل في معالجة الطلب - تم إيقاف المعالجة مسبقاً');
+          await sendTelegramMessage(chatId, `❌ عذراً ${employee.full_name}، فشل في معالجة الطلب. يرجى التحقق من التفاصيل والمحاولة مرة أخرى.`);
         }
         
       } catch (error) {
