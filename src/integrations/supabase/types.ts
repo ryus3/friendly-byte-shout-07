@@ -2218,6 +2218,7 @@ export type Database = {
           receipt_received_at: string | null
           receipt_received_by: string | null
           sales_amount: number | null
+          source: string | null
           status: string
           total_amount: number
           tracking_number: string | null
@@ -2262,6 +2263,7 @@ export type Database = {
           receipt_received_at?: string | null
           receipt_received_by?: string | null
           sales_amount?: number | null
+          source?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
@@ -2306,6 +2308,7 @@ export type Database = {
           receipt_received_at?: string | null
           receipt_received_by?: string | null
           sales_amount?: number | null
+          source?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
