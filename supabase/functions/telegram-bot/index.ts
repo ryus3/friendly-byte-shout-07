@@ -305,7 +305,7 @@ async function getEmployeeByTelegramId(chatId: number) {
       .limit(1);
 
     if (telRows && telRows.length > 0) {
-      const empCode = telRows[0].employee_code;
+      const telegramEmployeeCode = telRows[0].employee_code; // هذا هو RYU559
       const userId = telRows[0].user_id;
 
       let profile: any = null;
@@ -318,11 +318,11 @@ async function getEmployeeByTelegramId(chatId: number) {
         profile = res.data;
       }
 
-      if (!profile) {
+      if (!profile && telegramEmployeeCode) {
         const res2 = await supabase
           .from('profiles')
           .select('user_id, full_name, employee_code')
-          .eq('employee_code', empCode)
+          .eq('employee_code', telegramEmployeeCode)
           .maybeSingle();
         profile = res2.data;
       }
@@ -335,8 +335,8 @@ async function getEmployeeByTelegramId(chatId: number) {
           full_name: profile.full_name,
           role,
           role_title,
-          // إعطاء الأولوية لـ employee_code من جدول profiles
-          employee_code: profile.employee_code || empCode
+          // استخدام الكود من telegram_employee_codes وليس من profiles
+          employee_code: telegramEmployeeCode // هذا هو RYU559 وليس EMP001
         };
       }
     }
@@ -928,37 +928,41 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       customerName = actualDefaultCustomerName || 'زبون من التليغرام';
     }
 
-    // إنشاء الطلب الذكي - طلبات التليغرام توصيل فقط
-    const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
+    // إنشاء الطلب الذكي - استخدام الشكل الصحيح الجديد
+    const { data: orderResult, error } = await supabase.rpc('process_telegram_order', {
       p_order_data: {
-        original_text: text,
-        processed_at: new Date().toISOString(),
-        telegram_user_id: chatId,
-        employee_code: employeeCode,
-        delivery_type: 'توصيل', // فرض التوصيل لجميع طلبات التليغرام
-        parsing_method: 'cache_based_v3',
-        items_count: items.length,
-        source: 'telegram', // إضافة مصدر الطلب
-        city_id: cityId, // معرف المدينة من cache
-        region_id: regionId, // معرف المنطقة من cache
-        parsed_city: parsedCity || parsedCityName, // اسم المدينة المحللة
-        parsed_region: parsedRegion || parsedRegionName, // اسم المنطقة المحللة
         customer_name: customerName,
-        customer_phone: customerPhone || null,
-        customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
-        customer_city: parsedCity || parsedCityName || null, // المدينة المحللة
-        customer_province: parsedRegion || parsedRegionName || null, // المنطقة المحللة
-        total_amount: totalPrice,
-        items: items
+        customer_phone: customerPhone,
+        customer_secondary_phone: customerSecondaryPhone || null,
+        customer_address: customerAddress,
+        customer_city: parsedCity || parsedCityName,
+        customer_region: parsedRegion || parsedRegionName,
+        items: items,
+        total_price: totalPrice,
+        delivery_fee: currentDeliveryFee,
+        final_total: totalPrice + currentDeliveryFee,
+        delivery_type: deliveryType,
+        order_notes: orderNotes,
+        telegram_chat_id: chatId,
+        processed_at: new Date().toISOString(),
+        original_text: text
       },
-      p_employee_code: employeeCode,
+      p_telegram_employee_code: employeeCode, // هذا هو الكود الصحيح
       p_chat_id: chatId
     });
 
-    console.log('Order creation result:', { orderId, error });
+    console.log('Order creation result:', { orderResult, error });
 
     if (error) {
-      console.error('Error creating AI order:', error);
+      console.error('Database error:', error);
+      await sendTelegramMessage(chatId, '❌ حدث خطأ في حفظ الطلب في النظام. يرجى المحاولة مرة أخرى.');
+      return false;
+    }
+    
+    if (!orderResult || !orderResult.success) {
+      console.error('Order creation failed:', orderResult);
+      const errorMsg = orderResult?.message || 'فشل في إنشاء الطلب';
+      await sendTelegramMessage(chatId, `❌ ${errorMsg}`);
       return false;
     }
 
