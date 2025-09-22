@@ -223,6 +223,217 @@ function createFlexibleSearchTerms(productName: string): string[] {
   return uniqueTerms
 }
 
+// Enhanced product search with variant and inventory checking
+async function searchProductWithVariantsAndInventory(line: string, chatId: number, customerPhone?: string): Promise<{
+  found: boolean,
+  available: boolean,
+  product?: any,
+  variant?: any,
+  stockAlert?: string
+}> {
+  try {
+    console.log(`🔍 البحث المحسن عن المنتج: "${line}"`)
+    
+    // Parse product details (name, color, size) from the line
+    const productDetails = parseProductDetails(line)
+    console.log(`📋 تفاصيل المنتج المستخرجة:`, productDetails)
+    
+    // Search for products using flexible terms
+    const searchTerms = createFlexibleSearchTerms(productDetails.name)
+    let foundProduct = null
+    
+    for (const term of searchTerms) {
+      const { data: products, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          variants:product_variants(
+            *,
+            color:colors(id, name),
+            size:sizes(id, name),
+            inventory(quantity, reserved_quantity, min_stock)
+          )
+        `)
+        .ilike('name', `%${term}%`)
+        .eq('is_active', true)
+        .limit(1)
+      
+      if (products && products.length > 0) {
+        foundProduct = products[0]
+        console.log(`✅ عثر على منتج: "${foundProduct.name}" بالمصطلح "${term}"`)
+        break
+      }
+    }
+    
+    if (!foundProduct) {
+      return { found: false, available: false }
+    }
+    
+    // Find matching variant if color/size specified
+    let selectedVariant = null
+    if (foundProduct.variants && foundProduct.variants.length > 0) {
+      
+      // Look for exact color/size match
+      for (const variant of foundProduct.variants) {
+        const colorMatch = !productDetails.color || 
+          normalizeArabic(variant.color?.name || '').includes(normalizeArabic(productDetails.color)) ||
+          normalizeArabic(productDetails.color).includes(normalizeArabic(variant.color?.name || ''))
+        
+        const sizeMatch = !productDetails.size || 
+          normalizeArabic(variant.size?.name || '').includes(normalizeArabic(productDetails.size)) ||
+          normalizeArabic(productDetails.size).includes(normalizeArabic(variant.size?.name || ''))
+        
+        if (colorMatch && sizeMatch) {
+          selectedVariant = variant
+          console.log(`✅ متغير مطابق: ${variant.color?.name} ${variant.size?.name}`)
+          break
+        }
+      }
+      
+      // If no exact match but we have a color/size requirement, check availability and send alert
+      if (!selectedVariant && (productDetails.color || productDetails.size)) {
+        console.log(`❌ لم يتم العثور على متغير مطابق للـ ${productDetails.color} ${productDetails.size}`)
+        
+        // Generate stock alert for unavailable variant
+        const phone = customerPhone || await extractPhoneFromContext(chatId)
+        const stockAlert = generateStockAlert(foundProduct, productDetails, phone)
+        
+        return {
+          found: true,
+          available: false,
+          product: foundProduct,
+          stockAlert: stockAlert
+        }
+      }
+      
+      // If no color/size specified, pick first available variant
+      if (!selectedVariant) {
+        selectedVariant = foundProduct.variants.find(v => 
+          v.inventory && v.inventory.length > 0 && v.inventory[0].quantity > 0
+        ) || foundProduct.variants[0]
+      }
+    }
+    
+    // Check inventory availability
+    let isAvailable = true
+    let stockQuantity = 0
+    
+    if (selectedVariant && selectedVariant.inventory && selectedVariant.inventory.length > 0) {
+      const inventory = selectedVariant.inventory[0]
+      stockQuantity = inventory.quantity - (inventory.reserved_quantity || 0)
+      isAvailable = stockQuantity > 0
+      
+      console.log(`📦 المخزون: الكمية ${inventory.quantity}, المحجوز ${inventory.reserved_quantity}, المتاح ${stockQuantity}`)
+    }
+    
+    // If not available, generate stock alert
+    if (!isAvailable) {
+      const phone = customerPhone || await extractPhoneFromContext(chatId)
+      const stockAlert = generateStockAlert(foundProduct, productDetails, phone, selectedVariant)
+      
+      return {
+        found: true,
+        available: false,
+        product: foundProduct,
+        variant: selectedVariant,
+        stockAlert: stockAlert
+      }
+    }
+    
+    return {
+      found: true,
+      available: true,
+      product: foundProduct,
+      variant: selectedVariant ? {
+        ...selectedVariant,
+        stock: stockQuantity
+      } : null
+    }
+    
+  } catch (error) {
+    console.error('❌ خطأ في البحث المحسن عن المنتج:', error)
+    return { found: false, available: false }
+  }
+}
+
+// Parse product details (name, color, size) from text
+function parseProductDetails(text: string): { name: string, color?: string, size?: string } {
+  const normalizedText = text.trim()
+  
+  // Common colors in Arabic and English
+  const colors = [
+    'احمر', 'أحمر', 'red', 'ازرق', 'أزرق', 'blue', 'اصفر', 'أصفر', 'yellow',
+    'اخضر', 'أخضر', 'green', 'اسود', 'أسود', 'black', 'ابيض', 'أبيض', 'white',
+    'وردي', 'pink', 'بنفسجي', 'purple', 'برتقالي', 'orange', 'بني', 'brown',
+    'رمادي', 'gray', 'grey', 'سمائي', 'فيروزي', 'turquoise', 'ذهبي', 'gold',
+    'فضي', 'silver', 'كحلي', 'navy', 'زهري', 'بيج', 'beige'
+  ]
+  
+  // Common sizes
+  const sizes = ['xs', 'x-small', 's', 'small', 'm', 'medium', 'l', 'large', 'xl', 'x-large', 'xxl', '2xl', 'xxxl', '3xl']
+  
+  let foundColor = null
+  let foundSize = null
+  let productName = normalizedText
+  
+  // Extract color
+  for (const color of colors) {
+    const regex = new RegExp(`\\b${color}\\b`, 'gi')
+    if (regex.test(normalizedText)) {
+      foundColor = color
+      productName = productName.replace(regex, '').trim()
+      break
+    }
+  }
+  
+  // Extract size
+  for (const size of sizes) {
+    const regex = new RegExp(`\\b${size}\\b`, 'gi')
+    if (regex.test(productName)) {
+      foundSize = size
+      productName = productName.replace(regex, '').trim()
+      break
+    }
+  }
+  
+  // Clean up product name
+  productName = productName.replace(/\s+/g, ' ').trim()
+  
+  return {
+    name: productName,
+    color: foundColor,
+    size: foundSize
+  }
+}
+
+// Extract phone number from recent messages context
+async function extractPhoneFromContext(chatId: number): Promise<string> {
+  // Try to get phone from pending orders map first
+  const pendingOrder = pendingOrders.get(chatId)
+  if (pendingOrder && pendingOrder.customerPhone) {
+    return pendingOrder.customerPhone
+  }
+  
+  // Fallback to a placeholder
+  return '07xxxxxxxx'
+}
+
+// Generate stock alert message like the example provided
+function generateStockAlert(product: any, details: any, phone: string, variant?: any): string {
+  const productName = product.name
+  const colorText = details.color ? `(${details.color})` : ''
+  const sizeText = details.size ? details.size : ''
+  
+  const stockStatus = variant && variant.inventory?.[0]?.quantity === 0 ? 
+    'نافذ من المخزون' : 'غير متوفر'
+  
+  return `⚠️ تنبيه توفر
+📱 الهاتف : ${phone}
+❌ غير متاح ${productName} ${colorText} ${sizeText} × 1 — المقاس ${sizeText} واللون ${details.color || 'المحدد'} ${stockStatus}
+
+⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة`
+}
+
 // Smart city finder using cache system with fuzzy matching
 async function findCityByNameSmart(cityName: string): Promise<{ city: any | null, suggestions: any[], confidence: number }> {
   try {
@@ -885,7 +1096,7 @@ ${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quanti
 ⏳ في انتظار مراجعة الإدارة للموافقة والإرسال
     `.trim()
     
-    // Save order to database
+    // Save order to database - using RYU559 format
     const orderId = await supabase.rpc('process_telegram_order', {
       p_order_data: {
         customer_name: orderData.customerName,
@@ -904,7 +1115,7 @@ ${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quanti
         processed_at: new Date().toISOString(),
         original_text: `${orderData.customerName}\n${orderData.customerPhone}\n${orderData.items.map(i => i.name).join(', ')}`
       },
-      p_employee_code: employee.employee_code,
+      p_telegram_employee_code: employee.employee_code, // This is the RYU559 format code
       p_chat_id: chatId
     })
     
@@ -1131,35 +1342,34 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       if (!phoneMatches && !lowerLine.includes('منطقة') && !lowerLine.includes('مدينة') && 
           !lowerLine.includes('عنوان') && !isValidCustomerName(line) && line.length > 2) {
         
-        // Enhanced product search
-        const searchTerms = createFlexibleSearchTerms(line)
-        let foundProduct = null
+        // Enhanced product search with variant and inventory checking
+        const productSearchResult = await searchProductWithVariantsAndInventory(line, chatId, customerPhone)
         
-        for (const term of searchTerms) {
-          const { data: products, error } = await supabase
-            .from('products')
-            .select('*')
-            .ilike('name', `%${term}%`)
-            .eq('is_active', true)
-            .limit(1)
-          
-          if (products && products.length > 0) {
-            foundProduct = products[0]
-            console.log(`✅ Found product with term "${term}":`, foundProduct.name)
-            break
+        if (productSearchResult.found) {
+          if (productSearchResult.available) {
+            items.push({
+              id: productSearchResult.product.id,
+              name: productSearchResult.product.name,
+              color: productSearchResult.variant?.color,
+              size: productSearchResult.variant?.size,
+              variant_id: productSearchResult.variant?.id,
+              price: productSearchResult.variant?.price || productSearchResult.product.price,
+              quantity: 1,
+              stock_quantity: productSearchResult.variant?.stock || 0
+            })
+            totalPrice += (productSearchResult.variant?.price || productSearchResult.product.price)
+            console.log(`✅ Added product: ${productSearchResult.product.name} - Available: ${productSearchResult.variant?.stock || 0}`)
+          } else {
+            // Product found but not available - send stock alert
+            const stockAlert = productSearchResult.stockAlert
+            if (stockAlert) {
+              await sendTelegramMessage(chatId, stockAlert)
+              orderErrors.push(`المنتج ${productSearchResult.product.name} غير متوفر`)
+            }
           }
-        }
-        
-        if (foundProduct) {
-          items.push({
-            id: foundProduct.id,
-            name: foundProduct.name,
-            price: foundProduct.price,
-            quantity: 1
-          })
-          totalPrice += foundProduct.price
         } else {
           console.log(`❌ Product not found for: "${line}"`)
+          // Continue processing other items
         }
       }
     }
