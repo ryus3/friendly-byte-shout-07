@@ -2218,7 +2218,6 @@ export type Database = {
           receipt_received_at: string | null
           receipt_received_by: string | null
           sales_amount: number | null
-          source: string | null
           status: string
           total_amount: number
           tracking_number: string | null
@@ -2263,7 +2262,6 @@ export type Database = {
           receipt_received_at?: string | null
           receipt_received_by?: string | null
           sales_amount?: number | null
-          source?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
@@ -2308,7 +2306,6 @@ export type Database = {
           receipt_received_at?: string | null
           receipt_received_by?: string | null
           sales_amount?: number | null
-          source?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
@@ -4264,10 +4261,6 @@ export type Database = {
         Args: { p_variant_id: string }
         Returns: number
       }
-      create_invoice_cash_movement: {
-        Args: { p_amount: number; p_description?: string; p_order_id: string }
-        Returns: string
-      }
       create_order_deletion_notification: {
         Args: {
           p_employee_id?: string
@@ -4708,23 +4701,7 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args:
-          | { p_chat_id: number; p_employee_code: string; p_order_data: Json }
-          | {
-              p_customer_address: string
-              p_customer_name: string
-              p_customer_phone: string
-              p_delivery_fee?: number
-              p_employee_code: string
-              p_items: Json
-              p_notes?: string
-              p_total_amount?: number
-            }
-          | {
-              p_employee_code: string
-              p_order_data: Json
-              p_telegram_chat_id: number
-            }
+        Args: { p_chat_id: number; p_employee_code: string; p_order_data: Json }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
@@ -4955,16 +4932,6 @@ export type Database = {
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
-      }
-      validate_cash_source_balances: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          calculated_balance: number
-          cash_source_name: string
-          difference: number
-          is_valid: boolean
-          recorded_balance: number
-        }[]
       }
       validate_invoice_data_integrity: {
         Args: Record<PropertyKey, never>

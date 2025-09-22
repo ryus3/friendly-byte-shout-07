@@ -152,9 +152,9 @@ function calculateSimilarity(str1: string, str2: string): number {
   return 1.0 - (distance / longer.length)
 }
 
-// Fixed comprehensive city name variations with correct structure  
-const cityNameVariations: { [standardName: string]: string[] } = {
-  'الديوانية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah', 'diwaniyah'],
+// Comprehensive city name variations for all 18 Iraqi cities with smart matching
+const cityNameVariations: { [key: string]: string[] } = {
+  'الديوانية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah'],
   'بغداد': ['بغداد', 'Baghdad', 'baghdad', 'بغدد', 'بقداد'],
   'البصرة': ['البصره', 'بصرة', 'بصره', 'البصرة', 'basrah', 'basra'],
   'اربيل': ['أربيل', 'اربيل', 'أربيل', 'اربل', 'Erbil', 'erbil', 'هولير'],
@@ -172,31 +172,6 @@ const cityNameVariations: { [standardName: string]: string[] } = {
   'كركوك': ['كركوك', 'كركك', 'Kirkuk', 'kirkuk'],
   'السليمانية': ['السليمانية', 'سليمانية', 'سليمانيه', 'Sulaymaniyah', 'sulaymaniyah'],
   'حلبجة': ['حلبجة', 'حلبجه', 'halabja', 'halabcha']
-}
-
-// Enhanced city finder with improved variation matching
-function findCityByVariation(searchTerm: string): string | null {
-  const normalizedSearch = normalizeArabic(searchTerm)
-  
-  for (const [standardName, variations] of Object.entries(cityNameVariations)) {
-    // Check if search matches standard name
-    if (normalizeArabic(standardName).includes(normalizedSearch) || 
-        normalizedSearch.includes(normalizeArabic(standardName))) {
-      return standardName
-    }
-    
-    // Check variations
-    for (const variation of variations) {
-      const normalizedVariation = normalizeArabic(variation)
-      if (normalizedVariation === normalizedSearch || 
-          normalizedVariation.includes(normalizedSearch) ||
-          normalizedSearch.includes(normalizedVariation)) {
-        return standardName
-      }
-    }
-  }
-  
-  return null
 }
 
 // Enhanced flexible product search that handles both ة and ه with detailed logging
@@ -260,12 +235,18 @@ async function findCityByNameSmart(cityName: string): Promise<{ city: any | null
       const cityNormalized = normalizeArabic(city.name)
       let score = calculateSimilarity(normalizedName, cityNormalized)
       
-      // Check variations with improved logic
-      const foundCity = findCityByVariation(cityName)
-      if (foundCity) {
-        const standardNormalized = normalizeArabic(foundCity)
-        if (cityNormalized.includes(standardNormalized) || standardNormalized.includes(cityNormalized)) {
-          score = Math.max(score, 0.95)
+      // Check variations
+      for (const [standardName, variations] of Object.entries(cityNameVariations)) {
+        if (variations.some(variant => {
+          const normalizedVariant = normalizeArabic(variant)
+          const variantScore = calculateSimilarity(normalizedName, normalizedVariant)
+          if (variantScore > score) score = variantScore
+          return variantScore >= 0.7
+        })) {
+          const standardNormalized = normalizeArabic(standardName)
+          if (cityNormalized.includes(standardNormalized) || standardNormalized.includes(cityNormalized)) {
+            score = Math.max(score, 0.9)
+          }
         }
       }
       
@@ -365,12 +346,8 @@ const neighborhoodToCityMap: { [key: string]: string } = {
   'الكوفة': 'النجف', 'كوفة': 'النجف', 'كوفه': 'النجف',
   'الحيدرية': 'النجف', 'حيدرية': 'النجف', 'حيدريه': 'النجف',
   
-  // الديوانية
-  'غماس': 'الديوانية',
-  'الدغارة': 'الديوانية', 'دغارة': 'الديوانية',
-  'الشافعية': 'الديوانية', 'شافعية': 'الديوانية', 'شافعيه': 'الديوانية',
-  'عفك': 'الديوانية',
-  'الحمزة': 'الديوانية', 'حمزة': 'الديوانية', 'حمزه': 'الديوانية'
+  // Catch-all for unrecognized neighborhoods → default to Baghdad
+  'غماس': 'الديوانية'
 }
 
 // Find regions by partial name with disambiguation
@@ -748,34 +725,23 @@ async function sendEnhancedErrorMessage(
   }
   
   message += `\n📝 النص الأصلي:\n${originalText}\n\n`
-  
-  message += `❗ يرجى إصلاح الأخطاء وإعادة الإرسال!\n\n`
-  
   message += `🔧 تنسيق الطلب الصحيح:\n`
   message += `اسم الزبون\n`
   message += `رقم الهاتف (07xxxxxxxxx)\n`
-  message += `المدينة المنطقة (أو المنطقة فقط لبغداد)\n`
+  message += `المدينة المنطقة (أو المنطقة فقط للبغداد)\n`
   message += `اسم المنتج اللون المقاس\n\n`
   
-  message += `✨ أمثلة صحيحة:\n\n`
-  message += `📝 مثال 1:\n`
+  message += `مثال صحيح:\n`
   message += `أحمد علي\n`
   message += `07701234567\n`
-  if (detectedData?.city && detectedData.city.name !== 'بغداد') {
+  if (detectedData?.city) {
     message += `${detectedData.city.name} `
     message += detectedData.region ? detectedData.region.name : 'اسم المنطقة'
   } else {
-    message += `ديوانية غماس`
+    message += `بغداد الكرادة`
   }
-  message += `\nبرشلونة أزرق XL\n\n`
+  message += `\nبرشلونة أزرق XL`
   
-  message += `📝 مثال 2 (بغداد):\n`
-  message += `سارة محمد\n`
-  message += `07801234567\n`
-  message += `اعظمية\n`
-  message += `ريال مدريد أبيض لارج`
-  
-  console.log('🚨 إرسال رسالة خطأ محسنة:', message)
   await sendTelegramMessage(chatId, message)
 }
 

@@ -819,110 +819,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       totalPrice = calculatedPrice;
     }
 
-// === التحقق الذكي من العنوان والمدينة ===
-    let cityParsingError = '';
-    let shouldStopProcessing = false;
-    
-    // التحقق من وجود عنوان صحيح 
-    if (!customerAddress || customerAddress.trim() === '') {
-      cityParsingError = '❌ لم يتم العثور على عنوان!\n\n💡 الرجاء كتابة الطلب بالشكل الصحيح:\n📍 اسم الزبون\n📍 رقم الهاتف\n📍 المدينة والمنطقة\n📍 المنتجات\n\n📝 مثال:\nأحمد علي\n07712345678\nبغداد - الأعظمية\nبرشلونة ازرق لارج';
-      shouldStopProcessing = true;
-    } else {
-      // تحليل العنوان مع اكتشاف الأخطاء
-      const addressParts = customerAddress.toLowerCase().trim();
-      
-      // === قاموس المدن المحدث والصحيح ===
-      const cityVariations = {
-        'الديوانية': ['ديوانية', 'الديوانيه', 'ديوانيه', 'القادسية', 'الديوانية - القادسية'],
-        'بغداد': ['بغداد', 'baghdad', 'كرخ', 'رصافة'],
-        'البصرة': ['بصرة', 'البصره', 'basra'],
-        'أربيل': ['اربيل', 'اربيل', 'erbil', 'هولير'],
-        'الموصل': ['موصل', 'الموصل', 'mosul', 'نينوى'],
-        'النجف': ['نجف', 'النجف', 'najaf'],
-        'كربلاء': ['كربلاء', 'كربلا', 'karbala'],
-        'بابل': ['بابل', 'بابل', 'حلة', 'الحلة', 'babylon'],
-        'الأنبار': ['انبار', 'الانبار', 'رمادي', 'الرمادي', 'فلوجة', 'الفلوجة'],
-        'دهوك': ['دهوك', 'دهوك', 'duhok'],
-        'كركوك': ['كركوك', 'kirkuk'],
-        'صلاح الدين': ['صلاح الدين', 'تكريت', 'سامراء'],
-        'واسط': ['واسط', 'كوت', 'الكوت'],
-        'ذي قار': ['ذي قار', 'ذي قار', 'ناصرية', 'الناصرية'],
-        'المثنى': ['مثنى', 'المثنى', 'سماوة', 'السماوة'],
-        'ميسان': ['ميسان', 'عمارة', 'العمارة'],
-        'القادسية': ['قادسية', 'القادسية', 'ديوانية', 'الديوانية']
-      };
-      
-      // === خريطة الأحياء إلى بغداد ===
-      const baghdadNeighborhoods = [
-        'اعظمية', 'الاعظمية', 'كرادة', 'الكرادة', 'كاظمية', 'الكاظمية',
-        'دورة', 'الدورة', 'منصور', 'المنصور', 'جادرية', 'الجادرية',
-        'حارثية', 'الحارثية', 'شعلة', 'الشعلة', 'حيفا', 'البياع',
-        'علاوي', 'الكرخ', 'الرصافة', 'صدر', 'الصدر', 'شعب', 'الشعب',
-        'كريمات', 'زيونة', 'الزيونة', 'جميلة', 'الجميلة'
-      ];
-      
-      // البحث عن المدينة
-      let detectedCity = '';
-      let detectedRegion = '';
-      let cityFound = false;
-      
-      // 1. البحث المباشر في قاموس المدن
-      for (const [standardCity, variations] of Object.entries(cityVariations)) {
-        for (const variation of variations) {
-          if (addressParts.includes(variation.toLowerCase())) {
-            detectedCity = standardCity;
-            cityFound = true;
-            break;
-          }
-        }
-        if (cityFound) break;
-      }
-      
-      // 2. إذا لم توجد مدينة، تحقق من الأحياء لبغداد
-      if (!cityFound) {
-        for (const neighborhood of baghdadNeighborhoods) {
-          if (addressParts.includes(neighborhood.toLowerCase())) {
-            detectedCity = 'بغداد';
-            detectedRegion = neighborhood;
-            cityFound = true;
-            console.log(`🏙️ تم اكتشاف حي بغدادي: ${neighborhood} → اختيار بغداد افتراضياً`);
-            break;
-          }
-        }
-      }
-      
-      // 3. التحقق من وجود مدينة في قاعدة البيانات
-      if (cityFound && detectedCity) {
-        // تحديث بيانات العنوان
-        customerCity = detectedCity;
-        customerRegion = detectedRegion || addressParts;
-        
-        // البحث في قاعدة البيانات للتأكد
-        const { data: cityData } = await supabase
-          .from('cities_cache')
-          .select('alwaseet_id, name')
-          .ilike('name', `%${detectedCity}%`)
-          .eq('is_active', true)
-          .limit(1);
-          
-        if (cityData && cityData.length > 0) {
-          cityId = cityData[0].alwaseet_id;
-          parsedCity = cityData[0].name;
-          console.log(`✅ تم التحقق من المدينة في قاعدة البيانات: ${parsedCity}`);
-        }
-      } else {
-        // لم يتم العثور على مدينة صحيحة
-        cityParsingError = `❌ لم يتم التعرف على المدينة في: "${customerAddress}"\n\n💡 هل تقصد إحدى هذه المدن؟\n• الديوانية (للقادسية)\n• بغداد (للكرخ والرصافة)\n• البصرة\n• النجف\n• كربلاء\n• أربيل\n• الموصل\n\n📝 مثال صحيح:\nديوانية غماس\nالأعظمية شارع الربيع\nبغداد - الكرادة`;
-        shouldStopProcessing = true;
-      }
-    }
-    
-    // === إيقاف المعالجة عند وجود أخطاء ===
-    if (shouldStopProcessing) {
-      await sendTelegramMessage(chatId, cityParsingError);
-      return false;
-    }
-
     // تحسين اسم العميل - استخدام الاسم الافتراضي من الإعدادات
     if (!customerName || customerName.trim() === '' || !isValidCustomerName(customerName)) {
       customerName = actualDefaultCustomerName || 'زبون من التليغرام';
@@ -1060,247 +956,81 @@ function calculateSimilarity(str1: string, str2: string): number {
 }
 
 // دالة تحليل العنوان باستخدام cache
-// === نظام مطابقة المدن الذكي والمحدث ===
-async function parseAddressWithSmartMatching(addressText: string): Promise<any> {
+async function parseAddressWithCache(addressText: string): Promise<any> {
   try {
-    console.log(`🔍 تحليل العنوان الذكي: "${addressText}"`);
-    
     const cleanText = addressText.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0621-\u064A\u0660-\u0669a-zA-Z0-9\s]/g, ' ')
                                   .replace(/\s+/g, ' ')
-                                  .trim()
-                                  .toLowerCase();
+                                  .trim();
     
-    // === قاموس تنويعات المدن المحدث والمطابق لقاعدة البيانات ===
-    const cityVariations = {
-      'الديوانية - القادسية': ['ديوانية', 'الديوانيه', 'ديوانيه', 'قادسية', 'القادسية', 'الديوانية', 'diwaniya', 'qadisiya'],
-      'بغداد': ['بغداد', 'baghdad', 'كرخ', 'رصافة', 'الكرخ', 'الرصافة'],
-      'البصرة': ['بصرة', 'البصره', 'basra', 'البصرة'],
-      'أربيل - إقليم كردستان': ['اربيل', 'أربيل', 'erbil', 'هولير', 'hawler'],
-      'الموصل - نينوى': ['موصل', 'الموصل', 'mosul', 'نينوى', 'نينوا'],
-      'النجف الأشرف': ['نجف', 'النجف', 'najaf', 'الأشرف'],
-      'كربلاء المقدسة': ['كربلاء', 'كربلا', 'karbala', 'المقدسة'],
-      'الحلة - بابل': ['حلة', 'الحلة', 'بابل', 'babylon', 'hilla'],
-      'الرمادي - الأنبار': ['رمادي', 'الرمادي', 'انبار', 'الانبار', 'ramadi', 'anbar'],
-      'دهوك - إقليم كردستان': ['دهوك', 'دهوك', 'duhok', 'dahuk'],
-      'كركوك': ['كركوك', 'kirkuk'],
-      'تكريت - صلاح الدين': ['تكريت', 'صلاح الدين', 'سامراء', 'tikrit'],
-      'الكوت - واسط': ['كوت', 'الكوت', 'واسط', 'kut', 'wasit'],
-      'الناصرية - ذي قار': ['ناصرية', 'الناصرية', 'ذي قار', 'nasiriyah'],
-      'السماوة - المثنى': ['سماوة', 'السماوة', 'مثنى', 'المثنى', 'samawa'],
-      'العمارة - ميسان': ['عمارة', 'العمارة', 'ميسان', 'amara', 'maysan']
-    };
+    // البحث عن المدينة في cache
+    const { data: cities } = await supabase
+      .from('cities_cache')
+      .select('*')
+      .eq('is_active', true);
     
-    // === خريطة الأحياء لبغداد ===
-    const baghdadNeighborhoods = [
-      'اعظمية', 'الاعظمية', 'كرادة', 'الكرادة', 'كاظمية', 'الكاظمية',
-      'دورة', 'الدورة', 'منصور', 'المنصور', 'جادرية', 'الجادرية',
-      'حارثية', 'الحارثية', 'شعلة', 'الشعلة', 'حيفا', 'البياع',
-      'علاوي', 'الكرخ', 'الرصافة', 'صدر', 'الصدر', 'شعب', 'الشعب',
-      'كريمات', 'زيونة', 'الزيونة', 'جميلة', 'الجميلة', 'شالجية', 'الشالجية',
-      'ابو دشير', 'ابو دشير', 'جيزاني', 'الجيزاني', 'زعفرانية', 'الزعفرانية',
-      'بتاوين', 'ميدان', 'الميدان', 'باب الشرقي', 'الرشيد', 'فلسطين'
-    ];
+    let bestCityMatch = null;
+    let bestScore = 0;
     
-    let detectedCity = '';
-    let detectedRegion = '';
-    let cityFound = false;
-    let isNeighborhoodOnly = false;
-    
-    // === 1. البحث الذكي في قاموس المدن ===
-    for (const [standardCity, variations] of Object.entries(cityVariations)) {
-      for (const variation of variations) {
-        if (cleanText.includes(variation.toLowerCase())) {
-          detectedCity = standardCity;
-          cityFound = true;
-          console.log(`✅ تم العثور على المدينة: ${variation} → ${standardCity}`);
-          break;
-        }
-      }
-      if (cityFound) break;
-    }
-    
-    // === 2. إذا لم توجد مدينة، تحقق من أحياء بغداد ===
-    if (!cityFound) {
-      for (const neighborhood of baghdadNeighborhoods) {
-        if (cleanText.includes(neighborhood.toLowerCase())) {
-          detectedCity = 'بغداد';
-          detectedRegion = neighborhood;
-          cityFound = true;
-          isNeighborhoodOnly = true;
-          console.log(`🏙️ تم اكتشاف حي بغدادي: ${neighborhood} → اختيار بغداد افتراضياً`);
-          break;
-        }
-      }
-    }
-    
-    // === 3. البحث في قاعدة البيانات للتأكد ===
-    let cityData = null;
-    let regionData = null;
-    
-    if (cityFound && detectedCity) {
-      // البحث عن المدينة في قاعدة البيانات
-      const { data: cities } = await supabase
-        .from('cities_cache')
-        .select('alwaseet_id, name, name_ar')
-        .or(`name.ilike.%${detectedCity}%,name_ar.ilike.%${detectedCity}%`)
-        .eq('is_active', true)
-        .limit(1);
-        
-      if (cities && cities.length > 0) {
-        cityData = cities[0];
-        console.log(`✅ تم التحقق من المدينة في قاعدة البيانات: ${cityData.name}`);
-        
-        // البحث عن المنطقة
-        if (detectedRegion) {
-          const { data: regions } = await supabase
-            .from('regions_cache')
-            .select('alwaseet_id, name, name_ar')
-            .eq('city_id', cityData.alwaseet_id)
-            .or(`name.ilike.%${detectedRegion}%,name_ar.ilike.%${detectedRegion}%`)
-            .eq('is_active', true)
-            .limit(1);
-            
-          if (regions && regions.length > 0) {
-            regionData = regions[0];
-            console.log(`✅ تم التحقق من المنطقة في قاعدة البيانات: ${regionData.name}`);
+    for (const city of cities || []) {
+      const cityNames = [city.name, city.name_ar, city.name_en].filter(Boolean);
+      for (const cityName of cityNames) {
+        if (cleanText.toLowerCase().includes(cityName.toLowerCase())) {
+          const score = calculateSimilarity(cityName.toLowerCase(), cleanText.toLowerCase());
+          if (score > bestScore) {
+            bestScore = score;
+            bestCityMatch = { id: city.alwaseet_id, name: city.name };
           }
         }
       }
     }
     
-    // === 4. إعداد النتيجة ===
-    const result = {
-      city: cityData ? { id: cityData.alwaseet_id, name: cityData.name } : null,
-      region: regionData ? { id: regionData.alwaseet_id, name: regionData.name } : null,
-      remainingText: cleanText,
-      isNeighborhoodOnly,
-      detectedCity,
-      detectedRegion
+    let bestRegionMatch = null;
+    if (bestCityMatch) {
+      // البحث عن المنطقة في cache
+      const { data: regions } = await supabase
+        .from('regions_cache')
+        .select('*')
+        .eq('city_id', bestCityMatch.id)
+        .eq('is_active', true);
+      
+      let regionScore = 0;
+      for (const region of regions || []) {
+        const regionNames = [region.name, region.name_ar, region.name_en].filter(Boolean);
+        for (const regionName of regionNames) {
+          if (cleanText.toLowerCase().includes(regionName.toLowerCase())) {
+            const score = calculateSimilarity(regionName.toLowerCase(), cleanText.toLowerCase());
+            if (score > regionScore) {
+              regionScore = score;
+              bestRegionMatch = { id: region.alwaseet_id, name: region.name };
+            }
+          }
+        }
+      }
+    }
+    
+    // إزالة المدينة والمنطقة من النص للحصول على الباقي
+    let remainingText = cleanText;
+    if (bestCityMatch) {
+      remainingText = remainingText.replace(new RegExp(bestCityMatch.name, 'gi'), '').trim();
+    }
+    if (bestRegionMatch) {
+      remainingText = remainingText.replace(new RegExp(bestRegionMatch.name, 'gi'), '').trim();
+    }
+    
+    return {
+      city: bestCityMatch,
+      region: bestRegionMatch,
+      remainingText: remainingText || addressText
     };
     
-    console.log('🎯 نتيجة التحليل الذكي:', result);
-    return result;
-    
   } catch (error) {
-    console.error('❌ خطأ في تحليل العنوان الذكي:', error);
+    console.error('خطأ في تحليل العنوان:', error);
     return {
       city: null,
       region: null,
-      remainingText: addressText,
-      isNeighborhoodOnly: false,
-      detectedCity: '',
-      detectedRegion: '',
-      error: error.message
+      remainingText: addressText
     };
   }
-}
-
-// === رسائل الخطأ المحسنة مع الاقتراحات الذكية ===
-async function sendEnhancedErrorMessage(chatId: number, errorType: string, context: any = {}) {
-  let message = '';
-  
-  switch (errorType) {
-    case 'city_not_found':
-      message = `❌ لم يتم التعرف على المدينة في: "${context.address}"\n\n💡 هل تقصد إحدى هذه المدن؟\n• الديوانية (للقادسية)\n• بغداد (للكرخ والرصافة والأحياء)\n• البصرة\n• النجف الأشرف\n• كربلاء المقدسة\n• أربيل\n• الموصل\n• الحلة (بابل)\n• الرمادي (الأنبار)\n\n📝 مثال صحيح:\n"أحمد علي\n07712345678\nديوانية غماس\nبرشلونة ازرق لارج"`;
-      break;
-      
-    case 'address_missing':
-      message = `❌ لم يتم العثور على عنوان!\n\n💡 الرجاء كتابة الطلب بالشكل الصحيح:\n📍 اسم الزبون\n📍 رقم الهاتف\n📍 المدينة والمنطقة\n📍 المنتجات\n\n📝 مثال:\nأحمد علي\n07712345678\nبغداد - الأعظمية\nبرشلونة ازرق لارج`;
-      break;
-      
-    case 'incomplete_order':
-      message = `❌ ${context.message}\n\n📝 مثال صحيح:\n${context.example}`;
-      break;
-      
-    case 'phone_missing':
-      message = `❌ ${context.message}\n\n📱 ${context.format}\n\n📝 مثال:\nأحمد علي\n07712345678\nديوانية غماس\nبرشلونة ازرق لارج`;
-      break;
-      
-    case 'products_missing':
-      message = `❌ ${context.message}\n\n📦 أمثلة على منتجات:\n${context.example}`;
-      break;
-      
-    case 'baghdad_neighborhood_detected':
-      message = `🏙️ تم اكتشاف حي بغدادي: "${context.neighborhood}"\n✅ تم اختيار بغداد كمدينة افتراضياً\n\n💡 سيتم معالجة الطلب مع بغداد كمدينة`;
-      break;
-      
-    default:
-      message = `❌ حدث خطأ في معالجة الطلب\n\n💡 للمساعدة أرسل /help`;
-  }
-  
-  console.log(`🚨 إرسال رسالة خطأ: ${errorType}`);
-  await sendTelegramMessage(chatId, message);
-}
-
-// === التحقق المسبق من صحة الطلب ===
-async function validateOrderText(text: string): Promise<{isValid: boolean, errorType?: string, context?: any}> {
-  const lines = text.split('\n').filter(line => line.trim());
-  
-  if (lines.length < 2) {
-    return {
-      isValid: false,
-      errorType: 'incomplete_order',
-      context: { 
-        message: 'الطلب يحتاج على الأقل سطرين: معلومات الزبون والمنتجات',
-        example: 'أحمد علي\n07712345678\nديوانية غماس\nبرشلونة ازرق لارج'
-      }
-    };
-  }
-  
-  // التحقق من وجود رقم هاتف
-  let hasPhone = false;
-  for (const line of lines) {
-    const phoneRegex = /^0?\d{10,11}$/;
-    if (phoneRegex.test(line.replace(/[\s-]/g, ''))) {
-      hasPhone = true;
-      break;
-    }
-  }
-  
-  if (!hasPhone) {
-    return {
-      isValid: false,
-      errorType: 'phone_missing',
-      context: { 
-        message: 'لم يتم العثور على رقم هاتف صحيح',
-        format: 'رقم الهاتف يجب أن يكون 10-11 رقم مثل: 07712345678'
-      }
-    };
-  }
-  
-  // التحقق المبدئي من وجود منتجات
-  let hasProducts = false;
-  for (const line of lines) {
-    const cleanLine = line.trim();
-    // إذا لم يكن رقم هاتف أو سعر أو عنوان فقط، فهو منتج محتمل
-    const phoneRegex = /^0?\d{10,11}$/;
-    const priceRegex = /([\d٠-٩]+)\s*([اﻻ]?لف|الف|ألف|k|K|000)?/;
-    
-    if (!phoneRegex.test(cleanLine.replace(/[\s-]/g, '')) && 
-        !priceRegex.test(cleanLine) && 
-        cleanLine.length > 3) {
-      hasProducts = true;
-      break;
-    }
-  }
-  
-  if (!hasProducts) {
-    return {
-      isValid: false,
-      errorType: 'products_missing',
-      context: { 
-        message: 'لم يتم العثور على منتجات في الطلب',
-        example: 'قميص ابيض لارج\nحذاء اسود 42\nبرشلونة ازرق اكس لارج'
-      }
-    };
-  }
-  
-  return { isValid: true };
-}
-
-// دالة تحليل العنوان الأساسية (للتوافق مع الكود الحالي)
-async function parseAddressWithCache(addressText: string): Promise<any> {
-  return await parseAddressWithSmartMatching(addressText);
 }
 
 function levenshteinDistance(str1: string, str2: string): number {
@@ -1789,18 +1519,8 @@ ${employee.role === 'admin' ?
       console.log(`📝 الاسم الافتراضي للزبون: ${defaultCustomerName || 'غير محدد'}`);
       
       try {
-        // === التحقق الذكي من الطلب قبل المعالجة ===
-        const preValidation = await validateOrderText(text);
-        if (!preValidation.isValid) {
-          await sendEnhancedErrorMessage(chatId, preValidation.errorType, preValidation.context);
-          return;
-        }
-        
         // معالجة الطلب وإرسال رد للمستخدم
-        const result = await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
-        if (!result) {
-          console.log('❌ فشل في معالجة الطلب - تم إيقاف المعالجة مسبقاً');
-        }
+        await processOrderText(text, chatId, employee.employee_code, defaultCustomerName);
         
       } catch (error) {
         console.error('Error processing order:', error);
