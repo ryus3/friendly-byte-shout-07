@@ -4264,10 +4264,6 @@ export type Database = {
         Args: { p_variant_id: string }
         Returns: number
       }
-      convert_scientific_to_bigint: {
-        Args: { sci_text: string }
-        Returns: number
-      }
       create_invoice_cash_movement: {
         Args: { p_amount: number; p_description?: string; p_order_id: string }
         Returns: string
@@ -4429,7 +4425,7 @@ export type Database = {
         Returns: string
       }
       get_employee_by_telegram_id: {
-        Args: { p_telegram_chat_id: number }
+        Args: { p_chat_id: number }
         Returns: Json
       }
       get_employee_last_sync: {
