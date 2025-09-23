@@ -322,7 +322,7 @@ async function getEmployeeByTelegramId(chatId: number) {
   try {
     console.log(`🔍 استخدام الإجراء المخزن للبحث عن chatId: ${chatId}`);
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
-      p_chat_id: chatId
+      p_telegram_chat_id: chatId
     });
     
     console.log('📋 رد الإجراء المخزن:', { data, error });
