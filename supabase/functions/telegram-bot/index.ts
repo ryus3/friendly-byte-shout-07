@@ -1259,15 +1259,20 @@ async function validateOrderText(text: string): Promise<{isValid: boolean, error
   // إذا كان الطلب في سطر واحد، تحقق من وجود العناصر الأساسية
   if (lines.length === 1) {
     const singleLine = lines[0];
+    console.log('🔍 فحص طلب سطر واحد:', singleLine);
+    
     // تحقق من وجود رقم هاتف
     const hasPhone = /\b0?7[0-9]{8,9}\b/.test(singleLine);
-    // تحقق من وجود اسم مدينة (أي كلمة عربية)
-    const hasArabicLocation = /[\u0600-\u06FF]{2,}/.test(singleLine);
-    // تحقق من وجود منتج (كلمة غير رقم ولا رقم هاتف)
-    const hasProduct = singleLine.replace(/\b0?7[0-9]{8,9}\b/g, '').replace(/[\u0600-\u06FF]{2,}/g, '').trim().length > 0;
+    // تحقق من وجود نص عربي (للمدينة والمنتج)
+    const hasArabicText = /[\u0600-\u06FF]{2,}/.test(singleLine);
     
-    if (hasPhone && hasArabicLocation) {
+    console.log('📋 نتائج الفحص - هاتف:', hasPhone, 'نص عربي:', hasArabicText);
+    
+    if (hasPhone && hasArabicText) {
+      console.log('✅ طلب سطر واحد صالح');
       return { isValid: true }; // الطلب في سطر واحد صالح
+    } else {
+      console.log('❌ طلب سطر واحد غير صالح - مفقود:', !hasPhone ? 'رقم هاتف' : 'نص عربي');
     }
   }
   
