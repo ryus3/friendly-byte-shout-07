@@ -35,21 +35,21 @@ const SalesCard = ({
     if (order.status === 'completed') {
       return {
         badge: <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 shadow-md hover:shadow-lg transition-all"><CheckCircle className="w-3 h-3 mr-1" />مكتمل</Badge>,
-        color: 'from-emerald-50 to-green-50 dark:from-emerald-950 dark:to-green-950',
-        borderColor: 'border-emerald-200 dark:border-emerald-700'
+        color: 'from-emerald-50 to-green-50 dark:from-emerald-950/50 dark:to-green-950/50',
+        borderColor: 'border-emerald-200 dark:border-emerald-800'
       };
     }
     if (order.status === 'delivered') {
       return {
         badge: <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 shadow-md hover:shadow-lg transition-all"><Package className="w-3 h-3 mr-1" />مُسلم</Badge>,
-        color: 'from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950',
-        borderColor: 'border-blue-200 dark:border-blue-700'
+        color: 'from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50',
+        borderColor: 'border-blue-200 dark:border-blue-800'
       };
     }
     return {
       badge: <Badge variant="outline" className="bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-800 dark:to-slate-800">{order.status}</Badge>,
-      color: 'from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900',
-      borderColor: 'border-gray-200 dark:border-gray-700'
+      color: 'from-gray-50 to-slate-50 dark:from-gray-900/50 dark:to-slate-900/50',
+      borderColor: 'border-gray-200 dark:border-gray-800'
     };
   };
 
@@ -91,10 +91,9 @@ const SalesCard = ({
     <Card 
       className={`
         relative overflow-hidden transition-all duration-300 cursor-pointer group
-        ${isHovered ? 'scale-[1.02] shadow-2xl shadow-primary/25 dark:shadow-primary/15' : 'shadow-lg hover:shadow-xl dark:shadow-lg dark:hover:shadow-xl'}
+        ${isHovered ? 'scale-[1.02] shadow-2xl shadow-primary/20 dark:shadow-primary/10' : 'shadow-lg hover:shadow-xl dark:shadow-lg dark:hover:shadow-xl'}
         bg-gradient-to-br ${statusInfo.color} ${statusInfo.borderColor}
-        border-2 hover:border-primary/40 dark:hover:border-primary/50
-        dark:bg-gray-900/50 backdrop-blur-sm
+        border-2 hover:border-primary/40 dark:hover:border-primary/60
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -127,11 +126,11 @@ const SalesCard = ({
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 {hasTrackingNumber ? (
-                  <Tag className="w-4 h-4 text-primary dark:text-primary" />
+                  <Tag className="w-4 h-4 text-primary dark:text-primary-foreground" />
                 ) : (
                   <Package className="w-4 h-4 text-muted-foreground" />
                 )}
-                <h3 className="font-bold text-lg text-foreground dark:text-white">
+                <h3 className="font-bold text-lg text-foreground dark:text-foreground">
                   {hasTrackingNumber ? `#${primaryId}` : `#${order.order_number}`}
                 </h3>
               </div>
@@ -147,10 +146,10 @@ const SalesCard = ({
           </div>
 
           <div className="text-left">
-            <div className="text-2xl font-bold text-primary dark:text-blue-400">
+            <div className="text-2xl font-bold text-primary dark:text-primary-foreground">
               {formatCurrency(order.total_amount || 0)}
             </div>
-            <div className="text-xs text-muted-foreground dark:text-gray-400">Sales Amount</div>
+            <div className="text-xs text-muted-foreground">Total Amount</div>
           </div>
         </div>
 
@@ -161,11 +160,11 @@ const SalesCard = ({
               <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="flex-1">
-              <div className="font-medium text-foreground dark:text-white">
+              <div className="font-medium text-foreground dark:text-foreground">
                 {order.customer_name || 'عميل غير محدد'}
               </div>
               {order.customer_phone && (
-                <div className="text-xs text-muted-foreground dark:text-gray-400 flex items-center gap-1">
+                <div className="text-xs text-muted-foreground flex items-center gap-1">
                   <Phone className="w-3 h-3" />
                   {order.customer_phone}
                 </div>
@@ -179,9 +178,9 @@ const SalesCard = ({
                 <MapPin className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-foreground dark:text-white">{order.customer_city}</div>
+                <div className="font-medium text-foreground dark:text-foreground">{order.customer_city}</div>
                 {order.customer_address && (
-                  <div className="text-xs text-muted-foreground dark:text-gray-400 line-clamp-1">
+                  <div className="text-xs text-muted-foreground line-clamp-1">
                     {order.customer_address}
                   </div>
                 )}
@@ -209,7 +208,7 @@ const SalesCard = ({
                 </div>
               ))}
               {orderProducts.length > 3 && (
-                <div className="text-xs text-muted-foreground dark:text-gray-400 text-center pt-1">
+                <div className="text-xs text-muted-foreground text-center pt-1">
                   +{orderProducts.length - 3} منتجات أخرى
                 </div>
               )}
@@ -220,7 +219,7 @@ const SalesCard = ({
         {/* Footer Section */}
         <div className="space-y-3 pt-2 border-t border-white/40 dark:border-white/10">
           <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-1 text-muted-foreground dark:text-gray-400">
+            <div className="flex items-center gap-1 text-muted-foreground">
               <Calendar className="w-3 h-3" />
               {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
             </div>
@@ -235,10 +234,10 @@ const SalesCard = ({
           </div>
 
           {showEmployee && employee && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground dark:text-gray-400 bg-white/40 dark:bg-white/5 p-2 rounded-md">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/40 dark:bg-white/5 p-2 rounded-md">
               <User className="w-3 h-3" />
               <span className="font-medium">الموظف:</span>
-              <span className="text-foreground dark:text-white">{employee.full_name || employee.username || employee.email || 'غير محدد'}</span>
+              <span>{employee.full_name || employee.username || employee.email || 'غير محدد'}</span>
             </div>
           )}
 

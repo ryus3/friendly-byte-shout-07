@@ -127,7 +127,6 @@ export const SuperProvider = ({ children }) => {
     products: [],
     orders: [],
     customers: [],
-    orderItems: [], // إضافة orderItems
     purchases: [],
     expenses: [],
     profits: [],
@@ -2492,7 +2491,6 @@ export const SuperProvider = ({ children }) => {
     allProducts: allData.products || [],
     orders: allData.orders || [],
     customers: allData.customers || [],
-    orderItems: allData.orderItems || [], // إضافة orderItems
     purchases: allData.purchases || [],
     expenses: allData.expenses || [],
     profits: allData.profits || [],
@@ -2500,7 +2498,7 @@ export const SuperProvider = ({ children }) => {
     aiOrders: allData.aiOrders || [],
     settings: allData.settings || { 
       deliveryFee: 5000, 
-      lowStockThreshold: 5,
+      lowStockThreshold: 5, 
       mediumStockThreshold: 10, 
       sku_prefix: "PROD", 
       lastPurchaseId: 0,
