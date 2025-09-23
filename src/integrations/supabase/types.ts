@@ -4325,6 +4325,10 @@ export type Database = {
           similarity_score: number
         }[]
       }
+      find_employee_by_telegram_chat_id: {
+        Args: { p_chat_id: number }
+        Returns: Json
+      }
       find_region_in_cache: {
         Args: { p_city_id: number; p_region_text: string }
         Returns: {

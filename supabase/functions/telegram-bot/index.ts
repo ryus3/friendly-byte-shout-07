@@ -596,54 +596,29 @@ async function parseAddressWithSmartMatching(addressText: string): Promise<{
 // Get employee information by telegram chat ID with fallback methods
 async function getEmployeeByTelegramId(chatId: number) {
   try {
-    console.log(`🔍 Looking for employee with chat ID: ${chatId}`)
+    console.log(`🔍 البحث عن موظف بـ chat ID: ${chatId}`)
     
-    // First try the RPC function with correct parameter name
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_employee_by_telegram_id', {
+    // Use the new RPC function
+    const { data, error } = await supabase.rpc('find_employee_by_telegram_chat_id', {
       p_chat_id: chatId
     })
     
-    if (!rpcError && rpcData?.success && rpcData?.employee) {
-      console.log('Employee found via RPC:', rpcData.employee)
-      return rpcData.employee
-    }
-    
-    if (rpcError) {
-      console.log('RPC error:', rpcError)
-    }
-    
-    // Fallback: Direct table lookup
-    const { data: telData, error: telError } = await supabase
-      .from('telegram_employee_codes')
-      .select(`
-        employee_code,
-        user_id,
-        profiles!inner(user_id, full_name, employee_code)
-      `)
-      .eq('telegram_chat_id', chatId)
-      .eq('is_active', true)
-      .single()
-    
-    if (telError) {
-      console.log('Direct query error:', telError)
-    }
-    
-    if (telData?.profiles) {
-      const profile = telData.profiles
-      console.log('Employee found via direct query:', profile.full_name)
+    if (!error && data?.success) {
+      console.log(`👤 تم العثور على موظف: ${data.employee_code} - ${data.full_name}`)
       return {
-        user_id: profile.user_id,
-        full_name: profile.full_name,
-        employee_code: profile.employee_code || telData.employee_code,
-        role: 'employee',
-        role_title: 'موظف مبيعات'
+        employee_code: data.employee_code,
+        full_name: data.full_name,
+        user_id: data.user_id,
+        telegram_chat_id: data.chat_id,
+        role_title: 'موظف', // Default role
+        is_active: true
       }
     }
     
-    console.log('No employee found for chat ID:', chatId)
+    console.log('❌ لم يتم العثور على موظف للـ chat ID:', chatId)
     return null
   } catch (error) {
-    console.error('Error getting employee:', error)
+    console.error('❌ خطأ في البحث عن الموظف:', error)
     return null
   }
 }
