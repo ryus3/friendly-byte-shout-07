@@ -165,19 +165,14 @@ function normalizeEmployeeRecord(raw: any) {
   return { user_id, full_name, employee_code, role };
 }
 
-// يربط رمز المستخدم بحسابه في التليغرام مع دعم كلا الجدولين
+// يربط رمز المستخدم بحسابه في التليغرام - نظام تلقائي محسن
 async function linkEmployeeCode(code: string, chatId: number) {
   try {
-    // 1) الإجراء المخزن الأساسي
-    const { data, error } = await supabase.rpc('link_telegram_user', {
-      p_employee_code: code,
-      p_telegram_chat_id: chatId
-    });
-    if (!error && data) return true;
-
+    console.log(`🔗 بدء ربط الرمز ${code} بـ chat_id: ${chatId}`);
+    
     const normalized = code.trim().toUpperCase();
 
-    // 2) إذا كان normalized هو telegram_code في employee_telegram_codes
+    // البحث في الجدول الأساسي employee_telegram_codes
     const { data: codeRow, error: codeErr } = await supabase
       .from('employee_telegram_codes')
       .select('id,user_id,telegram_chat_id,is_active')
@@ -185,7 +180,15 @@ async function linkEmployeeCode(code: string, chatId: number) {
       .maybeSingle();
 
     if (!codeErr && codeRow && codeRow.is_active !== false) {
-      // اربط بالجدول الحالي
+      console.log(`✅ تم العثور على الرمز ${code} في employee_telegram_codes`);
+      
+      // إذا كان مربوط مسبقاً بنفس المحادثة
+      if (codeRow.telegram_chat_id === chatId) {
+        console.log(`✅ الرمز ${code} مربوط مسبقاً بنفس المحادثة`);
+        return true;
+      }
+      
+      // ربط الرمز بالمحادثة (سيتم المزامنة تلقائياً عبر trigger)
       const { error: updErr } = await supabase
         .from('employee_telegram_codes')
         .update({
@@ -194,35 +197,16 @@ async function linkEmployeeCode(code: string, chatId: number) {
           updated_at: new Date().toISOString()
         })
         .eq('id', codeRow.id);
+        
       if (!updErr) {
-        // مزامنة مع جدول telegram_employee_codes باستخدام employee_code من الملف الشخصي
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('employee_code')
-          .eq('user_id', codeRow.user_id)
-          .maybeSingle();
-        if (profile?.employee_code) {
-          const { data: existingTel } = await supabase
-            .from('telegram_employee_codes')
-            .select('id')
-            .eq('employee_code', profile.employee_code)
-            .limit(1);
-          if (existingTel && existingTel.length > 0) {
-            await supabase
-              .from('telegram_employee_codes')
-              .update({ telegram_chat_id: chatId, linked_at: new Date().toISOString(), updated_at: new Date().toISOString(), is_active: true })
-              .eq('id', existingTel[0].id);
-          } else {
-            await supabase
-              .from('telegram_employee_codes')
-              .insert({ employee_code: profile.employee_code, telegram_chat_id: chatId, is_active: true, linked_at: new Date().toISOString() });
-          }
-        }
+        console.log(`✅ تم ربط الرمز ${code} بنجاح - المزامنة التلقائية ستحدث`);
         return true;
+      } else {
+        console.error('❌ خطأ في تحديث employee_telegram_codes:', updErr);
       }
     }
 
-    // 3) إذا كان normalized هو employee_code في telegram_employee_codes
+    // البحث الاحتياطي في telegram_employee_codes
     const { data: telRows, error: telErr } = await supabase
       .from('telegram_employee_codes')
       .select('id,employee_code,telegram_chat_id,is_active')
@@ -230,6 +214,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
       .limit(1);
 
     if (!telErr && telRows && telRows.length > 0 && telRows[0].is_active !== false) {
+      console.log(`⚠️ تم العثور على الرمز ${code} في telegram_employee_codes فقط`);
       const row = telRows[0];
       const { error: upd2Err } = await supabase
         .from('telegram_employee_codes')
@@ -239,41 +224,28 @@ async function linkEmployeeCode(code: string, chatId: number) {
           updated_at: new Date().toISOString()
         })
         .eq('id', row.id);
-      if (!upd2Err) return true;
+      if (!upd2Err) {
+        console.log(`✅ تم ربط الرمز ${code} في telegram_employee_codes`);
+        return true;
+      }
     }
 
+    console.log(`❌ فشل في ربط الرمز ${code} - غير موجود أو غير نشط`);
     return false;
   } catch (error) {
-    console.error('Error linking employee code:', error);
+    console.error('❌ خطأ في ربط رمز الموظف:', error);
     return false;
   }
 }
 
 async function getEmployeeByTelegramId(chatId: number) {
-  // المحاولة الأولى: عبر الإجراء المخزن
-  try {
-    const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
-      p_telegram_chat_id: chatId
-    });
-    if (!error && data && data.length > 0) {
-      const raw = data[0];
-      const norm = normalizeEmployeeRecord(raw);
-      if (norm) {
-        const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
-        const role_title = await getRoleDisplayName(norm.user_id, finalRole);
-        return { ...norm, role: finalRole, role_title };
-      }
-    }
-  } catch (err) {
-    console.error('Error getting employee via RPC, will try fallback:', err);
-  }
-
-  // fallback 1: عبر جدول employee_telegram_codes باستخدام telegram_chat_id
+  // أولوية البحث: employee_telegram_codes (الجدول الأساسي) أولاً
   try {
     const { data: codeRow } = await supabase
       .from('employee_telegram_codes')
-      .select('user_id')
+      .select('user_id, telegram_code')
       .eq('telegram_chat_id', chatId)
+      .eq('is_active', true)
       .single();
 
     if (codeRow?.user_id) {
@@ -290,18 +262,21 @@ async function getEmployeeByTelegramId(chatId: number) {
           full_name: profile.full_name,
           role,
           role_title,
-          employee_code: profile.employee_code || null
+          employee_code: profile.employee_code || codeRow.telegram_code
         };
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    console.log('⚠️ البحث الأساسي في employee_telegram_codes فشل:', err);
+  }
 
-  // fallback 2: عبر جدول telegram_employee_codes (مربوط مباشرة برمز الموظف)
+  // البحث الاحتياطي في telegram_employee_codes
   try {
     const { data: telRows } = await supabase
       .from('telegram_employee_codes')
       .select('employee_code, user_id')
       .eq('telegram_chat_id', chatId)
+      .eq('is_active', true)
       .limit(1);
 
     if (telRows && telRows.length > 0) {
@@ -318,7 +293,7 @@ async function getEmployeeByTelegramId(chatId: number) {
         profile = res.data;
       }
 
-      if (!profile) {
+      if (!profile && empCode) {
         const res2 = await supabase
           .from('profiles')
           .select('user_id, full_name, employee_code')
@@ -335,12 +310,31 @@ async function getEmployeeByTelegramId(chatId: number) {
           full_name: profile.full_name,
           role,
           role_title,
-          // إعطاء الأولوية لـ employee_code من جدول profiles
           employee_code: profile.employee_code || empCode
         };
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    console.log('⚠️ البحث الاحتياطي في telegram_employee_codes فشل:', err);
+  }
+
+  // الحل الأخير: الإجراء المخزن
+  try {
+    const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
+      p_telegram_chat_id: chatId
+    });
+    if (!error && data && data.length > 0) {
+      const raw = data[0];
+      const norm = normalizeEmployeeRecord(raw);
+      if (norm) {
+        const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
+        const role_title = await getRoleDisplayName(norm.user_id, finalRole);
+        return { ...norm, role: finalRole, role_title };
+      }
+    }
+  } catch (err) {
+    console.error('❌ جميع محاولات البحث فشلت:', err);
+  }
 
   return null;
 }
