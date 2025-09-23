@@ -22,10 +22,15 @@ import {
   BarChart3,
   Receipt,
   MapPin,
-  User
+  User,
+  Grid,
+  List,
+  SlidersHorizontal
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import SalesCard from '@/components/sales/SalesCard';
+import OrderDetailsModal from '@/components/sales/OrderDetailsModal';
 
 const SalesPage = () => {
   const { user } = useAuth();
@@ -37,6 +42,9 @@ const SalesPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [receiptFilter, setReceiptFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'list'
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
 
   // Permission check - managers can view all employees
   const canViewAllEmployees = hasPermission('view_all_orders') || 
@@ -126,7 +134,7 @@ const SalesPage = () => {
     };
   }, [filteredOrders]);
 
-  // Get employee options for managers
+  // Get employee options for managers with enhanced data
   const employeeOptions = useMemo(() => {
     if (!canViewAllEmployees) return [];
     
@@ -134,14 +142,30 @@ const SalesPage = () => {
       new Set(deliveredOrders.map(order => order.created_by))
     ).map(employeeId => {
       const employee = users?.find(u => u.id === employeeId);
+      const employeeOrders = deliveredOrders.filter(order => order.created_by === employeeId);
+      const totalSales = employeeOrders.reduce((sum, order) => sum + (order.final_amount || order.total_amount || 0), 0);
+      
       return {
         id: employeeId,
-        name: employee?.full_name || employee?.email || 'موظف غير محدد'
+        name: employee?.full_name || employee?.email || 'موظف غير محدد',
+        ordersCount: employeeOrders.length,
+        totalSales,
+        user: employee
       };
     }).filter(emp => emp.id);
 
     return employeesWithOrders;
   }, [deliveredOrders, users, canViewAllEmployees]);
+
+  // Handle view order details
+  const handleViewOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setShowOrderDetails(true);
+  };
+
+  const getEmployeeByOrder = (order) => {
+    return users?.find(u => u.id === order.created_by);
+  };
 
   const getStatusBadge = (order) => {
     if (order.status === 'completed') {
@@ -178,250 +202,347 @@ const SalesPage = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">المبيعات</h1>
-          <p className="text-muted-foreground">
-            {canViewAllEmployees ? 'متابعة وإدارة مبيعات الموظفين' : 'مبيعاتي وأدائي'}
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            المبيعات
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {canViewAllEmployees ? 'متابعة وإدارة مبيعات الموظفين بشكل احترافي' : 'مبيعاتي وأدائي الشخصي'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <BarChart3 className="w-8 h-8 text-primary" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-blue-600/10 p-2 rounded-lg">
+            <BarChart3 className="w-6 h-6 text-primary" />
+            <span className="text-sm font-medium text-primary">لوحة المبيعات</span>
+          </div>
         </div>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      {/* Enhanced Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-bl-3xl opacity-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-700">إجمالي الطلبات</CardTitle>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
+              <Package className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-            <p className="text-xs text-muted-foreground">طلب مُسلم</p>
+            <div className="text-3xl font-bold text-blue-700">{stats.totalOrders}</div>
+            <p className="text-xs text-blue-600 mt-1">طلب مُسلم ومكتمل</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 hover:shadow-xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-600 rounded-bl-3xl opacity-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي المبيعات</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-emerald-700">إجمالي المبيعات</CardTitle>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">إيراد إجمالي</p>
+            <div className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.totalRevenue)}</div>
+            <p className="text-xs text-emerald-600 mt-1">إجمالي الإيرادات المحققة</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 hover:shadow-xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-600 rounded-bl-3xl opacity-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الفواتير المستلمة</CardTitle>
-            <Receipt className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-purple-700">الفواتير المستلمة</CardTitle>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
+              <Receipt className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.receivedInvoices}</div>
-            <p className="text-xs text-muted-foreground">
-              من أصل {stats.totalOrders} فاتورة
+            <div className="text-3xl font-bold text-purple-700">{stats.receivedInvoices}</div>
+            <p className="text-xs text-purple-600 mt-1">
+              من أصل {stats.totalOrders} فاتورة ({Math.round((stats.receivedInvoices/stats.totalOrders)*100) || 0}%)
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:shadow-xl transition-all duration-300">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-600 rounded-bl-3xl opacity-10" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متوسط قيمة الطلب</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-orange-700">متوسط قيمة الطلب</CardTitle>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-white" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.averageOrderValue)}</div>
-            <p className="text-xs text-muted-foreground">متوسط المبيعات</p>
+            <div className="text-2xl font-bold text-orange-700">{formatCurrency(stats.averageOrderValue)}</div>
+            <p className="text-xs text-orange-600 mt-1">متوسط قيمة الطلب الواحد</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
+      {/* Enhanced Filters & Controls */}
+      <Card className="bg-gradient-to-r from-slate-50 to-gray-50 border-slate-200">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            فلاتر البحث
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-primary" />
+              فلاتر البحث المتقدمة
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">عرض:</span>
+              <div className="flex items-center gap-1 bg-white rounded-lg p-1 border">
+                <Button
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('cards')}
+                  className="h-8 w-8 p-0"
+                >
+                  <Grid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="h-8 w-8 p-0"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Employee Selection (for managers only) */}
             {canViewAllEmployees && (
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الموظف" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">جميع الموظفين</SelectItem>
-                  {employeeOptions.map(employee => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">الموظف</label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="bg-white border-slate-300">
+                    <SelectValue placeholder="اختر الموظف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        جميع الموظفين
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {employeeOptions.map(employee => (
+                      <SelectItem key={employee.id} value={employee.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span>{employee.name}</span>
+                          <div className="text-xs text-muted-foreground ml-2">
+                            {employee.ordersCount} طلب
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="بحث برقم الطلب أو اسم العميل..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            {/* Enhanced Search */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">البحث</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="رقم التتبع، الطلب، أو اسم العميل..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white border-slate-300"
+                />
+              </div>
             </div>
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="حالة الطلب" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="delivered">مُسلم</SelectItem>
-                <SelectItem value="completed">مكتمل</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">حالة الطلب</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="bg-white border-slate-300">
+                  <SelectValue placeholder="حالة الطلب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
+                  <SelectItem value="delivered">
+                    <div className="flex items-center gap-2">
+                      <Package className="w-4 h-4 text-blue-600" />
+                      مُسلم
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      مكتمل
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Receipt Filter */}
-            <Select value={receiptFilter} onValueChange={setReceiptFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="حالة الفاتورة" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الفواتير</SelectItem>
-                <SelectItem value="received">مستلمة</SelectItem>
-                <SelectItem value="pending">في الانتظار</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">حالة الفاتورة</label>
+              <Select value={receiptFilter} onValueChange={setReceiptFilter}>
+                <SelectTrigger className="bg-white border-slate-300">
+                  <SelectValue placeholder="حالة الفاتورة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفواتير</SelectItem>
+                  <SelectItem value="received">
+                    <div className="flex items-center gap-2">
+                      <Receipt className="w-4 h-4 text-green-600" />
+                      مستلمة
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pending">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      في الانتظار
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Date Filter */}
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="الفترة الزمنية" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الفترات</SelectItem>
-                <SelectItem value="today">اليوم</SelectItem>
-                <SelectItem value="week">هذا الأسبوع</SelectItem>
-                <SelectItem value="month">هذا الشهر</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">الفترة الزمنية</label>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="bg-white border-slate-300">
+                  <SelectValue placeholder="الفترة الزمنية" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الفترات</SelectItem>
+                  <SelectItem value="today">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      اليوم
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="week">هذا الأسبوع</SelectItem>
+                  <SelectItem value="month">هذا الشهر</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Reset Filters */}
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setReceiptFilter('all');
-                setDateFilter('all');
-                if (canViewAllEmployees) setSelectedEmployee('all');
-              }}
-            >
-              إعادة تعيين
-            </Button>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700 invisible">إعادة</label>
+              <Button 
+                variant="outline" 
+                className="w-full bg-white hover:bg-slate-100 border-slate-300"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                  setReceiptFilter('all');
+                  setDateFilter('all');
+                  if (canViewAllEmployees) setSelectedEmployee('all');
+                }}
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                إعادة تعيين
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Orders List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>قائمة المبيعات ({filteredOrders.length})</span>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      {/* Orders Display */}
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-blue-600/5 border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-blue-600 flex items-center justify-center">
+                <Package className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <span className="text-xl">قائمة المبيعات</span>
+                <Badge variant="secondary" className="mr-2">
+                  {filteredOrders.length} طلب
+                </Badge>
+              </div>
+            </CardTitle>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Calendar className="w-4 h-4" />
-              آخر تحديث: {format(new Date(), 'dd MMM yyyy', { locale: ar })}
+              <span>آخر تحديث: {format(new Date(), 'dd MMM yyyy HH:mm', { locale: ar })}</span>
             </div>
-          </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {filteredOrders.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">لا توجد مبيعات مطابقة للفلاتر المحددة</p>
+            <div className="text-center py-16">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-gray-100 to-slate-100 flex items-center justify-center mx-auto mb-6">
+                <Package className="w-12 h-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-muted-foreground mb-2">لا توجد مبيعات</h3>
+              <p className="text-muted-foreground">لا توجد مبيعات مطابقة للفلاتر المحددة حالياً</p>
+            </div>
+          ) : viewMode === 'cards' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredOrders.map((order) => (
+                <SalesCard
+                  key={order.id}
+                  order={order}
+                  formatCurrency={formatCurrency}
+                  employee={getEmployeeByOrder(order)}
+                  onViewDetails={handleViewOrderDetails}
+                  showEmployee={canViewAllEmployees}
+                />
+              ))}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredOrders.map((order) => (
-                <div key={order.id} className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <h3 className="font-semibold">#{order.order_number}</h3>
-                        {getStatusBadge(order)}
-                        {getReceiptBadge(order.receipt_received)}
+                <div 
+                  key={order.id} 
+                  className="border rounded-lg p-4 hover:bg-gradient-to-r hover:from-primary/5 hover:to-blue-600/5 transition-all duration-200 cursor-pointer group"
+                  onClick={() => handleViewOrderDetails(order)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary/10 to-blue-600/10 flex items-center justify-center">
+                        <Package className="w-6 h-6 text-primary" />
                       </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                        <div className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          {order.customer_name || 'عميل غير محدد'}
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold">
+                            #{order.tracking_number || order.delivery_partner_order_id || order.order_number}
+                          </h3>
+                          {getStatusBadge(order)}
+                          {getReceiptBadge(order.receipt_received)}
                         </div>
-                        {order.customer_city && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {order.customer_city}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{order.customer_name || 'عميل غير محدد'}</span>
+                          {order.customer_city && <span>{order.customer_city}</span>}
+                          <span>{format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}</span>
                         </div>
                       </div>
-
-                      {canViewAllEmployees && (
-                        <div className="text-sm text-muted-foreground">
-                          <span className="font-medium">الموظف:</span> {
-                            users?.find(u => u.id === order.created_by)?.full_name || 'غير محدد'
-                          }
-                        </div>
-                      )}
                     </div>
-
-                    <div className="flex flex-col lg:items-end gap-2">
-                      <div className="text-2xl font-bold text-primary">
+                    <div className="text-left">
+                      <div className="text-xl font-bold text-primary">
                         {formatCurrency(order.final_amount || order.total_amount || 0)}
                       </div>
-                      
-                      {order.tracking_number && (
-                        <div className="text-sm text-muted-foreground">
-                          رقم التتبع: {order.tracking_number}
-                        </div>
-                      )}
-
-                      {order.delivery_partner && (
-                        <Badge variant="outline" className="text-xs">
-                          {order.delivery_partner}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Order Items Preview */}
-                  {order.order_items && order.order_items.length > 0 && (
-                    <div className="mt-3 pt-3 border-t">
                       <div className="text-sm text-muted-foreground">
-                        <span className="font-medium">المنتجات:</span> {
-                          order.order_items.slice(0, 2).map(item => 
-                            `${item.product_name || 'منتج'} (${item.quantity})`
-                          ).join(' • ')
-                        }
-                        {order.order_items.length > 2 && ` و ${order.order_items.length - 2} منتج آخر`}
+                        {order.order_items?.length || 0} منتج
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Order Details Modal */}
+      <OrderDetailsModal
+        order={selectedOrder}
+        isOpen={showOrderDetails}
+        onClose={() => setShowOrderDetails(false)}
+        formatCurrency={formatCurrency}
+        employee={selectedOrder ? getEmployeeByOrder(selectedOrder) : null}
+      />
     </div>
   );
 };
