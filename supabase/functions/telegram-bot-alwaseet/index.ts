@@ -1502,7 +1502,9 @@ serve(async (req) => {
     console.log(`💬 Processing message from chat ${chatId}: "${text}"`)
 
     // Get employee information
-    const { data: employeeData, error: employeeError } = await supabase.rpc('get_employee_by_telegram_id', { 
+    console.log(`🔍 Looking for employee with chat ID: ${chatId}`)
+    
+    const { data: employeeRpcData, error: employeeError } = await supabase.rpc('get_employee_by_telegram_id', { 
       p_telegram_chat_id: chatId 
     })
 
@@ -1512,7 +1514,14 @@ serve(async (req) => {
       return new Response('Error', { headers: corsHeaders })
     }
 
-    const employee = employeeData?.[0]
+    console.log('📋 Employee RPC response:', employeeRpcData)
+    
+    // Handle the correct response structure
+    let employee = null
+    if (employeeRpcData?.success && employeeRpcData?.employee) {
+      employee = employeeRpcData.employee
+    }
+    
     if (!employee) {
       console.log(`❌ No employee found for chat ID: ${chatId}`)
       await sendTelegramMessage(chatId, '❌ غير مسموح لك باستخدام هذا البوت. يرجى التواصل مع الإدارة.')

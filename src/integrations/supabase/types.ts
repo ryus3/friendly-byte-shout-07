@@ -4429,7 +4429,7 @@ export type Database = {
         Returns: string
       }
       get_employee_by_telegram_id: {
-        Args: { p_chat_id: number }
+        Args: { p_telegram_chat_id: number }
         Returns: Json
       }
       get_employee_last_sync: {
