@@ -320,17 +320,42 @@ async function getEmployeeByTelegramId(chatId: number) {
 
   // الحل الأخير: الإجراء المخزن
   try {
+    console.log(`🔍 استخدام الإجراء المخزن للبحث عن chatId: ${chatId}`);
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
-      p_telegram_chat_id: chatId
+      p_chat_id: chatId
     });
+    
+    console.log('📋 رد الإجراء المخزن:', { data, error });
+    
     if (!error && data && data.length > 0) {
-      const raw = data[0];
-      const norm = normalizeEmployeeRecord(raw);
-      if (norm) {
-        const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
-        const role_title = await getRoleDisplayName(norm.user_id, finalRole);
-        return { ...norm, role: finalRole, role_title };
+      const responseData = data[0];
+      console.log('📊 بيانات الرد الخام:', responseData);
+      
+      // التحقق من تنسيق الرد - إذا كان يحتوي على success و employee
+      let employeeData = null;
+      if (responseData.success && responseData.employee) {
+        console.log('✅ تم العثور على الموظف في تنسيق success/employee');
+        employeeData = responseData.employee;
+      } else if (responseData.user_id || responseData.employee_code) {
+        console.log('✅ تم العثور على الموظف في تنسيق مباشر');
+        employeeData = responseData;
       }
+      
+      if (employeeData) {
+        console.log('Full employee data:', JSON.stringify(employeeData, null, 2));
+        const norm = normalizeEmployeeRecord(employeeData);
+        console.log('Normalized employee data:', norm);
+        
+        if (norm && norm.user_id) {
+          const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
+          const role_title = await getRoleDisplayName(norm.user_id, finalRole);
+          const result = { ...norm, role: finalRole, role_title };
+          console.log('Employee found:', JSON.stringify(result, null, 2));
+          return result;
+        }
+      }
+    } else if (error) {
+      console.error('❌ خطأ في الإجراء المخزن:', error);
     }
   } catch (err) {
     console.error('❌ جميع محاولات البحث فشلت:', err);
