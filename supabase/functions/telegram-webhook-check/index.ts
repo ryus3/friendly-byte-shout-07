@@ -31,7 +31,7 @@ async function getBotToken(): Promise<string | null> {
   return null;
 }
 
-const EXPECTED_WEBHOOK_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot`;
+const EXPECTED_WEBHOOK_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot-alwaseet`;
 
 async function setWebhook(botToken: string) {
   const resp = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
