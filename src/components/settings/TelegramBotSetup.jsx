@@ -19,7 +19,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [botInfo, setBotInfo] = useState(null);
 
-  const BOT_FUNCTION_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot-alwaseet`;
+  const BOT_FUNCTION_URL = `https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot`;
 
   useEffect(() => {
     if (open) {
@@ -152,7 +152,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
         
         toast({
           title: "تم إعداد البوت بنجاح! 🎉",
-          description: `البوت @${botInfo.username} جاهز مع نظام الوسيط الذكي`,
+          description: `البوت @${botInfo.username} جاهز لاستقبال الطلبات`,
           variant: "success"
         });
 

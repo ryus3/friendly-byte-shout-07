@@ -1,673 +1,1274 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
+
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Telegram Bot Token
-const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
+const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!
 
-// Telegram message interface
 interface TelegramMessage {
-  message_id: number;
+  message_id: number
   from: {
-    id: number;
-    is_bot: boolean;
-    first_name: string;
-    last_name?: string;
-    language_code?: string;
-  };
+    id: number
+    first_name: string
+    username?: string
+  }
   chat: {
-    id: number;
-    first_name: string;
-    last_name?: string;
-    type: string;
-  };
-  date: number;
-  text?: string;
-  entities?: Array<{
-    offset: number;
-    length: number;
-    type: string;
-  }>;
+    id: number
+    type: string
+  }
+  text: string
+  date: number
 }
 
 interface TelegramUpdate {
-  update_id: number;
-  message?: TelegramMessage;
+  update_id: number
+  message?: TelegramMessage
 }
 
 // Send message to Telegram
 async function sendTelegramMessage(chatId: number, text: string) {
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: 'HTML'
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Failed to send Telegram message:', await response.text());
-    }
-  } catch (error) {
-    console.error('Error sending Telegram message:', error);
-  }
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML'
+    })
+  })
+  return response.json()
 }
 
-// Get cities from cache
-async function getCitiesFromCache() {
+// Get cities from cache database (fast and updated)
+async function getCitiesFromCache(): Promise<any[]> {
   try {
-    const { data, error } = await supabase
+    const { data: cities, error } = await supabase
       .from('cities_cache')
-      .select('*')
-      .eq('is_active', true);
+      .select('id, name, original_id')
+      .eq('is_active', true)
+      .order('name')
     
     if (error) {
-      console.error('Error fetching cities:', error);
-      return [];
+      console.error('Error fetching cities from cache:', error)
+      return []
     }
     
-    return data || [];
+    return cities || []
   } catch (error) {
-    console.error('Exception fetching cities:', error);
-    return [];
+    console.error('Error in getCitiesFromCache:', error)
+    return []
   }
 }
 
-// Get regions by city
-async function getRegionsByCity(cityId: number) {
+// Get regions by city from cache database (fast and updated)
+async function getRegionsByCity(cityId: number): Promise<any[]> {
   try {
-    const { data, error } = await supabase
+    const { data: regions, error } = await supabase
       .from('regions_cache')
-      .select('*')
+      .select('id, name, original_id')
       .eq('city_id', cityId)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .order('name')
     
     if (error) {
-      console.error('Error fetching regions:', error);
-      return [];
+      console.error('Error fetching regions from cache:', error)
+      return []
     }
     
-    return data || [];
+    return regions || []
   } catch (error) {
-    console.error('Exception fetching regions:', error);
-    return [];
+    console.error('Error in getRegionsByCity:', error)
+    return []
   }
 }
 
-// Normalize Arabic text
+// Enhanced Arabic text normalization for superior matching capabilities
 function normalizeArabic(text: string): string {
-  if (!text) return '';
+  if (!text) return ''
   
-  return text
-    .replace(/[\u064B-\u0652]/g, '') // Remove diacritics
-    .replace(/[إأآ]/g, 'ا') // Normalize alef
-    .replace(/ة/g, 'ه') // Normalize teh marbuta
-    .replace(/ي/g, 'ي') // Normalize yeh
-    .replace(/\s+/g, ' ') // Normalize spaces
+  return text.toString().trim()
+    // Remove common prefixes and suffixes
+    .replace(/^(ال|محافظة|مدينة|قضاء|ناحية)\s+/g, '')
+    .replace(/\s+(محافظة|قضاء|ناحية)$/g, '')
+    // Enhanced Arabic letter normalization
+    .replace(/[أإآ]/g, 'ا')
+    .replace(/[ةه]/g, 'ه')
+    .replace(/[يى]/g, 'ي')
+    .replace(/[ؤ]/g, 'و')
+    .replace(/[ئ]/g, 'ي')
+    .replace(/[ء]/g, '')
+    // Handle diacritics completely
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, '')
+    // Remove extra spaces and punctuation
+    .replace(/[.,،؛:]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim()
-    .toLowerCase();
+    .toLowerCase()
 }
 
-// Calculate similarity between strings
+// Calculate string similarity for fuzzy matching
 function calculateSimilarity(str1: string, str2: string): number {
-  const norm1 = normalizeArabic(str1);
-  const norm2 = normalizeArabic(str2);
+  const longer = str1.length > str2.length ? str1 : str2
+  const shorter = str1.length > str2.length ? str2 : str1
   
-  if (norm1 === norm2) return 1.0;
-  if (norm1.includes(norm2) || norm2.includes(norm1)) return 0.9;
+  if (longer.length === 0) return 1.0
   
-  // Simple character-based similarity
-  const maxLen = Math.max(norm1.length, norm2.length);
-  if (maxLen === 0) return 1.0;
+  // Exact match
+  if (longer === shorter) return 1.0
   
-  let matches = 0;
-  const minLen = Math.min(norm1.length, norm2.length);
-  
-  for (let i = 0; i < minLen; i++) {
-    if (norm1[i] === norm2[i]) matches++;
+  // Contains check
+  if (longer.includes(shorter) || shorter.includes(longer)) {
+    return 0.8 + (shorter.length / longer.length) * 0.2
   }
   
-  return matches / maxLen;
+  // Levenshtein distance
+  const matrix = Array(longer.length + 1).fill(null).map(() => Array(shorter.length + 1).fill(null))
+  
+  for (let i = 0; i <= longer.length; i++) matrix[i][0] = i
+  for (let j = 0; j <= shorter.length; j++) matrix[0][j] = j
+  
+  for (let i = 1; i <= longer.length; i++) {
+    for (let j = 1; j <= shorter.length; j++) {
+      const cost = longer[i - 1] === shorter[j - 1] ? 0 : 1
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      )
+    }
+  }
+  
+  const distance = matrix[longer.length][shorter.length]
+  return 1.0 - (distance / longer.length)
 }
 
-// City name variations mapping
-const cityNameVariations: Record<string, string[]> = {
-  'بغداد': ['بغداد', 'Baghdad', 'baghdad'],
-  'البصرة': ['البصرة', 'بصرة', 'Basra', 'basra'],
-  'كربلاء': ['كربلاء', 'كربلا', 'Karbala', 'karbala'],
-  'النجف': ['النجف', 'نجف', 'Najaf', 'najaf'],
-  'أربيل': ['أربيل', 'اربيل', 'Erbil', 'erbil'],
-  'السليمانية': ['السليمانية', 'سليمانية', 'Sulaymaniyah', 'sulaymaniyah'],
-  'الموصل': ['الموصل', 'موصل', 'Mosul', 'mosul'],
-  'ديالى': ['ديالى', 'ديالا', 'Diyala', 'diyala'],
-  'الأنبار': ['الأنبار', 'انبار', 'الانبار', 'Anbar', 'anbar'],
-  'صلاح الدين': ['صلاح الدين', 'صلاح', 'Salah al-Din', 'salah'],
-  'كركوك': ['كركوك', 'Kirkuk', 'kirkuk'],
-  'نينوى': ['نينوى', 'نينوا', 'Nineveh', 'nineveh'],
-  'بابل': ['بابل', 'Babylon', 'babylon'],
-  'واسط': ['واسط', 'Wasit', 'wasit'],
-  'ذي قار': ['ذي قار', 'ذيقار', 'Dhi Qar', 'dhi qar'],
-  'المثنى': ['المثنى', 'مثنى', 'Al-Muthanna', 'muthanna'],
-  'القادسية': ['القادسية', 'قادسية', 'Al-Qadisiyyah', 'qadisiyyah'],
-  'ميسان': ['ميسان', 'Maysan', 'maysan']
-};
+// Fixed comprehensive city name variations with correct structure  
+const cityNameVariations: { [standardName: string]: string[] } = {
+  'الديوانية': ['ديوانية', 'الديوانية', 'ديوانيه', 'الديوانيه', 'القادسية', 'القادسيه', 'قادسية', 'qadisiyah', 'diwaniyah'],
+  'بغداد': ['بغداد', 'Baghdad', 'baghdad', 'بغدد', 'بقداد'],
+  'البصرة': ['البصره', 'بصرة', 'بصره', 'البصرة', 'basrah', 'basra'],
+  'اربيل': ['أربيل', 'اربيل', 'أربيل', 'اربل', 'Erbil', 'erbil', 'هولير'],
+  'دهوك': ['دهوك', 'دهك', 'Dohuk', 'dohuk', 'dahuk'],
+  'كربلاء': ['كربلاء', 'كربلا', 'كربله', 'Karbala', 'karbala'],
+  'النجف': ['النجف', 'نجف', 'نجاف', 'Najaf', 'najaf'],
+  'نينوى': ['نينوى', 'نينوا', 'الموصل', 'موصل', 'نينوه', 'Nineveh', 'nineveh', 'mosul'],
+  'صلاح الدين': ['صلاح الدين', 'صلاحدين', 'تكريت', 'تكرت', 'salahuddin', 'tikrit'],
+  'الأنبار': ['الأنبار', 'الانبار', 'انبار', 'أنبار', 'الرمادي', 'رمادي', 'anbar', 'ramadi'],
+  'بابل': ['بابل', 'الحلة', 'حلة', 'حله', 'babylon', 'hillah', 'hilla'],
+  'واسط': ['واسط', 'الكوت', 'كوت', 'كت', 'Wasit', 'wasit', 'kut'],
+  'ذي قار': ['ذي قار', 'ذيقار', 'الناصرية', 'ناصرية', 'ناصريه', 'thi qar', 'nasiriyah'],
+  'المثنى': ['المثنى', 'مثنى', 'السماوة', 'سماوة', 'سماوه', 'muthanna', 'samawah'],
+  'ميسان': ['ميسان', 'العمارة', 'عمارة', 'عماره', 'Maysan', 'maysan', 'amarah'],
+  'كركوك': ['كركوك', 'كركك', 'Kirkuk', 'kirkuk'],
+  'السليمانية': ['السليمانية', 'سليمانية', 'سليمانيه', 'Sulaymaniyah', 'sulaymaniyah'],
+  'حلبجة': ['حلبجة', 'حلبجه', 'halabja', 'halabcha']
+}
 
-// Find city by variation
+// Enhanced city finder with improved variation matching
 function findCityByVariation(searchTerm: string): string | null {
-  const normalized = normalizeArabic(searchTerm);
+  const normalizedSearch = normalizeArabic(searchTerm)
   
   for (const [standardName, variations] of Object.entries(cityNameVariations)) {
+    // Check if search matches standard name
+    if (normalizeArabic(standardName).includes(normalizedSearch) || 
+        normalizedSearch.includes(normalizeArabic(standardName))) {
+      return standardName
+    }
+    
+    // Check variations
     for (const variation of variations) {
-      if (normalizeArabic(variation) === normalized) {
-        return standardName;
+      const normalizedVariation = normalizeArabic(variation)
+      if (normalizedVariation === normalizedSearch || 
+          normalizedVariation.includes(normalizedSearch) ||
+          normalizedSearch.includes(normalizedVariation)) {
+        return standardName
       }
     }
   }
   
-  return null;
+  return null
 }
 
-// Create flexible search terms for products
+// Enhanced flexible product search that handles both ة and ه with detailed logging
 function createFlexibleSearchTerms(productName: string): string[] {
-  const terms = [productName];
-  const normalized = normalizeArabic(productName);
+  const normalized = normalizeArabic(productName)
+  const terms = [
+    productName,
+    normalized,
+    productName.replace(/ة/g, 'ه'),
+    productName.replace(/ه/g, 'ة'),
+    normalized.replace(/ة/g, 'ه'),
+    normalized.replace(/ه/g, 'ة')
+  ]
   
-  if (normalized !== productName) {
-    terms.push(normalized);
+  // Add partial matching for single words
+  const words = productName.split(/\s+/);
+  if (words.length === 1 && words[0].length >= 3) {
+    terms.push(words[0]);
+    terms.push(normalizeArabic(words[0]));
   }
   
-  // Add partial terms
-  const words = normalized.split(' ').filter(w => w.length > 2);
-  terms.push(...words);
-  
-  return [...new Set(terms)];
+  const uniqueTerms = [...new Set(terms)]
+  console.log(`🔍 Search terms for "${productName}":`, uniqueTerms)
+  return uniqueTerms
 }
 
-// Search for product with variants and inventory
-async function searchProductWithVariantsAndInventory(line: string, chatId: number, customerPhone?: string): Promise<{found: boolean, message?: string}> {
+// Smart city finder using cache system with fuzzy matching
+async function findCityByNameSmart(cityName: string): Promise<{ city: any | null, suggestions: any[], confidence: number }> {
   try {
-    console.log(`🔍 Searching for product in line: "${line}"`);
-    
-    const details = parseProductDetails(line);
-    console.log(`📋 Parsed details:`, details);
-    
-    if (!details.productName) {
-      return { found: false, message: '❌ لم يتم العثور على اسم المنتج' };
-    }
-    
-    const searchTerms = createFlexibleSearchTerms(details.productName);
-    console.log(`🔍 Search terms:`, searchTerms);
-    
-    let product = null;
-    let variant = null;
-    
-    // Search for product
-    for (const term of searchTerms) {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select(`
-          id, name, price, cost_price,
-          product_variants!inner(
-            id, color_id, size_id, price, cost_price, stock_quantity,
-            colors(name),
-            sizes(name)
-          )
-        `)
-        .ilike('name', `%${term}%`)
-        .limit(10);
-      
-      if (!error && products && products.length > 0) {
-        console.log(`✅ Found ${products.length} products for term: ${term}`);
-        
-        // Find best matching product and variant
-        for (const prod of products) {
-          const similarity = calculateSimilarity(prod.name, details.productName);
-          
-          if (similarity >= 0.6) {
-            product = prod;
-            
-            // Try to find matching variant
-            if (prod.product_variants && prod.product_variants.length > 0) {
-              let bestVariant = null;
-              let bestScore = 0;
-              
-              for (const v of prod.product_variants) {
-                let score = 0;
-                
-                // Check color match
-                if (details.color && v.colors?.name) {
-                  const colorSimilarity = calculateSimilarity(v.colors.name, details.color);
-                  if (colorSimilarity >= 0.7) score += 0.5;
-                }
-                
-                // Check size match
-                if (details.size && v.sizes?.name) {
-                  const sizeSimilarity = calculateSimilarity(v.sizes.name, details.size);
-                  if (sizeSimilarity >= 0.7) score += 0.5;
-                }
-                
-                if (score > bestScore) {
-                  bestScore = score;
-                  bestVariant = v;
-                }
-              }
-              
-              variant = bestVariant || prod.product_variants[0];
-            }
-            
-            break;
-          }
-        }
-        
-        if (product) break;
-      }
-    }
-    
-    if (!product) {
-      const phone = customerPhone || extractPhoneFromContext(chatId);
-      return { 
-        found: false, 
-        message: generateStockAlert(null, details, phone)
-      };
-    }
-    
-    // Check inventory
-    const { data: inventory, error: invError } = await supabase
-      .from('inventory')
-      .select('quantity, reserved_quantity')
-      .eq(variant ? 'variant_id' : 'product_id', variant?.id || product.id)
-      .single();
-    
-    const availableStock = inventory ? inventory.quantity - (inventory.reserved_quantity || 0) : 0;
-    
-    if (availableStock <= 0) {
-      const phone = customerPhone || extractPhoneFromContext(chatId);
-      return { 
-        found: false, 
-        message: generateStockAlert(product, details, phone, variant)
-      };
-    }
-    
-    console.log(`✅ Product found: ${product.name}, Stock: ${availableStock}`);
-    return { found: true };
-    
-  } catch (error) {
-    console.error('❌ Error searching for product:', error);
-    return { found: false, message: '❌ خطأ في البحث عن المنتج' };
-  }
-}
-
-// Parse product details from text
-function parseProductDetails(text: string): {productName: string, color?: string, size?: string} {
-  const normalized = normalizeArabic(text);
-  const words = normalized.split(' ').filter(w => w.trim().length > 0);
-  
-  // Common colors in Arabic
-  const colors = ['أحمر', 'أزرق', 'أخضر', 'أصفر', 'أسود', 'أبيض', 'وردي', 'بنفسجي', 'برتقالي', 'بني', 'رمادي', 'ذهبي', 'فضي'];
-  
-  // Common sizes
-  const sizes = ['صغير', 'متوسط', 'كبير', 'اكس لارج', 'لارج', 'ميديوم', 'سمول', 'xl', 'l', 'm', 's', 'xxl'];
-  
-  let foundColor = '';
-  let foundSize = '';
-  let productWords: string[] = [];
-  
-  for (const word of words) {
-    let isColorOrSize = false;
-    
-    // Check for color
-    for (const color of colors) {
-      if (calculateSimilarity(word, color) >= 0.8) {
-        foundColor = color;
-        isColorOrSize = true;
-        break;
-      }
-    }
-    
-    // Check for size
-    if (!isColorOrSize) {
-      for (const size of sizes) {
-        if (calculateSimilarity(word, size) >= 0.8) {
-          foundSize = size;
-          isColorOrSize = true;
-          break;
-        }
-      }
-    }
-    
-    if (!isColorOrSize) {
-      productWords.push(word);
-    }
-  }
-  
-  return {
-    productName: productWords.join(' '),
-    color: foundColor || undefined,
-    size: foundSize || undefined
-  };
-}
-
-// Extract phone from context
-function extractPhoneFromContext(chatId: number): string {
-  // Simple fallback for now
-  return `07${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`;
-}
-
-// Generate stock alert
-function generateStockAlert(product: any, details: any, phone: string, variant?: any): string {
-  const productInfo = product ? 
-    `المنتج: ${product.name}${variant?.colors?.name ? ` - ${variant.colors.name}` : ''}${variant?.sizes?.name ? ` - ${variant.sizes.name}` : ''}` :
-    `المنتج المطلوب: ${details.productName}${details.color ? ` - ${details.color}` : ''}${details.size ? ` - ${details.size}` : ''}`;
-  
-  return `🚨 تنبيه نفاد المخزون
-
-${productInfo}
-
-📱 رقم العميل: ${phone}
-⏰ وقت الطلب: ${new Date().toLocaleString('ar-EG')}
-
-❌ هذا المنتج غير متوفر حالياً في المخزون
-
-🔄 يرجى التحقق من البدائل المتاحة أو انتظار وصول دفعة جديدة`;
-}
-
-// Smart city finder
-async function findCityByNameSmart(cityName: string) {
-  try {
-    // Try RPC function first
-    const { data, error } = await supabase.rpc('find_city_in_cache', {
+    // Use the smart cache system for primary search
+    const { data: cityMatches, error } = await supabase.rpc('find_city_in_cache', {
       p_city_text: cityName
-    });
+    })
     
-    if (!error && data && data.length > 0) {
-      return data[0];
+    if (!error && cityMatches && cityMatches.length > 0) {
+      const bestMatch = cityMatches[0]
+      if (bestMatch.similarity_score >= 0.7) {
+        console.log(`🏙️ وجدت مدينة ذكية: ${bestMatch.name} (${bestMatch.similarity_score})`)
+        return { 
+          city: { id: bestMatch.alwaseet_id, name: bestMatch.name, original_id: bestMatch.alwaseet_id }, 
+          suggestions: [], 
+          confidence: bestMatch.similarity_score 
+        }
+      }
     }
     
     // Fallback to local cache
-    const cities = await getCitiesFromCache();
-    let bestMatch = null;
-    let bestScore = 0;
+    const cities = await getCitiesFromCache()
+    const normalizedName = normalizeArabic(cityName)
     
+    if (!cities.length) {
+      return { city: null, suggestions: [], confidence: 0 }
+    }
+    
+    let bestCity = null
+    let bestScore = 0
+    const allMatches = []
+    
+    // Direct and variation matching with scoring
     for (const city of cities) {
-      const score = calculateSimilarity(city.name, cityName);
-      if (score > bestScore && score >= 0.7) {
-        bestScore = score;
-        bestMatch = city;
+      const cityNormalized = normalizeArabic(city.name)
+      let score = calculateSimilarity(normalizedName, cityNormalized)
+      
+      // Check variations with improved logic
+      const foundCity = findCityByVariation(cityName)
+      if (foundCity) {
+        const standardNormalized = normalizeArabic(foundCity)
+        if (cityNormalized.includes(standardNormalized) || standardNormalized.includes(cityNormalized)) {
+          score = Math.max(score, 0.95)
+        }
+      }
+      
+      if (score >= 0.7) {
+        allMatches.push({ city, score })
+        if (score > bestScore) {
+          bestScore = score
+          bestCity = city
+        }
+      } else if (score >= 0.5) {
+        // Lower confidence suggestions
+        allMatches.push({ city, score })
       }
     }
     
-    return bestMatch;
+    if (bestCity && bestScore >= 0.7) {
+      console.log(`✅ عثر على مدينة: ${cityName} → ${bestCity.name} (${bestScore.toFixed(2)})`)
+      return { city: bestCity, suggestions: [], confidence: bestScore }
+    }
+    
+    // Return suggestions if no good match
+    const suggestions = allMatches
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(m => m.city)
+    
+    return { city: null, suggestions, confidence: bestScore }
+    
   } catch (error) {
-    console.error('Error in smart city search:', error);
-    return null;
+    console.error('خطأ في البحث الذكي عن المدينة:', error)
+    return { city: null, suggestions: [], confidence: 0 }
   }
 }
 
-// Parse address with smart matching
-async function parseAddressWithSmartMatching(addressText: string) {
-  const words = addressText.split(/\s+/).filter(w => w.trim().length > 0);
-  let cityMatch = null;
-  let regionMatch = null;
-  let usedIndices = new Set();
+// Comprehensive neighborhood to city mapping for smart default city detection
+const neighborhoodToCityMap: { [key: string]: string } = {
+  // بغداد - شامل جميع الأحياء الرئيسية
+  'الاعظمية': 'بغداد', 'اعظمية': 'بغداد',
+  'الكرادة': 'بغداد', 'كرادة': 'بغداد', 'كراده': 'بغداد',
+  'الدورة': 'بغداد', 'دورة': 'بغداد', 'دوره': 'بغداد',
+  'المنصور': 'بغداد', 'منصور': 'بغداد',
+  'الكاظمية': 'بغداد', 'كاظمية': 'بغداد', 'كاظميه': 'بغداد',
+  'الشعلة': 'بغداد', 'شعلة': 'بغداد', 'شعله': 'بغداد',
+  'الجهاد': 'بغداد', 'جهاد': 'بغداد', 'حي الجهاد': 'بغداد',
+  'البياع': 'بغداد', 'بياع': 'بغداد',
+  'الغدير': 'بغداد', 'غدير': 'بغداد',
+  'الزعفرانية': 'بغداد', 'زعفرانية': 'بغداد', 'زعفرانيه': 'بغداد',
+  'النهروان': 'بغداد', 'نهروان': 'بغداد',
+  'ابو غريب': 'بغداد', 'أبو غريب': 'بغداد',
+  'التاجي': 'بغداد', 'تاجي': 'بغداد',
+  'الحرية': 'بغداد', 'حرية': 'بغداد', 'حريه': 'بغداد',
+  'الرسالة': 'بغداد', 'رسالة': 'بغداد', 'رساله': 'بغداد',
+  'الشعب': 'بغداد', 'شعب': 'بغداد',
+  'الصدر': 'بغداد', 'صدر': 'بغداد', 'مدينة الصدر': 'بغداد',
+  'الثورة': 'بغداد', 'ثورة': 'بغداد', 'ثوره': 'بغداد',
+  'المسبح': 'بغداد', 'مسبح': 'بغداد',
+  'الكفاح': 'بغداد', 'كفاح': 'بغداد',
+  'الجامعة': 'بغداد', 'جامعة': 'بغداد', 'جامعه': 'بغداد', 'حي الجامعة': 'بغداد',
+  'العامرية': 'بغداد', 'عامرية': 'بغداد', 'عامريه': 'بغداد',
+  'الدولعي': 'بغداد', 'دولعي': 'بغداد',
+  'الجزائر': 'بغداد', 'جزائر': 'بغداد',
+  'البيجية': 'بغداد', 'بيجية': 'بغداد', 'بيجيه': 'بغداد',
+  'المشتل': 'بغداد', 'مشتل': 'بغداد',
+  'الشلجية': 'بغداد', 'شلجية': 'بغداد', 'شلجيه': 'بغداد',
+  'الكاتب': 'بغداد', 'كاتب': 'بغداد',
+  'البلديات': 'بغداد', 'بلديات': 'بغداد',
+  'الجادرية': 'بغداد', 'جادرية': 'بغداد', 'جادريه': 'بغداد',
+  'الزوراء': 'بغداد', 'زوراء': 'بغداد',
+  'الاندلس': 'بغداد', 'اندلس': 'بغداد', 'أندلس': 'بغداد',
+  'العدل': 'بغداد', 'عدل': 'بغداد', 'حي العدل': 'بغداد',
+  'الصالحية': 'بغداد', 'صالحية': 'بغداد', 'صالحيه': 'بغداد',
+  'الكريمات': 'بغداد', 'كريمات': 'بغداد',
+  'الرصافة': 'بغداد', 'رصافة': 'بغداد', 'رصافه': 'بغداد',
+  'الكرخ': 'بغداد', 'كرخ': 'بغداد',
+  'الأطباء': 'بغداد', 'اطباء': 'بغداد', 'أطباء': 'بغداد', 'حي الأطباء': 'بغداد',
   
-  // Try to find city
-  for (let i = 0; i < words.length; i++) {
-    if (usedIndices.has(i)) continue;
-    
+  // البصرة
+  'العشار': 'البصرة', 'عشار': 'البصرة',
+  'المعقل': 'البصرة', 'معقل': 'البصرة',
+  'التنومة': 'البصرة', 'تنومة': 'البصرة', 'تنومه': 'البصرة',
+  'الأسماك': 'البصرة', 'اسماك': 'البصرة', 'أسماك': 'البصرة',
+  'الفيحاء': 'البصرة', 'فيحاء': 'البصرة',
+  'كرمة علي': 'البصرة', 'كرمه علي': 'البصرة',
+  'الجمهورية': 'البصرة', 'جمهورية': 'البصرة', 'جمهوريه': 'البصرة',
+  
+  // أربيل
+  'عنكاوا': 'اربيل', 'عنكاوه': 'اربيل',
+  'شورش': 'اربيل',
+  'باختياري': 'اربيل',
+  'قلاوري': 'اربيل',
+  
+  // كربلاء
+  'الحر': 'كربلاء', 'حر': 'كربلاء',
+  'الجديدة': 'كربلاء', 'جديدة': 'كربلاء', 'جديده': 'كربلاء',
+  
+  // النجف
+  'الكوفة': 'النجف', 'كوفة': 'النجف', 'كوفه': 'النجف',
+  'الحيدرية': 'النجف', 'حيدرية': 'النجف', 'حيدريه': 'النجف',
+  
+  // الديوانية
+  'غماس': 'الديوانية',
+  'الدغارة': 'الديوانية', 'دغارة': 'الديوانية',
+  'الشافعية': 'الديوانية', 'شافعية': 'الديوانية', 'شافعيه': 'الديوانية',
+  'عفك': 'الديوانية',
+  'الحمزة': 'الديوانية', 'حمزة': 'الديوانية', 'حمزه': 'الديوانية'
+}
+
+// Find regions by partial name with disambiguation
+async function findRegionsByName(cityId: number, regionText: string): Promise<any[]> {
+  if (!regionText || !cityId) return []
+  
+  const regions = await getRegionsByCity(cityId)
+  const normalizedText = normalizeArabic(regionText)
+  
+  // Find all matching regions
+  const matchingRegions = regions.filter(region => {
+    const normalizedRegion = normalizeArabic(region.name)
+    return normalizedRegion.includes(normalizedText) || 
+           normalizedText.includes(normalizedRegion)
+  })
+  
+  return matchingRegions
+}
+
+// Integrated smart cache address parsing (self-contained)
+async function parseAddressWithCacheSmart(addressText: string): Promise<{
+  customer_name?: string;
+  city_id?: number;
+  city_name?: string;
+  region_id?: number;
+  region_name?: string;
+  remaining_text: string;
+}> {
+  console.log(`🔍 تحليل العنوان بالذكاء الاصطناعي: "${addressText}"`);
+  
+  // Clean and normalize text
+  const cleanedText = addressText
+    .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\u0621-\u064A\u0660-\u0669a-zA-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  console.log(`🧹 النص المنظف: "${cleanedText}"`);
+
+  // Extract customer name (simple pattern)
+  const words = cleanedText.split(/\s+/);
+  let customerName: string | undefined;
+  let textWithoutName = cleanedText;
+  
+  // Simple name extraction - first Arabic word
+  const namePattern = /^([\u0621-\u064A]{2,})/;
+  const nameMatch = cleanedText.match(namePattern);
+  if (nameMatch && nameMatch[1].length >= 3) {
+    customerName = nameMatch[1];
+    textWithoutName = words.slice(1).join(' ');
+    console.log(`👤 اسم الزبون: ${customerName}`);
+  }
+
+  const remainingWords = textWithoutName.split(/\s+/).filter(word => word.length > 1);
+  
+  let cityMatch: any = null;
+  let regionMatch: any = null;
+  let usedWordIndices: Set<number> = new Set();
+
+  // Search for city using cache system
+  for (let i = 0; i < remainingWords.length; i++) {
+    if (usedWordIndices.has(i)) continue;
+
     // Try single word
-    let city = await findCityByNameSmart(words[i]);
-    if (city) {
-      cityMatch = city;
-      usedIndices.add(i);
-      break;
+    try {
+      const { data, error } = await supabase.rpc('find_city_in_cache', {
+        p_city_text: remainingWords[i]
+      });
+      
+      if (!error && data && data.length > 0) {
+        const bestMatch = data[0];
+        if (bestMatch.similarity_score >= 0.7) {
+          cityMatch = bestMatch;
+          usedWordIndices.add(i);
+          console.log(`✅ وجدت مدينة بكلمة واحدة: ${cityMatch.name}`);
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('خطأ في البحث عن المدينة:', e);
     }
-    
+
     // Try two words
-    if (i < words.length - 1) {
-      city = await findCityByNameSmart(`${words[i]} ${words[i + 1]}`);
-      if (city) {
-        cityMatch = city;
-        usedIndices.add(i);
-        usedIndices.add(i + 1);
-        break;
+    if (i < remainingWords.length - 1) {
+      const twoWords = `${remainingWords[i]} ${remainingWords[i + 1]}`;
+      try {
+        const { data, error } = await supabase.rpc('find_city_in_cache', {
+          p_city_text: twoWords
+        });
+        
+        if (!error && data && data.length > 0) {
+          const bestMatch = data[0];
+          if (bestMatch.similarity_score >= 0.7) {
+            cityMatch = bestMatch;
+            usedWordIndices.add(i);
+            usedWordIndices.add(i + 1);
+            console.log(`✅ وجدت مدينة بكلمتين: ${cityMatch.name}`);
+            break;
+          }
+        }
+      } catch (e) {
+        console.error('خطأ في البحث عن المدينة:', e);
       }
     }
   }
-  
-  // Try to find region if city found
+
+  // Search for region if city found
   if (cityMatch) {
-    const regions = await getRegionsByCity(cityMatch.alwaseet_id);
-    const remainingWords = words.filter((_, index) => !usedIndices.has(index));
+    const remainingWordsFiltered = remainingWords.filter((_, index) => !usedWordIndices.has(index));
     
-    for (const regionCandidate of remainingWords) {
-      for (const region of regions) {
-        if (calculateSimilarity(region.name, regionCandidate) >= 0.7) {
-          regionMatch = region;
-          usedIndices.add(words.indexOf(regionCandidate));
-          break;
+    for (let i = 0; i < remainingWordsFiltered.length; i++) {
+      // Try different combinations
+      for (let wordCount = Math.min(3, remainingWordsFiltered.length - i); wordCount >= 1; wordCount--) {
+        const regionCandidate = remainingWordsFiltered.slice(i, i + wordCount).join(' ');
+        
+        try {
+          const { data, error } = await supabase.rpc('find_region_in_cache', {
+            p_city_id: cityMatch.alwaseet_id,
+            p_region_text: regionCandidate
+          });
+          
+          if (!error && data && data.length > 0) {
+            const bestMatch = data[0];
+            if (bestMatch.similarity_score >= 0.7) {
+              regionMatch = bestMatch;
+              // Mark used indices
+              for (let j = 0; j < wordCount; j++) {
+                const originalIndex = remainingWords.indexOf(remainingWordsFiltered[i + j]);
+                if (originalIndex !== -1) usedWordIndices.add(originalIndex);
+              }
+              console.log(`✅ وجدت منطقة: ${regionMatch.name}`);
+              break;
+            }
+          }
+        } catch (e) {
+          console.error('خطأ في البحث عن المنطقة:', e);
         }
       }
       if (regionMatch) break;
     }
   }
-  
-  const remainingText = words
-    .filter((_, index) => !usedIndices.has(index))
-    .join(' ')
-    .trim();
-  
-  return {
-    city: cityMatch,
-    region: regionMatch,
-    address: remainingText,
-    originalText: addressText
+
+  // Calculate remaining text
+  const finalRemainingWords = remainingWords.filter((_, index) => !usedWordIndices.has(index));
+  const remainingText = finalRemainingWords.join(' ').trim();
+
+  const result = {
+    customer_name: customerName,
+    city_id: cityMatch?.alwaseet_id,
+    city_name: cityMatch?.name,
+    region_id: regionMatch?.alwaseet_id,
+    region_name: regionMatch?.name,
+    remaining_text: remainingText || textWithoutName
   };
+
+  console.log('🎯 نتيجة التحليل:', {
+    customer_name: result.customer_name,
+    city: result.city_name,
+    region: result.region_name,
+    remaining: result.remaining_text
+  });
+
+  return result;
 }
-
-// Get employee by Telegram chat ID
-async function getEmployeeByTelegramId(chatId: number) {
-  try {
-    console.log(`🔍 Looking for employee with chat ID: ${chatId}`);
-    
-    // Try using new RPC function
-    const { data: rpcData, error: rpcError } = await supabase.rpc('get_employee_by_telegram_chat_id', {
-      p_chat_id: chatId
-    });
-    
-    if (!rpcError && rpcData?.success) {
-      console.log(`📋 Employee RPC response:`, JSON.stringify(rpcData, null, 2));
-      return rpcData.employee;
+// Enhanced smart address parsing using integrated cache system
+async function parseAddressLineSmart(addressText: string): Promise<{
+  customerName?: string,
+  city: any | null,
+  region: any | null,
+  remainingText: string,
+  isDefaultCity: boolean,
+  errors: string[],
+  suggestions: { cities?: any[], regions?: any[] }
+}> {
+  console.log(`🧠 تحليل ذكي للعنوان: "${addressText}"`)
+  
+  if (!addressText || addressText.trim().length === 0) {
+    return { 
+      city: null, region: null, remainingText: '', isDefaultCity: false, 
+      errors: ['لا يوجد نص عنوان صالح'], suggestions: {} 
     }
-    
-    // Fallback to direct query if RPC fails
-    const { data, error } = await supabase
-      .from('employee_telegram_codes')
-      .select(`
-        user_id,
-        telegram_code,
-        telegram_chat_id,
-        is_active,
-        linked_at
-      `)
-      .eq('telegram_chat_id', chatId)
-      .eq('is_active', true)
-      .single();
-
-    if (error) {
-      console.error('❌ Error fetching employee:', error);
-      return null;
-    }
-
-    if (data) {
-      console.log(`👤 Employee found via direct query:`, data);
-      return {
-        user_id: data.user_id,
-        employee_code: data.telegram_code,
-        telegram_chat_id: data.telegram_chat_id,
-        is_active: data.is_active,
-        full_name: 'موظف' // Default name for direct query
-      };
-    }
-
-    return null;
-  } catch (error) {
-    console.error('❌ Exception in getEmployeeByTelegramId:', error);
-    return null;
   }
-}
-
-// Link employee code to telegram chat ID
-async function linkEmployeeCode(employeeCode: string, chatId: number) {
+  
+  const errors: string[] = []
+  let isDefaultCity = false
+  let city = null
+  let region = null
+  let customerName = ''
+  let suggestions: { cities?: any[], regions?: any[] } = {}
+  
   try {
-    console.log(`🔗 Attempting to link employee code ${employeeCode} to chat ID ${chatId}`);
+    // Use the integrated smart cache system
+    const cacheResult = await parseAddressWithCacheSmart(addressText)
+    console.log('🎯 نتيجة Cache الذكية:', cacheResult)
     
-    const { data, error } = await supabase.rpc('link_employee_telegram_code', {
-      p_employee_code: employeeCode,
-      p_chat_id: chatId
-    });
-
-    if (error) {
-      console.error('❌ Error linking employee code:', error);
-      return { success: false, message: 'حدث خطأ في ربط الكود' };
-    }
-
-    console.log(`✅ Link employee response:`, JSON.stringify(data, null, 2));
-    return data;
-  } catch (error) {
-    console.error('❌ Exception linking employee code:', error);
-    return { success: false, message: 'حدث خطأ في ربط الكود' };
-  }
-}
-
-// Process order with AlWaseet
-async function processOrderWithAlWaseet(text: string, chatId: number, employee: any) {
-  try {
-    console.log('📋 Processing order text...');
+    customerName = cacheResult.customer_name || ''
     
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
-    if (lines.length < 3) {
-      await sendTelegramMessage(chatId, `❌ تنسيق الطلب غير صحيح
-
-📋 التنسيق الصحيح:
-المدينة
-رقم الهاتف  
-اسم المنتج + اللون + المقاس
-
-مثال:
-بغداد
-07700000000
-قميص أزرق لارج`);
-      return false;
-    }
-    
-    // Parse basic info
-    const cityText = lines[0];
-    const phoneText = lines[1];
-    const productLines = lines.slice(2);
-    
-    // Validate phone
-    const phoneRegex = /^(07\d{9}|01\d{9}|\+9647\d{8})$/;
-    if (!phoneRegex.test(phoneText.replace(/\s/g, ''))) {
-      await sendTelegramMessage(chatId, `❌ رقم الهاتف غير صحيح: ${phoneText}
-
-📱 الأرقام المقبولة:
-• 07xxxxxxxxx
-• 01xxxxxxxxx  
-• +9647xxxxxxxx`);
-      return false;
-    }
-    
-    // Find city
-    const city = await findCityByNameSmart(cityText);
-    if (!city) {
-      await sendTelegramMessage(chatId, `❌ لم يتم العثور على المدينة: ${cityText}
-
-🏙️ المدن المتاحة: بغداد، البصرة، كربلاء، النجف، أربيل، الموصل...`);
-      return false;
-    }
-    
-    // Check products
-    const productResults = [];
-    for (const productLine of productLines) {
-      const result = await searchProductWithVariantsAndInventory(productLine, chatId, phoneText);
-      if (!result.found) {
-        await sendTelegramMessage(chatId, result.message || '❌ منتج غير متوفر');
-        return false;
+    if (cacheResult.city_id && cacheResult.city_name) {
+      city = { 
+        id: cacheResult.city_id, 
+        name: cacheResult.city_name, 
+        original_id: cacheResult.city_id 
       }
-      productResults.push(productLine);
+      console.log(`✅ مدينة من Cache: ${city.name}`)
     }
     
-    // All products available - simulate order creation
-    const orderSummary = `✅ تم إنشاء الطلب بنجاح!
+    if (cacheResult.region_id && cacheResult.region_name) {
+      region = {
+        id: cacheResult.region_id,
+        name: cacheResult.region_name,
+        original_id: cacheResult.region_id
+      }
+      console.log(`✅ منطقة من Cache: ${region.name}`)
+    }
+    
+    // If no city found via cache, try smart fallback
+    if (!city) {
+      const addressParts = addressText.split(/[\s،,]+/).filter(Boolean)
+      console.log('🔍 أجزاء العنوان:', addressParts)
+      
+      // Check for neighborhoods to determine default city
+      for (const part of addressParts) {
+        const normalizedPart = normalizeArabic(part)
+        
+        for (const [neighborhood, cityName] of Object.entries(neighborhoodToCityMap)) {
+          const normalizedNeighborhood = normalizeArabic(neighborhood)
+          
+          if (normalizedPart.includes(normalizedNeighborhood) || 
+              normalizedNeighborhood.includes(normalizedPart) ||
+              calculateSimilarity(normalizedPart, normalizedNeighborhood) >= 0.8) {
+            
+            console.log(`🏘️ اكتشف حي: "${neighborhood}" → مدينة: ${cityName}`)
+            
+            const defaultCityResult = await findCityByNameSmart(cityName)
+            if (defaultCityResult.city) {
+              city = defaultCityResult.city
+              isDefaultCity = true
+              console.log(`✅ استخدام مدينة افتراضية: ${city.name}`)
+              break
+            }
+          }
+        }
+        if (city) break
+      }
+      
+      // If still no city, try to find from first part
+      if (!city && addressParts.length > 0) {
+        const firstPartResult = await findCityByNameSmart(addressParts[0])
+        
+        if (firstPartResult.city && firstPartResult.confidence >= 0.7) {
+          city = firstPartResult.city
+          console.log(`✅ مدينة من الجزء الأول: ${city.name}`)
+        } else if (firstPartResult.suggestions.length > 0) {
+          suggestions.cities = firstPartResult.suggestions
+          errors.push(`المدينة "${addressParts[0]}" غير واضحة. هل تقصد إحدى هذه المدن؟`)
+        }
+      }
+      
+      // Ultimate fallback to Baghdad if region detected but no city
+      if (!city && addressParts.length > 0) {
+        const baghdadResult = await findCityByNameSmart('بغداد')
+        if (baghdadResult.city) {
+          city = baghdadResult.city
+          isDefaultCity = true
+          console.log(`🏙️ استخدام بغداد كافتراضي نهائي`)
+        }
+      }
+    }
+    
+    // If no region found via cache, try manual search
+    if (city && !region) {
+      const addressParts = addressText.split(/[\s،,]+/).filter(Boolean)
+      const startIndex = isDefaultCity ? 0 : 1 // Skip city name if not default
+      
+      for (let i = startIndex; i < addressParts.length; i++) {
+        for (let j = i; j < Math.min(i + 3, addressParts.length); j++) {
+          const regionCandidate = addressParts.slice(i, j + 1).join(' ')
+          
+          try {
+            const { data: regionMatches, error } = await supabase.rpc('find_region_in_cache', {
+              p_city_id: city.id,
+              p_region_text: regionCandidate
+            })
+            
+            if (!error && regionMatches && regionMatches.length > 0) {
+              const bestMatch = regionMatches[0]
+              if (bestMatch.similarity_score >= 0.7) {
+                region = {
+                  id: bestMatch.alwaseet_id,
+                  name: bestMatch.name,
+                  original_id: bestMatch.alwaseet_id
+                }
+                console.log(`✅ منطقة من البحث اليدوي: ${region.name}`)
+                break
+              }
+            }
+          } catch (e) {
+            console.error('خطأ في البحث عن المنطقة:', e)
+          }
+        }
+        if (region) break
+      }
+      
+      if (!region && addressParts.length > (isDefaultCity ? 1 : 2)) {
+        const regionText = addressParts.slice(isDefaultCity ? 1 : 1).join(' ')
+        errors.push(`لم يتم العثور على منطقة "${regionText}" في مدينة ${city.name}`)
+      }
+    }
+    
+    return {
+      customerName: customerName || undefined,
+      city,
+      region,
+      remainingText: cacheResult.remaining_text || '',
+      isDefaultCity,
+      errors,
+      suggestions
+    }
+    
+  } catch (error) {
+    console.error('❌ خطأ في التحليل الذكي:', error)
+    errors.push('حدث خطأ في تحليل العنوان')
+    
+    return {
+      city: null, region: null, remainingText: addressText, 
+      isDefaultCity: false, errors, suggestions: {}
+    }
+  }
+}
 
-👤 بيانات العميل:
-🏙️ المدينة: ${city.name}
-📱 الهاتف: ${phoneText}
+// Send comprehensive error message with smart suggestions
+async function sendEnhancedErrorMessage(
+  chatId: number, 
+  originalText: string, 
+  errors: string[], 
+  suggestions: { cities?: any[], regions?: any[] },
+  detectedData?: { city?: any, region?: any, isDefaultCity?: boolean }
+): Promise<void> {
+  let message = `❌ تحليل الطلب:\n\n`
+  
+  // Show what was detected successfully
+  if (detectedData?.city) {
+    message += `✅ المدينة: ${detectedData.city.name}`
+    if (detectedData.isDefaultCity) {
+      message += ` (تم اختيارها تلقائياً)`
+    }
+    message += `\n`
+  }
+  
+  if (detectedData?.region) {
+    message += `✅ المنطقة: ${detectedData.region.name}\n`
+  }
+  
+  // Show errors
+  if (errors.length > 0) {
+    message += `\n⚠️ مشاكل في الطلب:\n`
+    errors.forEach((error, index) => {
+      message += `${index + 1}. ${error}\n`
+    })
+  }
+  
+  // Show city suggestions
+  if (suggestions.cities && suggestions.cities.length > 0) {
+    message += `\n🏙️ هل تقصد إحدى هذه المدن؟\n`
+    suggestions.cities.slice(0, 5).forEach((city, index) => {
+      message += `${index + 1}. ${city.name}\n`
+    })
+  }
+  
+  // Show region suggestions  
+  if (suggestions.regions && suggestions.regions.length > 0) {
+    message += `\n🏘️ مناطق مقترحة:\n`
+    suggestions.regions.slice(0, 5).forEach((region, index) => {
+      message += `${index + 1}. ${region.name}\n`
+    })
+  }
+  
+  message += `\n📝 النص الأصلي:\n${originalText}\n\n`
+  
+  message += `❗ يرجى إصلاح الأخطاء وإعادة الإرسال!\n\n`
+  
+  message += `🔧 تنسيق الطلب الصحيح:\n`
+  message += `اسم الزبون\n`
+  message += `رقم الهاتف (07xxxxxxxxx)\n`
+  message += `المدينة المنطقة (أو المنطقة فقط لبغداد)\n`
+  message += `اسم المنتج اللون المقاس\n\n`
+  
+  message += `✨ أمثلة صحيحة:\n\n`
+  message += `📝 مثال 1:\n`
+  message += `أحمد علي\n`
+  message += `07701234567\n`
+  if (detectedData?.city && detectedData.city.name !== 'بغداد') {
+    message += `${detectedData.city.name} `
+    message += detectedData.region ? detectedData.region.name : 'اسم المنطقة'
+  } else {
+    message += `ديوانية غماس`
+  }
+  message += `\nبرشلونة أزرق XL\n\n`
+  
+  message += `📝 مثال 2 (بغداد):\n`
+  message += `سارة محمد\n`
+  message += `07801234567\n`
+  message += `اعظمية\n`
+  message += `ريال مدريد أبيض لارج`
+  
+  console.log('🚨 إرسال رسالة خطأ محسنة:', message)
+  await sendTelegramMessage(chatId, message)
+}
+
+// Send region selection menu
+async function sendRegionSelectionMenu(chatId: number, cityName: string, regions: any[], originalText: string): Promise<boolean> {
+  let message = `🏙️ المدينة: ${cityName}\n\n`
+  message += `🔍 وجدت عدة مناطق مشابهة:\n\n`
+  
+  regions.forEach((region, index) => {
+    message += `${index + 1}) ${region.name}\n`
+  })
+  
+  message += `\n📝 اكتب: المنطقة: [اسم المنطقة الصحيح]\n`
+  message += `مثال: المنطقة: ${regions[0].name}\n\n`
+  message += `📋 النص الأصلي: ${originalText}`
+  
+  await sendTelegramMessage(chatId, message)
+  return true
+}
+
+// Store pending order for region selection
+const pendingOrders = new Map()
+
+// Process region selection response
+async function processRegionSelection(text: string, chatId: number): Promise<boolean> {
+  const regionMatch = text.match(/المنطقة:\s*(.+)/i)
+  if (!regionMatch) return false
+  
+  const selectedRegionName = regionMatch[1].trim()
+  const pendingOrder = pendingOrders.get(chatId)
+  
+  if (!pendingOrder) {
+    await sendTelegramMessage(chatId, '❌ لا يوجد طلب في انتظار اختيار المنطقة')
+    return false
+  }
+  
+  // Find the selected region
+  const selectedRegion = pendingOrder.regions.find((r: any) => 
+    normalizeArabic(r.name) === normalizeArabic(selectedRegionName) ||
+    normalizeArabic(r.name).includes(normalizeArabic(selectedRegionName))
+  )
+  
+  if (!selectedRegion) {
+    await sendTelegramMessage(chatId, `❌ المنطقة "${selectedRegionName}" غير موجودة في القائمة. يرجى اختيار من القائمة المعروضة.`)
+    return false
+  }
+  
+  // Update pending order with selected region
+  pendingOrder.customerRegion = selectedRegion
+  pendingOrder.customerAddress = pendingOrder.remainingText || pendingOrder.customerAddress
+  
+  // Clear pending order and process
+  pendingOrders.delete(chatId)
+  
+  // Continue with order processing
+  return await completeOrderProcessing(pendingOrder, chatId)
+}
+
+// Complete order processing after region selection
+async function completeOrderProcessing(orderData: any, chatId: number): Promise<boolean> {
+  try {
+    const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+      p_telegram_chat_id: chatId 
+    })
+    const employee = employeeData.data?.[0]
+    
+    if (!employee) return false
+    
+    // Get delivery fee
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_fee')
+      .single()
+    
+    const defaultDeliveryFee = Number(settingsData?.value) || 5000
+    
+    // Calculate total
+    const totalPrice = orderData.items.reduce((sum: number, item: any) => 
+      sum + (item.price * item.quantity), 0)
+    
+    // Create order confirmation message
+    const employeeInfo = employee ? 
+      `${employee.full_name} (${employee.role}) - ${employee.employee_code}` : 
+      `@${employee.employee_code}`
+      
+    const orderSummary = `
+🔹 تأكيد الطلب الجديد 🔹
+
+👤 العميل: ${orderData.customerName}
+📱 الهاتف: ${orderData.customerPhone}${orderData.customerSecondaryPhone ? `\n📱 الهاتف الثاني: ${orderData.customerSecondaryPhone}` : ''}
+🏙️ المدينة: ${orderData.customerCity?.name || 'غير محدد'}
+📍 المنطقة: ${orderData.customerRegion?.name || 'غير محدد'}
+🏠 العنوان: ${orderData.customerAddress || ''}
 
 📦 المنتجات:
-${productResults.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+${orderData.items.map((item: any) => `• ${item.name} - كمية: ${item.quantity} - سعر: ${item.price.toLocaleString()} د.ع`).join('\n')}
 
-👨‍💼 الموظف: ${employee.full_name} (${employee.employee_code})
-⏰ الوقت: ${new Date().toLocaleString('ar-EG')}
+💰 المجموع: ${totalPrice.toLocaleString()} د.ع
+🚚 رسوم التوصيل: ${defaultDeliveryFee.toLocaleString()} د.ع
+💳 المبلغ الإجمالي: ${(totalPrice + defaultDeliveryFee).toLocaleString()} د.ع
 
-🔄 جاري إرسال الطلب للنظام...`;
+📋 المعرف: #TG_${Date.now().toString().slice(-6)}
+👨‍💼 بواسطة: ${employeeInfo}
 
-    await sendTelegramMessage(chatId, orderSummary);
+✅ تم حفظ الطلب بنجاح في النظام
+⏳ في انتظار مراجعة الإدارة للموافقة والإرسال
+    `.trim()
     
-    // Here you would typically save the order to the database
-    console.log('✅ Order processed successfully');
-    return true;
+    // Save order to database
+    const orderId = await supabase.rpc('process_telegram_order', {
+      p_order_data: {
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        customer_secondary_phone: orderData.customerSecondaryPhone,
+        customer_address: orderData.customerAddress,
+        customer_city: orderData.customerCity?.name,
+        customer_region: orderData.customerRegion?.name,
+        items: orderData.items,
+        total_price: totalPrice,
+        delivery_fee: defaultDeliveryFee,
+        final_total: totalPrice + defaultDeliveryFee,
+        delivery_type: orderData.deliveryType,
+        order_notes: orderData.orderNotes,
+        telegram_chat_id: chatId,
+        processed_at: new Date().toISOString(),
+        original_text: `${orderData.customerName}\n${orderData.customerPhone}\n${orderData.items.map(i => i.name).join(', ')}`
+      },
+      p_employee_code: employee.employee_code,
+      p_chat_id: chatId
+    })
+    
+    if (orderId.error) {
+      console.error('Database error:', orderId.error)
+      await sendTelegramMessage(chatId, '❌ حدث خطأ في حفظ الطلب في النظام. يرجى المحاولة مرة أخرى.')
+      return false
+    }
+    
+    // Send confirmation
+    await sendTelegramMessage(chatId, orderSummary)
+    return true
     
   } catch (error) {
-    console.error('❌ Error processing order:', error);
-    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى.');
-    return false;
+    console.error('Error completing order:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى.')
+    return false
   }
 }
 
-// Send welcome message
-async function sendWelcomeMessage(chatId: number, employee: any) {
-  const welcomeText = `🤖 مرحباً ${employee.full_name}!
-
-أهلاً بك في بوت الطلبات المتطور 🚀
-
-📋 لإرسال طلب، استخدم التنسيق التالي:
-
-المدينة
-رقم الهاتف
-اسم المنتج + اللون + المقاس
-
-مثال:
-بغداد
-07700000000
-قميص أزرق لارج
-
-✨ المزايا الذكية:
-🔍 تعرف تلقائي على المنتجات والألوان والأحجام
-📊 فحص المخزون الفوري
-🚨 تنبيهات نفاد المخزون
-🎯 اقتراح البدائل المتاحة
-
-👨‍💼 الموظف: ${employee.employee_code}`;
-
-  await sendTelegramMessage(chatId, welcomeText);
+// Helper function to validate customer name
+function isValidCustomerName(name: string): boolean {
+  const trimmed = name.trim()
+  // رفض الأسماء الفارغة أو القصيرة جداً
+  if (!trimmed || trimmed.length < 2) return false
+  // رفض الأسماء التي تحتوي على أرقام فقط
+  if (/^\d+$/.test(trimmed)) return false
+  // رفض الأسماء التي تحتوي على رموز غير مناسبة فقط
+  if (/^[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+$/.test(trimmed)) return false
+  // رفض الأسماء التي تحتوي على أرقام هواتف
+  if (/07[5789]\d{8}/.test(trimmed)) return false
+  // رفض الأسماء التي تبدو مثل عناوين (تحتوي على مدن عراقية شائعة)
+  const addressWords = ['بغداد', 'البصرة', 'اربيل', 'دهوك', 'كربلاء', 'النجف', 'الانبار', 'نينوى', 'صلاح الدين', 'القادسية', 'بابل', 'واسط', 'ذي قار', 'المثنى', 'ميسان', 'الدورة', 'الكرادة', 'المنصور', 'الكاظمية', 'الاعظمية', 'الحلة', 'كركوك', 'تكريت', 'الرمادي', 'الفلوجة', 'الموصل', 'السماوة', 'الديوانية', 'العمارة', 'الناصرية']
+  const lowerName = trimmed.toLowerCase()
+  if (addressWords.some(word => lowerName.includes(word.toLowerCase()))) return false
+  // رفض الأسماء التي تحتوي على كلمات عناوين شائعة
+  if (/\b(شارع|حي|منطقة|قرب|مقابل|جانب|محلة|صحة|مستشفى|جامع|مدرسة|مول|سوق)\b/i.test(trimmed)) return false
+  return true
 }
 
-// Main handler
+// Enhanced order processing with improved error handling
+async function processOrderWithAlWaseet(text: string, chatId: number, employeeCode: string) {
+  try {
+    const lines = text.split('\n').filter(line => line.trim())
+    
+    let customerName = ''
+    let customerPhone = ''
+    let customerSecondaryPhone = ''
+    let customerAddress = ''
+    let customerCity = null
+    let customerRegion = null
+    let items = []
+    let totalPrice = 0
+    let hasCustomPrice = false
+    let deliveryType = 'توصيل'
+    let orderNotes = ''
+    let orderErrors: string[] = []
+    let isDefaultCity = false
+    
+    // Get default settings
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_fee')
+      .single()
+    
+    const defaultDeliveryFee = Number(settingsData?.value) || 5000
+    
+    // Get employee info
+    const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+      p_telegram_chat_id: chatId 
+    })
+    const employee = employeeData.data?.[0]
+    
+    if (!employee) {
+      console.error('No employee found for chat ID:', chatId)
+      return false
+    }
+    
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('default_customer_name')
+      .eq('user_id', employee.user_id)
+      .single()
+    
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام'
+    
+    let phoneFound = false
+    let cityFound = false
+    
+    // Enhanced smart parsing of entire order text first
+    console.log(`🧠 بدء التحليل الذكي الشامل للطلب`)
+    const globalSmartResult = await parseAddressLineSmart(text)
+    
+    // Use global smart result if we found comprehensive data
+    if (globalSmartResult.city && globalSmartResult.customerName) {
+      customerName = globalSmartResult.customerName
+      customerCity = globalSmartResult.city
+      isDefaultCity = globalSmartResult.isDefaultCity
+      if (globalSmartResult.region) {
+        customerRegion = globalSmartResult.region
+      }
+      customerAddress = globalSmartResult.remainingText
+      
+      console.log(`✅ نتيجة التحليل الذكي الشامل:`, {
+        name: customerName,
+        city: customerCity.name,
+        region: customerRegion?.name,
+        isDefault: isDefaultCity
+      })
+      
+      if (globalSmartResult.errors.length > 0 && globalSmartResult.suggestions.cities) {
+        await sendEnhancedErrorMessage(
+          chatId, 
+          text, 
+          globalSmartResult.errors, 
+          globalSmartResult.suggestions,
+          { city: customerCity, region: customerRegion, isDefaultCity }
+        )
+        return true
+      }
+    }
+    
+    // Parse order text line by line for additional details
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      const lowerLine = line.toLowerCase()
+      
+      // Parse customer name - improved detection with validation
+      if ((lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل') || lowerLine.includes('الزبون')) && !customerName) {
+        const extractedName = line.replace(/^(اسم|زبون|عميل|الزبون)[:\s]*/i, '').trim()
+        if (isValidCustomerName(extractedName)) {
+          customerName = extractedName
+        }
+      } else if (i === 0 && !customerName && !line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج') && isValidCustomerName(line)) {
+        // First line as customer name only if it's a valid name
+        customerName = line.trim()
+      }
+      
+      // Parse phone numbers
+      const phoneRegex = /(?:07[5789]\d{8,9})/g
+      const phoneMatches = line.match(phoneRegex)
+      if (phoneMatches && !phoneFound) {
+        customerPhone = phoneMatches[0]
+        if (phoneMatches[1]) customerSecondaryPhone = phoneMatches[1]
+        phoneFound = true
+      }
+      
+      // Parse address with enhanced city detection (if not already found globally)
+      if ((lowerLine.includes('عنوان') || lowerLine.includes('منطقة') || lowerLine.includes('محلة')) && !customerAddress) {
+        customerAddress = line.replace(/^(عنوان|منطقة|محلة)[:\s]*/i, '').trim()
+      }
+      
+      // Parse city explicitly (if not already found globally)
+      if ((lowerLine.includes('مدينة') || lowerLine.includes('محافظة')) && !cityFound && !customerCity) {
+        const cityText = line.replace(/^(مدينة|محافظة)[:\s]*/i, '').trim()
+        const cityResult = await findCityByNameSmart(cityText)
+        customerCity = cityResult.city
+        
+        if (!customerCity && cityResult.suggestions.length > 0) {
+          await sendEnhancedErrorMessage(
+            chatId, 
+            text, 
+            [`المدينة "${cityText}" غير واضحة`], 
+            { cities: cityResult.suggestions }
+          )
+          return true
+        }
+        cityFound = true
+      }
+      
+      // Smart address parsing with enhanced intelligence
+      if (!cityFound && !customerAddress && !phoneMatches && !lowerLine.includes('منتج') && 
+          !isValidCustomerName(line) && line.length > 3) {
+        
+        console.log(`🧠 تحليل ذكي للسطر: "${line}"`)
+        const smartResult = await parseAddressLineSmart(line)
+        
+        if (smartResult.city) {
+          customerCity = smartResult.city
+          isDefaultCity = smartResult.isDefaultCity
+          
+          if (smartResult.region) {
+            customerRegion = smartResult.region
+            customerAddress = smartResult.remainingText || line
+            console.log(`✅ تحليل ذكي كامل: ${customerCity.name} - ${customerRegion.name}`)
+          } else {
+            customerAddress = smartResult.remainingText || line
+            console.log(`✅ تحليل ذكي للمدينة فقط: ${customerCity.name}`)
+          }
+          
+          if (smartResult.customerName && !customerName) {
+            customerName = smartResult.customerName
+            console.log(`👤 اسم الزبون من التحليل الذكي: ${customerName}`)
+          }
+          
+          if (isDefaultCity) {
+            console.log(`🏙️ تم استخدام مدينة افتراضية بذكاء: ${customerCity.name}`)
+          }
+        }
+        
+        // Handle errors with smart suggestions
+        if (smartResult.errors.length > 0) {
+          console.log(`⚠️ أخطاء في التحليل الذكي:`, smartResult.errors)
+          orderErrors.push(...smartResult.errors)
+          
+          // If we have suggestions, this means there were issues that need user clarification
+          if (smartResult.suggestions.cities && smartResult.suggestions.cities.length > 0) {
+            await sendEnhancedErrorMessage(
+              chatId, 
+              text, 
+              smartResult.errors, 
+              smartResult.suggestions,
+              { city: smartResult.city, region: smartResult.region, isDefaultCity: smartResult.isDefaultCity }
+            )
+            return true // Stop processing this order due to errors
+          }
+        }
+        
+        cityFound = true
+      }
+      
+      // Product parsing
+      if (!phoneMatches && !lowerLine.includes('منطقة') && !lowerLine.includes('مدينة') && 
+          !lowerLine.includes('عنوان') && !isValidCustomerName(line) && line.length > 2) {
+        
+        // Enhanced product search
+        const searchTerms = createFlexibleSearchTerms(line)
+        let foundProduct = null
+        
+        for (const term of searchTerms) {
+          const { data: products, error } = await supabase
+            .from('products')
+            .select('*')
+            .ilike('name', `%${term}%`)
+            .eq('is_active', true)
+            .limit(1)
+          
+          if (products && products.length > 0) {
+            foundProduct = products[0]
+            console.log(`✅ Found product with term "${term}":`, foundProduct.name)
+            break
+          }
+        }
+        
+        if (foundProduct) {
+          items.push({
+            id: foundProduct.id,
+            name: foundProduct.name,
+            price: foundProduct.price,
+            quantity: 1
+          })
+          totalPrice += foundProduct.price
+        } else {
+          console.log(`❌ Product not found for: "${line}"`)
+        }
+      }
+    }
+    
+    // Enhanced validation and error handling
+    if (!customerName) customerName = defaultCustomerName
+    
+    if (!customerPhone) {
+      orderErrors.push('لم يتم العثور على رقم هاتف صالح (يجب أن يبدأ بـ 07)')
+    }
+    
+    if (!customerCity) {
+      orderErrors.push('لم يتم تحديد المدينة بوضوح')
+    }
+    
+    if (items.length === 0) {
+      orderErrors.push('لم يتم العثور على أي منتجات في الطلب')
+    }
+    
+    // If there are critical errors, send enhanced error message
+    if (orderErrors.length > 0) {
+      console.log('❌ أخطاء في الطلب:', orderErrors)
+      await sendEnhancedErrorMessage(
+        chatId, 
+        text, 
+        orderErrors, 
+        {},
+        { city: customerCity, region: customerRegion, isDefaultCity }
+      )
+      return true
+    }
+    
+    if (!customerCity) {
+      orderErrors.push('لم يتم تحديد المدينة بوضوح')
+    }
+    
+    if (items.length === 0) {
+      orderErrors.push('لم يتم العثور على أي منتجات صالحة')
+    }
+    
+    // If there are errors, send detailed error message
+    if (orderErrors.length > 0) {
+      let suggestions = []
+      if (!customerCity) {
+        // Try to get city suggestions from first non-phone line
+        const addressLine = lines.find(line => 
+          !line.match(/07[5789]\d{8}/) && 
+          !isValidCustomerName(line) && 
+          line.length > 3
+        )
+        if (addressLine) {
+          const cityResult = await findCityByName(addressLine.split(/[\s,،]/)[0])
+          suggestions = cityResult.suggestions
+        }
+      }
+      
+      await sendErrorMessageWithSuggestions(chatId, text, orderErrors, suggestions)
+      return false
+    }
+    
+    // Complete order processing
+    const orderData = {
+      customerName,
+      customerPhone,
+      customerSecondaryPhone,
+      customerAddress: customerAddress || customerRegion?.name || '',
+      customerCity,
+      customerRegion,
+      items,
+      totalPrice,
+      deliveryType,
+      orderNotes
+    }
+    
+    return await completeOrderProcessing(orderData, chatId)
+    
+  } catch (error) {
+    console.error('Error processing order:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى أو التواصل مع الدعم الفني.')
+    return false
+  }
+}
+
+// Simple welcome message
+async function sendWelcomeMessage(chatId: number, employee: any) {
+  const welcomeText = `
+مرحباً ${employee.full_name}! 👋
+
+🤖 أنا بوت معالجة الطلبات
+📝 يمكنك إرسال طلبات العملاء بالشكل التالي:
+
+اسم العميل
+رقم الهاتف
+المدينة المنطقة
+اسم المنتج
+
+مثال:
+أحمد علي
+07701234567
+بغداد الكرادة
+برشلونة ازرق ميديم
+
+✨ البوت يفهم أسماء المدن بأشكال مختلفة
+🏙️ يمكن كتابة المنطقة فقط وسيتم اختيار بغداد كافتراضي
+  `.trim()
+  
+  await sendTelegramMessage(chatId, welcomeText)
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -675,96 +1276,70 @@ serve(async (req) => {
   }
 
   try {
-    const update: TelegramUpdate = await req.json();
-    console.log('📨 Received Telegram update:', JSON.stringify(update, null, 2));
-
-    if (!update.message) {
-      return new Response('OK', { headers: corsHeaders });
+    const body = await req.json()
+    console.log('📨 Received Telegram update:', JSON.stringify(body, null, 2))
+    
+    const message = body.message
+    if (!message || !message.text) {
+      console.log('❌ No message or text found')
+      return new Response('No message', { headers: corsHeaders })
     }
 
-    const message = update.message;
-    const chatId = message.chat.id;
-    const text = message.text || '';
+    const chatId = message.chat.id
+    const text = message.text.trim()
+    const userId = message.from.id
 
-    console.log(`💬 Processing message from chat ${chatId}: "${text}"`);
+    console.log(`💬 Processing message from chat ${chatId}: "${text}"`)
 
-    // Check if this is an employee code for linking
-    if (text && /^[A-Z]{3}\d{3,4}$/.test(text.trim())) {
-      console.log(`🔗 Detected employee code pattern: ${text.trim()}`);
-      
-      // Try to link this code
-      const linkResult = await linkEmployeeCode(text.trim(), chatId);
-      
-      if (linkResult.success) {
-        await sendTelegramMessage(chatId, `✅ تم ربط حسابك بنجاح!
-        
-👤 مرحباً ${linkResult.employee?.full_name || 'عزيزي الموظف'}
-🆔 كود الموظف: ${linkResult.employee?.employee_code}
+    // Get employee information
+    const { data: employeeData, error: employeeError } = await supabase.rpc('get_employee_by_telegram_id', { 
+      p_telegram_chat_id: chatId 
+    })
 
-📋 يمكنك الآن إرسال الطلبات بالتنسيق التالي:
-المدينة
-رقم الهاتف  
-اسم المنتج + اللون + المقاس
+    if (employeeError) {
+      console.error('❌ Error fetching employee:', employeeError)
+      await sendTelegramMessage(chatId, '❌ خطأ في النظام. يرجى المحاولة مرة أخرى.')
+      return new Response('Error', { headers: corsHeaders })
+    }
 
-مثال:
-بغداد
-07700000000
-قميص أزرق لارج`);
-        
-        return new Response('OK', { headers: corsHeaders });
-      } else {
-        await sendTelegramMessage(chatId, `❌ ${linkResult.message || 'فشل في ربط الكود'}
-        
-🔗 للحصول على مساعدة:
-1. تأكد من صحة الكود
-2. تواصل مع المدير
-3. تأكد من أن الكود غير مستخدم مسبقاً`);
-        
-        return new Response('OK', { headers: corsHeaders });
+    const employee = employeeData?.[0]
+    if (!employee) {
+      console.log(`❌ No employee found for chat ID: ${chatId}`)
+      await sendTelegramMessage(chatId, '❌ غير مسموح لك باستخدام هذا البوت. يرجى التواصل مع الإدارة.')
+      return new Response('Unauthorized', { headers: corsHeaders })
+    }
+
+    console.log(`👤 Employee found: ${employee.full_name} (${employee.employee_code})`)
+
+    // Handle commands
+    if (text === '/start' || text === '/help') {
+      await sendWelcomeMessage(chatId, employee)
+      return new Response('OK', { headers: corsHeaders })
+    }
+
+    // Check for region selection response
+    if (text.includes('المنطقة:')) {
+      const regionProcessed = await processRegionSelection(text, chatId)
+      if (regionProcessed) {
+        return new Response('OK', { headers: corsHeaders })
       }
     }
 
-    // Get employee information
-    const employee = await getEmployeeByTelegramId(chatId);
+    // Process order
+    const orderProcessed = await processOrderWithAlWaseet(text, chatId, employee.employee_code)
     
-    if (!employee) {
-      console.error(`No employee found for chat ID: ${chatId}`);
-      await sendTelegramMessage(chatId, `❌ لم يتم العثور على حساب مربوط بهذا الرقم.
-      
-🔗 لربط حسابك:
-1. احصل على كود الموظف من المدير
-2. أرسل الكود هنا مباشرة
-
-📄 تنسيق الكود: ABC123 أو ABC1234
-مثال: RYU559`);
-      return new Response('OK', { headers: corsHeaders });
+    if (!orderProcessed) {
+      console.log('❌ Order processing failed')
+      // Error message already sent in processOrderWithAlWaseet
     }
 
-    console.log(`👤 Employee found: ${employee.full_name} (${employee.employee_code})`);
-
-    // Handle start command
-    if (text === '/start' || text === '/help') {
-      await sendWelcomeMessage(chatId, employee);
-      return new Response('OK', { headers: corsHeaders });
-    }
-
-    // Process order text
-    try {
-      console.log('📦 Processing order text...');
-      await processOrderWithAlWaseet(text, chatId, employee);
-      console.log('✅ Order processing completed successfully');
-    } catch (orderError) {
-      console.error('❌ Order processing failed:', orderError);
-      await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى.');
-    }
-
-    return new Response('OK', { headers: corsHeaders });
-
+    return new Response('OK', { headers: corsHeaders })
+    
   } catch (error) {
-    console.error('❌ Error processing request:', error);
-    return new Response('Error', { 
-      status: 500, 
+    console.error('❌ Telegram bot error:', error)
+    return new Response('Internal Server Error', { 
+      status: 500,
       headers: corsHeaders 
-    });
+    })
   }
-});
+})
