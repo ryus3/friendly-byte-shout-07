@@ -372,8 +372,17 @@ function parseProductDetails(text: string): { name: string, color?: string, size
     'فضي', 'silver', 'كحلي', 'navy', 'زهري', 'بيج', 'beige'
   ]
   
-  // Common sizes
-  const sizes = ['xs', 'x-small', 's', 'small', 'm', 'medium', 'l', 'large', 'xl', 'x-large', 'xxl', '2xl', 'xxxl', '3xl']
+  // Common sizes with Arabic mappings
+  const sizeMap = {
+    'اكس سمول': 'xs', 'اكس اس': 'xs', 'xs': 'xs', 'x-small': 'xs',
+    'سمول': 's', 'صغير': 's', 's': 's', 'small': 's',
+    'ميديم': 'm', 'متوسط': 'm', 'وسط': 'm', 'm': 'm', 'medium': 'm',
+    'لارج': 'l', 'كبير': 'l', 'l': 'l', 'large': 'l',
+    'اكس لارج': 'xl', 'اكس ال': 'xl', 'xl': 'xl', 'x-large': 'xl',
+    'اكس اكس لارج': 'xxl', 'اكس اكس ال': 'xxl', 'xxl': 'xxl', '2xl': 'xxl',
+    'اكس اكس اكس لارج': 'xxxl', 'xxxl': 'xxxl', '3xl': 'xxxl'
+  }
+  const sizes = Object.keys(sizeMap)
   
   let foundColor = null
   let foundSize = null
@@ -389,11 +398,11 @@ function parseProductDetails(text: string): { name: string, color?: string, size
     }
   }
   
-  // Extract size
+  // Extract size with Arabic support
   for (const size of sizes) {
     const regex = new RegExp(`\\b${size}\\b`, 'gi')
     if (regex.test(productName)) {
-      foundSize = size
+      foundSize = sizeMap[size.toLowerCase()] || size
       productName = productName.replace(regex, '').trim()
       break
     }
@@ -642,7 +651,7 @@ async function getEmployeeByTelegramId(chatId: number) {
 // Link employee code to telegram chat ID
 async function linkEmployeeCode(employeeCode: string, chatId: number): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('link_telegram_user', {
+    const { data, error } = await supabase.rpc('link_employee_telegram_code', {
       p_employee_code: employeeCode,
       p_chat_id: chatId
     })
