@@ -587,9 +587,11 @@ async function parseAddressWithSmartMatching(addressText: string): Promise<{
 // Get employee information by telegram chat ID with fallback methods
 async function getEmployeeByTelegramId(chatId: number) {
   try {
-    // First try the RPC function
+    console.log(`🔍 Looking for employee with chat ID: ${chatId}`)
+    
+    // First try the RPC function with correct parameter name
     const { data: rpcData, error: rpcError } = await supabase.rpc('get_employee_by_telegram_id', {
-      p_telegram_chat_id: chatId
+      p_chat_id: chatId
     })
     
     if (!rpcError && rpcData?.success && rpcData?.employee) {
@@ -597,8 +599,12 @@ async function getEmployeeByTelegramId(chatId: number) {
       return rpcData.employee
     }
     
+    if (rpcError) {
+      console.log('RPC error:', rpcError)
+    }
+    
     // Fallback: Direct table lookup
-    const { data: telData } = await supabase
+    const { data: telData, error: telError } = await supabase
       .from('telegram_employee_codes')
       .select(`
         employee_code,
@@ -609,8 +615,13 @@ async function getEmployeeByTelegramId(chatId: number) {
       .eq('is_active', true)
       .single()
     
+    if (telError) {
+      console.log('Direct query error:', telError)
+    }
+    
     if (telData?.profiles) {
       const profile = telData.profiles
+      console.log('Employee found via direct query:', profile.full_name)
       return {
         user_id: profile.user_id,
         full_name: profile.full_name,
