@@ -253,13 +253,15 @@ return this.fetch('all_data', async () => {
     supabase.from('categories').select('*').order('name'),
     supabase.from('departments').select('*').order('name'),
     supabase.from('product_types').select('*').order('name'),
-    supabase.from('seasons_occasions').select('*').order('name')
+    supabase.from('seasons_occasions').select('*').order('name'),
+    supabase.from('product_variants').select('*'),
+    supabase.from('order_items').select('*')
   ]);
 
   // التحقق من الأخطاء
   const responses = [products, orders, customers, purchases, expenses, profits, 
                     cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, 
-                    categories, departments, productTypes, seasons];
+                    categories, departments, productTypes, seasons, variants, orderItems];
   
   // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
   if (products.error) {
@@ -294,6 +296,7 @@ return this.fetch('all_data', async () => {
     employeeProfitRules: profitRules.data || [],
     users: profiles.data || [],
     orderDiscounts: orderDiscounts.data || [],
+    orderItems: orderItems.data || [], // إضافة orderItems
     
     // بيانات المرشحات
     colors: colors.data || [],
