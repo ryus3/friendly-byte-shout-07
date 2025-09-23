@@ -1231,6 +1231,21 @@ async function sendEnhancedErrorMessage(chatId: number, errorType: string, conte
 async function validateOrderText(text: string): Promise<{isValid: boolean, errorType?: string, context?: any}> {
   const lines = text.split('\n').filter(line => line.trim());
   
+  // إذا كان الطلب في سطر واحد، تحقق من وجود العناصر الأساسية
+  if (lines.length === 1) {
+    const singleLine = lines[0];
+    // تحقق من وجود رقم هاتف
+    const hasPhone = /\b0?7[0-9]{8,9}\b/.test(singleLine);
+    // تحقق من وجود اسم مدينة (أي كلمة عربية)
+    const hasArabicLocation = /[\u0600-\u06FF]{2,}/.test(singleLine);
+    // تحقق من وجود منتج (كلمة غير رقم ولا رقم هاتف)
+    const hasProduct = singleLine.replace(/\b0?7[0-9]{8,9}\b/g, '').replace(/[\u0600-\u06FF]{2,}/g, '').trim().length > 0;
+    
+    if (hasPhone && hasArabicLocation) {
+      return { isValid: true }; // الطلب في سطر واحد صالح
+    }
+  }
+  
   if (lines.length < 2) {
     return {
       isValid: false,
