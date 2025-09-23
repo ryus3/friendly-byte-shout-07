@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
+import { useUnifiedStats } from '@/hooks/useUnifiedStats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +24,6 @@ import {
   MapPin,
   User
 } from 'lucide-react';
-import { formatCurrency } from '@/lib/financial-calculations';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -31,6 +31,7 @@ const SalesPage = () => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { orders, loading, users } = useSuper();
+  const { formatCurrency } = useUnifiedStats();
   const [selectedEmployee, setSelectedEmployee] = useState(user?.id || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
