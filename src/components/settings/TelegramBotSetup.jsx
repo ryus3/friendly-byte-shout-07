@@ -152,7 +152,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
         
         toast({
           title: "تم إعداد البوت بنجاح! 🎉",
-          description: `البوت @${botInfo.username} جاهز لاستقبال الطلبات`,
+          description: `البوت @${botInfo.username} جاهز مع نظام الوسيط الذكي`,
           variant: "success"
         });
 
