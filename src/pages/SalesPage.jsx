@@ -35,7 +35,7 @@ import OrderDetailsModal from '@/components/sales/OrderDetailsModal';
 const SalesPage = () => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  const { orders, loading, users } = useSuper();
+  const { orders, loading, users, orderItems } = useSuper();
   const { formatCurrency } = useUnifiedStats();
   const [selectedEmployee, setSelectedEmployee] = useState(user?.id || 'all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,10 +118,10 @@ const SalesPage = () => {
     return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, canViewAllEmployees, user?.id]);
 
-  // Calculate statistics
+  // Calculate statistics - using total_amount (sales without delivery fees)
   const stats = useMemo(() => {
     const totalOrders = filteredOrders.length;
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.final_amount || order.total_amount || 0), 0);
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
     const receivedInvoices = filteredOrders.filter(order => order.receipt_received).length;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -134,20 +134,20 @@ const SalesPage = () => {
     };
   }, [filteredOrders]);
 
-  // Get employee options for managers with enhanced data
+  // Get employee options for managers with enhanced data - using total_amount (sales without delivery)
   const employeeOptions = useMemo(() => {
     if (!canViewAllEmployees) return [];
     
     const employeesWithOrders = Array.from(
       new Set(deliveredOrders.map(order => order.created_by))
     ).map(employeeId => {
-      const employee = users?.find(u => u.id === employeeId);
+      const employee = users?.find(u => u.user_id === employeeId || u.id === employeeId);
       const employeeOrders = deliveredOrders.filter(order => order.created_by === employeeId);
-      const totalSales = employeeOrders.reduce((sum, order) => sum + (order.final_amount || order.total_amount || 0), 0);
+      const totalSales = employeeOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
       
       return {
         id: employeeId,
-        name: employee?.full_name || employee?.email || 'موظف غير محدد',
+        name: employee?.full_name || employee?.username || employee?.email || 'موظف غير محدد',
         ordersCount: employeeOrders.length,
         totalSales,
         user: employee
@@ -164,7 +164,7 @@ const SalesPage = () => {
   };
 
   const getEmployeeByOrder = (order) => {
-    return users?.find(u => u.id === order.created_by);
+    return users?.find(u => u.user_id === order.created_by || u.id === order.created_by);
   };
 
   const getStatusBadge = (order) => {
@@ -520,8 +520,8 @@ const SalesPage = () => {
                       </div>
                     </div>
                     <div className="text-left">
-                      <div className="text-xl font-bold text-primary">
-                        {formatCurrency(order.final_amount || order.total_amount || 0)}
+                     <div className="text-xl font-bold text-primary">
+                        {formatCurrency(order.total_amount || 0)}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         {order.order_items?.length || 0} منتج
