@@ -111,10 +111,10 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                       <DollarSign className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-blue-700">
-                        {formatCurrency(order.total_amount || 0)}
+                      <div className="text-2xl font-bold text-blue-700" dir="ltr">
+                        {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
                       </div>
-                      <div className="text-sm text-blue-600">Sales Amount</div>
+                      <div className="text-sm text-blue-600">مبلغ البيع</div>
                     </div>
                   </div>
                 </CardContent>
@@ -300,9 +300,17 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg">
-                      <span className="text-sm font-medium">حالة الفاتورة</span>
-                      {getReceiptInfo(order.receipt_received)}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg">
+                        <span className="text-sm font-medium">حالة الفاتورة</span>
+                        {getReceiptInfo(order.receipt_received)}
+                      </div>
+                      {order.receipt_received && order.delivery_partner_invoice_id && (
+                        <div className="flex justify-between items-center p-3 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-lg">
+                          <span className="text-sm font-medium">رقم الفاتورة</span>
+                          <span className="font-bold text-cyan-700" dir="ltr">#{order.delivery_partner_invoice_id}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -338,16 +346,16 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                   <Separator />
                   
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/50 dark:to-green-950/50 rounded-lg">
-                    <span className="font-medium">مبلغ البيع (بدون التوصيل)</span>
-                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                      {formatCurrency(order.total_amount || 0)}
+                    <span className="font-medium">مبلغ البيع (بعد الخصم)</span>
+                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300" dir="ltr">
+                      {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center p-4 bg-gradient-to-r from-primary/10 to-blue-600/10 rounded-lg border-2 border-primary/20">
-                    <span className="text-lg font-bold">Total Amount</span>
-                    <span className="text-2xl font-bold text-primary">
-                      {formatCurrency((order.total_amount || 0) + (order.delivery_fee || 0))}
+                    <span className="text-lg font-bold">المبلغ الإجمالي</span>
+                    <span className="text-2xl font-bold text-primary" dir="ltr">
+                      {formatCurrency(order.final_amount || 0)}
                     </span>
                   </div>
                 </div>

@@ -146,10 +146,10 @@ const SalesCard = ({
           </div>
 
           <div className="text-left">
-            <div className="text-2xl font-bold text-primary dark:text-primary-foreground">
-              {formatCurrency(order.total_amount || 0)}
+            <div className="text-2xl font-bold text-primary dark:text-primary-foreground" dir="ltr">
+              {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
             </div>
-            <div className="text-xs text-muted-foreground">Total Amount</div>
+            <div className="text-xs text-muted-foreground">مبلغ البيع</div>
           </div>
         </div>
 
@@ -240,13 +240,6 @@ const SalesCard = ({
               <span>{employee.full_name || employee.username || employee.email || 'غير محدد'}</span>
             </div>
           )}
-
-          {/* Payment Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {receiptInfo.icon}
-            </div>
-          </div>
         </div>
 
         {/* Hover Effect Overlay */}

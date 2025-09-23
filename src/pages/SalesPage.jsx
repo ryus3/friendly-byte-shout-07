@@ -118,32 +118,39 @@ const SalesPage = () => {
     return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, canViewAllEmployees, user?.id]);
 
-  // Calculate statistics - using total_amount (sales without delivery fees)
+  // Calculate statistics - using final_amount (after discount) as requested
   const stats = useMemo(() => {
     const totalOrders = filteredOrders.length;
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const totalRevenue = filteredOrders.reduce((sum, order) => {
+      // Use final_amount to show price after discount
+      const salesAmount = (order.final_amount || 0) - (order.delivery_fee || 0);
+      return sum + salesAmount;
+    }, 0);
     const receivedInvoices = filteredOrders.filter(order => order.receipt_received).length;
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return {
       totalOrders,
       totalRevenue,
       receivedInvoices,
-      pendingInvoices: totalOrders - receivedInvoices,
-      averageOrderValue
+      pendingInvoices: totalOrders - receivedInvoices
     };
   }, [filteredOrders]);
 
-  // Get employee options for managers with enhanced data - using total_amount (sales without delivery)
+  // Get employee options from profiles table
   const employeeOptions = useMemo(() => {
     if (!canViewAllEmployees) return [];
     
     const employeesWithOrders = Array.from(
       new Set(deliveredOrders.map(order => order.created_by))
     ).map(employeeId => {
+      // Look for employee in profiles table
       const employee = users?.find(u => u.user_id === employeeId || u.id === employeeId);
       const employeeOrders = deliveredOrders.filter(order => order.created_by === employeeId);
-      const totalSales = employeeOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+      // Use final_amount minus delivery fees to show actual sales amount after discount
+      const totalSales = employeeOrders.reduce((sum, order) => {
+        const salesAmount = (order.final_amount || 0) - (order.delivery_fee || 0);
+        return sum + salesAmount;
+      }, 0);
       
       return {
         id: employeeId,
@@ -217,63 +224,58 @@ const SalesPage = () => {
         </div>
       </div>
 
-      {/* Enhanced Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-bl-3xl opacity-10" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">إجمالي الطلبات</CardTitle>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Package className="h-5 w-5 text-white" />
+      {/* Enhanced Statistics Cards - Professional Design */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Total Orders Card */}
+        <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border-0 bg-gradient-to-br from-blue-500/10 via-blue-600/10 to-indigo-600/10 dark:from-blue-900/20 dark:via-blue-800/20 dark:to-indigo-900/20">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-blue-400/20 to-indigo-600/20 group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-blue-600/10 to-indigo-400/10 group-hover:scale-125 transition-transform duration-700" />
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+            <CardTitle className="text-sm font-medium text-blue-700 dark:text-blue-300">إجمالي الطلبات</CardTitle>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Package className="h-6 w-6 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-700">{stats.totalOrders}</div>
-            <p className="text-xs text-blue-600 mt-1">طلب مُسلم ومكتمل</p>
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold text-blue-700 dark:text-blue-300 mb-1" dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</div>
+            <p className="text-xs text-blue-600 dark:text-blue-400">طلب مُسلم ومكتمل</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 hover:shadow-xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-emerald-400 to-green-600 rounded-bl-3xl opacity-10" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-emerald-700">إجمالي المبيعات</CardTitle>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-white" />
+        {/* Total Sales Card */}
+        <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border-0 bg-gradient-to-br from-emerald-500/10 via-green-600/10 to-teal-600/10 dark:from-emerald-900/20 dark:via-green-800/20 dark:to-teal-900/20">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-green-600/20 group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-green-600/10 to-emerald-400/10 group-hover:scale-125 transition-transform duration-700" />
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+            <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">إجمالي المبيعات</CardTitle>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="h-6 w-6 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-700">{formatCurrency(stats.totalRevenue)}</div>
-            <p className="text-xs text-emerald-600 mt-1">إجمالي الإيرادات المحققة</p>
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mb-1" dir="ltr">{formatCurrency(stats.totalRevenue)}</div>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">مبلغ المبيعات بعد الخصم</p>
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200 hover:shadow-xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-600 rounded-bl-3xl opacity-10" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">الفواتير المستلمة</CardTitle>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
-              <Receipt className="h-5 w-5 text-white" />
+        {/* Received Invoices Card */}
+        <Card className="relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border-0 bg-gradient-to-br from-purple-500/10 via-violet-600/10 to-indigo-600/10 dark:from-purple-900/20 dark:via-violet-800/20 dark:to-indigo-900/20">
+          <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-400/20 to-violet-600/20 group-hover:scale-110 transition-transform duration-500" />
+          <div className="absolute -bottom-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-violet-600/10 to-purple-400/10 group-hover:scale-125 transition-transform duration-700" />
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+            <CardTitle className="text-sm font-medium text-purple-700 dark:text-purple-300">الفواتير المستلمة</CardTitle>
+            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-violet-600 shadow-lg shadow-purple-500/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <Receipt className="h-6 w-6 text-white" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-700">{stats.receivedInvoices}</div>
-            <p className="text-xs text-purple-600 mt-1">
-              من أصل {stats.totalOrders} فاتورة ({Math.round((stats.receivedInvoices/stats.totalOrders)*100) || 0}%)
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-bold text-purple-700 dark:text-purple-300 mb-1" dir="ltr">{stats.receivedInvoices.toLocaleString('en-US')}</div>
+            <p className="text-xs text-purple-600 dark:text-purple-400">
+              من أصل <span dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</span> فاتورة (<span dir="ltr">{Math.round((stats.receivedInvoices/stats.totalOrders)*100) || 0}%</span>)
             </p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:shadow-xl transition-all duration-300">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400 to-red-600 rounded-bl-3xl opacity-10" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700">متوسط قيمة الطلب</CardTitle>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-red-600 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700">{formatCurrency(stats.averageOrderValue)}</div>
-            <p className="text-xs text-orange-600 mt-1">متوسط قيمة الطلب الواحد</p>
           </CardContent>
         </Card>
       </div>
