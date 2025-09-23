@@ -958,7 +958,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       return false;
     }
 
-    if (!orderId || !orderId.order_id) {
+    if (!orderId || !orderId.ai_order_id) {
       console.error('No order ID returned from stored procedure');
       return false;
     }
