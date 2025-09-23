@@ -932,17 +932,6 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
       p_order_data: {
         original_text: text,
-        processed_at: new Date().toISOString(),
-        telegram_user_id: chatId,
-        employee_code: employeeCode,
-        delivery_type: 'توصيل', // فرض التوصيل لجميع طلبات التليغرام
-        parsing_method: 'cache_based_v3',
-        items_count: items.length,
-        source: 'telegram', // إضافة مصدر الطلب
-        city_id: cityId, // معرف المدينة من cache
-        region_id: regionId, // معرف المنطقة من cache
-        parsed_city: parsedCity || parsedCityName, // اسم المدينة المحللة
-        parsed_region: parsedRegion || parsedRegionName, // اسم المنطقة المحللة
         customer_name: customerName,
         customer_phone: customerPhone || null,
         customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
@@ -951,14 +940,26 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         total_amount: totalPrice,
         items: items
       },
-      p_employee_code: employeeCode,
-      p_chat_id: chatId
+      p_chat_id: chatId,
+      p_employee_id: null // Will be resolved by the stored procedure from chat_id
     });
 
     console.log('Order creation result:', { orderId, error });
 
     if (error) {
       console.error('Error creating AI order:', error);
+      return false;
+    }
+
+    // Check if the stored procedure returned an error
+    if (orderId && !orderId.success) {
+      console.error('Order creation failed:', orderId.error || orderId.message);
+      await sendTelegramMessage(chatId, `❌ فشل في إنشاء الطلب: ${orderId.message || 'خطأ غير معروف'}`);
+      return false;
+    }
+
+    if (!orderId || !orderId.order_id) {
+      console.error('No order ID returned from stored procedure');
       return false;
     }
 
