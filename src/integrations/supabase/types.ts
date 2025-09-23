@@ -4428,6 +4428,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_employee_by_telegram_chat_id: {
+        Args: { p_chat_id: number }
+        Returns: Json
+      }
       get_employee_by_telegram_id: {
         Args: { p_telegram_chat_id: number }
         Returns: Json
@@ -4637,6 +4641,10 @@ export type Database = {
       is_manager_user: {
         Args: { user_id?: string }
         Returns: boolean
+      }
+      link_employee_telegram_code: {
+        Args: { p_chat_id: number; p_employee_code: string }
+        Returns: Json
       }
       link_telegram_user: {
         Args: { p_chat_id: number; p_employee_code: string }
