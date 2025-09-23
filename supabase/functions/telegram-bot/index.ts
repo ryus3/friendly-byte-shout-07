@@ -372,15 +372,15 @@ function parseProductDetails(text: string): { name: string, color?: string, size
     'فضي', 'silver', 'كحلي', 'navy', 'زهري', 'بيج', 'beige'
   ]
   
-  // Common sizes with Arabic mappings
+  // Common sizes with Arabic mappings - Enhanced
   const sizeMap = {
-    'اكس سمول': 'xs', 'اكس اس': 'xs', 'xs': 'xs', 'x-small': 'xs',
-    'سمول': 's', 'صغير': 's', 's': 's', 'small': 's',
-    'ميديم': 'm', 'متوسط': 'm', 'وسط': 'm', 'm': 'm', 'medium': 'm',
-    'لارج': 'l', 'كبير': 'l', 'l': 'l', 'large': 'l',
-    'اكس لارج': 'xl', 'اكس ال': 'xl', 'xl': 'xl', 'x-large': 'xl',
-    'اكس اكس لارج': 'xxl', 'اكس اكس ال': 'xxl', 'xxl': 'xxl', '2xl': 'xxl',
-    'اكس اكس اكس لارج': 'xxxl', 'xxxl': 'xxxl', '3xl': 'xxxl'
+    'اكس سمول': 'XS', 'اكس اس': 'XS', 'xs': 'XS', 'x-small': 'XS',
+    'سمول': 'S', 'صغير': 'S', 's': 'S', 'small': 'S',
+    'ميديم': 'M', 'متوسط': 'M', 'وسط': 'M', 'm': 'M', 'medium': 'M',
+    'لارج': 'L', 'كبير': 'L', 'l': 'L', 'large': 'L',
+    'اكس لارج': 'XL', 'اكس ال': 'XL', 'xl': 'XL', 'x-large': 'XL',
+    'اكس اكس لارج': 'XXL', 'اكس اكس ال': 'XXL', 'xxl': 'XXL', '2xl': 'XXL',
+    'اكس اكس اكس لارج': 'XXXL', 'xxxl': 'XXXL', '3xl': 'XXXL'
   }
   const sizes = Object.keys(sizeMap)
   
@@ -430,7 +430,7 @@ async function extractPhoneFromContext(chatId: number): Promise<string> {
   return '07xxxxxxxx'
 }
 
-// Generate stock alert message like the example provided
+// Generate stock alert message exactly like the required format
 function generateStockAlert(product: any, details: any, phone: string, variant?: any): string {
   const productName = product.name
   const colorText = details.color ? details.color : 'بدون لون'
@@ -438,7 +438,7 @@ function generateStockAlert(product: any, details: any, phone: string, variant?:
   
   return `⚠️ تنبيه توفر
 📱 الهاتف : ${phone}
-❌ غير متاح ${productName} ${colorText} ${sizeText} × 1 — بدون لون
+❌ غير متاح ${productName} ${sizeText} × 1 — ${colorText}
 
 ⚠️ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة`
 }
@@ -687,8 +687,8 @@ async function processOrderText(text: string, chatId: number, employeeData: any)
         continue
       }
       
-      // Check if it's a product line (has arabic letters and possibly size/color info)
-      if (/[ا-ي]/.test(line) && (line.includes('L') || line.includes('M') || line.includes('S') || line.includes('XL') || /\b(احمر|ازرق|اسود|ابيض|اخضر|اصفر|وردي|بني|رمادي)\b/.test(line))) {
+      // Check if it's a product line (has arabic letters)
+      if (/[ا-ي]/.test(line)) {
         // This looks like a product
         const productSearch = await searchProductWithVariantsAndInventory(line, chatId, customerPhone)
         
@@ -696,7 +696,7 @@ async function processOrderText(text: string, chatId: number, employeeData: any)
           if (productSearch.available && productSearch.product) {
             products.push({
               name: productSearch.product.name,
-              color: productSearch.variant?.color?.name || 'افتراضي',
+              color: productSearch.variant?.color?.name || 'بدون لون',
               size: productSearch.variant?.size?.name || 'افتراضي',
               quantity: 1,
               price: productSearch.product.price || 0
@@ -774,15 +774,20 @@ async function processOrderText(text: string, chatId: number, employeeData: any)
     
     if (result?.success) {
       console.log('✅ تم إنشاء الطلب الذكي بنجاح')
-      await sendTelegramMessage(chatId, `✅ تم استلام طلبك بنجاح!
       
-👤 العميل: ${customerName}
-📱 الهاتف: ${customerPhone}
-📍 العنوان: ${customerAddress}
-📦 المنتجات: ${products.length} قطعة
-💰 المبلغ الإجمالي: ${totalAmount.toLocaleString()} دينار
+      // Format success message like the required format
+      let successMessage = `✅ تم استلام الطلب!
 
-سيتم مراجعة الطلب والتواصل معك قريباً.`)
+📱 الهاتف : ${customerPhone}`
+      
+      // Add products with the exact format
+      products.forEach(product => {
+        successMessage += `\n✅ ${product.name} (${product.color}) ${product.size} × ${product.quantity}`
+      })
+      
+      successMessage += `\n• المبلغ الاجمالي : ${totalAmount.toLocaleString()} د.ع`
+      
+      await sendTelegramMessage(chatId, successMessage)
       return true
     } else {
       console.log('❌ فشل في إنشاء الطلب الذكي:', result?.message)
