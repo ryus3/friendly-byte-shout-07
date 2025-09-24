@@ -36,17 +36,23 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
     if (!order?.order_items) return [];
     
     return order.order_items.map(item => {
+      // الحصول على بيانات المنتج والمتغير
       const productData = item.products || {};
-      const variantData = item.variant || {};
+      const variantData = item.product_variants || {};
       
-      // بناء تفاصيل المنتج مع المتغيرات
+      // بناء تفاصيل المتغير
       const variantDetails = [];
-      if (variantData.color_name) variantDetails.push(variantData.color_name);
-      if (variantData.size_name) variantDetails.push(variantData.size_name);
+      if (variantData.colors?.name) variantDetails.push(variantData.colors.name);
+      if (variantData.sizes?.name) variantDetails.push(variantData.sizes.name);
+      
+      // إضافة تفاصيل إضافية للمتغير
+      const variant = variantDetails.length > 0 
+        ? variantDetails.join(' - ') 
+        : (item.color || '') + (item.size ? (item.color ? ' - ' : '') + item.size : '');
       
       return {
-        productName: productData.name || item.product_name || 'منتج غير محدد',
-        variant: variantDetails.length > 0 ? variantDetails.join(' - ') : (variantData.variant_details || ''),
+        productName: productData.name || item.product_name || item.productName || 'منتج غير محدد',
+        variant: variant || '',
         quantity: item.quantity || 0,
         price: item.price || 0
       };
@@ -95,7 +101,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
             <DialogTitle className="flex items-center gap-3 text-xl text-foreground">
-              <span>تفاصيل الطلب #{order.tracking_number || order.delivery_partner_order_id || order.order_number}</span>
+              <span>تفاصيل الطلب {order.tracking_number || order.delivery_partner_order_id ? `#${order.tracking_number || order.delivery_partner_order_id}` : `#${order.order_number}`}</span>
             </DialogTitle>
             <div className="flex items-center gap-2 mt-2">
               {statusInfo.badge}

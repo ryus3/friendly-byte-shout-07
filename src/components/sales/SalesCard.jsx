@@ -147,7 +147,7 @@ const SalesCard = ({
 
           <div className="text-left">
             <div className="text-2xl font-bold text-primary dark:text-primary-foreground" dir="ltr">
-              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0))).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))}
+              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0)))}
             </div>
             <div className="text-xs text-muted-foreground">مبلغ البيع</div>
           </div>
@@ -163,12 +163,12 @@ const SalesCard = ({
               <div className="font-medium text-foreground dark:text-foreground">
                 {order.customer_name || 'عميل غير محدد'}
               </div>
-              {order.customer_phone && (
-                <div className="text-xs text-muted-foreground" dir="ltr">
-                  {order.customer_phone.toLocaleString('en-US')}
-                </div>
-              )}
             </div>
+            {order.customer_phone && (
+              <div className="text-xs text-muted-foreground" dir="ltr">
+                {order.customer_phone}
+              </div>
+            )}
           </div>
 
           {order.customer_city && (
