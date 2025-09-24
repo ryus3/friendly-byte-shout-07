@@ -212,8 +212,8 @@ const SalesPage = () => {
         </p>
       </div>
 
-      {/* إحصائيات المبيعات */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* الصف الأول - إحصائيات المبيعات الرئيسية */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
             <div className="text-center space-y-3 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
@@ -223,8 +223,8 @@ const SalesPage = () => {
                 </div>
               </div>
               <div>
-                <h4 className="font-bold text-base mb-2">إجمالي الطلبات</h4>
                 <p className="text-2xl font-bold" dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</p>
+                <h4 className="font-bold text-base">إجمالي الطلبات</h4>
                 <p className="text-white/80 text-xs">طلب مُسلم ومكتمل</p>
               </div>
               <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-400/20 to-red-600/20" />
@@ -242,8 +242,8 @@ const SalesPage = () => {
                 </div>
               </div>
               <div>
-                <h4 className="font-bold text-base mb-2">إجمالي المبيعات</h4>
                 <p className="text-2xl font-bold" dir="ltr">{formatCurrency(stats.totalRevenue)}</p>
+                <h4 className="font-bold text-base">إجمالي المبيعات</h4>
                 <p className="text-white/80 text-xs">المبلغ الإجمالي</p>
               </div>
               <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-teal-600/20" />
@@ -251,7 +251,10 @@ const SalesPage = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      {/* الصف الثاني - الفواتير والفلاتر */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
             <div className="text-center space-y-3 bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
@@ -261,8 +264,8 @@ const SalesPage = () => {
                 </div>
               </div>
               <div>
-                <h4 className="font-bold text-base mb-2">الفواتير المستلمة</h4>
                 <p className="text-2xl font-bold" dir="ltr">{stats.receivedInvoices.toLocaleString('en-US')}</p>
+                <h4 className="font-bold text-base">الفواتير المستلمة</h4>
                 <p className="text-white/80 text-xs">فاتورة مستلمة</p>
               </div>
               <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-400/20 to-pink-600/20" />
@@ -270,108 +273,80 @@ const SalesPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* كرت الفلاتر */}
+        <Card className="bg-card/60 backdrop-blur border-border/40">
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-center text-foreground">فلاتر البحث</h3>
+              
+              <div className="grid grid-cols-1 gap-3">
+                {/* اختيار الموظف */}
+                {canViewAllEmployees && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">الموظف</label>
+                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                      <SelectTrigger className="bg-background border-border text-foreground text-left">
+                        <SelectValue placeholder="جميع الموظفين" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background border-border">
+                        <SelectItem value="all">جميع الموظفين</SelectItem>
+                        {employeeOptions.map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.name} ({emp.orderCount.toLocaleString('en-US')})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* فلتر التاريخ */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">الفترة</label>
+                  <Select value={dateFilter} onValueChange={setDateFilter}>
+                    <SelectTrigger className="bg-background border-border text-foreground text-left">
+                      <SelectValue placeholder="اختر الفترة" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border">
+                      <SelectItem value="all">جميع الفترات</SelectItem>
+                      <SelectItem value="today">اليوم</SelectItem>
+                      <SelectItem value="week">أسبوع</SelectItem>
+                      <SelectItem value="month">شهر</SelectItem>
+                      <SelectItem value="3months">3 أشهر</SelectItem>
+                      <SelectItem value="6months">6 أشهر</SelectItem>
+                      <SelectItem value="year">سنة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* زر إعادة تعيين */}
+                <Button 
+                  variant="outline" 
+                  onClick={resetFilters} 
+                  className="w-full bg-background border-border text-foreground hover:bg-accent"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  إعادة تعيين
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* فلاتر البحث المتقدمة */}
+      {/* البحث السريع */}
       <Card className="p-4 bg-card/60 backdrop-blur border-border/40">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* اختيار الموظف */}
-          {canViewAllEmployees && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">اختيار الموظف</label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="bg-background border-border text-foreground">
-                  <SelectValue placeholder="جميع الموظفين" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border">
-                  <SelectItem value="all">جميع الموظفين</SelectItem>
-                  {employeeOptions.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.orderCount} طلبات - {formatCurrency(emp.totalSales)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* البحث */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">البحث</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="رقم الطلب، اسم العميل، أو رقم الهاتف..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background border-border text-foreground"
-              />
-            </div>
-          </div>
-
-          {/* فلتر الحالة */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">الحالة</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-background border-border text-foreground">
-                <SelectValue placeholder="جميع الحالات" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="delivered">مُسلم</SelectItem>
-                <SelectItem value="completed">مكتمل</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* فلتر استلام الفاتورة */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">استلام الفاتورة</label>
-            <Select value={receiptFilter} onValueChange={setReceiptFilter}>
-              <SelectTrigger className="bg-background border-border text-foreground">
-                <SelectValue placeholder="جميع الفواتير" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="all">جميع الفواتير</SelectItem>
-                <SelectItem value="received">مستلمة</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* الصف الثاني للفلاتر */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {/* فلتر التاريخ المحسن */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">فترة زمنية</label>
-            <Select value={dateFilter} onValueChange={setDateFilter}>
-              <SelectTrigger className="bg-background border-border text-foreground">
-                <SelectValue placeholder="اختر الفترة" />
-              </SelectTrigger>
-              <SelectContent className="bg-background border-border">
-                <SelectItem value="all">جميع الفترات</SelectItem>
-                <SelectItem value="today">اليوم</SelectItem>
-                <SelectItem value="week">أسبوع</SelectItem>
-                <SelectItem value="month">شهر</SelectItem>
-                <SelectItem value="3months">3 أشهر</SelectItem>
-                <SelectItem value="6months">6 أشهر</SelectItem>
-                <SelectItem value="year">سنة</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* زر إعادة تعيين */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium opacity-0">إعادة تعيين</label>
-            <Button 
-              variant="outline" 
-              onClick={resetFilters} 
-              className="w-full bg-background border-border text-foreground hover:bg-accent"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              إعادة تعيين الفلاتر
-            </Button>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">البحث السريع</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="رقم الطلب، اسم العميل، أو رقم الهاتف..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-background border-border text-foreground"
+            />
           </div>
         </div>
       </Card>

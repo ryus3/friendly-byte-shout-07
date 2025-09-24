@@ -147,7 +147,7 @@ const SalesCard = ({
 
           <div className="text-left">
             <div className="text-2xl font-bold text-primary dark:text-primary-foreground" dir="ltr">
-              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0)))}
+              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0))).replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))}
             </div>
             <div className="text-xs text-muted-foreground">مبلغ البيع</div>
           </div>
@@ -164,9 +164,8 @@ const SalesCard = ({
                 {order.customer_name || 'عميل غير محدد'}
               </div>
               {order.customer_phone && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1" dir="ltr">
-                  <Phone className="w-3 h-3" />
-                  {order.customer_phone}
+                <div className="text-xs text-muted-foreground" dir="ltr">
+                  {order.customer_phone.toLocaleString('en-US')}
                 </div>
               )}
             </div>
@@ -202,9 +201,9 @@ const SalesCard = ({
                   <span className="text-slate-600 dark:text-slate-400 font-medium">
                     {item.product_name}
                   </span>
-                  <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" dir="ltr">
-                    {item.quantity.toLocaleString('en-US')}x
-                  </Badge>
+                   <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" dir="ltr">
+                     {item.quantity.toLocaleString('en-US')}x
+                   </Badge>
                 </div>
               ))}
               {orderProducts.length > 3 && (

@@ -33,29 +33,25 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
   const { orderItems, products } = useSuper();
 
   const orderProducts = useMemo(() => {
-    if (!orderItems || !products || !order) return [];
+    if (!order?.order_items) return [];
     
-    return orderItems
-      .filter(item => item.order_id === order.id)
-      .map(item => {
-        const product = products.find(p => p.id === item.product_id);
-        const variant = product?.variants?.find(v => v.id === item.variant_id);
-        
-        // بناء تفاصيل المنتج مثل OrderDetailsDialog
-        const variantDetails = [];
-        if (variant) {
-          if (variant.color_name) variantDetails.push(variant.color_name);
-          if (variant.size_name) variantDetails.push(variant.size_name);
-        }
-        
-        return {
-          productName: product?.name || 'منتج غير محدد',
-          variant: variantDetails.length > 0 ? variantDetails.join(' - ') : (item.variant_details || ''),
-          quantity: item.quantity || 0,
-          price: item.price || 0
-        };
-      });
-  }, [orderItems, products, order]);
+    return order.order_items.map(item => {
+      const productData = item.products || {};
+      const variantData = item.variant || {};
+      
+      // بناء تفاصيل المنتج مع المتغيرات
+      const variantDetails = [];
+      if (variantData.color_name) variantDetails.push(variantData.color_name);
+      if (variantData.size_name) variantDetails.push(variantData.size_name);
+      
+      return {
+        productName: productData.name || item.product_name || 'منتج غير محدد',
+        variant: variantDetails.length > 0 ? variantDetails.join(' - ') : (variantData.variant_details || ''),
+        quantity: item.quantity || 0,
+        price: item.price || 0
+      };
+    });
+  }, [order]);
 
   if (!order) return null;
 
@@ -99,7 +95,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
         <DialogHeader className="flex flex-row items-center justify-between">
           <div>
             <DialogTitle className="flex items-center gap-3 text-xl text-foreground">
-              <span>تفاصيل الطلب #{order.delivery_partner_invoice_id || order.tracking_number || order.order_number}</span>
+              <span>تفاصيل الطلب #{order.tracking_number || order.delivery_partner_order_id || order.order_number}</span>
             </DialogTitle>
             <div className="flex items-center gap-2 mt-2">
               {statusInfo.badge}
