@@ -204,7 +204,7 @@ const SalesPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h1 className="text-3xl font-bold bg-gradient-to-br from-primary to-blue-600 bg-clip-text text-transparent mb-2">المبيعات</h1>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-2">المبيعات</h1>
         <p className="text-muted-foreground">
           {canViewAllEmployees 
             ? "مراجعة شاملة لجميع المبيعات والطلبات في النظام" 
@@ -216,7 +216,7 @@ const SalesPage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-3 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
+            <div className="text-center space-y-3 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
               <div className="absolute top-2 right-2">
                 <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
                   <ShoppingCart className="w-5 h-5" />
@@ -227,8 +227,8 @@ const SalesPage = () => {
                 <p className="text-2xl font-bold" dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</p>
                 <p className="text-white/80 text-xs">طلب مُسلم ومكتمل</p>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-blue-400/20 to-blue-600/20" />
-              <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-blue-600/10 to-blue-400/10" />
+              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-400/20 to-red-600/20" />
+              <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-red-600/10 to-orange-400/10" />
             </div>
           </CardContent>
         </Card>

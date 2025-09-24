@@ -147,7 +147,7 @@ const SalesCard = ({
 
           <div className="text-left">
             <div className="text-2xl font-bold text-primary dark:text-primary-foreground" dir="ltr">
-              {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
+              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0)))}
             </div>
             <div className="text-xs text-muted-foreground">مبلغ البيع</div>
           </div>
