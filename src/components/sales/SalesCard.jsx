@@ -164,7 +164,7 @@ const SalesCard = ({
                 {order.customer_name || 'عميل غير محدد'}
               </div>
               {order.customer_phone && (
-                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <div className="text-xs text-muted-foreground flex items-center gap-1" dir="ltr">
                   <Phone className="w-3 h-3" />
                   {order.customer_phone}
                 </div>
@@ -202,8 +202,8 @@ const SalesCard = ({
                   <span className="text-slate-600 dark:text-slate-400 font-medium">
                     {item.product_name}
                   </span>
-                  <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                    {item.quantity}x
+                  <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" dir="ltr">
+                    {item.quantity.toLocaleString('en-US')}x
                   </Badge>
                 </div>
               ))}

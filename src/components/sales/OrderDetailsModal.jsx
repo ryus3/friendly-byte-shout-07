@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSuper } from '@/contexts/SuperProvider';
 import {
   Package,
   User,
@@ -17,7 +18,6 @@ import {
   Receipt,
   Truck,
   Phone,
-  Mail,
   CreditCard,
   Tag,
   CheckCircle,
@@ -30,6 +30,33 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee }) => {
+  const { orderItems, products } = useSuper();
+
+  const orderProducts = useMemo(() => {
+    if (!orderItems || !products || !order) return [];
+    
+    return orderItems
+      .filter(item => item.order_id === order.id)
+      .map(item => {
+        const product = products.find(p => p.id === item.product_id);
+        const variant = product?.variants?.find(v => v.id === item.variant_id);
+        
+        // بناء تفاصيل المنتج مثل OrderDetailsDialog
+        const variantDetails = [];
+        if (variant) {
+          if (variant.color_name) variantDetails.push(variant.color_name);
+          if (variant.size_name) variantDetails.push(variant.size_name);
+        }
+        
+        return {
+          productName: product?.name || 'منتج غير محدد',
+          variant: variantDetails.length > 0 ? variantDetails.join(' - ') : (item.variant_details || ''),
+          quantity: item.quantity || 0,
+          price: item.price || 0
+        };
+      });
+  }, [orderItems, products, order]);
+
   if (!order) return null;
 
   const getStatusInfo = (order) => {
@@ -63,17 +90,14 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
   const hasTrackingNumber = order.tracking_number || order.delivery_partner_order_id;
 
   const calculateTotal = () => {
-    const itemsTotal = order.order_items?.reduce((sum, item) => 
-      sum + (item.unit_price * item.quantity), 0) || 0;
-    const deliveryFee = order.delivery_fee || 0;
-    return itemsTotal + deliveryFee;
+    return orderProducts.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden bg-background text-foreground border-border">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
+          <DialogTitle className="flex items-center gap-3 text-xl text-foreground">
             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-blue-600 flex items-center justify-center">
               <Package className="w-5 h-5 text-white" />
             </div>
@@ -103,50 +127,50 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
         <ScrollArea className="max-h-[calc(90vh-120px)]">
           <div className="space-y-6 p-1">
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center">
                       <DollarSign className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-blue-700" dir="ltr">
-                        {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
+                      <div className="text-2xl font-bold text-blue-700 dark:text-blue-300" dir="ltr">
+                        {formatCurrency(order.final_amount || order.total_amount || 0)}
                       </div>
-                      <div className="text-sm text-blue-600">مبلغ البيع</div>
+                      <div className="text-sm text-blue-600 dark:text-blue-400">مبلغ البيع (بعد الخصم)</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
                       <Package className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-green-700">
-                        {order.order_items?.length || 0}
+                      <div className="text-2xl font-bold text-green-700 dark:text-green-300" dir="ltr">
+                        {orderProducts.length}
                       </div>
-                      <div className="text-sm text-green-600">منتجات</div>
+                      <div className="text-sm text-green-600 dark:text-green-400">منتج</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-purple-200 dark:border-purple-800">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center">
                       <Calendar className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-lg font-bold text-purple-700">
-                        {format(new Date(order.created_at), 'dd MMM', { locale: ar })}
+                      <div className="text-lg font-bold text-purple-700 dark:text-purple-300">
+                        {order.delivery_partner_invoice_id || 'غير متوفر'}
                       </div>
-                      <div className="text-sm text-purple-600">تاريخ الطلب</div>
+                      <div className="text-sm text-purple-600 dark:text-purple-400">رقم الفاتورة</div>
                     </div>
                   </div>
                 </CardContent>
@@ -154,9 +178,9 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
             </div>
 
             {/* Customer Information */}
-            <Card>
+            <Card className="bg-card text-foreground border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <User className="w-5 h-5 text-blue-600" />
                   معلومات العميل
                 </CardTitle>
@@ -164,19 +188,19 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                    <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg">
                       <User className="w-4 h-4 text-blue-600" />
                       <div>
-                        <div className="font-medium">{order.customer_name || 'عميل غير محدد'}</div>
+                        <div className="font-medium text-foreground">{order.customer_name || 'عميل غير محدد'}</div>
                         <div className="text-sm text-muted-foreground">اسم العميل</div>
                       </div>
                     </div>
                     
                     {order.customer_phone && (
-                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg">
                         <Phone className="w-4 h-4 text-green-600" />
                         <div>
-                          <div className="font-medium" dir="ltr">{order.customer_phone}</div>
+                          <div className="font-medium text-foreground" dir="ltr">{order.customer_phone}</div>
                           <div className="text-sm text-muted-foreground">رقم الهاتف</div>
                         </div>
                       </div>
@@ -185,21 +209,21 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
 
                   <div className="space-y-3">
                     {order.customer_city && (
-                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-lg">
                         <MapPin className="w-4 h-4 text-purple-600" />
                         <div>
-                          <div className="font-medium">{order.customer_city}</div>
+                          <div className="font-medium text-foreground">{order.customer_city}</div>
                           <div className="text-sm text-muted-foreground">المدينة</div>
                         </div>
                       </div>
                     )}
 
                     {order.customer_address && (
-                      <div className="p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg">
+                      <div className="p-3 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/30 dark:to-slate-950/30 rounded-lg">
                         <div className="flex items-start gap-3">
                           <MapPin className="w-4 h-4 text-gray-600 mt-0.5" />
                           <div>
-                            <div className="font-medium text-sm">{order.customer_address}</div>
+                            <div className="font-medium text-sm text-foreground">{order.customer_address}</div>
                             <div className="text-xs text-muted-foreground">العنوان التفصيلي</div>
                           </div>
                         </div>
@@ -211,37 +235,34 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
             </Card>
 
             {/* Products Details */}
-            {order.order_items && order.order_items.length > 0 && (
-              <Card>
+            {orderProducts && orderProducts.length > 0 && (
+              <Card className="bg-card text-foreground border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-foreground">
                     <Package className="w-5 h-5 text-green-600" />
-                    تفاصيل المنتجات ({order.order_items.length})
+                    تفاصيل المنتجات ({orderProducts.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {order.order_items.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg border border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center">
-                            <Package className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium">{item.product_name || 'منتج غير محدد'}</div>
-                            {item.variant_details && (
-                              <div className="text-sm text-muted-foreground">
-                                {item.variant_details}
-                              </div>
-                            )}
-                          </div>
+                    {orderProducts.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-secondary rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-foreground">
+                            {item.productName || 'منتج غير محدد'}
+                          </h4>
+                          {item.variant && (
+                            <p className="text-sm text-muted-foreground">
+                              {item.variant}
+                            </p>
+                          )}
                         </div>
-                        <div className="text-left space-y-1">
-                          <div className="font-bold text-lg">
-                            {formatCurrency(item.unit_price * item.quantity)}
+                        <div className="text-right">
+                          <div className="font-medium text-foreground" dir="ltr">
+                            الكمية: {item.quantity.toLocaleString('en-US')}
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.quantity} × {formatCurrency(item.unit_price)}
+                          <div className="text-sm text-muted-foreground" dir="ltr">
+                            {formatCurrency(item.price || 0)}
                           </div>
                         </div>
                       </div>
@@ -252,9 +273,9 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
             )}
 
             {/* Order Information */}
-            <Card>
+            <Card className="bg-card text-foreground border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <Receipt className="w-5 h-5 text-purple-600" />
                   معلومات الطلب
                 </CardTitle>
@@ -262,21 +283,21 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                      <span className="text-sm font-medium">رقم الطلب</span>
-                      <span className="font-bold">#{order.order_number}</span>
+                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-lg">
+                      <span className="text-sm font-medium text-foreground">رقم الطلب</span>
+                      <span className="font-bold text-foreground">#{order.order_number}</span>
                     </div>
                     
                     {hasTrackingNumber && (
-                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                        <span className="text-sm font-medium">رقم التتبع</span>
-                        <span className="font-bold" dir="ltr">{order.tracking_number || order.delivery_partner_order_id}</span>
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-foreground">رقم التتبع</span>
+                        <span className="font-bold text-foreground" dir="ltr">{order.tracking_number || order.delivery_partner_order_id}</span>
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                      <span className="text-sm font-medium">تاريخ الطلب</span>
-                      <span className="font-bold">
+                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-lg">
+                      <span className="text-sm font-medium text-foreground">تاريخ الطلب</span>
+                      <span className="font-bold text-foreground">
                         {format(new Date(order.created_at), 'dd MMM yyyy HH:mm', { locale: ar })}
                       </span>
                     </div>
@@ -284,33 +305,31 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
 
                   <div className="space-y-3">
                     {order.delivery_partner && (
-                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg">
-                        <span className="text-sm font-medium">شركة التوصيل</span>
-                        <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white">
-                          <Truck className="w-3 h-3 mr-1" />
-                          {order.delivery_partner}
-                        </Badge>
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-foreground">شريك التوصيل</span>
+                        <span className="text-foreground font-medium">{order.delivery_partner}</span>
                       </div>
                     )}
 
                     {employee && (
-                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg">
-                        <span className="text-sm font-medium">الموظف المسؤول</span>
-                        <span className="font-bold">{employee.full_name || employee.email || 'غير محدد'}</span>
+                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-950/30 dark:to-cyan-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-foreground">الموظف المسؤول</span>
+                        <span className="font-bold text-foreground">{employee.full_name || employee.email || 'غير محدد'}</span>
                       </div>
                     )}
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg">
-                        <span className="text-sm font-medium">حالة الفاتورة</span>
-                        {getReceiptInfo(order.receipt_received)}
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">حالة الفاتورة:</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-medium ${order.receipt_received ? 'text-green-600' : 'text-amber-600'}`}>
+                          {order.receipt_received ? 'مستلمة' : 'قيد الانتظار'}
+                        </span>
+                        {order.receipt_received && order.delivery_partner_invoice_id && (
+                          <span className="text-xs text-muted-foreground">
+                            (#{order.delivery_partner_invoice_id})
+                          </span>
+                        )}
                       </div>
-                      {order.receipt_received && order.delivery_partner_invoice_id && (
-                        <div className="flex justify-between items-center p-3 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-lg">
-                          <span className="text-sm font-medium">رقم الفاتورة</span>
-                          <span className="font-bold text-cyan-700" dir="ltr">#{order.delivery_partner_invoice_id}</span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -318,45 +337,35 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
             </Card>
 
             {/* Financial Summary */}
-            <Card>
+            <Card className="bg-card text-foreground border-border">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <CreditCard className="w-5 h-5 text-emerald-600" />
                   الملخص المالي
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {order.order_items && (
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
-                      <span className="font-medium">مجموع المنتجات</span>
-                      <span className="font-bold">
-                        {formatCurrency(order.order_items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0))}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {order.delivery_fee > 0 && (
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                      <span className="font-medium">رسوم التوصيل</span>
-                      <span className="font-bold">{formatCurrency(order.delivery_fee)}</span>
-                    </div>
-                  )}
-
-                  <Separator />
-                  
-                  <div className="flex justify-between items-center p-3 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/50 dark:to-green-950/50 rounded-lg">
-                    <span className="font-medium">مبلغ البيع (بعد الخصم)</span>
-                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300" dir="ltr">
-                      {formatCurrency((order.final_amount || 0) - (order.delivery_fee || 0))}
-                    </span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">مجموع المنتجات:</span>
+                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency(calculateTotal())}</span>
                   </div>
-                  
-                  <div className="flex justify-between items-center p-4 bg-gradient-to-r from-primary/10 to-blue-600/10 rounded-lg border-2 border-primary/20">
-                    <span className="text-lg font-bold">المبلغ الإجمالي</span>
-                    <span className="text-2xl font-bold text-primary" dir="ltr">
-                      {formatCurrency(order.final_amount || 0)}
-                    </span>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">رسوم التوصيل:</span>
+                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency(order.delivery_fee || 0)}</span>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">المجموع الفرعي:</span>
+                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency((calculateTotal() + (order.delivery_fee || 0)))}</span>
+                  </div>
+
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-foreground">الإجمالي النهائي:</span>
+                      <span className="text-lg font-bold text-primary" dir="ltr">{formatCurrency(order.final_amount || order.total_amount || 0)}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
