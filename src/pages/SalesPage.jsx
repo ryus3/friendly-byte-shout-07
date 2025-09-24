@@ -319,16 +319,6 @@ const SalesPage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* زر إعادة تعيين */}
-                <Button 
-                  variant="outline" 
-                  onClick={resetFilters} 
-                  className="w-full bg-background border-border text-foreground hover:bg-accent"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  إعادة تعيين
-                </Button>
               </div>
             </div>
           </CardContent>

@@ -193,14 +193,17 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                              </p>
                            )}
                          </div>
-                         <div className="text-right">
-                           <div className="font-medium text-foreground" dir="ltr">
-                             الكمية: {item.quantity.toLocaleString('en-US')}
-                           </div>
-                           <div className="text-sm text-muted-foreground" dir="ltr">
-                             {formatCurrency(item.price || 0)}
-                           </div>
-                         </div>
+                          <div className="text-right">
+                            <div className="font-medium text-foreground" dir="ltr">
+                              الكمية: {item.quantity.toLocaleString('en-US')}
+                            </div>
+                            <div className="text-sm text-muted-foreground" dir="ltr">
+                              سعر الوحدة: {formatCurrency(item.price || 0)}
+                            </div>
+                            <div className="text-xs text-muted-foreground" dir="ltr">
+                              المجموع: {formatCurrency((item.price || 0) * (item.quantity || 0))}
+                            </div>
+                          </div>
                        </div>
                      ))}
                   </div>
