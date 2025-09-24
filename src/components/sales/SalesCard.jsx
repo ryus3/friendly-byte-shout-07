@@ -159,16 +159,16 @@ const SalesCard = ({
             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 flex items-center justify-center">
               <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 space-y-1">
               <div className="font-medium text-foreground dark:text-foreground">
                 {order.customer_name || 'عميل غير محدد'}
               </div>
+              {order.customer_phone && (
+                <div className="text-xs text-muted-foreground" dir="ltr">
+                  {order.customer_phone}
+                </div>
+              )}
             </div>
-            {order.customer_phone && (
-              <div className="text-xs text-muted-foreground" dir="ltr">
-                {order.customer_phone}
-              </div>
-            )}
           </div>
 
           {order.customer_city && (
@@ -220,7 +220,7 @@ const SalesCard = ({
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-1 text-muted-foreground">
               <Calendar className="w-3 h-3" />
-              {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
+              {format(new Date(order.created_at), 'dd/MM/yyyy')}
             </div>
             {order.delivery_partner && (
               <div className="flex items-center gap-1">

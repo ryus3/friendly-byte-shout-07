@@ -112,22 +112,6 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
 
         <ScrollArea className="max-h-[calc(90vh-120px)]">
           <div className="space-y-6 p-1">
-            {/* Single Product Summary Card - Mobile Responsive */}
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border-green-200 dark:border-green-800">
-              <CardContent className="p-4 text-center">
-                <div className="flex items-center gap-3 justify-center">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 flex items-center justify-center">
-                    <Package className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-green-700 dark:text-green-300" dir="ltr">
-                      {orderProducts.length}
-                    </div>
-                    <div className="text-sm text-green-600 dark:text-green-400">المنتجات في الطلب</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Customer Information */}
             <Card className="bg-card text-foreground border-border">
@@ -247,12 +231,12 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                       </div>
                     )}
 
-                    <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-lg">
-                      <span className="text-sm font-medium text-foreground">تاريخ الطلب</span>
-                      <span className="font-bold text-foreground">
-                        {format(new Date(order.created_at), 'dd MMM yyyy HH:mm', { locale: ar })}
-                      </span>
-                    </div>
+                     <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-lg">
+                       <span className="text-sm font-medium text-foreground">تاريخ الطلب</span>
+                       <span className="font-bold text-foreground">
+                         {format(new Date(order.created_at), 'dd/MM/yyyy HH:mm')}
+                       </span>
+                     </div>
                   </div>
 
                   <div className="space-y-3">

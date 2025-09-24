@@ -241,11 +241,11 @@ const SalesPage = () => {
                   <DollarSign className="w-5 h-5" />
                 </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold" dir="ltr">{formatCurrency(stats.totalRevenue)}</p>
-                <h4 className="font-bold text-base">إجمالي المبيعات</h4>
-                <p className="text-white/80 text-xs">المبلغ الإجمالي</p>
-              </div>
+               <div>
+                 <p className="text-2xl font-bold" dir="ltr">{formatCurrency(stats.totalRevenue).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</p>
+                 <h4 className="font-bold text-base">إجمالي المبيعات</h4>
+                 <p className="text-white/80 text-xs">المبلغ الإجمالي</p>
+               </div>
               <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-teal-600/20" />
               <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-teal-600/10 to-emerald-400/10" />
             </div>
