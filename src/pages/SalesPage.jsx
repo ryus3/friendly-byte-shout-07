@@ -272,17 +272,17 @@ const SalesPage = () => {
 
         {/* كرت الفلاتر */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-          <CardContent className="p-3">
-            <div className="text-center space-y-1.5 bg-gradient-to-br from-orange-400 to-yellow-500 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+          <CardContent className="p-4">
+            <div className="text-center space-y-2 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
               {/* دوائر شفافة في الخلفية */}
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
               <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
               
-              <div className="flex flex-col items-center gap-1.5">
+              <div className="flex flex-col items-center gap-2">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                  <Filter className="w-4 h-4" />
+                  <Filter className="w-5 h-5" />
                 </div>
-                <div className="font-bold text-xs text-white mb-1">فلاتر البحث</div>
+                <div className="font-bold text-sm text-white mb-1">فلاتر البحث</div>
                 <div className="space-y-1.5 w-full">
                   {/* منسدلة اختيار الموظف - فقط للمديرين */}
                   {canViewAllEmployees && (
