@@ -210,7 +210,11 @@ const SalesPage = () => {
         {/* كرت إجمالي الطلبات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-blue-500 to-cyan-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              {/* دوائر شفافة في الخلفية */}
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+              
               <div className="flex flex-col items-center gap-2">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <ShoppingCart className="w-5 h-5" />
@@ -227,7 +231,11 @@ const SalesPage = () => {
         {/* كرت إجمالي المبيعات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-green-500 to-emerald-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              {/* دوائر شفافة في الخلفية */}
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+              
               <div className="flex flex-col items-center gap-2">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <DollarSign className="w-5 h-5" />
@@ -244,7 +252,11 @@ const SalesPage = () => {
         {/* كرت الفواتير المستلمة */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-purple-500 to-violet-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              {/* دوائر شفافة في الخلفية */}
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+              
               <div className="flex flex-col items-center gap-2">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <Receipt className="w-5 h-5" />
@@ -260,18 +272,22 @@ const SalesPage = () => {
 
         {/* كرت الفلاتر */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-          <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
-              <div className="flex flex-col items-center gap-2">
+          <CardContent className="p-3">
+            <div className="text-center space-y-1.5 bg-gradient-to-br from-orange-400 to-yellow-500 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              {/* دوائر شفافة في الخلفية */}
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+              
+              <div className="flex flex-col items-center gap-1.5">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <Filter className="w-4 h-4" />
                 </div>
-                <div className="font-bold text-sm text-white mb-2">فلاتر البحث</div>
-                <div className="space-y-2 w-full">
+                <div className="font-bold text-xs text-white mb-1">فلاتر البحث</div>
+                <div className="space-y-1.5 w-full">
                   {/* منسدلة اختيار الموظف - فقط للمديرين */}
                   {canViewAllEmployees && (
                     <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-8">
+                      <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-7">
                         <SelectValue placeholder="جميع الموظفين" />
                       </SelectTrigger>
                       <SelectContent className="bg-background border-border z-50">
@@ -287,7 +303,7 @@ const SalesPage = () => {
                   
                   {/* منسدلة فلتر الفترة */}
                   <Select value={dateFilter} onValueChange={setDateFilter}>
-                    <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-8">
+                    <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-7">
                       <SelectValue placeholder="جميع الفترات" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border z-50">
