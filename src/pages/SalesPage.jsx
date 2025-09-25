@@ -13,7 +13,7 @@ import {
   ShoppingCart, 
   Receipt,
   Search, 
-  RotateCcw
+  Filter
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -169,13 +169,6 @@ const SalesPage = () => {
     return employeesWithOrders;
   }, [deliveredOrders, users, canViewAllEmployees]);
 
-  const resetFilters = () => {
-    setSelectedEmployee('all');
-    setSearchTerm('');
-    setStatusFilter('all');
-    setReceiptFilter('all');
-    setDateFilter('all');
-  };
 
   // Handle view order details
   const handleViewOrderDetails = (order) => {
@@ -212,84 +205,76 @@ const SalesPage = () => {
         </p>
       </div>
 
-      {/* الصف الأول - إحصائيات المبيعات الرئيسية */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* كروت الإحصائيات والفلاتر - 2x2 على الهاتف، 4x1 على الكمبيوتر */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* كرت إجمالي الطلبات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-3 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
-              <div className="absolute top-2 right-2">
-                <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+            <div className="text-center space-y-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              <div className="flex flex-col items-center gap-2">
+                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <ShoppingCart className="w-5 h-5" />
                 </div>
+                <div>
+                  <p className="text-xl font-bold" dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</p>
+                  <h4 className="font-semibold text-sm">إجمالي الطلبات</h4>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold" dir="ltr">{stats.totalOrders.toLocaleString('en-US')}</p>
-                <h4 className="font-bold text-base">إجمالي الطلبات</h4>
-                <p className="text-white/80 text-xs">طلب مُسلم ومكتمل</p>
-              </div>
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-orange-400/20 to-red-600/20" />
-              <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-red-600/10 to-orange-400/10" />
             </div>
           </CardContent>
         </Card>
 
+        {/* كرت إجمالي المبيعات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-3 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
-              <div className="absolute top-2 right-2">
-                <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+            <div className="text-center space-y-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              <div className="flex flex-col items-center gap-2">
+                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <DollarSign className="w-5 h-5" />
                 </div>
+                <div>
+                  <p className="text-xl font-bold" dir="ltr">{formatCurrency(stats.totalRevenue).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</p>
+                  <h4 className="font-semibold text-sm">إجمالي المبيعات</h4>
+                </div>
               </div>
-               <div>
-                 <p className="text-2xl font-bold" dir="ltr">{formatCurrency(stats.totalRevenue).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</p>
-                 <h4 className="font-bold text-base">إجمالي المبيعات</h4>
-                 <p className="text-white/80 text-xs">المبلغ الإجمالي</p>
-               </div>
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400/20 to-teal-600/20" />
-              <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-teal-600/10 to-emerald-400/10" />
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* الصف الثاني - الفواتير والفلاتر */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* كرت الفواتير المستلمة */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-3 bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between min-h-[140px]">
-              <div className="absolute top-2 right-2">
-                <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+            <div className="text-center space-y-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              <div className="flex flex-col items-center gap-2">
+                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <Receipt className="w-5 h-5" />
                 </div>
+                <div>
+                  <p className="text-xl font-bold" dir="ltr">{stats.receivedInvoices.toLocaleString('en-US')}</p>
+                  <h4 className="font-semibold text-sm">الفواتير المستلمة</h4>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold" dir="ltr">{stats.receivedInvoices.toLocaleString('en-US')}</p>
-                <h4 className="font-bold text-base">الفواتير المستلمة</h4>
-                <p className="text-white/80 text-xs">فاتورة مستلمة</p>
-              </div>
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-purple-400/20 to-pink-600/20" />
-              <div className="absolute -top-6 -left-6 w-16 h-16 rounded-full bg-gradient-to-br from-pink-600/10 to-purple-400/10" />
             </div>
           </CardContent>
         </Card>
 
         {/* كرت الفلاتر */}
-        <Card className="bg-card/60 backdrop-blur border-border/40">
+        <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="space-y-4">
-              <h3 className="font-semibold text-center text-foreground">فلاتر البحث</h3>
-              
-              <div className="grid grid-cols-1 gap-3">
-                {/* اختيار الموظف */}
-                {canViewAllEmployees && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">الموظف</label>
+            <div className="text-center space-y-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+              <div className="flex flex-col items-center gap-2">
+                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                  <Filter className="w-4 h-4" />
+                </div>
+                <div className="font-bold text-sm text-white mb-2">فلاتر البحث</div>
+                <div className="space-y-2 w-full">
+                  {/* منسدلة اختيار الموظف - فقط للمديرين */}
+                  {canViewAllEmployees && (
                     <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger className="bg-background border-border text-foreground text-left">
+                      <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-8">
                         <SelectValue placeholder="جميع الموظفين" />
                       </SelectTrigger>
-                      <SelectContent className="bg-background border-border">
+                      <SelectContent className="bg-background border-border z-50">
                         <SelectItem value="all">جميع الموظفين</SelectItem>
                         {employeeOptions.map(emp => (
                           <SelectItem key={emp.id} value={emp.id}>
@@ -298,17 +283,14 @@ const SalesPage = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                )}
-
-                {/* فلتر التاريخ */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">الفترة</label>
+                  )}
+                  
+                  {/* منسدلة فلتر الفترة */}
                   <Select value={dateFilter} onValueChange={setDateFilter}>
-                    <SelectTrigger className="bg-background border-border text-foreground text-left">
-                      <SelectValue placeholder="اختر الفترة" />
+                    <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-8">
+                      <SelectValue placeholder="جميع الفترات" />
                     </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
+                    <SelectContent className="bg-background border-border z-50">
                       <SelectItem value="all">جميع الفترات</SelectItem>
                       <SelectItem value="today">اليوم</SelectItem>
                       <SelectItem value="week">أسبوع</SelectItem>
