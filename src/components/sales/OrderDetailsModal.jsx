@@ -54,7 +54,7 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
         productName: productData.name || item.product_name || item.productName || 'منتج غير محدد',
         variant: variant || '',
         quantity: item.quantity || 0,
-        price: item.price || 0
+        price: item.total_price || item.total || item.price || (item.unit_price || 0)
       };
     });
   }, [order]);
@@ -92,7 +92,10 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
   const hasTrackingNumber = order.tracking_number || order.delivery_partner_order_id;
 
   const calculateTotal = () => {
-    return orderProducts.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return orderProducts.reduce((sum, item) => {
+      const itemTotal = (item.price || 0) * (item.quantity || 0);
+      return sum + itemTotal;
+    }, 0);
   };
 
   return (
@@ -197,12 +200,12 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                             <div className="font-medium text-foreground" dir="ltr">
                               الكمية: {item.quantity.toLocaleString('en-US')}
                             </div>
-                            <div className="text-sm text-muted-foreground" dir="ltr">
-                              سعر الوحدة: {formatCurrency(item.price || 0)}
-                            </div>
-                            <div className="text-xs text-muted-foreground" dir="ltr">
-                              المجموع: {formatCurrency((item.price || 0) * (item.quantity || 0))}
-                            </div>
+                             <div className="text-sm text-muted-foreground" dir="ltr">
+                               سعر الوحدة: {formatCurrency(item.price || 0).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}
+                             </div>
+                             <div className="text-xs text-muted-foreground" dir="ltr">
+                               المجموع: {formatCurrency((item.price || 0) * (item.quantity || 0)).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}
+                             </div>
                           </div>
                        </div>
                      ))}
@@ -285,27 +288,27 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">مجموع المنتجات:</span>
-                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency(calculateTotal())}</span>
-                  </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-muted-foreground">مجموع المنتجات:</span>
+                     <span className="text-foreground font-medium" dir="ltr">{formatCurrency(calculateTotal()).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</span>
+                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">رسوم التوصيل:</span>
-                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency(order.delivery_fee || 0)}</span>
-                  </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-muted-foreground">رسوم التوصيل:</span>
+                     <span className="text-foreground font-medium" dir="ltr">{formatCurrency(order.delivery_fee || 0).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</span>
+                   </div>
 
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">المجموع الفرعي:</span>
-                    <span className="text-foreground font-medium" dir="ltr">{formatCurrency((calculateTotal() + (order.delivery_fee || 0)))}</span>
-                  </div>
+                   <div className="flex justify-between items-center">
+                     <span className="text-muted-foreground">المجموع الفرعي:</span>
+                     <span className="text-foreground font-medium" dir="ltr">{formatCurrency((calculateTotal() + (order.delivery_fee || 0))).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</span>
+                   </div>
 
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-foreground">الإجمالي النهائي:</span>
-                      <span className="text-lg font-bold text-primary" dir="ltr">{formatCurrency(order.final_amount || order.total_amount || 0)}</span>
-                    </div>
-                  </div>
+                   <div className="border-t pt-3">
+                     <div className="flex justify-between items-center">
+                       <span className="text-lg font-bold text-foreground">الإجمالي النهائي:</span>
+                       <span className="text-lg font-bold text-primary" dir="ltr">{formatCurrency(order.final_amount || order.total_amount || 0).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}</span>
+                     </div>
+                   </div>
                 </div>
               </CardContent>
             </Card>
