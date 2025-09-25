@@ -210,7 +210,7 @@ const SalesPage = () => {
         {/* كرت إجمالي الطلبات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-br from-blue-500 to-cyan-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-blue-500 to-cyan-400 text-white rounded-lg p-4 relative overflow-hidden h-[140px] flex flex-col justify-center">
               {/* دوائر شفافة في الخلفية */}
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
               <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
@@ -231,7 +231,7 @@ const SalesPage = () => {
         {/* كرت إجمالي المبيعات */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-br from-green-500 to-emerald-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-green-500 to-emerald-400 text-white rounded-lg p-4 relative overflow-hidden h-[140px] flex flex-col justify-center">
               {/* دوائر شفافة في الخلفية */}
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
               <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
@@ -252,7 +252,7 @@ const SalesPage = () => {
         {/* كرت الفواتير المستلمة */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-br from-purple-500 to-violet-400 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center space-y-2 bg-gradient-to-br from-purple-500 to-violet-400 text-white rounded-lg p-4 relative overflow-hidden h-[140px] flex flex-col justify-center">
               {/* دوائر شفافة في الخلفية */}
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
               <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
@@ -273,50 +273,53 @@ const SalesPage = () => {
         {/* كرت الفلاتر */}
         <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="text-center space-y-2 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-center min-h-[120px]">
+            <div className="text-center bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden h-[140px] flex flex-col justify-between">
               {/* دوائر شفافة في الخلفية */}
               <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
               <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
               
-              <div className="flex flex-col items-center gap-2">
+              {/* القسم العلوي - الأيقونة والعنوان */}
+              <div className="flex flex-col items-center gap-2 flex-1 justify-center">
                 <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                   <Filter className="w-5 h-5" />
                 </div>
-                <div className="font-bold text-sm text-white mb-1">فلاتر البحث</div>
-                <div className="space-y-1.5 w-full">
-                  {/* منسدلة اختيار الموظف - فقط للمديرين */}
-                  {canViewAllEmployees && (
-                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-7">
-                        <SelectValue placeholder="جميع الموظفين" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background border-border z-50">
-                        <SelectItem value="all">جميع الموظفين</SelectItem>
-                        {employeeOptions.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.name} ({emp.orderCount.toLocaleString('en-US')})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  
-                  {/* منسدلة فلتر الفترة */}
-                  <Select value={dateFilter} onValueChange={setDateFilter}>
-                    <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-7">
-                      <SelectValue placeholder="جميع الفترات" />
+                <div className="font-bold text-sm text-white">فلاتر البحث</div>
+              </div>
+              
+              {/* القسم السفلي - المنسدلات */}
+              <div className="space-y-1 w-full">
+                {/* منسدلة اختيار الموظف - فقط للمديرين */}
+                {canViewAllEmployees && (
+                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                    <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-6">
+                      <SelectValue placeholder="جميع الموظفين" />
                     </SelectTrigger>
                     <SelectContent className="bg-background border-border z-50">
-                      <SelectItem value="all">جميع الفترات</SelectItem>
-                      <SelectItem value="today">اليوم</SelectItem>
-                      <SelectItem value="week">أسبوع</SelectItem>
-                      <SelectItem value="month">شهر</SelectItem>
-                      <SelectItem value="3months">3 أشهر</SelectItem>
-                      <SelectItem value="6months">6 أشهر</SelectItem>
-                      <SelectItem value="year">سنة</SelectItem>
+                      <SelectItem value="all">جميع الموظفين</SelectItem>
+                      {employeeOptions.map(emp => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.name} ({emp.orderCount.toLocaleString('en-US')})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                </div>
+                )}
+                
+                {/* منسدلة فلتر الفترة */}
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger className="bg-white/20 border-white/30 text-white text-xs h-6">
+                    <SelectValue placeholder="جميع الفترات" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border-border z-50">
+                    <SelectItem value="all">جميع الفترات</SelectItem>
+                    <SelectItem value="today">اليوم</SelectItem>
+                    <SelectItem value="week">أسبوع</SelectItem>
+                    <SelectItem value="month">شهر</SelectItem>
+                    <SelectItem value="3months">3 أشهر</SelectItem>
+                    <SelectItem value="6months">6 أشهر</SelectItem>
+                    <SelectItem value="year">سنة</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardContent>
