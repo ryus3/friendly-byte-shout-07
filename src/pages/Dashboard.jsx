@@ -9,6 +9,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import { useInstantNotifications } from '@/hooks/useInstantNotifications';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -97,6 +98,9 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
+    
+    // إعداد الإشعارات الفورية للطلبات الذكية
+    const { sendInstantNotification } = useInstantNotifications(user?.id, user?.role);
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {

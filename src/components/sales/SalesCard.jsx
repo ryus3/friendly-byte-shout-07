@@ -156,9 +156,6 @@ const SalesCard = ({
         {/* Customer & Location Info */}
         <div className="space-y-3">
           <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-white/40 dark:border-white/10 backdrop-blur-sm">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 flex items-center justify-center">
-              <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            </div>
             <div className="flex-1 space-y-1">
               <div className="font-medium text-foreground dark:text-foreground">
                 {order.customer_name || 'عميل غير محدد'}
@@ -168,6 +165,9 @@ const SalesCard = ({
                   {order.customer_phone}
                 </div>
               )}
+            </div>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 flex items-center justify-center">
+              <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
 
