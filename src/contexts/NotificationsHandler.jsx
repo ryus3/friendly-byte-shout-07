@@ -4,6 +4,8 @@ import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
 import { useUnreadNotificationsCheck } from '@/hooks/useUnreadNotificationsCheck';
+import { useReliableAiOrderNotifications } from '@/hooks/useReliableAiOrderNotifications';
+import { useAiOrderEventListener } from '@/hooks/useAiOrderEventListener';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
@@ -11,6 +13,12 @@ const NotificationsHandler = () => {
   
   // فحص الإشعارات غير المقروءة عند فتح الموقع
   useUnreadNotificationsCheck(user);
+  
+  // نظام إشعارات الطلبات الذكية الموثوق
+  useReliableAiOrderNotifications(user);
+  
+  // مستمع أحداث الطلبات الذكية
+  useAiOrderEventListener(user);
 
   useEffect(() => {
     // التحقق من الشروط الأساسية
@@ -72,65 +80,117 @@ const NotificationsHandler = () => {
     //   )
     //   .subscribe();
 
-    // إشعارات طلبات تليجرام (AI Orders) - للمدير والموظفين مع تسجيل مفصل
+    // إشعارات طلبات تليجرام (AI Orders) - نظام مبسط وموثوق
     const aiOrdersChannel = supabase
-      .channel(`ai-orders-notifications-${user.id}-${Date.now()}`)
+      .channel(`ai-orders-notifications-simplified-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
         async (payload) => {
-          console.log('🔥 NotificationsHandler: AI Orders Real-time INSERT detected:', {
-            payload: payload.new,
+          console.log('🔥 SIMPLIFIED: AI Orders Real-time INSERT detected:', {
+            orderId: payload.new?.id,
             currentUser: user.id,
             userRole: user.role,
+            userRoles: user.roles,
             userEmployeeCode: user.employee_code,
             orderCreatedBy: payload.new?.created_by,
-            orderSource: payload.new?.source
+            orderSource: payload.new?.source,
+            isAdmin: user?.roles?.includes('super_admin')
           });
 
           try {
-            // محاولة جلب بيانات الموظف الذي أنشأ الطلب
-            let employeeName = 'طلب تليغرام';
-            let employeeProfile = null;
-            
+            // جلب بيانات الموظف الذي أنشأ الطلب
+            let employeeName = 'موظف جديد';
             if (payload.new?.created_by) {
-              console.log('🔍 Looking up employee with user_id:', payload.new.created_by);
+              console.log('🔍 SIMPLIFIED: Looking up employee with user_id:', payload.new.created_by);
               
-              // البحث بـ user_id في جدول profiles  
               const { data: emp, error: empError } = await supabase
                 .from('profiles')
                 .select('user_id, full_name, employee_code')
                 .eq('user_id', payload.new.created_by)
                 .maybeSingle();
               
-              if (empError) {
-                console.error('❌ Error fetching employee profile:', empError);
-              }
-              
-              console.log('👤 Employee profile lookup result:', emp);
-              
               if (emp?.full_name) {
                 employeeName = emp.full_name;
-                employeeProfile = emp;
+                console.log('✅ SIMPLIFIED: Found employee name:', employeeName);
               } else {
-                employeeName = `موظف ${payload.new.created_by}`;
+                employeeName = `موظف ${payload.new.created_by.substring(0, 8)}`;
+                console.log('⚠️ SIMPLIFIED: Using fallback name:', employeeName);
               }
             }
             
-            console.log('📝 Final employee name for notification:', employeeName);
-            
-            // منطق مبسط وواضح للإشعارات
-            console.log('🔍 Checking notification conditions:', {
-              currentUserId: user.id,
-              orderCreatedBy: payload.new.created_by,
+            // منطق إشعارات مبسط وواضح
+            const isAdmin = user?.roles?.includes('super_admin');
+            const isOrderCreator = payload.new.created_by === user.id;
+            const isManagerOrder = payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604';
+
+            console.log('🔍 SIMPLIFIED: Notification conditions:', {
               isAdmin,
-              managerIdHardcoded: '91484496-b887-44f7-9e5d-be9db5567604'
+              isOrderCreator,
+              isManagerOrder,
+              willCreateNotification: isOrderCreator || (isAdmin && !isManagerOrder)
             });
 
-            // إشعار دائماً للشخص الذي أنشأ الطلب (موظف أو مدير)
-            if (payload.new.created_by === user.id) {
-              console.log('✅ Creating notification for order creator (current user)');
-              const creatorNotification = {
+            // حفظ الإشعار في قاعدة البيانات أولاً
+            let notificationSaved = false;
+            
+            if (isOrderCreator) {
+              // إشعار للمستخدم الذي أنشأ الطلب (موظف أو مدير)
+              console.log('✅ SIMPLIFIED: Creating notification for order creator');
+              const { error: notifError } = await supabase
+                .from('notifications')
+                .insert({
+                  user_id: payload.new.created_by,
+                  type: 'new_ai_order',
+                  title: 'طلب ذكي جديد',
+                  message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
+                  data: { 
+                    ai_order_id: payload.new.id,
+                    created_by: payload.new.created_by,
+                    source: payload.new.source || 'telegram',
+                    employee_name: employeeName
+                  },
+                  is_read: false
+                });
+                
+              if (notifError) {
+                console.error('❌ SIMPLIFIED: Error saving creator notification:', notifError);
+              } else {
+                console.log('✅ SIMPLIFIED: Creator notification saved to database');
+                notificationSaved = true;
+              }
+            }
+
+            if (isAdmin && !isManagerOrder && user.id !== payload.new.created_by) {
+              // إشعار إضافي للمدير إذا كان الطلب من موظف
+              console.log('✅ SIMPLIFIED: Creating additional admin notification');
+              const { error: adminNotifError } = await supabase
+                .from('notifications')
+                .insert({
+                  user_id: null, // إشعار عام للمدير
+                  type: 'new_ai_order',
+                  title: 'طلب ذكي جديد من موظف',
+                  message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
+                  data: { 
+                    ai_order_id: payload.new.id,
+                    created_by: payload.new.created_by,
+                    employee_name: employeeName,
+                    source: payload.new.source || 'telegram'
+                  },
+                  is_read: false
+                });
+                
+              if (adminNotifError) {
+                console.error('❌ SIMPLIFIED: Error saving admin notification:', adminNotifError);
+              } else {
+                console.log('✅ SIMPLIFIED: Admin notification saved to database');
+                notificationSaved = true;
+              }
+            }
+
+            // إضافة الإشعار للسياق المحلي فوراً بغض النظر عن قاعدة البيانات
+            if (isOrderCreator) {
+              addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
                 message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
@@ -143,17 +203,12 @@ const NotificationsHandler = () => {
                 },
                 user_id: payload.new.created_by,
                 is_read: false
-              };
-              console.log('📤 Creator notification data:', creatorNotification);
-              addNotification(creatorNotification);
+              });
+              console.log('✅ SIMPLIFIED: Added creator notification to local context');
             }
 
-            // إشعار إضافي للمدير إذا كان الطلب من موظف وليس من المدير نفسه
-            if (isAdmin && 
-                payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && 
-                user.id !== payload.new.created_by) {
-              console.log('✅ Creating additional admin notification for employee order');
-              const adminNotification = {
+            if (isAdmin && !isManagerOrder && user.id !== payload.new.created_by) {
+              addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد من موظف',
                 message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
@@ -165,15 +220,27 @@ const NotificationsHandler = () => {
                   employee_name: employeeName,
                   source: payload.new.source || 'telegram'
                 },
-                user_id: null, // Admin notification
+                user_id: null,
                 is_read: false
-              };
-              console.log('📤 Admin notification data:', adminNotification);
-              addNotification(adminNotification);
+              });
+              console.log('✅ SIMPLIFIED: Added admin notification to local context');
             }
 
-            // إشعار فوري بدون تأخير للوصول الفوري
-            console.log('🔔 Dispatching immediate notification event for UI refresh');
+            // إشعار متصفح فوري
+            try {
+              await notificationService.notifyAiOrder({
+                id: payload.new.id,
+                source: payload.new.source || 'telegram',
+                employee_name: employeeName,
+                created_by: payload.new.created_by
+              });
+              console.log('✅ SIMPLIFIED: Browser notification sent');
+            } catch (browserNotifError) {
+              console.log('⚠️ SIMPLIFIED: Browser notification failed:', browserNotifError);
+            }
+
+            // أحداث فورية للواجهة - دائماً
+            console.log('🔄 SIMPLIFIED: Dispatching UI refresh events');
             window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
               detail: { 
                 orderId: payload.new.id,
@@ -183,28 +250,20 @@ const NotificationsHandler = () => {
               } 
             }));
 
-            // إشعار متصفح فوري للطلبات الذكية
-            if (payload.new?.id) {
-              notificationService.notifyAiOrder({
-                id: payload.new.id,
-                source: payload.new.source || 'telegram',
-                employee_name: employeeName,
-                created_by: payload.new.created_by
-              }).catch(error => {
-                console.log('⚠️ Browser notification not available:', error);
-              });
-            }
-            
-            // بث حدث متصفح احتياطي لتحديث الواجهات فوراً
-            console.log('🔄 Dispatching aiOrderCreated browser event');
             window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
               detail: { ...payload.new, employeeName } 
-            })); 
+            }));
+
+            // تحديث الإشعارات فوراً
+            if (window.refreshNotifications) {
+              window.refreshNotifications();
+              console.log('✅ SIMPLIFIED: Triggered notifications refresh');
+            }
             
           } catch (e) {
-            console.error('❌ AI order notification error:', e);
-            // إشعار احتياطي في حالة الخطأ
-            console.log('⚠️ Creating fallback notification due to error');
+            console.error('❌ SIMPLIFIED: Critical AI order notification error:', e);
+            
+            // إشعار احتياطي أساسي في حالة الخطأ
             addNotification({
               type: 'new_ai_order',
               title: 'طلب ذكي جديد',
@@ -212,27 +271,29 @@ const NotificationsHandler = () => {
               icon: 'MessageSquare',
               color: 'amber',
               data: { ai_order_id: payload.new?.id || null },
-              user_id: isAdmin ? null : user.id,
+              user_id: user.id,
               is_read: false
             });
+            console.log('✅ SIMPLIFIED: Fallback notification created');
           }
         }
       )
       .subscribe((status) => {
-        console.log('📊 NotificationsHandler: AI Orders Real-time subscription status:', status);
+        console.log('📊 SIMPLIFIED: AI Orders Real-time subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to AI orders Real-time updates');
+          console.log('✅ SIMPLIFIED: Successfully subscribed to AI orders Real-time updates');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('❌ Error in AI orders Real-time subscription');
+          console.error('❌ SIMPLIFIED: Error in AI orders Real-time subscription');
         }
       });
 
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
 
 
+    // تنظيف القنوات
     return () => {
+      console.log('🧹 SIMPLIFIED: Cleaning up notification channels');
       supabase.removeChannel(profilesChannel);
-      // ordersChannel معطل
       supabase.removeChannel(aiOrdersChannel);
     };
     

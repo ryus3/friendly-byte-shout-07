@@ -75,8 +75,18 @@ export const NotificationsProvider = ({ children }) => {
     useEffect(() => {
         if (!user || !supabase) return () => {};
 
+        console.log('🔄 NotificationsContext: Setting up real-time listener for user:', user.id);
+
         const handleNewNotification = (payload) => {
             const newNotification = payload.new;
+            console.log('📬 NotificationsContext: New notification received:', {
+                id: newNotification.id,
+                type: newNotification.type,
+                title: newNotification.title,
+                user_id: newNotification.user_id,
+                currentUser: user.id
+            });
+
             const isForThisUser = newNotification.user_id === user.id;
             const isGlobalAdminNotification = newNotification.user_id === null;
 
@@ -84,17 +94,24 @@ export const NotificationsProvider = ({ children }) => {
 
             if (isForThisUser) {
                 shouldShow = true;
+                console.log('✅ NotificationsContext: Notification is for current user');
             } else if (isGlobalAdminNotification) {
                 const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
                 if (isAdmin) {
                     shouldShow = true;
+                    console.log('✅ NotificationsContext: Admin notification accepted');
                 } else {
-                    // إضافة order_created لقائمة الإشعارات المحظورة للموظفين
-                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'order_created', 'cash_correction', 'balance_correction', 'main_cash_correction', 'ai_order', 'ai_order_created', 'ai_order_updated', 'telegram_order', 'telegram_ai_order'];
+                    // التحقق من نوع الإشعار للموظفين
+                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'order_created', 'cash_correction', 'balance_correction', 'main_cash_correction'];
                     if (!adminOnlyGlobalTypes.includes(newNotification.type)) {
                         shouldShow = true;
+                        console.log('✅ NotificationsContext: Global notification accepted for employee');
+                    } else {
+                        console.log('❌ NotificationsContext: Admin-only notification blocked for employee');
                     }
                 }
+            } else {
+                console.log('❌ NotificationsContext: Notification not for this user');
             }
 
             if (shouldShow) {
