@@ -5,136 +5,108 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface AIOrderRecord {
+  id: string;
+  created_by: string;
+  customer_name: string | null;
+  total_amount: number;
+  source: string;
+}
+
+interface WebhookPayload {
+  type: string;
+  record: AIOrderRecord;
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('🔔 AI Order Notifications Edge Function called');
+  console.log('🔔 AI Order Notifications started');
 
   try {
     const supabase = createClient(
       'https://tkheostkubborwkwzugl.supabase.co',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     );
 
-    const { type, record } = await req.json();
-    console.log('📦 Received webhook data:', { type, record: record?.id });
+    const payload: WebhookPayload = await req.json();
+    console.log('📦 Processing AI order:', payload.record.id);
 
-    if (type !== 'ai_order_created' || !record) {
-      console.log('❌ Invalid webhook data');
-      return new Response('Invalid webhook data', { status: 400, headers: corsHeaders });
+    if (payload.type !== 'ai_order_created') {
+      return new Response('Invalid type', { status: 400, headers: corsHeaders });
     }
 
-    console.log('🆕 Processing new AI order:', record.id);
+    const record = payload.record;
 
-    // جلب بيانات المنشئ
-    const { data: creatorProfile } = await supabase
+    // جلب اسم المنشئ
+    const { data: creator } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('id', record.created_by)
       .single();
 
-    const creatorName = creatorProfile?.full_name || 'مستخدم غير معروف';
-    console.log('👤 Creator:', creatorName);
-
-    // إنشاء الإشعارات
-    const notifications = [];
+    const creatorName = creator?.full_name || 'مستخدم';
 
     // إشعار للمنشئ
-    notifications.push({
+    const creatorNotification = {
       type: 'new_ai_order',
       title: '✅ تم إنشاء طلب ذكي جديد',
-      message: `تم حفظ طلبك الذكي بنجاح - في انتظار اختيار شركة التوصيل`,
+      message: 'تم حفظ طلبك الذكي بنجاح',
       user_id: record.created_by,
       data: {
         ai_order_id: record.id,
         customer_name: record.customer_name,
-        total_amount: record.total_amount,
-        source: record.source
+        total_amount: record.total_amount
       },
       priority: 'high',
       is_read: false
-    });
-
-    // إشعار للمديرين (إذا لم يكن المنشئ مديراً)
-    const { data: adminProfiles } = await supabase
-      .from('profiles')
-      .select('id')
-      .in('role', ['admin', 'super_admin']);
-
-    if (adminProfiles) {
-      for (const admin of adminProfiles) {
-        if (admin.id !== record.created_by) {
-          notifications.push({
-            type: 'new_ai_order',
-            title: `📋 طلب ذكي جديد من ${creatorName}`,
-            message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount || 0}`,
-            user_id: admin.id,
-            data: {
-              ai_order_id: record.id,
-              customer_name: record.customer_name,
-              total_amount: record.total_amount,
-              creator_name: creatorName,
-              created_by: record.created_by,
-              source: record.source
-            },
-            priority: 'medium',
-            is_read: false
-          });
-        }
-      }
-    }
+    };
 
     // إشعار عام للمديرين
-    notifications.push({
+    const adminNotification = {
       type: 'new_ai_order',
       title: `📋 طلب ذكي جديد من ${creatorName}`,
-      message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount || 0}`,
-      user_id: null, // إشعار عام
+      message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount}`,
+      user_id: null,
       data: {
         ai_order_id: record.id,
         customer_name: record.customer_name,
         total_amount: record.total_amount,
         creator_name: creatorName,
-        created_by: record.created_by,
-        source: record.source
+        created_by: record.created_by
       },
       priority: 'medium',
       is_read: false
-    });
+    };
 
-    console.log('💾 Saving notifications to database:', notifications.length);
-
-    // حفظ الإشعارات في قاعدة البيانات
-    const { data: savedNotifications, error } = await supabase
+    // حفظ الإشعارات
+    const { error } = await supabase
       .from('notifications')
-      .insert(notifications)
-      .select();
+      .insert([creatorNotification, adminNotification]);
 
     if (error) {
       console.error('❌ Error saving notifications:', error);
       return new Response('Error saving notifications', { status: 500, headers: corsHeaders });
     }
 
-    console.log('✅ Notifications saved successfully:', savedNotifications?.length);
-
-    console.log('🚀 AI Order notification process completed successfully');
+    console.log('✅ Notifications saved successfully');
 
     return new Response(JSON.stringify({ 
       success: true, 
-      notifications_created: notifications.length,
       ai_order_id: record.id
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    console.error('❌ Error in AI Order notifications:', error);
+  } catch (err) {
+    console.error('❌ Error:', err);
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      success: false 
+      success: false,
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
