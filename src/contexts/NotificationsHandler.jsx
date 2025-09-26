@@ -115,10 +115,18 @@ const NotificationsHandler = () => {
             
             console.log('📝 Final employee name for notification:', employeeName);
             
-            // إنشاء إشعار للموظف الذي أنشأ الطلب (إذا لم يكن المدير)
-            if (payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && payload.new.created_by === user.id) {
-              console.log('✅ Creating notification for employee who created the order');
-              const employeeNotification = {
+            // منطق مبسط وواضح للإشعارات
+            console.log('🔍 Checking notification conditions:', {
+              currentUserId: user.id,
+              orderCreatedBy: payload.new.created_by,
+              isAdmin,
+              managerIdHardcoded: '91484496-b887-44f7-9e5d-be9db5567604'
+            });
+
+            // إشعار دائماً للشخص الذي أنشأ الطلب (موظف أو مدير)
+            if (payload.new.created_by === user.id) {
+              console.log('✅ Creating notification for order creator (current user)');
+              const creatorNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
                 message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
@@ -129,16 +137,18 @@ const NotificationsHandler = () => {
                   created_by: payload.new.created_by,
                   source: payload.new.source || 'telegram'
                 },
-                user_id: payload.new.created_by, // إرسال للموظف الذي أنشأ الطلب
+                user_id: payload.new.created_by,
                 is_read: false
               };
-              console.log('📤 Employee notification data:', employeeNotification);
-              addNotification(employeeNotification);
+              console.log('📤 Creator notification data:', creatorNotification);
+              addNotification(creatorNotification);
             }
 
-            // إنشاء إشعار للمدير فقط إذا كان الطلب من موظف (ليس من المدير نفسه)
-            if (isAdmin && payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604') {
-              console.log('✅ Creating admin notification for AI order from employee');
+            // إشعار إضافي للمدير إذا كان الطلب من موظف وليس من المدير نفسه
+            if (isAdmin && 
+                payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && 
+                user.id !== payload.new.created_by) {
+              console.log('✅ Creating additional admin notification for employee order');
               const adminNotification = {
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد من موظف',
@@ -156,25 +166,6 @@ const NotificationsHandler = () => {
               };
               console.log('📤 Admin notification data:', adminNotification);
               addNotification(adminNotification);
-            } else if (payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
-              // إشعار واحد فقط للمدير عندما ينشئ طلب بنفسه
-              console.log('✅ Creating single notification for manager self-created order');
-              const managerSelfNotification = {
-                type: 'new_ai_order',
-                title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
-                icon: 'MessageSquare',
-                color: 'green',
-                data: { 
-                  ai_order_id: payload.new.id,
-                  created_by: payload.new.created_by,
-                  source: payload.new.source || 'telegram'
-                },
-                user_id: '91484496-b887-44f7-9e5d-be9db5567604',
-                is_read: false
-              };
-              console.log('📤 Manager self notification data:', managerSelfNotification);
-              addNotification(managerSelfNotification);
             }
 
             // إشعار فوري بدون تأخير للوصول الفوري
