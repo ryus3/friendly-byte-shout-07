@@ -6,6 +6,7 @@ import { notificationService } from '@/utils/NotificationService';
 import { useUnreadNotificationsCheck } from '@/hooks/useUnreadNotificationsCheck';
 import { useReliableAiOrderNotifications } from '@/hooks/useReliableAiOrderNotifications';
 import { useAiOrderEventListener } from '@/hooks/useAiOrderEventListener';
+import { useAiOrderFallbackChecker } from '@/hooks/useAiOrderFallbackChecker';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
@@ -19,6 +20,9 @@ const NotificationsHandler = () => {
   
   // مستمع أحداث الطلبات الذكية
   useAiOrderEventListener(user);
+  
+  // نظام احتياطي للتحقق من الطلبات الذكية الجديدة عند فتح الموقع
+  useAiOrderFallbackChecker(user);
 
   useEffect(() => {
     // التحقق من الشروط الأساسية
@@ -143,7 +147,7 @@ const NotificationsHandler = () => {
                   user_id: payload.new.created_by,
                   type: 'new_ai_order',
                   title: 'طلب ذكي جديد',
-                  message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
+                   message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
                   data: { 
                     ai_order_id: payload.new.id,
                     created_by: payload.new.created_by,
@@ -170,7 +174,7 @@ const NotificationsHandler = () => {
                   user_id: null, // إشعار عام للمدير
                   type: 'new_ai_order',
                   title: 'طلب ذكي جديد من موظف',
-                  message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
+                   message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
                   data: { 
                     ai_order_id: payload.new.id,
                     created_by: payload.new.created_by,
@@ -193,7 +197,7 @@ const NotificationsHandler = () => {
               addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
+                 message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
@@ -211,7 +215,7 @@ const NotificationsHandler = () => {
               addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد من موظف',
-                message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
+                 message: `استلام طلب جديد من التليغرام بواسطة ${employeeName} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 
