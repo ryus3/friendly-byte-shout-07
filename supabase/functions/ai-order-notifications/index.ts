@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(
-      'https://tkheostkubborwkwzugl.supabase.co',
+      Deno.env.get('SUPABASE_URL') || 'https://tkheostkubborwkwzugl.supabase.co',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
     );
 

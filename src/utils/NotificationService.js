@@ -158,7 +158,7 @@ class NotificationService {
   async notifyAiOrder(orderData) {
     const notificationData = {
       title: 'طلب ذكي جديد',
-      message: `تم استلام طلب جديد من التليغرام`,
+      message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
       type: 'new_ai_order',
       ai_order_id: orderData.id
     };
