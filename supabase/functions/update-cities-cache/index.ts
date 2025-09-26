@@ -386,7 +386,7 @@ serve(async (req) => {
           p_cities_count: 0,
           p_regions_count: 0,
           p_success: false,
-          p_error_message: error instanceof Error ? error.message : String(error)
+          p_error_message: error.message
         });
       } catch (logError) {
         console.warn('⚠️ فشل تسجيل خطأ المزامنة:', logError);
@@ -396,7 +396,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : String(error),
+        error: error.message,
         duration_seconds: duration,
         timestamp: endTime.toISOString()
       }),

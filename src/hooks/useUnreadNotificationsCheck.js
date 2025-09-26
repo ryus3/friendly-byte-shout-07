@@ -16,15 +16,15 @@ export const useUnreadNotificationsCheck = (user) => {
       try {
         console.log('🔍 Checking for unread notifications for user:', user.id);
         
-        // جلب الإشعارات غير المقروءة منذ آخر 24 ساعة
+        // جلب الإشعارات غير المقروءة منذ آخر مرة تم فتح الموقع
         const now = Date.now();
-        const twentyFourHoursAgo = new Date(now - (24 * 60 * 60 * 1000)).toISOString();
+        const oneHourAgo = new Date(now - (60 * 60 * 1000)).toISOString();
         
         let query = supabase
           .from('notifications')
           .select('*')
           .eq('is_read', false)
-          .gte('created_at', twentyFourHoursAgo)
+          .gte('created_at', oneHourAgo)
           .order('created_at', { ascending: false })
           .limit(5); // آخر 5 إشعارات غير مقروءة
 
