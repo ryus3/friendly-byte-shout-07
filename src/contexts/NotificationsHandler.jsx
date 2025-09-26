@@ -115,8 +115,8 @@ const NotificationsHandler = () => {
             
             console.log('📝 Final employee name for notification:', employeeName);
             
-            // إنشاء إشعار للموظف إذا لم يكن المدير
-            if (payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && user.id === payload.new.created_by) {
+            // إنشاء إشعار للموظف الذي أنشأ الطلب (إذا لم يكن المدير)
+            if (payload.new.created_by !== '91484496-b887-44f7-9e5d-be9db5567604' && payload.new.created_by === user.id) {
               console.log('✅ Creating notification for employee who created the order');
               const employeeNotification = {
                 type: 'new_ai_order',
@@ -129,7 +129,7 @@ const NotificationsHandler = () => {
                   created_by: payload.new.created_by,
                   source: payload.new.source || 'telegram'
                 },
-                user_id: user.id,
+                user_id: payload.new.created_by, // إرسال للموظف الذي أنشأ الطلب
                 is_read: false
               };
               console.log('📤 Employee notification data:', employeeNotification);
