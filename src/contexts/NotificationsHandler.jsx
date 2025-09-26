@@ -3,10 +3,14 @@ import { useAuth } from './UnifiedAuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
+import { useUnreadNotificationsCheck } from '@/hooks/useUnreadNotificationsCheck';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
+  
+  // فحص الإشعارات غير المقروءة عند فتح الموقع
+  useUnreadNotificationsCheck(user);
 
   useEffect(() => {
     // التحقق من الشروط الأساسية

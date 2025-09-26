@@ -79,17 +79,47 @@ class NotificationService {
   }
 
   async showNotification(data) {
+    console.log('🔔 Attempting to show notification:', data);
+    
     const hasPermission = await this.requestPermission();
     
-    if (!hasPermission || !this.worker) {
-      console.log('❌ Cannot show notification: permission or worker not available');
+    if (!hasPermission) {
+      console.log('❌ Cannot show notification: permission denied');
       return;
+    }
+
+    // إذا لم يكن Service Worker متاحاً، استخدم Notification API المباشر
+    if (!this.worker || !this.worker.active) {
+      console.log('⚠️ Service Worker not available, using direct notification API');
+      
+      try {
+        const notification = new Notification(data.title || 'إشعار جديد', {
+          body: data.message || data.body || '',
+          icon: '/favicon.ico',
+          tag: data.type || 'default',
+          requireInteraction: true
+        });
+
+        notification.onclick = () => {
+          this.handleNotificationClick({
+            type: data.type,
+            id: data.id || data.ai_order_id
+          });
+          notification.close();
+        };
+
+        return;
+      } catch (error) {
+        console.error('❌ Direct notification failed:', error);
+        return;
+      }
     }
 
     const notificationData = {
       title: data.title || 'إشعار جديد',
       body: data.message || data.body || '',
       icon: '/favicon.ico',
+      badge: '/favicon.ico',
       tag: data.type || 'default',
       data: {
         type: data.type,
@@ -98,13 +128,13 @@ class NotificationService {
       }
     };
 
+    console.log('📤 Sending notification to Service Worker:', notificationData);
+
     // إرسال بيانات الإشعار إلى Service Worker
-    if (this.worker.active) {
-      this.worker.active.postMessage({
-        type: 'SHOW_NOTIFICATION',
-        data: notificationData
-      });
-    }
+    this.worker.active.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      payload: notificationData
+    });
   }
 
   handleNotificationClick(data) {

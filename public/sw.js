@@ -1,115 +1,113 @@
-// Service Worker للإشعارات الفورية
-const CACHE_NAME = 'ryus-notifications-v1';
+// Service Worker للإشعارات الخلفية
+console.log('🔄 Service Worker loaded');
 
-// تثبيت Service Worker
+// Cache names
+const CACHE_NAME = 'notifications-cache-v1';
+
+// أحداث التثبيت
 self.addEventListener('install', (event) => {
-  console.log('📦 Service Worker installed');
+  console.log('✅ Service Worker installed');
   self.skipWaiting();
 });
 
-// تفعيل Service Worker
+// أحداث التفعيل
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker activated');
+  console.log('🚀 Service Worker activated');
   event.waitUntil(self.clients.claim());
 });
 
-// معالجة الرسائل من التطبيق الرئيسي
+// التعامل مع الرسائل من التطبيق الرئيسي
 self.addEventListener('message', (event) => {
-  const { type, data } = event.data;
+  console.log('📨 SW received message:', event.data);
   
-  if (type === 'SHOW_NOTIFICATION') {
-    showNotification(data);
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { title, body, icon, badge, tag, data } = event.data.payload;
+    
+    self.registration.showNotification(title, {
+      body,
+      icon: icon || '/icon-192x192.png',
+      badge: badge || '/icon-192x192.png',
+      tag: tag || 'default',
+      data: data || {},
+      requireInteraction: true,
+      actions: [
+        {
+          action: 'view',
+          title: 'عرض',
+          icon: '/icon-192x192.png'
+        },
+        {
+          action: 'dismiss',
+          title: 'تجاهل'
+        }
+      ]
+    });
   }
 });
 
-// عرض الإشعارات
-async function showNotification(notificationData) {
-  const { title, body, icon, tag, data } = notificationData;
-  
-  // التحقق من إذن الإشعارات
-  if (Notification.permission !== 'granted') {
-    console.log('❌ Notification permission not granted');
-    return;
-  }
-  
-  const options = {
-    body,
-    icon: icon || '/favicon.ico',
-    badge: '/favicon.ico',
-    tag: tag || 'default',
-    data: data || {},
-    actions: [
-      {
-        action: 'view',
-        title: 'عرض',
-        icon: '/favicon.ico'
-      },
-      {
-        action: 'dismiss',
-        title: 'إغلاق'
-      }
-    ],
-    requireInteraction: true,
-    vibrate: [200, 100, 200]
-  };
-  
-  try {
-    await self.registration.showNotification(title, options);
-    console.log('✅ Notification shown:', title);
-  } catch (error) {
-    console.error('❌ Error showing notification:', error);
-  }
-}
-
-// معالجة النقر على الإشعارات
+// التعامل مع النقر على الإشعارات
 self.addEventListener('notificationclick', (event) => {
-  console.log('🔔 Notification clicked:', event.notification.tag);
+  console.log('🔔 Notification clicked:', event.notification.data);
   
   event.notification.close();
   
-  const action = event.action;
-  const data = event.notification.data;
+  const data = event.notification.data || {};
   
-  if (action === 'dismiss') {
+  if (event.action === 'dismiss') {
     return;
   }
   
-  // فتح التطبيق أو التركيز عليه
+  // فتح التطبيق والانتقال للصفحة المناسبة
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clients) => {
-      // البحث عن نافذة مفتوحة للتطبيق
-      for (const client of clients) {
-        if (client.url.includes(self.location.origin)) {
-          // التركيز على النافذة الموجودة
-          client.focus();
-          
-          // إرسال بيانات الإشعار للتطبيق
-          client.postMessage({
-            type: 'NOTIFICATION_CLICKED',
-            data: data
-          });
-          
-          return;
-        }
-      }
+    self.clients.matchAll().then((clients) => {
+      // البحث عن نافذة مفتوحة
+      const client = clients.find(c => c.visibilityState === 'visible');
       
-      // فتح نافذة جديدة إذا لم توجد نافذة مفتوحة
-      self.clients.openWindow('/dashboard');
+      if (client) {
+        // إرسال رسالة للتطبيق للانتقال للصفحة المناسبة
+        client.postMessage({
+          type: 'NOTIFICATION_CLICKED',
+          data: data
+        });
+        return client.focus();
+      } else {
+        // فتح نافذة جديدة
+        let url = '/';
+        if (data.type === 'new_ai_order') {
+          url = '/ai-orders';
+        } else if (data.type === 'new_order') {
+          url = '/orders';
+        } else if (data.type === 'low_stock') {
+          url = '/products';
+        }
+        
+        return self.clients.openWindow(url);
+      }
     })
   );
 });
 
-// معالجة إغلاق الإشعارات
+// التعامل مع إغلاق الإشعارات
 self.addEventListener('notificationclose', (event) => {
   console.log('🔕 Notification closed:', event.notification.tag);
 });
 
-// استقبال Push Messages (للمستقبل)
+// Push notifications (للمستقبل)
 self.addEventListener('push', (event) => {
-  console.log('📨 Push message received');
+  console.log('📬 Push notification received:', event.data);
   
   if (event.data) {
-    const pushData = event.data.json();
-    event.waitUntil(showNotification(pushData));
+    const data = event.data.json();
+    
+    event.waitUntil(
+      self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: data.icon || '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        tag: data.tag || 'push',
+        data: data.data || {},
+        requireInteraction: true
+      })
+    );
   }
 });
