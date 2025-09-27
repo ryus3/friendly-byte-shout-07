@@ -108,10 +108,10 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the process_telegram_order function with enhanced error handling
-          console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
+          // Call the detailed process_telegram_order function
+          console.log('🔄 معالجة الطلب باستخدام process_telegram_order_detailed...');
           
-          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order_detailed', {
             p_message_text: text,
             p_chat_id: chatId
           });
@@ -137,24 +137,37 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // Handle different response types with improved logic
+          // Handle different response types with detailed formatting
           if (orderResult?.success) {
-            // Order processed successfully
-            let message = orderResult.message || '✅ تم استلام طلبك بنجاح!';
+            // Build detailed order confirmation message
+            let message = '✅ تم استلام الطلب!\n';
             
-            // Add order details if available
-            if (orderResult.order_number) {
-              message += `\n🏷️ رقم الطلب: ${orderResult.order_number}`;
+            // Add location info
+            if (orderResult.customer_city && orderResult.customer_region) {
+              message += `📍 ${orderResult.customer_city} - ${orderResult.customer_region}\n`;
+            } else if (orderResult.customer_city) {
+              message += `📍 ${orderResult.customer_city}\n`;
             }
             
-            // Add confirmed address if available
-            if (orderResult.confirmed_address) {
-              message += `\n📍 العنوان: ${orderResult.confirmed_address}`;
+            // Add phone number
+            if (orderResult.customer_phone) {
+              message += `📱 الهاتف: ${orderResult.customer_phone}\n`;
             }
             
-            // Add total amount if available
-            if (orderResult.total_amount) {
-              message += `\n💰 المبلغ: ${orderResult.total_amount} دينار`;
+            // Add product details
+            if (orderResult.items && Array.isArray(orderResult.items) && orderResult.items.length > 0) {
+              orderResult.items.forEach((item: any) => {
+                const productName = item.product_name || 'منتج';
+                const color = item.color ? ` (${item.color})` : '';
+                const size = item.size ? ` ${item.size}` : '';
+                const quantity = item.quantity || 1;
+                message += `✅ ${productName}${color}${size} × ${quantity}\n`;
+              });
+            }
+            
+            // Add total amount
+            if (orderResult.formatted_amount && orderResult.formatted_amount !== 'غير محدد') {
+              message += `• المبلغ الإجمالي: ${orderResult.formatted_amount}`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
