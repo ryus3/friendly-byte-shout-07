@@ -4369,6 +4369,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      extract_product_items_from_text: {
+        Args: { input_text: string }
+        Returns: Json
+      }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
