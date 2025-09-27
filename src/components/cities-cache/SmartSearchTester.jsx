@@ -14,7 +14,7 @@ const SmartSearchTester = () => {
   const { cities } = useCitiesCache();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchType, setSearchType] = useState('city');
-  const [selectedCity, setSelectedCity] = useState('');
+  const [selectedCity, setSelectedCity] = useState('all');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchHistory, setSearchHistory] = useState([]);
@@ -41,7 +41,7 @@ const SmartSearchTester = () => {
         if (error) throw error;
         results = data || [];
       } else {
-        const cityIdParam = selectedCity ? parseInt(selectedCity) : null;
+        const cityIdParam = selectedCity && selectedCity !== "all" ? parseInt(selectedCity) : null;
         const { data, error } = await supabase.rpc('smart_search_region', {
           search_term: searchTerm,
           city_id_param: cityIdParam
@@ -127,7 +127,7 @@ const SmartSearchTester = () => {
     setSearchTerm(example.text);
     setSearchType(example.type);
     if (example.type === 'region') {
-      setSelectedCity(''); // البحث في جميع المدن
+      setSelectedCity("all"); // البحث في جميع المدن
     }
   };
 
@@ -173,7 +173,7 @@ const SmartSearchTester = () => {
                     <SelectValue placeholder="جميع المدن" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">جميع المدن</SelectItem>
+                    <SelectItem value="all">جميع المدن</SelectItem>
                     {cities.map(city => (
                       <SelectItem key={city.id} value={city.id.toString()}>
                         {city.name}

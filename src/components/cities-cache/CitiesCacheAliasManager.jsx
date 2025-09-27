@@ -194,7 +194,7 @@ const CitiesCacheAliasManager = () => {
   const filteredRegionAliases = regionAliases.filter(alias => 
     alias.alias_name.includes(searchTerm) || 
     alias.regions_cache?.name.includes(searchTerm) ||
-    (selectedCity && alias.regions_cache?.city_id.toString() === selectedCity)
+    (selectedCity && selectedCity !== "all" && alias.regions_cache?.city_id.toString() === selectedCity)
   );
 
   const getConfidenceColor = (score) => {
@@ -307,7 +307,7 @@ const CitiesCacheAliasManager = () => {
             <SelectValue placeholder="فلترة حسب المدينة" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">جميع المدن</SelectItem>
+            <SelectItem value="all">جميع المدن</SelectItem>
             {cities.map(city => (
               <SelectItem key={city.id} value={city.id.toString()}>
                 {city.name}
