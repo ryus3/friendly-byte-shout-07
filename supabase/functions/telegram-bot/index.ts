@@ -15,12 +15,11 @@ const corsHeaders = {
 const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات الذكية!
 
 ✨ يمكنني فهم طلباتك بطريقة ذكية وسهلة
-📍 أكتب مدينتك بأي شكل: "ديوانية" أو "الديوانية" أو "كراده" أو "الكرادة"
+📍 أكتب مدينتك بأي شكل: "ديوانية" أو "الديوانية" 
 🛍️ أكتب طلبك بأي طريقة تريد
 
 مثال:
 "عايز قميص أحمر حجم L للديوانية"
-"بغداد كراده ارجنتين سمائي ميديم"
 
 جرب الآن! 👇`;
 
@@ -36,7 +35,7 @@ async function getBotToken(): Promise<string | null> {
     const tokenFromDb = (data && (typeof data.value === 'string' ? data.value : data.value?.bot_token)) || null;
     if (tokenFromDb && String(tokenFromDb).trim()) return String(tokenFromDb).trim();
   } catch (error) {
-    console.error('🔐 خطأ في قراءة إعدادات رمز البوت:', error);
+    console.error('Error reading settings for bot token:', error);
   }
 
   const envToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
@@ -59,11 +58,11 @@ async function sendTelegramMessage(chatId: number, text: string, botToken: strin
 
     const result = await response.json();
     if (!result.ok) {
-      console.error('❌ فشل إرسال رسالة تليغرام:', result);
+      console.error('فشل إرسال رسالة تليغرام:', result);
     }
     return result;
   } catch (error) {
-    console.error('❌ خطأ في إرسال رسالة تليغرام:', error);
+    console.error('خطأ في إرسال رسالة تليغرام:', error);
     throw error;
   }
 }
@@ -77,7 +76,7 @@ serve(async (req) => {
   try {
     const botToken = await getBotToken();
     if (!botToken) {
-      console.error('❌ لم يتم العثور على رمز البوت');
+      console.error('Bot token not found');
       return new Response(JSON.stringify({ error: 'Bot token not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -108,9 +107,7 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the process_telegram_order function with enhanced error handling
-          console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
-          
+          // Call the process_telegram_order function
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_order_data: {
               original_text: text,
@@ -126,17 +123,11 @@ serve(async (req) => {
 
           if (orderError) {
             console.error('❌ خطأ في معالجة الطلب:', orderError);
-            
-            // Handle specific error types with more helpful messages
-            let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
-            
-            if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
-              errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
-            } else if (orderError.message?.includes('permission')) {
-              errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
-            }
-            
-            await sendTelegramMessage(chatId, errorMessage, botToken);
+            await sendTelegramMessage(
+              chatId, 
+              '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى أو التواصل مع الدعم.',
+              botToken
+            );
             return new Response(JSON.stringify({ error: orderError.message }), {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -145,37 +136,26 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // Handle different response types with improved logic
+          // Handle different response types
           if (orderResult?.success) {
             // Order processed successfully
-            let message = orderResult.message || '✅ تم استلام طلبك بنجاح!';
-            
-            // Add order details if available
-            if (orderResult.order_number) {
-              message += `\n🏷️ رقم الطلب: ${orderResult.order_number}`;
-            }
+            const message = orderResult.message || '✅ تم استلام طلبك بنجاح!';
             
             // Add confirmed address if available
+            let finalMessage = message;
             if (orderResult.confirmed_address) {
-              message += `\n📍 العنوان: ${orderResult.confirmed_address}`;
+              finalMessage += `\n\n📍 العنوان المؤكد: ${orderResult.confirmed_address}`;
             }
             
-            // Add total amount if available
-            if (orderResult.total_amount) {
-              message += `\n💰 المبلغ: ${orderResult.total_amount} دينار`;
-            }
-            
-            await sendTelegramMessage(chatId, message, botToken);
-            
+            await sendTelegramMessage(chatId, finalMessage, botToken);
           } else {
             // Handle errors or clarifications needed
-            let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
+            const errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك. يرجى المحاولة مرة أخرى.';
             
-            // Create inline keyboard for options if available
+            // If there are suggestions or options, create inline keyboard
             let replyMarkup: any = undefined;
-            
             if (orderResult?.options_type === 'city_selection' && orderResult?.suggested_cities) {
-              console.log('🏙️ إرسال خيارات المدن');
+              // Create numbered options for city selection
               const cities = orderResult.suggested_cities.split('\n• ').filter((c: string) => c.trim());
               replyMarkup = {
                 inline_keyboard: cities.slice(0, 6).map((city: string, index: number) => ([{
@@ -184,7 +164,7 @@ serve(async (req) => {
                 }]))
               };
             } else if (orderResult?.options_type === 'variant_selection' && orderResult?.available_combinations) {
-              console.log('👕 إرسال خيارات المنتجات');
+              // Create options for product variants
               const variants = orderResult.available_combinations.split('\n').filter((v: string) => v.trim());
               replyMarkup = {
                 inline_keyboard: variants.slice(0, 8).map((variant: string, index: number) => ([{
@@ -199,24 +179,16 @@ serve(async (req) => {
 
         } catch (processingError) {
           console.error('❌ خطأ عام في معالجة الطلب:', processingError);
-          
-          // More specific error handling
-          let errorMessage = '⚠️ عذراً، حدث خطأ في النظام.';
-          
-          if (processingError instanceof Error) {
-            if (processingError.message.includes('timeout')) {
-              errorMessage = '⏰ انتهت مهلة الاستجابة، يرجى المحاولة مرة أخرى.';
-            } else if (processingError.message.includes('network')) {
-              errorMessage = '🌐 مشكلة في الشبكة، يرجى التحقق من الاتصال.';
-            }
-          }
-          
-          await sendTelegramMessage(chatId, errorMessage, botToken);
+          await sendTelegramMessage(
+            chatId, 
+            '⚠️ عذراً، حدث خطأ في النظام. يرجى المحاولة لاحقاً.',
+            botToken
+          );
         }
       }
 
     } else if (update.callback_query) {
-      // Handle inline keyboard button presses with improved feedback
+      // Handle inline keyboard button presses
       const { callback_query } = update;
       const chatId = callback_query.message?.chat?.id;
       const data = callback_query.data;
@@ -234,14 +206,12 @@ serve(async (req) => {
           })
         });
 
-        // Process the selected option with better guidance
+        // Process the selected option
         let responseMessage = '';
         if (data.startsWith('city_')) {
-          const cityName = data.split('_').slice(2).join('_');
-          responseMessage = `✅ تم اختيار المدينة: ${cityName}\n\nيرجى الآن إعادة كتابة طلبك مع اسم المدينة الصحيح والمنطقة ورقم الهاتف.`;
+          responseMessage = '✅ تم اختيار المدينة. يرجى إعادة كتابة طلبك مع اسم المدينة الصحيح.';
         } else if (data.startsWith('variant_')) {
-          const variantName = data.split('_').slice(2).join('_');
-          responseMessage = `✅ تم اختيار المنتج: ${variantName}\n\nيرجى إعادة كتابة طلبك مع المواصفات الصحيحة والعنوان ورقم الهاتف.`;
+          responseMessage = '✅ تم اختيار المنتج. يرجى إعادة كتابة طلبك مع المواصفات الصحيحة.';
         }
 
         if (responseMessage) {
