@@ -112,16 +112,8 @@ serve(async (req) => {
           console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_order_data: {
-              original_text: text,
-              customer_name: message.from?.first_name || 'عميل تليغرام',
-              customer_phone: '', // Will be asked later if needed
-              items: [], // Will be extracted by AI
-              customer_city: '', // Will be extracted by AI
-              customer_address: '' // Will be extracted by AI
-            },
-            p_chat_id: chatId,
-            p_employee_id: null // Will be determined by chat_id
+            p_message_text: text,
+            p_chat_id: chatId
           });
 
           if (orderError) {
