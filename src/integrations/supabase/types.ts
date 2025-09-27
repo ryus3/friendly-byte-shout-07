@@ -3175,7 +3175,6 @@ export type Database = {
       region_aliases: {
         Row: {
           alias_name: string
-          city_id: number
           confidence_score: number | null
           created_at: string | null
           id: string
@@ -3185,7 +3184,6 @@ export type Database = {
         }
         Insert: {
           alias_name: string
-          city_id: number
           confidence_score?: number | null
           created_at?: string | null
           id?: string
@@ -3195,7 +3193,6 @@ export type Database = {
         }
         Update: {
           alias_name?: string
-          city_id?: number
           confidence_score?: number | null
           created_at?: string | null
           id?: string
