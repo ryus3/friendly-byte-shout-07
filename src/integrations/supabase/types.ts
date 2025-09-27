@@ -453,6 +453,36 @@ export type Database = {
         }
         Relationships: []
       }
+      city_aliases: {
+        Row: {
+          alias_name: string
+          city_id: number
+          confidence_score: number | null
+          created_at: string | null
+          id: string
+          normalized_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          alias_name: string
+          city_id: number
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          normalized_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          alias_name?: string
+          city_id?: number
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          normalized_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       city_benefit_usage: {
         Row: {
           applied_at: string
@@ -3142,6 +3172,39 @@ export type Database = {
           },
         ]
       }
+      region_aliases: {
+        Row: {
+          alias_name: string
+          city_id: number
+          confidence_score: number | null
+          created_at: string | null
+          id: string
+          normalized_name: string
+          region_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          alias_name: string
+          city_id: number
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          normalized_name: string
+          region_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          alias_name?: string
+          city_id?: number
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string
+          normalized_name?: string
+          region_id?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       regions_cache: {
         Row: {
           alwaseet_id: number
@@ -4755,6 +4818,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      normalize_arabic_location: {
+        Args: { input_text: string }
+        Returns: string
+      }
       normalize_arabic_text: {
         Args: { input_text: string }
         Returns: string
@@ -4884,6 +4951,26 @@ export type Database = {
           p_variant_id: string
         }
         Returns: boolean
+      }
+      smart_search_city: {
+        Args: { search_term: string }
+        Returns: {
+          city_id: number
+          city_name: string
+          confidence: number
+          match_type: string
+        }[]
+      }
+      smart_search_region: {
+        Args: { search_term: string; target_city_id?: number }
+        Returns: {
+          city_id: number
+          city_name: string
+          confidence: number
+          match_type: string
+          region_id: number
+          region_name: string
+        }[]
       }
       sync_alwaseet_invoice_data: {
         Args: { p_invoice_data: Json; p_orders_data: Json }
