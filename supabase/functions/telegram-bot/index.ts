@@ -153,21 +153,21 @@ serve(async (req) => {
             const errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك. يرجى المحاولة مرة أخرى.';
             
             // If there are suggestions or options, create inline keyboard
-            let replyMarkup = undefined;
+            let replyMarkup: any = undefined;
             if (orderResult?.options_type === 'city_selection' && orderResult?.suggested_cities) {
               // Create numbered options for city selection
-              const cities = orderResult.suggested_cities.split('\n• ').filter(c => c.trim());
+              const cities = orderResult.suggested_cities.split('\n• ').filter((c: string) => c.trim());
               replyMarkup = {
-                inline_keyboard: cities.slice(0, 6).map((city, index) => ([{
+                inline_keyboard: cities.slice(0, 6).map((city: string, index: number) => ([{
                   text: `${index + 1}. ${city.replace(/\s*\(ثقة:.*?\)/g, '')}`,
                   callback_data: `city_${index + 1}_${city.split(' ')[0]}`
                 }]))
               };
             } else if (orderResult?.options_type === 'variant_selection' && orderResult?.available_combinations) {
               // Create options for product variants
-              const variants = orderResult.available_combinations.split('\n').filter(v => v.trim());
+              const variants = orderResult.available_combinations.split('\n').filter((v: string) => v.trim());
               replyMarkup = {
-                inline_keyboard: variants.slice(0, 8).map((variant, index) => ([{
+                inline_keyboard: variants.slice(0, 8).map((variant: string, index: number) => ([{
                   text: variant,
                   callback_data: `variant_${index + 1}_${variant.split('.')[1]?.trim() || variant}`
                 }]))
@@ -229,7 +229,7 @@ serve(async (req) => {
     console.error('❌ خطأ عام في بوت تليغرام:', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message 
+      details: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
