@@ -34,17 +34,20 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         
         try {
           const alWaseetPayload = {
-            name: customerInfo.name,
-            phone: customerInfo.phone,
+            name: customerInfo.customer_name || customerInfo.name,
+            phone: customerInfo.customer_phone || customerInfo.phone,
             second_phone: customerInfo.second_phone || '',
-            address: customerInfo.address,
+            address: customerInfo.customer_address || customerInfo.address,
             notes: customerInfo.notes || '',
-            details: (cart || []).filter(item => item != null).map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
+            details: (cart || []).filter(item => item != null).map(item => `${item?.productName || item?.name} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
             quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
             price: finalAmount + (settings?.delivery_fee || 50000), // إضافة رسوم التوصيل
             size: 'عادي',
             type: 'new',
-            promocode: customerInfo.promo_code || ''
+            promocode: customerInfo.promo_code || '',
+            // إضافة معرفات المدينة والمنطقة إذا توفرت
+            city_id: customerInfo.alwaseet_city_id,
+            region_id: customerInfo.alwaseet_region_id
           };
 
           console.log('📦 إرسال للوسيط:', alWaseetPayload);
@@ -83,7 +86,10 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               {
                 delivery_partner_order_id: waseetInternalId || null,
                 tracking_number: qrId || null,
-                delivery_partner: 'alwaseet'
+                delivery_partner: 'alwaseet',
+                // إضافة معرفات المدينة والمنطقة من المطابقة الذكية
+                alwaseet_city_id: customerInfo.alwaseet_city_id,
+                alwaseet_region_id: customerInfo.alwaseet_region_id
               }
             );
 

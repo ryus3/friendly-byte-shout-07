@@ -11,14 +11,17 @@ export const useDeliveryOrderHandler = () => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
-      // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder
+      // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder مع معرفات المدينة والمنطقة
       const customerInfo = {
         customer_name: aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         customer_address: aiOrder.customer_address,
         customer_city: aiOrder.customer_city,
         customer_province: aiOrder.customer_province,
-        delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
+        delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي',
+        // إضافة معرفات المدينة والمنطقة من المطابقة الذكية
+        alwaseet_city_id: aiOrder.city_id,
+        alwaseet_region_id: aiOrder.region_id
       };
 
       // تحويل العناصر إلى صيغة cart
