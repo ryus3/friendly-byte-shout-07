@@ -4918,10 +4918,6 @@ export type Database = {
         Args: { p_employee_id?: string; p_force_refresh?: boolean }
         Returns: Json
       }
-      sync_recent_received_invoices: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
       sync_specific_order_by_tracking: {
         Args: { p_tracking_number: string }
         Returns: Json
