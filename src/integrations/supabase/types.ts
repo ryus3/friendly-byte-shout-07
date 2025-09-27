@@ -4950,17 +4950,16 @@ export type Database = {
         Returns: boolean
       }
       smart_search_city: {
-        Args: { search_text: string }
+        Args: { search_term: string }
         Returns: {
           city_id: number
           city_name: string
           confidence: number
+          match_type: string
         }[]
       }
       smart_search_region: {
-        Args:
-          | { search_term: string; target_city_id?: number }
-          | { search_text: string }
+        Args: { search_term: string; target_city_id?: number }
         Returns: {
           city_id: number
           city_name: string
