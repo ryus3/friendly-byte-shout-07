@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { RefreshCw, Database, MapPin, Clock, Building2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RefreshCw, Database, MapPin, Clock, Building2, Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import RegionDistribution from './RegionDistribution';
+import CitiesCacheAliasManager from './CitiesCacheAliasManager';
+import SmartSearchTester from './SmartSearchTester';
 
 const CitiesCacheManager = () => {
   const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0, message: '' });
@@ -121,7 +124,7 @@ const CitiesCacheManager = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5" />
-          إدارة cache المدن والمناطق
+          إدارة بيانات المدن والمناطق الذكي
         </CardTitle>
         
         {/* عرض شركة التوصيل الحالية */}
@@ -142,6 +145,28 @@ const CitiesCacheManager = () => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        
+        <Tabs defaultValue="cache" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="cache" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              Cache
+            </TabsTrigger>
+            <TabsTrigger value="aliases" className="flex items-center gap-2">
+              <Edit2 className="h-4 w-4" />
+              المرادفات
+            </TabsTrigger>
+            <TabsTrigger value="test" className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              اختبار البحث
+            </TabsTrigger>
+            <TabsTrigger value="regions" className="flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              توزيع المناطق
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="cache" className="space-y-4 mt-6">
         
         {/* معلومات Cache الحالي */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -198,10 +223,6 @@ const CitiesCacheManager = () => {
           </div>
         )}
 
-        {/* عرض توزيع المناطق حسب المدن */}
-        {!isCacheEmpty() && cities.length > 0 && (
-          <RegionDistribution cities={cities} />
-        )}
 
         {/* تنبيه حسب نوع شركة التوصيل */}
         {activePartner === 'local' && (
@@ -289,6 +310,28 @@ const CitiesCacheManager = () => {
             <p>• عند تغيير شركة التوصيل، يتم تحديث Cache تلقائياً حسب الشركة الجديدة</p>
           )}
         </div>
+          </TabsContent>
+
+          <TabsContent value="aliases" className="mt-6">
+            <CitiesCacheAliasManager />
+          </TabsContent>
+
+          <TabsContent value="test" className="mt-6">
+            <SmartSearchTester />
+          </TabsContent>
+
+          <TabsContent value="regions" className="mt-6">
+            {!isCacheEmpty() && cities.length > 0 ? (
+              <RegionDistribution cities={cities} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد بيانات مدن ومناطق لعرض التوزيع</p>
+                <p className="text-sm">يجب تحديث Cache أولاً</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
