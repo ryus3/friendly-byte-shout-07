@@ -42,8 +42,6 @@ async function getStoreData(userInfo: any, authToken?: string) {
         id, name, cost_price, description, is_active,
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
-          colors (id, name, hex_code),
-          sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
         ),
         categories (id, name),
@@ -51,20 +49,35 @@ async function getStoreData(userInfo: any, authToken?: string) {
         product_types (id, name)
       `)
       .eq('is_active', true);
+
+    // Get colors and sizes separately to avoid relationship issues
+    const { data: colors } = await supabase.from('colors').select('id, name, hex_code');
+    const { data: sizes } = await supabase.from('sizes').select('id, name');
     
     if (productsError) {
       console.error('❌ خطأ في جلب المنتجات:', productsError);
     } else {
-    console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
-    console.log('📊 تفاصيل المنتجات:', products?.map(p => `${p.name}: ${p.product_variants?.length || 0} متغير`));
-    
-    // Log detailed variant info for debugging
-    products?.forEach(p => {
-      console.log(`🛍️ منتج ${p.name}:`);
-      p.product_variants?.forEach((v: any) => {
-        console.log(`  • ${v.colors?.name || 'لا لون'} - ${v.sizes?.name || 'لا حجم'} | مخزون: ${v.inventory?.[0]?.quantity || 0}`);
-      });
-    });
+      console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
+      console.log('📊 تفاصيل المنتجات:', products?.map(p => `${p.name}: ${p.product_variants?.length || 0} متغير`));
+      
+      // Process products with color and size details
+      if (products && colors && sizes) {
+        products.forEach(p => {
+          console.log(`🛍️ منتج ${p.name}:`);
+          if (p.product_variants) {
+            p.product_variants.forEach((v: any) => {
+              const colorName = colors.find(c => c.id === v.color_id)?.name || 'لا لون';
+              const sizeName = sizes.find(s => s.id === v.size_id)?.name || 'لا حجم';
+              const stock = v.inventory?.[0]?.quantity || 0;
+              console.log(`  • ${colorName} - ${sizeName} | سعر: ${v.price} | مخزون: ${stock}`);
+              
+              // Add color and size names to variant for AI processing
+              v.color_name = colorName;
+              v.size_name = sizeName;
+            });
+          }
+        });
+      }
     }
 
     // Get recent orders with complete details
@@ -76,9 +89,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
         order_items (
           id, quantity, price, total, product_name, variant_sku,
           product_variants (
-            price, cost_price,
-            colors (name, hex_code),
-            sizes (name)
+            id, price, cost_price, color_id, size_id
           ),
           products (name, cost_price)
         )
@@ -242,14 +253,14 @@ serve(async (req) => {
       // تحليل الأرباح
       profitAnalysis: {
         totalRevenue: storeData.todaySales.total || 0,
-        estimatedProfit: storeData.products.reduce((sum, product) => {
+        estimatedProfit: storeData.products.reduce((sum: number, product: any) => {
           return sum + (product.variants?.reduce((variantSum: number, variant: any) => {
             const profit = (variant.actual_price || 0) - (variant.actual_cost || 0);
             return variantSum + (profit * (variant.sold || 0));
           }, 0) || 0);
         }, 0),
         profitMargin: storeData.products.length > 0 ? 
-          (storeData.products.reduce((sum, p) => {
+          (storeData.products.reduce((sum: number, p: any) => {
             const avgProfit = p.variants?.reduce((vSum: number, v: any) => vSum + (v.profit_per_item || 0), 0) / (p.variants?.length || 1) || 0;
             const avgPrice = p.variants?.reduce((vSum: number, v: any) => vSum + (v.actual_price || 0), 0) / (p.variants?.length || 1) || 1;
             return sum + (avgProfit / avgPrice);
@@ -258,27 +269,27 @@ serve(async (req) => {
       
       // تحليل المخزون
       inventoryHealth: {
-        lowStock: storeData.products.filter(p => (p.inventory_count || 0) < 10),
-        outOfStock: storeData.products.filter(p => (p.inventory_count || 0) === 0),
-        totalValue: storeData.products.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.inventory_count || 0)), 0)
+        lowStock: storeData.products.filter((p: any) => (p.inventory_count || 0) < 10),
+        outOfStock: storeData.products.filter((p: any) => (p.inventory_count || 0) === 0),
+        totalValue: storeData.products.reduce((sum: number, p: any) => sum + ((p.cost_price || 0) * (p.inventory_count || 0)), 0)
       },
       
       // تحليل العملاء
       customerInsights: {
-        topCities: [...new Set(storeData.orders.map(o => o.customer_city))].filter(Boolean),
+        topCities: [...new Set(storeData.orders.map((o: any) => o.customer_city))].filter(Boolean),
         repeatCustomers: storeData.orders.reduce((acc: Record<string, number>, order: any) => {
           acc[order.customer_phone] = (acc[order.customer_phone] || 0) + 1;
           return acc;
         }, {}),
         averageOrderValue: storeData.orders.length > 0 ? 
-          storeData.orders.reduce((sum, o) => sum + (o.final_amount || 0), 0) / storeData.orders.length : 0
+          storeData.orders.reduce((sum: number, o: any) => sum + (o.final_amount || 0), 0) / storeData.orders.length : 0
       },
       
       // تحليل الاتجاهات
       trends: {
         bestSellers: storeData.products
-          .filter(p => (p.sold_quantity || 0) > 0)
-          .sort((a, b) => (b.sold_quantity || 0) - (a.sold_quantity || 0))
+          .filter((p: any) => (p.sold_quantity || 0) > 0)
+          .sort((a: any, b: any) => (b.sold_quantity || 0) - (a.sold_quantity || 0))
           .slice(0, 3),
         recentOrders: storeData.orders.slice(0, 5)
       }
