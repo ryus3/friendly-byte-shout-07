@@ -3175,7 +3175,6 @@ export type Database = {
       region_aliases: {
         Row: {
           alias_name: string
-          city_id: number
           confidence_score: number | null
           created_at: string | null
           id: string
@@ -3185,7 +3184,6 @@ export type Database = {
         }
         Insert: {
           alias_name: string
-          city_id: number
           confidence_score?: number | null
           created_at?: string | null
           id?: string
@@ -3195,7 +3193,6 @@ export type Database = {
         }
         Update: {
           alias_name?: string
-          city_id?: number
           confidence_score?: number | null
           created_at?: string | null
           id?: string
@@ -4372,6 +4369,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      extract_product_items_from_text: {
+        Args: { input_text: string }
+        Returns: Json
+      }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
@@ -4846,7 +4847,11 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args: { p_chat_id: number; p_employee_id?: string; p_order_data: Json }
+        Args: { p_chat_id: number; p_message_text: string }
+        Returns: Json
+      }
+      process_telegram_order_detailed: {
+        Args: { p_chat_id: number; p_message_text: string }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
@@ -4953,16 +4958,15 @@ export type Database = {
         Returns: boolean
       }
       smart_search_city: {
-        Args: { search_term: string }
+        Args: { search_text: string }
         Returns: {
           city_id: number
           city_name: string
           confidence: number
-          match_type: string
         }[]
       }
       smart_search_region: {
-        Args: { search_term: string; target_city_id?: number }
+        Args: { city_id_filter?: number; search_text: string }
         Returns: {
           city_id: number
           city_name: string

@@ -39,37 +39,68 @@ const CitiesCacheAliasManager = () => {
   const fetchAliases = async () => {
     setLoading(true);
     try {
-      // جلب مرادفات المدن
+      // جلب مرادفات المدن مع join يدوي
       const { data: cityData, error: cityError } = await supabase
         .from('city_aliases')
         .select(`
           *,
-          cities_cache!city_aliases_city_id_fkey (
-            id,
-            name
-          )
+          city_id,
+          alias_name,
+          confidence_score,
+          created_at
         `)
         .order('confidence_score', { ascending: false });
 
-      if (cityError) throw cityError;
+      if (cityError) {
+        console.error('خطأ في جلب مرادفات المدن:', cityError);
+        throw cityError;
+      }
 
-      // جلب مرادفات المناطق
+      // جلب أسماء المدن منفصلة
+      const { data: citiesData, error: citiesError } = await supabase
+        .from('cities_cache')
+        .select('id, name');
+
+      if (citiesError) throw citiesError;
+
+      // ربط البيانات يدوياً
+      const cityAliasesWithNames = (cityData || []).map(alias => ({
+        ...alias,
+        cities_cache: citiesData?.find(city => city.id === alias.city_id) || null
+      }));
+
+      // جلب مرادفات المناطق مع join يدوي
       const { data: regionData, error: regionError } = await supabase
         .from('region_aliases')
         .select(`
           *,
-          regions_cache!region_aliases_region_id_fkey (
-            id,
-            name,
-            city_id
-          )
+          region_id,
+          alias_name,
+          confidence_score,
+          created_at
         `)
         .order('confidence_score', { ascending: false });
 
-      if (regionError) throw regionError;
+      if (regionError) {
+        console.error('خطأ في جلب مرادفات المناطق:', regionError);
+        throw regionError;
+      }
 
-      setCityAliases(cityData || []);
-      setRegionAliases(regionData || []);
+      // جلب أسماء المناطق منفصلة
+      const { data: regionsData, error: regionsError } = await supabase
+        .from('regions_cache')
+        .select('id, name, city_id');
+
+      if (regionsError) throw regionsError;
+
+      // ربط البيانات يدوياً
+      const regionAliasesWithNames = (regionData || []).map(alias => ({
+        ...alias,
+        regions_cache: regionsData?.find(region => region.id === alias.region_id) || null
+      }));
+
+      setCityAliases(cityAliasesWithNames);
+      setRegionAliases(regionAliasesWithNames);
       
     } catch (error) {
       console.error('خطأ في جلب المرادفات:', error);
