@@ -173,14 +173,9 @@ serve(async (req) => {
             }
             
             // Build order confirmation message in the exact requested format
-            let message = '';
+            let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add customer name with correct icon if provided and not default
-            if (orderData.customer_name && orderData.customer_name !== 'عميل') {
-              message += `👫 ${orderData.customer_name}\n`;
-            }
-            
-            // Add location info
+            // Add location info first
             if (orderData.customer_city && orderData.customer_province) {
               message += `📍 ${orderData.customer_city} - ${orderData.customer_province}\n`;
             } else if (orderData.customer_city) {
@@ -192,21 +187,21 @@ serve(async (req) => {
               message += `📱 ${orderData.customer_phone}\n`;
             }
             
-            // Add product details with proper formatting
+            // Add product details with proper formatting using ❇️ icon
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
                 const color = item.color ? ` (${item.color})` : '';
                 const size = item.size ? ` ${item.size}` : '';
                 const quantity = item.quantity || 1;
-                message += `🛍️ ${productName}${color}${size} × ${quantity}\n`;
+                message += `❇️ ${productName}${color}${size} × ${quantity}\n`;
               });
             }
             
-            // Add total amount with English numerals and proper formatting
+            // Add total amount with English numerals using 💵 icon
             if (orderData.total_amount && orderData.total_amount > 0) {
               const formattedAmount = orderData.total_amount.toLocaleString('en-US');
-              message += `💰 المبلغ الإجمالي: ${formattedAmount} د.ع`;
+              message += `💵 المبلغ الإجمالي: ${formattedAmount} د.ع`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
