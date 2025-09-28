@@ -38,7 +38,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
       setMessages([
         { 
           role: 'model', 
-          content: `🎯 أهلاً ${userName}! أنا المساعد الذكي RYUS\n\n💡 **أستطيع مساعدتك في**:\n• 🛒 **طلبات ذكية**: "بغداد الكرادة 07812345678 برشلونة ازرق لارج"\n• 📊 **إحصائيات**: "مبيعات اليوم؟"\n• 🔍 **بحث المنتجات**: "منتجات متوفرة؟"\n• 💰 **تحليل الأرباح**: "ربح الشهر؟"\n\n⚡ **ميزاتي المتقدمة**:\n✅ فهم ذكي للمناطق العراقية\n✅ فحص مخزون حقيقي\n✅ اقتراح بدائل ذكية\n✅ حفظ فوري في الطلبات الذكية\n✅ تحليل متقدم للمناطق المتشابهة` 
+          content: `أهلاً! أنا مساعدك الذكي 🤖\nأستطيع إنشاء طلبات ذكية وتحليل البيانات` 
         }
       ]);
     }
@@ -194,19 +194,19 @@ const AiChatDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm sm:max-w-2xl h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-4 sm:p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+      <DialogContent className="max-w-xs sm:max-w-lg h-[80vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-2 sm:p-4 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                <h2 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
                   المساعد الذكي
                 </h2>
                 <div className="text-xs text-muted-foreground">
-                  نظام RYUS المتقدم
+                  مدعوم بـ Gemini AI
                 </div>
               </div>
             </div>
@@ -214,7 +214,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             <AiManagementButton />
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 p-3 sm:p-4" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-2 sm:p-4" ref={scrollAreaRef}>
           <div className="space-y-6">
             <AnimatePresence>
               {messages.map((message, index) => (
@@ -227,7 +227,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
-        <div className="p-3 sm:p-4 border-t bg-muted/30">
+        <div className="p-2 sm:p-4 border-t bg-muted/30">
           <form onSubmit={handleSendMessage} className="flex items-center gap-3">
             <Button 
               type="submit" 
@@ -250,7 +250,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             />
           </form>
           <div className="mt-2 text-xs text-muted-foreground text-center">
-            🤖 مدعوم بـ 6 نماذج ذكية متقدمة | النسخة التقليدية
+            🤖 مدعوم بـ Gemini AI
           </div>
         </div>
       </DialogContent>
@@ -289,7 +289,7 @@ const MessageBubble = ({ message }) => {
   )
 }
 
-// مكون زر الإدارة البسيط
+// مكون زر الإدارة بتدرج لوني أنيق
 const AiManagementButton = () => {
   const handleManagementClick = () => {
     // إرسال حدث لفتح نافذة إدارة المساعد الذكي
@@ -298,24 +298,12 @@ const AiManagementButton = () => {
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button 
-          onClick={handleManagementClick}
-          className="h-8 px-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
-        >
-          <Settings className="w-4 h-4 mr-1" />
-          <span className="text-sm font-medium">إدارة</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="end">
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            انقر الزر لفتح إدارة المساعد الذكي المتقدم
-          </p>
-        </div>
-      </PopoverContent>
-    </Popover>
+    <Button 
+      onClick={handleManagementClick}
+      className="h-7 px-3 bg-gradient-to-r from-emerald-500 to-blue-500 hover:from-emerald-600 hover:to-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200 text-xs font-medium"
+    >
+      إدارة
+    </Button>
   );
 };
 
