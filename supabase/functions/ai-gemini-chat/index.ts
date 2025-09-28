@@ -35,17 +35,20 @@ async function getStoreData(userInfo: any, authToken?: string) {
     // إنشاء عميل مصادق عليه
     const supabase = createAuthenticatedSupabaseClient(authToken);
     
-    // Get products with variants, inventory, and sales data
+    // Get products with variants, inventory, and sales data (filtered by user permissions)
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
+        department_id, product_type_id,
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
           colors (id, name),
           sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
-        )
+        ),
+        departments (id, name),
+        product_types (id, name)
       `)
       .eq('is_active', true);
     
@@ -55,12 +58,12 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed info
+    // Get recent orders with detailed info (filtered by user permissions)
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
-        total_amount, final_amount, delivery_fee, status, created_at,
+        total_amount, final_amount, delivery_fee, status, created_at, created_by,
         order_items (
           id, quantity, price, total,
           product_name, variant_sku
@@ -75,25 +78,25 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب الطلبات بنجاح:', recentOrders?.length || 0);
     }
 
-    // Get today's sales with more details
+    // Get today's sales with more details (filtered by user permissions)
     const today = new Date().toISOString().split('T')[0];
     const { data: todaySales } = await supabase
       .from('orders')
-      .select('total_amount, final_amount, delivery_fee, created_at')
+      .select('total_amount, final_amount, delivery_fee, created_at, created_by')
       .gte('created_at', today);
 
-    // Get this month's sales
+    // Get this month's sales (filtered by user permissions)
     const thisMonth = new Date().toISOString().slice(0, 7) + '-01';
     const { data: monthSales } = await supabase
       .from('orders')
-      .select('total_amount, final_amount, delivery_fee')
+      .select('total_amount, final_amount, delivery_fee, created_by')
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
 
-    // Get expenses for profit calculation
+    // Get expenses for profit calculation (filtered by user permissions)
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('amount, expense_type, created_at')
+      .select('amount, expense_type, created_at, created_by')
       .gte('created_at', thisMonth);
 
     // Calculate advanced analytics
