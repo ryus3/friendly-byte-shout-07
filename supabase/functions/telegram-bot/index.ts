@@ -148,72 +148,51 @@ serve(async (req) => {
             if (orderData.items && Array.isArray(orderData.items)) {
               for (const item of orderData.items) {
                 // فحص إذا كان المنتج يحتاج تحديد مواصفات أو غير متوفر
-                if (item.selection_needed || 
+                if (item.selection_needed === true || item.is_available === false || 
                     (item.stock_status && (
                       item.stock_status.includes('يرجى تحديد') ||
-                      item.stock_status.includes('غير متوفر') ||
-                      item.stock_status.includes('المواصفات المطلوبة غير متوفرة')
+                      item.stock_status.includes('غير متوفرة') ||
+                      item.stock_status.includes('❌')
                     ))) {
                   hasUnavailableItems = true;
                   
-                  // استخراج اللون المطلوب من النص الأصلي
-                  const extractRequestedColor = (originalText: string, productName: string) => {
-                    const colorKeywords = ['احمر', 'أحمر', 'ازرق', 'أزرق', 'اسود', 'أسود', 'ابيض', 'أبيض', 'اصفر', 'أصفر', 'اخضر', 'أخضر', 'بنفسجي', 'وردي', 'رمادي', 'بني', 'برتقالي', 'سمائي'];
-                    const words = originalText.toLowerCase().split(/\s+/);
-                    
-                    for (const word of words) {
-                      for (const color of colorKeywords) {
-                        if (word.includes(color.toLowerCase())) {
-                          return color;
-                        }
-                      }
-                    }
-                    return null;
-                  };
-                  
-                  // استخراج الحجم المطلوب من النص الأصلي
-                  const extractRequestedSize = (originalText: string) => {
-                    const sizeKeywords = ['سمول', 'صغير', 'ميديم', 'متوسط', 'وسط', 'لارج', 'كبير', 'اكس', 'xl', 'xxl', 's', 'm', 'l'];
-                    const words = originalText.toLowerCase().split(/\s+/);
-                    
-                    for (const word of words) {
-                      for (const size of sizeKeywords) {
-                        if (word.includes(size.toLowerCase())) {
-                          if (size.includes('سمول') || size.includes('صغير') || word.includes('s')) return 'S';
-                          if (size.includes('ميديم') || size.includes('متوسط') || word.includes('m')) return 'M';
-                          if (size.includes('لارج') || size.includes('كبير') || word.includes('l')) return 'L';
-                          if (size.includes('xl') || size.includes('اكس')) return word.includes('xx') ? 'XXL' : 'XL';
-                          return size.toUpperCase();
-                        }
-                      }
-                    }
-                    return null;
-                  };
-                  
-                  const requestedColor = extractRequestedColor(text, item.product_name) || item.color_name || 'غير محدد';
-                  const requestedSize = extractRequestedSize(text) || item.size_name || 'غير محدد';
+                  // استخراج اللون والحجم المطلوب من النص الأصلي أو من البيانات
+                  const requestedColor = item.color_name && item.color_name !== 'يرجى تحديد اللون' ? item.color_name : 'غير محدد';
+                  const requestedSize = item.size_name && item.size_name !== 'يرجى تحديد الحجم' ? item.size_name : 'غير محدد';
                   
                   // بناء رسالة خطأ واضحة
                   unavailableMessage = `❌ فشل في إنشاء الطلب: المنتج "${item.product_name}" غير متوفر باللون "${requestedColor}" والحجم "${requestedSize}".\n\n`;
                   
-                  // تنسيق البدائل المتوفرة بشكل أفضل
-                  if (item.available_colors && item.available_sizes) {
-                    unavailableMessage += `✅ المتوفر فعلياً:\n`;
-                    
-                    // عرض كل لون مع أحجامه (هذا مثال - سيحتاج لتحسين بناءً على البيانات الفعلية)
-                    const colors = item.available_colors;
-                    const sizes = item.available_sizes;
-                    
-                    for (const color of colors) {
-                      unavailableMessage += `${color} (${sizes.join(', ')})\n`;
-                    }
-                  } else if (item.alternatives_message) {
+                  // إضافة البدائل المتوفرة فعلياً بتنسيق جميل
+                  if (item.alternatives_message && item.alternatives_message.trim() !== '') {
                     unavailableMessage += `✅ المتوفر فعلياً:\n${item.alternatives_message}`;
+                  } else if (item.colors_with_sizes) {
+                    unavailableMessage += `✅ المتوفر فعلياً:\n`;
+                    // تحويل colors_with_sizes إلى نص منسق
+                    const colorsWithSizes = item.colors_with_sizes;
+                    for (const [color, sizes] of Object.entries(colorsWithSizes)) {
+                      if (Array.isArray(sizes) && sizes.length > 0) {
+                        unavailableMessage += `${color} (${sizes.join(', ')})\n`;
+                      }
+                    }
                   }
                   break;
                 }
               }
             }
+            
+            // إذا كان هناك منتجات غير متوفرة، لا نحفظ الطلب ونرسل رسالة خطأ
+            if (hasUnavailableItems) {
+              console.log('❌ يحتوي الطلب على منتجات غير متوفرة:', unavailableMessage);
+              await sendTelegramMessage(chatId, unavailableMessage, botToken);
+              return new Response(JSON.stringify({ success: false, message: unavailableMessage }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
+            console.log('✅ جميع المنتجات متوفرة، سيتم حفظ الطلب');
             
             // إذا كان هناك منتجات غير متوفرة، لا نحفظ الطلب ونرسل رسالة خطأ
             if (hasUnavailableItems) {
