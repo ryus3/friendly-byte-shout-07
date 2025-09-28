@@ -51,6 +51,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     const map = new Map();
     for (const o of ordersFromContext) {
       // فلترة الطلبات المعتمدة والمعالجة محلياً لمنع إعادة ظهورها
+      // تضمين كل المصادر: telegram, ai_chat, ai_assistant, store, web
       if (o && o.id && !map.has(o.id) && o.status !== 'approved' && !processedOrders.includes(o.id)) {
         map.set(o.id, o);
       }
@@ -79,11 +80,11 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
   
-  // مستمعات Real-time للتحديثات الفورية
+  // مستمعات Real-time للتحديثات الفورية مع دعم المساعد الذكي
   useEffect(() => {
     const handleAiOrderCreated = async (event) => {
       const newOrder = event.detail;
-      console.log('🎯 AiOrdersManager: استلام طلب جديد', newOrder?.id);
+      console.log('🎯 AiOrdersManager: استلام طلب جديد من', newOrder?.source, 'معرف:', newOrder?.id);
       if (newOrder?.id) {
         setOrders(prev => {
           // تجنب التكرار
@@ -91,9 +92,18 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
             console.log('⚠️ طلب مكرر، تم تجاهله:', newOrder.id);
             return prev;
           }
-          console.log('✅ إضافة طلب جديد للقائمة:', newOrder.id);
+          console.log('✅ إضافة طلب جديد للقائمة من المساعد الذكي:', newOrder.id);
           return [newOrder, ...prev];
         });
+
+        // إشعار توست للطلبات من المساعد الذكي
+        if (newOrder.source === 'ai_assistant') {
+          toast({
+            title: "🤖 طلب ذكي جديد",
+            description: `طلب من المساعد الذكي: ${newOrder.customer_name}`,
+            variant: "success"
+          });
+        }
 
         // التحقق من إمكانية الموافقة التلقائية (فقط بعد تحميل التفضيلات)
         if (preferencesLoaded && autoApprovalEnabled && newOrder.status === 'pending') {
@@ -150,14 +160,37 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       }
     };
 
+    // مستمع لفتح نافذة الإدارة من المساعد الذكي
+    const handleOpenAiOrdersManager = (event) => {
+      const { aiOrderId, highlight } = event.detail || {};
+      if (!open && typeof onClose === 'function') {
+        // فتح النافذة إذا لم تكن مفتوحة
+        // Note: يجب تمرير دالة فتح من المكون الأب
+        console.log('🔄 طلب فتح نافذة إدارة الطلبات الذكية');
+      }
+      if (aiOrderId && highlight) {
+        // تمييز الطلب المحدد
+        setTimeout(() => {
+          const element = document.getElementById(`ai-order-${aiOrderId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('highlight-order');
+            setTimeout(() => element.classList.remove('highlight-order'), 3000);
+          }
+        }, 500);
+      }
+    };
+
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
     window.addEventListener('aiOrderApproved', handleAiOrderApproved);
+    window.addEventListener('openAiOrdersManager', handleOpenAiOrdersManager);
 
     return () => {
       window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
+      window.removeEventListener('openAiOrdersManager', handleOpenAiOrdersManager);
     };
   }, [preferencesLoaded, autoApprovalEnabled, orderDestination, approveAiOrder]);
   

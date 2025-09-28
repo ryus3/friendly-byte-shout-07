@@ -35,6 +35,19 @@ async function getStoreData(userInfo: any, authToken?: string) {
     // إنشاء عميل مصادق عليه
     const supabase = createAuthenticatedSupabaseClient(authToken);
     
+    // Get real cities and regions from cache
+    const { data: cities } = await supabase
+      .from('cities_cache')
+      .select('id, name, alwaseet_id')
+      .eq('is_active', true)
+      .order('name');
+    
+    const { data: regions } = await supabase
+      .from('regions_cache')
+      .select('id, name, city_id, alwaseet_id')
+      .eq('is_active', true)
+      .order('name');
+    
     // Get products with variants, inventory, and sales data
     const { data: products, error: productsError } = await supabase
       .from('products')
@@ -134,6 +147,8 @@ async function getStoreData(userInfo: any, authToken?: string) {
     return {
       products: processedProducts,
       orders: recentOrders || [],
+      cities: cities || [],
+      regions: regions || [],
       todaySales: {
         total: todayTotal,
         count: todayCount,
@@ -150,6 +165,8 @@ async function getStoreData(userInfo: any, authToken?: string) {
     return {
       products: [],
       orders: [],
+      cities: [],
+      regions: [],
       todaySales: { total: 0, count: 0, average: 0 },
       monthSales: { total: 0, profit: 0, expenses: 0 }
     };
@@ -215,24 +232,29 @@ serve(async (req) => {
       }
     };
 
-    const systemPrompt = `🎯 مساعد RYUS الذكي - ردود مختصرة وذكية.
+    // إعداد قوائم المدن والمناطق الحقيقية
+    const cityList = storeData.cities.map(c => c.name).slice(0, 10).join(', ');
+    const availableProducts = storeData.products.filter(p => (p.inventory_count || 0) > 0);
+    const outOfStockProducts = storeData.products.filter(p => (p.inventory_count || 0) === 0);
 
-**بيانات سريعة:**
-📊 اليوم: ${advancedAnalytics.profitAnalysis.totalRevenue.toLocaleString()} د.ع
-📦 المخزون: ${advancedAnalytics.inventoryHealth.outOfStock.length > 0 ? `⚠️ ${advancedAnalytics.inventoryHealth.outOfStock.length} نفد` : '✅ جيد'}
-🏆 أكثر مبيعاً: ${advancedAnalytics.trends.bestSellers.slice(0,2).map(p => p.name).join(', ')}
+    const systemPrompt = `🎯 مساعد RYUS الذكي - ردود قصيرة وذكية (2-3 أسطر فقط)
 
-**منتجات (${storeData.products.length}):**
-${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count || 0})`).join('\n')}
+**المنتجات المتوفرة:**
+${availableProducts.slice(0,5).map(product => 
+  `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} متوفر)`
+).join('\n')}
+${outOfStockProducts.length > 0 ? `\n⚠️ نفد المخزون: ${outOfStockProducts.slice(0,3).map(p => p.name).join(', ')}` : ''}
 
-**قواعد مهمة:**
-- رد في 2-3 أسطر فقط
-- اسم العميل الافتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
-- أجور التوصيل: 5000 د.ع
-- فحص المخزون قبل الطلب
-- اقترح بدائل إذا نفد المنتج
+**المدن المتاحة:** ${cityList}
 
-**للطلبات:** اكتب المدينة + الهاتف + المنتج`;
+**قواعد الطلبات:**
+- اسم العميل: "${userInfo?.default_customer_name || 'ريوس'}"
+- أجور التوصيل: 5000 د.ع لجميع المدن
+- فحص المخزون الحقيقي من قاعدة البيانات
+- اقترح بدائل (ألوان/أحجام) من نفس المنتج إذا نفد المطلوب
+- استخدم المدن والمناطق الحقيقية فقط من النظام
+
+**تنسيق الرد:** إيموجي + نص مختصر + معلومات الطلب (إن وجد)`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
@@ -251,10 +273,10 @@ ${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.b
             }
           ],
           generationConfig: {
-            temperature: 0.9,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 400,
+            temperature: 0.7,
+            topK: 30,
+            topP: 0.8,
+            maxOutputTokens: 150,
           },
           safetySettings: [
             {
@@ -299,11 +321,12 @@ ${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.b
       try {
         console.log('🔍 تحليل طلب ذكي للنص:', message);
         
-        // استخدام دالة معالجة التليغرام الجديدة (بدون المعامل الثالث)
+        // استخدام دالة معالجة التليغرام مع معرف خاص للمساعد الذكي
+        const aiChatId = -999999999; // معرف خاص للمساعد الذكي
         const { data: orderResult, error: orderError } = await supabase
           .rpc('process_telegram_order', {
             p_message_text: message,
-            p_chat_id: Math.floor(Math.random() * 1000000) // رقم وهمي للمساعد الذكي
+            p_chat_id: aiChatId
           });
         
         if (orderError) {
@@ -314,10 +337,31 @@ ${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.b
           responseType = 'order';
           orderData = orderResult.order_data;
           
-          // حفظ الطلب في ai_orders مع تطبيق الاسم الافتراضي
-          const customerName = orderData.customer_name && orderData.customer_name !== orderData.customer_city && orderData.customer_name !== orderData.customer_province 
+          // تحسين البيانات وحفظ الطلب في ai_orders
+          const customerName = orderData.customer_name && 
+            orderData.customer_name !== orderData.customer_city && 
+            orderData.customer_name !== orderData.customer_province 
             ? orderData.customer_name 
-            : (userInfo?.default_customer_name || 'عميل');
+            : (userInfo?.default_customer_name || 'ريوس');
+
+          // فحص المخزون الحقيقي للمنتجات وإضافة تفاصيل إضافية
+          const enhancedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
+            if (item.variant_id) {
+              const { data: inventoryData } = await supabase
+                .from('inventory')
+                .select('quantity, reserved_quantity')
+                .eq('variant_id', item.variant_id)
+                .single();
+              
+              const availableStock = (inventoryData?.quantity || 0) - (inventoryData?.reserved_quantity || 0);
+              return {
+                ...item,
+                available_stock: availableStock,
+                stock_status: availableStock >= (item.quantity || 1) ? 'available' : 'insufficient'
+              };
+            }
+            return item;
+          }));
             
           const aiOrderData = {
             customer_name: customerName,
@@ -327,12 +371,13 @@ ${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.b
             customer_address: orderData.customer_address || message,
             city_id: orderData.city_id,
             region_id: orderData.region_id,
-            items: orderData.items || [],
+            items: enhancedItems,
             total_amount: orderData.total_amount || 0,
-            order_data: orderData,
+            order_data: { ...orderData, items: enhancedItems },
             source: 'ai_assistant',
             created_by: userInfo?.id || null,
-            original_text: message
+            original_text: message,
+            telegram_chat_id: aiChatId
           };
 
           const { data: savedOrder, error: saveError } = await supabase

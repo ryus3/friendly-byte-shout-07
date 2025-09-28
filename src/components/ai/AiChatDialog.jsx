@@ -37,7 +37,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
       setMessages([
         { 
           role: 'model', 
-          content: `🎯 أهلاً ${userName}! أنا مساعدك الذكي RYUS\n\n💡 **ما أستطيع فعله**:\n• 🛒 **طلبات ذكية**: "بغداد الكرادة 07812345678 برشلونة ازرق لارج"\n• 📊 **تحليلات**: "كيف أداء المبيعات اليوم؟"\n• 🔍 **بحث**: "منتجات اللون الأحمر"\n• 💰 **أرباح**: "كم ربحت هذا الشهر؟"\n\n⚡ أجيب بذكاء ومباشرة، وأحفظ كل طلب في إدارة الطلبات الذكية فوراً.` 
+          content: `🎯 أهلاً ${userName}! أنا مساعدك الذكي RYUS\n\n💡 **أستطيع مساعدتك في**:\n• 🛒 **طلبات ذكية**: "بغداد الكرادة 07812345678 برشلونة ازرق لارج"\n• 📊 **إحصائيات**: "مبيعات اليوم؟"\n• 🔍 **بحث المنتجات**: "منتجات متوفرة؟"\n• 💰 **تحليل الأرباح**: "ربح الشهر؟"\n\n⚡ **ميزاتي الجديدة**:\n✅ فحص مخزون حقيقي\n✅ تعرف على المدن العراقية\n✅ اقتراح بدائل ذكية\n✅ حفظ فوري في الطلبات الذكية` 
         }
       ]);
     }
@@ -97,27 +97,48 @@ const AiChatDialog = ({ open, onOpenChange }) => {
           if (orderDetails.orderSaved) {
             orderStatusMessage = `\n\n🎯 **تم حفظ الطلب بنجاح!**\n📋 رقم الطلب الذكي: ${orderDetails.aiOrderId}\n👤 العميل: ${orderDetails.customer_name}\n📱 الهاتف: ${orderDetails.customer_phone || 'غير محدد'}\n📍 العنوان: ${orderDetails.customer_city || 'غير محدد'} - ${orderDetails.customer_province || 'غير محدد'}\n💰 المبلغ الإجمالي: ${(orderDetails.total_amount || 0).toLocaleString()} د.ع\n🛍️ عدد المنتجات: ${orderDetails.items?.length || 0}\n\n✨ يمكنك مراجعة الطلب في **إدارة الطلبات الذكية** وتحويله إلى طلب نهائي.`;
             
-            // 🎯 إشعار فوري لإدارة الطلبات الذكية
+            // 🎯 إشعار فوري لإدارة الطلبات الذكية مع تفاصيل كاملة
             setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
+              const aiOrderEvent = new CustomEvent('aiOrderCreated', { 
                 detail: {
                   id: orderDetails.aiOrderId,
                   customer_name: orderDetails.customer_name,
+                  customer_phone: orderDetails.customer_phone,
+                  customer_city: orderDetails.customer_city,
+                  customer_province: orderDetails.customer_province,
+                  customer_address: orderDetails.customer_address,
+                  city_id: orderDetails.city_id,
+                  region_id: orderDetails.region_id,
                   source: 'ai_assistant',
                   status: 'pending',
                   created_at: new Date().toISOString(),
                   items: orderDetails.items,
-                  total_amount: orderDetails.total_amount
+                  total_amount: orderDetails.total_amount,
+                  order_data: orderDetails,
+                  original_text: input,
+                  created_by: userInfo?.id
                 }
-              }));
+              });
+              window.dispatchEvent(aiOrderEvent);
               
-              // فتح نافذة إدارة الطلبات الذكية تلقائياً مع تأخير بسيط
+              // عرض توست للتأكيد
+              toast({
+                title: "✅ تم إنشاء طلب ذكي",
+                description: `طلب جديد للعميل ${orderDetails.customer_name} بمبلغ ${(orderDetails.total_amount || 0).toLocaleString()} د.ع`,
+                variant: "success"
+              });
+              
+              // فتح نافذة إدارة الطلبات الذكية تلقائياً
               setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('openAiOrdersManager', { 
-                  detail: { aiOrderId: orderDetails.aiOrderId } 
-                }));
-              }, 2000);
-            }, 500);
+                const openManagerEvent = new CustomEvent('openAiOrdersManager', { 
+                  detail: { 
+                    aiOrderId: orderDetails.aiOrderId,
+                    highlight: true 
+                  } 
+                });
+                window.dispatchEvent(openManagerEvent);
+              }, 1500);
+            }, 300);
           } else if (orderDetails.needs_city_selection) {
             orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المدينة**\nلم أتمكن من التعرف على المدينة من النص. يرجى إعادة كتابة الطلب مع ذكر المدينة بوضوح.`;
           } else if (orderDetails.needs_region_selection) {
