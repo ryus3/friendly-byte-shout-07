@@ -182,9 +182,9 @@ serve(async (req) => {
               message += `📍 ${orderData.customer_city}\n`;
             }
             
-            // Add phone number
+            // Add phone number with prefix
             if (orderData.customer_phone) {
-              message += `📱 ${orderData.customer_phone}\n`;
+              message += `الهاتف : ${orderData.customer_phone}\n`;
             }
             
             // Add product details with proper formatting using ❇️ icon
