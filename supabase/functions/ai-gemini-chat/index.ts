@@ -9,31 +9,15 @@ const corsHeaders = {
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-// Function to create authenticated Supabase client
-function createAuthenticatedSupabaseClient(authToken?: string) {
-  if (authToken) {
-    // استخدام user token للحصول على البيانات حسب صلاحيات المستخدم
-    return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${authToken}`
-        }
-      }
-    });
-  }
-  // fallback للـ anon client
-  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
-}
+// إنشاء عميل Supabase بصلاحيات SERVICE ROLE مثل بوت التليغرام
+const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
 // Helper functions to fetch real data with advanced analytics
 async function getStoreData(userInfo: any, authToken?: string) {
   try {
     console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
-    
-    // إنشاء عميل مصادق عليه
-    const supabase = createAuthenticatedSupabaseClient(authToken);
     
     // Get real cities and regions from cache
     const { data: cities } = await supabase
@@ -98,6 +82,14 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .select('total_amount, final_amount, delivery_fee, created_at')
       .gte('created_at', today);
 
+    // Get ALL-TIME sales data (not just this month)
+    const { data: allTimeSales } = await supabase
+      .from('orders')
+      .select('total_amount, final_amount, delivery_fee, created_at')
+      .in('status', ['completed', 'delivered'])
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
     // Get this month's sales
     const thisMonth = new Date().toISOString().slice(0, 7) + '-01';
     const { data: monthSales } = await supabase
@@ -106,14 +98,26 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
 
-    // Get expenses and profits for comprehensive financial data
-    const { data: expenses } = await supabase
+    // Get expenses and profits for comprehensive financial data (ALL TIME)
+    const { data: allExpenses } = await supabase
+      .from('expenses')
+      .select('amount, expense_type, created_at')
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    const { data: monthExpenses } = await supabase
       .from('expenses')
       .select('amount, expense_type, created_at')
       .gte('created_at', thisMonth);
 
-    // Get profit analytics
-    const { data: profits } = await supabase
+    // Get profit analytics (ALL TIME)
+    const { data: allProfits } = await supabase
+      .from('profits')
+      .select('profit_amount, employee_profit, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    const { data: monthProfits } = await supabase
       .from('profits')
       .select('profit_amount, employee_profit, status, created_at')
       .gte('created_at', thisMonth);
@@ -130,13 +134,22 @@ async function getStoreData(userInfo: any, authToken?: string) {
     const todayCount = todaySales?.length || 0;
     const todayAverage = todayCount > 0 ? todayTotal / todayCount : 0;
 
+    // حساب جميع الإحصائيات المالية
+    const allTimeTotal = allTimeSales?.reduce((sum, order) => 
+      sum + (order.final_amount || order.total_amount || 0), 0) || 0;
+    
     const monthTotal = monthSales?.reduce((sum, order) => 
       sum + (order.final_amount || order.total_amount || 0), 0) || 0;
     
-    const monthExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
-    const actualMonthProfit = profits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
+    const allTimeExpensesTotal = allExpenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
+    const monthExpensesTotal = monthExpenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
+    
+    const allTimeProfitTotal = allProfits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
+    const actualMonthProfit = monthProfits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
     const todayProfit = todayProfits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
-    const estimatedMonthProfit = monthTotal - monthExpenses;
+    
+    const estimatedMonthProfit = monthTotal - monthExpensesTotal;
+    const estimatedAllTimeProfit = allTimeTotal - allTimeExpensesTotal;
 
     // Process products with analytics
     const processedProducts = products?.map(product => {
@@ -165,19 +178,34 @@ async function getStoreData(userInfo: any, authToken?: string) {
       orders: recentOrders || [],
       cities: cities || [],
       regions: regions || [],
-      todaySales: {
-        total: todayTotal,
-        count: todayCount,
-        average: todayAverage
-      },
-      monthSales: {
-        total: monthTotal,
-        profit: actualMonthProfit || estimatedMonthProfit,
-        actualProfit: actualMonthProfit,
-        estimatedProfit: estimatedMonthProfit,
-        expenses: monthExpenses
-      },
-      todayProfit: todayProfit
+      analytics: {
+        citiesCount: cities?.length || 0,
+        regionsCount: regions?.length || 0,
+        productsCount: processedProducts?.length || 0,
+        totalVariantsCount: processedProducts?.reduce((sum, p) => sum + (p.variants?.length || 0), 0) || 0,
+        allTimeStats: {
+          totalSales: allTimeTotal,
+          totalProfit: allTimeProfitTotal || estimatedAllTimeProfit,
+          actualProfit: allTimeProfitTotal,
+          estimatedProfit: estimatedAllTimeProfit,
+          totalExpenses: allTimeExpensesTotal,
+          ordersCount: allTimeSales?.length || 0
+        },
+        todayStats: {
+          total: todayTotal,
+          count: todayCount,
+          average: todayAverage,
+          profit: todayProfit
+        },
+        monthStats: {
+          total: monthTotal,
+          profit: actualMonthProfit || estimatedMonthProfit,
+          actualProfit: actualMonthProfit,
+          estimatedProfit: estimatedMonthProfit,
+          expenses: monthExpensesTotal,
+          ordersCount: monthSales?.length || 0
+        }
+      }
     };
   } catch (error) {
     console.error('Error fetching store data:', error);
@@ -186,8 +214,15 @@ async function getStoreData(userInfo: any, authToken?: string) {
       orders: [],
       cities: [],
       regions: [],
-      todaySales: { total: 0, count: 0, average: 0 },
-      monthSales: { total: 0, profit: 0, expenses: 0 }
+      analytics: {
+        citiesCount: 0,
+        regionsCount: 0,
+        productsCount: 0,
+        totalVariantsCount: 0,
+        allTimeStats: { totalSales: 0, totalProfit: 0, totalExpenses: 0, ordersCount: 0 },
+        todayStats: { total: 0, count: 0, average: 0, profit: 0 },
+        monthStats: { total: 0, profit: 0, expenses: 0, ordersCount: 0 }
+      }
     };
   }
 }
@@ -214,15 +249,17 @@ serve(async (req) => {
     const advancedAnalytics = {
       // تحليل الأرباح الحقيقي
       profitAnalysis: {
-        todayRevenue: storeData.todaySales.total || 0,
-        todayActualProfit: storeData.todayProfit || 0,
-        monthlyRevenue: storeData.monthSales.total || 0,
-        monthlyActualProfit: storeData.monthSales.actualProfit || 0,
-        monthlyEstimatedProfit: storeData.monthSales.estimatedProfit || 0,
-        profitMargin: storeData.monthSales.total > 0 ? 
-          ((storeData.monthSales.actualProfit || 0) / storeData.monthSales.total * 100).toFixed(1) : 0,
-        profitPerOrder: storeData.todaySales.count > 0 ? 
-          (storeData.todayProfit || 0) / storeData.todaySales.count : 0
+        todayRevenue: storeData.analytics?.todayStats?.total || 0,
+        todayActualProfit: storeData.analytics?.todayStats?.profit || 0,
+        monthlyRevenue: storeData.analytics?.monthStats?.total || 0,
+        monthlyActualProfit: storeData.analytics?.monthStats?.actualProfit || 0,
+        monthlyEstimatedProfit: storeData.analytics?.monthStats?.estimatedProfit || 0,
+        allTimeRevenue: storeData.analytics?.allTimeStats?.totalSales || 0,
+        allTimeProfit: storeData.analytics?.allTimeStats?.actualProfit || 0,
+        profitMargin: storeData.analytics?.monthStats?.total > 0 ? 
+          ((storeData.analytics?.monthStats?.actualProfit || 0) / storeData.analytics?.monthStats?.total * 100).toFixed(1) : 0,
+        profitPerOrder: storeData.analytics?.todayStats?.count > 0 ? 
+          (storeData.analytics?.todayStats?.profit || 0) / storeData.analytics?.todayStats?.count : 0
       },
       
       // تحليل المخزون
@@ -263,9 +300,9 @@ serve(async (req) => {
 **شخصيتك:** مساعد متجر RYUS الداخلي للموظفين. أنت تعرف كل شيء عن النظام وتساعد الموظفين في إدارة الطلبات والمبيعات والأرباح.
 
 **البيانات المالية الحالية:**
-📊 مبيعات اليوم: ${storeData.todaySales.total?.toLocaleString()} د.ع (${storeData.todaySales.count} طلب)
-💰 أرباح اليوم: ${storeData.todayProfit?.toLocaleString()} د.ع | الشهر: ${storeData.monthSales.actualProfit?.toLocaleString()} د.ع
-📈 متوسط الطلب: ${storeData.todaySales.average?.toLocaleString()} د.ع | متوسط الربح: ${advancedAnalytics.profitAnalysis.profitPerOrder?.toLocaleString()} د.ع
+📊 مبيعات اليوم: ${storeData.analytics?.todayStats?.total?.toLocaleString() || 0} د.ع (${storeData.analytics?.todayStats?.count || 0} طلب)
+💰 أرباح اليوم: ${storeData.analytics?.todayStats?.profit?.toLocaleString() || 0} د.ع | الشهر: ${storeData.analytics?.monthStats?.actualProfit?.toLocaleString() || 0} د.ع | إجمالي: ${storeData.analytics?.allTimeStats?.actualProfit?.toLocaleString() || 0} د.ع
+📈 متوسط الطلب: ${storeData.analytics?.todayStats?.average?.toLocaleString() || 0} د.ع | متوسط الربح: ${advancedAnalytics.profitAnalysis.profitPerOrder?.toLocaleString() || 0} د.ع
 
 **المنتجات والمخزون:**
 ${availableProducts.slice(0,5).map(product => {
@@ -341,8 +378,7 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
 
     const aiResponse = data.candidates[0].content.parts[0].text;
 
-    // تحليل الرد لاستخراج طلبات محتملة باستخدام دالة معالجة التليغرام
-    const supabase = createAuthenticatedSupabaseClient(authToken);
+    // تحليل الرد لاستخراج طلبات محتملة باستخدام نفس منطق بوت التليغرام
     
     // تحقق من وجود طلب في النص
     const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون'];
@@ -356,7 +392,7 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
       try {
         console.log('🔍 تحليل طلب ذكي للنص:', message);
         
-        // استخدام دالة معالجة التليغرام مع معرف خاص للمساعد الذكي
+        // استخدام نفس منطق بوت التليغرام تماماً مع معرف خاص للمساعد الذكي
         const aiChatId = -999999999; // معرف خاص للمساعد الذكي
         const { data: orderResult, error: orderError } = await supabase
           .rpc('process_telegram_order', {
@@ -440,10 +476,12 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
       type: responseType,
       orderData: orderData,
       analytics: {
-        todayRevenue: storeData.todaySales.total,
-        todayProfit: storeData.todayProfit,
-        monthlyRevenue: storeData.monthSales.total,
-        monthlyProfit: storeData.monthSales.actualProfit,
+        todayRevenue: storeData.analytics?.todayStats?.total || 0,
+        todayProfit: storeData.analytics?.todayStats?.profit || 0,
+        monthlyRevenue: storeData.analytics?.monthStats?.total || 0,
+        monthlyProfit: storeData.analytics?.monthStats?.actualProfit || 0,
+        allTimeRevenue: storeData.analytics?.allTimeStats?.totalSales || 0,
+        allTimeProfit: storeData.analytics?.allTimeStats?.actualProfit || 0,
         profitMargin: advancedAnalytics.profitAnalysis.profitMargin,
         productsCount: storeData.products.length,
         ordersCount: storeData.orders.length,
