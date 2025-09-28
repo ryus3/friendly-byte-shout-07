@@ -191,8 +191,8 @@ serve(async (req) => {
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
-                const color = item.color ? ` (${item.color})` : '';
-                const size = item.size ? ` ${item.size}` : '';
+                const color = (item.color_name || item.color) ? ` (${item.color_name || item.color})` : '';
+                const size = (item.size_name || item.size) ? ` ${item.size_name || item.size}` : '';
                 const quantity = item.quantity || 1;
                 message += `❇️ ${productName}${color}${size} × ${quantity}\n`;
               });
