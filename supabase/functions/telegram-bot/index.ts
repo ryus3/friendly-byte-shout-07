@@ -184,7 +184,7 @@ serve(async (req) => {
             
             // Add phone number with 📱 icon and prefix
             if (orderData.customer_phone) {
-              message += `📱الهاتف : ${orderData.customer_phone}\n`;
+              message += `📱 الهاتف : ${orderData.customer_phone}\n`;
             }
             
             // Add product details with proper formatting using ❇️ icon
