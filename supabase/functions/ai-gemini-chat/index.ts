@@ -60,7 +60,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
-        order_items (
+        order_item_variants (
           id, quantity, unit_price, total_price,
           product_name, variant_sku
         ),
@@ -350,10 +350,9 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
             }
           ],
           generationConfig: {
-            temperature: 0.7,
             topK: 30,
             topP: 0.8,
-            maxOutputTokens: 150,
+            maxOutputTokens: 500,
           },
           safetySettings: [
             {
@@ -371,8 +370,24 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API Error:', errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error('🚨 Gemini API Error:', response.status, errorText);
+      
+      // معالجة خاصة لخطأ انتهاء الكوتة
+      if (response.status === 429 || errorText.includes('quota') || errorText.includes('limit')) {
+        console.error('❌ تم استنفاف كوتة Gemini اليومية (25 طلب/يوم)');
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'quota_exceeded',
+          response: "🚨 تم استنفاف كوتة Gemini اليومية (25 طلب). سيتم تجديدها تلقائياً في منتصف الليل بتوقيت كاليفورنيا. يرجى المحاولة لاحقاً.",
+          quotaStatus: 'exhausted',
+          resetTime: 'منتصف الليل بتوقيت كاليفورنيا'
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -511,14 +526,33 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
     });
 
   } catch (error) {
-    console.error('Error in ai-gemini-chat:', error);
+    console.error('❌ Error in ai-gemini-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير محدد';
+    
+    // تحديد نوع الخطأ لإعطاء رد مناسب
+    let userResponse = "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً.";
+    let errorType = 'unknown';
+    
+    if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+      userResponse = "🚨 تم استنفاف كوتة Gemini اليومية. سيتم التجديد تلقائياً في منتصف الليل (كاليفورنيا).";
+      errorType = 'quota_exceeded';
+    } else if (errorMessage.includes('API key')) {
+      userResponse = "⚠️ مشكلة في مفتاح Gemini API. يرجى التواصل مع المطور.";
+      errorType = 'api_key_error';
+    }
+    
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage,
-      response: "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً."
+      error: errorType,
+      errorDetails: errorMessage,
+      response: userResponse,
+      timestamp: new Date().toISOString(),
+      debugInfo: {
+        errorType: errorType,
+        originalError: errorMessage
+      }
     }), {
-      status: 500,
+      status: errorType === 'quota_exceeded' ? 429 : 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
