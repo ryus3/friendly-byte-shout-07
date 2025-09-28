@@ -88,34 +88,25 @@ const AiChatDialog = ({ open, onOpenChange }) => {
           throw new Error(data.error || 'خطأ في الاتصال بالمساعد الذكي');
         }
 
-        // إذا كان الرد يحتوي على طلب
+        // إذا كان الرد يحتوي على طلب ذكي
         if (data.type === 'order' && data.orderData) {
-          try {
-            const { success, trackingNumber } = await createOrder(
-              data.orderData.customerInfo,
-              data.orderData.items,
-              null,
-              0,
-              'ai_pending' 
-            );
-
-            if (success) {
-              setMessages(prev => [...prev, {
-                role: 'model',
-                content: `✅ ${data.response}\n\n🎯 تم إنشاء طلب جديد برقم تتبع **${trackingNumber}**\nيمكنك مراجعته في قائمة الطلبات.`
-              }]);
-            } else {
-              setMessages(prev => [...prev, { 
-                role: 'model', 
-                content: `${data.response}\n\n⚠️ لم أتمكن من إنشاء الطلب تلقائياً. يرجى إنشاؤه يدوياً.` 
-              }]);
-            }
-          } catch (orderError) {
-            setMessages(prev => [...prev, { 
-              role: 'model', 
-              content: `${data.response}\n\n⚠️ حدث خطأ في إنشاء الطلب. يرجى المحاولة مرة أخرى.` 
-            }]);
+          const orderDetails = data.orderData;
+          let orderStatusMessage = '';
+          
+          if (orderDetails.orderSaved) {
+            orderStatusMessage = `\n\n🎯 **تم حفظ الطلب بنجاح!**\n📋 رقم الطلب الذكي: ${orderDetails.aiOrderId}\n👤 العميل: ${orderDetails.customer_name}\n📱 الهاتف: ${orderDetails.customer_phone || 'غير محدد'}\n📍 العنوان: ${orderDetails.customer_city || 'غير محدد'} - ${orderDetails.customer_province || 'غير محدد'}\n💰 المبلغ الإجمالي: ${(orderDetails.total_amount || 0).toLocaleString()} د.ع\n🛍️ عدد المنتجات: ${orderDetails.items?.length || 0}\n\n✨ يمكنك مراجعة الطلب في **إدارة الطلبات الذكية** وتحويله إلى طلب نهائي.`;
+          } else if (orderDetails.needs_city_selection) {
+            orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المدينة**\nلم أتمكن من التعرف على المدينة من النص. يرجى إعادة كتابة الطلب مع ذكر المدينة بوضوح.`;
+          } else if (orderDetails.needs_region_selection) {
+            orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المنطقة**\nتم العثور على المدينة ولكن لم أتمكن من تحديد المنطقة. يرجى إعادة كتابة الطلب مع ذكر المنطقة.`;
+          } else {
+            orderStatusMessage = `\n\n⚠️ **لم أتمكن من معالجة الطلب بالكامل**\nيرجى التأكد من ذكر: اسم العميل، رقم الهاتف، المدينة والمنطقة، واسم المنتج.`;
           }
+
+          setMessages(prev => [...prev, {
+            role: 'model',
+            content: `${data.response}${orderStatusMessage}`
+          }]);
         } else {
           // رد نصي عادي
           setMessages(prev => [...prev, { 

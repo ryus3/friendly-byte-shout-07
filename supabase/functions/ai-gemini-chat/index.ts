@@ -275,19 +275,41 @@ serve(async (req) => {
     6. **📊 التقارير الفورية**: إحصائيات وتقارير مفصلة
 
     ### 💬 أمثلة تفاعلية:
+    **📊 التحليلات:**
     - "ما هو أداء المبيعات اليوم؟"
     - "أي المنتجات تحتاج إعادة تخزين؟"
     - "كم الربح المتوقع هذا الشهر؟"
     - "من هم أفضل العملاء؟"
-    - "أنشئ طلب جديد لعميل"
-    - "اقترح استراتيجية لزيادة المبيعات"
+    
+    **🛒 إنشاء الطلبات الذكية:**
+    - "بغداد الكرادة 07728020024 برشلونة ازرق لارج"
+    - "اطلب للعميل أحمد العراقي 07812345678 الكاظمية بغداد تيشرت ازرق ميديم"
+    - "أريد طلب للزبونة فاطمة 07911111111 النجف الكوفة فستان احمر لارج"
+    - "طلب جديد: سارة 07812223333 أربيل عنكاوا حذاء أبيض مقاس 38"
+    
+    **💡 نصائح:**
+    - اقترح استراتيجية لزيادة المبيعات
+    - ما هي أفضل الأوقات للمبيعات؟
 
     ### ⚡ نمط الاستجابة:
     - كن محلل خبير وودود
     - استخدم الرموز التعبيرية للوضوح
     - قدم رؤى قابلة للتنفيذ
     - ادعم بالأرقام والإحصائيات
-    - اقترح حلول عملية`;
+    - اقترح حلول عملية
+    - عند إنشاء طلب، أكد التفاصيل بوضوح
+    
+    ### 🎯 لإنشاء طلب ذكي:
+    يمكنك كتابة الطلب بصيغة طبيعية مثل:
+    "المدينة المنطقة رقم_الهاتف اسم_المنتج اللون المقاس"
+    مثال: "بغداد الكرادة 07728020024 برشلونة ازرق لارج"
+    
+    سأقوم بـ:
+    ✅ تحليل النص وتحديد العميل والمنتج
+    ✅ التحقق من المخزون المتوفر
+    ✅ تحديد المدينة والمنطقة من قاعدة البيانات
+    ✅ حساب السعر الإجمالي مع التوصيل
+    ✅ حفظ الطلب في النظام الذكي`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
@@ -339,68 +361,74 @@ serve(async (req) => {
 
     const aiResponse = data.candidates[0].content.parts[0].text;
 
-    // تحليل الرد لاستخراج طلبات محتملة مع ربطها بالمنتجات الحقيقية
-    const orderPattern = /.*(?:للزبون|اسم|عميل)\s*([^\s,،]+).*(?:هاتف|رقم)\s*([0-9]+).*(?:عنوان|منطقة|مدينة)\s*([^.]+)/i;
-    const match = aiResponse.match(orderPattern);
-
+    // تحليل الرد لاستخراج طلبات محتملة باستخدام دالة معالجة التليغرام
+    const supabase = createAuthenticatedSupabaseClient(authToken);
+    
+    // تحقق من وجود طلب في النص
+    const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون'];
+    const hasOrderIntent = orderKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    
     let responseType = 'text';
     let orderData = null;
 
-    // البحث عن منتجات مذكورة في الرد
-    const findMentionedProducts = (text: string) => {
-      const mentionedProducts = [];
-      for (const product of storeData.products) {
-        if (text.toLowerCase().includes(product.name.toLowerCase())) {
-          // البحث عن أول متغير متوفر
-          const availableVariant = product.product_variants?.find((v: any) => 
-            (v.inventory?.[0]?.quantity || 0) > 0
-          );
+    // تطبيق معالجة الطلبات الذكية إذا كان النص يحتوي على نية طلب
+    if (hasOrderIntent) {
+      try {
+        console.log('🔍 تحليل طلب ذكي للنص:', message);
+        
+        // استخدام دالة معالجة التليغرام للتحليل الذكي
+        const { data: orderResult, error: orderError } = await supabase
+          .rpc('process_telegram_order', {
+            p_message_text: message,
+            p_chat_id: Math.floor(Math.random() * 1000000) // رقم وهمي للمساعد الذكي
+          });
+        
+        if (orderError) {
+          console.error('❌ خطأ في معالجة الطلب:', orderError);
+        } else if (orderResult?.success) {
+          console.log('✅ تم تحليل الطلب بنجاح:', orderResult);
           
-          if (availableVariant) {
-            mentionedProducts.push({
-              productId: product.id,
-              productName: product.name,
-              variantId: availableVariant.id,
-              sku: availableVariant.sku,
-              color: availableVariant.colors?.name || 'افتراضي',
-              size: availableVariant.sizes?.name || 'افتراضي',
-              quantity: 1,
-              price: availableVariant.price || product.base_price || 0,
-              costPrice: availableVariant.cost_price || product.cost_price || 0,
-              total: availableVariant.price || product.base_price || 0,
-              stock: availableVariant.inventory?.[0]?.quantity || 0
-            });
+          responseType = 'order';
+          orderData = orderResult.order_data;
+          
+          // حفظ الطلب في ai_orders
+          const aiOrderData = {
+            customer_name: orderData.customer_name || 'عميل',
+            customer_phone: orderData.customer_phone,
+            customer_city: orderData.customer_city,
+            customer_province: orderData.customer_province,
+            customer_address: orderData.customer_address || message,
+            city_id: orderData.city_id,
+            region_id: orderData.region_id,
+            items: orderData.items || [],
+            total_amount: orderData.total_amount || 0,
+            source: 'ai_assistant',
+            original_text: message,
+            telegram_chat_id: null,
+            created_by: userInfo?.id || '91484496-b887-44f7-9e5d-be9db5567604',
+            order_data: orderData,
+            status: 'pending'
+          };
+          
+          const { data: savedOrder, error: saveError } = await supabase
+            .from('ai_orders')
+            .insert(aiOrderData)
+            .select()
+            .single();
+          
+          if (saveError) {
+            console.error('❌ خطأ في حفظ الطلب الذكي:', saveError);
+          } else {
+            console.log('✅ تم حفظ الطلب الذكي بنجاح:', savedOrder.id);
+            
+            // إضافة معرف الطلب المحفوظ للاستجابة
+            orderData.aiOrderId = savedOrder.id;
+            orderData.orderSaved = true;
           }
         }
+      } catch (error) {
+        console.error('❌ خطأ عام في معالجة الطلب الذكي:', error);
       }
-      return mentionedProducts;
-    };
-
-    if (match) {
-      const mentionedProducts = findMentionedProducts(aiResponse);
-      
-      responseType = 'order';
-      orderData = {
-        customerInfo: {
-          name: match[1],
-          phone: match[2],
-          address: match[3],
-          city: "بغداد" // افتراضي
-        },
-        items: mentionedProducts.length > 0 ? mentionedProducts : [
-          {
-            productId: storeData.products[0]?.id || 'no-product',
-            productName: storeData.products[0]?.name || "منتج غير محدد",
-            sku: 'MANUAL-ORDER',
-            color: 'حسب الطلب',
-            size: 'حسب الطلب',
-            quantity: 1,
-            price: storeData.products[0]?.base_price || 25000,
-            costPrice: storeData.products[0]?.cost_price || 15000,
-            total: storeData.products[0]?.base_price || 25000
-          }
-        ]
-      };
     }
 
     // إضافة معلومات إضافية للرد
