@@ -49,10 +49,10 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
   }, [open, messages, user]);
 
   const initializeWelcomeMessage = () => {
-    const userName = user?.full_name || user?.fullName || user?.display_name || 'المستخدم';
+    const userName = user?.full_name || user?.fullName || user?.display_name || 'المدير العام';
     const welcomeMessage = {
       role: 'model',
-      content: `أهلاً! أنا مساعدك الذكي 🤖
+      content: `أهلاً ${userName}! أنا مساعدك الذكي 🤖
 أستطيع إنشاء طلبات ذكية وتحليل البيانات`
     };
     
@@ -189,10 +189,10 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
 
   const handleOrderResponse = async (data) => {
     const orderDetails = data.orderData;
-    let orderStatusMessage = '';
+    let shortMessage = '';
     
     if (orderDetails.orderSaved) {
-      orderStatusMessage = `\n\n🎯 **طلب ذكي خارق تم إنشاؤه!**\n📋 ID: ${orderDetails.aiOrderId}\n👤 ${orderDetails.customer_name}\n📱 ${orderDetails.customer_phone || 'غير محدد'}\n📍 ${orderDetails.customer_city} - ${orderDetails.customer_province}\n💰 ${(orderDetails.total_amount || 0).toLocaleString()} د.ع\n🛍️ ${orderDetails.items?.length || 0} منتج\n\n✨ **ميزات الطلب الذكي**:\n🔍 تحقق تلقائي من المخزون\n🎯 اقتراحات بدائل ذكية\n📊 حساب الأرباح الفوري\n🚀 تحويل فوري لطلب نهائي`;
+      shortMessage = `✅ تم إنشاء الطلب بنجاح`;
       
       // إشعار محسن للطلب الذكي
       setTimeout(() => {
@@ -208,16 +208,22 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
         window.dispatchEvent(aiOrderEvent);
         
         toast({
-          title: "🚀 طلب ذكي خارق جديد",
+          title: "✅ طلب جديد",
           description: `${orderDetails.customer_name} - ${(orderDetails.total_amount || 0).toLocaleString()} د.ع`,
           variant: "success"
         });
       }, 300);
+    } else if (data.response.includes('مدينة') || data.response.includes('عنوان')) {
+      shortMessage = `❗ يرجى تحديد العنوان`;
+    } else if (data.response.includes('منتج') || data.response.includes('لون') || data.response.includes('قياس')) {
+      shortMessage = `❗ يرجى تحديد المنتج واللون والقياس`;
+    } else {
+      shortMessage = data.response.substring(0, 50) + '...';
     }
 
     setMessages(prev => [...prev, {
       role: 'model',
-      content: `${data.response}${orderStatusMessage}`,
+      content: shortMessage,
       metadata: {
         type: 'order',
         model_used: data.model_used,
@@ -259,7 +265,7 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
                   المساعد الذكي
                 </h2>
                 <div className="text-xs text-muted-foreground">
-                  مدعوم بـ Gemini AI
+                  نظام RYUS المتقدم
                 </div>
               </div>
             </div>
