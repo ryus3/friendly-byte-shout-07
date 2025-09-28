@@ -9,7 +9,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
-import AiChatDialog from './components/ai/AiChatDialog';
+import SuperAiChatDialog from './components/ai/SuperAiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
@@ -151,7 +151,7 @@ function AppContent() {
         </Routes>
       </Suspense>
       <Toaster />
-      <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
+      <SuperAiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
     </div>
   )

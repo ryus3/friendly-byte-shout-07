@@ -252,7 +252,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             />
           </form>
           <div className="mt-2 text-xs text-muted-foreground text-center">
-            🤖 مدعوم بالذكاء الاصطناعي Gemini 2.0
+            🤖 مدعوم بـ 6 نماذج ذكية متقدمة | النسخة التقليدية
           </div>
         </div>
       </DialogContent>
