@@ -108,7 +108,7 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the working original function
+          // Call the enhanced order processing function
           console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
@@ -137,7 +137,7 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // Handle different response types with detailed formatting
+          // Handle different response types
           if (orderResult?.success) {
             const orderData = orderResult.order_data || {};
             
@@ -149,7 +149,7 @@ serve(async (req) => {
                   customer_name: orderData.customer_name || 'عميل',
                   customer_phone: orderData.customer_phone,
                   customer_city: orderData.customer_city,
-                  customer_province: orderData.customer_province,
+                  customer_province: orderData.customer_province, // تم تصحيح هذا من customer_region
                   customer_address: orderData.customer_address,
                   city_id: orderData.city_id,
                   region_id: orderData.region_id,
@@ -171,10 +171,10 @@ serve(async (req) => {
               console.error('❌ خطأ في حفظ الطلب:', saveError);
             }
             
-            // Build detailed order confirmation message with new format
+            // Build order confirmation message in the requested format
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add customer name if available
+            // Add customer name if provided and not default
             if (orderData.customer_name && orderData.customer_name !== 'عميل') {
               message += `🥷 ${orderData.customer_name}\n`;
             }
@@ -191,7 +191,7 @@ serve(async (req) => {
               message += `📱 ${orderData.customer_phone}\n`;
             }
             
-            // Add product details with new format
+            // Add product details
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
@@ -211,7 +211,7 @@ serve(async (req) => {
             await sendTelegramMessage(chatId, message, botToken);
             
           } else {
-            // Handle errors or clarifications needed
+            // Handle errors or clarifications needed - including availability errors
             let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
             
             // Create inline keyboard for options if available
