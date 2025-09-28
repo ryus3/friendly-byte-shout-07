@@ -170,11 +170,17 @@ serve(async (req) => {
                     unavailableMessage += `✅ المتوفر فعلياً:\n`;
                     // تحويل colors_with_sizes إلى نص منسق
                     const colorsWithSizes = item.colors_with_sizes;
-                    for (const [color, sizes] of Object.entries(colorsWithSizes)) {
+                    const colorEntries = Object.entries(colorsWithSizes);
+                    colorEntries.forEach(([color, sizes], index) => {
                       if (Array.isArray(sizes) && sizes.length > 0) {
-                        unavailableMessage += `${color} (${sizes.join(', ')})\n`;
+                        unavailableMessage += `${color} (${sizes.join(', ')})`;
+                        if (index < colorEntries.length - 1) {
+                          unavailableMessage += '\n';
+                        }
                       }
-                    }
+                    });
+                  } else {
+                    unavailableMessage += `✅ يرجى التواصل لمعرفة المواصفات المتوفرة.`;
                   }
                   break;
                 }
