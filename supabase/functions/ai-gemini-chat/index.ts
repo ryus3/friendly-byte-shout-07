@@ -11,6 +11,212 @@ const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+// تكوين نماذج Gemini المتاحة مع الكوتات المجانية
+const GEMINI_MODELS = [
+  {
+    name: 'gemini-2.5-flash',
+    dailyLimit: 1500,
+    minuteLimit: 15,
+    priority: 1,
+    useCase: 'general',
+    description: 'الأسرع والأكثر كفاءة للمحادثات العامة'
+  },
+  {
+    name: 'gemini-2.5-flash-lite',
+    dailyLimit: 1500,
+    minuteLimit: 15,
+    priority: 2,
+    useCase: 'simple',
+    description: 'نسخة مخففة للطلبات البسيطة'
+  },
+  {
+    name: 'gemini-1.5-flash',
+    dailyLimit: 1500,
+    minuteLimit: 15,
+    priority: 3,
+    useCase: 'general',
+    description: 'نسخة ثابتة ومجربة'
+  },
+  {
+    name: 'gemini-2.5-pro',
+    dailyLimit: 50,
+    minuteLimit: 2,
+    priority: 4,
+    useCase: 'complex',
+    description: 'للطلبات المعقدة وتحليل البيانات'
+  },
+  {
+    name: 'gemini-1.5-pro',
+    dailyLimit: 50,
+    minuteLimit: 2,
+    priority: 5,
+    useCase: 'complex',
+    description: 'نسخة احتياطية للطلبات المعقدة'
+  },
+  {
+    name: 'gemini-2.0-flash',
+    dailyLimit: 50,
+    minuteLimit: 10,
+    priority: 6,
+    useCase: 'experimental',
+    description: 'نسخة تجريبية للميزات الجديدة'
+  }
+];
+
+// متغيرات لتتبع الاستخدام (في الذاكرة)
+let modelUsageStats = new Map();
+
+// تحديد النموذج الأنسب حسب نوع الطلب
+function selectBestModel(messageText: string, orderIntent: boolean = false): string {
+  const lowerText = messageText.toLowerCase();
+  
+  // للطلبات المعقدة - استخدم Pro models
+  if (orderIntent || lowerText.includes('طلب') || lowerText.includes('إحصائي') || lowerText.includes('تحليل')) {
+    return getAvailableModel('complex') || getAvailableModel('general') || 'gemini-2.5-flash';
+  }
+  
+  // للردود البسيطة - استخدم Flash-Lite
+  if (lowerText.length < 50 || lowerText.includes('شكرا') || lowerText.includes('مرحبا')) {
+    return getAvailableModel('simple') || getAvailableModel('general') || 'gemini-2.5-flash';
+  }
+  
+  // للمحادثات العامة - استخدم Flash العادي
+  return getAvailableModel('general') || 'gemini-2.5-flash';
+}
+
+// الحصول على نموذج متاح حسب نوع الاستخدام
+function getAvailableModel(useCase: string): string | null {
+  const suitableModels = GEMINI_MODELS
+    .filter(model => model.useCase === useCase || useCase === 'general')
+    .sort((a, b) => a.priority - b.priority);
+    
+  for (const model of suitableModels) {
+    const usage = modelUsageStats.get(model.name) || { daily: 0, lastReset: new Date().toDateString() };
+    
+    // إعادة تعيين الكونتر اليومي
+    if (usage.lastReset !== new Date().toDateString()) {
+      usage.daily = 0;
+      usage.lastReset = new Date().toDateString();
+      modelUsageStats.set(model.name, usage);
+    }
+    
+    // التحقق من توفر الكوتة
+    if (usage.daily < model.dailyLimit * 0.9) { // استخدم 90% من الحد للأمان
+      return model.name;
+    }
+  }
+  
+  return null; // لا يوجد نموذج متاح
+}
+
+// تسجيل استخدام النموذج
+function recordModelUsage(modelName: string) {
+  const usage = modelUsageStats.get(modelName) || { daily: 0, lastReset: new Date().toDateString() };
+  usage.daily += 1;
+  modelUsageStats.set(modelName, usage);
+  
+  console.log(`📊 استخدام ${modelName}: ${usage.daily} من ${GEMINI_MODELS.find(m => m.name === modelName)?.dailyLimit || 'غير محدد'}`);
+}
+
+// استدعاء Gemini API مع نظام التحويل التلقائي
+async function callGeminiWithFallback(systemPrompt: string, userMessage: string, maxRetries: number = 3): Promise<any> {
+  const orderIntent = userMessage.toLowerCase().includes('طلب') || userMessage.toLowerCase().includes('اطلب');
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const selectedModel = selectBestModel(userMessage, orderIntent);
+      
+      if (!selectedModel) {
+        throw new Error('لم يعد هناك نماذج متاحة - تم استنفاف جميع الكوتات اليومية');
+      }
+      
+      console.log(`🤖 محاولة ${attempt}: استخدام نموذج ${selectedModel}`);
+      
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: systemPrompt },
+                  { text: `رسالة المستخدم: ${userMessage}` }
+                ]
+              }
+            ],
+            generationConfig: {
+              topK: 30,
+              topP: 0.8,
+              maxOutputTokens: 500,
+            },
+            safetySettings: [
+              {
+                category: "HARM_CATEGORY_HARASSMENT",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              },
+              {
+                category: "HARM_CATEGORY_HATE_SPEECH",
+                threshold: "BLOCK_MEDIUM_AND_ABOVE"
+              }
+            ]
+          }),
+        }
+      );
+
+      if (response.ok) {
+        // تسجيل الاستخدام الناجح
+        recordModelUsage(selectedModel);
+        console.log(`✅ نجح ${selectedModel} في المحاولة ${attempt}`);
+        return await response.json();
+      }
+      
+      const errorText = await response.text();
+      console.error(`❌ خطأ في ${selectedModel} (محاولة ${attempt}):`, response.status, errorText);
+      
+      // إذا كان خطأ كوتة، اعلم عن استنفافها وجرب النموذج التالي
+      if (response.status === 429 || errorText.includes('quota') || errorText.includes('limit')) {
+        console.warn(`⚠️ تم استنفاف كوتة ${selectedModel} - التحويل للنموذج التالي`);
+        
+        // تعيين الكوتة كمستنفدة
+        const usage = modelUsageStats.get(selectedModel) || { daily: 0, lastReset: new Date().toDateString() };
+        const modelConfig = GEMINI_MODELS.find(m => m.name === selectedModel);
+        if (modelConfig) {
+          usage.daily = modelConfig.dailyLimit; // ضع الكوتة في الحد الأقصى
+          modelUsageStats.set(selectedModel, usage);
+        }
+        
+        // إذا كانت هذه المحاولة الأخيرة، ارجع خطأ شامل
+        if (attempt === maxRetries) {
+          return {
+            error: true,
+            status: 429,
+            message: '🚨 تم استنفاف جميع نماذج Gemini المتاحة لليوم. سيتم التجديد تلقائياً في منتصف الليل بتوقيت كاليفورنيا.'
+          };
+        }
+        
+        continue; // جرب النموذج التالي
+      }
+      
+      // لأخطاء أخرى، جرب مرة أخرى
+      if (attempt === maxRetries) {
+        throw new Error(`فشل جميع النماذج: ${errorText}`);
+      }
+      
+    } catch (error) {
+      console.error(`❌ خطأ في المحاولة ${attempt}:`, error);
+      if (attempt === maxRetries) {
+        throw error;
+      }
+    }
+  }
+  
+  throw new Error('فشل في جميع المحاولات');
+}
+
 // إنشاء عميل Supabase بصلاحيات SERVICE ROLE مثل بوت التليغرام
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
@@ -333,64 +539,28 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
 **تعليمات الذكاء الخارق:**
 كن مختصراً وذكياً (1-2 سطر) + اعطِ معلومات دقيقة من النظام الحقيقي فقط. عند ذكر أي مدينة أو منطقة، استخدم فقط الأسماء الموجودة في قاعدة البيانات. اعرض المخزون الحقيقي والأسعار الصحيحة. انشئ طلبات حقيقية تظهر فوراً في نظام الإدارة.`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: systemPrompt },
-                { text: `رسالة المستخدم: ${message}` }
-              ]
-            }
-          ],
-          generationConfig: {
-            topK: 30,
-            topP: 0.8,
-            maxOutputTokens: 500,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('🚨 Gemini API Error:', response.status, errorText);
-      
-      // معالجة خاصة لخطأ انتهاء الكوتة
-      if (response.status === 429 || errorText.includes('quota') || errorText.includes('limit')) {
-        console.error('❌ تم استنفاف كوتة Gemini اليومية (25 طلب/يوم)');
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'quota_exceeded',
-          response: "🚨 تم استنفاف كوتة Gemini اليومية (25 طلب). سيتم تجديدها تلقائياً في منتصف الليل بتوقيت كاليفورنيا. يرجى المحاولة لاحقاً.",
-          quotaStatus: 'exhausted',
-          resetTime: 'منتصف الليل بتوقيت كاليفورنيا'
-        }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    // استخدام نظام التحويل التلقائي الذكي
+    const data = await callGeminiWithFallback(systemPrompt, message);
+    
+    // التحقق من وجود خطأ في النظام
+    if (data.error) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'all_models_exhausted',
+        response: data.message,
+        quotaStatus: 'all_exhausted',
+        availableModels: GEMINI_MODELS.map(m => ({
+          name: m.name,
+          description: m.description,
+          dailyUsage: modelUsageStats.get(m.name)?.daily || 0,
+          dailyLimit: m.dailyLimit,
+          available: (modelUsageStats.get(m.name)?.daily || 0) < m.dailyLimit * 0.9
+        }))
+      }), {
+        status: data.status || 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
-
-    const data = await response.json();
     
     if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
       throw new Error('Invalid response from Gemini API');
@@ -529,12 +699,21 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
     console.error('❌ Error in ai-gemini-chat:', error);
     const errorMessage = error instanceof Error ? error.message : 'خطأ غير محدد';
     
-    // تحديد نوع الخطأ لإعطاء رد مناسب
+    // تحديد نوع الخطأ لإعطاء رد مناسب مع معلومات النظام الذكي
     let userResponse = "عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى لاحقاً.";
     let errorType = 'unknown';
     
-    if (errorMessage.includes('quota') || errorMessage.includes('429')) {
-      userResponse = "🚨 تم استنفاف كوتة Gemini اليومية. سيتم التجديد تلقائياً في منتصف الليل (كاليفورنيا).";
+    if (errorMessage.includes('quota') || errorMessage.includes('429') || errorMessage.includes('لم يعد هناك نماذج متاحة')) {
+      const availableModels = GEMINI_MODELS.filter(m => {
+        const usage = modelUsageStats.get(m.name)?.daily || 0;
+        return usage < m.dailyLimit * 0.9;
+      });
+      
+      if (availableModels.length > 0) {
+        userResponse = `⚠️ النموذج الحالي مُستنفد. يتم التحويل تلقائياً للنموذج التالي... (متوفر: ${availableModels.length} نموذج)`;
+      } else {
+        userResponse = "🚨 تم استنفاف جميع نماذج Gemini المتاحة (5,000+ طلب/يوم). سيتم التجديد تلقائياً في منتصف الليل (كاليفورنيا).";
+      }
       errorType = 'quota_exceeded';
     } else if (errorMessage.includes('API key')) {
       userResponse = "⚠️ مشكلة في مفتاح Gemini API. يرجى التواصل مع المطور.";
@@ -547,9 +726,18 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
       errorDetails: errorMessage,
       response: userResponse,
       timestamp: new Date().toISOString(),
+      modelStats: GEMINI_MODELS.map(m => ({
+        name: m.name,
+        description: m.description,
+        used: modelUsageStats.get(m.name)?.daily || 0,
+        limit: m.dailyLimit,
+        available: (modelUsageStats.get(m.name)?.daily || 0) < m.dailyLimit * 0.9
+      })),
       debugInfo: {
         errorType: errorType,
-        originalError: errorMessage
+        originalError: errorMessage,
+        totalModelsAvailable: GEMINI_MODELS.length,
+        totalDailyQuota: GEMINI_MODELS.reduce((sum, m) => sum + m.dailyLimit, 0)
       }
     }), {
       status: errorType === 'quota_exceeded' ? 429 : 500,
