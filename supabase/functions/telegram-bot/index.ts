@@ -141,46 +141,28 @@ serve(async (req) => {
           if (orderResult?.success) {
             const orderData = orderResult.order_data || {};
             
-            // التحقق من توفر المنتجات قبل حفظ الطلب
+            // التحقق من توفر المنتجات باستخدام النظام المحسن الجديد
             let hasUnavailableItems = false;
             let unavailableMessage = '';
             
             if (orderData.items && Array.isArray(orderData.items)) {
               for (const item of orderData.items) {
-                // فحص إذا كان المنتج يحتاج تحديد مواصفات أو غير متوفر
-                if (item.selection_needed === true || item.is_available === false || 
-                    (item.stock_status && (
-                      item.stock_status.includes('يرجى تحديد') ||
-                      item.stock_status.includes('غير متوفرة') ||
-                      item.stock_status.includes('❌')
-                    ))) {
+                // فحص إذا كان المنتج غير متوفر باستخدام is_available الجديد
+                if (item.is_available === false) {
                   hasUnavailableItems = true;
                   
-                  // استخراج اللون والحجم المطلوب من النص الأصلي أو من البيانات
-                  const requestedColor = item.color_name && item.color_name !== 'يرجى تحديد اللون' ? item.color_name : 'غير محدد';
-                  const requestedSize = item.size_name && item.size_name !== 'يرجى تحديد الحجم' ? item.size_name : 'غير محدد';
+                  // استخراج اللون والحجم المطلوب
+                  const requestedColor = item.color_name || 'غير محدد';
+                  const requestedSize = item.size_name || 'غير محدد';
                   
                   // بناء رسالة خطأ واضحة
                   unavailableMessage = `❌ فشل في إنشاء الطلب: المنتج "${item.product_name}" غير متوفر باللون "${requestedColor}" والحجم "${requestedSize}".\n\n`;
                   
-                  // إضافة البدائل المتوفرة فعلياً بتنسيق جميل
+                  // استخدام رسالة البدائل من الدالة المحسنة
                   if (item.alternatives_message && item.alternatives_message.trim() !== '') {
-                    unavailableMessage += `✅ المتوفر فعلياً:\n${item.alternatives_message}`;
-                  } else if (item.colors_with_sizes) {
-                    unavailableMessage += `✅ المتوفر فعلياً:\n`;
-                    // تحويل colors_with_sizes إلى نص منسق
-                    const colorsWithSizes = item.colors_with_sizes;
-                    const colorEntries = Object.entries(colorsWithSizes);
-                    colorEntries.forEach(([color, sizes], index) => {
-                      if (Array.isArray(sizes) && sizes.length > 0) {
-                        unavailableMessage += `${color} (${sizes.join(', ')})`;
-                        if (index < colorEntries.length - 1) {
-                          unavailableMessage += '\n';
-                        }
-                      }
-                    });
+                    unavailableMessage += item.alternatives_message;
                   } else {
-                    unavailableMessage += `✅ يرجى التواصل لمعرفة المواصفات المتوفرة.`;
+                    unavailableMessage += `💡 يرجى التواصل لمعرفة المواصفات المتوفرة.`;
                   }
                   break;
                 }
@@ -199,15 +181,6 @@ serve(async (req) => {
             
             // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
             console.log('✅ جميع المنتجات متوفرة، سيتم حفظ الطلب');
-            
-            // إذا كان هناك منتجات غير متوفرة، لا نحفظ الطلب ونرسل رسالة خطأ
-            if (hasUnavailableItems) {
-              await sendTelegramMessage(chatId, unavailableMessage, botToken);
-              return new Response(JSON.stringify({ success: false, message: unavailableMessage }), {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              });
-            }
             
             // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
             try {
