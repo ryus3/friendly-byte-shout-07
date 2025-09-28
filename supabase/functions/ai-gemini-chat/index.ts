@@ -39,11 +39,11 @@ async function getStoreData(userInfo: any, authToken?: string) {
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
-        id, name, base_price, cost_price, description, is_active,
+        id, name, cost_price, description, is_active,
         product_variants (
-          id, sku, color_id, size_id, selling_price, cost_price,
-          colors!inner (id, name, hex_code),
-          sizes!inner (id, name),
+          id, sku, color_id, size_id, price, cost_price,
+          colors (id, name, hex_code),
+          sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
         ),
         categories (id, name),
@@ -73,14 +73,14 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, delivery_partner,
-        order_items!inner (
+        order_items (
           id, quantity, price, total, product_name, variant_sku,
-          product_variants!inner (
-            selling_price, cost_price,
-            colors!inner (name, hex_code),
-            sizes!inner (name)
+          product_variants (
+            price, cost_price,
+            colors (name, hex_code),
+            sizes (name)
           ),
-          products!inner (name, cost_price)
+          products (name, cost_price)
         )
       `)
       .order('created_at', { ascending: false })
@@ -181,9 +181,9 @@ async function getStoreData(userInfo: any, authToken?: string) {
           sold: variant.inventory?.[0]?.sold_quantity || 0,
           reserved: variant.inventory?.[0]?.reserved_quantity || 0,
           min_stock: variant.inventory?.[0]?.min_stock || 0,
-          actual_price: variant.selling_price || product.base_price || 0,
+          actual_price: variant.price || 0,
           actual_cost: variant.cost_price || product.cost_price || 0,
-          profit_per_item: (variant.selling_price || product.base_price || 0) - (variant.cost_price || product.cost_price || 0)
+          profit_per_item: (variant.price || 0) - (variant.cost_price || product.cost_price || 0)
         })) || []
       };
     }) || [];
@@ -243,11 +243,17 @@ serve(async (req) => {
       profitAnalysis: {
         totalRevenue: storeData.todaySales.total || 0,
         estimatedProfit: storeData.products.reduce((sum, product) => {
-          const profit = (product.base_price || 0) - (product.cost_price || 0);
-          return sum + (profit * (product.sold_quantity || 0));
+          return sum + (product.variants?.reduce((variantSum: number, variant: any) => {
+            const profit = (variant.actual_price || 0) - (variant.actual_cost || 0);
+            return variantSum + (profit * (variant.sold || 0));
+          }, 0) || 0);
         }, 0),
         profitMargin: storeData.products.length > 0 ? 
-          (storeData.products.reduce((sum, p) => sum + ((p.base_price || 0) - (p.cost_price || 0)) / (p.base_price || 1), 0) / storeData.products.length * 100).toFixed(1) : 0
+          (storeData.products.reduce((sum, p) => {
+            const avgProfit = p.variants?.reduce((vSum: number, v: any) => vSum + (v.profit_per_item || 0), 0) / (p.variants?.length || 1) || 0;
+            const avgPrice = p.variants?.reduce((vSum: number, v: any) => vSum + (v.actual_price || 0), 0) / (p.variants?.length || 1) || 1;
+            return sum + (avgProfit / avgPrice);
+          }, 0) / storeData.products.length * 100).toFixed(1) : 0
       },
       
       // تحليل المخزون
@@ -307,7 +313,7 @@ serve(async (req) => {
 
     **🏆 المنتجات الأكثر مبيعاً:**
     ${advancedAnalytics.trends.bestSellers.map((product, index) => `
-    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح ${((product.base_price || 0) - (product.cost_price || 0)) * (product.sold_quantity || 0)} د.ع`).join('')}
+    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح مقدر ${(product.variants?.reduce((sum: number, v: any) => sum + (v.profit_per_item * v.sold), 0) || 0).toLocaleString()} د.ع`).join('')}
 
     **👥 رؤى العملاء:**
     - متوسط قيمة الطلب: ${advancedAnalytics.customerInsights.averageOrderValue.toLocaleString()} د.ع
@@ -325,9 +331,8 @@ serve(async (req) => {
     ${storeData.products.map(product => `
     🛍️ **${product.name}**
     🏷️ الفئة: ${product.category_name || 'غير محدد'} | القسم: ${product.department_name || 'غير محدد'}
-    💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
+    💰 التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
     📦 المخزون الكلي: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
-    📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
     ${product.variants?.length > 0 ? `
     🎨 **المتغيرات المتوفرة (${product.variants.length} متغير):**
     ${product.variants.map((v: any) => `
