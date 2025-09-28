@@ -19,18 +19,20 @@ async function getStoreData(userInfo: any, authToken?: string) {
   try {
     console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
     
-    // Get real cities and regions from cache
+    // Get real cities and regions from cache with smart search functions
     const { data: cities } = await supabase
       .from('cities_cache')
-      .select('id, name, alwaseet_id')
+      .select('id, name, alwaseet_id, name_ar, name_en')
       .eq('is_active', true)
       .order('name');
     
     const { data: regions } = await supabase
       .from('regions_cache')
-      .select('id, name, city_id, alwaseet_id')
+      .select('id, name, city_id, alwaseet_id, name_ar, name_en')
       .eq('is_active', true)
       .order('name');
+
+    console.log(`✅ تم جلب ${cities?.length || 0} مدينة و ${regions?.length || 0} منطقة من النظام الحقيقي`);
     
     // Get products with variants, inventory, and sales data
     const { data: products, error: productsError } = await supabase
@@ -59,7 +61,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
         order_items (
-          id, quantity, price, total,
+          id, quantity, unit_price, total_price,
           product_name, variant_sku
         ),
         profits (
@@ -295,38 +297,41 @@ serve(async (req) => {
     const availableProducts = storeData.products.filter(p => (p.inventory_count || 0) > 0);
     const outOfStockProducts = storeData.products.filter(p => (p.inventory_count || 0) === 0);
 
-    const systemPrompt = `🎯 أنت مساعد RYUS الذكي الداخلي للموظفين - كن مختصراً وذكياً (2-3 أسطر فقط)
+const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - الآن لديك وصول كامل لقاعدة البيانات الحقيقية ونظام مثالي لإنشاء الطلبات
 
-**شخصيتك:** مساعد متجر RYUS الداخلي للموظفين. أنت تعرف كل شيء عن النظام وتساعد الموظفين في إدارة الطلبات والمبيعات والأرباح.
+**شخصيتك:** مساعد متجر RYUS الذكي الخارق. تعرف كل شيء في النظام وتستطيع: إنشاء طلبات حقيقية، فحص المخزون، عرض الأرباح الشاملة، التعرف على جميع المدن والمناطق.
 
-**البيانات المالية الحالية:**
+**البيانات المالية الحقيقية - الوصول الكامل:**
 📊 مبيعات اليوم: ${storeData.analytics?.todayStats?.total?.toLocaleString() || 0} د.ع (${storeData.analytics?.todayStats?.count || 0} طلب)
-💰 أرباح اليوم: ${storeData.analytics?.todayStats?.profit?.toLocaleString() || 0} د.ع | الشهر: ${storeData.analytics?.monthStats?.actualProfit?.toLocaleString() || 0} د.ع | إجمالي: ${storeData.analytics?.allTimeStats?.actualProfit?.toLocaleString() || 0} د.ع
-📈 متوسط الطلب: ${storeData.analytics?.todayStats?.average?.toLocaleString() || 0} د.ع | متوسط الربح: ${advancedAnalytics.profitAnalysis.profitPerOrder?.toLocaleString() || 0} د.ع
+📈 مبيعات الشهر: ${storeData.analytics?.monthStats?.total?.toLocaleString() || 0} د.ع | أرباح: ${storeData.analytics?.monthStats?.actualProfit?.toLocaleString() || 0} د.ع
+💰 إجمالي كل الأوقات: ${storeData.analytics?.allTimeStats?.totalSales?.toLocaleString() || 0} د.ع | أرباح: ${storeData.analytics?.allTimeStats?.actualProfit?.toLocaleString() || 0} د.ع
+📊 عدد الطلبات: اليوم ${storeData.analytics?.todayStats?.count || 0} | الشهر ${storeData.analytics?.monthStats?.ordersCount || 0} | الإجمالي ${storeData.analytics?.allTimeStats?.ordersCount || 0}
 
-**المنتجات والمخزون:**
-${availableProducts.slice(0,5).map(product => {
+**مخزون حقيقي ومنتجات متاحة:**
+${availableProducts.slice(0,6).map(product => {
   const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
-  const availableColors = [...new Set(variants.map((v: any) => v.color))].slice(0,3).join(', ');
-  const availableSizes = [...new Set(variants.map((v: any) => v.size))].slice(0,3).join(', ');
-  return `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة)
-  الألوان: ${availableColors || 'افتراضي'} | المقاسات: ${availableSizes || 'افتراضي'}`;
+  const availableColors = [...new Set(variants.map((v: any) => v.color))].slice(0,4).join(', ');
+  const availableSizes = [...new Set(variants.map((v: any) => v.size))].slice(0,4).join(', ');
+  return `✅ ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة متاحة)
+   🎨 ألوان: ${availableColors || 'افتراضي'} | 📏 مقاسات: ${availableSizes || 'افتراضي'}`;
 }).join('\n')}
 
-${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockProducts.slice(0,3).map(p => p.name).join(', ')}` : ''}
+${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStockProducts.slice(0,4).map(p => p.name).join(', ')} - اقترح بدائل ذكية` : ''}
 
-**شبكة التوصيل الحقيقية:**
-🏙️ **المدن المتاحة:** ${cityList}
-📍 **المناطق:** ${storeData.regions.slice(0,8).map(r => r.name).join(', ')}
+**نظام المدن والمناطق الحقيقي (${storeData.cities.length} مدينة، ${storeData.regions.length} منطقة):**
+🏙️ **المدن:** ${cityList}${storeData.cities.length > 10 ? ` و${storeData.cities.length - 10} مدن أخرى` : ''}
+📍 **مناطق رئيسية:** ${storeData.regions.slice(0,10).map(r => r.name).join(', ')}
 
-**لإنشاء طلبات ذكية:**
-- 👤 اسم العميل الافتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
-- 🚛 أجور التوصيل: 5000 د.ع (ثابت لجميع المدن)
-- ✅ فحص مخزون حقيقي + اقتراح بدائل ذكية
-- 📱 استخدم المدن والمناطق من النظام فقط
-- 💾 الطلبات تُحفظ تلقائياً في نظام الطلبات الذكية
+**قدرات إنشاء الطلبات الخارقة:**
+- 🤖 استخدام نفس منطق بوت التليغرام المتطور
+- 🔍 التعرف التلقائي على المدن والمناطق من قاعدة البيانات
+- 💰 حساب أجور التوصيل: 5000 د.ع (موحد)
+- 📦 فحص مخزون فوري واقتراح بدائل ذكية
+- 💾 حفظ تلقائي في ai_orders مع source='ai_assistant'
+- 👤 اسم افتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
 
-**أسلوب الرد:** أجب بإيموجي + رد مختصر ومفيد + معلومات دقيقة من النظام الحقيقي`;
+**تعليمات الذكاء الخارق:**
+كن مختصراً وذكياً (1-2 سطر) + اعطِ معلومات دقيقة من النظام الحقيقي فقط. عند ذكر أي مدينة أو منطقة، استخدم فقط الأسماء الموجودة في قاعدة البيانات. اعرض المخزون الحقيقي والأسعار الصحيحة. انشئ طلبات حقيقية تظهر فوراً في نظام الإدارة.`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
@@ -378,11 +383,13 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
 
     const aiResponse = data.candidates[0].content.parts[0].text;
 
-    // تحليل الرد لاستخراج طلبات محتملة باستخدام نفس منطق بوت التليغرام
+    // تحليل الرد لاستخراج طلبات محتملة باستخدام نفس منطق بوت التليغرام المطور
     
-    // تحقق من وجود طلب في النص
-    const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون'];
-    const hasOrderIntent = orderKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    // تحقق من وجود طلب في النص - كلمات أكثر ذكاءً
+    const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون', 'أنشئ', 'إنشاء', 'سجل', 'أضف'];
+    const hasOrderIntent = orderKeywords.some(keyword => message.toLowerCase().includes(keyword)) || 
+                          message.includes('د.ع') || 
+                          storeData.cities.some(city => message.toLowerCase().includes(city.name.toLowerCase()));
     
     let responseType = 'text';
     let orderData = null;
@@ -392,7 +399,7 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
       try {
         console.log('🔍 تحليل طلب ذكي للنص:', message);
         
-        // استخدام نفس منطق بوت التليغرام تماماً مع معرف خاص للمساعد الذكي
+          // استخدام نفس منطق بوت التليغرام تماماً مع معرف خاص للمساعد الذكي
         const aiChatId = -999999999; // معرف خاص للمساعد الذكي
         const { data: orderResult, error: orderError } = await supabase
           .rpc('process_telegram_order', {
@@ -475,6 +482,12 @@ ${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockP
       response: aiResponse,
       type: responseType,
       orderData: orderData,
+      debugInfo: {
+        citiesCount: storeData.cities?.length || 0,
+        regionsCount: storeData.regions?.length || 0,
+        allTimeProfit: storeData.analytics?.allTimeStats?.actualProfit || 0,
+        hasOrderIntent: hasOrderIntent
+      },
       analytics: {
         todayRevenue: storeData.analytics?.todayStats?.total || 0,
         todayProfit: storeData.analytics?.todayStats?.profit || 0,
