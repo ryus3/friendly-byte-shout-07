@@ -141,7 +141,46 @@ serve(async (req) => {
           if (orderResult?.success) {
             const orderData = orderResult.order_data || {};
             
-            // Save order to ai_orders table for smart administration
+            // التحقق من توفر المنتجات قبل حفظ الطلب
+            let hasUnavailableItems = false;
+            let unavailableMessage = '';
+            
+            if (orderData.items && Array.isArray(orderData.items)) {
+              for (const item of orderData.items) {
+                // فحص إذا كان المنتج يحتاج تحديد مواصفات أو غير متوفر
+                if (item.selection_needed || 
+                    (item.stock_status && (
+                      item.stock_status.includes('يرجى تحديد') ||
+                      item.stock_status.includes('غير متوفر') ||
+                      item.stock_status.includes('المواصفات المطلوبة غير متوفرة')
+                    ))) {
+                  hasUnavailableItems = true;
+                  
+                  // تحديد اللون والحجم المطلوب
+                  const requestedColor = item.color_name || item.color || 'غير محدد';
+                  const requestedSize = item.size_name || item.size || 'غير محدد';
+                  
+                  unavailableMessage = `❌ فشل في إنشاء الطلب: المنتج "${item.product_name}" غير متوفر باللون "${requestedColor}" والحجم "${requestedSize}".\n\n`;
+                  
+                  // إضافة البدائل المتوفرة من الرسالة
+                  if (item.alternatives_message) {
+                    unavailableMessage += `المتوفر فعلياً: ${item.alternatives_message.replace('🎨 الألوان المتوفرة: ', '').replace('📏 الأحجام المتوفرة: ', '')}`;
+                  }
+                  break;
+                }
+              }
+            }
+            
+            // إذا كان هناك منتجات غير متوفرة، لا نحفظ الطلب ونرسل رسالة خطأ
+            if (hasUnavailableItems) {
+              await sendTelegramMessage(chatId, unavailableMessage, botToken);
+              return new Response(JSON.stringify({ success: false, message: unavailableMessage }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
             try {
               const { error: saveError } = await supabase
                 .from('ai_orders')
