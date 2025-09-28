@@ -138,16 +138,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
                 variant: "success"
               });
             }, 100);
-                }
-              });
-              window.dispatchEvent(aiOrderEvent);
-              
-              // عرض توست للتأكيد
-              toast({
-                title: "✅ تم إنشاء طلب ذكي",
-                description: `طلب جديد للعميل ${orderDetails.customer_name} بمبلغ ${(orderDetails.total_amount || 0).toLocaleString()} د.ع`,
-                variant: "success"
-              });
+          }
               
               // فتح نافذة إدارة الطلبات الذكية تلقائياً
               setTimeout(() => {
