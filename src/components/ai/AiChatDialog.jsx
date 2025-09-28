@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Bot, User, Send, Sparkles, Loader2 } from 'lucide-react';
+import { Bot, User, Send, Sparkles, Loader2, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const AiChatDialog = ({ open, onOpenChange }) => {
   const [messages, setMessages] = useState([]);
@@ -37,7 +38,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
       setMessages([
         { 
           role: 'model', 
-          content: `🎯 أهلاً ${userName}! أنا مساعدك الذكي RYUS\n\n💡 **أستطيع مساعدتك في**:\n• 🛒 **طلبات ذكية**: "بغداد الكرادة 07812345678 برشلونة ازرق لارج"\n• 📊 **إحصائيات**: "مبيعات اليوم؟"\n• 🔍 **بحث المنتجات**: "منتجات متوفرة؟"\n• 💰 **تحليل الأرباح**: "ربح الشهر؟"\n\n⚡ **ميزاتي الجديدة**:\n✅ فحص مخزون حقيقي\n✅ تعرف على المدن العراقية\n✅ اقتراح بدائل ذكية\n✅ حفظ فوري في الطلبات الذكية` 
+          content: `🎯 أهلاً ${userName}! أنا المساعد الذكي RYUS\n\n💡 **أستطيع مساعدتك في**:\n• 🛒 **طلبات ذكية**: "بغداد الكرادة 07812345678 برشلونة ازرق لارج"\n• 📊 **إحصائيات**: "مبيعات اليوم؟"\n• 🔍 **بحث المنتجات**: "منتجات متوفرة؟"\n• 💰 **تحليل الأرباح**: "ربح الشهر؟"\n\n⚡ **ميزاتي المتقدمة**:\n✅ فهم ذكي للمناطق العراقية\n✅ فحص مخزون حقيقي\n✅ اقتراح بدائل ذكية\n✅ حفظ فوري في الطلبات الذكية\n✅ تحليل متقدم للمناطق المتشابهة` 
         }
       ]);
     }
@@ -193,18 +194,27 @@ const AiChatDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
-          <DialogTitle className="flex items-center gap-3 text-xl font-bold">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-white" />
+      <DialogContent className="max-w-sm sm:max-w-2xl h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-4 sm:p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  المساعد الذكي
+                </h2>
+                <div className="text-xs text-muted-foreground">
+                  نظام RYUS المتقدم
+                </div>
+              </div>
             </div>
-            <span className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              المساعد الذكي RYUS
-            </span>
+            
+            <AiManagementButton />
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+        <ScrollArea className="flex-1 p-3 sm:p-4" ref={scrollAreaRef}>
           <div className="space-y-6">
             <AnimatePresence>
               {messages.map((message, index) => (
@@ -217,7 +227,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
-        <div className="p-4 border-t bg-muted/30">
+        <div className="p-3 sm:p-4 border-t bg-muted/30">
           <form onSubmit={handleSendMessage} className="flex items-center gap-3">
             <Button 
               type="submit" 
@@ -258,8 +268,8 @@ const MessageBubble = ({ message }) => {
       className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : 'justify-start')}
     >
       {message.role === 'model' && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-          <Sparkles className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
       )}
       <div className={cn(
@@ -271,12 +281,42 @@ const MessageBubble = ({ message }) => {
         <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
       </div>
       {message.role === 'user' && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg">
-          <User className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
         </div>
       )}
     </motion.div>
   )
 }
+
+// مكون زر الإدارة البسيط
+const AiManagementButton = () => {
+  const handleManagementClick = () => {
+    // إرسال حدث لفتح نافذة إدارة المساعد الذكي
+    const openManagerEvent = new CustomEvent('openAiManager');
+    window.dispatchEvent(openManagerEvent);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button 
+          onClick={handleManagementClick}
+          className="h-8 px-3 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
+        >
+          <Settings className="w-4 h-4 mr-1" />
+          <span className="text-sm font-medium">إدارة</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-64 p-3" align="end">
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">
+            انقر الزر لفتح إدارة المساعد الذكي المتقدم
+          </p>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export default AiChatDialog;
