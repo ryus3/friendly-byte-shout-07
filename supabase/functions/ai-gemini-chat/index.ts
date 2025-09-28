@@ -17,12 +17,13 @@ const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 // Helper functions to fetch real data with advanced analytics
 async function getStoreData() {
   try {
+    console.log('🔍 بدء جلب بيانات المتجر...');
+    
     // Get products with variants, inventory, and sales data
-    const { data: products } = await supabase
+    const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
-        categories (id, name),
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
           colors (id, name),
@@ -31,9 +32,15 @@ async function getStoreData() {
         )
       `)
       .eq('is_active', true);
+    
+    if (productsError) {
+      console.error('❌ خطأ في جلب المنتجات:', productsError);
+    } else {
+      console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
+    }
 
     // Get recent orders with detailed info
-    const { data: recentOrders } = await supabase
+    const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
@@ -45,6 +52,12 @@ async function getStoreData() {
       `)
       .order('created_at', { ascending: false })
       .limit(20);
+    
+    if (ordersError) {
+      console.error('❌ خطأ في جلب الطلبات:', ordersError);
+    } else {
+      console.log('✅ تم جلب الطلبات بنجاح:', recentOrders?.length || 0);
+    }
 
     // Get today's sales with more details
     const today = new Date().toISOString().split('T')[0];
@@ -219,8 +232,7 @@ serve(async (req) => {
     💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
     📦 المخزون: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
     📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
-    🏷️ التصنيف: ${product.categories?.name || 'متنوع'}
-    ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.colors?.name || ''}-${v.sizes?.name || ''} (${v.stock || 0})`).join(', ')}` : ''}
+    ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.color || ''}-${v.size || ''} (مخزون: ${v.stock || 0})`).join(', ')}` : ''}
     `).join('\n')}
 
     ### 📋 سجل الطلبات الأخيرة (${storeData.orders.length} طلب):
