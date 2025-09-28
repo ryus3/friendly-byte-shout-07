@@ -22,10 +22,9 @@ async function getStoreData() {
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
-        departments (id, name),
         categories (id, name),
         product_variants (
-          id, sku, color_id, size_id, base_price, cost_price,
+          id, sku, color_id, size_id, price, cost_price,
           colors (id, name),
           sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
@@ -220,7 +219,7 @@ serve(async (req) => {
     💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
     📦 المخزون: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
     📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
-    🏷️ التصنيف: ${product.departments?.name || 'عام'} > ${product.categories?.name || 'متنوع'}
+    🏷️ التصنيف: ${product.categories?.name || 'متنوع'}
     ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.colors?.name || ''}-${v.sizes?.name || ''} (${v.stock || 0})`).join(', ')}` : ''}
     `).join('\n')}
 
@@ -332,9 +331,9 @@ serve(async (req) => {
               color: availableVariant.colors?.name || 'افتراضي',
               size: availableVariant.sizes?.name || 'افتراضي',
               quantity: 1,
-              price: availableVariant.base_price || product.base_price || 0,
+              price: availableVariant.price || product.base_price || 0,
               costPrice: availableVariant.cost_price || product.cost_price || 0,
-              total: availableVariant.base_price || product.base_price || 0,
+              total: availableVariant.price || product.base_price || 0,
               stock: availableVariant.inventory?.[0]?.quantity || 0
             });
           }
