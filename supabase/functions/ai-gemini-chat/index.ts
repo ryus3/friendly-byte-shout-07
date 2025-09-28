@@ -123,6 +123,8 @@ async function getStoreData(userInfo: any, authToken?: string) {
         sold_quantity: totalSold,
         variants: product.product_variants?.map((variant: any) => ({
           ...variant,
+          color: variant.colors?.name || 'افتراضي',
+          size: variant.sizes?.name || 'افتراضي',
           stock: variant.inventory?.[0]?.quantity || 0,
           sold: variant.inventory?.[0]?.sold_quantity || 0
         })) || []
@@ -222,10 +224,7 @@ serve(async (req) => {
     - مستشار استراتيجي للمبيعات والأرباح
     - خبير في تحليل سلوك العملاء والاتجاهات
 
-    ### 👤 معلومات المستخدم:
-    - الاسم: ${userInfo?.full_name || userInfo?.fullName || 'المدير'}
-    - الدور: ${userInfo?.isAdmin ? 'مدير' : 'موظف'}
-    - معرف المستخدم: ${userInfo?.id || 'admin'}
+    مرحباً ${userInfo?.full_name || 'المدير'} - أنا مساعدك الذكي للمتجر.
 
     ### 📊 التحليلات المتقدمة الحية:
 
@@ -255,7 +254,7 @@ serve(async (req) => {
     💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
     📦 المخزون: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
     📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
-    ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.color || ''}-${v.size || ''} (مخزون: ${v.stock || 0})`).join(', ')}` : ''}
+    ${product.variants?.length > 0 ? `🎨 المتغيرات (${product.variants.length}): ${product.variants.map((v: any) => `${v.color}-${v.size} (مخزون: ${v.stock})`).join(', ')}` : ''}
     `).join('\n')}
 
     ### 📋 سجل الطلبات الأخيرة (${storeData.orders.length} طلب):
