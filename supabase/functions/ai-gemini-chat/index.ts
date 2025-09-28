@@ -21,11 +21,11 @@ async function getStoreData() {
     const { data: products } = await supabase
       .from('products')
       .select(`
-        id, name, price, cost_price, description, is_active,
+        id, name, base_price, cost_price, description, is_active,
         departments (id, name),
         categories (id, name),
         product_variants (
-          id, sku, color_id, size_id, price, cost_price,
+          id, sku, color_id, size_id, base_price, cost_price,
           colors (id, name),
           sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
@@ -143,11 +143,11 @@ serve(async (req) => {
       profitAnalysis: {
         totalRevenue: storeData.todaySales.total || 0,
         estimatedProfit: storeData.products.reduce((sum, product) => {
-          const profit = (product.price || 0) - (product.cost_price || 0);
+          const profit = (product.base_price || 0) - (product.cost_price || 0);
           return sum + (profit * (product.sold_quantity || 0));
         }, 0),
         profitMargin: storeData.products.length > 0 ? 
-          (storeData.products.reduce((sum, p) => sum + ((p.price || 0) - (p.cost_price || 0)) / (p.price || 1), 0) / storeData.products.length * 100).toFixed(1) : 0
+          (storeData.products.reduce((sum, p) => sum + ((p.base_price || 0) - (p.cost_price || 0)) / (p.base_price || 1), 0) / storeData.products.length * 100).toFixed(1) : 0
       },
       
       // تحليل المخزون
@@ -207,7 +207,7 @@ serve(async (req) => {
 
     **🏆 المنتجات الأكثر مبيعاً:**
     ${advancedAnalytics.trends.bestSellers.map((product, index) => `
-    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح ${((product.price || 0) - (product.cost_price || 0)) * (product.sold_quantity || 0)} د.ع`).join('')}
+    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح ${((product.base_price || 0) - (product.cost_price || 0)) * (product.sold_quantity || 0)} د.ع`).join('')}
 
     **👥 رؤى العملاء:**
     - متوسط قيمة الطلب: ${advancedAnalytics.customerInsights.averageOrderValue.toLocaleString()} د.ع
@@ -217,9 +217,9 @@ serve(async (req) => {
     ### 📋 كتالوج المنتجات الكامل (${storeData.products.length} منتج):
     ${storeData.products.map(product => `
     🛍️ **${product.name}**
-    💰 السعر: ${product.price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
+    💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
     📦 المخزون: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
-    📈 الربح للقطعة: ${((product.price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
+    📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
     🏷️ التصنيف: ${product.departments?.name || 'عام'} > ${product.categories?.name || 'متنوع'}
     ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.colors?.name || ''}-${v.sizes?.name || ''} (${v.stock || 0})`).join(', ')}` : ''}
     `).join('\n')}
@@ -332,9 +332,9 @@ serve(async (req) => {
               color: availableVariant.colors?.name || 'افتراضي',
               size: availableVariant.sizes?.name || 'افتراضي',
               quantity: 1,
-              price: availableVariant.price || product.price || 0,
+              price: availableVariant.base_price || product.base_price || 0,
               costPrice: availableVariant.cost_price || product.cost_price || 0,
-              total: availableVariant.price || product.price || 0,
+              total: availableVariant.base_price || product.base_price || 0,
               stock: availableVariant.inventory?.[0]?.quantity || 0
             });
           }
@@ -362,9 +362,9 @@ serve(async (req) => {
             color: 'حسب الطلب',
             size: 'حسب الطلب',
             quantity: 1,
-            price: storeData.products[0]?.price || 25000,
+            price: storeData.products[0]?.base_price || 25000,
             costPrice: storeData.products[0]?.cost_price || 15000,
-            total: storeData.products[0]?.price || 25000
+            total: storeData.products[0]?.base_price || 25000
           }
         ]
       };
