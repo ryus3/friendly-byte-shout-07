@@ -324,9 +324,13 @@ serve(async (req) => {
           responseType = 'order';
           orderData = orderResult.order_data;
           
-          // حفظ الطلب في ai_orders
+          // حفظ الطلب في ai_orders مع تطبيق الاسم الافتراضي
+          const customerName = orderData.customer_name && orderData.customer_name !== orderData.customer_city && orderData.customer_name !== orderData.customer_province 
+            ? orderData.customer_name 
+            : (userInfo?.default_customer_name || 'عميل');
+            
           const aiOrderData = {
-            customer_name: orderData.customer_name || 'عميل',
+            customer_name: customerName,
             customer_phone: orderData.customer_phone,
             customer_city: orderData.customer_city,
             customer_province: orderData.customer_province,
@@ -335,43 +339,43 @@ serve(async (req) => {
             region_id: orderData.region_id,
             items: orderData.items || [],
             total_amount: orderData.total_amount || 0,
-            source: 'ai_assistant',
-            original_text: message,
-            telegram_chat_id: null,
-            created_by: userInfo?.id || '91484496-b887-44f7-9e5d-be9db5567604',
             order_data: orderData,
-            status: 'pending'
+            source: 'ai_assistant',
+            created_by: userInfo?.id || null,
+            original_text: message
           };
-          
+
           const { data: savedOrder, error: saveError } = await supabase
             .from('ai_orders')
             .insert(aiOrderData)
             .select()
             .single();
-          
+
           if (saveError) {
             console.error('❌ خطأ في حفظ الطلب الذكي:', saveError);
           } else {
-            console.log('✅ تم حفظ الطلب الذكي بنجاح:', savedOrder.id);
-            
-            // إضافة معرف الطلب المحفوظ للاستجابة
-            orderData.aiOrderId = savedOrder.id;
+            console.log('✅ تم حفظ الطلب الذكي:', savedOrder?.id);
             orderData.orderSaved = true;
+            orderData.aiOrderId = savedOrder?.id;
           }
         }
       } catch (error) {
-        console.error('❌ خطأ عام في معالجة الطلب الذكي:', error);
+        console.error('Error processing smart order:', error);
       }
     }
 
-    // إضافة معلومات إضافية للرد
     return new Response(JSON.stringify({
       success: true,
       response: aiResponse,
       type: responseType,
       orderData: orderData,
-      storeStats: {
+      analytics: {
+        todayRevenue: storeData.todaySales.total,
+        monthlyProfit: storeData.monthSales.profit,
         productsCount: storeData.products.length,
+        ordersCount: storeData.orders.length,
+        outOfStockCount: advancedAnalytics.inventoryHealth.outOfStock.length,
+        lowStockCount: advancedAnalytics.inventoryHealth.lowStock.length,
         variantsCount: storeData.products.reduce((sum: number, p: any) => sum + (p.variants?.length || 0), 0),
         todayTotal: storeData.todaySales.total,
         recentOrdersCount: storeData.orders.length
