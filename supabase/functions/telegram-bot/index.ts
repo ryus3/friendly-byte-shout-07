@@ -113,7 +113,9 @@ serve(async (req) => {
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order_detailed', {
             p_message_text: text,
-            p_chat_id: chatId
+            p_chat_id: chatId,
+            p_telegram_user_id: userId,
+            p_telegram_username: message.from?.username || null
           });
 
           if (orderError) {
