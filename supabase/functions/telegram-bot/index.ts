@@ -149,7 +149,7 @@ serve(async (req) => {
                   customer_name: orderData.customer_name || 'عميل',
                   customer_phone: orderData.customer_phone,
                   customer_city: orderData.customer_city,
-                  customer_province: orderData.customer_province, // تم تصحيح هذا من customer_region
+                  customer_province: orderData.customer_province,
                   customer_address: orderData.customer_address,
                   city_id: orderData.city_id,
                   region_id: orderData.region_id,
@@ -159,7 +159,8 @@ serve(async (req) => {
                   order_data: orderData,
                   original_text: text,
                   source: 'telegram',
-                  status: 'pending'
+                  status: 'pending',
+                  created_by: orderData.created_by || '91484496-b887-44f7-9e5d-be9db5567604'
                 });
               
               if (saveError) {
@@ -171,12 +172,12 @@ serve(async (req) => {
               console.error('❌ خطأ في حفظ الطلب:', saveError);
             }
             
-            // Build order confirmation message in the requested format
-            let message = '✅ تم استلام الطلب!\n\n';
+            // Build order confirmation message in the exact requested format
+            let message = '';
             
-            // Add customer name if provided and not default
+            // Add customer name with correct icon if provided and not default
             if (orderData.customer_name && orderData.customer_name !== 'عميل') {
-              message += `🥷 ${orderData.customer_name}\n`;
+              message += `👫 ${orderData.customer_name}\n`;
             }
             
             // Add location info
@@ -191,7 +192,7 @@ serve(async (req) => {
               message += `📱 ${orderData.customer_phone}\n`;
             }
             
-            // Add product details
+            // Add product details with exact format
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
@@ -202,9 +203,9 @@ serve(async (req) => {
               });
             }
             
-            // Add total amount with proper formatting
+            // Add total amount with English numerals and proper formatting
             if (orderData.total_amount && orderData.total_amount > 0) {
-              const formattedAmount = orderData.total_amount.toLocaleString('ar-IQ');
+              const formattedAmount = orderData.total_amount.toLocaleString('en-US');
               message += `💰 المبلغ الإجمالي: ${formattedAmount} د.ع`;
             }
             
