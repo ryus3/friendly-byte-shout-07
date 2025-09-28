@@ -92,12 +92,23 @@ const AiChatDialog = ({ open, onOpenChange }) => {
         // إذا كان الرد يحتوي على طلب ذكي
         if (data.type === 'order' && data.orderData) {
           const orderDetails = data.orderData;
-          let orderStatusMessage = '';
+          
+          // رد مختصر من المساعد الذكي
+          const orderMessage = {
+            role: 'model',
+            content: data.response, // الرد المختصر من المساعد
+            source: 'المساعد الذكي',
+            metadata: {
+              type: 'order',
+              model_used: data.model_used,
+              confidence: data.confidence || 95
+            }
+          };
+          
+          setMessages(prev => [...prev, orderMessage]);
           
           if (orderDetails.orderSaved) {
-            orderStatusMessage = `\n\n🎯 **تم حفظ الطلب بنجاح!**\n📋 رقم الطلب الذكي: ${orderDetails.aiOrderId}\n👤 العميل: ${orderDetails.customer_name}\n📱 الهاتف: ${orderDetails.customer_phone || 'غير محدد'}\n📍 العنوان: ${orderDetails.customer_city || 'غير محدد'} - ${orderDetails.customer_province || 'غير محدد'}\n💰 المبلغ الإجمالي: ${(orderDetails.total_amount || 0).toLocaleString()} د.ع\n🛍️ عدد المنتجات: ${orderDetails.items?.length || 0}\n\n✨ يمكنك مراجعة الطلب في **إدارة الطلبات الذكية** وتحويله إلى طلب نهائي.`;
-            
-            // 🎯 إشعار فوري لإدارة الطلبات الذكية مع تفاصيل كاملة
+            // إشعار فوري لإدارة الطلبات الذكية مع تفاصيل كاملة
             setTimeout(() => {
               const aiOrderEvent = new CustomEvent('aiOrderCreated', { 
                 detail: {
@@ -109,7 +120,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
                   customer_address: orderDetails.customer_address,
                   city_id: orderDetails.city_id,
                   region_id: orderDetails.region_id,
-                  source: 'ai_assistant',
+                  source: 'المساعد الذكي', // تحديد المصدر بوضوح
                   status: 'pending',
                   created_at: new Date().toISOString(),
                   items: orderDetails.items,
@@ -117,6 +128,16 @@ const AiChatDialog = ({ open, onOpenChange }) => {
                   order_data: orderDetails,
                   original_text: input,
                   created_by: userInfo?.id
+                }
+              });
+              window.dispatchEvent(aiOrderEvent);
+              
+              toast({
+                title: "🤖 طلب ذكي جديد",
+                description: `${orderDetails.customer_name} - ${(orderDetails.total_amount || 0).toLocaleString()} د.ع`,
+                variant: "success"
+              });
+            }, 100);
                 }
               });
               window.dispatchEvent(aiOrderEvent);
