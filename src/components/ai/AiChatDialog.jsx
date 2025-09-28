@@ -31,8 +31,12 @@ const AiChatDialog = ({ open, onOpenChange }) => {
 
   useEffect(() => {
     if (open && messages.length === 0) {
+      const userName = user?.full_name || user?.fullName || user?.display_name || 'المستخدم';
       setMessages([
-        { role: 'model', content: `أهلاً بك يا ${user.fullName}! كيف يمكنني مساعدتك اليوم؟\nيمكنني مساعدتك في إنشاء طلبات. فقط أخبرني بالتفاصيل.` }
+        { 
+          role: 'model', 
+          content: `🌟 أهلاً وسهلاً بك يا ${userName}!\n\nأنا المساعد الذكي RYUS، مساعدك الشخصي في إدارة المتجر.\n\n💼 يمكنني مساعدتك في:\n• إنشاء طلبات جديدة للعملاء\n• متابعة الطلبات الحالية\n• إدارة المخزون\n• تحليل المبيعات\n\nفقط أخبرني ما تحتاجه وسأكون في خدمتك! 🚀` 
+        }
       ]);
     }
   }, [open, messages, user]);
@@ -46,34 +50,74 @@ const AiChatDialog = ({ open, onOpenChange }) => {
     setInput('');
     setIsLoading(true);
     
-    // This is a mock response. In a real scenario, this would call a Gemini/AI API
+    // تكامل مع Gemini AI الحقيقي
     try {
-        const aiResponse = await mockProcessOrder(input);
+        const userInfo = {
+          full_name: user?.full_name || user?.fullName || user?.display_name,
+          isAdmin: user?.isAdmin || false,
+          id: user?.id
+        };
+
+        const response = await fetch('https://tkheostkubborwkwzugl.functions.supabase.co/functions/v1/ai-gemini-chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA'}`
+          },
+          body: JSON.stringify({
+            message: input,
+            userInfo: userInfo
+          })
+        });
+
+        const data = await response.json();
         
-        if (aiResponse.type === 'order') {
+        if (!data.success) {
+          throw new Error(data.error || 'خطأ في الاتصال بالمساعد الذكي');
+        }
+
+        // إذا كان الرد يحتوي على طلب
+        if (data.type === 'order' && data.orderData) {
+          try {
             const { success, trackingNumber } = await createOrder(
-                aiResponse.data.customerInfo,
-                aiResponse.data.items,
-                null,
-                0,
-                'ai_pending' 
+              data.orderData.customerInfo,
+              data.orderData.items,
+              null,
+              0,
+              'ai_pending' 
             );
 
             if (success) {
-                setMessages(prev => [...prev, {
-                    role: 'model',
-                    content: `تم إنشاء طلب جديد للزبون **${aiResponse.data.customerInfo.name}** برقم تتبع **${trackingNumber}**. سيظهر في قائمة طلبات الذكاء الاصطناعي للمراجعة والموافقة.`
-                }]);
+              setMessages(prev => [...prev, {
+                role: 'model',
+                content: `✅ ${data.response}\n\n🎯 تم إنشاء طلب جديد برقم تتبع **${trackingNumber}**\nيمكنك مراجعته في قائمة الطلبات.`
+              }]);
             } else {
-                 setMessages(prev => [...prev, { role: 'model', content: 'حدث خطأ أثناء محاولة إنشاء الطلب. يرجى المحاولة مرة أخرى.' }]);
+              setMessages(prev => [...prev, { 
+                role: 'model', 
+                content: `${data.response}\n\n⚠️ لم أتمكن من إنشاء الطلب تلقائياً. يرجى إنشاؤه يدوياً.` 
+              }]);
             }
-
+          } catch (orderError) {
+            setMessages(prev => [...prev, { 
+              role: 'model', 
+              content: `${data.response}\n\n⚠️ حدث خطأ في إنشاء الطلب. يرجى المحاولة مرة أخرى.` 
+            }]);
+          }
         } else {
-            setMessages(prev => [...prev, { role: 'model', content: aiResponse.data }]);
+          // رد نصي عادي
+          setMessages(prev => [...prev, { 
+            role: 'model', 
+            content: data.response 
+          }]);
         }
 
     } catch (error) {
-        setMessages(prev => [...prev, { role: 'model', content: "عذراً، لم أتمكن من فهم طلبك. هل يمكنك إعادة صياغته؟" }]);
+      console.error('AI Chat Error:', error);
+      setMessages(prev => [...prev, { 
+        role: 'model', 
+        content: "🔧 عذراً، أواجه مشكلة تقنية حالياً. يرجى المحاولة مرة أخرى أو التواصل مع الدعم التقني." 
+      }]);
     } finally {
         setIsLoading(false);
     }
@@ -118,10 +162,14 @@ const AiChatDialog = ({ open, onOpenChange }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl h-[80vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle className="flex items-center gap-2 gradient-text">
-            <Sparkles />
-            المساعد الذكي
+        <DialogHeader className="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+          <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <span className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              المساعد الذكي RYUS
+            </span>
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
@@ -136,19 +184,31 @@ const AiChatDialog = ({ open, onOpenChange }) => {
             </AnimatePresence>
           </div>
         </ScrollArea>
-        <div className="p-4 border-t">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+        <div className="p-4 border-t bg-muted/30">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-3">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="اكتب طلبك هنا..."
-              className="flex-1"
+              placeholder="💬 اكتب رسالتك هنا... (مثال: أريد إنشاء طلب لأحمد العراقي)"
+              className="flex-1 h-12 text-sm"
               disabled={isLoading}
             />
-            <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
-              <Send className="w-5 h-5" />
+            <Button 
+              type="submit" 
+              size="icon" 
+              disabled={!input.trim() || isLoading}
+              className="h-12 w-12 rounded-full shadow-lg"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
             </Button>
           </form>
+          <div className="mt-2 text-xs text-muted-foreground text-center">
+            🤖 مدعوم بالذكاء الاصطناعي Gemini 2.0
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -165,16 +225,21 @@ const MessageBubble = ({ message }) => {
       className={cn("flex items-start gap-3", message.role === 'user' ? 'justify-end' : 'justify-start')}
     >
       {message.role === 'model' && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-5 h-5 text-white" />
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <Sparkles className="w-5 h-5 text-white" />
         </div>
       )}
-      <div className={cn("p-3 rounded-2xl max-w-md", message.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-secondary text-secondary-foreground rounded-bl-none')}>
-        <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+      <div className={cn(
+        "p-4 rounded-2xl max-w-lg shadow-sm", 
+        message.role === 'user' 
+          ? 'bg-primary text-primary-foreground rounded-br-none' 
+          : 'bg-card border text-card-foreground rounded-bl-none'
+      )}>
+        <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
       </div>
       {message.role === 'user' && (
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-          <User className="w-5 h-5 text-muted-foreground" />
+        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg">
+          <User className="w-5 h-5 text-white" />
         </div>
       )}
     </motion.div>
