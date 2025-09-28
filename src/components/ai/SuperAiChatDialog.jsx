@@ -404,7 +404,7 @@ const AiManagementButton = ({ usage, currentModel, onModelChange, systemStatus }
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 px-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white border-0 hover:opacity-90">
+        <Button variant="outline" size="sm" className="h-9 px-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white border-0 hover:opacity-90 hover:scale-105 transition-all">
           <span>إدارة</span>
         </Button>
       </PopoverTrigger>
