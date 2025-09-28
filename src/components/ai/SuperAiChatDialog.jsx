@@ -52,30 +52,8 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
     const userName = user?.full_name || user?.fullName || user?.display_name || 'المستخدم';
     const welcomeMessage = {
       role: 'model',
-      content: `🎯 مرحباً ${userName}! أنا المساعد الذكي الخارق لـ RYUS
-
-🚀 **الجديد في النسخة الخارقة**:
-✨ **6 نماذج ذكية متقدمة** - تحديد تلقائي للأفضل
-🧠 **ذاكرة ذكية** - أتذكر تفضيلاتك ومحادثاتنا
-📊 **إحصائيات فورية** - مراقبة الاستخدام والأداء
-🎯 **دقة عراقية 95%+** - فهم متقدم للهجات المحلية
-💡 **اقتراحات ذكية** - بدائل وتوصيات تلقائية
-
-💰 **قدراتي المالية والتجارية**:
-• 📈 تحليل الأرباح والمبيعات الفوري
-• 💸 حساب التكاليف والهوامش
-• 📊 اقتراحات تسعير ذكية
-• 🎯 تحليل أداء المنتجات
-
-🛒 **إنشاء الطلبات الذكية**:
-"بغداد الكرادة أحمد علي 07812345678 برشلونة أزرق لارج"
-
-🔍 **استفساراتي المتقدمة**:
-• "كم ربح اليوم؟" | "أفضل منتج هذا الشهر؟"
-• "منتجات منخفضة المخزون؟" | "عملاء VIP؟"
-• "توقعات مبيعات الأسبوع؟" | "تحليل المدن؟"
-
-⚡ النموذج الحالي: **${currentModel}** | الحالة: 🟢 متاح`
+      content: `أهلاً! أنا مساعدك الذكي 🤖
+أستطيع إنشاء طلبات ذكية وتحليل البيانات`
     };
     
     setMessages([welcomeMessage]);
@@ -269,19 +247,19 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-4 sm:p-6 border-b bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950/20 dark:via-blue-950/20 dark:to-indigo-950/20">
+      <DialogContent className="max-w-sm sm:max-w-2xl h-[80vh] sm:h-[80vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-3 sm:p-4 border-b bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950/20 dark:via-blue-950/20 dark:to-indigo-950/20">
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg animate-pulse">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                 <Sparkles className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
                 <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  المساعد الذكي الخارق
+                  المساعد الذكي
                 </h2>
                 <div className="text-xs text-muted-foreground">
-                  نظام RYUS المتقدم
+                  مدعوم بـ Gemini AI
                 </div>
               </div>
             </div>
@@ -420,12 +398,8 @@ const AiManagementButton = ({ usage, currentModel, onModelChange, systemStatus }
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 px-3 gap-2 hover:bg-primary/5">
-          <Settings className="w-4 h-4" />
-          <span className="hidden sm:inline">إدارة</span>
-          <Badge variant="secondary" className="text-xs px-1">
-            {Object.values(usage).reduce((sum, val) => sum + (val || 0), 0)}
-          </Badge>
+        <Button variant="outline" size="sm" className="h-9 px-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white border-0 hover:opacity-90">
+          <span>إدارة</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4" align="end">
