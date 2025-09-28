@@ -182,9 +182,9 @@ serve(async (req) => {
               message += `📍 ${orderData.customer_city}\n`;
             }
             
-            // Add phone number with prefix
+            // Add phone number with 📱 icon and prefix
             if (orderData.customer_phone) {
-              message += `الهاتف : ${orderData.customer_phone}\n`;
+              message += `📱الهاتف : ${orderData.customer_phone}\n`;
             }
             
             // Add product details with proper formatting using ❇️ icon
@@ -198,7 +198,7 @@ serve(async (req) => {
               });
             }
             
-            // Add total amount with English numerals using 💵 icon
+            // Add total amount with English numerals using 💵 icon (includes delivery fee)
             if (orderData.total_amount && orderData.total_amount > 0) {
               const formattedAmount = orderData.total_amount.toLocaleString('en-US');
               message += `💵 المبلغ الإجمالي: ${formattedAmount} د.ع`;
