@@ -139,24 +139,56 @@ serve(async (req) => {
 
           // Handle different response types with detailed formatting
           if (orderResult?.success) {
+            const orderData = orderResult.order_data || {};
+            
+            // Save order to ai_orders table for smart administration
+            try {
+              const { error: saveError } = await supabase
+                .from('ai_orders')
+                .insert({
+                  customer_name: orderData.customer_name || 'عميل',
+                  customer_phone: orderData.customer_phone,
+                  customer_city: orderData.customer_city,
+                  customer_region: orderData.customer_region,
+                  customer_address: orderData.customer_address,
+                  city_id: orderData.city_id,
+                  region_id: orderData.region_id,
+                  telegram_chat_id: chatId,
+                  items: orderData.items || [],
+                  total_amount: orderData.total_amount || 0,
+                  order_data: orderData,
+                  original_text: text,
+                  source: 'telegram',
+                  status: 'pending'
+                });
+              
+              if (saveError) {
+                console.error('❌ خطأ في حفظ الطلب:', saveError);
+              } else {
+                console.log('✅ تم حفظ الطلب في الإدارة الذكية');
+              }
+            } catch (saveError) {
+              console.error('❌ خطأ في حفظ الطلب:', saveError);
+            }
+            
             // Build detailed order confirmation message
-            let message = '✅ تم استلام الطلب!\n';
+            let message = '✅ تم تحليل طلبك بنجاح!\n\n';
             
             // Add location info
-            if (orderResult.customer_city && orderResult.customer_region) {
-              message += `📍 ${orderResult.customer_city} - ${orderResult.customer_region}\n`;
-            } else if (orderResult.customer_city) {
-              message += `📍 ${orderResult.customer_city}\n`;
+            if (orderData.customer_city && orderData.customer_region) {
+              message += `📍 ${orderData.customer_city} - ${orderData.customer_region}\n`;
+            } else if (orderData.customer_city) {
+              message += `📍 ${orderData.customer_city}\n`;
             }
             
             // Add phone number
-            if (orderResult.customer_phone) {
-              message += `📱 الهاتف: ${orderResult.customer_phone}\n`;
+            if (orderData.customer_phone) {
+              message += `📱 الهاتف: ${orderData.customer_phone}\n`;
             }
             
             // Add product details
-            if (orderResult.items && Array.isArray(orderResult.items) && orderResult.items.length > 0) {
-              orderResult.items.forEach((item: any) => {
+            if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
+              orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
                 const color = item.color ? ` (${item.color})` : '';
                 const size = item.size ? ` ${item.size}` : '';
@@ -165,9 +197,10 @@ serve(async (req) => {
               });
             }
             
-            // Add total amount
-            if (orderResult.formatted_amount && orderResult.formatted_amount !== 'غير محدد') {
-              message += `• المبلغ الإجمالي: ${orderResult.formatted_amount}`;
+            // Add total amount with proper formatting
+            if (orderData.total_amount && orderData.total_amount > 0) {
+              const formattedAmount = orderData.total_amount.toLocaleString('ar-IQ') + ' د.ع';
+              message += `• المبلغ الإجمالي: ${formattedAmount}`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
