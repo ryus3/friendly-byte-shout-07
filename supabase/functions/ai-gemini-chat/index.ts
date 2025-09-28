@@ -55,7 +55,16 @@ async function getStoreData(userInfo: any, authToken?: string) {
     if (productsError) {
       console.error('❌ خطأ في جلب المنتجات:', productsError);
     } else {
-      console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
+    console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
+    console.log('📊 تفاصيل المنتجات:', products?.map(p => `${p.name}: ${p.product_variants?.length || 0} متغير`));
+    
+    // Log detailed variant info for debugging
+    products?.forEach(p => {
+      console.log(`🛍️ منتج ${p.name}:`);
+      p.product_variants?.forEach((v: any) => {
+        console.log(`  • ${v.colors?.name || 'لا لون'} - ${v.sizes?.name || 'لا حجم'} | مخزون: ${v.inventory?.[0]?.quantity || 0}`);
+      });
+    });
     }
 
     // Get recent orders with complete details
@@ -118,13 +127,23 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .order('created_at', { ascending: false })
       .limit(30);
 
-    // Get delivery pricing
+    // Get real delivery pricing from settings
+    const { data: deliverySettings } = await supabase
+      .from('settings')
+      .select('key, value')
+      .in('key', ['delivery_fee', 'free_delivery_threshold', 'express_delivery_fee', 'local_delivery_fee', 'national_delivery_fee']);
+    
+    // Build delivery pricing from actual settings
     const deliveryPricing = {
-      local: 5000,       // داخل المحافظة
-      national: 7000,    // خارج المحافظة 
-      alwaseet: 5000,    // الوسيط
-      free_threshold: 100000 // توصيل مجاني فوق هذا المبلغ
+      local: Number(deliverySettings?.find(s => s.key === 'local_delivery_fee')?.value) || 
+             Number(deliverySettings?.find(s => s.key === 'delivery_fee')?.value) || 5000,
+      national: Number(deliverySettings?.find(s => s.key === 'national_delivery_fee')?.value) || 7000,
+      alwaseet: Number(deliverySettings?.find(s => s.key === 'delivery_fee')?.value) || 5000,
+      express: Number(deliverySettings?.find(s => s.key === 'express_delivery_fee')?.value) || 10000,
+      free_threshold: Number(deliverySettings?.find(s => s.key === 'free_delivery_threshold')?.value) || 100000
     };
+    
+    console.log('✅ تم جلب إعدادات التوصيل:', deliveryPricing);
 
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
@@ -169,6 +188,9 @@ async function getStoreData(userInfo: any, authToken?: string) {
       };
     }) || [];
 
+    console.log('🔍 معالجة المنتجات المكتملة:', processedProducts?.length || 0);
+    console.log('📋 إجمالي المتغيرات المعالجة:', processedProducts?.reduce((sum, p) => sum + (p.variants?.length || 0), 0) || 0);
+    
     return {
       products: processedProducts,
       orders: recentOrders || [],
@@ -292,10 +314,11 @@ serve(async (req) => {
     - أهم المدن: ${advancedAnalytics.customerInsights.topCities.slice(0, 3).join(', ')}
     - العملاء المتكررون: ${Object.values(advancedAnalytics.customerInsights.repeatCustomers).filter(count => count > 1).length} عميل
 
-    ### 🚚 أسعار التوصيل:
+    ### 🚚 أسعار التوصيل الحقيقية (من الإعدادات):
     📍 **داخل المحافظة**: ${storeData.deliveryPricing?.local?.toLocaleString() || '5,000'} د.ع
     📍 **خارج المحافظة**: ${storeData.deliveryPricing?.national?.toLocaleString() || '7,000'} د.ع
     📍 **الوسيط**: ${storeData.deliveryPricing?.alwaseet?.toLocaleString() || '5,000'} د.ع
+    ⚡ **التوصيل السريع**: ${storeData.deliveryPricing?.express?.toLocaleString() || '10,000'} د.ع
     🎁 **توصيل مجاني**: للطلبات فوق ${storeData.deliveryPricing?.free_threshold?.toLocaleString() || '100,000'} د.ع
 
     ### 📋 كتالوج المنتجات الكامل (${storeData.products.length} منتج):
