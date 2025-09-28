@@ -108,14 +108,12 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the detailed process_telegram_order function
-          console.log('🔄 معالجة الطلب باستخدام process_telegram_order_detailed...');
+          // Call the working original function
+          console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
           
-          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order_detailed', {
+          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_message_text: text,
-            p_chat_id: chatId,
-            p_telegram_user_id: userId,
-            p_telegram_username: message.from?.username || null
+            p_chat_id: chatId
           });
 
           if (orderError) {
