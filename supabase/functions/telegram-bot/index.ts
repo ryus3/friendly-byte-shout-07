@@ -156,15 +156,59 @@ serve(async (req) => {
                     ))) {
                   hasUnavailableItems = true;
                   
-                  // تحديد اللون والحجم المطلوب
-                  const requestedColor = item.color_name || item.color || 'غير محدد';
-                  const requestedSize = item.size_name || item.size || 'غير محدد';
+                  // استخراج اللون المطلوب من النص الأصلي
+                  const extractRequestedColor = (originalText: string, productName: string) => {
+                    const colorKeywords = ['احمر', 'أحمر', 'ازرق', 'أزرق', 'اسود', 'أسود', 'ابيض', 'أبيض', 'اصفر', 'أصفر', 'اخضر', 'أخضر', 'بنفسجي', 'وردي', 'رمادي', 'بني', 'برتقالي', 'سمائي'];
+                    const words = originalText.toLowerCase().split(/\s+/);
+                    
+                    for (const word of words) {
+                      for (const color of colorKeywords) {
+                        if (word.includes(color.toLowerCase())) {
+                          return color;
+                        }
+                      }
+                    }
+                    return null;
+                  };
                   
+                  // استخراج الحجم المطلوب من النص الأصلي
+                  const extractRequestedSize = (originalText: string) => {
+                    const sizeKeywords = ['سمول', 'صغير', 'ميديم', 'متوسط', 'وسط', 'لارج', 'كبير', 'اكس', 'xl', 'xxl', 's', 'm', 'l'];
+                    const words = originalText.toLowerCase().split(/\s+/);
+                    
+                    for (const word of words) {
+                      for (const size of sizeKeywords) {
+                        if (word.includes(size.toLowerCase())) {
+                          if (size.includes('سمول') || size.includes('صغير') || word.includes('s')) return 'S';
+                          if (size.includes('ميديم') || size.includes('متوسط') || word.includes('m')) return 'M';
+                          if (size.includes('لارج') || size.includes('كبير') || word.includes('l')) return 'L';
+                          if (size.includes('xl') || size.includes('اكس')) return word.includes('xx') ? 'XXL' : 'XL';
+                          return size.toUpperCase();
+                        }
+                      }
+                    }
+                    return null;
+                  };
+                  
+                  const requestedColor = extractRequestedColor(text, item.product_name) || item.color_name || 'غير محدد';
+                  const requestedSize = extractRequestedSize(text) || item.size_name || 'غير محدد';
+                  
+                  // بناء رسالة خطأ واضحة
                   unavailableMessage = `❌ فشل في إنشاء الطلب: المنتج "${item.product_name}" غير متوفر باللون "${requestedColor}" والحجم "${requestedSize}".\n\n`;
                   
-                  // إضافة البدائل المتوفرة من الرسالة
-                  if (item.alternatives_message) {
-                    unavailableMessage += `المتوفر فعلياً: ${item.alternatives_message.replace('🎨 الألوان المتوفرة: ', '').replace('📏 الأحجام المتوفرة: ', '')}`;
+                  // تنسيق البدائل المتوفرة بشكل أفضل
+                  if (item.available_colors && item.available_sizes) {
+                    unavailableMessage += `✅ المتوفر فعلياً:\n`;
+                    
+                    // عرض كل لون مع أحجامه (هذا مثال - سيحتاج لتحسين بناءً على البيانات الفعلية)
+                    const colors = item.available_colors;
+                    const sizes = item.available_sizes;
+                    
+                    for (const color of colors) {
+                      unavailableMessage += `${color} (${sizes.join(', ')})\n`;
+                    }
+                  } else if (item.alternatives_message) {
+                    unavailableMessage += `✅ المتوفر فعلياً:\n${item.alternatives_message}`;
                   }
                   break;
                 }
