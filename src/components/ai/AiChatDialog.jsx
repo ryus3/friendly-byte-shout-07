@@ -139,18 +139,6 @@ const AiChatDialog = ({ open, onOpenChange }) => {
               });
             }, 100);
           }
-        } else if (data.response.includes('needs_city_selection')) {
-            orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المدينة**\nلم أتمكن من التعرف على المدينة من النص. يرجى إعادة كتابة الطلب مع ذكر المدينة بوضوح.`;
-          } else if (orderDetails.needs_region_selection) {
-            orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المنطقة**\nتم العثور على المدينة ولكن لم أتمكن من تحديد المنطقة. يرجى إعادة كتابة الطلب مع ذكر المنطقة.`;
-          } else {
-            orderStatusMessage = `\n\n⚠️ **لم أتمكن من معالجة الطلب بالكامل**\nيرجى التأكد من ذكر: اسم العميل، رقم الهاتف، المدينة والمنطقة، واسم المنتج.`;
-          }
-
-          setMessages(prev => [...prev, {
-            role: 'model',
-            content: `${data.response}${orderStatusMessage}`
-          }]);
         } else {
           // رد نصي عادي
           setMessages(prev => [...prev, { 
