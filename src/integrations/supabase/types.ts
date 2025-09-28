@@ -4548,14 +4548,6 @@ export type Database = {
           sync_duration_seconds: number
         }[]
       }
-      get_product_available_variants: {
-        Args: {
-          p_product_id: string
-          p_requested_color?: string
-          p_requested_size?: string
-        }
-        Returns: Json
-      }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
