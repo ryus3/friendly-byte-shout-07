@@ -196,13 +196,6 @@ const AiChatDialog = ({ open, onOpenChange }) => {
         </ScrollArea>
         <div className="p-4 border-t bg-muted/30">
           <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="💬 اكتب رسالتك هنا... (مثال: أريد إنشاء طلب لأحمد العراقي)"
-              className="flex-1 h-12 text-sm"
-              disabled={isLoading}
-            />
             <Button 
               type="submit" 
               size="icon" 
@@ -215,6 +208,13 @@ const AiChatDialog = ({ open, onOpenChange }) => {
                 <Send className="w-5 h-5" />
               )}
             </Button>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="💬 اكتب رسالتك هنا... (مثال: أريد إنشاء طلب لأحمد العراقي)"
+              className="flex-1 h-12 text-sm"
+              disabled={isLoading}
+            />
           </form>
           <div className="mt-2 text-xs text-muted-foreground text-center">
             🤖 مدعوم بالذكاء الاصطناعي Gemini 2.0
