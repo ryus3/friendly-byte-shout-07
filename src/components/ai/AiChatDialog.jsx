@@ -96,6 +96,28 @@ const AiChatDialog = ({ open, onOpenChange }) => {
           
           if (orderDetails.orderSaved) {
             orderStatusMessage = `\n\n🎯 **تم حفظ الطلب بنجاح!**\n📋 رقم الطلب الذكي: ${orderDetails.aiOrderId}\n👤 العميل: ${orderDetails.customer_name}\n📱 الهاتف: ${orderDetails.customer_phone || 'غير محدد'}\n📍 العنوان: ${orderDetails.customer_city || 'غير محدد'} - ${orderDetails.customer_province || 'غير محدد'}\n💰 المبلغ الإجمالي: ${(orderDetails.total_amount || 0).toLocaleString()} د.ع\n🛍️ عدد المنتجات: ${orderDetails.items?.length || 0}\n\n✨ يمكنك مراجعة الطلب في **إدارة الطلبات الذكية** وتحويله إلى طلب نهائي.`;
+            
+            // 🎯 إشعار فوري لإدارة الطلبات الذكية
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
+                detail: {
+                  id: orderDetails.aiOrderId,
+                  customer_name: orderDetails.customer_name,
+                  source: 'ai_assistant',
+                  status: 'pending',
+                  created_at: new Date().toISOString(),
+                  items: orderDetails.items,
+                  total_amount: orderDetails.total_amount
+                }
+              }));
+              
+              // فتح نافذة إدارة الطلبات الذكية تلقائياً مع تأخير بسيط
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('openAiOrdersManager', { 
+                  detail: { aiOrderId: orderDetails.aiOrderId } 
+                }));
+              }, 2000);
+            }, 500);
           } else if (orderDetails.needs_city_selection) {
             orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المدينة**\nلم أتمكن من التعرف على المدينة من النص. يرجى إعادة كتابة الطلب مع ذكر المدينة بوضوح.`;
           } else if (orderDetails.needs_region_selection) {

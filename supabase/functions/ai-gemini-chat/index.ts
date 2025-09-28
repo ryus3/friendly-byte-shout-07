@@ -215,33 +215,24 @@ serve(async (req) => {
       }
     };
 
-    const systemPrompt = `🎯 أنا مساعدك الذكي المحترف RYUS - خبير تحليل وإدارة المتاجر الإلكترونية.
+    const systemPrompt = `🎯 مساعد RYUS الذكي - ردود مختصرة وذكية.
 
-    أهلاً ${userInfo?.full_name || 'المدير'} - أعمل بذكاء متقدم مع قاعدة البيانات الحية لمتجرك.
+**بيانات سريعة:**
+📊 اليوم: ${advancedAnalytics.profitAnalysis.totalRevenue.toLocaleString()} د.ع
+📦 المخزون: ${advancedAnalytics.inventoryHealth.outOfStock.length > 0 ? `⚠️ ${advancedAnalytics.inventoryHealth.outOfStock.length} نفد` : '✅ جيد'}
+🏆 أكثر مبيعاً: ${advancedAnalytics.trends.bestSellers.slice(0,2).map(p => p.name).join(', ')}
 
-    📊 **أداء اليوم**: ${advancedAnalytics.profitAnalysis.totalRevenue.toLocaleString()} د.ع | ربح: ${advancedAnalytics.profitAnalysis.estimatedProfit.toLocaleString()} د.ع
-    📦 **المخزون**: ${advancedAnalytics.inventoryHealth.outOfStock.length > 0 ? `⚠️ ${advancedAnalytics.inventoryHealth.outOfStock.length} منتج نفد` : '✅ جيد'}
-    🏆 **الأكثر مبيعاً**: ${advancedAnalytics.trends.bestSellers.slice(0,2).map(p => p.name).join(', ')}
+**منتجات (${storeData.products.length}):**
+${storeData.products.slice(0,5).map(product => `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count || 0})`).join('\n')}
 
-    🛍️ **منتجاتك (${storeData.products.length})**:
-    ${storeData.products.slice(0,8).map(product => `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (مخزون: ${product.inventory_count || 0})`).join('\n    ')}${storeData.products.length > 8 ? '\n    ... والمزيد' : ''}
+**قواعد مهمة:**
+- رد في 2-3 أسطر فقط
+- اسم العميل الافتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
+- أجور التوصيل: 5000 د.ع
+- فحص المخزون قبل الطلب
+- اقترح بدائل إذا نفد المنتج
 
-    📋 **آخر الطلبات**: ${storeData.orders.slice(0,3).map(order => `#${order.order_number} ${order.customer_name} (${order.final_amount?.toLocaleString()} د.ع)`).join(' | ')}
-
-    💡 **ما أستطيع فعله**:
-    • 🎯 **طلبات ذكية**: اكتب "بغداد الكرادة 07812345678 برشلونة ازرق لارج" وسأنشئ الطلب
-    • 📊 **تحليلات فورية**: "كيف أداء المبيعات؟" أو "أي منتج نفد؟"
-    • 💰 **حساب الأرباح**: "كم ربحت هذا الشهر؟"
-    • 🔍 **بحث ذكي**: "أبحث عن العميل أحمد" أو "منتجات اللون الأحمر"
-
-    ### ⚡ قواعد الذكاء:
-    - **ردود مختصرة**: أجيب بوضوح ومباشرة
-    - **تحليل ذكي**: أفهم السياق وأقترح الحلول
-    - **فحص المخزون**: أتحقق من التوفر وأقترح البدائل
-    - **حساب تلقائي**: أحسب التكاليف والأرباح والتوصيل فوراً
-    - **حفظ ذكي**: أحفظ كل طلب في نظام إدارة الطلبات الذكية
-
-    🎯 **لإنشاء طلب**: اكتب المدينة، المنطقة، الهاتف، المنتج، اللون، المقاس في جملة واحدة.`;
+**للطلبات:** اكتب المدينة + الهاتف + المنتج`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
@@ -263,7 +254,7 @@ serve(async (req) => {
             temperature: 0.9,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 600,
+            maxOutputTokens: 400,
           },
           safetySettings: [
             {
@@ -308,12 +299,11 @@ serve(async (req) => {
       try {
         console.log('🔍 تحليل طلب ذكي للنص:', message);
         
-        // استخدام دالة معالجة التليغرام مع دعم الاسم الافتراضي
+        // استخدام دالة معالجة التليغرام الجديدة (بدون المعامل الثالث)
         const { data: orderResult, error: orderError } = await supabase
           .rpc('process_telegram_order', {
             p_message_text: message,
-            p_chat_id: Math.floor(Math.random() * 1000000), // رقم وهمي للمساعد الذكي
-            p_default_customer_name: userInfo?.default_customer_name || 'عميل'
+            p_chat_id: Math.floor(Math.random() * 1000000) // رقم وهمي للمساعد الذكي
           });
         
         if (orderError) {

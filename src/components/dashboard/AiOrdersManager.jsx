@@ -375,7 +375,7 @@ useEffect(() => {
   const pendingCount = visibleOrders.filter(order => order.status === 'pending').length;
   const needsReviewCount = visibleOrders.filter(orderNeedsReview).length;
   const telegramCount = visibleOrders.filter(order => order.source === 'telegram').length;
-  const aiChatCount = visibleOrders.filter(order => order.source === 'ai_chat').length;
+  const aiChatCount = visibleOrders.filter(order => order.source === 'ai_chat' || order.source === 'ai_assistant').length;
   const storeCount = visibleOrders.filter(order => order.source === 'web' || order.source === 'store').length;
 
   const filteredOrders = useMemo(() => {
@@ -385,7 +385,7 @@ useEffect(() => {
       case 'telegram':
         return visibleOrders.filter(order => order.source === 'telegram');
       case 'ai_chat':
-        return visibleOrders.filter(order => order.source === 'ai_chat');
+        return visibleOrders.filter(order => order.source === 'ai_chat' || order.source === 'ai_assistant');
       case 'store':
         return visibleOrders.filter(order => order.source === 'web' || order.source === 'store');
       case 'pending':
