@@ -4373,6 +4373,10 @@ export type Database = {
         Args: { input_text: string }
         Returns: Json
       }
+      extract_product_items_with_availability_check: {
+        Args: { input_text: string }
+        Returns: Json
+      }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {

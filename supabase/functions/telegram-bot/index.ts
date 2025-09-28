@@ -149,7 +149,7 @@ serve(async (req) => {
                   customer_name: orderData.customer_name || 'عميل',
                   customer_phone: orderData.customer_phone,
                   customer_city: orderData.customer_city,
-                  customer_region: orderData.customer_region,
+                  customer_province: orderData.customer_province,
                   customer_address: orderData.customer_address,
                   city_id: orderData.city_id,
                   region_id: orderData.region_id,
@@ -171,36 +171,41 @@ serve(async (req) => {
               console.error('❌ خطأ في حفظ الطلب:', saveError);
             }
             
-            // Build detailed order confirmation message
-            let message = '✅ تم تحليل طلبك بنجاح!\n\n';
+            // Build detailed order confirmation message with new format
+            let message = '✅ تم استلام الطلب!\n\n';
+            
+            // Add customer name if available
+            if (orderData.customer_name && orderData.customer_name !== 'عميل') {
+              message += `🥷 ${orderData.customer_name}\n`;
+            }
             
             // Add location info
-            if (orderData.customer_city && orderData.customer_region) {
-              message += `📍 ${orderData.customer_city} - ${orderData.customer_region}\n`;
+            if (orderData.customer_city && orderData.customer_province) {
+              message += `📍 ${orderData.customer_city} - ${orderData.customer_province}\n`;
             } else if (orderData.customer_city) {
               message += `📍 ${orderData.customer_city}\n`;
             }
             
             // Add phone number
             if (orderData.customer_phone) {
-              message += `📱 الهاتف: ${orderData.customer_phone}\n`;
+              message += `📱 ${orderData.customer_phone}\n`;
             }
             
-            // Add product details
+            // Add product details with new format
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
                 const color = item.color ? ` (${item.color})` : '';
                 const size = item.size ? ` ${item.size}` : '';
                 const quantity = item.quantity || 1;
-                message += `✅ ${productName}${color}${size} × ${quantity}\n`;
+                message += `🛍️ ${productName}${color}${size} × ${quantity}\n`;
               });
             }
             
             // Add total amount with proper formatting
             if (orderData.total_amount && orderData.total_amount > 0) {
-              const formattedAmount = orderData.total_amount.toLocaleString('ar-IQ') + ' د.ع';
-              message += `• المبلغ الإجمالي: ${formattedAmount}`;
+              const formattedAmount = orderData.total_amount.toLocaleString('ar-IQ');
+              message += `💰 المبلغ الإجمالي: ${formattedAmount} د.ع`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
