@@ -160,7 +160,7 @@ serve(async (req) => {
                   original_text: text,
                   source: 'telegram',
                   status: 'pending',
-                  created_by: orderData.created_by || '91484496-b887-44f7-9e5d-be9db5567604'
+                  created_by: orderData.created_by // Link to the responsible user
                 });
               
               if (saveError) {
@@ -192,7 +192,7 @@ serve(async (req) => {
               message += `📱 ${orderData.customer_phone}\n`;
             }
             
-            // Add product details with exact format
+            // Add product details with proper formatting
             if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
               orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
