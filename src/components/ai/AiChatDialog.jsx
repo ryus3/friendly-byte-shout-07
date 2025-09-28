@@ -139,19 +139,7 @@ const AiChatDialog = ({ open, onOpenChange }) => {
               });
             }, 100);
           }
-              
-              // فتح نافذة إدارة الطلبات الذكية تلقائياً
-              setTimeout(() => {
-                const openManagerEvent = new CustomEvent('openAiOrdersManager', { 
-                  detail: { 
-                    aiOrderId: orderDetails.aiOrderId,
-                    highlight: true 
-                  } 
-                });
-                window.dispatchEvent(openManagerEvent);
-              }, 1500);
-            }, 300);
-          } else if (orderDetails.needs_city_selection) {
+        } else if (data.response.includes('needs_city_selection')) {
             orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المدينة**\nلم أتمكن من التعرف على المدينة من النص. يرجى إعادة كتابة الطلب مع ذكر المدينة بوضوح.`;
           } else if (orderDetails.needs_region_selection) {
             orderStatusMessage = `\n\n⚠️ **يحتاج الطلب لتحديد المنطقة**\nتم العثور على المدينة ولكن لم أتمكن من تحديد المنطقة. يرجى إعادة كتابة الطلب مع ذكر المنطقة.`;
