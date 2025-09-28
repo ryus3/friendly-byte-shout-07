@@ -14,6 +14,8 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AiModelSelector } from './AiModelSelector';
 import { AiUsageStats } from './AiUsageStats';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Settings, Zap } from 'lucide-react';
 
 const SuperAiChatDialog = ({ open, onOpenChange }) => {
   const [messages, setMessages] = useState([]);
@@ -267,34 +269,29 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 border-b bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950/20 dark:via-blue-950/20 dark:to-indigo-950/20">
+      <DialogContent className="max-w-md sm:max-w-4xl h-[90vh] sm:h-[85vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-4 sm:p-6 border-b bg-gradient-to-r from-purple-50 via-blue-50 to-indigo-50 dark:from-purple-950/20 dark:via-blue-950/20 dark:to-indigo-950/20">
           <DialogTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg animate-pulse">
-                <Sparkles className="w-7 h-7 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg animate-pulse">
+                <Sparkles className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  المساعد الذكي الخارق RYUS
+                <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  المساعد الذكي الخارق
                 </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className="text-xs">
-                    <Activity className="w-3 h-3 mr-1" />
-                    النموذج: {currentModel}
-                  </Badge>
-                  <Badge variant={systemStatus === 'online' ? 'default' : 'destructive'} className="text-xs">
-                    <div className={cn("w-2 h-2 rounded-full mr-1", systemStatus === 'online' ? 'bg-green-500' : 'bg-red-500')} />
-                    {systemStatus === 'online' ? 'متصل' : 'إعادة اتصال'}
-                  </Badge>
+                <div className="text-xs text-muted-foreground">
+                  نظام RYUS المتقدم
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <AiUsageStats usage={modelUsage} />
-              <AiModelSelector currentModel={currentModel} onModelChange={setCurrentModel} />
-            </div>
+            <AiManagementButton 
+              usage={modelUsage} 
+              currentModel={currentModel} 
+              onModelChange={setCurrentModel}
+              systemStatus={systemStatus}
+            />
           </DialogTitle>
         </DialogHeader>
         
@@ -341,8 +338,8 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
             />
           </form>
           <div className="mt-2 text-xs text-muted-foreground text-center flex items-center justify-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            🤖 مدعوم بـ 6 نماذج ذكية متقدمة | نموذج RYUS مخصص | دقة عراقية 95%+
+            <div className={cn("w-2 h-2 rounded-full", systemStatus === 'online' ? 'bg-green-500' : 'bg-red-500')} />
+            النموذج النشط: {currentModel.replace('gemini-', '')}
           </div>
         </div>
       </DialogContent>
@@ -416,6 +413,53 @@ const SuperMessageBubble = ({ message }) => {
       )}
     </motion.div>
   )
+};
+
+// مكون زر الإدارة المتقدم
+const AiManagementButton = ({ usage, currentModel, onModelChange, systemStatus }) => {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 px-3 gap-2 hover:bg-primary/5">
+          <Settings className="w-4 h-4" />
+          <span className="hidden sm:inline">إدارة</span>
+          <Badge variant="secondary" className="text-xs px-1">
+            {Object.values(usage).reduce((sum, val) => sum + (val || 0), 0)}
+          </Badge>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4" align="end">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-primary" />
+            <h4 className="font-semibold">إدارة المساعد الذكي</h4>
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-2 block">النموذج النشط</label>
+              <AiModelSelector currentModel={currentModel} onModelChange={onModelChange} />
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block">الاستخدام والإحصائيات</label>
+              <AiUsageStats usage={usage} />
+            </div>
+            
+            <div className="pt-2 border-t">
+              <div className="flex items-center justify-between text-sm">
+                <span>حالة الاتصال:</span>
+                <Badge variant={systemStatus === 'online' ? 'default' : 'destructive'} className="text-xs">
+                  <div className={cn("w-2 h-2 rounded-full mr-1", systemStatus === 'online' ? 'bg-green-500' : 'bg-red-500')} />
+                  {systemStatus === 'online' ? 'متصل' : 'إعادة اتصال'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 };
 
 export default SuperAiChatDialog;
