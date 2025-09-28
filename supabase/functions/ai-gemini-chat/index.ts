@@ -68,15 +68,18 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed info
+    // Get recent orders with detailed profit info
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
-        total_amount, final_amount, delivery_fee, status, created_at,
+        total_amount, final_amount, delivery_fee, status, created_at, created_by,
         order_items (
           id, quantity, price, total,
           product_name, variant_sku
+        ),
+        profits (
+          profit_amount, employee_profit, status
         )
       `)
       .order('created_at', { ascending: false })
@@ -103,11 +106,22 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
 
-    // Get expenses for profit calculation
+    // Get expenses and profits for comprehensive financial data
     const { data: expenses } = await supabase
       .from('expenses')
       .select('amount, expense_type, created_at')
       .gte('created_at', thisMonth);
+
+    // Get profit analytics
+    const { data: profits } = await supabase
+      .from('profits')
+      .select('profit_amount, employee_profit, status, created_at')
+      .gte('created_at', thisMonth);
+
+    const { data: todayProfits } = await supabase
+      .from('profits')
+      .select('profit_amount, employee_profit, status')
+      .gte('created_at', today);
 
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
@@ -120,7 +134,9 @@ async function getStoreData(userInfo: any, authToken?: string) {
       sum + (order.final_amount || order.total_amount || 0), 0) || 0;
     
     const monthExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
-    const monthProfit = monthTotal - monthExpenses;
+    const actualMonthProfit = profits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
+    const todayProfit = todayProfits?.reduce((sum, profit) => sum + (profit.profit_amount || 0), 0) || 0;
+    const estimatedMonthProfit = monthTotal - monthExpenses;
 
     // Process products with analytics
     const processedProducts = products?.map(product => {
@@ -156,9 +172,12 @@ async function getStoreData(userInfo: any, authToken?: string) {
       },
       monthSales: {
         total: monthTotal,
-        profit: monthProfit,
+        profit: actualMonthProfit || estimatedMonthProfit,
+        actualProfit: actualMonthProfit,
+        estimatedProfit: estimatedMonthProfit,
         expenses: monthExpenses
-      }
+      },
+      todayProfit: todayProfit
     };
   } catch (error) {
     console.error('Error fetching store data:', error);
@@ -193,15 +212,17 @@ serve(async (req) => {
 
     // تحليلات متقدمة للبيانات
     const advancedAnalytics = {
-      // تحليل الأرباح
+      // تحليل الأرباح الحقيقي
       profitAnalysis: {
-        totalRevenue: storeData.todaySales.total || 0,
-        estimatedProfit: storeData.products.reduce((sum, product) => {
-          const profit = (product.base_price || 0) - (product.cost_price || 0);
-          return sum + (profit * (product.sold_quantity || 0));
-        }, 0),
-        profitMargin: storeData.products.length > 0 ? 
-          (storeData.products.reduce((sum, p) => sum + ((p.base_price || 0) - (p.cost_price || 0)) / (p.base_price || 1), 0) / storeData.products.length * 100).toFixed(1) : 0
+        todayRevenue: storeData.todaySales.total || 0,
+        todayActualProfit: storeData.todayProfit || 0,
+        monthlyRevenue: storeData.monthSales.total || 0,
+        monthlyActualProfit: storeData.monthSales.actualProfit || 0,
+        monthlyEstimatedProfit: storeData.monthSales.estimatedProfit || 0,
+        profitMargin: storeData.monthSales.total > 0 ? 
+          ((storeData.monthSales.actualProfit || 0) / storeData.monthSales.total * 100).toFixed(1) : 0,
+        profitPerOrder: storeData.todaySales.count > 0 ? 
+          (storeData.todayProfit || 0) / storeData.todaySales.count : 0
       },
       
       // تحليل المخزون
@@ -237,24 +258,38 @@ serve(async (req) => {
     const availableProducts = storeData.products.filter(p => (p.inventory_count || 0) > 0);
     const outOfStockProducts = storeData.products.filter(p => (p.inventory_count || 0) === 0);
 
-    const systemPrompt = `🎯 مساعد RYUS الذكي - ردود قصيرة وذكية (2-3 أسطر فقط)
+    const systemPrompt = `🎯 أنت مساعد RYUS الذكي الداخلي للموظفين - كن مختصراً وذكياً (2-3 أسطر فقط)
 
-**المنتجات المتوفرة:**
-${availableProducts.slice(0,5).map(product => 
-  `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} متوفر)`
-).join('\n')}
-${outOfStockProducts.length > 0 ? `\n⚠️ نفد المخزون: ${outOfStockProducts.slice(0,3).map(p => p.name).join(', ')}` : ''}
+**شخصيتك:** مساعد متجر RYUS الداخلي للموظفين. أنت تعرف كل شيء عن النظام وتساعد الموظفين في إدارة الطلبات والمبيعات والأرباح.
 
-**المدن المتاحة:** ${cityList}
+**البيانات المالية الحالية:**
+📊 مبيعات اليوم: ${storeData.todaySales.total?.toLocaleString()} د.ع (${storeData.todaySales.count} طلب)
+💰 أرباح اليوم: ${storeData.todayProfit?.toLocaleString()} د.ع | الشهر: ${storeData.monthSales.actualProfit?.toLocaleString()} د.ع
+📈 متوسط الطلب: ${storeData.todaySales.average?.toLocaleString()} د.ع | متوسط الربح: ${advancedAnalytics.profitAnalysis.profitPerOrder?.toLocaleString()} د.ع
 
-**قواعد الطلبات:**
-- اسم العميل: "${userInfo?.default_customer_name || 'ريوس'}"
-- أجور التوصيل: 5000 د.ع لجميع المدن
-- فحص المخزون الحقيقي من قاعدة البيانات
-- اقترح بدائل (ألوان/أحجام) من نفس المنتج إذا نفد المطلوب
-- استخدم المدن والمناطق الحقيقية فقط من النظام
+**المنتجات والمخزون:**
+${availableProducts.slice(0,5).map(product => {
+  const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
+  const availableColors = [...new Set(variants.map((v: any) => v.color))].slice(0,3).join(', ');
+  const availableSizes = [...new Set(variants.map((v: any) => v.size))].slice(0,3).join(', ');
+  return `• ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة)
+  الألوان: ${availableColors || 'افتراضي'} | المقاسات: ${availableSizes || 'افتراضي'}`;
+}).join('\n')}
 
-**تنسيق الرد:** إيموجي + نص مختصر + معلومات الطلب (إن وجد)`;
+${outOfStockProducts.length > 0 ? `🚨 **نفد المخزون:** ${outOfStockProducts.slice(0,3).map(p => p.name).join(', ')}` : ''}
+
+**شبكة التوصيل الحقيقية:**
+🏙️ **المدن المتاحة:** ${cityList}
+📍 **المناطق:** ${storeData.regions.slice(0,8).map(r => r.name).join(', ')}
+
+**لإنشاء طلبات ذكية:**
+- 👤 اسم العميل الافتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
+- 🚛 أجور التوصيل: 5000 د.ع (ثابت لجميع المدن)
+- ✅ فحص مخزون حقيقي + اقتراح بدائل ذكية
+- 📱 استخدم المدن والمناطق من النظام فقط
+- 💾 الطلبات تُحفظ تلقائياً في نظام الطلبات الذكية
+
+**أسلوب الرد:** أجب بإيموجي + رد مختصر ومفيد + معلومات دقيقة من النظام الحقيقي`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
@@ -406,14 +441,18 @@ ${outOfStockProducts.length > 0 ? `\n⚠️ نفد المخزون: ${outOfStockP
       orderData: orderData,
       analytics: {
         todayRevenue: storeData.todaySales.total,
-        monthlyProfit: storeData.monthSales.profit,
+        todayProfit: storeData.todayProfit,
+        monthlyRevenue: storeData.monthSales.total,
+        monthlyProfit: storeData.monthSales.actualProfit,
+        profitMargin: advancedAnalytics.profitAnalysis.profitMargin,
         productsCount: storeData.products.length,
         ordersCount: storeData.orders.length,
         outOfStockCount: advancedAnalytics.inventoryHealth.outOfStock.length,
         lowStockCount: advancedAnalytics.inventoryHealth.lowStock.length,
         variantsCount: storeData.products.reduce((sum: number, p: any) => sum + (p.variants?.length || 0), 0),
-        todayTotal: storeData.todaySales.total,
-        recentOrdersCount: storeData.orders.length
+        recentOrdersCount: storeData.orders.length,
+        citiesCount: storeData.cities.length,
+        regionsCount: storeData.regions.length
       },
       timestamp: new Date().toISOString()
     }), {
