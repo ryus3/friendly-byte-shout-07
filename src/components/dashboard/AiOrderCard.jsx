@@ -68,9 +68,10 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
           label: 'تليغرام'
         };
       case 'ai_chat':
+      case 'ai_assistant':
         return {
           icon: Bot,
-          label: 'ذكاء اصطناعي'
+          label: 'المساعد الذكي'
         };
       case 'web':
         return {
@@ -80,7 +81,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
       default:
         return {
           icon: MessageSquare,
-          label: 'غير محدد'
+          label: 'طلب ذكي'
         };
     }
   };
@@ -343,8 +344,21 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
 
   const gradientToUse = useMemo(() => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 to-red-700';
-    if (availability === 'available' && !needsReviewAny) return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
     if (needsReviewAny) return 'bg-gradient-to-br from-red-500 to-red-700';
+    
+    // ألوان مميزة للمساعد الذكي
+    if (order.source === 'ai_assistant' && availability === 'available') {
+      return 'bg-gradient-to-br from-purple-500 via-purple-600 to-pink-600';
+    }
+    
+    // لون التليغرام
+    if (order.source === 'telegram' && availability === 'available') {
+      return 'bg-gradient-to-br from-cyan-500 via-blue-600 to-blue-700';
+    }
+    
+    // افتراضي للمتاح
+    if (availability === 'available') return 'bg-gradient-to-br from-[hsl(var(--primary))] via-[hsl(var(--primary)/0.85)] to-[hsl(var(--primary)/0.7)]';
+    
     const statusConfig = getUnifiedStatusForOrder(order);
     return statusConfig.color.includes('gradient') ? statusConfig.color : 'bg-gradient-to-br from-slate-500 via-gray-600 to-slate-700';
   }, [availability, needsReviewAny, order]);

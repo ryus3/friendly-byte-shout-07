@@ -99,8 +99,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
         // إشعار توست للطلبات من المساعد الذكي
         if (newOrder.source === 'ai_assistant') {
           toast({
-            title: "🤖 طلب ذكي جديد",
-            description: `طلب من المساعد الذكي: ${newOrder.customer_name}`,
+            title: "المساعد الذكي",
+            description: `طلب جديد بقيمة ${newOrder.total_amount?.toLocaleString() || 0} د.ع`,
             variant: "success"
           });
         }
@@ -664,8 +664,8 @@ useEffect(() => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs">الذكاء الاصطناعي</h4>
-                      <p className="text-purple-100 text-xs">مساعد ذكي</p>
+                      <h4 className="font-bold text-xs text-center">المساعد الذكي</h4>
+                      <p className="text-purple-100 text-xs text-center">ذكاء اصطناعي</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{aiChatCount} طلب</p>
