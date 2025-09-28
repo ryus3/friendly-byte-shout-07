@@ -155,8 +155,9 @@ serve(async (req) => {
                   const requestedColor = item.color_name || 'غير محدد';
                   const requestedSize = item.size_name || 'غير محدد';
                   
-                  // بناء رسالة خطأ واضحة
-                  unavailableMessage = `❌ فشل في إنشاء الطلب: المنتج "${item.product_name}" غير متوفر باللون "${requestedColor}" والحجم "${requestedSize}".\n\n`;
+                  // بناء رسالة خطأ واضحة ومنسقة
+                  unavailableMessage = `❌ عذراً، المنتج "${item.product_name}" غير متوفر بالمواصفات المطلوبة:\n`;
+                  unavailableMessage += `🔍 المطلوب: ${requestedColor} - ${requestedSize}\n\n`;
                   
                   // استخدام رسالة البدائل من الدالة المحسنة
                   if (item.alternatives_message && item.alternatives_message.trim() !== '') {
@@ -164,6 +165,9 @@ serve(async (req) => {
                   } else {
                     unavailableMessage += `💡 يرجى التواصل لمعرفة المواصفات المتوفرة.`;
                   }
+                  
+                  // إضافة رسالة إرشادية
+                  unavailableMessage += `\n💬 يرجى إعادة كتابة الطلب بالمواصفات المتوفرة أعلاه.`;
                   break;
                 }
               }
