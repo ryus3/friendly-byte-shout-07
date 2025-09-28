@@ -27,26 +27,24 @@ function createAuthenticatedSupabaseClient(authToken?: string) {
   return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
 }
 
-// Helper functions to fetch comprehensive store data with analytics
+// Helper functions to fetch real data with advanced analytics
 async function getStoreData(userInfo: any, authToken?: string) {
   try {
-    console.log('🔍 بدء جلب بيانات المتجر الشاملة للمستخدم:', userInfo?.full_name || userInfo?.id);
+    console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
     
     // إنشاء عميل مصادق عليه
     const supabase = createAuthenticatedSupabaseClient(authToken);
     
-    // 1. Get products with complete details
+    // Get products with variants, inventory, and sales data
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
-        id, name, base_price, cost_price, description, is_active, department_id, category_id,
-        departments (id, name, color, icon),
-        categories (id, name, type),
+        id, name, base_price, cost_price, description, is_active,
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
-          colors (id, name, hex_code),
+          colors (id, name),
           sizes (id, name),
-          inventory (quantity, min_stock, reserved_quantity, sold_quantity, location)
+          inventory (quantity, min_stock, reserved_quantity, sold_quantity)
         )
       `)
       .eq('is_active', true);
@@ -57,19 +55,15 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // 2. Get recent orders with comprehensive details
+    // Get recent orders with detailed info
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
-        total_amount, final_amount, delivery_fee, status, created_at, delivery_partner,
-        tracking_number, delivery_status, receipt_received, isarchived,
+        total_amount, final_amount, delivery_fee, status, created_at,
         order_items (
           id, quantity, price, total,
           product_name, variant_sku
-        ),
-        customers (
-          id, name, phone, city, province, address
         )
       `)
       .order('created_at', { ascending: false })
@@ -96,106 +90,11 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
 
-    // 3. Get comprehensive financial data
+    // Get expenses for profit calculation
     const { data: expenses } = await supabase
       .from('expenses')
-      .select('amount, expense_type, category, description, status, vendor_name, created_at, created_by')
+      .select('amount, expense_type, created_at')
       .gte('created_at', thisMonth);
-
-    // 4. Get profits data
-    const { data: profits } = await supabase
-      .from('profits')
-      .select(`
-        id, order_id, employee_id, total_revenue, total_cost, profit_amount, 
-        employee_percentage, employee_profit, status, settled_at, created_at
-      `)
-      .gte('created_at', thisMonth);
-
-    // 5. Get customer loyalty data
-    const { data: customerLoyalty } = await supabase
-      .from('customer_phone_loyalty')
-      .select(`
-        phone_number, customer_name, customer_city, total_points, total_orders, 
-        total_spent, first_order_date, last_order_date
-      `)
-      .order('total_spent', { ascending: false })
-      .limit(10);
-
-    // 6. Get financial transactions
-    const { data: financialTransactions } = await supabase
-      .from('financial_transactions')
-      .select('id, amount, transaction_type, description, status, created_at')
-      .gte('created_at', thisMonth)
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    // 7. Get delivery invoices
-    const { data: deliveryInvoices } = await supabase
-      .from('delivery_invoices')
-      .select(`
-        id, external_id, partner, amount, orders_count, status, 
-        received, issued_at, received_at
-      `)
-      .gte('issued_at', thisMonth)
-      .order('issued_at', { ascending: false })
-      .limit(10);
-
-    // 8. Get departments and categories
-    const { data: departments } = await supabase
-      .from('departments')
-      .select('id, name, description, color, icon, is_active, display_order')
-      .eq('is_active', true);
-
-    const { data: categories } = await supabase
-      .from('categories')
-      .select('id, name, description, type')
-      .order('name');
-
-    // 9. Get colors and sizes
-    const { data: colors } = await supabase
-      .from('colors')
-      .select('id, name, hex_code');
-
-    const { data: sizes } = await supabase
-      .from('sizes')
-      .select('id, name');
-
-    // 10. Get cash sources and movements
-    const { data: cashSources } = await supabase
-      .from('cash_sources')
-      .select('id, name, type, current_balance, is_active')
-      .eq('is_active', true);
-
-    const { data: cashMovements } = await supabase
-      .from('cash_movements')
-      .select(`
-        id, amount, movement_type, description, balance_before, balance_after,
-        effective_at, reference_type, reference_id
-      `)
-      .gte('effective_at', thisMonth)
-      .order('effective_at', { ascending: false })
-      .limit(20);
-
-    // 11. Get employee profit rules
-    const { data: employeeProfitRules } = await supabase
-      .from('employee_profit_rules')
-      .select('id, employee_id, rule_type, target_id, profit_percentage, profit_amount, is_active')
-      .eq('is_active', true);
-
-    // 12. Get city statistics
-    const { data: cityStats } = await supabase
-      .from('city_order_stats')
-      .select('city_name, total_orders, total_amount, month, year')
-      .eq('year', new Date().getFullYear())
-      .order('total_amount', { ascending: false })
-      .limit(10);
-
-    // 13. Get notifications
-    const { data: notifications } = await supabase
-      .from('notifications')
-      .select('id, type, title, message, is_read, priority, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
 
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
@@ -235,20 +134,6 @@ async function getStoreData(userInfo: any, authToken?: string) {
     return {
       products: processedProducts,
       orders: recentOrders || [],
-      departments: departments || [],
-      categories: categories || [],
-      colors: colors || [],
-      sizes: sizes || [],
-      expenses: expenses || [],
-      profits: profits || [],
-      customerLoyalty: customerLoyalty || [],
-      financialTransactions: financialTransactions || [],
-      deliveryInvoices: deliveryInvoices || [],
-      cashSources: cashSources || [],
-      cashMovements: cashMovements || [],
-      employeeProfitRules: employeeProfitRules || [],
-      cityStats: cityStats || [],
-      notifications: notifications || [],
       todaySales: {
         total: todayTotal,
         count: todayCount,
@@ -265,20 +150,6 @@ async function getStoreData(userInfo: any, authToken?: string) {
     return {
       products: [],
       orders: [],
-      departments: [],
-      categories: [],
-      colors: [],
-      sizes: [],
-      expenses: [],
-      profits: [],
-      customerLoyalty: [],
-      financialTransactions: [],
-      deliveryInvoices: [],
-      cashSources: [],
-      cashMovements: [],
-      employeeProfitRules: [],
-      cityStats: [],
-      notifications: [],
       todaySales: { total: 0, count: 0, average: 0 },
       monthSales: { total: 0, profit: 0, expenses: 0 }
     };
@@ -344,48 +215,16 @@ serve(async (req) => {
       }
     };
 
-    const systemPrompt = `أنت مساعد ذكي متقدم ومحلل بيانات خبير لإدارة المتاجر الإلكترونية. 
-    أنت متصل بقاعدة بيانات شاملة وتملك ذكاءً تحليلياً عالمي متطور.
+    const systemPrompt = `أنت مساعد ذكي متخصص ومحلل بيانات خبير لإدارة المتاجر الإلكترونية. 
+    أنت متصل بقاعدة بيانات حقيقية وتملك ذكاءً تحليلياً متقدماً.
 
     ### 🎯 هويتك المهنية:
-    **خبير تحليل البيانات ومدير المتجر الذكي العالمي**
-    - محلل بيانات متخصص في التجارة الإلكترونية العالمية
-    - مستشار استراتيجي للمبيعات والأرباح والعمليات
-    - خبير في تحليل سلوك العملاء والاتجاهات والتنبؤات
-    - مدير مالي ذكي ومحلل الاستثمارات
-    - خبير إدارة المخزون والتوصيل والعمليات اللوجستية
+    **خبير تحليل البيانات ومدير المتجر الذكي**
+    - محلل بيانات متخصص في التجارة الإلكترونية
+    - مستشار استراتيجي للمبيعات والأرباح
+    - خبير في تحليل سلوك العملاء والاتجاهات
 
-    مرحباً ${userInfo?.full_name || 'المدير'} - أنا مساعدك الذكي العالمي الشامل للمتجر.
-
-    ### 🗂️ قاعدة البيانات الشاملة المتاحة:
-
-    **📦 إدارة المنتجات (${storeData.products.length} منتج):**
-    - الأقسام: ${storeData.departments.map(d => d.name).join(', ')}
-    - الفئات: ${storeData.categories.map(c => c.name).join(', ')}
-    - الألوان المتاحة: ${storeData.colors.map(c => c.name).join(', ')}
-    - الأحجام المتاحة: ${storeData.sizes.map(s => s.name).join(', ')}
-
-    **💰 البيانات المالية الحية:**
-    - الأرباح: ${storeData.profits.length} سجل ربح
-    - المصاريف: ${storeData.expenses.length} مصروف هذا الشهر
-    - المعاملات المالية: ${storeData.financialTransactions.length} معاملة
-    - مصادر النقد: ${storeData.cashSources.map(c => `${c.name}: ${c.current_balance.toLocaleString()} د.ع`).join(', ')}
-    - حركات النقد: ${storeData.cashMovements.length} حركة مالية
-
-    **🚚 إدارة التوصيل:**
-    - فواتير التوصيل: ${storeData.deliveryInvoices.length} فاتورة
-    - شركاء التوصيل: ${[...new Set(storeData.deliveryInvoices.map(d => d.partner))].join(', ')}
-
-    **👥 إدارة العملاء والولاء:**
-    - برنامج الولاء: ${storeData.customerLoyalty.length} عميل مميز
-    - أفضل العملاء: ${storeData.customerLoyalty.slice(0, 3).map(c => `${c.customer_name} (${c.total_spent.toLocaleString()} د.ع)`).join(', ')}
-
-    **🏙️ التحليلات الجغرافية:**
-    - إحصائيات المدن: ${storeData.cityStats.map(c => `${c.city_name}: ${c.total_orders} طلب`).join(', ')}
-
-    **🔔 النظام الذكي:**
-    - الإشعارات: ${storeData.notifications.length} إشعار حديث
-    - قواعد أرباح الموظفين: ${storeData.employeeProfitRules.length} قاعدة نشطة
+    مرحباً ${userInfo?.full_name || 'المدير'} - أنا مساعدك الذكي للمتجر.
 
     ### 📊 التحليلات المتقدمة الحية:
 
@@ -427,82 +266,28 @@ serve(async (req) => {
     🛒 العناصر: ${order.order_items?.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ') || 'غير محدد'}
     `).join('\n')}
 
-    ### 🚀 قدراتك المتقدمة العالمية:
+    ### 🚀 قدراتك المتقدمة:
+    1. **🎯 التحليل الذكي**: تحليل عميق للمبيعات والأرباح والاتجاهات
+    2. **📈 التنبؤات**: توقعات المبيعات وتحليل الأداء
+    3. **💡 الاستشارات**: نصائح استراتيجية لتحسين الأداء
+    4. **⚡ الإدارة السريعة**: إنشاء الطلبات وإدارة المخزون
+    5. **🔍 البحث الذكي**: العثور على المعلومات بسرعة
+    6. **📊 التقارير الفورية**: إحصائيات وتقارير مفصلة
 
-    **1. 🎯 التحليل الذكي الشامل:**
-    - تحليل عميق للمبيعات والأرباح والاتجاهات
-    - تحليل الأداء المالي والمحاسبي
-    - تحليل ولاء العملاء وسلوك الشراء
-    - تحليل أداء شركات التوصيل
-
-    **2. 📈 التنبؤات والذكاء التجاري:**
-    - توقعات المبيعات والأرباح
-    - تحليل الاتجاهات الموسمية
-    - توقع احتياجات المخزون
-    - تحليل مخاطر العملاء
-
-    **3. 💡 الاستشارات الاستراتيجية:**
-    - نصائح لتحسين الأداء المالي
-    - استراتيجيات زيادة المبيعات
-    - تحسين عمليات التوصيل
-    - تطوير برامج الولاء
-
-    **4. ⚡ الإدارة الذكية:**
-    - إنشاء طلبات تلقائية
-    - إدارة المخزون الذكية
-    - معالجة المدفوعات والفواتير
-    - إدارة علاقات العملاء
-
-    **5. 🔍 البحث والتحليل:**
-    - البحث في جميع البيانات
-    - تحليل الأنماط والعلاقات
-    - تتبع الأداء عبر الزمن
-    - مقارنة الفترات والأقسام
-
-    **6. 📊 التقارير المتقدمة:**
-    - تقارير مالية شاملة
-    - تحليل الربحية
-    - تقارير أداء الموظفين
-    - إحصائيات العملاء والمدن
-
-    **7. 🤖 الأتمتة الذكية:**
-    - إنشاء المنتجات تلقائياً
-    - معالجة الطلبات الذكية
-    - تحديث المخزون التلقائي
-    - إرسال الإشعارات الذكية
-
-    ### 💬 أمثلة تفاعلية شاملة:
-    **📊 التحليلات:**
-    - "ما هو أداء المبيعات اليوم/الشهر/السنة؟"
+    ### 💬 أمثلة تفاعلية:
+    - "ما هو أداء المبيعات اليوم؟"
     - "أي المنتجات تحتاج إعادة تخزين؟"
     - "كم الربح المتوقع هذا الشهر؟"
-    - "ما هي أفضل المدن من ناحية المبيعات؟"
-    - "حلل لي أداء شركات التوصيل"
-
-    **👥 إدارة العملاء:**
     - "من هم أفضل العملاء؟"
-    - "أظهر لي برنامج الولاء"
-    - "ما هي أنماط شراء العملاء؟"
-
-    **💰 الإدارة المالية:**
-    - "ما هو الوضع المالي الحالي؟"
-    - "حلل لي الأرباح والخسائر"
-    - "أظهر حركات النقد"
-    - "ما هي المصاريف الشهرية؟"
-
-    **🛍️ إدارة المتجر:**
     - "أنشئ طلب جديد لعميل"
-    - "أضف منتج جديد"
-    - "حدث المخزون"
     - "اقترح استراتيجية لزيادة المبيعات"
 
-    ### ⚡ نمط الاستجابة المتطور:
-    - كن محلل خبير ومستشار عالمي
+    ### ⚡ نمط الاستجابة:
+    - كن محلل خبير وودود
     - استخدم الرموز التعبيرية للوضوح
-    - قدم رؤى قابلة للتنفيذ ومفصلة
-    - ادعم بالأرقام والإحصائيات الدقيقة
-    - اقترح حلول عملية ومبتكرة
-    - فكر بعقلية استراتيجية شاملة`;
+    - قدم رؤى قابلة للتنفيذ
+    - ادعم بالأرقام والإحصائيات
+    - اقترح حلول عملية`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
