@@ -35,63 +35,35 @@ async function getStoreData(userInfo: any, authToken?: string) {
     // إنشاء عميل مصادق عليه
     const supabase = createAuthenticatedSupabaseClient(authToken);
     
-    // Get products with complete variant details including colors and sizes
+    // Get products with variants, inventory, and sales data
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
-        id, name, cost_price, description, is_active,
+        id, name, base_price, cost_price, description, is_active,
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
+          colors (id, name),
+          sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
-        ),
-        categories (id, name),
-        departments (id, name),
-        product_types (id, name)
+        )
       `)
       .eq('is_active', true);
-
-    // Get colors and sizes separately to avoid relationship issues
-    const { data: colors } = await supabase.from('colors').select('id, name, hex_code');
-    const { data: sizes } = await supabase.from('sizes').select('id, name');
     
     if (productsError) {
       console.error('❌ خطأ في جلب المنتجات:', productsError);
     } else {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
-      console.log('📊 تفاصيل المنتجات:', products?.map(p => `${p.name}: ${p.product_variants?.length || 0} متغير`));
-      
-      // Process products with color and size details
-      if (products && colors && sizes) {
-        products.forEach(p => {
-          console.log(`🛍️ منتج ${p.name}:`);
-          if (p.product_variants) {
-            p.product_variants.forEach((v: any) => {
-              const colorName = colors.find(c => c.id === v.color_id)?.name || 'لا لون';
-              const sizeName = sizes.find(s => s.id === v.size_id)?.name || 'لا حجم';
-              const stock = v.inventory?.[0]?.quantity || 0;
-              console.log(`  • ${colorName} - ${sizeName} | سعر: ${v.price} | مخزون: ${stock}`);
-              
-              // Add color and size names to variant for AI processing
-              v.color_name = colorName;
-              v.size_name = sizeName;
-            });
-          }
-        });
-      }
     }
 
-    // Get recent orders with complete details
+    // Get recent orders with detailed info
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
-        total_amount, final_amount, delivery_fee, status, created_at, delivery_partner,
+        total_amount, final_amount, delivery_fee, status, created_at,
         order_items (
-          id, quantity, price, total, product_name, variant_sku,
-          product_variants (
-            id, price, cost_price, color_id, size_id
-          ),
-          products (name, cost_price)
+          id, quantity, price, total,
+          product_name, variant_sku
         )
       `)
       .order('created_at', { ascending: false })
@@ -124,38 +96,6 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .select('amount, expense_type, created_at')
       .gte('created_at', thisMonth);
 
-    // Get sales analytics
-    const { data: salesStats, error: salesError } = await supabase
-      .rpc('get_sales_summary_stats');
-
-    // Get profit data
-    const { data: profitsData, error: profitsError } = await supabase
-      .from('profits')
-      .select(`
-        *,
-        orders!inner (order_number, customer_name, total_amount, delivery_fee, created_at, status)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(30);
-
-    // Get real delivery pricing from settings
-    const { data: deliverySettings } = await supabase
-      .from('settings')
-      .select('key, value')
-      .in('key', ['delivery_fee', 'free_delivery_threshold', 'express_delivery_fee', 'local_delivery_fee', 'national_delivery_fee']);
-    
-    // Build delivery pricing from actual settings
-    const deliveryPricing = {
-      local: Number(deliverySettings?.find(s => s.key === 'local_delivery_fee')?.value) || 
-             Number(deliverySettings?.find(s => s.key === 'delivery_fee')?.value) || 5000,
-      national: Number(deliverySettings?.find(s => s.key === 'national_delivery_fee')?.value) || 7000,
-      alwaseet: Number(deliverySettings?.find(s => s.key === 'delivery_fee')?.value) || 5000,
-      express: Number(deliverySettings?.find(s => s.key === 'express_delivery_fee')?.value) || 10000,
-      free_threshold: Number(deliverySettings?.find(s => s.key === 'free_delivery_threshold')?.value) || 100000
-    };
-    
-    console.log('✅ تم جلب إعدادات التوصيل:', deliveryPricing);
-
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
       sum + (order.final_amount || order.total_amount || 0), 0) || 0;
@@ -169,7 +109,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
     const monthExpenses = expenses?.reduce((sum, expense) => sum + (expense.amount || 0), 0) || 0;
     const monthProfit = monthTotal - monthExpenses;
 
-    // Process products with complete variant details including colors and sizes
+    // Process products with analytics
     const processedProducts = products?.map(product => {
       const totalStock = product.product_variants?.reduce((sum: number, variant: any) => 
         sum + (variant.inventory?.[0]?.quantity || 0), 0) || 0;
@@ -181,27 +121,14 @@ async function getStoreData(userInfo: any, authToken?: string) {
         ...product,
         inventory_count: totalStock,
         sold_quantity: totalSold,
-        category_name: product.categories?.name || 'غير محدد',
-        department_name: product.departments?.name || 'غير محدد',
         variants: product.product_variants?.map((variant: any) => ({
           ...variant,
-          color_name: variant.colors?.name || 'غير محدد',
-          color_hex: variant.colors?.hex_code || '#000000',
-          size_name: variant.sizes?.name || 'غير محدد',
           stock: variant.inventory?.[0]?.quantity || 0,
-          sold: variant.inventory?.[0]?.sold_quantity || 0,
-          reserved: variant.inventory?.[0]?.reserved_quantity || 0,
-          min_stock: variant.inventory?.[0]?.min_stock || 0,
-          actual_price: variant.price || 0,
-          actual_cost: variant.cost_price || product.cost_price || 0,
-          profit_per_item: (variant.price || 0) - (variant.cost_price || product.cost_price || 0)
+          sold: variant.inventory?.[0]?.sold_quantity || 0
         })) || []
       };
     }) || [];
 
-    console.log('🔍 معالجة المنتجات المكتملة:', processedProducts?.length || 0);
-    console.log('📋 إجمالي المتغيرات المعالجة:', processedProducts?.reduce((sum, p) => sum + (p.variants?.length || 0), 0) || 0);
-    
     return {
       products: processedProducts,
       orders: recentOrders || [],
@@ -214,10 +141,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
         total: monthTotal,
         profit: monthProfit,
         expenses: monthExpenses
-      },
-      deliveryPricing: deliveryPricing,
-      salesStats: salesStats || {},
-      profitsData: profitsData || []
+      }
     };
   } catch (error) {
     console.error('Error fetching store data:', error);
@@ -253,43 +177,37 @@ serve(async (req) => {
       // تحليل الأرباح
       profitAnalysis: {
         totalRevenue: storeData.todaySales.total || 0,
-        estimatedProfit: storeData.products.reduce((sum: number, product: any) => {
-          return sum + (product.variants?.reduce((variantSum: number, variant: any) => {
-            const profit = (variant.actual_price || 0) - (variant.actual_cost || 0);
-            return variantSum + (profit * (variant.sold || 0));
-          }, 0) || 0);
+        estimatedProfit: storeData.products.reduce((sum, product) => {
+          const profit = (product.base_price || 0) - (product.cost_price || 0);
+          return sum + (profit * (product.sold_quantity || 0));
         }, 0),
         profitMargin: storeData.products.length > 0 ? 
-          (storeData.products.reduce((sum: number, p: any) => {
-            const avgProfit = p.variants?.reduce((vSum: number, v: any) => vSum + (v.profit_per_item || 0), 0) / (p.variants?.length || 1) || 0;
-            const avgPrice = p.variants?.reduce((vSum: number, v: any) => vSum + (v.actual_price || 0), 0) / (p.variants?.length || 1) || 1;
-            return sum + (avgProfit / avgPrice);
-          }, 0) / storeData.products.length * 100).toFixed(1) : 0
+          (storeData.products.reduce((sum, p) => sum + ((p.base_price || 0) - (p.cost_price || 0)) / (p.base_price || 1), 0) / storeData.products.length * 100).toFixed(1) : 0
       },
       
       // تحليل المخزون
       inventoryHealth: {
-        lowStock: storeData.products.filter((p: any) => (p.inventory_count || 0) < 10),
-        outOfStock: storeData.products.filter((p: any) => (p.inventory_count || 0) === 0),
-        totalValue: storeData.products.reduce((sum: number, p: any) => sum + ((p.cost_price || 0) * (p.inventory_count || 0)), 0)
+        lowStock: storeData.products.filter(p => (p.inventory_count || 0) < 10),
+        outOfStock: storeData.products.filter(p => (p.inventory_count || 0) === 0),
+        totalValue: storeData.products.reduce((sum, p) => sum + ((p.cost_price || 0) * (p.inventory_count || 0)), 0)
       },
       
       // تحليل العملاء
       customerInsights: {
-        topCities: [...new Set(storeData.orders.map((o: any) => o.customer_city))].filter(Boolean),
+        topCities: [...new Set(storeData.orders.map(o => o.customer_city))].filter(Boolean),
         repeatCustomers: storeData.orders.reduce((acc: Record<string, number>, order: any) => {
           acc[order.customer_phone] = (acc[order.customer_phone] || 0) + 1;
           return acc;
         }, {}),
         averageOrderValue: storeData.orders.length > 0 ? 
-          storeData.orders.reduce((sum: number, o: any) => sum + (o.final_amount || 0), 0) / storeData.orders.length : 0
+          storeData.orders.reduce((sum, o) => sum + (o.final_amount || 0), 0) / storeData.orders.length : 0
       },
       
       // تحليل الاتجاهات
       trends: {
         bestSellers: storeData.products
-          .filter((p: any) => (p.sold_quantity || 0) > 0)
-          .sort((a: any, b: any) => (b.sold_quantity || 0) - (a.sold_quantity || 0))
+          .filter(p => (p.sold_quantity || 0) > 0)
+          .sort((a, b) => (b.sold_quantity || 0) - (a.sold_quantity || 0))
           .slice(0, 3),
         recentOrders: storeData.orders.slice(0, 5)
       }
@@ -324,46 +242,29 @@ serve(async (req) => {
 
     **🏆 المنتجات الأكثر مبيعاً:**
     ${advancedAnalytics.trends.bestSellers.map((product, index) => `
-    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح مقدر ${(product.variants?.reduce((sum: number, v: any) => sum + (v.profit_per_item * v.sold), 0) || 0).toLocaleString()} د.ع`).join('')}
+    ${index + 1}. ${product.name}: ${product.sold_quantity} مبيعة - ربح ${((product.base_price || 0) - (product.cost_price || 0)) * (product.sold_quantity || 0)} د.ع`).join('')}
 
     **👥 رؤى العملاء:**
     - متوسط قيمة الطلب: ${advancedAnalytics.customerInsights.averageOrderValue.toLocaleString()} د.ع
     - أهم المدن: ${advancedAnalytics.customerInsights.topCities.slice(0, 3).join(', ')}
     - العملاء المتكررون: ${Object.values(advancedAnalytics.customerInsights.repeatCustomers).filter(count => count > 1).length} عميل
 
-    ### 🚚 أسعار التوصيل الحقيقية (من الإعدادات):
-    📍 **داخل المحافظة**: ${storeData.deliveryPricing?.local?.toLocaleString() || '5,000'} د.ع
-    📍 **خارج المحافظة**: ${storeData.deliveryPricing?.national?.toLocaleString() || '7,000'} د.ع
-    📍 **الوسيط**: ${storeData.deliveryPricing?.alwaseet?.toLocaleString() || '5,000'} د.ع
-    ⚡ **التوصيل السريع**: ${storeData.deliveryPricing?.express?.toLocaleString() || '10,000'} د.ع
-    🎁 **توصيل مجاني**: للطلبات فوق ${storeData.deliveryPricing?.free_threshold?.toLocaleString() || '100,000'} د.ع
-
     ### 📋 كتالوج المنتجات الكامل (${storeData.products.length} منتج):
     ${storeData.products.map(product => `
     🛍️ **${product.name}**
-    🏷️ الفئة: ${product.category_name || 'غير محدد'} | القسم: ${product.department_name || 'غير محدد'}
-    💰 التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
-    📦 المخزون الكلي: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
-    ${product.variants?.length > 0 ? `
-    🎨 **المتغيرات المتوفرة (${product.variants.length} متغير):**
-    ${product.variants.map((v: any) => `
-       • اللون: ${v.color_name || 'غير محدد'} | الحجم: ${v.size_name || 'غير محدد'}
-       • السعر: ${v.actual_price?.toLocaleString() || 'غير محدد'} د.ع | المخزون: ${v.stock || 0} قطعة
-       • الكود: ${v.sku || 'غير محدد'} | المبيعات: ${v.sold || 0} | المحجوز: ${v.reserved || 0}`).join('\n    ')}` : '⚠️ لا توجد متغيرات'}
+    💰 السعر: ${product.base_price?.toLocaleString()} د.ع | التكلفة: ${product.cost_price?.toLocaleString() || 'غير محدد'} د.ع
+    📦 المخزون: ${product.inventory_count || 0} قطعة | المبيعات: ${product.sold_quantity || 0} قطعة
+    📈 الربح للقطعة: ${((product.base_price || 0) - (product.cost_price || 0)).toLocaleString()} د.ع
+    ${product.variants?.length > 0 ? `🎨 المتغيرات: ${product.variants.map((v: any) => `${v.color || ''}-${v.size || ''} (مخزون: ${v.stock || 0})`).join(', ')}` : ''}
     `).join('\n')}
 
     ### 📋 سجل الطلبات الأخيرة (${storeData.orders.length} طلب):
     ${storeData.orders.map(order => `
-    🧾 **طلب #${order.order_number || order.id}** - ${order.final_amount?.toLocaleString() || order.total_amount?.toLocaleString()} د.ع
+    🧾 **طلب #${order.order_number}** - ${order.final_amount?.toLocaleString()} د.ع
     👤 ${order.customer_name} | 📱 ${order.customer_phone}
     📍 ${order.customer_city}, ${order.customer_province}
-    🚚 شركة التوصيل: ${order.delivery_partner || 'محلي'} | رسوم التوصيل: ${order.delivery_fee?.toLocaleString() || '0'} د.ع
     📊 الحالة: ${order.status} | 📅 ${new Date(order.created_at).toLocaleDateString('ar')}
-    🛒 العناصر: ${order.order_items?.map((item: any) => {
-      const colorName = item.product_variants?.colors?.name || 'غير محدد';
-      const sizeName = item.product_variants?.sizes?.name || 'غير محدد';
-      return `${item.product_name} (${colorName} - ${sizeName}) x${item.quantity} = ${item.total?.toLocaleString() || 'غير محدد'} د.ع`;
-    }).join(', ') || 'غير محدد'}
+    🛒 العناصر: ${order.order_items?.map((item: any) => `${item.product_name} x${item.quantity}`).join(', ') || 'غير محدد'}
     `).join('\n')}
 
     ### 🚀 قدراتك المتقدمة:
@@ -462,13 +363,13 @@ serve(async (req) => {
               productName: product.name,
               variantId: availableVariant.id,
               sku: availableVariant.sku,
-              color: availableVariant.color_name || availableVariant.colors?.name || 'افتراضي',
-              size: availableVariant.size_name || availableVariant.sizes?.name || 'افتراضي',
+              color: availableVariant.colors?.name || 'افتراضي',
+              size: availableVariant.sizes?.name || 'افتراضي',
               quantity: 1,
-              price: availableVariant.actual_price || availableVariant.selling_price || product.base_price || 0,
-              costPrice: availableVariant.actual_cost || availableVariant.cost_price || product.cost_price || 0,
-              total: availableVariant.actual_price || availableVariant.selling_price || product.base_price || 0,
-              stock: availableVariant.stock || availableVariant.inventory?.[0]?.quantity || 0
+              price: availableVariant.price || product.base_price || 0,
+              costPrice: availableVariant.cost_price || product.cost_price || 0,
+              total: availableVariant.price || product.base_price || 0,
+              stock: availableVariant.inventory?.[0]?.quantity || 0
             });
           }
         }
