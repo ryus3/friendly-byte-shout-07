@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const AiChatDialog = ({ open, onOpenChange }) => {
   const [messages, setMessages] = useState([]);
@@ -52,17 +53,27 @@ const AiChatDialog = ({ open, onOpenChange }) => {
     
     // تكامل مع Gemini AI الحقيقي
     try {
+        // الحصول على session token للمستخدم المصادق عليه
+        const { data: { session } } = await supabase.auth.getSession();
+        const userToken = session?.access_token;
+
+        if (!userToken) {
+          throw new Error('لم يتم العثور على رمز المصادقة. يرجى تسجيل الدخول مرة أخرى.');
+        }
+
         const userInfo = {
           full_name: user?.full_name || user?.fullName || user?.display_name,
           isAdmin: user?.isAdmin || false,
-          id: user?.id
+          id: user?.id,
+          permissions: user?.permissions || []
         };
 
         const response = await fetch('https://tkheostkubborwkwzugl.functions.supabase.co/functions/v1/ai-gemini-chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA'}`
+            'Authorization': `Bearer ${userToken}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA'
           },
           body: JSON.stringify({
             message: input,

@@ -11,13 +11,29 @@ const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
 
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+// Function to create authenticated Supabase client
+function createAuthenticatedSupabaseClient(authToken?: string) {
+  if (authToken) {
+    // استخدام user token للحصول على البيانات حسب صلاحيات المستخدم
+    return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      }
+    });
+  }
+  // fallback للـ anon client
+  return createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
+}
 
 // Helper functions to fetch real data with advanced analytics
-async function getStoreData() {
+async function getStoreData(userInfo: any, authToken?: string) {
   try {
-    console.log('🔍 بدء جلب بيانات المتجر...');
+    console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
+    
+    // إنشاء عميل مصادق عليه
+    const supabase = createAuthenticatedSupabaseClient(authToken);
     
     // Get products with variants, inventory, and sales data
     const { data: products, error: productsError } = await supabase
@@ -145,9 +161,16 @@ serve(async (req) => {
 
   try {
     const { message, userInfo, orderContext } = await req.json();
+    
+    // الحصول على authorization header
+    const authHeader = req.headers.get('Authorization');
+    const authToken = authHeader?.replace('Bearer ', '');
+    
+    console.log('🔐 طلب من المستخدم:', userInfo?.full_name || userInfo?.id);
+    console.log('🎫 Token متوفر:', !!authToken);
 
-    // Get real store data
-    const storeData = await getStoreData();
+    // Get real store data with user authentication
+    const storeData = await getStoreData(userInfo, authToken);
 
     // تحليلات متقدمة للبيانات
     const advancedAnalytics = {
