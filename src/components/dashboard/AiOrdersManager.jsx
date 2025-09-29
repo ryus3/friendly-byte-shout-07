@@ -663,9 +663,9 @@ useEffect(() => {
                         <Brain className="w-4 h-4" />
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-center">المساعد الذكي</h4>
-                      <p className="text-purple-100 text-xs text-center">ذكاء اصطناعي</p>
+                    <div className="flex flex-col items-center justify-center w-full">
+                      <h4 className="font-bold text-xs leading-tight">المساعد الذكي</h4>
+                      <p className="text-purple-100 text-xs leading-tight">ذكاء اصطناعي</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{aiChatCount} طلب</p>
@@ -692,9 +692,9 @@ useEffect(() => {
                         <ShoppingCart className="w-4 h-4" />
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-center">من المتجر</h4>
-                      <p className="text-amber-100 text-xs text-center">طلبات الموقع</p>
+                    <div className="flex flex-col items-center justify-center w-full">
+                      <h4 className="font-bold text-xs leading-tight">من المتجر</h4>
+                      <p className="text-amber-100 text-xs leading-tight">طلبات الموقع</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{storeCount} طلب</p>
@@ -721,9 +721,9 @@ useEffect(() => {
                         <Smartphone className="w-4 h-4" />
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-center">من التليغرام</h4>
-                      <p className="text-cyan-100 text-xs text-center">تليغرام بوت</p>
+                    <div className="flex flex-col items-center justify-center w-full">
+                      <h4 className="font-bold text-xs leading-tight">من التليغرام</h4>
+                      <p className="text-cyan-100 text-xs leading-tight">تليغرام بوت</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{telegramCount} طلب</p>
