@@ -39,7 +39,7 @@ import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 
 const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { aiOrders = [], loading, refreshAll, products = [], approveAiOrder, users = [] } = useSuper();
-  const { cleanupOrphanedAiOrders } = useAiOrdersCleanup();
+  const { cleanupOrphanedAiOrders, deleteAiOrderSafely } = useAiOrdersCleanup();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
   
@@ -693,8 +693,8 @@ useEffect(() => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs">من المتجر</h4>
-                      <p className="text-amber-100 text-xs">طلبات الموقع</p>
+                      <h4 className="font-bold text-xs text-center">من المتجر</h4>
+                      <p className="text-amber-100 text-xs text-center">طلبات الموقع</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{storeCount} طلب</p>
@@ -722,8 +722,8 @@ useEffect(() => {
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-bold text-xs">من التليغرام</h4>
-                      <p className="text-cyan-100 text-xs">تليغرام بوت</p>
+                      <h4 className="font-bold text-xs text-center">من التليغرام</h4>
+                      <p className="text-cyan-100 text-xs text-center">تليغرام بوت</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{telegramCount} طلب</p>
