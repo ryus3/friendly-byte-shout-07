@@ -4349,6 +4349,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      daitch_mokotoff: {
+        Args: { "": string }
+        Returns: string[]
+      }
       debug_orders_rls: {
         Args: { p_user_id?: string }
         Returns: Json
@@ -4364,6 +4368,14 @@ export type Database = {
       delete_purchase_completely: {
         Args: { p_purchase_id: string }
         Returns: Json
+      }
+      dmetaphone: {
+        Args: { "": string }
+        Returns: string
+      }
+      dmetaphone_alt: {
+        Args: { "": string }
+        Returns: string
       }
       expire_old_points: {
         Args: Record<PropertyKey, never>
@@ -4962,7 +4974,7 @@ export type Database = {
         }[]
       }
       smart_search_region: {
-        Args: { city_id_filter?: number; search_text: string }
+        Args: { preferred_city_id?: number; search_text: string }
         Returns: {
           city_id: number
           city_name: string
@@ -4971,6 +4983,10 @@ export type Database = {
           region_id: number
           region_name: string
         }[]
+      }
+      soundex: {
+        Args: { "": string }
+        Returns: string
       }
       sync_alwaseet_invoice_data: {
         Args: { p_invoice_data: Json; p_orders_data: Json }
@@ -4995,6 +5011,10 @@ export type Database = {
       sync_user_scoped_received_invoices: {
         Args: Record<PropertyKey, never>
         Returns: Json
+      }
+      text_soundex: {
+        Args: { "": string }
+        Returns: string
       }
       text_to_bytea: {
         Args: { data: string }

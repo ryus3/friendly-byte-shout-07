@@ -257,19 +257,56 @@ async function getStoreData(userInfo: any, authToken?: string) {
 
     console.log(`✅ تم جلب ${cities?.length || 0} مدينة و ${regions?.length || 0} منطقة من النظام الحقيقي`);
     
-    // Get products with variants, inventory, and sales data
+    // Get comprehensive product data with all related information
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
+        department_id, category_id, product_type_id, season_occasion_id,
+        departments (id, name, description, color, icon),
+        categories (id, name, description, type),
+        product_types (id, name, description),
+        seasons_occasions (id, name, type, start_date, end_date),
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
-          colors (id, name),
+          colors (id, name, hex_code),
           sizes (id, name),
           inventory (quantity, min_stock, reserved_quantity, sold_quantity)
         )
       `)
       .eq('is_active', true);
+
+    // Get all departments, categories, product types, and seasons for comprehensive data
+    const { data: departments } = await supabase
+      .from('departments')
+      .select('id, name, description, color, icon, is_active, display_order')
+      .eq('is_active', true)
+      .order('display_order');
+
+    const { data: categories } = await supabase
+      .from('categories')
+      .select('id, name, description, type')
+      .order('name');
+
+    const { data: productTypes } = await supabase
+      .from('product_types')
+      .select('id, name, description')
+      .order('name');
+
+    const { data: seasonsOccasions } = await supabase
+      .from('seasons_occasions')
+      .select('id, name, type, start_date, end_date')
+      .order('name');
+
+    const { data: colors } = await supabase
+      .from('colors')
+      .select('id, name, hex_code')
+      .order('name');
+
+    const { data: sizes } = await supabase
+      .from('sizes')
+      .select('id, name')
+      .order('name');
     
     if (productsError) {
       console.error('❌ خطأ في جلب المنتجات:', productsError);
@@ -403,11 +440,23 @@ async function getStoreData(userInfo: any, authToken?: string) {
       orders: recentOrders || [],
       cities: cities || [],
       regions: regions || [],
+      departments: departments || [],
+      categories: categories || [],
+      productTypes: productTypes || [],
+      seasonsOccasions: seasonsOccasions || [],
+      colors: colors || [],
+      sizes: sizes || [],
       analytics: {
         citiesCount: cities?.length || 0,
         regionsCount: regions?.length || 0,
         productsCount: processedProducts?.length || 0,
         totalVariantsCount: processedProducts?.reduce((sum, p) => sum + (p.variants?.length || 0), 0) || 0,
+        departmentsCount: departments?.length || 0,
+        categoriesCount: categories?.length || 0,
+        productTypesCount: productTypes?.length || 0,
+        seasonsOccasionsCount: seasonsOccasions?.length || 0,
+        colorsCount: colors?.length || 0,
+        sizesCount: sizes?.length || 0,
         allTimeStats: {
           totalSales: allTimeTotal,
           totalProfit: allTimeProfitTotal || estimatedAllTimeProfit,
@@ -439,11 +488,23 @@ async function getStoreData(userInfo: any, authToken?: string) {
       orders: [],
       cities: [],
       regions: [],
+      departments: [],
+      categories: [],
+      productTypes: [],
+      seasonsOccasions: [],
+      colors: [],
+      sizes: [],
       analytics: {
         citiesCount: 0,
         regionsCount: 0,
         productsCount: 0,
         totalVariantsCount: 0,
+        departmentsCount: 0,
+        categoriesCount: 0,
+        productTypesCount: 0,
+        seasonsOccasionsCount: 0,
+        colorsCount: 0,
+        sizesCount: 0,
         allTimeStats: { totalSales: 0, totalProfit: 0, totalExpenses: 0, ordersCount: 0 },
         todayStats: { total: 0, count: 0, average: 0, profit: 0 },
         monthStats: { total: 0, profit: 0, expenses: 0, ordersCount: 0 }
@@ -530,12 +591,32 @@ const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - ال
 💰 إجمالي كل الأوقات: ${storeData.analytics?.allTimeStats?.totalSales?.toLocaleString() || 0} د.ع | أرباح: ${storeData.analytics?.allTimeStats?.actualProfit?.toLocaleString() || 0} د.ع
 📊 عدد الطلبات: اليوم ${storeData.analytics?.todayStats?.count || 0} | الشهر ${storeData.analytics?.monthStats?.ordersCount || 0} | الإجمالي ${storeData.analytics?.allTimeStats?.ordersCount || 0}
 
+🏪 **أقسام المتجر (${storeData.analytics.departmentsCount} قسم):**
+${storeData.departments?.map(dept => `🏷️ ${dept.name}: ${dept.description || 'قسم متنوع'}`).join('\n') || '- لا توجد أقسام متاحة حالياً'}
+
+📚 **التصنيفات (${storeData.analytics.categoriesCount} تصنيف):**
+${storeData.categories?.map(cat => `📋 ${cat.name} (${cat.type || 'عام'})`).join(', ') || 'لا توجد تصنيفات'}
+
+🏭 **أنواع المنتجات (${storeData.analytics.productTypesCount} نوع):**
+${storeData.productTypes?.map(type => `📦 ${type.name}`).join(', ') || 'لا توجد أنواع'}
+
+🎭 **المواسم والمناسبات (${storeData.analytics.seasonsOccasionsCount} موسم):**
+${storeData.seasonsOccasions?.map(season => `🎉 ${season.name}`).join(', ') || 'لا توجد مواسم'}
+
+🎨 **الألوان المتاحة (${storeData.analytics.colorsCount} لون):**
+${storeData.colors?.map(color => color.name).slice(0,10).join(', ') || 'لا توجد ألوان محددة'}
+
+📏 **الأحجام المتاحة (${storeData.analytics.sizesCount} حجم):**
+${storeData.sizes?.map(size => size.name).slice(0,10).join(', ') || 'لا توجد أحجام محددة'}
+
 **مخزون حقيقي ومنتجات متاحة:**
 ${availableProducts.slice(0,6).map(product => {
   const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
   const availableColors = [...new Set(variants.map((v: any) => v.color))].slice(0,4).join(', ');
   const availableSizes = [...new Set(variants.map((v: any) => v.size))].slice(0,4).join(', ');
-  return `✅ ${product.name}: ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة متاحة)
+  const department = product.departments?.name || 'غير محدد';
+  const category = product.categories?.name || 'غير محدد';
+  return `✅ ${product.name} (${department} - ${category}): ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة متاحة)
    🎨 ألوان: ${availableColors || 'افتراضي'} | 📏 مقاسات: ${availableSizes || 'افتراضي'}`;
 }).join('\n')}
 
@@ -555,6 +636,14 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
 
 **تعليمات الذكاء الخارق مع الفهم الجغرافي المتقدم:**
 كن مختصراً وذكياً (1-2 سطر) + اعطِ معلومات دقيقة من النظام الحقيقي فقط. عند ذكر أي مدينة أو منطقة، استخدم نظام المرادفات الذكي:
+
+### أسئلة الأقسام والتصنيفات:
+- عند سؤال "ما المتوفر في قسم نسائي؟" → أعرض منتجات القسم النسائي المتاحة في المخزون
+- عند سؤال "منتجات الموسم الصيفي؟" → أعرض منتجات موسم الصيف المتاحة
+- عند سؤال "ألوان متاحة؟" → أعرض قائمة الألوان من النظام
+- عند سؤال "أحجام متاحة؟" → أعرض قائمة الأحجام المتاحة
+- عند سؤال "تصنيفات المتجر؟" → أعرض التصنيفات والأقسام الموجودة
+- تأكد من عرض الأسعار والكميات المتاحة من المخزون الحقيقي
 
 ### قواعد الفهم الجغرافي:
 - **الكرادة**: إذا ذُكرت بدون تحديد → اختر "كرادة داخل" (الأكثر شيوعاً)
