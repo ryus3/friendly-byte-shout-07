@@ -34,17 +34,19 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         
         try {
           const alWaseetPayload = {
-            name: customerInfo.name,
-            phone: customerInfo.phone,
+            name: customerInfo.customer_name || customerInfo.name,
+            phone: customerInfo.customer_phone || customerInfo.phone,
             second_phone: customerInfo.second_phone || '',
-            address: customerInfo.address,
+            address: customerInfo.customer_address || customerInfo.address,
             notes: customerInfo.notes || '',
             details: (cart || []).filter(item => item != null).map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
             quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
             price: finalAmount + (settings?.delivery_fee || 50000), // إضافة رسوم التوصيل
             size: 'عادي',
             type: 'new',
-            promocode: customerInfo.promo_code || ''
+            promocode: customerInfo.promo_code || '',
+            city_id: customerInfo.customer_city_id,
+            region_id: customerInfo.customer_region_id
           };
 
           console.log('📦 إرسال للوسيط:', alWaseetPayload);

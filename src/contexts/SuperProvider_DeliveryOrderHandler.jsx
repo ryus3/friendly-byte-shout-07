@@ -18,6 +18,8 @@ export const useDeliveryOrderHandler = () => {
         customer_address: aiOrder.customer_address,
         customer_city: aiOrder.customer_city,
         customer_province: aiOrder.customer_province,
+        customer_city_id: aiOrder.city_id,
+        customer_region_id: aiOrder.region_id,
         delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
       };
 
