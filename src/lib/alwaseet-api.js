@@ -160,7 +160,23 @@ const mapToAlWaseetFields = (orderData) => {
     cleanedLocation = cleanedLocation.replace(regex, '').trim();
   });
   
-  // إزالة أسماء المدن والمناطق إذا كانت موجودة
+  // إزالة أسماء المدن والمناطق المحددة بالإضافة إلى الشائعة
+  const cityNames = ['كربلاء', 'بغداد', 'البصرة', 'الموصل', 'اربيل', 'السليمانية', 'النجف', 'كركوك'];
+  const regionNames = ['الملحق', 'المركز', 'الحي', 'المنطقة', 'القطاع'];
+  
+  // إزالة أسماء المدن
+  cityNames.forEach(city => {
+    const regex = new RegExp('\\b' + city + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
+  
+  // إزالة أسماء المناطق
+  regionNames.forEach(region => {
+    const regex = new RegExp('\\b' + region + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
+  
+  // إزالة أسماء المدن والمناطق المحددة في البيانات إذا كانت موجودة
   if (orderData.customer_city) {
     const cityRegex = new RegExp('\\b' + orderData.customer_city + '\\b', 'gi');
     cleanedLocation = cleanedLocation.replace(cityRegex, '').trim();
