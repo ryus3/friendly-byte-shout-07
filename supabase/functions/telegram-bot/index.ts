@@ -112,8 +112,8 @@ serve(async (req) => {
           console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_message_text: text,
-            p_chat_id: chatId
+            input_text: text,
+            chat_id: chatId
           });
 
           if (orderError) {
