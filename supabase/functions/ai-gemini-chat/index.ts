@@ -321,12 +321,13 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed profit info - إصلاح أخطاء الاستعلام
+    // Get recent orders with detailed profit info - FIXED with tracking data
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
+        tracking_number, delivery_status, delivery_partner,
         order_items (
           id, quantity, unit_price, total_price,
           variant_sku
@@ -631,9 +632,9 @@ ${availableProducts.slice(0,6).map(product => {
 
 ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStockProducts.slice(0,4).map(p => p.name).join(', ')} - اقترح بدائل ذكية` : ''}
 
-**نظام المدن والمناطق الحقيقي (${storeData.cities.length} مدينة، ${storeData.regions.length} منطقة):**
-🏙️ **المدن:** ${cityList}${storeData.cities.length > 10 ? ` و${storeData.cities.length - 10} مدن أخرى` : ''}
-📍 **مناطق رئيسية:** ${storeData.regions.slice(0,10).map(r => r.name).join(', ')}
+**نظام المدن والمناطق الحقيقي (${(storeData.cities || []).length} مدينة، ${(storeData.regions || []).length} منطقة):**
+🏙️ **المدن:** ${cityList}${(storeData.cities || []).length > 10 ? ` و${(storeData.cities || []).length - 10} مدن أخرى` : ''}
+📍 **مناطق رئيسية:** ${(storeData.regions || []).slice(0,10).map(r => r.name).join(', ')}
 
 **قدرات إنشاء الطلبات الخارقة:**
 - 🤖 استخدام نفس منطق بوت التليغرام المتطور
@@ -699,7 +700,7 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
     const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون', 'أنشئ', 'إنشاء', 'سجل', 'أضف'];
     const hasOrderIntent = orderKeywords.some(keyword => message.toLowerCase().includes(keyword)) || 
                           message.includes('د.ع') || 
-                          storeData.cities.some(city => message.toLowerCase().includes(city.name.toLowerCase()));
+                          (storeData.cities || []).some(city => message.toLowerCase().includes(city.name.toLowerCase()));
     
     let responseType = 'text';
     let orderData = null;
