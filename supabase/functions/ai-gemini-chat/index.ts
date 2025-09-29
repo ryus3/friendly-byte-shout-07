@@ -619,18 +619,28 @@ ${storeData.colors?.map(color => color.name).slice(0,10).join(', ') || 'لا ت�
 📏 **الأحجام المتاحة (${storeData.analytics.sizesCount} حجم):**
 ${storeData.sizes?.map(size => size.name).slice(0,10).join(', ') || 'لا توجد أحجام محددة'}
 
-**مخزون حقيقي ومنتجات متاحة:**
-${availableProducts.slice(0,6).map(product => {
+**مخزون مفصل بالألوان والأحجام:**
+${availableProducts.slice(0,8).map(product => {
   const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
-  const availableColors = [...new Set(variants.map((v: any) => v.color))].slice(0,4).join(', ');
-  const availableSizes = [...new Set(variants.map((v: any) => v.size))].slice(0,4).join(', ');
   const department = product.departments?.name || 'غير محدد';
   const category = product.categories?.name || 'غير محدد';
-  return `✅ ${product.name} (${department} - ${category}): ${product.base_price?.toLocaleString()} د.ع (${product.inventory_count} قطعة متاحة)
-   🎨 ألوان: ${availableColors || 'افتراضي'} | 📏 مقاسات: ${availableSizes || 'افتراضي'}`;
-}).join('\n')}
-
-${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStockProducts.slice(0,4).map(p => p.name).join(', ')} - اقترح بدائل ذكية` : ''}
+  const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+  
+  // تجميع المتغيرات حسب اللون
+  const colorGroups = variants.reduce((acc: any, v: any) => {
+    const color = v.color || 'افتراضي';
+    if (!acc[color]) acc[color] = [];
+    acc[color].push({ size: v.size || 'افتراضي', stock: v.stock || 0 });
+    return acc;
+  }, {});
+  
+  let productInfo = `✅ **${product.name}** (${department}) - ${product.base_price?.toLocaleString()} د.ع - إجمالي: ${totalStock}\n`;
+  Object.keys(colorGroups).slice(0,4).forEach(color => {
+    const sizes = colorGroups[color].map((s: any) => `${s.size}(${s.stock})`).join(', ');
+    productInfo += `   🎨 ${color}: ${sizes}\n`;
+  });
+  return productInfo;
+}).join('')}
 
 **نظام المدن والمناطق الحقيقي (${(storeData.cities || []).length} مدينة، ${(storeData.regions || []).length} منطقة):**
 🏙️ **المدن:** ${cityList}${(storeData.cities || []).length > 10 ? ` و${(storeData.cities || []).length - 10} مدن أخرى` : ''}
@@ -644,8 +654,12 @@ ${outOfStockProducts.length > 0 ? `⚠️ **نفد المخزون:** ${outOfStoc
 - 💾 حفظ تلقائي في ai_orders مع source='ai_assistant'
 - 👤 اسم افتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
 
-**تعليمات الذكاء الخارق مع الفهم الجغرافي المتقدم:**
-كن مختصراً وذكياً (1-2 سطر) + اعطِ معلومات دقيقة من النظام الحقيقي فقط. عند ذكر أي مدينة أو منطقة، استخدم نظام المرادفات الذكي:
+**تعليمات الردود المختصرة والذكية:**
+- كن مختصراً جداً (سطر واحد أو اثنين)
+- لا تكرر الترحيب أو التحيات
+- اعرض المعلومات مباشرة وبذكاء
+- عند السؤال عن منتج: اعرض الألوان والأحجام المتاحة فوراً
+- مثال: "برشلونة: 🔵أزرق S(40) M(24) L(20) | ⚪أبيض S(151) M(2)"
 
 ### أسئلة الأقسام والتصنيفات:
 - عند سؤال "ما المتوفر في قسم نسائي؟" → أعرض منتجات القسم النسائي المتاحة في المخزون
