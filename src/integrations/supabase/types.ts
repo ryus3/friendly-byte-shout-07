@@ -4385,6 +4385,10 @@ export type Database = {
         Args: { input_text: string }
         Returns: Json
       }
+      extract_product_text_from_message: {
+        Args: { input_text: string }
+        Returns: string
+      }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
