@@ -4382,7 +4382,7 @@ export type Database = {
         Returns: undefined
       }
       extract_product_items_from_text: {
-        Args: { p_text: string }
+        Args: { input_text: string }
         Returns: Json
       }
       extract_product_text_from_message: {
