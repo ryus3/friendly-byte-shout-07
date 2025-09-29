@@ -219,8 +219,8 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
     for (const it of items) {
       const name = (it?.product_name || it?.name || it?.product || '').toString().trim();
       const qty = Number(it?.quantity || 1);
-      const sizeRaw = it?.size;
-      const colorRaw = it?.color;
+      const sizeRaw = it?.size_name || it?.size;
+      const colorRaw = it?.color_name || it?.color;
       const parts = [colorRaw ? `اللون ${colorRaw}` : null, sizeRaw ? `المقاس ${sizeRaw}` : null].filter(Boolean).join('، ');
       const avail = it?.availability;
       const miss = it?.missing_attributes || {};
