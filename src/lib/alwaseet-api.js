@@ -140,6 +140,49 @@ export const createAlWaseetOrder = async (orderData, token) => {
 const mapToAlWaseetFields = (orderData) => {
   console.log('🔍 mapToAlWaseetFields - Input data:', orderData);
   
+  // استخراج وتنظيف حقل العنوان (أقرب نقطة دالة)
+  let cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
+  
+  // إزالة أرقام الهاتف (أي رقم 7 خانات أو أكثر)
+  cleanedLocation = cleanedLocation.replace(/\b\d{7,}\b/g, '').trim();
+  
+  // إزالة أسماء المنتجات الشائعة
+  const productNames = ['تيشرت', 'تشيرت', 'بنطال', 'جينز', 'قميص', 'فستان', 'برشلونة', 'ارجنتين', 'ريال', 'مدريد', 'باريس', 'سان', 'جيرمان'];
+  productNames.forEach(name => {
+    const regex = new RegExp('\\b' + name + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
+  
+  // إزالة الألوان والأحجام
+  const colorsAndSizes = ['احمر', 'اخضر', 'ازرق', 'اصفر', 'اسود', 'ابيض', 'بني', 'رمادي', 'كبير', 'صغير', 'وسط', 'ميديم', 'لارج', 'سمول', 'اكس', 'xl', 'xxl', 'xxxl', 's', 'm', 'l', 'xs'];
+  colorsAndSizes.forEach(item => {
+    const regex = new RegExp('\\b' + item + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
+  
+  // إزالة أسماء المدن والمناطق إذا كانت موجودة
+  if (orderData.customer_city) {
+    const cityRegex = new RegExp('\\b' + orderData.customer_city + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(cityRegex, '').trim();
+  }
+  if (orderData.customer_province) {
+    const regionRegex = new RegExp('\\b' + orderData.customer_province + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regionRegex, '').trim();
+  }
+  
+  // تنظيف المسافات الإضافية وإزالة علامات الترقيم المتكررة
+  cleanedLocation = cleanedLocation.replace(/\s+/g, ' ').replace(/[,،\-\s]+$/, '').trim();
+  
+  // إذا كان العنوان قصيراً جداً أو فارغ، اتركه فارغ
+  if (cleanedLocation.length < 3) {
+    cleanedLocation = '';
+  }
+  
+  console.log('🧹 تنظيف العنوان:', {
+    original: orderData.customer_address,
+    cleaned: cleanedLocation
+  });
+  
   const mapped = {
     qr_id: orderData.tracking_number || orderData.qr_id || orderData.delivery_partner_order_id,
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
@@ -147,7 +190,7 @@ const mapToAlWaseetFields = (orderData) => {
     client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
     city_id: parseInt(orderData.customer_city_id || orderData.city_id || 0),
     region_id: parseInt(orderData.customer_region_id || orderData.region_id || 0),
-    location: orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '',
+    location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
     price: parseInt(orderData.price || orderData.final_total || orderData.total_amount || 0),
