@@ -4978,7 +4978,7 @@ export type Database = {
         }[]
       }
       smart_search_region: {
-        Args: { preferred_city_id?: number; search_text: string }
+        Args: { p_city_id?: number; search_text: string }
         Returns: {
           city_id: number
           city_name: string
