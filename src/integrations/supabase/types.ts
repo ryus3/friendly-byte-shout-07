@@ -4382,7 +4382,7 @@ export type Database = {
         Returns: undefined
       }
       extract_product_items_from_text: {
-        Args: { input_text: string }
+        Args: { p_text: string }
         Returns: Json
       }
       extract_product_text_from_message: {
@@ -5022,6 +5022,14 @@ export type Database = {
       }
       text_to_bytea: {
         Args: { data: string }
+        Returns: string
+      }
+      translate_arabic_color: {
+        Args: { arabic_color: string }
+        Returns: string
+      }
+      translate_arabic_size: {
+        Args: { arabic_size: string }
         Returns: string
       }
       update_cash_source_balance: {
