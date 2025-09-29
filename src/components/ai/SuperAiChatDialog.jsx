@@ -405,6 +405,7 @@ const AiManagementButton = ({ usage, currentModel, onModelChange, systemStatus }
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 px-3 bg-gradient-to-r from-emerald-500 to-blue-500 text-white border-0 hover:opacity-90 hover:scale-105 transition-all">
+          <Settings className="w-4 h-4 mr-1" />
           <span>إدارة</span>
         </Button>
       </PopoverTrigger>
@@ -432,6 +433,14 @@ const AiManagementButton = ({ usage, currentModel, onModelChange, systemStatus }
                 <Badge variant={systemStatus === 'online' ? 'default' : 'destructive'} className="text-xs">
                   <div className={cn("w-2 h-2 rounded-full mr-1", systemStatus === 'online' ? 'bg-green-500' : 'bg-red-500')} />
                   {systemStatus === 'online' ? 'متصل' : 'إعادة اتصال'}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+                <span>نظام الذكاء الجغرافي:</span>
+                <Badge variant="secondary" className="text-xs">
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  نشط
                 </Badge>
               </div>
             </div>
