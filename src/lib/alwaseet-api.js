@@ -141,47 +141,49 @@ const mapToAlWaseetFields = (orderData) => {
   console.log('🔍 mapToAlWaseetFields - Input data:', orderData);
   
   // استخراج وتنظيف حقل العنوان (أقرب نقطة دالة)
-  // ملاحظة: customer_address يجب أن يكون منظف مسبقاً من extract_actual_address
   let cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
   
-  // تنظيف إضافي كخط دفاع ثاني
   // إزالة أرقام الهاتف (أي رقم 7 خانات أو أكثر)
-  cleanedLocation = cleanedLocation.replace(/\b\d{7,}\b/g, '');
+  cleanedLocation = cleanedLocation.replace(/\b\d{7,}\b/g, '').trim();
   
-  // إزالة الأرقام القصيرة (كميات/أكواد المنتجات)
-  cleanedLocation = cleanedLocation.replace(/\b\d{1,3}\b/g, '');
+  // إزالة أسماء المنتجات الشائعة
+  const productNames = ['تيشرت', 'تشيرت', 'بنطال', 'جينز', 'قميص', 'فستان', 'برشلونة', 'ارجنتين', 'ريال', 'مدريد', 'باريس', 'سان', 'جيرمان'];
+  productNames.forEach(name => {
+    const regex = new RegExp('\\b' + name + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
   
-  // إزالة أسماء المنتجات والألوان والأحجام - قائمة شاملة
-  const unwantedTerms = [
-    // منتجات
-    'تيشرت', 'تشيرت', 'بنطال', 'جينز', 'قميص', 'فستان', 'سوت', 'شيك',
-    'برشلونة', 'ارجنتين', 'ريال', 'مدريد', 'باريس', 'سان', 'جيرمان',
-    // ألوان
-    'احمر', 'اخضر', 'ازرق', 'اصفر', 'اسود', 'ابيض', 'بني', 'رمادي',
-    'سمائي', 'سماوي', 'بنفسجي', 'وردي', 'برتقالي',
-    // أحجام
-    'كبير', 'صغير', 'وسط', 'ميديم', 'لارج', 'سمول', 'اكس', 'دبل',
-    'xl', 'xxl', 'xxxl', 's', 'm', 'l', 'xs',
-    // مدن شائعة (كخط دفاع إضافي)
-    'كربلاء', 'بغداد', 'البصرة', 'الموصل', 'اربيل', 'السليمانية', 'النجف', 'كركوك',
-    // مناطق شائعة
-    'الملحق', 'المركز', 'الحي', 'المنطقة', 'القطاع', 'ناحية', 'قضاء'
-  ];
+  // إزالة الألوان والأحجام
+  const colorsAndSizes = ['احمر', 'اخضر', 'ازرق', 'اصفر', 'اسود', 'ابيض', 'بني', 'رمادي', 'كبير', 'صغير', 'وسط', 'ميديم', 'لارج', 'سمول', 'اكس', 'xl', 'xxl', 'xxxl', 's', 'm', 'l', 'xs'];
+  colorsAndSizes.forEach(item => {
+    const regex = new RegExp('\\b' + item + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
   
-  // إزالة جميع المصطلحات غير المرغوب فيها
-  unwantedTerms.forEach(term => {
-    const regex = new RegExp('\\b' + term + '\\b', 'gi');
-    cleanedLocation = cleanedLocation.replace(regex, '');
+  // إزالة أسماء المدن والمناطق المحددة بالإضافة إلى الشائعة
+  const cityNames = ['كربلاء', 'بغداد', 'البصرة', 'الموصل', 'اربيل', 'السليمانية', 'النجف', 'كركوك'];
+  const regionNames = ['الملحق', 'المركز', 'الحي', 'المنطقة', 'القطاع'];
+  
+  // إزالة أسماء المدن
+  cityNames.forEach(city => {
+    const regex = new RegExp('\\b' + city + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
+  });
+  
+  // إزالة أسماء المناطق
+  regionNames.forEach(region => {
+    const regex = new RegExp('\\b' + region + '\\b', 'gi');
+    cleanedLocation = cleanedLocation.replace(regex, '').trim();
   });
   
   // إزالة أسماء المدن والمناطق المحددة في البيانات إذا كانت موجودة
   if (orderData.customer_city) {
     const cityRegex = new RegExp('\\b' + orderData.customer_city + '\\b', 'gi');
-    cleanedLocation = cleanedLocation.replace(cityRegex, '');
+    cleanedLocation = cleanedLocation.replace(cityRegex, '').trim();
   }
-  if (orderData.customer_province && orderData.customer_province !== orderData.customer_city) {
+  if (orderData.customer_province) {
     const regionRegex = new RegExp('\\b' + orderData.customer_province + '\\b', 'gi');
-    cleanedLocation = cleanedLocation.replace(regionRegex, '');
+    cleanedLocation = cleanedLocation.replace(regionRegex, '').trim();
   }
   
   // تنظيف المسافات الإضافية وإزالة علامات الترقيم المتكررة
