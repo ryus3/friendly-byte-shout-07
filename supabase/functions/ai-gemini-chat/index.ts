@@ -302,7 +302,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
 
     const { data: seasonsOccasions } = await supabase
       .from('seasons_occasions')
-      .select('id, name, type, start_date, end_date')
+      .select('id, name, type, description')
       .order('name');
 
     const { data: colors } = await supabase
@@ -321,7 +321,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed profit info
+    // Get recent orders with detailed profit info - إصلاح أخطاء الاستعلام
     const { data: recentOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
@@ -329,7 +329,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
         order_items (
           id, quantity, unit_price, total_price,
-          product_name, variant_sku
+          variant_sku
         ),
         profits (
           profit_amount, employee_profit, status
@@ -583,8 +583,10 @@ serve(async (req) => {
       }
     };
 
-    // إعداد قوائم المدن والمناطق الحقيقية
-    const cityList = storeData.cities.map(c => c.name).slice(0, 10).join(', ');
+    // إعداد قوائم المدن والمناطق الحقيقية - مع التحقق من وجود البيانات
+    const cityList = (storeData.cities && storeData.cities.length > 0) 
+      ? storeData.cities.map(c => c.name).slice(0, 10).join(', ')
+      : 'لا توجد مدن متاحة';
     const availableProducts = storeData.products.filter(p => (p.inventory_count || 0) > 0);
     const outOfStockProducts = storeData.products.filter(p => (p.inventory_count || 0) === 0);
 
