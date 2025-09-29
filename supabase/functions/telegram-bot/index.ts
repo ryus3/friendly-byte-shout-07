@@ -151,23 +151,12 @@ serve(async (req) => {
                 if (item.is_available === false) {
                   hasUnavailableItems = true;
                   
-                  // استخراج اللون والحجم المطلوب
-                  const requestedColor = item.color_name || 'غير محدد';
-                  const requestedSize = item.size_name || 'غير محدد';
-                  
-                  // بناء رسالة خطأ واضحة ومنسقة
-                  unavailableMessage = `❌ عذراً، المنتج "${item.product_name}" غير متوفر بالمواصفات المطلوبة:\n`;
-                  unavailableMessage += `🔍 المطلوب: ${requestedColor} - ${requestedSize}\n\n`;
-                  
-                  // استخدام رسالة البدائل من الدالة المحسنة
+                  // استخدام رسالة البدائل من الدالة المحسنة مباشرة بدون إضافات
                   if (item.alternatives_message && item.alternatives_message.trim() !== '') {
-                    unavailableMessage += item.alternatives_message;
+                    unavailableMessage = item.alternatives_message;
                   } else {
-                    unavailableMessage += `💡 يرجى التواصل لمعرفة المواصفات المتوفرة.`;
+                    unavailableMessage = `❌ لم يتم إنشاء طلب!\nالمنتج "${item.product_name}" غير متوفر حالياً\n\n💡 يرجى التواصل لمعرفة المواصفات المتوفرة.`;
                   }
-                  
-                  // إضافة رسالة إرشادية
-                  unavailableMessage += `\n💬 يرجى إعادة كتابة الطلب بالمواصفات المتوفرة أعلاه.`;
                   break;
                 }
               }
