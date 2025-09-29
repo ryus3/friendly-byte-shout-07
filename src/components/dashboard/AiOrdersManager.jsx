@@ -750,9 +750,9 @@ useEffect(() => {
                         <MessageSquare className="w-4 h-4" />
                       </div>
                     </div>
-                    <div className="flex flex-col items-center justify-center w-full">
-                      <h4 className="font-bold text-xs leading-tight">إجمالي الطلبات</h4>
-                      <p className="text-emerald-100 text-xs leading-tight">طلبات واردة</p>
+                    <div>
+                      <h4 className="font-bold text-xs">إجمالي الطلبات</h4>
+                      <p className="text-emerald-100 text-xs">طلبات واردة</p>
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{totalCount} طلب</p>

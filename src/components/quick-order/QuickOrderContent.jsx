@@ -253,7 +253,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         notes: aiOrderData.order_data?.delivery_type ? `نوع التوصيل: ${aiOrderData.order_data.delivery_type}` : '',
         details: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.map(item => {
-            const colorSize = [item.color_name || item.color, item.size_name || item.size].filter(Boolean).join(' ');
+            const colorSize = [item.color, item.size].filter(Boolean).join(' ');
             return `${item.product_name || item.name}${colorSize ? ` (${colorSize})` : ''} × ${item.quantity}`;
           }).join(' + ') : '',
         quantity: Array.isArray(aiOrderData.items) ? 
