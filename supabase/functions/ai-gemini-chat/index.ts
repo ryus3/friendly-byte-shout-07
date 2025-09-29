@@ -624,20 +624,36 @@ ${availableProducts.slice(0,8).map(product => {
   const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
   const department = product.departments?.name || 'غير محدد';
   const category = product.categories?.name || 'غير محدد';
-  const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
   
-  // تجميع المتغيرات حسب اللون
+  // تجميع المتغيرات حسب اللون مع تفاصيل أكثر
   const colorGroups = variants.reduce((acc: any, v: any) => {
     const color = v.color || 'افتراضي';
     if (!acc[color]) acc[color] = [];
-    acc[color].push({ size: v.size || 'افتراضي', stock: v.stock || 0 });
+    
+    const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
+    acc[color].push({ 
+      size: v.size || 'افتراضي', 
+      available: available, // العدد المتاح فعلياً
+      total: v.stock || 0, // العدد الإجمالي
+      reserved: v.reserved || 0, // المحجوز
+      sold: v.sold || 0 // المباع
+    });
     return acc;
   }, {});
   
-  let productInfo = `✅ **${product.name}** (${department}) - ${product.base_price?.toLocaleString()} د.ع - إجمالي: ${totalStock}\n`;
+  const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+  const totalAvailable = variants.reduce((sum: number, v: any) => sum + Math.max(0, (v.stock || 0) - (v.reserved || 0)), 0);
+  
+  let productInfo = `✅ **${product.name}** (${department}) - ${product.base_price?.toLocaleString()} د.ع - مجموع: ${totalStock}, متاح: ${totalAvailable}\n`;
   Object.keys(colorGroups).slice(0,4).forEach(color => {
-    const sizes = colorGroups[color].map((s: any) => `${s.size}(${s.stock})`).join(', ');
-    productInfo += `   🎨 ${color}: ${sizes}\n`;
+    const sizesInfo = colorGroups[color]
+      .sort((a: any, b: any) => {
+        const sizeOrder: {[key: string]: number} = { 'XS': 1, 'S': 2, 'M': 3, 'L': 4, 'XL': 5, 'XXL': 6 };
+        return (sizeOrder[a.size as string] || 99) - (sizeOrder[b.size as string] || 99);
+      })
+      .map((s: any) => `${s.size}(${s.available}/${s.total})`)
+      .join(', ');
+    productInfo += `   🎨 ${color}: ${sizesInfo}\n`;
   });
   return productInfo;
 }).join('')}
@@ -658,8 +674,11 @@ ${availableProducts.slice(0,8).map(product => {
 - كن مختصراً جداً (سطر واحد أو اثنين)
 - لا تكرر الترحيب أو التحيات
 - اعرض المعلومات مباشرة وبذكاء
-- عند السؤال عن منتج: اعرض الألوان والأحجام المتاحة فوراً
-- مثال: "برشلونة: 🔵أزرق S(40) M(24) L(20) | ⚪أبيض S(151) M(2)"
+- عند السؤال عن منتج: اعرض الألوان والأحجام والمخزون بالتفصيل
+- تنسيق المخزون: المنتج → اللون: الحجم(المتاح/الإجمالي)
+- مثال: "برشلونة → 🔵أزرق: S(40/45), M(24/30), L(20/25) | ⚪أبيض: S(151/151), M(2/5)"
+- اعرض العدد المحجوز والمباع عند الحاجة
+- رتب الأحجام منطقياً: XS, S, M, L, XL, XXL
 
 ### أسئلة الأقسام والتصنيفات:
 - عند سؤال "ما المتوفر في قسم نسائي؟" → أعرض منتجات القسم النسائي المتاحة في المخزون
