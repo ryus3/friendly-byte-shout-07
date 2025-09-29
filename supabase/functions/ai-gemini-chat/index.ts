@@ -262,11 +262,18 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
-        department_id, category_id, product_type_id, season_occasion_id,
-        departments (id, name, description, color, icon),
-        categories (id, name, description, type),
-        product_types (id, name, description),
-        seasons_occasions (id, name, type, start_date, end_date),
+        product_departments!inner (
+          departments (id, name, description, color, icon)
+        ),
+        product_categories!inner (
+          categories (id, name, description, type)
+        ),
+        product_product_types!inner (
+          product_types (id, name, description)
+        ),
+        product_seasons_occasions!inner (
+          seasons_occasions (id, name, type, description)
+        ),
         product_variants (
           id, sku, color_id, size_id, price, cost_price,
           colors (id, name, hex_code),
@@ -320,7 +327,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
-        order_item_variants (
+        order_items (
           id, quantity, unit_price, total_price,
           product_name, variant_sku
         ),
