@@ -82,90 +82,7 @@ function extractPhoneFromText(text: string): string {
   return '';
 }
 
-// Extract city from text - basic implementation
-function extractCityFromText(text: string): { city: string, province: string } {
-  const lowerText = text.toLowerCase();
-  
-  // Common Iraqi cities mapping
-  const cityMappings: Record<string, { city: string, province: string }> = {
-    'بغداد': { city: 'بغداد', province: 'بغداد' },
-    'كراده': { city: 'الكرادة', province: 'بغداد' },
-    'الكراده': { city: 'الكرادة', province: 'بغداد' },
-    'الكرادة': { city: 'الكرادة', province: 'بغداد' },
-    'ديوانية': { city: 'الديوانية', province: 'الديوانية' },
-    'الديوانية': { city: 'الديوانية', province: 'الديوانية' },
-    'نجف': { city: 'النجف', province: 'النجف' },
-    'النجف': { city: 'النجف', province: 'النجف' },
-    'كربلاء': { city: 'كربلاء', province: 'كربلاء' },
-    'البصرة': { city: 'البصرة', province: 'البصرة' },
-    'بصرة': { city: 'البصرة', province: 'البصرة' }
-  };
-
-  for (const [key, value] of Object.entries(cityMappings)) {
-    if (lowerText.includes(key)) {
-      return value;
-    }
-  }
-
-  return { city: '', province: '' };
-}
-
-// Extract product info from text - basic implementation
-function extractProductFromText(text: string): any[] {
-  const lowerText = text.toLowerCase();
-  
-  // Common product patterns
-  const products = [
-    { name: 'قميص', keywords: ['قميص', 'قمصان'] },
-    { name: 'ارجنتين', keywords: ['ارجنتين', 'أرجنتين'] },
-    { name: 'تيشرت', keywords: ['تيشرت', 'تشيرت'] }
-  ];
-
-  const colors = ['أحمر', 'أزرق', 'أسود', 'أبيض', 'سمائي', 'أخضر'];
-  const sizes = ['S', 'M', 'L', 'XL', 'صغير', 'وسط', 'كبير', 'ميديم', 'لارج'];
-
-  let foundProduct = null;
-  let foundColor = '';
-  let foundSize = '';
-
-  // Find product
-  for (const product of products) {
-    if (product.keywords.some(keyword => lowerText.includes(keyword))) {
-      foundProduct = product.name;
-      break;
-    }
-  }
-
-  // Find color
-  for (const color of colors) {
-    if (lowerText.includes(color.toLowerCase())) {
-      foundColor = color;
-      break;
-    }
-  }
-
-  // Find size
-  for (const size of sizes) {
-    if (lowerText.includes(size.toLowerCase())) {
-      foundSize = size;
-      break;
-    }
-  }
-
-  if (foundProduct) {
-    return [{
-      product_name: foundProduct,
-      color: foundColor || 'افتراضي',
-      size: foundSize || 'افتراضي',
-      quantity: 1,
-      price: 15000,
-      total_price: 15000,
-      is_available: true
-    }];
-  }
-
-  return [];
-}
+// Note: City and product extraction is now handled by the smart database function process_telegram_order
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -226,22 +143,11 @@ serve(async (req) => {
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
-           // استخراج الهاتف فقط - الدالة الذكية ستتولى باقي الاستخراج
-           const extractedPhone = extractPhoneFromText(text);
-
-           // بناء order_data مبسط جداً - الدالة الذكية ستقوم بكل شيء
-           const orderData = {
-             customer_name: '',
-             customer_phone: extractedPhone,
-             customer_address: text, // النص الكامل للمعالجة الذكية
-             original_text: text
-           };
-          
-          // استدعاء الدالة الذكية التي ستستخرج المنتجات والعناوين بذكاء
+          // استدعاء الدالة الذكية المطورة التي تستخدم extract_product_items_from_text
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_order_data: orderData,
-            p_employee_code: employeeCode,
-            p_chat_id: chatId
+            p_chat_id: chatId,
+            p_message_text: text,
+            p_employee_id: employeeId
           });
 
           if (orderError) {
