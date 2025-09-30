@@ -4880,11 +4880,6 @@ export type Database = {
               p_message_text: string
             }
           | {
-              p_chat_id: number
-              p_employee_id?: string
-              p_message_text: string
-            }
-          | {
               p_customer_address: string
               p_customer_name: string
               p_customer_phone: string
