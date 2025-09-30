@@ -1002,11 +1002,11 @@ export const SuperProvider = ({ children }) => {
 
       // بيانات الطلب للإدراج
       const baseOrder = isPayload ? arg1 : {
-        customer_name: arg1?.name,
-        customer_phone: arg1?.phone,
-        customer_address: arg1?.address,
-        customer_city: arg1?.city,
-        customer_province: arg1?.province,
+        customer_name: arg1?.customer_name || arg1?.name,
+        customer_phone: arg1?.customer_phone || arg1?.phone,
+        customer_address: arg1?.customer_address || arg1?.address,
+        customer_city: arg1?.customer_city || arg1?.city,
+        customer_province: arg1?.customer_province || arg1?.province,
         notes: arg1?.notes,
       };
 
