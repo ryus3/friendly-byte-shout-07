@@ -365,34 +365,47 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
 
   const isProblematic = availability !== 'available' || needsReview;
   
-  // حساب السعر الإجمالي مع رسوم التوصيل كما في الطلبات العادية
+  // حساب السعر الإجمالي - استخدام final_amount إذا كان متوفراً لأنه يشمل رسوم التوصيل
   const calculateTotalAmount = useMemo(() => {
-    const baseAmount = order.final_amount || order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
-    const deliveryFee = settings?.deliveryFee || 0;
-    
-    // التحقق من نوع التوصيل - إذا لم يكن محلي، أضف رسوم التوصيل
-    const isLocalDelivery = order.delivery_partner === 'محلي';
-    
-    if (isLocalDelivery) {
-      return baseAmount + deliveryFee;
+    // إذا كان final_amount متوفراً، استخدمه مباشرة لأنه يشمل رسوم التوصيل
+    if (order.final_amount) {
+      return order.final_amount;
     }
     
-    return baseAmount;
+    // إذا لم يكن final_amount متوفراً، احسب المجموع يدوياً
+    const baseAmount = order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
+    const deliveryFee = settings?.deliveryFee || 0;
+    const isLocalDelivery = order.delivery_partner === 'محلي';
+    
+    return baseAmount + (isLocalDelivery ? deliveryFee : 0);
   }, [order, settings]);
   
   // حساب التفاصيل للعرض
   const priceDetails = useMemo(() => {
-    const baseAmount = order.final_amount || order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
-    const deliveryFee = settings?.deliveryFee || 0;
-    const isLocalDelivery = order.delivery_partner === 'محلي';
+    let baseAmount, deliveryFee, total;
+    
+    if (order.final_amount) {
+      // إذا كان final_amount متوفراً، فهو المجموع النهائي
+      total = order.final_amount;
+      // استخرج سعر المنتجات من المجموع النهائي
+      const orderDeliveryFee = order.delivery_fee || settings?.deliveryFee || 0;
+      baseAmount = total - orderDeliveryFee;
+      deliveryFee = orderDeliveryFee;
+    } else {
+      // الحساب اليدوي
+      baseAmount = order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
+      const isLocalDelivery = order.delivery_partner === 'محلي';
+      deliveryFee = isLocalDelivery ? (settings?.deliveryFee || 0) : 0;
+      total = baseAmount + deliveryFee;
+    }
     
     return {
       baseAmount,
-      deliveryFee: isLocalDelivery ? deliveryFee : 0,
-      total: calculateTotalAmount,
-      showDeliveryFee: isLocalDelivery && deliveryFee > 0
+      deliveryFee,
+      total,
+      showDeliveryFee: deliveryFee > 0
     };
-  }, [order, settings, calculateTotalAmount]);
+  }, [order, settings]);
 
   return (
     <Card id={`ai-order-${order.id}`} className={cn(
