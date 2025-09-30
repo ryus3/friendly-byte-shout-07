@@ -184,7 +184,10 @@ serve(async (req) => {
             const landmark = extractedData.landmark || '';
             
             // بناء العنوان بصيغة: المدينة - المنطقة - أقرب نقطة دالة
-            const addressLine = `${city} - ${region} - ${landmark}`;
+            let addressLine = `${city} - ${region}`;
+            if (landmark && landmark !== 'غير محدد' && landmark.trim() !== '') {
+              addressLine += ` - ${landmark}`;
+            }
             message += `📍 ${addressLine}\n`;
             
             // Add phone number
@@ -194,7 +197,7 @@ serve(async (req) => {
             }
             
             // المنتجات المستخرجة بالدالة الذكية
-            const extractedProducts = extractedData.products;
+            const extractedProducts = extractedData.items;
             if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
               let hasUnavailableProduct = false;
               
@@ -220,8 +223,8 @@ serve(async (req) => {
               }
             }
             
-            // إجمالي المبلغ من نتيجة المعالجة الذكية
-            const totalAmount = extractedData.total_amount || 5000;
+            // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل التوصيل)
+            const totalAmount = extractedData.final_amount || extractedData.total_amount || 5000;
             message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
             await sendTelegramMessage(chatId, message, botToken);
