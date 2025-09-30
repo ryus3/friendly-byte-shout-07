@@ -307,11 +307,14 @@ serve(async (req) => {
             // Build order confirmation message
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add location info - عرض المدينة والمنطقة بشكل صحيح
+            // Add location info - عرض المدينة والمنطقة وأقرب نقطة دالة بشكل صحيح
             const cityName = responseData.customer_city || orderResult.customer_city || '';
             const regionName = responseData.customer_region || orderResult.customer_region || '';
+            const landmark = responseData.landmark || orderResult.landmark || '';
             
-            if (cityName && regionName) {
+            if (cityName && regionName && landmark) {
+              message += `📍 ${cityName} - ${regionName} - ${landmark}\n`;
+            } else if (cityName && regionName) {
               message += `📍 ${cityName} - ${regionName}\n`;
             } else if (cityName) {
               message += `📍 ${cityName}\n`;
