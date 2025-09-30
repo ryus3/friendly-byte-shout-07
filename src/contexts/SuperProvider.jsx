@@ -657,7 +657,7 @@ export const SuperProvider = ({ children }) => {
       const fullOrder = await superAPI.getOrderById(orderId);
         
       if (fullOrder && fullOrder.order_items?.length > 0) {
-        const normalized = normalizeOrder(fullOrder, allData.users);
+        const normalized = normalizeOrder(fullOrder);
         
         // تحديث الطلب مع التفاصيل الكاملة
         setAllData(prev => ({
@@ -770,7 +770,7 @@ export const SuperProvider = ({ children }) => {
           (async () => {
             try {
               const full = await superAPI.getOrderById(orderId);
-              const normalized = normalizeOrder(full, allData.users);
+              const normalized = normalizeOrder(full);
               setAllData(prev => {
                 const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
                 
@@ -1118,7 +1118,7 @@ export const SuperProvider = ({ children }) => {
         try {
           const fullOrder = await superAPI.getOrderById(createdOrder.id);
           if (fullOrder) {
-            const normalized = normalizeOrder(fullOrder, allData.users);
+            const normalized = normalizeOrder(fullOrder);
             setAllData(prev => ({
               ...prev,
               orders: prev.orders.map(o => 
@@ -1220,7 +1220,7 @@ export const SuperProvider = ({ children }) => {
       setAllData(prev => ({
         ...prev,
         orders: (prev.orders || []).map(o => o.id === orderId ? {
-          ...normalizeOrder(result, prev.users),
+          ...normalizeOrder(result),
           items: newItems || o.items,
           alwaseet_city_id: updates.alwaseet_city_id || result.alwaseet_city_id,
           alwaseet_region_id: updates.alwaseet_region_id || result.alwaseet_region_id
@@ -1807,9 +1807,6 @@ export const SuperProvider = ({ children }) => {
           return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
         }
 
-        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
-        const extractedData = aiOrder.order_data?.extracted_data || {};
-        
         // إثراء العناصر بأسماء المنتجات الفعلية
         const enrichedItems = normalizedItems.map(item => {
           const product = products.find(p => p.id === item.product_id);
@@ -1880,6 +1877,9 @@ export const SuperProvider = ({ children }) => {
           
           return candidates;
         };
+        
+        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
+        const extractedData = aiOrder.order_data?.extracted_data || {};
         
         let cityToSearch = extractedData.city || aiOrder.customer_city || '';
         let regionToSearch = extractedData.region || aiOrder.customer_province || '';
