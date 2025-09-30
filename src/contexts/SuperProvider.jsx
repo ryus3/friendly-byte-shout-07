@@ -1807,6 +1807,9 @@ export const SuperProvider = ({ children }) => {
           return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
         }
 
+        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
+        const extractedData = aiOrder.order_data?.extracted_data || {};
+        
         // إثراء العناصر بأسماء المنتجات الفعلية
         const enrichedItems = normalizedItems.map(item => {
           const product = products.find(p => p.id === item.product_id);
@@ -1877,9 +1880,6 @@ export const SuperProvider = ({ children }) => {
           
           return candidates;
         };
-        
-        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
-        const extractedData = aiOrder.order_data?.extracted_data || {};
         
         let cityToSearch = extractedData.city || aiOrder.customer_city || '';
         let regionToSearch = extractedData.region || aiOrder.customer_province || '';
