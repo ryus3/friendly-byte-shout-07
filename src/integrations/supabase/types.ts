@@ -4881,6 +4881,11 @@ export type Database = {
             }
           | {
               p_chat_id: number
+              p_employee_code?: string
+              p_message_text: string
+            }
+          | {
+              p_chat_id: number
               p_employee_id?: string
               p_message_text: string
             }
