@@ -322,9 +322,7 @@ serve(async (req) => {
             }
             
             // Add final amount only - المبلغ الإجمالي فقط
-            const totalAmount = responseData.total_amount || orderResult.total_amount || 0;
-            const deliveryFee = responseData.delivery_fee || orderResult.delivery_fee || 0;
-            const finalAmount = responseData.final_amount || orderResult.final_amount || (totalAmount + deliveryFee);
+            const finalAmount = responseData.final_amount || orderResult.final_amount || orderResult.total_amount || 0;
             
             if (finalAmount > 0) {
               const formattedFinalAmount = finalAmount.toLocaleString('en-US');
