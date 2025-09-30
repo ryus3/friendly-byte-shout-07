@@ -295,11 +295,14 @@ serve(async (req) => {
             // Build order confirmation message
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add location info
-            if (responseData.customer_city && responseData.customer_province) {
-              message += `📍 ${responseData.customer_city} - ${responseData.customer_province}\n`;
-            } else if (responseData.customer_city) {
-              message += `📍 ${responseData.customer_city}\n`;
+            // Add location info - عرض المدينة والمنطقة بشكل صحيح
+            const cityName = responseData.customer_city || orderResult.customer_city || '';
+            const regionName = responseData.customer_region || orderResult.customer_region || '';
+            
+            if (cityName && regionName) {
+              message += `📍 ${cityName} - ${regionName}\n`;
+            } else if (cityName) {
+              message += `📍 ${cityName}\n`;
             }
             
             // Add phone number
@@ -318,10 +321,24 @@ serve(async (req) => {
               });
             }
             
-            // Add total amount
-            if (responseData.total_amount && responseData.total_amount > 0) {
-              const formattedAmount = responseData.total_amount.toLocaleString('en-US');
-              message += `💵 المبلغ الإجمالي: ${formattedAmount} د.ع`;
+            // Add amounts - إضافة أجور التوصيل والمبلغ الإجمالي
+            const totalAmount = responseData.total_amount || orderResult.total_amount || 0;
+            const deliveryFee = responseData.delivery_fee || orderResult.delivery_fee || 0;
+            const finalAmount = responseData.final_amount || orderResult.final_amount || (totalAmount + deliveryFee);
+            
+            if (totalAmount > 0) {
+              const formattedAmount = totalAmount.toLocaleString('en-US');
+              message += `💰 مبلغ المنتجات: ${formattedAmount} د.ع\n`;
+            }
+            
+            if (deliveryFee > 0) {
+              const formattedDeliveryFee = deliveryFee.toLocaleString('en-US');
+              message += `🚚 أجور التوصيل: ${formattedDeliveryFee} د.ع\n`;
+            }
+            
+            if (finalAmount > 0) {
+              const formattedFinalAmount = finalAmount.toLocaleString('en-US');
+              message += `💵 المبلغ الإجمالي: ${formattedFinalAmount} د.ع`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
