@@ -21,7 +21,7 @@ export type Database = {
           created_by: string | null
           customer_address: string | null
           customer_city: string | null
-          customer_name: string
+          customer_name: string | null
           customer_phone: string | null
           customer_province: string | null
           id: string
@@ -44,7 +44,7 @@ export type Database = {
           created_by?: string | null
           customer_address?: string | null
           customer_city?: string | null
-          customer_name: string
+          customer_name?: string | null
           customer_phone?: string | null
           customer_province?: string | null
           id?: string
@@ -67,7 +67,7 @@ export type Database = {
           created_by?: string | null
           customer_address?: string | null
           customer_city?: string | null
-          customer_name?: string
+          customer_name?: string | null
           customer_phone?: string | null
           customer_province?: string | null
           id?: string
