@@ -212,7 +212,7 @@ serve(async (req) => {
           // البحث عن الموظف المربوط بهذا الحساب
           const { data: employeeData, error: employeeError } = await supabase
             .from('employee_telegram_codes')
-            .select('user_id')
+            .select('telegram_code, user_id')
             .eq('telegram_chat_id', chatId)
             .eq('is_active', true)
             .maybeSingle();
@@ -221,14 +221,35 @@ serve(async (req) => {
             console.log('🔍 لم يتم العثور على موظف مربوط:', employeeError);
           }
 
+          const employeeCode = employeeData?.telegram_code || '';
           const employeeId = employeeData?.user_id || null;
+          console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
+
+          // استخراج البيانات من النص
+          const extractedPhone = extractPhoneFromText(text);
+          const { city, province } = extractCityFromText(text);
+          const products = extractProductFromText(text);
+
+          // بناء order_data مع البيانات المستخرجة
+          const orderData = {
+            customer_name: '',
+            customer_phone: extractedPhone,
+            customer_city: city,
+            customer_province: province,
+            customer_address: text, // النص الكامل للمعالجة الذكية
+            items: products,
+            total_price: products.reduce((sum, item) => sum + (item.total_price || 0), 0),
+            final_total: products.reduce((sum, item) => sum + (item.total_price || 0), 0) + 5000, // إضافة رسوم التوصيل
+            original_text: text,
+            source: 'telegram'
+          };
           
-          // استدعاء الدالة الذكية الصحيحة مباشرة
+          // استدعاء الدالة الذكية الصحيحة
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_chat_id: chatId,
-            p_message_text: text,
-            p_employee_id: employeeId
+            p_order_data: orderData,
+            p_employee_code: employeeCode,
+            p_chat_id: chatId
           });
 
           if (orderError) {
@@ -253,43 +274,36 @@ serve(async (req) => {
 
           // Handle response
           if (orderResult?.success) {
-            const responseData = orderResult.order_data || orderResult;
+            console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
             
             // Build order confirmation message
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add location info - عرض المدينة والمنطقة وأقرب نقطة دالة بشكل صحيح
-            const cityName = responseData.customer_city || orderResult.customer_city || '';
-            const regionName = responseData.customer_region || orderResult.customer_region || '';
-            const landmark = responseData.landmark || orderResult.landmark || '';
-            
-            if (cityName && regionName && landmark) {
-              message += `📍 ${cityName} - ${regionName} - ${landmark}\n`;
-            } else if (cityName && regionName) {
-              message += `📍 ${cityName} - ${regionName}\n`;
-            } else if (cityName) {
-              message += `📍 ${cityName}\n`;
+            // Add location info - استخراج العنوان المعالج بذكاء
+            const customerAddress = orderResult.customer_address || '';
+            if (customerAddress && customerAddress !== 'لم يُحدد - لم يُحدد') {
+              message += `📍 ${customerAddress}\n`;
             }
             
             // Add phone number
-            if (responseData.customer_phone) {
-              message += `📱 الهاتف : ${responseData.customer_phone}\n`;
+            const customerPhone = orderData.customer_phone || '';
+            if (customerPhone) {
+              message += `📱 الهاتف : ${customerPhone}\n`;
             }
             
-            // Add product details
-            if (responseData.items && Array.isArray(responseData.items) && responseData.items.length > 0) {
-              responseData.items.forEach((item: any) => {
+            // Add product details from original orderData
+            if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
+              orderData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
-                const color = item.color ? ` (${item.color})` : '';
-                const size = item.size ? ` ${item.size}` : '';
+                const color = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
+                const size = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
                 const quantity = item.quantity || 1;
                 message += `❇️ ${productName}${color}${size} × ${quantity}\n`;
               });
             }
             
-            // Add final amount only - المبلغ الإجمالي فقط
-            const finalAmount = responseData.final_amount || orderResult.final_amount || orderResult.total_amount || 0;
-            
+            // Add final amount - المبلغ الإجمالي
+            const finalAmount = orderData.final_total || 0;
             if (finalAmount > 0) {
               const formattedFinalAmount = finalAmount.toLocaleString('en-US');
               message += `💵 المبلغ الإجمالي: ${formattedFinalAmount} د.ع`;
@@ -299,7 +313,7 @@ serve(async (req) => {
             
           } else {
             // Handle errors
-            let errorMessage = orderResult?.error || 'لم أتمكن من فهم طلبك بشكل كامل.';
+            let errorMessage = orderResult?.message || orderResult?.error || 'لم أتمكن من فهم طلبك بشكل كامل.';
             await sendTelegramMessage(chatId, errorMessage, botToken);
           }
 
