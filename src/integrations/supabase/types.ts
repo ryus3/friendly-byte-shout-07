@@ -4879,7 +4879,6 @@ export type Database = {
               p_employee_id?: string
               p_message_text: string
             }
-          | { p_chat_id?: number; p_text: string }
           | {
               p_created_by?: string
               p_telegram_chat_id?: number
