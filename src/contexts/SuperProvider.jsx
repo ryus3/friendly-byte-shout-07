@@ -657,7 +657,7 @@ export const SuperProvider = ({ children }) => {
       const fullOrder = await superAPI.getOrderById(orderId);
         
       if (fullOrder && fullOrder.order_items?.length > 0) {
-        const normalized = normalizeOrder(fullOrder);
+        const normalized = normalizeOrder(fullOrder, allData.users);
         
         // تحديث الطلب مع التفاصيل الكاملة
         setAllData(prev => ({
@@ -770,7 +770,7 @@ export const SuperProvider = ({ children }) => {
           (async () => {
             try {
               const full = await superAPI.getOrderById(orderId);
-              const normalized = normalizeOrder(full);
+              const normalized = normalizeOrder(full, prev.users);
               setAllData(prev => {
                 const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
                 
@@ -1118,7 +1118,7 @@ export const SuperProvider = ({ children }) => {
         try {
           const fullOrder = await superAPI.getOrderById(createdOrder.id);
           if (fullOrder) {
-            const normalized = normalizeOrder(fullOrder);
+            const normalized = normalizeOrder(fullOrder, prev.users);
             setAllData(prev => ({
               ...prev,
               orders: prev.orders.map(o => 
@@ -1220,7 +1220,7 @@ export const SuperProvider = ({ children }) => {
       setAllData(prev => ({
         ...prev,
         orders: (prev.orders || []).map(o => o.id === orderId ? {
-          ...normalizeOrder(result),
+          ...normalizeOrder(result, prev.users),
           items: newItems || o.items,
           alwaseet_city_id: updates.alwaseet_city_id || result.alwaseet_city_id,
           alwaseet_region_id: updates.alwaseet_region_id || result.alwaseet_region_id
