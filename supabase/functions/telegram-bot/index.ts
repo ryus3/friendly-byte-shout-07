@@ -321,20 +321,10 @@ serve(async (req) => {
               });
             }
             
-            // Add amounts - إضافة أجور التوصيل والمبلغ الإجمالي
+            // Add final amount only - المبلغ الإجمالي فقط
             const totalAmount = responseData.total_amount || orderResult.total_amount || 0;
             const deliveryFee = responseData.delivery_fee || orderResult.delivery_fee || 0;
             const finalAmount = responseData.final_amount || orderResult.final_amount || (totalAmount + deliveryFee);
-            
-            if (totalAmount > 0) {
-              const formattedAmount = totalAmount.toLocaleString('en-US');
-              message += `💰 مبلغ المنتجات: ${formattedAmount} د.ع\n`;
-            }
-            
-            if (deliveryFee > 0) {
-              const formattedDeliveryFee = deliveryFee.toLocaleString('en-US');
-              message += `🚚 أجور التوصيل: ${formattedDeliveryFee} د.ع\n`;
-            }
             
             if (finalAmount > 0) {
               const formattedFinalAmount = finalAmount.toLocaleString('en-US');
