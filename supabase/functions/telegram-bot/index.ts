@@ -108,12 +108,30 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the enhanced order processing function
-          console.log('🔄 معالجة الطلب باستخدام process_telegram_order...');
+          // Call the working version with structured data format
+          console.log('🔄 معالجة الطلب باستخدام النسخة العاملة من process_telegram_order...');
+          
+          // Create structured order data for the working function
+          const orderData = {
+            customer_phone: '', // Will be extracted by bot logic
+            customer_name: 'عميل تليغرام',
+            customer_address: text, // Use full text as initial address
+            customer_city: '',
+            customer_province: '',
+            city_id: null,
+            region_id: null,
+            items: [], // Will be processed by bot logic
+            total_amount: 0,
+            original_text: text
+          };
+          
+          // Use default employee code for now
+          const employeeCode = 'EMP0001';
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            input_text: text,
-            chat_id: chatId
+            p_order_data: orderData,
+            p_employee_code: employeeCode,
+            p_chat_id: chatId
           });
 
           if (orderError) {
