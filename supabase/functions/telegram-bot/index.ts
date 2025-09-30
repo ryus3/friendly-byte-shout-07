@@ -203,18 +203,28 @@ serve(async (req) => {
             // المنتجات المستخرجة بالدالة الذكية
             const extractedProducts = extractedData.products;
             if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
-              extractedProducts.forEach((item: any) => {
-                if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
+              let hasUnavailableProduct = false;
+              
+              for (const item of extractedProducts) {
+                if (item.alternatives_message) {
+                  // إذا كان هناك رسالة بدائل (منتج غير متوفر)
+                  await sendTelegramMessage(chatId, item.alternatives_message, botToken);
+                  hasUnavailableProduct = true;
+                  break;
+                } else if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
                   const colorText = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
                   const sizeText = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
                   message += `❇️ ${item.product_name}${colorText}${sizeText} × ${item.quantity} - ${item.total_price.toLocaleString()} د.ع\n`;
-                } else if (item.alternatives_message) {
-                  // إذا كان هناك رسالة بدائل (منتج غير متوفر)
-                  message = item.alternatives_message;
-                  await sendTelegramMessage(chatId, message, botToken);
-                  return;
                 }
-              });
+              }
+              
+              // إذا كان هناك منتج غير متوفر، لا نرسل رسالة التأكيد
+              if (hasUnavailableProduct) {
+                return new Response(JSON.stringify({ success: true }), {
+                  status: 200,
+                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                });
+              }
             }
             
             // إجمالي المبلغ من نتيجة المعالجة الذكية
