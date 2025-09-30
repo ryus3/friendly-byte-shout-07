@@ -365,39 +365,17 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
 
   const isProblematic = availability !== 'available' || needsReview;
   
-  // حساب السعر الإجمالي - استخدام final_amount إذا كان متوفراً لأنه يشمل رسوم التوصيل
+  // حساب السعر الإجمالي - استخدام order.total_amount مباشرة (20000)
   const calculateTotalAmount = useMemo(() => {
-    // إذا كان final_amount متوفراً، استخدمه مباشرة لأنه يشمل رسوم التوصيل
-    if (order.final_amount) {
-      return order.final_amount;
-    }
-    
-    // إذا لم يكن final_amount متوفراً، احسب المجموع يدوياً
-    const baseAmount = order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
-    const deliveryFee = settings?.deliveryFee || 0;
-    const isLocalDelivery = order.delivery_partner === 'محلي';
-    
-    return baseAmount + (isLocalDelivery ? deliveryFee : 0);
-  }, [order, settings]);
+    // order.total_amount يحتوي على المجموع الكلي شامل رسوم التوصيل (20000)
+    return order.total_amount || 0;
+  }, [order]);
   
   // حساب التفاصيل للعرض
   const priceDetails = useMemo(() => {
-    let baseAmount, deliveryFee, total;
-    
-    if (order.final_amount) {
-      // إذا كان final_amount متوفراً، فهو المجموع النهائي
-      total = order.final_amount;
-      // استخرج سعر المنتجات من المجموع النهائي
-      const orderDeliveryFee = order.delivery_fee || settings?.deliveryFee || 0;
-      baseAmount = total - orderDeliveryFee;
-      deliveryFee = orderDeliveryFee;
-    } else {
-      // الحساب اليدوي
-      baseAmount = order.order_data?.total_amount || order.order_data?.total || order.total_amount || 0;
-      const isLocalDelivery = order.delivery_partner === 'محلي';
-      deliveryFee = isLocalDelivery ? (settings?.deliveryFee || 0) : 0;
-      total = baseAmount + deliveryFee;
-    }
+    const total = order.total_amount || 0; // 20000
+    const deliveryFee = order.delivery_fee || settings?.deliveryFee || 0; // 5000
+    const baseAmount = total - deliveryFee; // 15000 (سعر المنتجات)
     
     return {
       baseAmount,
