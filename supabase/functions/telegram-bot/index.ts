@@ -207,24 +207,58 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Extract information from text
+          // استخراج رقم الهاتف
           const phone = extractPhoneFromText(text);
-          const { city, province } = extractCityFromText(text);
-          const items = extractProductFromText(text);
           
+          // استخدام دالة SQL المتقدمة لاستخراج المنتجات
+          const { data: productItems, error: productError } = await supabase.rpc('extract_product_items_from_text', {
+            input_text: text
+          });
+
+          if (productError) {
+            console.error('❌ خطأ في استخراج المنتجات:', productError);
+            await sendTelegramMessage(chatId, 'حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.', botToken);
+            return new Response('OK', { headers: corsHeaders });
+          }
+
+          // استخدام دالة SQL المتقدمة للبحث عن المدينة
+          let cityResult = null;
+          let cityId = null;
+          let cityName = '';
+          let province = '';
+
+          // استخراج أول كلمة كمدينة محتملة
+          const words = text.split(/\s+/);
+          for (const word of words) {
+            if (word.length > 2) {
+              const { data: cityData, error: cityError } = await supabase.rpc('smart_search_city', {
+                search_text: word
+              });
+              
+              if (!cityError && cityData && cityData.length > 0) {
+                cityResult = cityData[0];
+                cityId = cityResult.city_id;
+                cityName = cityResult.city_name;
+                province = cityName; // افترض أن المدينة هي المحافظة أيضاً
+                break;
+              }
+            }
+          }
+
           console.log('🔄 معالجة الطلب باستخدام النسخة العاملة من process_telegram_order...');
           
-          // Create structured order data for the working function
+          // بناء بيانات الطلب بالمنتجات المستخرجة من SQL
           const orderData = {
             customer_name: 'عميل تليغرام',
             customer_phone: phone,
             customer_address: text,
-            customer_city: city,
+            customer_city: cityName,
             customer_province: province,
-            city_id: null,
+            city_id: cityId,
             region_id: null,
-            items: items,
-            total_amount: items.reduce((sum, item) => sum + (item.total_price || 0), 0),
+            items: productItems || [],
+            total_amount: Array.isArray(productItems) ? 
+              productItems.reduce((sum, item) => sum + (item.total_price || 0), 0) : 0,
             original_text: text
           };
           
