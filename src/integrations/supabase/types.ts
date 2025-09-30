@@ -4870,7 +4870,7 @@ export type Database = {
       }
       process_telegram_order: {
         Args:
-          | { p_chat_id: number; p_employee_code: string; p_order_data: Json }
+          | { p_chat_id?: number; p_employee_code?: string; p_order_data: Json }
           | {
               p_customer_address: string
               p_customer_name: string
