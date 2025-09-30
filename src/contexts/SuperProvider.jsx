@@ -1865,32 +1865,19 @@ export const SuperProvider = ({ children }) => {
           return candidates;
         };
         
-        // استخراج المدينة والمنطقة من العنوان - محسن للعناوين المركبة
-        let cityToSearch = aiOrder.customer_city || '';
-        let regionToSearch = aiOrder.customer_province || '';
-        let nearestPoint = '';
+        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
+        const extractedData = aiOrder.order_data?.extracted_data || {};
         
-        // إذا لم توجد مدينة، استخرج من العنوان كاملاً
-        if (!cityToSearch && aiOrder.customer_address) {
-          const addressParts = aiOrder.customer_address.split(/[،,\s]+/).filter(Boolean);
-          if (addressParts.length > 0) {
-            cityToSearch = addressParts[0];
-            console.log('🔍 استخراج المدينة من العنوان:', cityToSearch);
-            
-            // استخدام النص المتبقي للبحث عن المنطقة ونقطة الدلالة
-            if (addressParts.length > 1) {
-              const remainingText = addressParts.slice(1).join(' ');
-              console.log('🔍 النص المتبقي للتحليل:', remainingText);
-              
-              // توليد مرشحات للمناطق
-              const regionCandidates = generateRegionCandidates(remainingText);
-              console.log('🏘️ مرشحات المناطق:', regionCandidates);
-              
-              // البحث عن أفضل مطابقة للمنطقة (سيتم لاحقاً)
-              regionToSearch = regionCandidates[0] || addressParts[1];
-            }
-          }
-        }
+        let cityToSearch = extractedData.city || aiOrder.customer_city || '';
+        let regionToSearch = extractedData.region || aiOrder.customer_province || '';
+        let nearestPoint = extractedData.landmark || '';
+        
+        console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
+          city: cityToSearch,
+          region: regionToSearch,
+          landmark: nearestPoint,
+          full_address: extractedData.full_address
+        });
         
         // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
         let cityId = null;
@@ -2061,14 +2048,14 @@ export const SuperProvider = ({ children }) => {
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          client_name: (aiOrder.customer_name && 
-            aiOrder.customer_name !== 'زبون من تليغرام' && 
-            aiOrder.customer_name.trim() !== '') 
-            ? aiOrder.customer_name 
-            : (profile?.default_customer_name || `زبون-${Date.now().toString().slice(-6)}`),
+          // ✅ استخدام اسم الزبون المستخرج أو الافتراضي من الإعدادات
+          client_name: extractedData.customer_name || 
+            (profile?.default_customer_name || `زبون-${Date.now().toString().slice(-6)}`),
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          location: aiOrder.customer_address || '',
+          // ✅ استخدام العنوان الكامل المستخرج مع المدينة والمنطقة و landmark
+          location: extractedData.full_address || 
+            `${foundCityName} - ${foundRegionName}${nearestPoint && nearestPoint !== 'غير محدد' ? ' - ' + nearestPoint : ''}`,
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
@@ -2287,13 +2274,19 @@ export const SuperProvider = ({ children }) => {
 
       // إنشاء طلب حقيقي مع دعم شركة التوصيل
       const trackingNumber = deliveryPartnerData.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`;
+      
+      // ✅ استخدام البيانات المستخرجة من extractedData
+      const extractedData = aiOrder.order_data?.extracted_data || {};
       const orderRow = {
         order_number: orderNumber,
-        customer_name: aiOrder.customer_name,
+        // ✅ استخدام اسم الزبون المستخرج
+        customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        customer_address: aiOrder.customer_address,
-        customer_city: cityName || aiOrder.customer_city,
-        customer_province: regionName || aiOrder.customer_province,
+        // ✅ استخدام العنوان الكامل المستخرج
+        customer_address: extractedData.full_address || 
+          `${cityName || aiOrder.customer_city} - ${regionName || aiOrder.customer_province}${extractedData.landmark && extractedData.landmark !== 'غير محدد' ? ' - ' + extractedData.landmark : ''}`,
+        customer_city: cityName || extractedData.city || aiOrder.customer_city,
+        customer_province: regionName || extractedData.region || aiOrder.customer_province,
         total_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
