@@ -11,7 +11,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// رسائل تحسين UX
 const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات الذكية!
 
 ✨ يمكنني فهم طلباتك بطريقة ذكية وسهلة
@@ -68,6 +67,106 @@ async function sendTelegramMessage(chatId: number, text: string, botToken: strin
   }
 }
 
+// Extract phone number from text using simple regex
+function extractPhoneFromText(text: string): string {
+  const phonePattern = /\b(07[3-9]\d{8}|00964[37]\d{8}|964[37]\d{8})\b/;
+  const match = text.match(phonePattern);
+  if (match) {
+    let phone = match[0];
+    // Normalize to Iraqi format
+    phone = phone.replace(/^(00964|964)/, '0');
+    if (phone.startsWith('07') && phone.length === 11) {
+      return phone;
+    }
+  }
+  return '';
+}
+
+// Extract city from text - basic implementation
+function extractCityFromText(text: string): { city: string, province: string } {
+  const lowerText = text.toLowerCase();
+  
+  // Common Iraqi cities mapping
+  const cityMappings: Record<string, { city: string, province: string }> = {
+    'بغداد': { city: 'بغداد', province: 'بغداد' },
+    'كراده': { city: 'الكرادة', province: 'بغداد' },
+    'الكراده': { city: 'الكرادة', province: 'بغداد' },
+    'الكرادة': { city: 'الكرادة', province: 'بغداد' },
+    'ديوانية': { city: 'الديوانية', province: 'الديوانية' },
+    'الديوانية': { city: 'الديوانية', province: 'الديوانية' },
+    'نجف': { city: 'النجف', province: 'النجف' },
+    'النجف': { city: 'النجف', province: 'النجف' },
+    'كربلاء': { city: 'كربلاء', province: 'كربلاء' },
+    'البصرة': { city: 'البصرة', province: 'البصرة' },
+    'بصرة': { city: 'البصرة', province: 'البصرة' }
+  };
+
+  for (const [key, value] of Object.entries(cityMappings)) {
+    if (lowerText.includes(key)) {
+      return value;
+    }
+  }
+
+  return { city: '', province: '' };
+}
+
+// Extract product info from text - basic implementation
+function extractProductFromText(text: string): any[] {
+  const lowerText = text.toLowerCase();
+  
+  // Common product patterns
+  const products = [
+    { name: 'قميص', keywords: ['قميص', 'قمصان'] },
+    { name: 'ارجنتين', keywords: ['ارجنتين', 'أرجنتين'] },
+    { name: 'تيشرت', keywords: ['تيشرت', 'تشيرت'] }
+  ];
+
+  const colors = ['أحمر', 'أزرق', 'أسود', 'أبيض', 'سمائي', 'أخضر'];
+  const sizes = ['S', 'M', 'L', 'XL', 'صغير', 'وسط', 'كبير', 'ميديم', 'لارج'];
+
+  let foundProduct = null;
+  let foundColor = '';
+  let foundSize = '';
+
+  // Find product
+  for (const product of products) {
+    if (product.keywords.some(keyword => lowerText.includes(keyword))) {
+      foundProduct = product.name;
+      break;
+    }
+  }
+
+  // Find color
+  for (const color of colors) {
+    if (lowerText.includes(color.toLowerCase())) {
+      foundColor = color;
+      break;
+    }
+  }
+
+  // Find size
+  for (const size of sizes) {
+    if (lowerText.includes(size.toLowerCase())) {
+      foundSize = size;
+      break;
+    }
+  }
+
+  if (foundProduct) {
+    return [{
+      product_name: foundProduct,
+      color: foundColor || 'افتراضي',
+      size: foundSize || 'افتراضي',
+      quantity: 1,
+      price: 15000,
+      total_price: 15000,
+      is_available: true
+    }];
+  }
+
+  return [];
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -108,36 +207,36 @@ serve(async (req) => {
       // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // Call the working version with structured data format
+          // Extract information from text
+          const phone = extractPhoneFromText(text);
+          const { city, province } = extractCityFromText(text);
+          const items = extractProductFromText(text);
+          
           console.log('🔄 معالجة الطلب باستخدام النسخة العاملة من process_telegram_order...');
           
           // Create structured order data for the working function
           const orderData = {
-            customer_phone: '', // Will be extracted by bot logic
             customer_name: 'عميل تليغرام',
-            customer_address: text, // Use full text as initial address
-            customer_city: '',
-            customer_province: '',
+            customer_phone: phone,
+            customer_address: text,
+            customer_city: city,
+            customer_province: province,
             city_id: null,
             region_id: null,
-            items: [], // Will be processed by bot logic
-            total_amount: 0,
+            items: items,
+            total_amount: items.reduce((sum, item) => sum + (item.total_price || 0), 0),
             original_text: text
           };
           
-          // Use default employee code for now
-          const employeeCode = 'EMP0001';
-          
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_order_data: orderData,
-            p_employee_code: employeeCode,
+            p_employee_code: 'EMP0001', // Default employee code
             p_chat_id: chatId
           });
 
           if (orderError) {
             console.error('❌ خطأ في معالجة الطلب:', orderError);
             
-            // Handle specific error types with more helpful messages
             let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
             
             if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
@@ -155,143 +254,53 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // Handle different response types
+          // Handle response
           if (orderResult?.success) {
-            const orderData = orderResult.order_data || {};
+            const responseData = orderResult.order_data || orderResult;
             
-            // التحقق من توفر المنتجات باستخدام النظام المحسن الجديد
-            let hasUnavailableItems = false;
-            let unavailableMessage = '';
-            
-            if (orderData.items && Array.isArray(orderData.items)) {
-              for (const item of orderData.items) {
-                // فحص إذا كان المنتج غير متوفر باستخدام is_available الجديد
-                if (item.is_available === false) {
-                  hasUnavailableItems = true;
-                  
-                  // استخدام رسالة البدائل من الدالة المحسنة مباشرة بدون إضافات
-                  if (item.alternatives_message && item.alternatives_message.trim() !== '') {
-                    unavailableMessage = item.alternatives_message;
-                  } else {
-                    unavailableMessage = `❌ لم يتم إنشاء طلب!\nالمنتج "${item.product_name}" غير متوفر حالياً\n\n💡 يرجى التواصل لمعرفة المواصفات المتوفرة.`;
-                  }
-                  break;
-                }
-              }
-            }
-            
-            // إذا كان هناك منتجات غير متوفرة، لا نحفظ الطلب ونرسل رسالة خطأ
-            if (hasUnavailableItems) {
-              console.log('❌ يحتوي الطلب على منتجات غير متوفرة:', unavailableMessage);
-              await sendTelegramMessage(chatId, unavailableMessage, botToken);
-              return new Response(JSON.stringify({ success: false, message: unavailableMessage }), {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              });
-            }
-            
-            // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
-            console.log('✅ جميع المنتجات متوفرة، سيتم حفظ الطلب');
-            
-            // حفظ الطلب فقط إذا كانت جميع المنتجات متوفرة
-            try {
-              const { error: saveError } = await supabase
-                .from('ai_orders')
-                .insert({
-                  customer_name: orderData.customer_name || 'عميل',
-                  customer_phone: orderData.customer_phone,
-                  customer_city: orderData.customer_city,
-                  customer_province: orderData.customer_province,
-                  customer_address: orderData.customer_address,
-                  city_id: orderData.city_id,
-                  region_id: orderData.region_id,
-                  telegram_chat_id: chatId,
-                  items: orderData.items || [],
-                  total_amount: orderData.total_amount || 0,
-                  order_data: orderData,
-                  original_text: text,
-                  source: 'telegram',
-                  status: 'pending',
-                  created_by: orderData.created_by // Link to the responsible user
-                });
-              
-              if (saveError) {
-                console.error('❌ خطأ في حفظ الطلب:', saveError);
-              } else {
-                console.log('✅ تم حفظ الطلب في الإدارة الذكية');
-              }
-            } catch (saveError) {
-              console.error('❌ خطأ في حفظ الطلب:', saveError);
-            }
-            
-            // Build order confirmation message in the exact requested format
+            // Build order confirmation message
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add location info first
-            if (orderData.customer_city && orderData.customer_province) {
-              message += `📍 ${orderData.customer_city} - ${orderData.customer_province}\n`;
-            } else if (orderData.customer_city) {
-              message += `📍 ${orderData.customer_city}\n`;
+            // Add location info
+            if (responseData.customer_city && responseData.customer_province) {
+              message += `📍 ${responseData.customer_city} - ${responseData.customer_province}\n`;
+            } else if (responseData.customer_city) {
+              message += `📍 ${responseData.customer_city}\n`;
             }
             
-            // Add phone number with 📱 icon and prefix
-            if (orderData.customer_phone) {
-              message += `📱 الهاتف : ${orderData.customer_phone}\n`;
+            // Add phone number
+            if (responseData.customer_phone) {
+              message += `📱 الهاتف : ${responseData.customer_phone}\n`;
             }
             
-            // Add product details with proper formatting using ❇️ icon
-            if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
-              orderData.items.forEach((item: any) => {
+            // Add product details
+            if (responseData.items && Array.isArray(responseData.items) && responseData.items.length > 0) {
+              responseData.items.forEach((item: any) => {
                 const productName = item.product_name || 'منتج';
-                const color = (item.color_name || item.color) ? ` (${item.color_name || item.color})` : '';
-                const size = (item.size_name || item.size) ? ` ${item.size_name || item.size}` : '';
+                const color = item.color ? ` (${item.color})` : '';
+                const size = item.size ? ` ${item.size}` : '';
                 const quantity = item.quantity || 1;
                 message += `❇️ ${productName}${color}${size} × ${quantity}\n`;
               });
             }
             
-            // Add total amount with English numerals using 💵 icon (includes delivery fee)
-            if (orderData.total_amount && orderData.total_amount > 0) {
-              const formattedAmount = orderData.total_amount.toLocaleString('en-US');
+            // Add total amount
+            if (responseData.total_amount && responseData.total_amount > 0) {
+              const formattedAmount = responseData.total_amount.toLocaleString('en-US');
               message += `💵 المبلغ الإجمالي: ${formattedAmount} د.ع`;
             }
             
             await sendTelegramMessage(chatId, message, botToken);
             
           } else {
-            // Handle errors or clarifications needed - including availability errors
-            let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
-            
-            // Create inline keyboard for options if available
-            let replyMarkup: any = undefined;
-            
-            if (orderResult?.options_type === 'city_selection' && orderResult?.suggested_cities) {
-              console.log('🏙️ إرسال خيارات المدن');
-              const cities = orderResult.suggested_cities.split('\n• ').filter((c: string) => c.trim());
-              replyMarkup = {
-                inline_keyboard: cities.slice(0, 6).map((city: string, index: number) => ([{
-                  text: `${index + 1}. ${city.replace(/\s*\(ثقة:.*?\)/g, '')}`,
-                  callback_data: `city_${index + 1}_${city.split(' ')[0]}`
-                }]))
-              };
-            } else if (orderResult?.options_type === 'variant_selection' && orderResult?.available_combinations) {
-              console.log('👕 إرسال خيارات المنتجات');
-              const variants = orderResult.available_combinations.split('\n').filter((v: string) => v.trim());
-              replyMarkup = {
-                inline_keyboard: variants.slice(0, 8).map((variant: string, index: number) => ([{
-                  text: variant,
-                  callback_data: `variant_${index + 1}_${variant.split('.')[1]?.trim() || variant}`
-                }]))
-              };
-            }
-            
-            await sendTelegramMessage(chatId, errorMessage, botToken, replyMarkup);
+            // Handle errors
+            let errorMessage = orderResult?.error || 'لم أتمكن من فهم طلبك بشكل كامل.';
+            await sendTelegramMessage(chatId, errorMessage, botToken);
           }
 
         } catch (processingError) {
           console.error('❌ خطأ عام في معالجة الطلب:', processingError);
           
-          // More specific error handling
           let errorMessage = '⚠️ عذراً، حدث خطأ في النظام.';
           
           if (processingError instanceof Error) {
@@ -307,7 +316,7 @@ serve(async (req) => {
       }
 
     } else if (update.callback_query) {
-      // Handle inline keyboard button presses with improved feedback
+      // Handle inline keyboard button presses
       const { callback_query } = update;
       const chatId = callback_query.message?.chat?.id;
       const data = callback_query.data;
@@ -325,7 +334,7 @@ serve(async (req) => {
           })
         });
 
-        // Process the selected option with better guidance
+        // Process the selected option
         let responseMessage = '';
         if (data.startsWith('city_')) {
           const cityName = data.split('_').slice(2).join('_');
