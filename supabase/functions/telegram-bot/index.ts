@@ -226,22 +226,18 @@ serve(async (req) => {
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
-           // استخراج البيانات الأساسية فقط
+           // استخراج الهاتف فقط - الدالة الذكية ستتولى باقي الاستخراج
            const extractedPhone = extractPhoneFromText(text);
-           const { city, province } = extractCityFromText(text);
 
-           // بناء order_data المبسط - سيتم استخراج المنتجات في قاعدة البيانات
+           // بناء order_data مبسط جداً - الدالة الذكية ستقوم بكل شيء
            const orderData = {
              customer_name: '',
              customer_phone: extractedPhone,
-             customer_city: city,
-             customer_province: province,
              customer_address: text, // النص الكامل للمعالجة الذكية
-             original_text: text,
-             source: 'telegram'
+             original_text: text
            };
           
-          // استدعاء الدالة الذكية الصحيحة
+          // استدعاء الدالة الذكية التي ستستخرج المنتجات والعناوين بذكاء
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_order_data: orderData,
             p_employee_code: employeeCode,
