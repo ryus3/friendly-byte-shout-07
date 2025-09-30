@@ -1687,17 +1687,21 @@ export const SuperProvider = ({ children }) => {
         
         // التحقق من وجود الحساب أو جلبه من التفضيلات
         let actualAccount = selectedAccount;
+        let profile = null; // تعريف profile خارج try-catch
+        
         if (!actualAccount) {
           console.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
           try {
-            const { data: profile } = await supabase
+            const { data: profileData } = await supabase
               .from('profiles')
               .select('selected_delivery_account, default_customer_name')
               .eq('user_id', createdBy)
               .single();
             
+            profile = profileData;
             actualAccount = profile?.selected_delivery_account;
             console.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
+            console.log('👤 اسم الزبون الافتراضي:', profile?.default_customer_name);
           } catch (error) {
             console.error('❌ فشل في جلب الحساب من التفضيلات:', error);
           }
