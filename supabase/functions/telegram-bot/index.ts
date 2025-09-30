@@ -259,6 +259,21 @@ serve(async (req) => {
 
           console.log('🔄 معالجة الطلب باستخدام النسخة العاملة من process_telegram_order...');
           
+          // البحث عن كود الموظف المربوط بهذا الحساب
+          const { data: employeeCode, error: employeeError } = await supabase
+            .from('telegram_employee_codes')
+            .select('employee_code')
+            .eq('telegram_chat_id', chatId)
+            .eq('is_active', true)
+            .single();
+
+          if (employeeError) {
+            console.log('🔍 لم يتم العثور على كود موظف مربوط، استخدام الافتراضي:', employeeError);
+          }
+
+          const employeeCodeToUse = employeeCode?.employee_code || 'EMP0001';
+          console.log('👤 كود الموظف المستخدم:', employeeCodeToUse);
+          
           // بناء بيانات الطلب بالمنتجات المستخرجة من SQL
           const orderData = {
             customer_name: 'عميل تليغرام',
@@ -276,7 +291,7 @@ serve(async (req) => {
           
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_order_data: orderData,
-            p_employee_code: 'EMP0001', // Default employee code
+            p_employee_code: employeeCodeToUse, // استخدام الكود الصحيح
             p_chat_id: chatId
           });
 
