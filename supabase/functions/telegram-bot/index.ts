@@ -183,16 +183,9 @@ serve(async (req) => {
             const region = extractedData.region || 'غير محدد';
             const landmark = extractedData.landmark || '';
             
-            if (city && city !== 'غير محدد') {
-              let addressLine = `${city}`;
-              if (region && region !== 'غير محدد') {
-                addressLine += ` - ${region}`;
-              }
-              if (landmark && landmark !== 'غير محدد' && landmark.trim() !== '') {
-                addressLine += ` - ${landmark}`;
-              }
-              message += `📍 ${addressLine}\n`;
-            }
+            // بناء العنوان بصيغة: المدينة - المنطقة - أقرب نقطة دالة
+            const addressLine = `${city} - ${region} - ${landmark}`;
+            message += `📍 ${addressLine}\n`;
             
             // Add phone number
             const customerPhone = extractedData.phone || '';
@@ -214,7 +207,7 @@ serve(async (req) => {
                 } else if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
                   const colorText = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
                   const sizeText = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
-                  message += `❇️ ${item.product_name}${colorText}${sizeText} × ${item.quantity} - ${item.total_price.toLocaleString()} د.ع\n`;
+                  message += `❇️ ${item.product_name}${colorText}${sizeText} × ${item.quantity}\n`;
                 }
               }
               
