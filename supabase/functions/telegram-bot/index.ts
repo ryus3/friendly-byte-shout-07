@@ -221,6 +221,18 @@ serve(async (req) => {
             return new Response('OK', { headers: corsHeaders });
           }
 
+          console.log('🔍 نتائج استخراج المنتجات:', productItems);
+
+          // التحقق من توفر المنتجات قبل المتابعة
+          if (Array.isArray(productItems) && productItems.length > 0) {
+            const unavailableProduct = productItems.find(item => item.is_available === false);
+            if (unavailableProduct && unavailableProduct.alternatives_message) {
+              console.log('❌ منتج غير متوفر:', unavailableProduct);
+              await sendTelegramMessage(chatId, unavailableProduct.alternatives_message, botToken);
+              return new Response('OK', { headers: corsHeaders });
+            }
+          }
+
           // استخدام دالة SQL المتقدمة للبحث عن المدينة
           let cityResult = null;
           let cityId = null;
