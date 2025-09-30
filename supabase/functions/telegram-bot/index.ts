@@ -183,9 +183,9 @@ serve(async (req) => {
             const region = extractedData.region || 'غير محدد';
             const landmark = extractedData.landmark || '';
             
-            // بناء العنوان بصيغة: المدينة - المنطقة - أقرب نقطة دالة (إذا كانت موجودة)
+            // بناء العنوان بصيغة: المدينة - المنطقة - أقرب نقطة دالة
             let addressLine = `${city} - ${region}`;
-            if (landmark && landmark !== 'غير محدد') {
+            if (landmark && landmark !== 'غير محدد' && landmark.trim() !== '') {
               addressLine += ` - ${landmark}`;
             }
             message += `📍 ${addressLine}\n`;
@@ -223,7 +223,7 @@ serve(async (req) => {
               }
             }
             
-            // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل أجور التوصيل)
+            // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل التوصيل)
             const totalAmount = extractedData.final_amount || extractedData.total_amount || 5000;
             message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
