@@ -4387,10 +4387,6 @@ export type Database = {
           | { p_city_name: string; p_original_text: string }
         Returns: string
       }
-      extract_address_line_only: {
-        Args: { input_text: string }
-        Returns: string
-      }
       extract_product_items_from_text: {
         Args: { input_text: string }
         Returns: Json
@@ -4874,7 +4870,7 @@ export type Database = {
       }
       process_telegram_order: {
         Args:
-          | { p_chat_id?: number; p_employee_code?: string; p_order_data: Json }
+          | { p_chat_id: number; p_employee_code: string; p_order_data: Json }
           | {
               p_customer_address: string
               p_customer_name: string
