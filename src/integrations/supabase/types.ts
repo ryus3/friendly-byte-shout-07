@@ -4881,6 +4881,11 @@ export type Database = {
             }
           | { p_chat_id?: number; p_text: string }
           | {
+              p_created_by?: string
+              p_telegram_chat_id?: number
+              p_text: string
+            }
+          | {
               p_customer_address: string
               p_customer_name: string
               p_customer_phone: string
