@@ -204,95 +204,31 @@ serve(async (req) => {
         });
       }
 
-      // Handle text messages (potential orders)
+        // Handle text messages (potential orders)
       if (text && text !== '/start') {
         try {
-          // استخراج رقم الهاتف
-          const phone = extractPhoneFromText(text);
+          console.log('🔄 معالجة الطلب باستخدام الدالة الذكية الصحيحة...');
           
-          // استخدام دالة SQL المتقدمة لاستخراج المنتجات
-          const { data: productItems, error: productError } = await supabase.rpc('extract_product_items_from_text', {
-            input_text: text
-          });
-
-          if (productError) {
-            console.error('❌ خطأ في استخراج المنتجات:', productError);
-            await sendTelegramMessage(chatId, 'حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.', botToken);
-            return new Response('OK', { headers: corsHeaders });
-          }
-
-          console.log('🔍 نتائج استخراج المنتجات:', productItems);
-
-          // التحقق من توفر المنتجات قبل المتابعة
-          if (Array.isArray(productItems) && productItems.length > 0) {
-            const unavailableProduct = productItems.find(item => item.is_available === false);
-            if (unavailableProduct && unavailableProduct.alternatives_message) {
-              console.log('❌ منتج غير متوفر:', unavailableProduct);
-              await sendTelegramMessage(chatId, unavailableProduct.alternatives_message, botToken);
-              return new Response('OK', { headers: corsHeaders });
-            }
-          }
-
-          // استخدام دالة SQL المتقدمة للبحث عن المدينة
-          let cityResult = null;
-          let cityId = null;
-          let cityName = '';
-          let province = '';
-
-          // استخراج أول كلمة كمدينة محتملة
-          const words = text.split(/\s+/);
-          for (const word of words) {
-            if (word.length > 2) {
-              const { data: cityData, error: cityError } = await supabase.rpc('smart_search_city', {
-                search_text: word
-              });
-              
-              if (!cityError && cityData && cityData.length > 0) {
-                cityResult = cityData[0];
-                cityId = cityResult.city_id;
-                cityName = cityResult.city_name;
-                province = cityName; // افترض أن المدينة هي المحافظة أيضاً
-                break;
-              }
-            }
-          }
-
-          console.log('🔄 معالجة الطلب باستخدام النسخة العاملة من process_telegram_order...');
-          
-          // البحث عن كود الموظف المربوط بهذا الحساب
-          const { data: employeeCode, error: employeeError } = await supabase
-            .from('telegram_employee_codes')
-            .select('employee_code')
+          // البحث عن الموظف المربوط بهذا الحساب
+          const { data: employeeData, error: employeeError } = await supabase
+            .from('employee_telegram_codes')
+            .select('user_id')
             .eq('telegram_chat_id', chatId)
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
 
           if (employeeError) {
-            console.log('🔍 لم يتم العثور على كود موظف مربوط، استخدام الافتراضي:', employeeError);
+            console.log('🔍 لم يتم العثور على موظف مربوط:', employeeError);
           }
 
-          const employeeCodeToUse = employeeCode?.employee_code || 'EMP0001';
-          console.log('👤 كود الموظف المستخدم:', employeeCodeToUse);
+          const employeeId = employeeData?.user_id || null;
+          console.log('👤 معرف الموظف المستخدم:', employeeId);
           
-          // بناء بيانات الطلب بالمنتجات المستخرجة من SQL
-          const orderData = {
-            customer_name: 'عميل تليغرام',
-            customer_phone: phone,
-            customer_address: text,
-            customer_city: cityName,
-            customer_province: province,
-            city_id: cityId,
-            region_id: null,
-            items: productItems || [],
-            total_amount: Array.isArray(productItems) ? 
-              productItems.reduce((sum, item) => sum + (item.total_price || 0), 0) : 0,
-            original_text: text
-          };
-          
+          // استدعاء الدالة الذكية الصحيحة مباشرة
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_order_data: orderData,
-            p_employee_code: employeeCodeToUse, // استخدام الكود الصحيح
-            p_chat_id: chatId
+            p_chat_id: chatId,
+            p_message_text: text,
+            p_employee_id: employeeId
           });
 
           if (orderError) {
