@@ -226,24 +226,20 @@ serve(async (req) => {
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
-          // استخراج البيانات من النص
-          const extractedPhone = extractPhoneFromText(text);
-          const { city, province } = extractCityFromText(text);
-          const products = extractProductFromText(text);
+           // استخراج البيانات الأساسية فقط
+           const extractedPhone = extractPhoneFromText(text);
+           const { city, province } = extractCityFromText(text);
 
-          // بناء order_data مع البيانات المستخرجة
-          const orderData = {
-            customer_name: '',
-            customer_phone: extractedPhone,
-            customer_city: city,
-            customer_province: province,
-            customer_address: text, // النص الكامل للمعالجة الذكية
-            items: products,
-            total_price: products.reduce((sum, item) => sum + (item.total_price || 0), 0),
-            final_total: products.reduce((sum, item) => sum + (item.total_price || 0), 0) + 5000, // إضافة رسوم التوصيل
-            original_text: text,
-            source: 'telegram'
-          };
+           // بناء order_data المبسط - سيتم استخراج المنتجات في قاعدة البيانات
+           const orderData = {
+             customer_name: '',
+             customer_phone: extractedPhone,
+             customer_city: city,
+             customer_province: province,
+             customer_address: text, // النص الكامل للمعالجة الذكية
+             original_text: text,
+             source: 'telegram'
+           };
           
           // استدعاء الدالة الذكية الصحيحة
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
@@ -291,23 +287,26 @@ serve(async (req) => {
               message += `📱 الهاتف : ${customerPhone}\n`;
             }
             
-            // Add product details from original orderData
-            if (orderData.items && Array.isArray(orderData.items) && orderData.items.length > 0) {
-              orderData.items.forEach((item: any) => {
-                const productName = item.product_name || 'منتج';
-                const color = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
-                const size = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
-                const quantity = item.quantity || 1;
-                message += `❇️ ${productName}${color}${size} × ${quantity}\n`;
+            // المنتجات المستخرجة بالدالة الذكية
+            const extractedProducts = orderResult.extracted_products;
+            if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
+              extractedProducts.forEach((item: any) => {
+                if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
+                  const colorText = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
+                  const sizeText = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
+                  message += `❇️ ${item.product_name}${colorText}${sizeText} × ${item.quantity} - ${item.total_price.toLocaleString()} د.ع\n`;
+                } else if (item.alternatives_message) {
+                  // إذا كان هناك رسالة بدائل (منتج غير متوفر)
+                  message = item.alternatives_message;
+                  await sendTelegramMessage(chatId, message, botToken);
+                  return;
+                }
               });
             }
             
-            // Add final amount - المبلغ الإجمالي
-            const finalAmount = orderData.final_total || 0;
-            if (finalAmount > 0) {
-              const formattedFinalAmount = finalAmount.toLocaleString('en-US');
-              message += `💵 المبلغ الإجمالي: ${formattedFinalAmount} د.ع`;
-            }
+            // إجمالي المبلغ من نتيجة المعالجة الذكية
+            const totalAmount = orderResult.total_amount || 5000;
+            message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
             await sendTelegramMessage(chatId, message, botToken);
             
