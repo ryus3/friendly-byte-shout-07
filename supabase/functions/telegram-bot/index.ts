@@ -178,19 +178,30 @@ serve(async (req) => {
             let message = '✅ تم استلام الطلب!\n\n';
             
             // Add location info - استخراج العنوان المعالج بذكاء
-            const customerAddress = orderResult.customer_address || '';
-            if (customerAddress && customerAddress !== 'لم يُحدد - لم يُحدد') {
-              message += `📍 ${customerAddress}\n`;
+            const extractedData = orderResult.extracted_data || {};
+            const city = extractedData.city || 'غير محدد';
+            const region = extractedData.region || 'غير محدد';
+            const landmark = extractedData.landmark || '';
+            
+            if (city && city !== 'غير محدد') {
+              let addressLine = `${city}`;
+              if (region && region !== 'غير محدد') {
+                addressLine += ` - ${region}`;
+              }
+              if (landmark && landmark !== 'غير محدد' && landmark.trim() !== '') {
+                addressLine += ` - ${landmark}`;
+              }
+              message += `📍 ${addressLine}\n`;
             }
             
             // Add phone number
-            const customerPhone = orderData.customer_phone || '';
+            const customerPhone = extractedData.phone || '';
             if (customerPhone) {
               message += `📱 الهاتف : ${customerPhone}\n`;
             }
             
             // المنتجات المستخرجة بالدالة الذكية
-            const extractedProducts = orderResult.extracted_products;
+            const extractedProducts = extractedData.products;
             if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
               extractedProducts.forEach((item: any) => {
                 if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
@@ -207,7 +218,7 @@ serve(async (req) => {
             }
             
             // إجمالي المبلغ من نتيجة المعالجة الذكية
-            const totalAmount = orderResult.total_amount || 5000;
+            const totalAmount = extractedData.total_amount || 5000;
             message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
             await sendTelegramMessage(chatId, message, botToken);
