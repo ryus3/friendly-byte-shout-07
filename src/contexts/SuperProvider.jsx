@@ -158,7 +158,7 @@ export const SuperProvider = ({ children }) => {
   const lastFetchAtRef = useRef(0);
   const pendingAiDeletesRef = useRef(new Set());
 
-  const normalizeOrder = useCallback((o) => {
+  const normalizeOrder = useCallback((o, usersArray = null) => {
     if (!o) return o;
     
     // دعم الطلبات الجديدة بدون order_items
@@ -174,6 +174,15 @@ export const SuperProvider = ({ children }) => {
         }))
       : (o.items || []);
     
+    // البحث عن اسم الموظف من users array إذا كان created_by موجود
+    let employeeName = o.created_by_name || o.employee_name || 'غير محدد';
+    if (o.created_by && usersArray && Array.isArray(usersArray)) {
+      const foundUser = usersArray.find(u => u.user_id === o.created_by);
+      if (foundUser?.full_name) {
+        employeeName = foundUser.full_name;
+      }
+    }
+    
     // ضمان البيانات الأساسية للطلبات الجديدة
     return { 
       ...o, 
@@ -182,7 +191,7 @@ export const SuperProvider = ({ children }) => {
       customer_name: o.customer_name || 'عميل جديد',
       total_amount: o.total_amount || 0,
       created_at: o.created_at || new Date().toISOString(),
-      employee_name: o.created_by_name || o.employee_name || 'غير محدد',
+      employee_name: employeeName,
       isArchived: o.isArchived || false,
       isAiOrder: false,
     };
@@ -1809,11 +1818,11 @@ export const SuperProvider = ({ children }) => {
 
         // إنشاء payload للوسيط
         const alwaseetPayload = {
-          customer_name: (aiOrder.customer_name && 
-            aiOrder.customer_name !== 'زبون من تليغرام' && 
-            aiOrder.customer_name.trim() !== '') 
-            ? aiOrder.customer_name 
-            : (profile?.default_customer_name || aiOrder.customer_name),
+          customer_name: (extractedData.customer_name && 
+            extractedData.customer_name !== 'زبون تليغرام' && 
+            extractedData.customer_name.trim() !== '') 
+            ? extractedData.customer_name 
+            : (profile?.default_customer_name || 'زبون تليغرام'),
           customer_phone: aiOrder.customer_phone,
           customer_address: aiOrder.customer_address,
           customer_city: aiOrder.customer_city,
@@ -2053,8 +2062,9 @@ export const SuperProvider = ({ children }) => {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
           // ✅ استخدام اسم الزبون المستخرج أو الافتراضي من الإعدادات
-          client_name: extractedData.customer_name || 
-            (profile?.default_customer_name || `زبون-${Date.now().toString().slice(-6)}`),
+          client_name: (extractedData.customer_name && extractedData.customer_name !== 'زبون تليغرام')
+            ? extractedData.customer_name 
+            : (profile?.default_customer_name || 'زبون تليغرام'),
           client_mobile: normalizedPhone,
           client_mobile2: '',
           // ✅ استخدام العنوان الكامل المستخرج مع المدينة والمنطقة و landmark
