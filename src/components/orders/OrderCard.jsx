@@ -139,7 +139,6 @@ const OrderCard = ({
       // جمع معلومات اللون والقياس
       const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
       const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
-      // عرض اللون والقياس معاً إذا كانوا موجودين
       const parts = [sizeInfo, colorInfo].filter(Boolean);
       const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
       
@@ -153,7 +152,7 @@ const OrderCard = ({
         isSingle: true
       };
     } else {
-      // عدة منتجات - اعرض ملخص
+      // عدة منتجات - اعرض ملخص باسم المنتج الأول
       const firstProductName = validItems[0]?.productname || validItems[0]?.product_name || 'منتج';
       return { 
         totalItems, 
