@@ -177,36 +177,26 @@ serve(async (req) => {
             // Build order confirmation message
             let message = '✅ تم استلام الطلب!\n\n';
             
-            // Add location info - استخراج العنوان المعالج بذكاء
-            const extractedData = orderResult.extracted_data || {};
-            const city = extractedData.customer_city || 'غير محدد';
-            const fullAddress = extractedData.customer_address || '';
-            
-            // استخراج المنطقة فقط (أول كلمة أو جزء قبل أي فاصل)
-            let region = '';
-            if (fullAddress && fullAddress.trim() !== '' && fullAddress !== city) {
-              // استخراج المنطقة (أول جزء قبل أي فاصلة أو شرطة أو كلمة "شارع")
-              const cleanAddress = fullAddress.replace(city, '').trim();
-              const regionMatch = cleanAddress.match(/^([^\-,،]+)/);
-              region = regionMatch ? regionMatch[1].trim() : cleanAddress.split(/\s+/)[0];
-            }
+            // قراءة البيانات مباشرة من orderResult (وليس من extracted_data)
+            const city = orderResult.customer_city || 'غير محدد';
+            const region = orderResult.customer_address || '';
             
             // بناء العنوان: المدينة - المنطقة
             const addressLine = region ? `${city} - ${region}` : city;
             message += `📍 ${addressLine}\n`;
             
             // Add phone number
-            const customerPhone = extractedData.customer_phone || '';
+            const customerPhone = orderResult.customer_phone || '';
             if (customerPhone && customerPhone !== 'غير محدد') {
               message += `📱 الهاتف: ${customerPhone}\n`;
             }
             
             // المنتجات المستخرجة بالدالة الذكية
-            const extractedProducts = extractedData.products;
-            if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
+            const productItems = orderResult.product_items;
+            if (productItems && Array.isArray(productItems) && productItems.length > 0) {
               let hasUnavailableProduct = false;
               
-              for (const item of extractedProducts) {
+              for (const item of productItems) {
                 if (item.alternatives_message) {
                   // إذا كان هناك رسالة بدائل (منتج غير متوفر)
                   await sendTelegramMessage(chatId, item.alternatives_message, botToken);
@@ -229,7 +219,7 @@ serve(async (req) => {
             }
             
             // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل التوصيل)
-            const totalAmount = extractedData.total_amount || 5000;
+            const totalAmount = orderResult.total_amount || 5000;
             message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
             await sendTelegramMessage(chatId, message, botToken);
