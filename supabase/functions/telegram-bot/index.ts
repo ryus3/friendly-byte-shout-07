@@ -179,25 +179,26 @@ serve(async (req) => {
             
             // Add location info - استخراج العنوان المعالج بذكاء
             const extractedData = orderResult.extracted_data || {};
-            const city = extractedData.city || 'غير محدد';
-            const region = extractedData.region || 'غير محدد';
-            const landmark = extractedData.landmark || '';
+            const city = extractedData.customer_city || 'غير محدد';
+            const fullAddress = extractedData.customer_address || '';
             
-            // بناء العنوان بصيغة: المدينة - المنطقة - أقرب نقطة دالة
-            let addressLine = `${city} - ${region}`;
-            if (landmark && landmark !== 'غير محدد' && landmark.trim() !== '') {
-              addressLine += ` - ${landmark}`;
+            // بناء العنوان بشكل مبسط
+            let addressLine = city;
+            if (fullAddress && fullAddress.trim() !== '' && fullAddress !== city) {
+              // عرض جزء من العنوان فقط (أول 50 حرف)
+              const shortAddress = fullAddress.length > 50 ? fullAddress.substring(0, 50) + '...' : fullAddress;
+              addressLine = `${city} - ${shortAddress}`;
             }
             message += `📍 ${addressLine}\n`;
             
             // Add phone number
-            const customerPhone = extractedData.phone || '';
-            if (customerPhone) {
-              message += `📱 الهاتف : ${customerPhone}\n`;
+            const customerPhone = extractedData.customer_phone || '';
+            if (customerPhone && customerPhone !== 'غير محدد') {
+              message += `📱 الهاتف: ${customerPhone}\n`;
             }
             
             // المنتجات المستخرجة بالدالة الذكية
-            const extractedProducts = extractedData.items;
+            const extractedProducts = extractedData.products;
             if (extractedProducts && Array.isArray(extractedProducts) && extractedProducts.length > 0) {
               let hasUnavailableProduct = false;
               
@@ -224,7 +225,7 @@ serve(async (req) => {
             }
             
             // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل التوصيل)
-            const totalAmount = extractedData.final_amount || extractedData.total_amount || 5000;
+            const totalAmount = extractedData.total_amount || 5000;
             message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
             
             await sendTelegramMessage(chatId, message, botToken);
