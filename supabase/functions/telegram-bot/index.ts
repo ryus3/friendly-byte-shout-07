@@ -182,13 +182,17 @@ serve(async (req) => {
             const city = extractedData.customer_city || 'غير محدد';
             const fullAddress = extractedData.customer_address || '';
             
-            // بناء العنوان بشكل مبسط
-            let addressLine = city;
+            // استخراج المنطقة فقط (أول كلمة أو جزء قبل أي فاصل)
+            let region = '';
             if (fullAddress && fullAddress.trim() !== '' && fullAddress !== city) {
-              // عرض جزء من العنوان فقط (أول 50 حرف)
-              const shortAddress = fullAddress.length > 50 ? fullAddress.substring(0, 50) + '...' : fullAddress;
-              addressLine = `${city} - ${shortAddress}`;
+              // استخراج المنطقة (أول جزء قبل أي فاصلة أو شرطة أو كلمة "شارع")
+              const cleanAddress = fullAddress.replace(city, '').trim();
+              const regionMatch = cleanAddress.match(/^([^\-,،]+)/);
+              region = regionMatch ? regionMatch[1].trim() : cleanAddress.split(/\s+/)[0];
             }
+            
+            // بناء العنوان: المدينة - المنطقة
+            const addressLine = region ? `${city} - ${region}` : city;
             message += `📍 ${addressLine}\n`;
             
             // Add phone number
