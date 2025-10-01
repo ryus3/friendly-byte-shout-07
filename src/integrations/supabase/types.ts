@@ -4874,7 +4874,11 @@ export type Database = {
       }
       process_telegram_order: {
         Args:
-          | { p_chat_id: number; p_employee_id?: string; p_order_data: Json }
+          | {
+              p_message_text: string
+              p_telegram_chat_id: number
+              p_telegram_username?: string
+            }
           | {
               p_message_text: string
               p_telegram_chat_id: number
