@@ -4873,7 +4873,11 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args: { p_chat_id: number; p_message_text: string }
+        Args: {
+          p_employee_code: string
+          p_message_text: string
+          p_telegram_chat_id: number
+        }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
