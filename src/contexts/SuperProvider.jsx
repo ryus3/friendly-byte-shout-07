@@ -1819,13 +1819,9 @@ export const SuperProvider = ({ children }) => {
           };
         });
 
-        // إنشاء payload للوسيط
+        // إنشاء payload للوسيط - استخدام الاسم من aiOrder مباشرة
         const alwaseetPayload = {
-          customer_name: (extractedData.customer_name &&
-            extractedData.customer_name !== 'زبون تليغرام' && 
-            extractedData.customer_name.trim() !== '') 
-            ? extractedData.customer_name 
-            : (profile?.default_customer_name || 'زبون تليغرام'),
+          customer_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           customer_phone: aiOrder.customer_phone,
           customer_address: aiOrder.customer_address,
           customer_city: aiOrder.customer_city,

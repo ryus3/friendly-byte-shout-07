@@ -143,11 +143,11 @@ serve(async (req) => {
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
-          // استدعاء الدالة الذكية المطورة التي تستخدم extract_product_items_from_text
+          // استدعاء الدالة الذكية الجديدة بالمعاملات الصحيحة
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_chat_id: chatId,
             p_message_text: text,
-            p_employee_code: employeeCode
+            p_telegram_chat_id: chatId,
+            p_telegram_username: message.from?.username || null
           });
 
           if (orderError) {
