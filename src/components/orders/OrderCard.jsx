@@ -154,10 +154,10 @@ const OrderCard = ({
       };
     } else {
       // عدة منتجات - اعرض ملخص
-      const firstProductType = validItems[0]?.producttype || validItems[0]?.product_type || 'منتج';
+      const firstProductName = validItems[0]?.product_name || validItems[0]?.productname || validItems[0]?.producttype || validItems[0]?.product_type || 'منتج';
       return { 
         totalItems, 
-        displayText: `${totalItems} قطعة - ${firstProductType}`,
+        displayText: `${totalItems} قطعة - ${firstProductName}`,
         variantInfo: null,
         quantity: totalItems,
         isSingle: false
