@@ -173,60 +173,11 @@ serve(async (req) => {
           // Handle response
           if (orderResult?.success) {
             console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
-            
-            // Build order confirmation message
-            let message = '✅ تم استلام الطلب!\n\n';
-            
-            // قراءة البيانات مباشرة من orderResult (وليس من extracted_data)
-            const city = orderResult.customer_city || 'غير محدد';
-            const region = orderResult.customer_address || '';
-            
-            // بناء العنوان: المدينة - المنطقة
-            const addressLine = region ? `${city} - ${region}` : city;
-            message += `📍 ${addressLine}\n`;
-            
-            // Add phone number
-            const customerPhone = orderResult.customer_phone || '';
-            if (customerPhone && customerPhone !== 'غير محدد') {
-              message += `📱 الهاتف: ${customerPhone}\n`;
-            }
-            
-            // المنتجات المستخرجة بالدالة الذكية
-            const productItems = orderResult.product_items;
-            if (productItems && Array.isArray(productItems) && productItems.length > 0) {
-              let hasUnavailableProduct = false;
-              
-              for (const item of productItems) {
-                if (item.alternatives_message) {
-                  // إذا كان هناك رسالة بدائل (منتج غير متوفر)
-                  await sendTelegramMessage(chatId, item.alternatives_message, botToken);
-                  hasUnavailableProduct = true;
-                  break;
-                } else if (item.product_name && item.product_name !== 'غير محدد' && item.product_name !== 'خطأ') {
-                  const colorText = item.color && item.color !== 'افتراضي' ? ` (${item.color})` : '';
-                  const sizeText = item.size && item.size !== 'افتراضي' ? ` ${item.size}` : '';
-                  message += `❇️ ${item.product_name}${colorText}${sizeText} × ${item.quantity}\n`;
-                }
-              }
-              
-              // إذا كان هناك منتج غير متوفر، لا نرسل رسالة التأكيد
-              if (hasUnavailableProduct) {
-                return new Response(JSON.stringify({ success: true }), {
-                  status: 200,
-                  headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                });
-              }
-            }
-            
-            // إجمالي المبلغ من نتيجة المعالجة الذكية (شامل التوصيل)
-            const totalAmount = orderResult.total_amount || 5000;
-            message += `💵 المبلغ الإجمالي: ${totalAmount.toLocaleString()} د.ع`;
-            
-            await sendTelegramMessage(chatId, message, botToken);
-            
+            // استخدام الرسالة الجاهزة من الدالة مباشرة ✅
+            await sendTelegramMessage(chatId, orderResult.message, botToken);
           } else {
             // Handle errors
-            let errorMessage = orderResult?.message || orderResult?.error || 'لم أتمكن من فهم طلبك بشكل كامل.';
+            let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
             await sendTelegramMessage(chatId, errorMessage, botToken);
           }
 
