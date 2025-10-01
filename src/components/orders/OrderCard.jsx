@@ -154,7 +154,7 @@ const OrderCard = ({
       };
     } else {
       // عدة منتجات - اعرض ملخص
-      const firstProductName = validItems[0]?.productname || validItems[0]?.product_name || validItems[0]?.products?.name || 'منتج';
+      const firstProductName = validItems[0]?.productname || validItems[0]?.product_name || 'منتج';
       return { 
         totalItems, 
         displayText: `${totalItems} قطعة - ${firstProductName}`,
