@@ -153,12 +153,22 @@ const OrderCard = ({
         isSingle: true
       };
     } else {
-      // عدة منتجات - اعرض ملخص
-      const firstProductName = validItems[0]?.product_name || validItems[0]?.productname || validItems[0]?.producttype || validItems[0]?.product_type || 'منتج';
+      // عدة منتجات - اعرض أول منتج مع اللون والقياس
+      const firstItem = validItems[0];
+      const firstProductName = firstItem?.product_name || firstItem?.productname || firstItem?.producttype || firstItem?.product_type || 'منتج';
+      
+      // جمع معلومات اللون والقياس للمنتج الأول
+      const colorInfo = firstItem?.product_variants?.colors?.name || firstItem?.color || '';
+      const sizeInfo = firstItem?.product_variants?.sizes?.name || firstItem?.size || '';
+      const parts = [sizeInfo, colorInfo].filter(Boolean);
+      const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
+      
       return { 
         totalItems, 
-        displayText: `${totalItems} قطعة - ${firstProductName}`,
-        variantInfo: null,
+        displayText: firstProductName,
+        variantInfo: variantInfo || null,
+        colorInfo: colorInfo,
+        colorHex: firstItem?.product_variants?.colors?.hex_code || firstItem?.color_hex,
         quantity: totalItems,
         isSingle: false
       };
@@ -519,11 +529,9 @@ const OrderCard = ({
                           <Package className="h-4 w-4" />
                         </div>
                         <span className="text-sm">{productSummary.displayText}</span>
-                        {productSummary.isSingle && (
-                          <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                            X{productSummary.quantity}
-                          </span>
-                        )}
+                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                          X{productSummary.quantity}
+                        </span>
                       </div>
                       
                       {/* الصف الثاني: اللون - القياس (أسفل اسم المنتج) */}
