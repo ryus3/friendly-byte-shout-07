@@ -373,14 +373,15 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   
   // حساب التفاصيل للعرض
   const priceDetails = useMemo(() => {
-    const total = order.total_amount || 0; // 20000
+    // order.total_amount = سعر المنتجات فقط (بدون رسوم التوصيل)
+    const baseAmount = order.total_amount || 0; // 30000 (سعر المنتجات)
     const deliveryFee = order.delivery_fee || settings?.deliveryFee || 0; // 5000
-    const baseAmount = total - deliveryFee; // 15000 (سعر المنتجات)
+    const total = baseAmount + deliveryFee; // 35000 (المجموع الكلي) ✅
     
     return {
-      baseAmount,
-      deliveryFee,
-      total,
+      baseAmount, // 30000
+      deliveryFee, // 5000
+      total, // 35000
       showDeliveryFee: deliveryFee > 0
     };
   }, [order, settings]);
