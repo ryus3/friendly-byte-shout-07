@@ -145,9 +145,9 @@ serve(async (req) => {
 
           // استدعاء الدالة الذكية الجديدة بالمعاملات الصحيحة
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+            p_employee_code: employeeCode,
             p_message_text: text,
-            p_telegram_chat_id: chatId,
-            p_telegram_username: message.from?.username || null
+            p_telegram_chat_id: chatId
           });
 
           if (orderError) {
