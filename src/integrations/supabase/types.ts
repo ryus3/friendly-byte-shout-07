@@ -4874,6 +4874,7 @@ export type Database = {
       }
       process_telegram_order: {
         Args:
+          | { p_chat_id: number; p_message_text: string }
           | {
               p_employee_code: string
               p_message_text: string
