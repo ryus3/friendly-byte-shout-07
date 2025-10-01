@@ -2057,10 +2057,8 @@ export const SuperProvider = ({ children }) => {
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
-          // ✅ استخدام اسم الزبون المستخرج أو الافتراضي من الإعدادات
-          client_name: (extractedData.customer_name && extractedData.customer_name !== 'زبون تليغرام')
-            ? extractedData.customer_name 
-            : (profile?.default_customer_name || 'زبون تليغرام'),
+          // ✅ استخدام اسم الزبون من الطلب الذكي مباشرة، ثم الافتراضي من الإعدادات
+          client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           client_mobile: normalizedPhone,
           client_mobile2: '',
           // ✅ استخدام العنوان الكامل المستخرج مع المدينة والمنطقة و landmark
