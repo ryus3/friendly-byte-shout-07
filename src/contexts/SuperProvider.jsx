@@ -1878,7 +1878,8 @@ export const SuperProvider = ({ children }) => {
         };
         
         let cityToSearch = extractedData.city || aiOrder.customer_city || '';
-        let regionToSearch = extractedData.region || aiOrder.customer_province || '';
+        // ✅ استخدام customer_address للمنطقة بدلاً من customer_province
+        let regionToSearch = extractedData.region || aiOrder.customer_address || aiOrder.customer_province || '';
         let nearestPoint = extractedData.landmark || '';
         
         console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
@@ -2290,11 +2291,10 @@ export const SuperProvider = ({ children }) => {
         // ✅ استخدام اسم الزبون المستخرج
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        // ✅ استخدام العنوان الكامل المستخرج
-        customer_address: extractedData.full_address || 
-          `${cityName || aiOrder.customer_city} - ${regionName || aiOrder.customer_province}${extractedData.landmark && extractedData.landmark !== 'غير محدد' ? ' - ' + extractedData.landmark : ''}`,
-        customer_city: cityName || extractedData.city || aiOrder.customer_city,
-        customer_province: regionName || extractedData.region || aiOrder.customer_province,
+        // ✅ استخدام البيانات الأصلية من aiOrder مباشرة
+        customer_address: extractedData.full_address || `${aiOrder.customer_city || ''} ${aiOrder.customer_address || ''}`.trim(),
+        customer_city: aiOrder.customer_city || cityName || extractedData.city,
+        customer_province: aiOrder.customer_address || regionName || extractedData.region,
         total_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
