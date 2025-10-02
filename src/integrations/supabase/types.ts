@@ -5111,17 +5111,21 @@ export type Database = {
         Returns: boolean
       }
       smart_inventory_search: {
-        Args: { p_employee_id: string; p_search_query: string }
+        Args: { p_employee_id: string; p_search_text: string }
         Returns: {
           available_quantity: number
-          category_name: string
+          barcode: string
+          color_id: string
           color_name: string
-          match_score: number
+          cost_price: number
+          image_url: string
+          price: number
           product_id: string
           product_name: string
           reserved_quantity: number
+          size_id: string
           size_name: string
-          total_quantity: number
+          variant_id: string
         }[]
       }
       smart_search_city: {
