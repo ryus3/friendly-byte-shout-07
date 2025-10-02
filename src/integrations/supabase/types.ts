@@ -26,12 +26,16 @@ export type Database = {
           customer_province: string | null
           id: string
           items: Json
+          location_confidence: number | null
+          location_suggestions: Json | null
           order_data: Json
           original_text: string | null
           processed_at: string | null
           processed_by: string | null
           region_id: number | null
           related_order_id: string | null
+          resolved_city_name: string | null
+          resolved_region_name: string | null
           source: string
           status: string
           telegram_chat_id: number | null
@@ -49,12 +53,16 @@ export type Database = {
           customer_province?: string | null
           id?: string
           items?: Json
+          location_confidence?: number | null
+          location_suggestions?: Json | null
           order_data: Json
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           region_id?: number | null
           related_order_id?: string | null
+          resolved_city_name?: string | null
+          resolved_region_name?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
@@ -72,12 +80,16 @@ export type Database = {
           customer_province?: string | null
           id?: string
           items?: Json
+          location_confidence?: number | null
+          location_suggestions?: Json | null
           order_data?: Json
           original_text?: string | null
           processed_at?: string | null
           processed_by?: string | null
           region_id?: number | null
           related_order_id?: string | null
+          resolved_city_name?: string | null
+          resolved_region_name?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null

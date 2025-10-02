@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.telegram-webhook-check]
 verify_jwt = false
+
+[functions.resolve-location-with-ai]
+verify_jwt = false

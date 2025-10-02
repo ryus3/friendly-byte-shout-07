@@ -170,6 +170,77 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
+          // إذا نجح إنشاء الطلب، استدعاء resolve-location-with-ai
+          if (orderResult?.success) {
+            console.log('🌍 معالجة العنوان بالذكاء الاصطناعي...');
+            
+            try {
+              // استخراج النص الخاص بالموقع من الرسالة
+              const locationText = orderResult.location_text || text.split('\n')[1] || text;
+              
+              const { data: locationData, error: locationError } = await supabase.functions.invoke('resolve-location-with-ai', {
+                body: { location_text: locationText }
+              });
+
+              if (locationError) {
+                console.warn('⚠️ فشل في معالجة الموقع:', locationError);
+              } else if (locationData) {
+                console.log('✅ تم معالجة الموقع:', locationData);
+                
+                // تحديث ai_orders بالموقع المعالج
+                const aiOrderId = orderResult.ai_order_id || orderResult.order_id;
+                if (aiOrderId) {
+                  const { error: updateError } = await supabase
+                    .from('ai_orders')
+                    .update({
+                      city_id: locationData.city_id,
+                      region_id: locationData.region_id,
+                      resolved_city_name: locationData.city_name,
+                      resolved_region_name: locationData.region_name,
+                      location_confidence: locationData.confidence,
+                      location_suggestions: locationData.suggestions || []
+                    })
+                    .eq('id', aiOrderId);
+
+                  if (updateError) {
+                    console.error('❌ فشل تحديث الموقع في قاعدة البيانات:', updateError);
+                  } else {
+                    console.log('✅ تم تحديث الموقع في قاعدة البيانات');
+                  }
+                }
+              }
+            } catch (locationProcessError) {
+              console.error('❌ خطأ في معالجة الموقع:', locationProcessError);
+              // نتجاهل الخطأ ونكمل لأن الطلب تم إنشاؤه بنجاح
+            }
+          }
+
+          // Handle response
+          if (orderResult?.success) {
+            console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
+            // استخدام الرسالة الجاهزة من الدالة مباشرة ✅
+            await sendTelegramMessage(chatId, orderResult.message, botToken);
+
+          if (orderError) {
+            console.error('❌ خطأ في معالجة الطلب:', orderError);
+            
+            let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
+            
+            if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
+              errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
+            } else if (orderError.message?.includes('permission')) {
+              errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
+            }
+            
+            await sendTelegramMessage(chatId, errorMessage, botToken);
+            return new Response(JSON.stringify({ error: orderError.message }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          console.log('✅ نتيجة معالجة الطلب:', orderResult);
+
           // Handle response
           if (orderResult?.success) {
             console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
