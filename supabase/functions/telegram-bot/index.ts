@@ -28,7 +28,6 @@ const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات 
 
 /inventory - جرد سريع للمخزون 📦
 /product برشلونة - جرد منتج معين 🛍️
-/department رياضي - جرد قسم كامل 📁
 /category تيشرتات - جرد تصنيف محدد 🏷️
 /color أحمر - جرد حسب اللون 🎨
 /size سمول - جرد حسب القياس 📏
@@ -44,18 +43,17 @@ const INVENTORY_KEYBOARD = {
   inline_keyboard: [
     [
       { text: '🛍️ جرد منتج', callback_data: 'inv_product' },
-      { text: '📁 جرد قسم', callback_data: 'inv_department' }
+      { text: '🏷️ جرد تصنيف', callback_data: 'inv_category' }
     ],
     [
-      { text: '🏷️ جرد تصنيف', callback_data: 'inv_category' },
-      { text: '🎨 جرد لون', callback_data: 'inv_color' }
+      { text: '🎨 جرد لون', callback_data: 'inv_color' },
+      { text: '📏 جرد قياس', callback_data: 'inv_size' }
     ],
     [
-      { text: '📏 جرد قياس', callback_data: 'inv_size' },
-      { text: '🔍 بحث ذكي', callback_data: 'inv_search' }
+      { text: '🔍 بحث ذكي', callback_data: 'inv_search' },
+      { text: '📊 إحصائيات المخزون', callback_data: 'inv_stats' }
     ],
     [
-      { text: '📊 إحصائيات المخزون', callback_data: 'inv_stats' },
       { text: '📦 جرد سريع', callback_data: 'inv_quick' }
     ]
   ]
@@ -133,13 +131,11 @@ interface InventoryItem {
   total_quantity: number;
   available_quantity: number;
   reserved_quantity: number;
-  department_name?: string;
   category_name?: string;
 }
 
 interface InventoryProduct {
   product_name: string;
-  department_name?: string;
   category_name?: string;
   variants: Array<{
     color_name: string;
@@ -211,13 +207,9 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
       // اسم المنتج مع أيقونة مميزة
       message += `🛍️ <b>${product.product_name}</b>\n`;
       
-      // القسم والتصنيف
-      if (product.department_name) {
-        message += `📁 ${product.department_name}`;
-        if (product.category_name) {
-          message += ` • ${product.category_name}`;
-        }
-        message += '\n';
+      // التصنيف فقط (لا يوجد قسم)
+      if (product.category_name) {
+        message += `🏷️ ${product.category_name}\n`;
       }
       
       // حساب الإحصائيات
@@ -422,31 +414,6 @@ async function getSizeButtons(): Promise<any> {
   }
 }
 
-// Helper function to get department buttons
-async function getDepartmentButtons(employeeId: string): Promise<any> {
-  try {
-    const { data, error } = await supabase
-      .from('departments')
-      .select('id, name')
-      .eq('is_active', true)
-      .limit(8);
-
-    if (error || !data || data.length === 0) {
-      return null;
-    }
-
-    const buttons = data.map((d: any) => [{
-      text: `📁 ${d.name}`,
-      callback_data: `select_department_${d.name}`
-    }]);
-
-    return { inline_keyboard: buttons };
-  } catch (error) {
-    console.error('❌ خطأ في جلب قائمة الأقسام:', error);
-    return null;
-  }
-}
-
 // Helper function to get category buttons
 async function getCategoryButtons(): Promise<any> {
   try {
@@ -557,21 +524,6 @@ serve(async (req) => {
         });
       }
 
-      // Handle /department command
-      if (text.startsWith('/department')) {
-        const searchValue = text.replace(/^\/department\s*/i, '').trim();
-        if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم القسم بعد الأمر\nمثال: /department رياضي', botToken);
-        } else {
-          const inventoryMessage = await handleInventorySearch(employeeId, 'department', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
-        }
-        return new Response(JSON.stringify({ success: true }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
       // Handle /category command
       if (text.startsWith('/category')) {
         const searchValue = text.replace(/^\/category\s*/i, '').trim();
@@ -655,8 +607,6 @@ serve(async (req) => {
           
           if (action === 'inv_product') {
             inventoryMessage = await handleInventorySearch(employeeId, 'product', text);
-          } else if (action === 'inv_department') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'department', text);
           } else if (action === 'inv_category') {
             inventoryMessage = await handleInventorySearch(employeeId, 'category', text);
           } else if (action === 'inv_color') {
@@ -795,19 +745,6 @@ serve(async (req) => {
             shouldSaveState = true;
             stateAction = 'inv_product';
           }
-        } else if (data === 'inv_department') {
-          // عرض قائمة الأقسام بأزرار تفاعلية
-          const deptButtons = await getDepartmentButtons(employeeId);
-          if (deptButtons) {
-            await sendTelegramMessage(chatId, '📁 اختر قسم أو اكتب اسمه:', botToken, deptButtons);
-            shouldSaveState = true;
-            stateAction = 'inv_department';
-            responseMessage = '';
-          } else {
-            responseMessage = '📁 اكتب اسم القسم الذي تريد الاستعلام عنه:\n\nمثال: رياضي';
-            shouldSaveState = true;
-            stateAction = 'inv_department';
-          }
         } else if (data === 'inv_category') {
           // عرض قائمة التصنيفات بأزرار تفاعلية
           const catButtons = await getCategoryButtons();
@@ -858,16 +795,23 @@ serve(async (req) => {
         }
         // Handle selection from buttons
         else if (data.startsWith('select_product_')) {
-          const productId = data.replace('select_product_', '');
-          // Get product details and show inventory
-          const { data: productData } = await supabase.rpc('get_inventory_by_permissions', {
-            p_employee_id: employeeId,
-            p_filter_type: 'product',
-            p_search_term: null
-          });
-          const product = productData?.find((p: any) => p.product_id === productId);
-          if (product) {
-            responseMessage = await handleInventorySearch(employeeId, 'product', product.product_name);
+          const productIdOrName = data.replace('select_product_', '');
+          // Try to search by the product ID we saved
+          try {
+            const { data: allProducts } = await supabase.rpc('get_inventory_by_permissions', {
+              p_employee_id: employeeId,
+              p_filter_type: null,
+              p_search_term: null
+            });
+            const product = allProducts?.find((p: any) => p.product_id === productIdOrName);
+            if (product) {
+              responseMessage = await handleInventorySearch(employeeId, 'product', product.product_name);
+            } else {
+              responseMessage = '❌ لم يتم العثور على المنتج';
+            }
+          } catch (error) {
+            console.error('خطأ في جلب تفاصيل المنتج:', error);
+            responseMessage = '❌ حدث خطأ في جلب تفاصيل المنتج';
           }
         } else if (data.startsWith('select_color_')) {
           const colorName = data.replace('select_color_', '');
@@ -875,9 +819,6 @@ serve(async (req) => {
         } else if (data.startsWith('select_size_')) {
           const sizeName = data.replace('select_size_', '');
           responseMessage = await handleInventorySearch(employeeId, 'size', sizeName);
-        } else if (data.startsWith('select_department_')) {
-          const deptName = data.replace('select_department_', '');
-          responseMessage = await handleInventorySearch(employeeId, 'department', deptName);
         } else if (data.startsWith('select_category_')) {
           const catName = data.replace('select_category_', '');
           responseMessage = await handleInventorySearch(employeeId, 'category', catName);
@@ -912,23 +853,16 @@ serve(async (req) => {
         }
 
         if (responseMessage) {
-          // For inventory buttons that expect user input, add the keyboard again
-          const shouldShowKeyboard = ['inv_product', 'inv_department', 'inv_category', 'inv_color', 'inv_size', 'inv_search'].some(prefix => data === prefix);
-          
-          if (shouldShowKeyboard) {
-            // Send message with force reply to prompt user for input
-            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: chatId,
-                text: responseMessage,
-                reply_markup: { force_reply: true, selective: true }
-              })
-            });
-          } else {
-            await sendTelegramMessage(chatId, responseMessage, botToken);
-          }
+          // For inventory buttons that expect user input, send with HTML parse mode
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: responseMessage,
+              parse_mode: 'HTML'
+            })
+          });
         }
       }
     }
