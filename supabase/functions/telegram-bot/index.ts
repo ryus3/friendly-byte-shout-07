@@ -188,7 +188,7 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
     // استخدام smart_inventory_search بدلاً من get_inventory_by_permissions
     const { data, error } = await supabase.rpc('smart_inventory_search', {
       p_employee_id: employeeId,
-      p_search_query: searchValue || ''
+      p_search_text: searchValue || ''
     });
 
     if (error) throw error;
