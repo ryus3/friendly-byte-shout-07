@@ -169,11 +169,11 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
 
 ✅ إجمالي المنتجات: ${stats.total_products || 0}
 🎨 إجمالي المتغيرات: ${stats.total_variants || 0}
-📦 إجمالي المخزون: ${stats.total_stock || 0}
-🟢 المتاح للبيع: ${stats.available_stock || 0}
-🔒 المحجوز: ${stats.reserved_stock || 0}
-⚠️ منخفض المخزون: ${stats.low_stock_items || 0}
-❌ نفذ من المخزون: ${stats.out_of_stock_items || 0}
+📦 إجمالي المخزون: ${stats.total_quantity || 0}
+🟢 المتاح للبيع: ${stats.available_quantity || 0}
+🔒 المحجوز: ${stats.reserved_quantity || 0}
+⚠️ منخفض المخزون: ${stats.low_stock_count || 0}
+❌ نفذ من المخزون: ${stats.out_of_stock_count || 0}
 💰 قيمة المخزون: ${(stats.total_value || 0).toLocaleString()} د.ع`;
   } catch (error) {
     console.error('❌ خطأ في جلب الإحصائيات:', error);
@@ -243,7 +243,7 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
       
       // عرض الإحصائيات بشكل احترافي
       const availabilityIcon = totalAvailable > 0 ? '✅' : '❌';
-      message += `${availabilityIcon} <b>المخزون:</b> ${totalAvailable} متاح من ${totalStock}`;
+      message += `${availabilityIcon} <b>المخزون:</b> ${totalAvailable} قطعة`;
       if (totalReserved > 0) {
         message += ` <i>(محجوز: ${totalReserved})</i>`;
       }
