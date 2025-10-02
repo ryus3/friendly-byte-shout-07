@@ -1877,9 +1877,22 @@ export const SuperProvider = ({ children }) => {
           return candidates;
         };
         
-        let cityToSearch = extractedData.city || aiOrder.customer_city || '';
-        // ✅ استخدام customer_address للمنطقة بدلاً من customer_province
-        let regionToSearch = extractedData.region || aiOrder.customer_address || aiOrder.customer_province || '';
+        // ✅ استخدام city_id و region_id المحفوظة من process_telegram_order مباشرة
+        let cityId = aiOrder.city_id || null;
+        let regionId = aiOrder.region_id || null;
+        
+        // fallback للطريقة القديمة إذا لم تكن موجودة
+        let cityToSearch = '';
+        let regionToSearch = '';
+        
+        if (!cityId || !regionId) {
+          // استخراج المدينة والمنطقة من customer_city (بصيغة "المدينة - المنطقة")
+          let fullCityRegion = aiOrder.customer_city || '';
+          const [cityPart, regionPart] = fullCityRegion.split('-').map(s => s.trim());
+          
+          cityToSearch = extractedData.city || cityPart || '';
+          regionToSearch = extractedData.region || regionPart || '';
+        }
         let nearestPoint = extractedData.landmark || '';
         
         console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
@@ -1889,11 +1902,10 @@ export const SuperProvider = ({ children }) => {
           full_address: extractedData.full_address
         });
         
-        // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
-        let cityId = null;
+        // البحث عن المدينة - فقط إذا لم تكن موجودة من قبل
         let foundCityName = '';
         
-        if (cityToSearch) {
+        if (!cityId && cityToSearch) {
           const searchCity = normalizeArabic(cityToSearch);
           console.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
           
@@ -1928,16 +1940,16 @@ export const SuperProvider = ({ children }) => {
           }
         }
 
-        // جلب المناطق للمدينة المحددة
-        console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
-        const regionsData = await getRegionsByCity(accountData.token, cityId);
-        const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
-        
-        let regionId = null;
+        // جلب المناطق للمدينة المحددة - فقط إذا لم تكن region_id موجودة
         let foundRegionName = '';
         
-        if (regions.length > 0) {
-          if (regionToSearch) {
+        if (!regionId && cityId) {
+          console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
+          const regionsData = await getRegionsByCity(accountData.token, cityId);
+          const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
+          
+          if (regions.length > 0) {
+            if (regionToSearch) {
             console.log('🔍 البحث عن المنطقة:', regionToSearch);
             
             // توليد جميع المرشحات المحتملة من النص
@@ -2005,13 +2017,31 @@ export const SuperProvider = ({ children }) => {
           } else if (!regionId && regionToSearch) {
             console.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
           }
+          
+          // لا نفشل العملية إذا لم نجد منطقة، بدلاً من ذلك نستخدم المدينة فقط
+          if (!regionId && regions.length > 0) {
+            regionId = regions[0].id;
+            foundRegionName = regions[0].name;
+            console.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
+          }
         }
         
-        // لا نفشل العملية إذا لم نجد منطقة، بدلاً من ذلك نستخدم المدينة فقط
-        if (!regionId && regions.length > 0) {
-          regionId = regions[0].id;
-          foundRegionName = regions[0].name;
-          console.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
+        // إذا كانت city_id و region_id موجودة من البداية، نحصل على الأسماء فقط
+        if (aiOrder.city_id && aiOrder.region_id && !foundCityName) {
+          const city = cities.find(c => c.id === aiOrder.city_id);
+          if (city) foundCityName = city.name;
+          
+          const regionsData = await getRegionsByCity(accountData.token, aiOrder.city_id);
+          const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
+          const region = regions.find(r => r.id === aiOrder.region_id);
+          if (region) foundRegionName = region.name;
+          
+          console.log('✅ استخدام city_id و region_id المحفوظة مسبقاً:', { 
+            cityId: aiOrder.city_id, 
+            regionId: aiOrder.region_id,
+            cityName: foundCityName,
+            regionName: foundRegionName 
+          });
         }
 
         // تطبيع رقم الهاتف - نفس الطريقة من QuickOrderContent
@@ -2058,6 +2088,8 @@ export const SuperProvider = ({ children }) => {
         const updatedPayload = {
           city_id: parseInt(cityId),
           region_id: parseInt(regionId),
+          customer_city_id: parseInt(cityId), // ✅ تمرير أيضاً كـ customer_city_id للتوافق
+          customer_region_id: parseInt(regionId), // ✅ تمرير أيضاً كـ customer_region_id للتوافق
           // ✅ استخدام اسم الزبون من الطلب الذكي مباشرة، ثم الافتراضي من الإعدادات
           client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           client_mobile: normalizedPhone,
