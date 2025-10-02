@@ -220,32 +220,6 @@ serve(async (req) => {
             console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
             // استخدام الرسالة الجاهزة من الدالة مباشرة ✅
             await sendTelegramMessage(chatId, orderResult.message, botToken);
-
-          if (orderError) {
-            console.error('❌ خطأ في معالجة الطلب:', orderError);
-            
-            let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
-            
-            if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
-              errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
-            } else if (orderError.message?.includes('permission')) {
-              errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
-            }
-            
-            await sendTelegramMessage(chatId, errorMessage, botToken);
-            return new Response(JSON.stringify({ error: orderError.message }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-
-          console.log('✅ نتيجة معالجة الطلب:', orderResult);
-
-          // Handle response
-          if (orderResult?.success) {
-            console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
-            // استخدام الرسالة الجاهزة من الدالة مباشرة ✅
-            await sendTelegramMessage(chatId, orderResult.message, botToken);
           } else {
             // Handle errors
             let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
