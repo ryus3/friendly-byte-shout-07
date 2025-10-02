@@ -2182,10 +2182,11 @@ export const SuperProvider = ({ children }) => {
           alwaseet_city_id: parseInt(cityId),
           alwaseet_region_id: parseInt(regionId)
         }, foundCityName, foundRegionName);
-        } catch (err) {
-          console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
-          return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
-        }
+        
+      } catch (err) {
+        console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
+        return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
+      }
       }
 
       // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
