@@ -4609,13 +4609,12 @@ export type Database = {
       get_employee_inventory_stats: {
         Args: { p_employee_id: string }
         Returns: {
-          available_stock: number
-          low_stock_items: number
-          out_of_stock_items: number
-          reserved_stock: number
+          low_stock_variants: number
+          out_of_stock_variants: number
+          total_available_quantity: number
           total_products: number
-          total_stock: number
-          total_value: number
+          total_quantity: number
+          total_reserved_quantity: number
           total_variants: number
         }[]
       }
@@ -4635,11 +4634,13 @@ export type Database = {
         }[]
       }
       get_inventory_by_permissions: {
-        Args: {
-          p_employee_id: string
-          p_search_type?: string
-          p_search_value?: string
-        }
+        Args:
+          | { p_employee_id: string }
+          | {
+              p_employee_id: string
+              p_search_type?: string
+              p_search_value?: string
+            }
         Returns: {
           available_quantity: number
           category_name: string
