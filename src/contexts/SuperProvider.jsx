@@ -2187,7 +2187,7 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
         return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
       }
-      }
+
 
       // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
       const products = Array.isArray(allData.products) ? allData.products : [];
