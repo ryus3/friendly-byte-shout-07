@@ -193,25 +193,37 @@ serve(async (req) => {
               } else if (locationData) {
                 console.log('✅ تم معالجة الموقع:', locationData);
                 
-                // تحديث ai_orders بالموقع المعالج
+                // تحديث ai_orders بالموقع المُحلّل من الذكاء الاصطناعي
                 const aiOrderId = orderResult.ai_order_id || orderResult.order_id;
                 if (aiOrderId) {
+                  const updatePayload: any = {
+                    location_confidence: locationData.confidence || 0,
+                    location_suggestions: locationData.suggestions || []
+                  };
+
+                  // حفظ المعرفات والأسماء المُحللة من الذكاء الاصطناعي
+                  if (locationData.city_id) {
+                    updatePayload.city_id = locationData.city_id;
+                  }
+                  if (locationData.region_id) {
+                    updatePayload.region_id = locationData.region_id;
+                  }
+                  if (locationData.city_name) {
+                    updatePayload.resolved_city_name = locationData.city_name;
+                  }
+                  if (locationData.region_name) {
+                    updatePayload.resolved_region_name = locationData.region_name;
+                  }
+
                   const { error: updateError } = await supabase
                     .from('ai_orders')
-                    .update({
-                      city_id: locationData.city_id,
-                      region_id: locationData.region_id,
-                      resolved_city_name: locationData.city_name,
-                      resolved_region_name: locationData.region_name,
-                      location_confidence: locationData.confidence,
-                      location_suggestions: locationData.suggestions || []
-                    })
+                    .update(updatePayload)
                     .eq('id', aiOrderId);
 
                   if (updateError) {
                     console.error('❌ فشل تحديث الموقع في قاعدة البيانات:', updateError);
                   } else {
-                    console.log('✅ تم تحديث الموقع في قاعدة البيانات');
+                    console.log('✅ تم تحديث الموقع في قاعدة البيانات بنجاح');
                   }
                 }
               }

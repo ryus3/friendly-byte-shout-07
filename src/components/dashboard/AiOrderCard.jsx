@@ -452,25 +452,70 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
           <div className="space-y-1.5 mb-2">
             {/* Customer Phone */}
 
-            {/* City & Region - Resolved by AI */}
-            {(order.resolved_city_name || order.customer_city) && (
-              <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
-                <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-[11px] font-bold">
-                    {order.resolved_city_name || order.customer_city}
-                    {(order.resolved_region_name || order.customer_address?.split(',')[0]) && 
-                      ` - ${order.resolved_region_name || order.customer_address?.split(',')[0]}`
-                    }
-                  </span>
-                  {order.location_confidence && order.location_confidence < 0.7 && (
-                    <span className="text-[9px] bg-yellow-500/30 px-1 rounded">تحقق</span>
-                  )}
+            {/* City & Region - Formatted Address with AI */}
+            {(() => {
+              const displayCity = order.resolved_city_name || order.customer_city || 'غير محدد';
+              const displayRegion = order.resolved_region_name || '';
+              
+              // استخراج نقطة دالة من النص الأصلي
+              const extractLandmark = () => {
+                if (!order.original_text) return '';
+                
+                let text = order.original_text.toLowerCase();
+                
+                // إزالة المدينة والمنطقة من النص
+                if (displayCity && displayCity !== 'غير محدد') {
+                  text = text.replace(displayCity.toLowerCase(), '');
+                  text = text.replace(displayCity.toLowerCase().replace(/^ال/, ''), '');
+                }
+                if (displayRegion) {
+                  text = text.replace(displayRegion.toLowerCase(), '');
+                  text = text.replace(displayRegion.toLowerCase().replace(/^ال/, ''), '');
+                }
+                
+                // تنظيف النص
+                text = text.replace(/[-،,\s]+/g, ' ').trim();
+                
+                // إزالة أرقام الهاتف
+                text = text.replace(/\d{10,}/g, '').trim();
+                
+                // أخذ أول 3 كلمات كحد أقصى
+                const words = text.split(' ').filter(w => w.length > 2);
+                return words.slice(0, 3).join(' ') || '';
+              };
+
+              const landmark = extractLandmark();
+              
+              // تنسيق العنوان الكامل: المدينة - المنطقة - نقطة دالة
+              const formattedAddress = [displayCity, displayRegion, landmark]
+                .filter(Boolean)
+                .join(' - ') || 'غير محدد';
+
+              return (
+                <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-[11px] font-bold">
+                      {formattedAddress}
+                    </span>
+                    {order.location_confidence > 0 && (
+                      <span className={cn(
+                        "text-[9px] px-1.5 py-0.5 rounded-full",
+                        order.location_confidence >= 0.8 
+                          ? "bg-green-500/30 text-green-100" 
+                          : order.location_confidence >= 0.5
+                          ? "bg-yellow-500/30 text-yellow-100"
+                          : "bg-red-500/30 text-red-100"
+                      )}>
+                        {Math.round(order.location_confidence * 100)}%
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
 
             {/* Product Details */}

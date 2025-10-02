@@ -117,49 +117,189 @@ serve(async (req) => {
       .from('city_aliases')
       .select('alias_name, city_id, normalized_name, confidence_score');
 
-    // المرحلة 4: محاولة المطابقة المباشرة
+    // المرحلة 4: محاولة المطابقة المباشرة المحسّنة
     const parts = normalizedInput.split(/[-،,\s]+/).filter(p => p.length > 0);
     console.log('📝 أجزاء النص:', parts);
+
+    // تطبيع النص: إزالة "ال" التعريف وتنظيف
+    const normalize = (text: string) => {
+      return text.toLowerCase()
+        .replace(/^ال/, '')
+        .replace(/[ـ]/g, '')
+        .trim();
+    };
 
     let cityMatch = null;
     let regionMatch = null;
     let directMatchConfidence = 0;
+    let bestCityScore = 0;
+    let bestRegionScore = 0;
 
-    for (const part of parts) {
-      if (!cityMatch) {
-        // البحث في المدن
-        cityMatch = cities?.find(c => 
-          c.name.toLowerCase() === part || 
-          c.name.toLowerCase().includes(part) ||
-          part.includes(c.name.toLowerCase())
-        );
+    // 1️⃣ محاولة المطابقة الكاملة أولاً (النص كامل)
+    const fullTextNormalized = normalize(normalizedInput);
+    for (const city of cities || []) {
+      const cityNormalized = normalize(city.name);
+      if (fullTextNormalized.includes(cityNormalized) || cityNormalized.includes(fullTextNormalized)) {
+        const score = cityNormalized === fullTextNormalized ? 1.0 : 0.9;
+        if (score > bestCityScore) {
+          cityMatch = city;
+          bestCityScore = score;
+          directMatchConfidence = score;
+        }
+      }
+    }
+
+    // 2️⃣ البحث في تركيبات من كلمتين
+    if (!cityMatch && parts.length >= 2) {
+      for (let i = 0; i < parts.length - 1; i++) {
+        const twoWords = normalize(parts[i] + ' ' + parts[i + 1]);
+        for (const city of cities || []) {
+          const cityNormalized = normalize(city.name);
+          if (twoWords.includes(cityNormalized) || cityNormalized.includes(twoWords)) {
+            const score = 0.85;
+            if (score > bestCityScore) {
+              cityMatch = city;
+              bestCityScore = score;
+              directMatchConfidence = score;
+            }
+          }
+        }
+      }
+    }
+
+    // 3️⃣ البحث في الكلمات المنفردة
+    if (!cityMatch) {
+      for (const part of parts) {
+        const partNormalized = normalize(part);
         
-        // البحث في المرادفات
-        if (!cityMatch && aliases) {
-          const aliasMatch = aliases.find(a => 
-            a.normalized_name.toLowerCase() === part ||
-            a.alias_name.toLowerCase() === part
-          );
-          if (aliasMatch) {
-            cityMatch = cities?.find(c => c.id === aliasMatch.city_id);
-            directMatchConfidence += (aliasMatch.confidence_score || 0.5);
+        // البحث في المدن
+        for (const city of cities || []) {
+          const cityNormalized = normalize(city.name);
+          if (cityNormalized === partNormalized) {
+            const score = 0.8;
+            if (score > bestCityScore) {
+              cityMatch = city;
+              bestCityScore = score;
+              directMatchConfidence = score;
+            }
+          } else if (cityNormalized.includes(partNormalized) || partNormalized.includes(cityNormalized)) {
+            const score = 0.6;
+            if (score > bestCityScore) {
+              cityMatch = city;
+              bestCityScore = score;
+              directMatchConfidence = score;
+            }
           }
         }
         
-        if (cityMatch) directMatchConfidence += 0.5;
-      }
-      
-      if (cityMatch && !regionMatch) {
-        regionMatch = regions?.find(r => 
-          r.city_id === cityMatch.id && (
-            r.name.toLowerCase() === part ||
-            r.name.toLowerCase().includes(part) ||
-            part.includes(r.name.toLowerCase())
-          )
-        );
-        if (regionMatch) directMatchConfidence += 0.5;
+        // البحث في المرادفات
+        if (aliases) {
+          for (const alias of aliases) {
+            const aliasNormalized = normalize(alias.alias_name);
+            if (aliasNormalized === partNormalized) {
+              const foundCity = cities?.find(c => c.id === alias.city_id);
+              if (foundCity) {
+                const score = alias.confidence_score || 0.7;
+                if (score > bestCityScore) {
+                  cityMatch = foundCity;
+                  bestCityScore = score;
+                  directMatchConfidence = score;
+                }
+              }
+            }
+          }
+        }
       }
     }
+
+    // 4️⃣ البحث عن المنطقة بعد إيجاد المدينة
+    if (cityMatch) {
+      const cityNormalized = normalize(cityMatch.name);
+      
+      // استخراج النص بعد اسم المدينة
+      const textAfterCity = normalizedInput
+        .toLowerCase()
+        .replace(cityMatch.name.toLowerCase(), '')
+        .replace(/^[،,\s-]+/, '')
+        .trim();
+      
+      console.log('📍 النص بعد المدينة:', textAfterCity);
+
+      // 4.1: مطابقة كاملة للنص بعد المدينة
+      const textAfterNormalized = normalize(textAfterCity);
+      for (const region of regions || []) {
+        if (region.city_id !== cityMatch.id) continue;
+        
+        const regionNormalized = normalize(region.name);
+        if (regionNormalized === textAfterNormalized || textAfterNormalized === regionNormalized) {
+          const score = 1.0;
+          if (score > bestRegionScore) {
+            regionMatch = region;
+            bestRegionScore = score;
+            directMatchConfidence += 0.5;
+          }
+        } else if (regionNormalized.includes(textAfterNormalized) || textAfterNormalized.includes(regionNormalized)) {
+          const score = 0.9;
+          if (score > bestRegionScore) {
+            regionMatch = region;
+            bestRegionScore = score;
+            directMatchConfidence += 0.4;
+          }
+        }
+      }
+
+      // 4.2: البحث في تركيبات من كلمتين بعد المدينة
+      if (!regionMatch && parts.length >= 2) {
+        const afterCityParts = textAfterCity.split(/[-،,\s]+/).filter(p => p.length > 0);
+        for (let i = 0; i < afterCityParts.length - 1; i++) {
+          const twoWords = normalize(afterCityParts[i] + ' ' + afterCityParts[i + 1]);
+          for (const region of regions || []) {
+            if (region.city_id !== cityMatch.id) continue;
+            const regionNormalized = normalize(region.name);
+            if (regionNormalized.includes(twoWords) || twoWords.includes(regionNormalized)) {
+              const score = 0.85;
+              if (score > bestRegionScore) {
+                regionMatch = region;
+                bestRegionScore = score;
+                directMatchConfidence += 0.35;
+              }
+            }
+          }
+        }
+      }
+
+      // 4.3: البحث في الكلمات المنفردة
+      if (!regionMatch) {
+        for (const part of parts) {
+          const partNormalized = normalize(part);
+          for (const region of regions || []) {
+            if (region.city_id !== cityMatch.id) continue;
+            const regionNormalized = normalize(region.name);
+            if (regionNormalized === partNormalized) {
+              const score = 0.7;
+              if (score > bestRegionScore) {
+                regionMatch = region;
+                bestRegionScore = score;
+                directMatchConfidence += 0.3;
+              }
+            } else if (regionNormalized.includes(partNormalized) || partNormalized.includes(regionNormalized)) {
+              const score = 0.5;
+              if (score > bestRegionScore) {
+                regionMatch = region;
+                bestRegionScore = score;
+                directMatchConfidence += 0.2;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    console.log('🎯 نتيجة المطابقة المباشرة:', { 
+      city: cityMatch?.name, 
+      region: regionMatch?.name, 
+      confidence: directMatchConfidence 
+    });
 
     if (cityMatch && directMatchConfidence >= 0.5) {
       const result: LocationResult = {
