@@ -2296,8 +2296,8 @@ export const SuperProvider = ({ children }) => {
         customer_phone: aiOrder.customer_phone,
         // ✅ استخدام البيانات الأصلية من aiOrder مباشرة
         customer_address: extractedData.full_address || `${aiOrder.customer_city || ''} ${aiOrder.customer_address || ''}`.trim(),
-        customer_city: aiOrder.customer_city || cityName || extractedData.city,
-        customer_province: aiOrder.customer_address || regionName || extractedData.region,
+        customer_city: cityName || aiOrder.customer_city || extractedData.city,
+        customer_province: regionName || aiOrder.customer_province || extractedData.region,
         total_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
