@@ -22,20 +22,44 @@ const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات 
 "بغداد كراده ارجنتين سمائي ميديم"
 
 ━━━━━━━━━━━━━━━━━━
-📦 أوامر الجرد (Commands):
+📦 أوامر الجرد:
+
+استخدم الأزرار أدناه ↓ أو اكتب الأوامر مباشرة:
 
 /inventory - جرد سريع للمخزون 📦
-/product [اسم] - جرد منتج معين 🛍️
-/department [اسم] - جرد قسم كامل 📁
-/category [اسم] - جرد تصنيف محدد 🏷️
-/color [اسم] - جرد حسب اللون 🎨
-/size [حجم] - جرد حسب القياس 📏
+/product برشلونة - جرد منتج معين 🛍️
+/department رياضي - جرد قسم كامل 📁
+/category تيشرتات - جرد تصنيف محدد 🏷️
+/color أحمر - جرد حسب اللون 🎨
+/size سمول - جرد حسب القياس 📏
 /stats - إحصائيات المخزون 📊
-/search [نص] - بحث ذكي في المخزون 🔍
+/search برشلونة أحمر - بحث ذكي 🔍
 
 💡 ملاحظة: لإنشاء طلب، اكتب رسالة عادية بدون أوامر
 
 جرب الآن! 👇`;
+
+// Inline keyboard for inventory menu
+const INVENTORY_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '🛍️ جرد منتج', callback_data: 'inv_product' },
+      { text: '📁 جرد قسم', callback_data: 'inv_department' }
+    ],
+    [
+      { text: '🏷️ جرد تصنيف', callback_data: 'inv_category' },
+      { text: '🎨 جرد لون', callback_data: 'inv_color' }
+    ],
+    [
+      { text: '📏 جرد قياس', callback_data: 'inv_size' },
+      { text: '🔍 بحث ذكي', callback_data: 'inv_search' }
+    ],
+    [
+      { text: '📊 إحصائيات المخزون', callback_data: 'inv_stats' },
+      { text: '📦 جرد سريع', callback_data: 'inv_quick' }
+    ]
+  ]
+};
 
 // Get bot token from settings table with ENV fallback
 async function getBotToken(): Promise<string | null> {
@@ -154,8 +178,8 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
   try {
     const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
       p_employee_id: employeeId,
-      p_search_type: searchType,
-      p_search_value: searchValue || null
+      p_filter_type: searchType === 'all' ? null : searchType,
+      p_filter_value: searchValue || null
     });
 
     if (error) throw error;
@@ -282,7 +306,7 @@ serve(async (req) => {
 
       // Handle /start command
       if (text === '/start') {
-        await sendTelegramMessage(chatId, WELCOME_MESSAGE, botToken);
+        await sendTelegramMessage(chatId, WELCOME_MESSAGE, botToken, INVENTORY_KEYBOARD);
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -313,10 +337,10 @@ serve(async (req) => {
         });
       }
 
-      // Handle /inventory command (quick inventory)
+      // Handle /inventory command (quick inventory with keyboard)
       if (text === '/inventory') {
-        const inventoryMessage = await handleInventorySearch(employeeId, 'all', '');
-        await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        const inventoryMessage = '📦 اختر نوع الجرد الذي تريده:';
+        await sendTelegramMessage(chatId, inventoryMessage, botToken, INVENTORY_KEYBOARD);
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -500,18 +524,66 @@ serve(async (req) => {
           })
         });
 
+        // Get employee data for inventory commands
+        const { data: employeeData } = await supabase
+          .from('employee_telegram_codes')
+          .select('telegram_code, user_id')
+          .eq('telegram_chat_id', chatId)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const employeeId = employeeData?.user_id || null;
+
         // Process the selected option
         let responseMessage = '';
-        if (data.startsWith('city_')) {
+        
+        // Handle inventory button presses
+        if (data === 'inv_product') {
+          responseMessage = '🛍️ اكتب اسم المنتج الذي تريد الاستعلام عنه:\n\nمثال: برشلونة';
+        } else if (data === 'inv_department') {
+          responseMessage = '📁 اكتب اسم القسم الذي تريد الاستعلام عنه:\n\nمثال: رياضي';
+        } else if (data === 'inv_category') {
+          responseMessage = '🏷️ اكتب اسم التصنيف الذي تريد الاستعلام عنه:\n\nمثال: تيشرتات';
+        } else if (data === 'inv_color') {
+          responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
+        } else if (data === 'inv_size') {
+          responseMessage = '📏 اكتب القياس الذي تريد الاستعلام عنه:\n\nمثال: سمول';
+        } else if (data === 'inv_search') {
+          responseMessage = '🔍 اكتب نص البحث الذكي:\n\nمثال: برشلونة أحمر';
+        } else if (data === 'inv_stats') {
+          responseMessage = await handleInventoryStats(employeeId);
+        } else if (data === 'inv_quick') {
+          responseMessage = await handleInventorySearch(employeeId, 'all', '');
+        }
+        // Handle city selection
+        else if (data.startsWith('city_')) {
           const cityName = data.split('_').slice(2).join('_');
           responseMessage = `✅ تم اختيار المدينة: ${cityName}\n\nيرجى الآن إعادة كتابة طلبك مع اسم المدينة الصحيح والمنطقة ورقم الهاتف.`;
-        } else if (data.startsWith('variant_')) {
+        } 
+        // Handle variant selection
+        else if (data.startsWith('variant_')) {
           const variantName = data.split('_').slice(2).join('_');
           responseMessage = `✅ تم اختيار المنتج: ${variantName}\n\nيرجى إعادة كتابة طلبك مع المواصفات الصحيحة والعنوان ورقم الهاتف.`;
         }
 
         if (responseMessage) {
-          await sendTelegramMessage(chatId, responseMessage, botToken);
+          // For inventory buttons that expect user input, add the keyboard again
+          const shouldShowKeyboard = ['inv_product', 'inv_department', 'inv_category', 'inv_color', 'inv_size', 'inv_search'].some(prefix => data === prefix);
+          
+          if (shouldShowKeyboard) {
+            // Send message with force reply to prompt user for input
+            await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: responseMessage,
+                reply_markup: { force_reply: true, selective: true }
+              })
+            });
+          } else {
+            await sendTelegramMessage(chatId, responseMessage, botToken);
+          }
         }
       }
     }

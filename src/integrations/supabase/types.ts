@@ -4636,18 +4636,21 @@ export type Database = {
       get_inventory_by_permissions: {
         Args: {
           p_employee_id: string
-          p_search_type?: string
-          p_search_value?: string
+          p_filter_type?: string
+          p_filter_value?: string
         }
         Returns: {
           available_quantity: number
           category_name: string
           color_name: string
           department_name: string
+          product_id: string
           product_name: string
+          product_type_name: string
+          quantity: number
           reserved_quantity: number
           size_name: string
-          total_quantity: number
+          variant_id: string
         }[]
       }
       get_inventory_stats: {
