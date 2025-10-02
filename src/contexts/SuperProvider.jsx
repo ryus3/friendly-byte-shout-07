@@ -1877,9 +1877,12 @@ export const SuperProvider = ({ children }) => {
           return candidates;
         };
         
-        let cityToSearch = extractedData.city || aiOrder.customer_city || '';
-        // ✅ استخدام customer_address للمنطقة بدلاً من customer_province
-        let regionToSearch = extractedData.region || aiOrder.customer_address || aiOrder.customer_province || '';
+        // تقسيم customer_city إلى مدينة ومنطقة (مثال: "بغداد - كرادة")
+        let fullCityRegion = aiOrder.customer_city || '';
+        const [cityPart, regionPart] = fullCityRegion.split('-').map(s => s.trim());
+        
+        let cityToSearch = extractedData.city || cityPart || '';
+        let regionToSearch = extractedData.region || regionPart || '';
         let nearestPoint = extractedData.landmark || '';
         
         console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
