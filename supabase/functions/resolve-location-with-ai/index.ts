@@ -14,6 +14,7 @@ interface LocationResult {
   confidence: number;
   suggestions: Array<{city: string, region?: string, confidence: number}>;
   raw_input: string;
+  used_learning: boolean;
 }
 
 serve(async (req) => {
@@ -31,13 +32,72 @@ serve(async (req) => {
       );
     }
 
+    // التحقق من أن النص ليس رقم هاتف ✅
+    if (/^[\d\s+()-]{7,}$/.test(location_text.trim())) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'النص المرسل يبدو كرقم هاتف وليس عنواناً',
+          city_id: null,
+          region_id: null,
+          city_name: null,
+          region_name: null,
+          confidence: 0,
+          suggestions: [],
+          used_learning: false
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('📍 معالجة الموقع:', location_text);
 
-    // 1. جلب المدن والمناطق من قاعدة البيانات
+    const normalizedInput = location_text.trim().toLowerCase()
+      .replace(/\s+/g, ' ')
+      .replace(/[،,]/g, ' ');
+
+    // 🧠 المرحلة 1: البحث في أنماط التعلم أولاً (سريع جداً!)
+    console.log('🧠 البحث في أنماط التعلم...');
+    const { data: learnedPattern } = await supabase
+      .from('location_learning_patterns')
+      .select('*, cities_cache!inner(name), regions_cache(name)')
+      .eq('normalized_pattern', normalizedInput)
+      .gte('confidence', 0.85)
+      .order('usage_count', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (learnedPattern) {
+      console.log('✅ تم العثور على نمط متعلم!');
+      
+      // تحديث usage_count
+      await supabase
+        .from('location_learning_patterns')
+        .update({ 
+          usage_count: learnedPattern.usage_count + 1,
+          last_used_at: new Date().toISOString()
+        })
+        .eq('id', learnedPattern.id);
+
+      return new Response(
+        JSON.stringify({
+          city_id: learnedPattern.resolved_city_id,
+          region_id: learnedPattern.resolved_region_id,
+          city_name: learnedPattern.cities_cache.name,
+          region_name: learnedPattern.regions_cache?.name || null,
+          confidence: learnedPattern.confidence,
+          suggestions: [],
+          raw_input: location_text,
+          used_learning: true
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // المرحلة 2: جلب المدن والمناطق من قاعدة البيانات
     const { data: cities, error: citiesError } = await supabase
       .from('cities_cache')
       .select('id, name, alwaseet_id')
@@ -52,24 +112,40 @@ serve(async (req) => {
       throw new Error('فشل في جلب بيانات المدن والمناطق');
     }
 
-    // 2. محاولة المطابقة المباشرة أولاً
-    const normalizedText = location_text.trim().toLowerCase();
-    const parts = normalizedText.split(/[-،,\s]+/).filter(p => p.length > 0);
-    
+    // المرحلة 3: جلب المرادفات من city_aliases
+    const { data: aliases } = await supabase
+      .from('city_aliases')
+      .select('alias_name, city_id, normalized_name, confidence_score');
+
+    // المرحلة 4: محاولة المطابقة المباشرة
+    const parts = normalizedInput.split(/[-،,\s]+/).filter(p => p.length > 0);
     console.log('📝 أجزاء النص:', parts);
 
     let cityMatch = null;
     let regionMatch = null;
     let directMatchConfidence = 0;
 
-    // محاولة المطابقة المباشرة
     for (const part of parts) {
       if (!cityMatch) {
+        // البحث في المدن
         cityMatch = cities?.find(c => 
           c.name.toLowerCase() === part || 
           c.name.toLowerCase().includes(part) ||
           part.includes(c.name.toLowerCase())
         );
+        
+        // البحث في المرادفات
+        if (!cityMatch && aliases) {
+          const aliasMatch = aliases.find(a => 
+            a.normalized_name.toLowerCase() === part ||
+            a.alias_name.toLowerCase() === part
+          );
+          if (aliasMatch) {
+            cityMatch = cities?.find(c => c.id === aliasMatch.city_id);
+            directMatchConfidence += (aliasMatch.confidence_score || 0.5);
+          }
+        }
+        
         if (cityMatch) directMatchConfidence += 0.5;
       }
       
@@ -85,7 +161,6 @@ serve(async (req) => {
       }
     }
 
-    // إذا وجدنا مطابقة مباشرة جيدة، نرجعها
     if (cityMatch && directMatchConfidence >= 0.5) {
       const result: LocationResult = {
         city_id: cityMatch.id,
@@ -94,47 +169,62 @@ serve(async (req) => {
         region_name: regionMatch?.name || null,
         confidence: directMatchConfidence,
         suggestions: [],
-        raw_input: location_text
+        raw_input: location_text,
+        used_learning: false
       };
       
       console.log('✅ مطابقة مباشرة:', result);
       
+      // حفظ النمط في التعلم
+      await saveLearnedPattern(supabase, normalizedInput, cityMatch.id, regionMatch?.id, directMatchConfidence);
+      
       return new Response(
         JSON.stringify(result),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // 3. استخدام Gemini AI للمعالجة المتقدمة
+    // المرحلة 5: استخدام Gemini AI مع الأنماط المتعلمة
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     
     if (!geminiApiKey) {
-      console.warn('⚠️ GEMINI_API_KEY غير موجود، استخدام المطابقة البسيطة');
-      
-      const result: LocationResult = {
-        city_id: cityMatch?.id || null,
-        region_id: regionMatch?.id || null,
-        city_name: cityMatch?.name || null,
-        region_name: regionMatch?.name || null,
-        confidence: directMatchConfidence,
-        suggestions: [],
-        raw_input: location_text
-      };
-      
+      console.warn('⚠️ GEMINI_API_KEY غير موجود');
       return new Response(
-        JSON.stringify(result),
+        JSON.stringify({
+          city_id: cityMatch?.id || null,
+          region_id: regionMatch?.id || null,
+          city_name: cityMatch?.name || null,
+          region_name: regionMatch?.name || null,
+          confidence: directMatchConfidence,
+          suggestions: [],
+          raw_input: location_text,
+          used_learning: false
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // إعداد prompt للذكاء الاصطناعي
+    // جلب أفضل 100 نمط متعلم لتضمينها في الـ prompt
+    const { data: topPatterns } = await supabase
+      .from('location_learning_patterns')
+      .select('pattern_text, cities_cache!inner(name), regions_cache(name)')
+      .order('usage_count', { ascending: false })
+      .limit(100);
+
+    const learnedExamples = topPatterns?.map(p => 
+      `"${p.pattern_text}" → ${p.cities_cache.name}${p.regions_cache ? ' - ' + p.regions_cache.name : ''}`
+    ).join('\n') || '';
+
     const citiesList = cities?.map(c => c.name).join('، ') || '';
     const regionsList = regions?.slice(0, 50).map(r => r.name).join('، ') || '';
 
-    const prompt = `أنت خبير في استخراج المدن والمناطق من النصوص العربية.
+    const prompt = `أنت خبير في استخراج المدن والمناطق من النصوص العربية. لديك تجربة تعلم سابقة من ${topPatterns?.length || 0} نمط.
 
 المدن المتاحة: ${citiesList}
 أمثلة على المناطق: ${regionsList}
+
+أمثلة من التعلم السابق:
+${learnedExamples}
 
 النص المطلوب: "${location_text}"
 
@@ -142,29 +232,20 @@ serve(async (req) => {
 1. استخرج اسم المدينة (يجب أن تكون من القائمة)
 2. استخرج اسم المنطقة إن وجدت
 3. صحح الأخطاء الإملائية (مثال: كراده → الكرادة، بغدد → بغداد)
-4. اقترح 2-3 بدائل محتملة إذا كان النص غامضاً
+4. استخدم التعلم السابق لتحسين الدقة
 
-أرجع النتيجة بصيغة JSON فقط، بدون أي نص إضافي:
+أرجع النتيجة بصيغة JSON فقط:
 {
   "city": "اسم المدينة",
   "region": "اسم المنطقة",
   "confidence": 0.95,
-  "suggestions": [
-    {"city": "بديل 1", "region": "منطقة بديلة", "confidence": 0.8}
-  ]
+  "suggestions": [{"city": "بديل", "region": "منطقة", "confidence": 0.8}]
 }`;
 
-    console.log('🤖 استدعاء Gemini AI...');
+    console.log('🤖 استدعاء Gemini AI مع التعلم...');
 
-    // محاولة مع نماذج Gemini المختلفة (Fallback)
-    const models = [
-      'gemini-2.0-flash-exp',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
-    ];
-
+    const models = ['gemini-2.0-flash-exp', 'gemini-1.5-flash', 'gemini-1.5-pro'];
     let aiResponse = null;
-    let lastError = null;
 
     for (const model of models) {
       try {
@@ -174,76 +255,53 @@ serve(async (req) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              contents: [{
-                parts: [{ text: prompt }]
-              }],
-              generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 500,
-              }
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 500 }
             })
           }
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.warn(`⚠️ فشل النموذج ${model}:`, errorText);
-          lastError = errorText;
-          continue;
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!text) {
-          console.warn(`⚠️ لا يوجد نص من النموذج ${model}`);
-          continue;
-        }
-
-        console.log(`✅ نجح النموذج ${model}`);
-        
-        // استخراج JSON من النص
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          aiResponse = JSON.parse(jsonMatch[0]);
-          break;
+        if (response.ok) {
+          const data = await response.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          const jsonMatch = text?.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            aiResponse = JSON.parse(jsonMatch[0]);
+            console.log(`✅ نجح النموذج ${model}`);
+            break;
+          }
         }
       } catch (error) {
         console.warn(`⚠️ خطأ في النموذج ${model}:`, error.message);
-        lastError = error.message;
       }
     }
 
     if (!aiResponse) {
-      console.error('❌ فشلت جميع نماذج Gemini:', lastError);
-      
-      // استخدام المطابقة البسيطة كـ fallback
-      const result: LocationResult = {
-        city_id: cityMatch?.id || null,
-        region_id: regionMatch?.id || null,
-        city_name: cityMatch?.name || null,
-        region_name: regionMatch?.name || null,
-        confidence: directMatchConfidence,
-        suggestions: [],
-        raw_input: location_text
-      };
-      
       return new Response(
-        JSON.stringify(result),
+        JSON.stringify({
+          city_id: cityMatch?.id || null,
+          region_id: regionMatch?.id || null,
+          city_name: cityMatch?.name || null,
+          region_name: regionMatch?.name || null,
+          confidence: directMatchConfidence,
+          suggestions: [],
+          raw_input: location_text,
+          used_learning: false
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('🎯 نتيجة AI:', aiResponse);
 
-    // 4. مطابقة نتائج AI مع قاعدة البيانات
+    // مطابقة نتائج AI مع قاعدة البيانات
     const aiCityName = aiResponse.city?.trim().toLowerCase();
     const aiRegionName = aiResponse.region?.trim().toLowerCase();
 
     const finalCity = cities?.find(c => 
       c.name.toLowerCase() === aiCityName ||
       c.name.toLowerCase().includes(aiCityName) ||
-      aiCityName.includes(c.name.toLowerCase())
+      aiCityName?.includes(c.name.toLowerCase())
     );
 
     let finalRegion = null;
@@ -257,24 +315,41 @@ serve(async (req) => {
       );
     }
 
-    // معالجة الاقتراحات
-    const suggestions = (aiResponse.suggestions || []).map((sug: any) => ({
-      city: sug.city || '',
-      region: sug.region || null,
-      confidence: sug.confidence || 0
-    }));
-
     const result: LocationResult = {
       city_id: finalCity?.id || null,
       region_id: finalRegion?.id || null,
       city_name: finalCity?.name || aiResponse.city || null,
       region_name: finalRegion?.name || aiResponse.region || null,
       confidence: aiResponse.confidence || 0.5,
-      suggestions,
-      raw_input: location_text
+      suggestions: (aiResponse.suggestions || []).map((sug: any) => ({
+        city: sug.city || '',
+        region: sug.region || null,
+        confidence: sug.confidence || 0
+      })),
+      raw_input: location_text,
+      used_learning: false
     };
 
     console.log('✨ النتيجة النهائية:', result);
+
+    // حفظ النمط الجديد في التعلم + إضافة مرادف جديد
+    if (finalCity && result.confidence >= 0.7) {
+      await saveLearnedPattern(supabase, normalizedInput, finalCity.id, finalRegion?.id, result.confidence);
+      
+      // إضافة مرادف جديد إذا كان مختلفاً
+      if (aiCityName && aiCityName !== finalCity.name.toLowerCase()) {
+        await supabase
+          .from('city_aliases')
+          .upsert({
+            city_id: finalCity.id,
+            alias_name: aiResponse.city,
+            normalized_name: aiCityName,
+            confidence_score: result.confidence
+          }, { onConflict: 'alias_name' });
+        
+        console.log('📝 تم إضافة مرادف جديد:', aiResponse.city, '→', finalCity.name);
+      }
+    }
 
     return new Response(
       JSON.stringify(result),
@@ -292,12 +367,41 @@ serve(async (req) => {
         city_name: null,
         region_name: null,
         confidence: 0,
-        suggestions: []
+        suggestions: [],
+        used_learning: false
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
+
+// دالة مساعدة لحفظ الأنماط المتعلمة
+async function saveLearnedPattern(
+  supabase: any, 
+  normalizedPattern: string, 
+  cityId: number, 
+  regionId: number | null, 
+  confidence: number
+) {
+  try {
+    await supabase
+      .from('location_learning_patterns')
+      .upsert({
+        pattern_text: normalizedPattern,
+        normalized_pattern: normalizedPattern,
+        resolved_city_id: cityId,
+        resolved_region_id: regionId,
+        confidence: confidence,
+        usage_count: 1,
+        success_rate: 1.0,
+        last_used_at: new Date().toISOString()
+      }, { 
+        onConflict: 'normalized_pattern',
+        ignoreDuplicates: false 
+      });
+    
+    console.log('💾 تم حفظ النمط في التعلم');
+  } catch (error) {
+    console.warn('⚠️ فشل في حفظ النمط:', error.message);
+  }
+}

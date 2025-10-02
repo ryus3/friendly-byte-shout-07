@@ -471,18 +471,6 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
               </div>
             )}
 
-            {/* Detailed Address */}
-            {(order.customer_address || order.order_data?.shipping_address || order.order_data?.address || order.shipping_address) && (
-              <div className="bg-white/10 rounded-md p-1.5 backdrop-blur-sm">
-                <div className="flex items-center gap-1">
-                  <Package className="w-3 h-3" />
-                  <span className="text-[11px] font-medium">التفاصيل:</span>
-                  <span className="text-[11px]">
-                    {order.customer_address || order.order_data?.shipping_address || order.order_data?.address || order.shipping_address}
-                  </span>
-                </div>
-              </div>
-            )}
 
             {/* Product Details */}
             {order.order_data && (

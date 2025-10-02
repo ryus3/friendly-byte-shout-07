@@ -24,6 +24,7 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           customer_province: string | null
+          delivery_fee: number | null
           id: string
           items: Json
           location_confidence: number | null
@@ -51,6 +52,7 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_province?: string | null
+          delivery_fee?: number | null
           id?: string
           items?: Json
           location_confidence?: number | null
@@ -78,6 +80,7 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_province?: string | null
+          delivery_fee?: number | null
           id?: string
           items?: Json
           location_confidence?: number | null
@@ -1781,6 +1784,63 @@ export type Database = {
           work_start_hour?: number | null
         }
         Relationships: []
+      }
+      location_learning_patterns: {
+        Row: {
+          confidence: number
+          created_at: string | null
+          id: string
+          last_used_at: string | null
+          normalized_pattern: string
+          pattern_text: string
+          resolved_city_id: number | null
+          resolved_region_id: number | null
+          success_rate: number
+          updated_at: string | null
+          usage_count: number
+        }
+        Insert: {
+          confidence?: number
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          normalized_pattern: string
+          pattern_text: string
+          resolved_city_id?: number | null
+          resolved_region_id?: number | null
+          success_rate?: number
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Update: {
+          confidence?: number
+          created_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          normalized_pattern?: string
+          pattern_text?: string
+          resolved_city_id?: number | null
+          resolved_region_id?: number | null
+          success_rate?: number
+          updated_at?: string | null
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_learning_patterns_resolved_city_id_fkey"
+            columns: ["resolved_city_id"]
+            isOneToOne: false
+            referencedRelation: "cities_cache"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_learning_patterns_resolved_region_id_fkey"
+            columns: ["resolved_region_id"]
+            isOneToOne: false
+            referencedRelation: "regions_cache"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loyalty_points_history: {
         Row: {

@@ -175,8 +175,14 @@ serve(async (req) => {
             console.log('🌍 معالجة العنوان بالذكاء الاصطناعي...');
             
             try {
-              // استخراج النص الخاص بالموقع من الرسالة
-              const locationText = orderResult.location_text || text.split('\n')[1] || text;
+              // استخراج العنوان (السطر الأول) وليس رقم الهاتف ✅
+              const locationText = orderResult.customer_city || text.split('\n')[0] || text;
+              
+              // التحقق من أن النص ليس رقم هاتف
+              if (/^[\d\s+()-]{7,}$/.test(locationText.trim())) {
+                console.warn('⚠️ النص المرسل يبدو كرقم هاتف، تخطي معالجة الموقع');
+                throw new Error('invalid_location_text');
+              }
               
               const { data: locationData, error: locationError } = await supabase.functions.invoke('resolve-location-with-ai', {
                 body: { location_text: locationText }
