@@ -1877,12 +1877,21 @@ export const SuperProvider = ({ children }) => {
           return candidates;
         };
         
-        // تقسيم customer_city إلى مدينة ومنطقة (مثال: "بغداد - كرادة")
-        let fullCityRegion = aiOrder.customer_city || '';
-        const [cityPart, regionPart] = fullCityRegion.split('-').map(s => s.trim());
+        // استخدام customer_city للمدينة و customer_address للمنطقة
+        let cityToSearch = extractedData.city || aiOrder.customer_city || '';
+        let regionToSearch = extractedData.region || '';
         
-        let cityToSearch = extractedData.city || cityPart || '';
-        let regionToSearch = extractedData.region || regionPart || '';
+        // استخراج المنطقة من customer_address إذا لم نجدها في extractedData
+        if (!regionToSearch && aiOrder.customer_address) {
+          // إزالة اسم المدينة من customer_address للحصول على المنطقة
+          let addressWithoutCity = aiOrder.customer_address;
+          if (cityToSearch) {
+            addressWithoutCity = addressWithoutCity.replace(cityToSearch, '').trim();
+          }
+          // تنظيف المنطقة من الفواصل والشرطات
+          regionToSearch = addressWithoutCity.replace(/^[-\s,]+|[-\s,]+$/g, '').trim();
+        }
+        
         let nearestPoint = extractedData.landmark || '';
         
         console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
