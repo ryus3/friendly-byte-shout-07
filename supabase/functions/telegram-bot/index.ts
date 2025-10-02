@@ -208,22 +208,28 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
     products.forEach((product, index) => {
       if (index > 0) message += '\n━━━━━━━━━━━━━━━━━━\n\n';
       
-      // اسم المنتج
-      message += `🛍️ ${product.product_name}\n`;
+      // اسم المنتج مع أيقونة مميزة
+      message += `🛍️ <b>${product.product_name}</b>\n`;
       
-      // القسم إن وجد
+      // القسم والتصنيف
       if (product.department_name) {
-        message += `📁 ${product.department_name}\n`;
+        message += `📁 ${product.department_name}`;
+        if (product.category_name) {
+          message += ` • ${product.category_name}`;
+        }
+        message += '\n';
       }
       
-      // حساب الإجمالي المتاح والإجمالي الكلي
+      // حساب الإحصائيات
       const totalAvailable = product.variants.reduce((sum, v) => sum + (v.available_quantity || 0), 0);
       const totalStock = product.variants.reduce((sum, v) => sum + (v.total_quantity || 0), 0);
       const totalReserved = product.variants.reduce((sum, v) => sum + (v.reserved_quantity || 0), 0);
       
-      message += `📊 إجمالي المتاح: ${totalAvailable} من ${totalStock}`;
+      // عرض الإحصائيات بشكل احترافي
+      const availabilityIcon = totalAvailable > 0 ? '✅' : '❌';
+      message += `${availabilityIcon} <b>المخزون:</b> ${totalAvailable} متاح من ${totalStock}`;
       if (totalReserved > 0) {
-        message += ` (محجوز: ${totalReserved})`;
+        message += ` <i>(محجوز: ${totalReserved})</i>`;
       }
       message += '\n\n';
       
@@ -237,7 +243,7 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
       
       // عرض كل لون مع قياساته
       Object.entries(byColor).forEach(([colorName, colorVariants]) => {
-        message += `🎨 ${colorName}:\n`;
+        message += `🎨 <b>${colorName}</b>\n`;
         
         // ترتيب القياسات
         const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
@@ -255,9 +261,13 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
           const available = variant.available_quantity || 0;
           const reserved = variant.reserved_quantity || 0;
           
-          message += `   📏 ${sizeName}: ${available} قطعة`;
+          // أيقونة حسب التوافر
+          const icon = available > 0 ? '✅' : '❌';
+          const status = available > 0 ? `<b>${available} قطعة</b>` : '<i>نافذ</i>';
+          
+          message += `   ${icon} ${sizeName}: ${status}`;
           if (reserved > 0) {
-            message += ` (محجوز: ${reserved})`;
+            message += ` <i>(محجوز: ${reserved})</i>`;
           }
           message += '\n';
         });
@@ -293,29 +303,171 @@ async function handleSmartInventorySearch(employeeId: string | null, searchText:
 
     const items = data as any[];
     if (!items || items.length === 0) {
-      return `🔍 لم يتم العثور على نتائج لـ: "${searchText}"`;
+      return `🔍 لم يتم العثور على نتائج لـ: "<b>${searchText}</b>"`;
     }
 
-    let message = `🔍 نتائج البحث عن "${searchText}":\n\n`;
+    let message = `🔍 <b>نتائج البحث عن "${searchText}":</b>\n\n`;
     
     items.slice(0, 20).forEach((item, idx) => {
-      message += `${idx + 1}. ${item.product_name}\n`;
-      message += `   🎨 ${item.color_name} | 📏 ${item.size_name}\n`;
-      message += `   📦 متاح: ${item.available_quantity} | إجمالي: ${item.total_quantity}\n`;
+      const available = item.available_quantity || 0;
+      const icon = available > 0 ? '✅' : '❌';
+      const status = available > 0 ? `<b>${available} قطعة</b>` : '<i>نافذ</i>';
+      
+      message += `${idx + 1}. <b>${item.product_name}</b>\n`;
+      message += `   🎨 ${item.color_name} • 📏 ${item.size_name}\n`;
+      message += `   ${icon} ${status}`;
       if (item.reserved_quantity > 0) {
-        message += `   🔒 محجوز: ${item.reserved_quantity}\n`;
+        message += ` <i>(محجوز: ${item.reserved_quantity})</i>`;
       }
-      message += '\n';
+      message += `\n   📦 إجمالي: ${item.total_quantity}\n\n`;
     });
 
     if (items.length > 20) {
-      message += `\n... وعدد ${items.length - 20} نتيجة أخرى`;
+      message += `\n... وعدد <b>${items.length - 20}</b> نتيجة أخرى`;
     }
 
     return message;
   } catch (error) {
     console.error('❌ خطأ في البحث الذكي:', error);
     return '❌ حدث خطأ في البحث. يرجى المحاولة لاحقاً.';
+  }
+}
+
+// Helper function to get product list buttons
+async function getProductButtons(employeeId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
+      p_employee_id: employeeId,
+      p_filter_type: null,
+      p_search_term: null
+    });
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    // حد أقصى 8 منتجات في كل صفحة
+    const products = data.slice(0, 8);
+    const buttons = products.map((p: any) => [{
+      text: `${p.product_name}`,
+      callback_data: `select_product_${p.product_id}`
+    }]);
+
+    if (data.length > 8) {
+      buttons.push([{ text: '⬇️ المزيد...', callback_data: 'more_products' }]);
+    }
+
+    return { inline_keyboard: buttons };
+  } catch (error) {
+    console.error('❌ خطأ في جلب قائمة المنتجات:', error);
+    return null;
+  }
+}
+
+// Helper function to get color buttons
+async function getColorButtons(employeeId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('colors')
+      .select('id, name')
+      .limit(8);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const buttons = data.map((c: any) => [{
+      text: `🎨 ${c.name}`,
+      callback_data: `select_color_${c.name}`
+    }]);
+
+    return { inline_keyboard: buttons };
+  } catch (error) {
+    console.error('❌ خطأ في جلب قائمة الألوان:', error);
+    return null;
+  }
+}
+
+// Helper function to get size buttons
+async function getSizeButtons(): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('sizes')
+      .select('id, name')
+      .limit(8);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    const sortedSizes = data.sort((a: any, b: any) => {
+      const aIndex = sizeOrder.indexOf(a.name);
+      const bIndex = sizeOrder.indexOf(b.name);
+      if (aIndex === -1 && bIndex === -1) return 0;
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+
+    const buttons = sortedSizes.map((s: any) => [{
+      text: `📏 ${s.name}`,
+      callback_data: `select_size_${s.name}`
+    }]);
+
+    return { inline_keyboard: buttons };
+  } catch (error) {
+    console.error('❌ خطأ في جلب قائمة القياسات:', error);
+    return null;
+  }
+}
+
+// Helper function to get department buttons
+async function getDepartmentButtons(employeeId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('departments')
+      .select('id, name')
+      .eq('is_active', true)
+      .limit(8);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const buttons = data.map((d: any) => [{
+      text: `📁 ${d.name}`,
+      callback_data: `select_department_${d.name}`
+    }]);
+
+    return { inline_keyboard: buttons };
+  } catch (error) {
+    console.error('❌ خطأ في جلب قائمة الأقسام:', error);
+    return null;
+  }
+}
+
+// Helper function to get category buttons
+async function getCategoryButtons(): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name')
+      .limit(8);
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    const buttons = data.map((c: any) => [{
+      text: `🏷️ ${c.name}`,
+      callback_data: `select_category_${c.name}`
+    }]);
+
+    return { inline_keyboard: buttons };
+  } catch (error) {
+    console.error('❌ خطأ في جلب قائمة التصنيفات:', error);
+    return null;
   }
 }
 
@@ -631,25 +783,70 @@ serve(async (req) => {
         
         // Handle inventory button presses
         if (data === 'inv_product') {
-          responseMessage = '🛍️ اكتب اسم المنتج الذي تريد الاستعلام عنه:\n\nمثال: برشلونة';
-          shouldSaveState = true;
-          stateAction = 'inv_product';
+          // عرض قائمة المنتجات بأزرار تفاعلية
+          const productButtons = await getProductButtons(employeeId);
+          if (productButtons) {
+            await sendTelegramMessage(chatId, '🛍️ اختر منتج أو اكتب اسمه:', botToken, productButtons);
+            shouldSaveState = true;
+            stateAction = 'inv_product';
+            responseMessage = ''; // Don't send the default message
+          } else {
+            responseMessage = '🛍️ اكتب اسم المنتج الذي تريد الاستعلام عنه:\n\nمثال: برشلونة';
+            shouldSaveState = true;
+            stateAction = 'inv_product';
+          }
         } else if (data === 'inv_department') {
-          responseMessage = '📁 اكتب اسم القسم الذي تريد الاستعلام عنه:\n\nمثال: رياضي';
-          shouldSaveState = true;
-          stateAction = 'inv_department';
+          // عرض قائمة الأقسام بأزرار تفاعلية
+          const deptButtons = await getDepartmentButtons(employeeId);
+          if (deptButtons) {
+            await sendTelegramMessage(chatId, '📁 اختر قسم أو اكتب اسمه:', botToken, deptButtons);
+            shouldSaveState = true;
+            stateAction = 'inv_department';
+            responseMessage = '';
+          } else {
+            responseMessage = '📁 اكتب اسم القسم الذي تريد الاستعلام عنه:\n\nمثال: رياضي';
+            shouldSaveState = true;
+            stateAction = 'inv_department';
+          }
         } else if (data === 'inv_category') {
-          responseMessage = '🏷️ اكتب اسم التصنيف الذي تريد الاستعلام عنه:\n\nمثال: تيشرتات';
-          shouldSaveState = true;
-          stateAction = 'inv_category';
+          // عرض قائمة التصنيفات بأزرار تفاعلية
+          const catButtons = await getCategoryButtons();
+          if (catButtons) {
+            await sendTelegramMessage(chatId, '🏷️ اختر تصنيف أو اكتب اسمه:', botToken, catButtons);
+            shouldSaveState = true;
+            stateAction = 'inv_category';
+            responseMessage = '';
+          } else {
+            responseMessage = '🏷️ اكتب اسم التصنيف الذي تريد الاستعلام عنه:\n\nمثال: تيشرتات';
+            shouldSaveState = true;
+            stateAction = 'inv_category';
+          }
         } else if (data === 'inv_color') {
-          responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
-          shouldSaveState = true;
-          stateAction = 'inv_color';
+          // عرض قائمة الألوان بأزرار تفاعلية
+          const colorButtons = await getColorButtons(employeeId);
+          if (colorButtons) {
+            await sendTelegramMessage(chatId, '🎨 اختر لون أو اكتب اسمه:', botToken, colorButtons);
+            shouldSaveState = true;
+            stateAction = 'inv_color';
+            responseMessage = '';
+          } else {
+            responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
+            shouldSaveState = true;
+            stateAction = 'inv_color';
+          }
         } else if (data === 'inv_size') {
-          responseMessage = '📏 اكتب القياس الذي تريد الاستعلام عنه:\n\nمثال: سمول';
-          shouldSaveState = true;
-          stateAction = 'inv_size';
+          // عرض قائمة القياسات بأزرار تفاعلية
+          const sizeButtons = await getSizeButtons();
+          if (sizeButtons) {
+            await sendTelegramMessage(chatId, '📏 اختر قياس أو اكتب اسمه:', botToken, sizeButtons);
+            shouldSaveState = true;
+            stateAction = 'inv_size';
+            responseMessage = '';
+          } else {
+            responseMessage = '📏 اكتب القياس الذي تريد الاستعلام عنه:\n\nمثال: سمول';
+            shouldSaveState = true;
+            stateAction = 'inv_size';
+          }
         } else if (data === 'inv_search') {
           responseMessage = '🔍 اكتب نص البحث الذكي:\n\nمثال: برشلونة أحمر';
           shouldSaveState = true;
@@ -658,6 +855,32 @@ serve(async (req) => {
           responseMessage = await handleInventoryStats(employeeId);
         } else if (data === 'inv_quick') {
           responseMessage = await handleInventorySearch(employeeId, 'all', '');
+        }
+        // Handle selection from buttons
+        else if (data.startsWith('select_product_')) {
+          const productId = data.replace('select_product_', '');
+          // Get product details and show inventory
+          const { data: productData } = await supabase.rpc('get_inventory_by_permissions', {
+            p_employee_id: employeeId,
+            p_filter_type: 'product',
+            p_search_term: null
+          });
+          const product = productData?.find((p: any) => p.product_id === productId);
+          if (product) {
+            responseMessage = await handleInventorySearch(employeeId, 'product', product.product_name);
+          }
+        } else if (data.startsWith('select_color_')) {
+          const colorName = data.replace('select_color_', '');
+          responseMessage = await handleInventorySearch(employeeId, 'color', colorName);
+        } else if (data.startsWith('select_size_')) {
+          const sizeName = data.replace('select_size_', '');
+          responseMessage = await handleInventorySearch(employeeId, 'size', sizeName);
+        } else if (data.startsWith('select_department_')) {
+          const deptName = data.replace('select_department_', '');
+          responseMessage = await handleInventorySearch(employeeId, 'department', deptName);
+        } else if (data.startsWith('select_category_')) {
+          const catName = data.replace('select_category_', '');
+          responseMessage = await handleInventorySearch(employeeId, 'category', catName);
         }
         
         // Save state if needed

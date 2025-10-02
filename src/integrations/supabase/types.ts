@@ -4609,12 +4609,13 @@ export type Database = {
       get_employee_inventory_stats: {
         Args: { p_employee_id: string }
         Returns: {
-          low_stock_variants: number
-          out_of_stock_variants: number
-          total_available_quantity: number
+          available_stock: number
+          low_stock_items: number
+          out_of_stock_items: number
+          reserved_stock: number
           total_products: number
-          total_quantity: number
-          total_reserved_quantity: number
+          total_stock: number
+          total_value: number
           total_variants: number
         }[]
       }
@@ -4640,14 +4641,13 @@ export type Database = {
           p_search_term?: string
         }
         Returns: {
-          category_id: string
           category_name: string
-          is_active: boolean
+          department_name: string
           product_id: string
           product_name: string
           total_available: number
-          total_quantity: number
           total_reserved: number
+          total_stock: number
           variants: Json
         }[]
       }
@@ -5124,7 +5124,6 @@ export type Database = {
           reserved_quantity: number
           size_name: string
           total_quantity: number
-          variant_id: string
         }[]
       }
       smart_search_city: {
