@@ -4954,6 +4954,12 @@ export type Database = {
             }
           | { p_chat_id: number; p_employee_id?: string; p_order_data: Json }
           | {
+              p_chat_id: number
+              p_message_text: string
+              p_telegram_user_id?: number
+              p_telegram_username?: string
+            }
+          | {
               p_customer_city: string
               p_customer_phone: string
               p_items: Json
