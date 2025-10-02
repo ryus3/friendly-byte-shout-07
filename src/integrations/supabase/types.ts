@@ -4606,6 +4606,19 @@ export type Database = {
         Args: { p_telegram_chat_id: number }
         Returns: Json
       }
+      get_employee_inventory_stats: {
+        Args: { p_employee_id: string }
+        Returns: {
+          available_stock: number
+          low_stock_items: number
+          out_of_stock_items: number
+          reserved_stock: number
+          total_products: number
+          total_stock: number
+          total_value: number
+          total_variants: number
+        }[]
+      }
       get_employee_last_sync: {
         Args: { p_employee_id: string }
         Returns: Json
@@ -4619,6 +4632,35 @@ export type Database = {
           product_types: Json
           seasons_occasions: Json
           sizes: Json
+        }[]
+      }
+      get_inventory_by_permissions: {
+        Args: {
+          p_employee_id: string
+          p_search_type?: string
+          p_search_value?: string
+        }
+        Returns: {
+          available_quantity: number
+          category_name: string
+          color_id: string
+          color_name: string
+          cost_price: number
+          department_name: string
+          location: string
+          min_stock: number
+          product_code: string
+          product_id: string
+          product_name: string
+          product_type: string
+          reserved_quantity: number
+          sale_price: number
+          season_occasion: string
+          size_id: string
+          size_name: string
+          sold_quantity: number
+          total_quantity: number
+          variant_id: string
         }[]
       }
       get_inventory_stats: {
@@ -5080,6 +5122,22 @@ export type Database = {
           p_variant_id: string
         }
         Returns: boolean
+      }
+      smart_inventory_search: {
+        Args: { p_employee_id: string; p_search_text: string }
+        Returns: {
+          available_quantity: number
+          category_name: string
+          color_name: string
+          department_name: string
+          match_score: number
+          product_id: string
+          product_name: string
+          reserved_quantity: number
+          size_name: string
+          total_quantity: number
+          variant_id: string
+        }[]
       }
       smart_search_city: {
         Args: { search_text: string }

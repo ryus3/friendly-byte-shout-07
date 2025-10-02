@@ -21,6 +21,16 @@ const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات 
 "عايز قميص أحمر حجم L للديوانية"
 "بغداد كراده ارجنتين سمائي ميديم"
 
+━━━━━━━━━━━━━━━━━━
+📦 أوامر الجرد الذكية:
+
+/جرد - جرد سريع لمخزونك
+/جرد_منتج [اسم] - جرد منتج معين
+/جرد_قسم [اسم] - جرد قسم كامل
+/جرد_لون [اسم] - جرد حسب اللون
+/جرد_قياس [حجم] - جرد حسب القياس
+/احصائياتي - إحصائيات مخزونك
+
 جرب الآن! 👇`;
 
 // Get bot token from settings table with ENV fallback
@@ -84,6 +94,160 @@ function extractPhoneFromText(text: string): string {
 
 // Note: City and product extraction is now handled by the smart database function process_telegram_order
 
+// ==========================================
+// Smart Inventory Handlers
+// ==========================================
+
+interface InventoryItem {
+  product_name: string;
+  color_name: string;
+  size_name: string;
+  total_quantity: number;
+  available_quantity: number;
+  reserved_quantity: number;
+  department_name?: string;
+  category_name?: string;
+}
+
+async function handleInventoryStats(employeeId: string | null): Promise<string> {
+  if (!employeeId) {
+    return '⚠️ لم يتم ربط حسابك بالنظام.\nيرجى التواصل مع المدير للحصول على رمز الربط.';
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('get_employee_inventory_stats', {
+      p_employee_id: employeeId
+    });
+
+    if (error) throw error;
+
+    const stats = data?.[0];
+    if (!stats) {
+      return '📊 لا توجد بيانات متاحة حالياً.';
+    }
+
+    return `📊 إحصائيات المخزون الخاص بك:
+
+✅ إجمالي المنتجات: ${stats.total_products || 0}
+🎨 إجمالي المتغيرات: ${stats.total_variants || 0}
+📦 إجمالي المخزون: ${stats.total_stock || 0}
+🟢 المتاح للبيع: ${stats.available_stock || 0}
+🔒 المحجوز: ${stats.reserved_stock || 0}
+⚠️ منخفض المخزون: ${stats.low_stock_items || 0}
+❌ نفذ من المخزون: ${stats.out_of_stock_items || 0}
+💰 قيمة المخزون: ${(stats.total_value || 0).toLocaleString()} د.ع`;
+  } catch (error) {
+    console.error('❌ خطأ في جلب الإحصائيات:', error);
+    return '❌ حدث خطأ في جلب الإحصائيات. يرجى المحاولة لاحقاً.';
+  }
+}
+
+async function handleInventorySearch(employeeId: string | null, searchType: string, searchValue: string): Promise<string> {
+  if (!employeeId) {
+    return '⚠️ لم يتم ربط حسابك بالنظام.\nيرجى التواصل مع المدير للحصول على رمز الربط.';
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
+      p_employee_id: employeeId,
+      p_search_type: searchType,
+      p_search_value: searchValue || null
+    });
+
+    if (error) throw error;
+
+    const items = data as InventoryItem[];
+    if (!items || items.length === 0) {
+      return `🔍 لم يتم العثور على نتائج لـ: ${searchValue || 'البحث المطلوب'}`;
+    }
+
+    // Group by product for better presentation
+    const groupedByProduct: Record<string, InventoryItem[]> = {};
+    items.forEach(item => {
+      if (!groupedByProduct[item.product_name]) {
+        groupedByProduct[item.product_name] = [];
+      }
+      groupedByProduct[item.product_name].push(item);
+    });
+
+    let message = `📦 نتائج الجرد:\n\n`;
+    
+    Object.entries(groupedByProduct).forEach(([productName, variants]) => {
+      message += `🛍️ ${productName}\n`;
+      if (variants[0]?.department_name) {
+        message += `   📁 ${variants[0].department_name}\n`;
+      }
+      
+      // Group by color
+      const byColor: Record<string, InventoryItem[]> = {};
+      variants.forEach(v => {
+        if (!byColor[v.color_name]) byColor[v.color_name] = [];
+        byColor[v.color_name].push(v);
+      });
+
+      Object.entries(byColor).forEach(([color, colorVariants]) => {
+        message += `   🎨 ${color}:\n`;
+        colorVariants.forEach(v => {
+          message += `      📏 ${v.size_name}: ${v.available_quantity}/${v.total_quantity} (محجوز: ${v.reserved_quantity})\n`;
+        });
+      });
+      
+      message += '\n';
+    });
+
+    // Limit message length for Telegram
+    if (message.length > 4000) {
+      message = message.substring(0, 3900) + '\n\n... (النتائج محدودة)';
+    }
+
+    return message;
+  } catch (error) {
+    console.error('❌ خطأ في البحث:', error);
+    return '❌ حدث خطأ في البحث. يرجى المحاولة لاحقاً.';
+  }
+}
+
+async function handleSmartInventorySearch(employeeId: string | null, searchText: string): Promise<string> {
+  if (!employeeId) {
+    return '⚠️ لم يتم ربط حسابك بالنظام.\nيرجى التواصل مع المدير للحصول على رمز الربط.';
+  }
+
+  try {
+    const { data, error } = await supabase.rpc('smart_inventory_search', {
+      p_employee_id: employeeId,
+      p_search_text: searchText
+    });
+
+    if (error) throw error;
+
+    const items = data as any[];
+    if (!items || items.length === 0) {
+      return `🔍 لم يتم العثور على نتائج لـ: "${searchText}"`;
+    }
+
+    let message = `🔍 نتائج البحث عن "${searchText}":\n\n`;
+    
+    items.slice(0, 20).forEach((item, idx) => {
+      message += `${idx + 1}. ${item.product_name}\n`;
+      message += `   🎨 ${item.color_name} | 📏 ${item.size_name}\n`;
+      message += `   📦 متاح: ${item.available_quantity} | إجمالي: ${item.total_quantity}\n`;
+      if (item.reserved_quantity > 0) {
+        message += `   🔒 محجوز: ${item.reserved_quantity}\n`;
+      }
+      message += '\n';
+    });
+
+    if (items.length > 20) {
+      message += `\n... وعدد ${items.length - 20} نتيجة أخرى`;
+    }
+
+    return message;
+  } catch (error) {
+    console.error('❌ خطأ في البحث الذكي:', error);
+    return '❌ حدث خطأ في البحث. يرجى المحاولة لاحقاً.';
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -121,25 +285,127 @@ serve(async (req) => {
         });
       }
 
-        // Handle text messages (potential orders)
+      // ==========================================
+      // Handle Inventory Commands
+      // ==========================================
+      
+      // Get employee data once for all inventory commands
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employee_telegram_codes')
+        .select('telegram_code, user_id')
+        .eq('telegram_chat_id', chatId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const employeeId = employeeData?.user_id || null;
+      
+      // Handle /احصائياتي command
+      if (text === '/احصائياتي' || text === '/stats') {
+        const statsMessage = await handleInventoryStats(employeeId);
+        await sendTelegramMessage(chatId, statsMessage, botToken);
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /جرد command (quick inventory)
+      if (text === '/جرد' || text === '/inventory') {
+        const inventoryMessage = await handleInventorySearch(employeeId, 'all', '');
+        await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /جرد_منتج command
+      if (text.startsWith('/جرد_منتج') || text.startsWith('/product_inventory')) {
+        const searchValue = text.replace(/^\/(جرد_منتج|product_inventory)\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم المنتج بعد الأمر\nمثال: /جرد_منتج برشلونة', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'product', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /جرد_قسم command
+      if (text.startsWith('/جرد_قسم') || text.startsWith('/department_inventory')) {
+        const searchValue = text.replace(/^\/(جرد_قسم|department_inventory)\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم القسم بعد الأمر\nمثال: /جرد_قسم رياضي', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'department', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /جرد_لون command
+      if (text.startsWith('/جرد_لون') || text.startsWith('/color_inventory')) {
+        const searchValue = text.replace(/^\/(جرد_لون|color_inventory)\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم اللون بعد الأمر\nمثال: /جرد_لون أحمر', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'color', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /جرد_قياس command
+      if (text.startsWith('/جرد_قياس') || text.startsWith('/size_inventory')) {
+        const searchValue = text.replace(/^\/(جرد_قياس|size_inventory)\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة القياس بعد الأمر\nمثال: /جرد_قياس سمول', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'size', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle smart search (any text query that's not a command)
+      // Check if it looks like an inventory query (starts with common keywords)
+      const inventoryKeywords = ['ما المتوفر', 'شو المتوفر', 'وين', 'عندي', 'المخزون', 'الجرد'];
+      const isInventoryQuery = inventoryKeywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
+      
+      if (isInventoryQuery) {
+        const searchQuery = text.replace(/^(ما المتوفر|شو المتوفر|وين|عندي|المخزون|الجرد)\s*/i, '').trim();
+        if (searchQuery) {
+          const inventoryMessage = await handleSmartInventorySearch(employeeId, searchQuery);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          return new Response(JSON.stringify({ success: true }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
+      // ==========================================
+      // Handle text messages (potential orders)
+      // IMPORTANT: This runs ONLY if the message is NOT an inventory command
+      // ==========================================
       if (text && text !== '/start') {
         try {
           console.log('🔄 معالجة الطلب باستخدام الدالة الذكية الصحيحة...');
           
-          // البحث عن الموظف المربوط بهذا الحساب
-          const { data: employeeData, error: employeeError } = await supabase
-            .from('employee_telegram_codes')
-            .select('telegram_code, user_id')
-            .eq('telegram_chat_id', chatId)
-            .eq('is_active', true)
-            .maybeSingle();
-
-          if (employeeError) {
-            console.log('🔍 لم يتم العثور على موظف مربوط:', employeeError);
-          }
-
+          // We already fetched employeeData above, use it
           const employeeCode = employeeData?.telegram_code || '';
-          const employeeId = employeeData?.user_id || null;
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
