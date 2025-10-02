@@ -137,6 +137,19 @@ interface InventoryItem {
   category_name?: string;
 }
 
+interface InventoryProduct {
+  product_name: string;
+  department_name?: string;
+  category_name?: string;
+  variants: Array<{
+    color_name: string;
+    size_name: string;
+    total_quantity: number;
+    available_quantity: number;
+    reserved_quantity: number;
+  }>;
+}
+
 async function handleInventoryStats(employeeId: string | null): Promise<string> {
   if (!employeeId) {
     return '⚠️ لم يتم ربط حسابك بالنظام.\nيرجى التواصل مع المدير للحصول على رمز الربط.';
@@ -184,51 +197,81 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
 
     if (error) throw error;
 
-    const items = data as InventoryItem[];
-    if (!items || items.length === 0) {
+    // البيانات تأتي كمنتجات مع variants داخل JSONB
+    const products = data as InventoryProduct[];
+    if (!products || products.length === 0) {
       return `🔍 لم يتم العثور على نتائج لـ: ${searchValue || 'البحث المطلوب'}`;
     }
 
-    // Group by product for better presentation
-    const groupedByProduct: Record<string, InventoryItem[]> = {};
-    items.forEach(item => {
-      if (!groupedByProduct[item.product_name]) {
-        groupedByProduct[item.product_name] = [];
-      }
-      groupedByProduct[item.product_name].push(item);
-    });
-
-    let message = `📦 نتائج الجرد:\n\n`;
+    let message = '';
     
-    Object.entries(groupedByProduct).forEach(([productName, variants]) => {
-      message += `🛍️ ${productName}\n`;
-      if (variants[0]?.department_name) {
-        message += `   📁 ${variants[0].department_name}\n`;
+    products.forEach((product, index) => {
+      if (index > 0) message += '\n━━━━━━━━━━━━━━━━━━\n\n';
+      
+      // اسم المنتج
+      message += `🛍️ ${product.product_name}\n`;
+      
+      // القسم إن وجد
+      if (product.department_name) {
+        message += `📁 ${product.department_name}\n`;
       }
       
-      // Group by color
-      const byColor: Record<string, InventoryItem[]> = {};
-      variants.forEach(v => {
-        if (!byColor[v.color_name]) byColor[v.color_name] = [];
-        byColor[v.color_name].push(v);
-      });
-
-      Object.entries(byColor).forEach(([color, colorVariants]) => {
-        message += `   🎨 ${color}:\n`;
-        colorVariants.forEach(v => {
-          message += `      📏 ${v.size_name}: ${v.available_quantity}/${v.total_quantity} (محجوز: ${v.reserved_quantity})\n`;
-        });
+      // حساب الإجمالي المتاح والإجمالي الكلي
+      const totalAvailable = product.variants.reduce((sum, v) => sum + (v.available_quantity || 0), 0);
+      const totalStock = product.variants.reduce((sum, v) => sum + (v.total_quantity || 0), 0);
+      const totalReserved = product.variants.reduce((sum, v) => sum + (v.reserved_quantity || 0), 0);
+      
+      message += `📊 إجمالي المتاح: ${totalAvailable} من ${totalStock}`;
+      if (totalReserved > 0) {
+        message += ` (محجوز: ${totalReserved})`;
+      }
+      message += '\n\n';
+      
+      // تنظيم المتغيرات حسب اللون
+      const byColor: Record<string, typeof product.variants> = {};
+      product.variants.forEach(variant => {
+        const colorName = variant.color_name || 'غير محدد';
+        if (!byColor[colorName]) byColor[colorName] = [];
+        byColor[colorName].push(variant);
       });
       
-      message += '\n';
+      // عرض كل لون مع قياساته
+      Object.entries(byColor).forEach(([colorName, colorVariants]) => {
+        message += `🎨 ${colorName}:\n`;
+        
+        // ترتيب القياسات
+        const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+        colorVariants.sort((a, b) => {
+          const aIndex = sizeOrder.indexOf(a.size_name || '');
+          const bIndex = sizeOrder.indexOf(b.size_name || '');
+          if (aIndex === -1 && bIndex === -1) return 0;
+          if (aIndex === -1) return 1;
+          if (bIndex === -1) return -1;
+          return aIndex - bIndex;
+        });
+        
+        colorVariants.forEach(variant => {
+          const sizeName = variant.size_name || 'غير محدد';
+          const available = variant.available_quantity || 0;
+          const reserved = variant.reserved_quantity || 0;
+          
+          message += `   📏 ${sizeName}: ${available} قطعة`;
+          if (reserved > 0) {
+            message += ` (محجوز: ${reserved})`;
+          }
+          message += '\n';
+        });
+        
+        message += '\n';
+      });
     });
 
     // Limit message length for Telegram
     if (message.length > 4000) {
-      message = message.substring(0, 3900) + '\n\n... (النتائج محدودة)';
+      message = message.substring(0, 3900) + '\n\n... (النتائج محدودة، استخدم بحث أدق)';
     }
 
-    return message;
+    return message.trim();
   } catch (error) {
     console.error('❌ خطأ في البحث:', error);
     return '❌ حدث خطأ في البحث. يرجى المحاولة لاحقاً.';
@@ -438,10 +481,57 @@ serve(async (req) => {
       }
 
       // ==========================================
-      // Handle text messages (potential orders)
-      // IMPORTANT: This runs ONLY if the message is NOT an inventory command
+      // Handle text messages (check for pending state first)
       // ==========================================
       if (text && text !== '/start') {
+        // First, check if there's a pending selection state
+        const { data: pendingState } = await supabase
+          .from('telegram_pending_selections')
+          .select('*')
+          .eq('chat_id', chatId)
+          .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (pendingState) {
+          // User is responding to a previous button press
+          console.log('📋 معالجة استجابة لحالة معلقة:', pendingState.action);
+          
+          let inventoryMessage = '';
+          const action = pendingState.action;
+          
+          if (action === 'inv_product') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'product', text);
+          } else if (action === 'inv_department') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'department', text);
+          } else if (action === 'inv_category') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'category', text);
+          } else if (action === 'inv_color') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'color', text);
+          } else if (action === 'inv_size') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'size', text);
+          } else if (action === 'inv_search') {
+            inventoryMessage = await handleSmartInventorySearch(employeeId, text);
+          }
+          
+          if (inventoryMessage) {
+            await sendTelegramMessage(chatId, inventoryMessage, botToken);
+            
+            // Delete the pending state
+            await supabase
+              .from('telegram_pending_selections')
+              .delete()
+              .eq('id', pendingState.id);
+            
+            return new Response(JSON.stringify({ success: true }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
+        // No pending state - treat as order
         try {
           console.log('🔄 معالجة الطلب باستخدام الدالة الذكية الصحيحة...');
           
@@ -536,24 +626,56 @@ serve(async (req) => {
 
         // Process the selected option
         let responseMessage = '';
+        let shouldSaveState = false;
+        let stateAction = '';
         
         // Handle inventory button presses
         if (data === 'inv_product') {
           responseMessage = '🛍️ اكتب اسم المنتج الذي تريد الاستعلام عنه:\n\nمثال: برشلونة';
+          shouldSaveState = true;
+          stateAction = 'inv_product';
         } else if (data === 'inv_department') {
           responseMessage = '📁 اكتب اسم القسم الذي تريد الاستعلام عنه:\n\nمثال: رياضي';
+          shouldSaveState = true;
+          stateAction = 'inv_department';
         } else if (data === 'inv_category') {
           responseMessage = '🏷️ اكتب اسم التصنيف الذي تريد الاستعلام عنه:\n\nمثال: تيشرتات';
+          shouldSaveState = true;
+          stateAction = 'inv_category';
         } else if (data === 'inv_color') {
           responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
+          shouldSaveState = true;
+          stateAction = 'inv_color';
         } else if (data === 'inv_size') {
           responseMessage = '📏 اكتب القياس الذي تريد الاستعلام عنه:\n\nمثال: سمول';
+          shouldSaveState = true;
+          stateAction = 'inv_size';
         } else if (data === 'inv_search') {
           responseMessage = '🔍 اكتب نص البحث الذكي:\n\nمثال: برشلونة أحمر';
+          shouldSaveState = true;
+          stateAction = 'inv_search';
         } else if (data === 'inv_stats') {
           responseMessage = await handleInventoryStats(employeeId);
         } else if (data === 'inv_quick') {
           responseMessage = await handleInventorySearch(employeeId, 'all', '');
+        }
+        
+        // Save state if needed
+        if (shouldSaveState && stateAction) {
+          // Delete any existing pending states for this chat
+          await supabase
+            .from('telegram_pending_selections')
+            .delete()
+            .eq('chat_id', chatId);
+          
+          // Save new state
+          await supabase
+            .from('telegram_pending_selections')
+            .insert({
+              chat_id: chatId,
+              action: stateAction,
+              context: {}
+            });
         }
         // Handle city selection
         else if (data.startsWith('city_')) {
