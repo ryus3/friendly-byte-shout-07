@@ -50,10 +50,11 @@ const INVENTORY_KEYBOARD = {
       { text: '📏 جرد قياس', callback_data: 'inv_size' }
     ],
     [
-      { text: '🔍 بحث ذكي', callback_data: 'inv_search' },
-      { text: '📊 إحصائيات المخزون', callback_data: 'inv_stats' }
+      { text: '🌞 جرد موسم', callback_data: 'inv_season' },
+      { text: '🔍 بحث ذكي', callback_data: 'inv_search' }
     ],
     [
+      { text: '📊 إحصائيات المخزون', callback_data: 'inv_stats' },
       { text: '📦 جرد سريع', callback_data: 'inv_quick' }
     ]
   ]
@@ -132,6 +133,7 @@ interface InventoryItem {
   available_quantity: number;
   reserved_quantity: number;
   category_name?: string;
+  season_name?: string;
 }
 
 interface InventoryProduct {
@@ -608,6 +610,21 @@ serve(async (req) => {
         });
       }
 
+      // Handle /season command
+      if (text.startsWith('/season')) {
+        const searchValue = text.replace(/^\/season\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم الموسم بعد الأمر\nمثال: /season صيفي', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'season', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       // Handle /search command (smart search)
       if (text.startsWith('/search')) {
         const searchQuery = text.replace(/^\/search\s*/i, '').trim();
@@ -652,6 +669,8 @@ serve(async (req) => {
             inventoryMessage = await handleInventorySearch(employeeId, 'color', text);
           } else if (action === 'inv_size') {
             inventoryMessage = await handleInventorySearch(employeeId, 'size', text);
+          } else if (action === 'inv_season') {
+            inventoryMessage = await handleInventorySearch(employeeId, 'season', text);
           } else if (action === 'inv_search') {
             inventoryMessage = await handleSmartInventorySearch(employeeId, text);
           }
@@ -823,6 +842,10 @@ serve(async (req) => {
             shouldSaveState = true;
             stateAction = 'inv_size';
           }
+        } else if (data === 'inv_season') {
+          responseMessage = '🌞 اكتب اسم الموسم الذي تريد الاستعلام عنه:\n\nمثال: صيفي';
+          shouldSaveState = true;
+          stateAction = 'inv_season';
         } else if (data === 'inv_search') {
           responseMessage = '🔍 اكتب نص البحث الذكي:\n\nمثال: برشلونة أحمر';
           shouldSaveState = true;

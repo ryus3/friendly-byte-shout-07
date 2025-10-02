@@ -4609,11 +4609,14 @@ export type Database = {
       get_employee_inventory_stats: {
         Args: { p_employee_id: string }
         Returns: {
-          available_stock: number
-          low_stock_products: number
-          reserved_stock: number
+          available_quantity: number
+          low_stock_count: number
+          out_of_stock_count: number
+          reserved_quantity: number
           total_products: number
-          total_stock: number
+          total_quantity: number
+          total_value: number
+          total_variants: number
         }[]
       }
       get_employee_last_sync: {
@@ -5115,6 +5118,7 @@ export type Database = {
         Returns: {
           available_quantity: number
           barcode: string
+          category_name: string
           color_id: string
           color_name: string
           cost_price: number
@@ -5122,6 +5126,7 @@ export type Database = {
           product_id: string
           product_name: string
           reserved_quantity: number
+          season_name: string
           size_id: string
           size_name: string
           variant_id: string
