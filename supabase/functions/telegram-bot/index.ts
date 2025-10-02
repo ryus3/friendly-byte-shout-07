@@ -188,7 +188,7 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
     const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
       p_employee_id: employeeId,
       p_filter_type: searchType === 'all' ? null : searchType,
-      p_search_term: searchValue || null
+      p_filter_value: searchValue || null
     });
 
     if (error) throw error;
