@@ -170,64 +170,8 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // إذا نجح إنشاء الطلب، استدعاء resolve-location-with-ai
+          // إذا نجح إنشاء الطلب (العنوان تم معالجته في process_telegram_order)
           if (orderResult?.success) {
-            console.log('🌍 معالجة العنوان بالذكاء الاصطناعي...');
-            
-            try {
-              // استخراج العنوان (السطر الأول) وليس رقم الهاتف ✅
-              const locationText = orderResult.customer_city || text.split('\n')[0] || text;
-              
-              // التحقق من أن النص ليس رقم هاتف
-              if (/^[\d\s+()-]{7,}$/.test(locationText.trim())) {
-                console.warn('⚠️ النص المرسل يبدو كرقم هاتف، تخطي معالجة الموقع');
-                throw new Error('invalid_location_text');
-              }
-              
-              const { data: locationData, error: locationError } = await supabase.functions.invoke('resolve-location-with-ai', {
-                body: { location_text: locationText }
-              });
-
-              if (locationError) {
-                console.warn('⚠️ فشل في معالجة الموقع:', locationError);
-              } else if (locationData) {
-                console.log('✅ تم معالجة الموقع:', locationData);
-                
-                // تحديث ai_orders بالموقع المُحلّل من الذكاء الاصطناعي
-                const aiOrderId = orderResult.ai_order_id || orderResult.order_id;
-                if (aiOrderId) {
-                  const updatePayload: any = {
-                    location_confidence: locationData.confidence || 0,
-                    location_suggestions: locationData.suggestions || []
-                  };
-
-                  // حفظ المعرفات والأسماء المُحللة من الذكاء الاصطناعي
-                  if (locationData.city_id) {
-                    updatePayload.city_id = locationData.city_id;
-                  }
-                  if (locationData.region_id) {
-                    updatePayload.region_id = locationData.region_id;
-                  }
-                  if (locationData.city_name) {
-                    updatePayload.resolved_city_name = locationData.city_name;
-                  }
-                  if (locationData.region_name) {
-                    updatePayload.resolved_region_name = locationData.region_name;
-                  }
-
-                  const { error: updateError } = await supabase
-                    .from('ai_orders')
-                    .update(updatePayload)
-                    .eq('id', aiOrderId);
-
-                  if (updateError) {
-                    console.error('❌ فشل تحديث الموقع في قاعدة البيانات:', updateError);
-                  } else {
-                    console.log('✅ تم تحديث الموقع في قاعدة البيانات بنجاح');
-                  }
-                }
-              }
-            } catch (locationProcessError) {
               console.error('❌ خطأ في معالجة الموقع:', locationProcessError);
               // نتجاهل الخطأ ونكمل لأن الطلب تم إنشاؤه بنجاح
             }
