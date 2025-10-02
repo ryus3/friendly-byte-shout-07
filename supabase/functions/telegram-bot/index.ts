@@ -170,20 +170,13 @@ serve(async (req) => {
 
           console.log('✅ نتيجة معالجة الطلب:', orderResult);
 
-          // إذا نجح إنشاء الطلب (العنوان تم معالجته في process_telegram_order)
-          if (orderResult?.success) {
-              console.error('❌ خطأ في معالجة الموقع:', locationProcessError);
-              // نتجاهل الخطأ ونكمل لأن الطلب تم إنشاؤه بنجاح
-            }
-          }
-
-          // Handle response
+          // التعامل مع النتيجة
           if (orderResult?.success) {
             console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
-            // استخدام الرسالة الجاهزة من الدالة مباشرة ✅
+            // استخدام الرسالة الجاهزة من الدالة (تحتوي على العنوان المُحلّل)
             await sendTelegramMessage(chatId, orderResult.message, botToken);
           } else {
-            // Handle errors
+            // معالجة الأخطاء
             let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
             await sendTelegramMessage(chatId, errorMessage, botToken);
           }
