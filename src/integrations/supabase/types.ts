@@ -4639,14 +4639,15 @@ export type Database = {
         }
         Returns: {
           available_quantity: number
-          category_name: string
+          color_id: string
           color_name: string
-          department_name: string
           product_id: string
           product_name: string
           reserved_quantity: number
+          size_id: string
           size_name: string
           total_quantity: number
+          variant_id: string
         }[]
       }
       get_inventory_stats: {
