@@ -4641,15 +4641,20 @@ export type Database = {
         }
         Returns: {
           available_quantity: number
+          barcode: string
           category_name: string
           color_name: string
+          cost_price: number
           department_name: string
+          location: string
           product_id: string
           product_name: string
           product_type_name: string
           quantity: number
           reserved_quantity: number
+          sale_price: number
           size_name: string
+          sold_quantity: number
           variant_id: string
         }[]
       }
