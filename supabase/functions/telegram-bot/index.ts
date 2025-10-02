@@ -22,14 +22,18 @@ const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات 
 "بغداد كراده ارجنتين سمائي ميديم"
 
 ━━━━━━━━━━━━━━━━━━
-📦 أوامر الجرد الذكية:
+📦 أوامر الجرد (Commands):
 
-/جرد - جرد سريع لمخزونك
-/جرد_منتج [اسم] - جرد منتج معين
-/جرد_قسم [اسم] - جرد قسم كامل
-/جرد_لون [اسم] - جرد حسب اللون
-/جرد_قياس [حجم] - جرد حسب القياس
-/احصائياتي - إحصائيات مخزونك
+/inventory - جرد سريع للمخزون 📦
+/product [اسم] - جرد منتج معين 🛍️
+/department [اسم] - جرد قسم كامل 📁
+/category [اسم] - جرد تصنيف محدد 🏷️
+/color [اسم] - جرد حسب اللون 🎨
+/size [حجم] - جرد حسب القياس 📏
+/stats - إحصائيات المخزون 📊
+/search [نص] - بحث ذكي في المخزون 🔍
+
+💡 ملاحظة: لإنشاء طلب، اكتب رسالة عادية بدون أوامر
 
 جرب الآن! 👇`;
 
@@ -299,8 +303,8 @@ serve(async (req) => {
 
       const employeeId = employeeData?.user_id || null;
       
-      // Handle /احصائياتي command
-      if (text === '/احصائياتي' || text === '/stats') {
+      // Handle /stats command
+      if (text === '/stats') {
         const statsMessage = await handleInventoryStats(employeeId);
         await sendTelegramMessage(chatId, statsMessage, botToken);
         return new Response(JSON.stringify({ success: true }), {
@@ -309,8 +313,8 @@ serve(async (req) => {
         });
       }
 
-      // Handle /جرد command (quick inventory)
-      if (text === '/جرد' || text === '/inventory') {
+      // Handle /inventory command (quick inventory)
+      if (text === '/inventory') {
         const inventoryMessage = await handleInventorySearch(employeeId, 'all', '');
         await sendTelegramMessage(chatId, inventoryMessage, botToken);
         return new Response(JSON.stringify({ success: true }), {
@@ -319,11 +323,11 @@ serve(async (req) => {
         });
       }
 
-      // Handle /جرد_منتج command
-      if (text.startsWith('/جرد_منتج') || text.startsWith('/product_inventory')) {
-        const searchValue = text.replace(/^\/(جرد_منتج|product_inventory)\s*/i, '').trim();
+      // Handle /product command
+      if (text.startsWith('/product')) {
+        const searchValue = text.replace(/^\/product\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم المنتج بعد الأمر\nمثال: /جرد_منتج برشلونة', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم المنتج بعد الأمر\nمثال: /product برشلونة', botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'product', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -334,11 +338,11 @@ serve(async (req) => {
         });
       }
 
-      // Handle /جرد_قسم command
-      if (text.startsWith('/جرد_قسم') || text.startsWith('/department_inventory')) {
-        const searchValue = text.replace(/^\/(جرد_قسم|department_inventory)\s*/i, '').trim();
+      // Handle /department command
+      if (text.startsWith('/department')) {
+        const searchValue = text.replace(/^\/department\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم القسم بعد الأمر\nمثال: /جرد_قسم رياضي', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم القسم بعد الأمر\nمثال: /department رياضي', botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'department', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -349,11 +353,26 @@ serve(async (req) => {
         });
       }
 
-      // Handle /جرد_لون command
-      if (text.startsWith('/جرد_لون') || text.startsWith('/color_inventory')) {
-        const searchValue = text.replace(/^\/(جرد_لون|color_inventory)\s*/i, '').trim();
+      // Handle /category command
+      if (text.startsWith('/category')) {
+        const searchValue = text.replace(/^\/category\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم اللون بعد الأمر\nمثال: /جرد_لون أحمر', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم التصنيف بعد الأمر\nمثال: /category تيشرتات', botToken);
+        } else {
+          const inventoryMessage = await handleInventorySearch(employeeId, 'category', searchValue);
+          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Handle /color command
+      if (text.startsWith('/color')) {
+        const searchValue = text.replace(/^\/color\s*/i, '').trim();
+        if (!searchValue) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم اللون بعد الأمر\nمثال: /color أحمر', botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'color', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -364,11 +383,11 @@ serve(async (req) => {
         });
       }
 
-      // Handle /جرد_قياس command
-      if (text.startsWith('/جرد_قياس') || text.startsWith('/size_inventory')) {
-        const searchValue = text.replace(/^\/(جرد_قياس|size_inventory)\s*/i, '').trim();
+      // Handle /size command
+      if (text.startsWith('/size')) {
+        const searchValue = text.replace(/^\/size\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة القياس بعد الأمر\nمثال: /جرد_قياس سمول', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة القياس بعد الأمر\nمثال: /size سمول', botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'size', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -379,21 +398,19 @@ serve(async (req) => {
         });
       }
 
-      // Handle smart search (any text query that's not a command)
-      // Check if it looks like an inventory query (starts with common keywords)
-      const inventoryKeywords = ['ما المتوفر', 'شو المتوفر', 'وين', 'عندي', 'المخزون', 'الجرد'];
-      const isInventoryQuery = inventoryKeywords.some(keyword => text.toLowerCase().includes(keyword.toLowerCase()));
-      
-      if (isInventoryQuery) {
-        const searchQuery = text.replace(/^(ما المتوفر|شو المتوفر|وين|عندي|المخزون|الجرد)\s*/i, '').trim();
-        if (searchQuery) {
+      // Handle /search command (smart search)
+      if (text.startsWith('/search')) {
+        const searchQuery = text.replace(/^\/search\s*/i, '').trim();
+        if (!searchQuery) {
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة نص البحث بعد الأمر\nمثال: /search برشلونة أحمر', botToken);
+        } else {
           const inventoryMessage = await handleSmartInventorySearch(employeeId, searchQuery);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
-          return new Response(JSON.stringify({ success: true }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
         }
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
       // ==========================================

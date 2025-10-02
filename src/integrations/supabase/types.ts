@@ -4634,34 +4634,20 @@ export type Database = {
         }[]
       }
       get_inventory_by_permissions: {
-        Args:
-          | { p_employee_id: string }
-          | {
-              p_employee_id: string
-              p_search_type?: string
-              p_search_value?: string
-            }
+        Args: {
+          p_employee_id: string
+          p_search_type?: string
+          p_search_value?: string
+        }
         Returns: {
           available_quantity: number
           category_name: string
-          color_id: string
           color_name: string
-          cost_price: number
           department_name: string
-          location: string
-          min_stock: number
-          product_code: string
-          product_id: string
           product_name: string
-          product_type: string
           reserved_quantity: number
-          sale_price: number
-          season_occasion: string
-          size_id: string
           size_name: string
-          sold_quantity: number
           total_quantity: number
-          variant_id: string
         }[]
       }
       get_inventory_stats: {
