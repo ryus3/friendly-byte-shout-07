@@ -185,20 +185,42 @@ async function handleInventorySearch(employeeId: string | null, searchType: stri
   }
 
   try {
-    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
+    // استخدام smart_inventory_search بدلاً من get_inventory_by_permissions
+    const { data, error } = await supabase.rpc('smart_inventory_search', {
       p_employee_id: employeeId,
-      p_filter_type: searchType === 'all' ? null : searchType,
-      p_filter_value: searchValue || null
+      p_search_query: searchValue || ''
     });
 
     if (error) throw error;
 
-    // البيانات تأتي كمنتجات مع variants داخل JSONB
-    const products = data as InventoryProduct[];
-    if (!products || products.length === 0) {
+    // البيانات تأتي كصفوف منفصلة (كل variant على حدة)
+    const items = data as InventoryItem[];
+    if (!items || items.length === 0) {
       return `🔍 لم يتم العثور على نتائج لـ: ${searchValue || 'البحث المطلوب'}`;
     }
 
+    // تجميع البيانات حسب المنتج
+    const productMap = new Map<string, InventoryProduct>();
+    
+    items.forEach(item => {
+      if (!productMap.has(item.product_name)) {
+        productMap.set(item.product_name, {
+          product_name: item.product_name,
+          category_name: item.category_name,
+          variants: []
+        });
+      }
+      
+      productMap.get(item.product_name)!.variants.push({
+        color_name: item.color_name,
+        size_name: item.size_name,
+        total_quantity: item.total_quantity,
+        available_quantity: item.available_quantity,
+        reserved_quantity: item.reserved_quantity
+      });
+    });
+
+    const products = Array.from(productMap.values());
     let message = '';
     
     products.forEach((product, index) => {
