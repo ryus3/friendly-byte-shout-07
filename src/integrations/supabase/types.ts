@@ -5118,7 +5118,6 @@ export type Database = {
           color_id: string
           color_name: string
           cost_price: number
-          image_url: string
           price: number
           product_id: string
           product_name: string
