@@ -123,7 +123,7 @@ const OrderCard = ({
     });
   };
 
-  // تحضير معلومات المنتجات مع اسم المنتج واللون والقياس
+  // تحضير معلومات المنتجات مع اسم المنتج واللون والقياس - النظام الاحترافي الكامل
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
@@ -131,46 +131,91 @@ const OrderCard = ({
     const validItems = (order.items || []).filter(item => item != null && typeof item === 'object');
     const totalItems = validItems.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
     
-    if (validItems.length === 1) {
-      // منتج واحد - اعرض الاسم والعدد واللون والقياس
-      const item = validItems[0];
+    // تجميع المنتجات حسب الاسم
+    const groupedByProduct = validItems.reduce((acc, item) => {
       const productName = item?.productname || item?.product_name || item?.producttype || item?.product_type || 'منتج';
+      if (!acc[productName]) {
+        acc[productName] = [];
+      }
+      acc[productName].push(item);
+      return acc;
+    }, {});
+    
+    const uniqueProducts = Object.keys(groupedByProduct);
+    
+    // الحالة 1: منتج واحد فقط
+    if (uniqueProducts.length === 1) {
+      const productName = uniqueProducts[0];
+      const items = groupedByProduct[productName];
       
-      // جمع معلومات اللون والقياس
-      const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
-      const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
-      // عرض اللون والقياس معاً إذا كانوا موجودين
-      const parts = [sizeInfo, colorInfo].filter(Boolean);
-      const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
+      // منتج واحد بلون/حجم واحد
+      if (items.length === 1) {
+        const item = items[0];
+        const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
+        const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
+        const parts = [colorInfo, sizeInfo].filter(Boolean);
+        const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
+        
+        return {
+          type: 'single',
+          totalItems,
+          productName,
+          quantity: item?.quantity || 1,
+          variantInfo: variantInfo || null,
+          colorHex: item?.product_variants?.colors?.hex_code || item?.color_hex
+        };
+      }
       
-      return { 
-        totalItems, 
-        displayText: productName,
-        variantInfo: variantInfo || null,
-        colorInfo: colorInfo,
-        colorHex: item?.product_variants?.colors?.hex_code || item?.color_hex,
-        quantity: item?.quantity || 1,
-        isSingle: true
-      };
-    } else {
-      // عدة منتجات - اعرض أول منتج مع اللون والقياس
-      const firstItem = validItems[0];
-      const firstProductName = firstItem?.product_name || firstItem?.productname || firstItem?.producttype || firstItem?.product_type || 'منتج';
+      // منتج واحد بألوان/أحجام متعددة
+      else {
+        // تجميع الألوان والأحجام
+        const variantsMap = {};
+        items.forEach(item => {
+          const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
+          const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
+          const key = `${colorInfo} ${sizeInfo}`.trim();
+          if (!variantsMap[key]) {
+            variantsMap[key] = 0;
+          }
+          variantsMap[key] += item?.quantity || 1;
+        });
+        
+        // تحويل إلى نص منسق: أزرق S (2)، أحمر M (1)
+        const variantsText = Object.entries(variantsMap)
+          .map(([variant, qty]) => `${variant} (${qty})`)
+          .join('، ');
+        
+        return {
+          type: 'single-multi-variant',
+          totalItems,
+          productName,
+          quantity: totalItems,
+          variantsText
+        };
+      }
+    }
+    
+    // الحالة 2: منتجات مختلفة
+    else {
+      const products = uniqueProducts.map(productName => {
+        const items = groupedByProduct[productName];
+        const item = items[0]; // نأخذ أول عنصر للحصول على اللون والقياس
+        const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
+        const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
+        const parts = [colorInfo, sizeInfo].filter(Boolean);
+        const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
+        
+        return {
+          productName,
+          variantInfo,
+          colorHex: item?.product_variants?.colors?.hex_code || item?.color_hex
+        };
+      });
       
-      // جمع معلومات اللون والقياس للمنتج الأول
-      const colorInfo = firstItem?.product_variants?.colors?.name || firstItem?.color || '';
-      const sizeInfo = firstItem?.product_variants?.sizes?.name || firstItem?.size || '';
-      const parts = [sizeInfo, colorInfo].filter(Boolean);
-      const variantInfo = parts.length > 0 ? parts.join(' - ') : '';
-      
-      return { 
-        totalItems, 
-        displayText: firstProductName,
-        variantInfo: variantInfo || null,
-        colorInfo: colorInfo,
-        colorHex: firstItem?.product_variants?.colors?.hex_code || firstItem?.color_hex,
-        quantity: totalItems,
-        isSingle: false
+      return {
+        type: 'multiple',
+        totalItems,
+        products
       };
     }
   };
@@ -519,29 +564,79 @@ const OrderCard = ({
                   </div>
                 </div>
 
-                {/* معلومات المنتج */}
+                {/* معلومات المنتج - النظام الاحترافي الكامل */}
                 {productSummary && (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
-                      {/* الصف الأول: أيقونة (أقصى يمين) + اسم المنتج + العدد */}
-                      <div className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
-                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
-                          <Package className="h-4 w-4" />
-                        </div>
-                        <span className="text-sm">{productSummary.displayText}</span>
-                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
-                          X{productSummary.quantity}
-                        </span>
-                      </div>
                       
-                      {/* الصف الثاني: اللون - القياس (أسفل اسم المنتج) */}
-                      {productSummary.variantInfo && (
-                        <div className="flex items-center gap-2 mt-1 justify-end mr-2">
-                          <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
-                            {productSummary.variantInfo}
-                          </span>
+                      {/* الحالة 1: منتج واحد بلون/حجم واحد */}
+                      {productSummary.type === 'single' && (
+                        <>
+                          <div className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                              <Package className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm">{productSummary.productName}</span>
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                              X{productSummary.quantity}
+                            </span>
+                          </div>
+                          {productSummary.variantInfo && (
+                            <div className="flex items-center gap-2 mt-1 justify-end mr-2">
+                              <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
+                                {productSummary.variantInfo}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* الحالة 2: منتج واحد بألوان/أحجام متعددة */}
+                      {productSummary.type === 'single-multi-variant' && (
+                        <>
+                          <div className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
+                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                              <Package className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm">{productSummary.productName}</span>
+                            <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                              X{productSummary.quantity}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 justify-end mr-2">
+                            <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium leading-relaxed">
+                              {productSummary.variantsText}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      
+                      {/* الحالة 3: منتجات مختلفة */}
+                      {productSummary.type === 'multiple' && (
+                        <div className="space-y-1">
+                          {productSummary.products.map((product, index) => (
+                            <div key={index} className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
+                              {index === 0 && (
+                                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
+                                  <Package className="h-4 w-4" />
+                                </div>
+                              )}
+                              {index > 0 && (
+                                <span className="text-xs text-muted-foreground mr-2">+</span>
+                              )}
+                              <div className="flex items-center gap-2 flex-row-reverse">
+                                <span className="text-sm">{product.productName}:</span>
+                                {product.variantInfo && (
+                                  <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md font-medium">
+                                    {product.variantInfo}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
+                      
                     </div>
                   </div>
                 )}
