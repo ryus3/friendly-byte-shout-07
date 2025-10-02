@@ -4637,25 +4637,18 @@ export type Database = {
         Args: {
           p_employee_id: string
           p_filter_type?: string
-          p_filter_value?: string
+          p_search_term?: string
         }
         Returns: {
-          available_quantity: number
-          barcode: string
+          category_id: string
           category_name: string
-          color_name: string
-          cost_price: number
-          department_name: string
-          location: string
+          is_active: boolean
           product_id: string
           product_name: string
-          product_type_name: string
-          quantity: number
-          reserved_quantity: number
-          sale_price: number
-          size_name: string
-          sold_quantity: number
-          variant_id: string
+          total_available: number
+          total_quantity: number
+          total_reserved: number
+          variants: Json
         }[]
       }
       get_inventory_stats: {
