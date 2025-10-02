@@ -4945,11 +4945,19 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args: {
-          p_employee_code: string
-          p_message_text: string
-          p_telegram_chat_id: number
-        }
+        Args:
+          | {
+              p_customer_city: string
+              p_customer_phone: string
+              p_items: Json
+              p_original_text: string
+              p_telegram_chat_id: number
+            }
+          | {
+              p_employee_code: string
+              p_message_text: string
+              p_telegram_chat_id: number
+            }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {

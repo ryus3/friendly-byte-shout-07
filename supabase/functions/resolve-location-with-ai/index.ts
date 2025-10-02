@@ -248,49 +248,57 @@ serve(async (req) => {
         }
       }
 
-      // 4.2: البحث في تركيبات من كلمتين بعد المدينة
-      if (!regionMatch && parts.length >= 2) {
-        const afterCityParts = textAfterCity.split(/[-،,\s]+/).filter(p => p.length > 0);
-        for (let i = 0; i < afterCityParts.length - 1; i++) {
-          const twoWords = normalize(afterCityParts[i] + ' ' + afterCityParts[i + 1]);
+      // 4.2: البحث المحسّن في تركيبات متعددة الكلمات من النص المتبقي
+      const afterCityParts = textAfterCity.split(/[-،,\s]+/).filter(p => p.length > 0);
+      
+      // البحث بتركيبات من الأطول إلى الأقصر
+      for (let len = afterCityParts.length; len > 0 && !regionMatch; len--) {
+        for (let i = 0; i <= afterCityParts.length - len; i++) {
+          const combination = afterCityParts.slice(i, i + len).join(' ');
+          const combinationNormalized = normalize(combination);
+          
           for (const region of regions || []) {
             if (region.city_id !== cityMatch.id) continue;
+            
             const regionNormalized = normalize(region.name);
-            if (regionNormalized.includes(twoWords) || twoWords.includes(regionNormalized)) {
-              const score = 0.85;
+            const regionOriginal = region.name.toLowerCase();
+            
+            // تطابق كامل (بدون تطبيع) - أعلى أولوية
+            if (combination === regionOriginal) {
+              regionMatch = region;
+              bestRegionScore = 1.0;
+              directMatchConfidence = Math.min(directMatchConfidence + 0.5, 1.0);
+              console.log(`✅ تطابق كامل تام: "${combination}" = "${region.name}"`);
+              break;
+            }
+            
+            // تطابق كامل (مع تطبيع)
+            if (combinationNormalized === regionNormalized) {
+              const score = 0.95;
               if (score > bestRegionScore) {
                 regionMatch = region;
                 bestRegionScore = score;
-                directMatchConfidence += 0.35;
+                directMatchConfidence = Math.min(directMatchConfidence + 0.45, 1.0);
+                console.log(`✅ تطابق كامل (مطبّع): "${combination}" = "${region.name}"`);
+              }
+            }
+            
+            // تطابق جزئي قوي
+            else if (regionNormalized.includes(combinationNormalized) || combinationNormalized.includes(regionNormalized)) {
+              const similarity = Math.min(combinationNormalized.length, regionNormalized.length) / 
+                                Math.max(combinationNormalized.length, regionNormalized.length);
+              const score = 0.7 * similarity;
+              
+              if (score > bestRegionScore) {
+                regionMatch = region;
+                bestRegionScore = score;
+                directMatchConfidence = Math.min(directMatchConfidence + (score * 0.3), 1.0);
+                console.log(`🔍 تطابق جزئي: "${combination}" ~ "${region.name}" (${score.toFixed(2)})`);
               }
             }
           }
-        }
-      }
-
-      // 4.3: البحث في الكلمات المنفردة
-      if (!regionMatch) {
-        for (const part of parts) {
-          const partNormalized = normalize(part);
-          for (const region of regions || []) {
-            if (region.city_id !== cityMatch.id) continue;
-            const regionNormalized = normalize(region.name);
-            if (regionNormalized === partNormalized) {
-              const score = 0.7;
-              if (score > bestRegionScore) {
-                regionMatch = region;
-                bestRegionScore = score;
-                directMatchConfidence += 0.3;
-              }
-            } else if (regionNormalized.includes(partNormalized) || partNormalized.includes(regionNormalized)) {
-              const score = 0.5;
-              if (score > bestRegionScore) {
-                regionMatch = region;
-                bestRegionScore = score;
-                directMatchConfidence += 0.2;
-              }
-            }
-          }
+          
+          if (bestRegionScore >= 0.95) break; // وجدنا تطابقاً ممتازاً
         }
       }
     }

@@ -457,31 +457,33 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
               const displayCity = order.resolved_city_name || order.customer_city || 'غير محدد';
               const displayRegion = order.resolved_region_name || '';
               
-              // استخراج نقطة دالة من النص الأصلي
+              // استخراج Landmark من customer_city فقط (بعد المدينة والمنطقة)
               const extractLandmark = () => {
-                if (!order.original_text) return '';
+                const customerCity = order.customer_city || '';
                 
-                let text = order.original_text.toLowerCase();
+                if (!customerCity) return '';
                 
-                // إزالة المدينة والمنطقة من النص
+                let landmark = customerCity.toLowerCase();
+                
+                // إزالة اسم المدينة المُحلّلة
                 if (displayCity && displayCity !== 'غير محدد') {
-                  text = text.replace(displayCity.toLowerCase(), '');
-                  text = text.replace(displayCity.toLowerCase().replace(/^ال/, ''), '');
-                }
-                if (displayRegion) {
-                  text = text.replace(displayRegion.toLowerCase(), '');
-                  text = text.replace(displayRegion.toLowerCase().replace(/^ال/, ''), '');
+                  landmark = landmark.replace(displayCity.toLowerCase(), '');
+                  landmark = landmark.replace(displayCity.toLowerCase().replace(/^ال/, ''), '');
                 }
                 
-                // تنظيف النص
-                text = text.replace(/[-،,\s]+/g, ' ').trim();
+                // إزالة اسم المنطقة المُحلّلة
+                if (displayRegion) {
+                  landmark = landmark.replace(displayRegion.toLowerCase(), '');
+                  landmark = landmark.replace(displayRegion.toLowerCase().replace(/^ال/, ''), '');
+                }
+                
+                // تنظيف المسافات والرموز الزائدة
+                landmark = landmark.replace(/[-،,\s]+/g, ' ').trim();
                 
                 // إزالة أرقام الهاتف
-                text = text.replace(/\d{10,}/g, '').trim();
+                landmark = landmark.replace(/\d{10,}/g, '').trim();
                 
-                // أخذ أول 3 كلمات كحد أقصى
-                const words = text.split(' ').filter(w => w.length > 2);
-                return words.slice(0, 3).join(' ') || '';
+                return landmark || '';
               };
 
               const landmark = extractLandmark();
