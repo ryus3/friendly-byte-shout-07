@@ -4610,13 +4610,10 @@ export type Database = {
         Args: { p_employee_id: string }
         Returns: {
           available_stock: number
-          low_stock_items: number
-          out_of_stock_items: number
+          low_stock_products: number
           reserved_stock: number
           total_products: number
           total_stock: number
-          total_value: number
-          total_variants: number
         }[]
       }
       get_employee_last_sync: {
@@ -4638,17 +4635,18 @@ export type Database = {
         Args: {
           p_employee_id: string
           p_filter_type?: string
-          p_search_term?: string
+          p_filter_value?: string
         }
         Returns: {
+          available_quantity: number
           category_name: string
+          color_name: string
           department_name: string
           product_id: string
           product_name: string
-          total_available: number
-          total_reserved: number
-          total_stock: number
-          variants: Json
+          reserved_quantity: number
+          size_name: string
+          total_quantity: number
         }[]
       }
       get_inventory_stats: {
@@ -5112,12 +5110,11 @@ export type Database = {
         Returns: boolean
       }
       smart_inventory_search: {
-        Args: { p_employee_id: string; p_search_text: string }
+        Args: { p_employee_id: string; p_search_query: string }
         Returns: {
           available_quantity: number
           category_name: string
           color_name: string
-          department_name: string
           match_score: number
           product_id: string
           product_name: string

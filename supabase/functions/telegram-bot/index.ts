@@ -331,21 +331,38 @@ async function getProductButtons(employeeId: string): Promise<any> {
     const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
       p_employee_id: employeeId,
       p_filter_type: null,
-      p_search_term: null
+      p_filter_value: null
     });
 
-    if (error || !data || data.length === 0) {
+    if (error) {
+      console.error('❌ خطأ في RPC getProductButtons:', error);
       return null;
     }
 
-    // حد أقصى 8 منتجات في كل صفحة
-    const products = data.slice(0, 8);
+    if (!data || data.length === 0) {
+      console.log('⚠️ لا توجد منتجات للموظف');
+      return null;
+    }
+
+    // استخراج المنتجات الفريدة
+    const uniqueProducts = new Map<string, any>();
+    data.forEach((item: any) => {
+      if (!uniqueProducts.has(item.product_id)) {
+        uniqueProducts.set(item.product_id, {
+          id: item.product_id,
+          name: item.product_name
+        });
+      }
+    });
+
+    // أخذ أول 8 منتجات
+    const products = Array.from(uniqueProducts.values()).slice(0, 8);
     const buttons = products.map((p: any) => [{
-      text: `${p.product_name}`,
-      callback_data: `select_product_${p.product_id}`
+      text: `🛍️ ${p.name}`,
+      callback_data: `select_product_${p.id}`
     }]);
 
-    if (data.length > 8) {
+    if (uniqueProducts.size > 8) {
       buttons.push([{ text: '⬇️ المزيد...', callback_data: 'more_products' }]);
     }
 
@@ -793,34 +810,29 @@ serve(async (req) => {
         } else if (data === 'inv_quick') {
           responseMessage = await handleInventorySearch(employeeId, 'all', '');
         }
-        // Handle selection from buttons
+        // Handle direct selection from buttons
         else if (data.startsWith('select_product_')) {
-          const productIdOrName = data.replace('select_product_', '');
-          // Try to search by the product ID we saved
-          try {
-            const { data: allProducts } = await supabase.rpc('get_inventory_by_permissions', {
-              p_employee_id: employeeId,
-              p_filter_type: null,
-              p_search_term: null
-            });
-            const product = allProducts?.find((p: any) => p.product_id === productIdOrName);
-            if (product) {
-              responseMessage = await handleInventorySearch(employeeId, 'product', product.product_name);
-            } else {
-              responseMessage = '❌ لم يتم العثور على المنتج';
-            }
-          } catch (error) {
-            console.error('خطأ في جلب تفاصيل المنتج:', error);
-            responseMessage = '❌ حدث خطأ في جلب تفاصيل المنتج';
+          const productId = data.replace('select_product_', '');
+          // البحث مباشرة باستخدام ID المنتج
+          const { data: productData } = await supabase
+            .from('products')
+            .select('name')
+            .eq('id', productId)
+            .maybeSingle();
+          
+          if (productData) {
+            responseMessage = await handleInventorySearch(employeeId, 'product', productData.name);
+          } else {
+            responseMessage = '❌ لم يتم العثور على المنتج';
           }
         } else if (data.startsWith('select_color_')) {
-          const colorName = data.replace('select_color_', '');
+          const colorName = data.replace('select_color_', '').replace(/_/g, ' ');
           responseMessage = await handleInventorySearch(employeeId, 'color', colorName);
         } else if (data.startsWith('select_size_')) {
-          const sizeName = data.replace('select_size_', '');
+          const sizeName = data.replace('select_size_', '').replace(/_/g, ' ');
           responseMessage = await handleInventorySearch(employeeId, 'size', sizeName);
         } else if (data.startsWith('select_category_')) {
-          const catName = data.replace('select_category_', '');
+          const catName = data.replace('select_category_', '').replace(/_/g, ' ');
           responseMessage = await handleInventorySearch(employeeId, 'category', catName);
         }
         
