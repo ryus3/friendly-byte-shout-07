@@ -154,13 +154,10 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
   }
 
   try {
-    const { data, error } = await supabase.rpc('get_employee_inventory_stats', {
-      p_employee_id: employeeId
-    });
+    const { data: stats, error } = await supabase.rpc('get_unified_inventory_stats');
 
     if (error) throw error;
 
-    const stats = data?.[0];
     if (!stats) {
       return '📊 لا توجد بيانات متاحة حالياً.';
     }
