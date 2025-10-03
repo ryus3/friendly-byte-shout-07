@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,22 @@ import { BulkAliasInput } from './BulkAliasInput';
 import { iraqCitiesCommonAliases } from '@/lib/iraqCitiesAliases';
 import { samawahRegionAliases } from '@/lib/samawahRegionsAliases';
 import { DeleteConfirmationDialog } from '@/components/ui/delete-confirmation-dialog';
+import { SearchableSelectFixed } from '@/components/ui/searchable-select-fixed';
+
+// دالة التطبيع الشاملة للنصوص العربية
+const normalizeArabicText = (text) => {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/^ال/, '')           // حذف "ال" التعريف من البداية
+    .replace(/[أإآ]/g, 'ا')       // توحيد الألف
+    .replace(/[ة]/g, 'ه')         // التاء المربوطة → هاء
+    .replace(/[ؤ]/g, 'و')         // الواو بالهمزة
+    .replace(/[ئ]/g, 'ي')         // الياء بالهمزة
+    .replace(/[ء]/g, '')          // حذف الهمزة المفردة
+    .replace(/\s+/g, ' ');        // توحيد المسافات
+};
 
 const CitiesCacheAliasManager = () => {
   const { cities, regions } = useCitiesCache();
@@ -37,8 +53,12 @@ const CitiesCacheAliasManager = () => {
 
   // States for bulk operations
   const [bulkAliases, setBulkAliases] = useState([]);
-  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [isBulkMode, setIsBulkMode] = useState(true); // الافتراضي متعدد
   const [isAddingAliases, setIsAddingAliases] = useState(false);
+
+  // State for city filter when selecting regions
+  const [selectedCityForRegion, setSelectedCityForRegion] = useState('');
+  const [regionSearchTerm, setRegionSearchTerm] = useState('');
 
   // States for multi-selection
   const [selectedCityAliases, setSelectedCityAliases] = useState([]);
@@ -161,7 +181,7 @@ const CitiesCacheAliasManager = () => {
         const aliasObjects = newAliasesToAdd.map(alias => ({
           city_id: cityId,
           alias_name: alias,
-          normalized_name: alias.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+          normalized_name: normalizeArabicText(alias),
           confidence_score: newAlias.confidence
         }));
 
@@ -206,7 +226,7 @@ const CitiesCacheAliasManager = () => {
         const aliasObjects = newAliasesToAdd.map(alias => ({
           region_id: regionId,
           alias_name: alias,
-          normalized_name: alias.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+          normalized_name: normalizeArabicText(alias),
           confidence_score: newAlias.confidence
         }));
 
@@ -230,7 +250,9 @@ const CitiesCacheAliasManager = () => {
         regionId: ''
       });
       setBulkAliases([]);
-      setIsBulkMode(false);
+      setIsBulkMode(true); // العودة للافتراضي (متعدد)
+      setSelectedCityForRegion('');
+      setRegionSearchTerm('');
       
       fetchAliases();
     } catch (error) {
@@ -269,7 +291,7 @@ const CitiesCacheAliasManager = () => {
           const aliasObjects = newAliases.map(alias => ({
             city_id: city.id,
             alias_name: alias.text,
-            normalized_name: alias.text.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+            normalized_name: normalizeArabicText(alias.text),
             confidence_score: alias.confidence
           }));
 
@@ -333,7 +355,7 @@ const CitiesCacheAliasManager = () => {
           const aliasObjects = newAliases.map(alias => ({
             region_id: region.id,
             alias_name: alias.text,
-            normalized_name: alias.text.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+            normalized_name: normalizeArabicText(alias.text),
             confidence_score: alias.confidence
           }));
 
@@ -481,8 +503,10 @@ const CitiesCacheAliasManager = () => {
         <Dialog open={showAddDialog} onOpenChange={(open) => {
           setShowAddDialog(open);
           if (!open) {
-            setIsBulkMode(false);
+            setIsBulkMode(true); // العودة للافتراضي (متعدد)
             setBulkAliases([]);
+            setSelectedCityForRegion('');
+            setRegionSearchTerm('');
           }
         }}>
           <DialogTrigger asChild>
@@ -514,36 +538,80 @@ const CitiesCacheAliasManager = () => {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant={!isBulkMode ? "default" : "outline"}
-                    onClick={() => setIsBulkMode(false)}
-                  >
-                    مفرد
-                  </Button>
-                  <Button
-                    size="sm"
                     variant={isBulkMode ? "default" : "outline"}
                     onClick={() => setIsBulkMode(true)}
                   >
                     متعدد
                   </Button>
+                  <Button
+                    size="sm"
+                    variant={!isBulkMode ? "default" : "outline"}
+                    onClick={() => setIsBulkMode(false)}
+                  >
+                    مفرد
+                  </Button>
                 </div>
               </div>
 
-              <div>
-                <Label>{newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}</Label>
-                <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`اختر ${newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(newAlias.type === 'city' ? cities : regions).map(item => (
-                      <SelectItem key={item.id} value={item.name}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {newAlias.type === 'city' ? (
+                <div>
+                  <Label>المدينة</Label>
+                  <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المدينة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities.map(city => (
+                        <SelectItem key={city.id} value={city.name}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <Label>المدينة (فلتر)</Label>
+                    <Select 
+                      value={selectedCityForRegion} 
+                      onValueChange={(value) => {
+                        setSelectedCityForRegion(value);
+                        setNewAlias({...newAlias, name: ''});
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر المدينة أولاً" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cities.map(city => (
+                          <SelectItem key={city.id} value={city.id.toString()}>
+                            {city.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>المنطقة</Label>
+                    <SearchableSelectFixed
+                      value={newAlias.name}
+                      onValueChange={(value) => setNewAlias({...newAlias, name: value})}
+                      options={regions
+                        .filter(r => !selectedCityForRegion || r.city_id.toString() === selectedCityForRegion)
+                        .map(region => ({
+                          value: region.name,
+                          label: region.name
+                        }))}
+                      placeholder={selectedCityForRegion ? "ابحث عن المنطقة..." : "اختر المدينة أولاً"}
+                      searchPlaceholder="ابحث..."
+                      emptyText="لا توجد مناطق"
+                      disabled={!selectedCityForRegion}
+                    />
+                  </div>
+                </>
+              )}
               
               {!isBulkMode ? (
                 <div>
