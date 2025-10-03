@@ -45,6 +45,10 @@ const CitiesCacheAliasManager = () => {
   const [selectedRegionAliases, setSelectedRegionAliases] = useState([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteType, setDeleteType] = useState('city');
+  
+  // States for single delete
+  const [showSingleDeleteDialog, setShowSingleDeleteDialog] = useState(false);
+  const [singleDeleteAlias, setSingleDeleteAlias] = useState(null);
 
   // جلب المرادفات عند التحميل
   useEffect(() => {
@@ -54,51 +58,47 @@ const CitiesCacheAliasManager = () => {
   const fetchAliases = async () => {
     setLoading(true);
     try {
-      // جلب مرادفات المدن
+      // جلب مرادفات المدن مع معلومات المدينة
       const { data: cityData, error: cityError } = await supabase
         .from('city_aliases')
-        .select('*')
+        .select(`
+          *,
+          cities_cache (
+            id,
+            name
+          )
+        `)
         .order('confidence_score', { ascending: false });
 
       if (cityError) throw cityError;
 
-      const { data: citiesData, error: citiesError } = await supabase
-        .from('cities_cache')
-        .select('id, name');
-
-      if (citiesError) throw citiesError;
-
-      const cityAliasesWithNames = (cityData || []).map(alias => ({
-        ...alias,
-        cities_cache: citiesData?.find(city => city.id === alias.city_id) || null
-      }));
-
-      // جلب مرادفات المناطق مع معلومات المدينة
+      // جلب مرادفات المناطق مع معلومات المنطقة والمدينة
       const { data: regionData, error: regionError } = await supabase
         .from('region_aliases')
-        .select('*')
+        .select(`
+          *,
+          regions_cache (
+            id,
+            name,
+            city_id,
+            cities_cache (
+              id,
+              name
+            )
+          )
+        `)
         .order('confidence_score', { ascending: false });
 
       if (regionError) throw regionError;
 
-      const { data: regionsData, error: regionsError } = await supabase
-        .from('regions_cache')
-        .select('id, name, city_id');
+      // معالجة مرادفات المناطق لإضافة اسم المدينة
+      const regionAliasesWithCityNames = (regionData || []).map(alias => ({
+        ...alias,
+        city_name: alias.regions_cache?.cities_cache?.name || 'غير معروف'
+      }));
 
-      if (regionsError) throw regionsError;
-
-      const regionAliasesWithNames = (regionData || []).map(alias => {
-        const region = regionsData?.find(region => region.id === alias.region_id);
-        const city = citiesData?.find(city => city.id === region?.city_id);
-        return {
-          ...alias,
-          regions_cache: region,
-          city_name: city?.name || 'غير معروف'
-        };
-      });
-
-      setCityAliases(cityAliasesWithNames);
-      setRegionAliases(regionAliasesWithNames);
+      setCityAliases(cityData || []);
+      setRegionAliases(regionAliasesWithCityNames);
       
     } catch (error) {
       console.error('خطأ في جلب المرادفات:', error);
@@ -397,6 +397,38 @@ const CitiesCacheAliasManager = () => {
     }
   };
 
+  const handleDeleteSingle = async () => {
+    if (!singleDeleteAlias) return;
+
+    try {
+      const tableName = singleDeleteAlias.type === 'city' ? 'city_aliases' : 'region_aliases';
+
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', singleDeleteAlias.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "نجح الحذف",
+        description: `تم حذف المرادف بنجاح`,
+        variant: "default"
+      });
+      
+      setShowSingleDeleteDialog(false);
+      setSingleDeleteAlias(null);
+      fetchAliases();
+    } catch (error) {
+      console.error('خطأ في حذف المرادف:', error);
+      toast({
+        title: "فشل الحذف",
+        description: error.message || "حدث خطأ أثناء حذف المرادف",
+        variant: "destructive"
+      });
+    }
+  };
+
   const toggleSelectAll = (type) => {
     if (type === 'city') {
       if (selectedCityAliases.length === filteredCityAliases.length) {
@@ -444,34 +476,6 @@ const CitiesCacheAliasManager = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button
-            onClick={handleAddSmartCityAliases}
-            disabled={isAddingAliases}
-            variant="outline"
-            size="sm"
-          >
-            {isAddingAliases ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            مرادفات المدن الذكية
-          </Button>
-
-          <Button
-            onClick={handleAddSmartSamawahRegionAliases}
-            disabled={isAddingAliases}
-            variant="outline"
-            size="sm"
-          >
-            {isAddingAliases ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            مرادفات مناطق السماوة
-          </Button>
-
           <Dialog open={showAddDialog} onOpenChange={(open) => {
             setShowAddDialog(open);
             if (!open) {
@@ -729,6 +733,17 @@ const CitiesCacheAliasManager = () => {
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setSingleDeleteAlias({ ...alias, type: 'city' });
+                        setShowSingleDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -815,6 +830,17 @@ const CitiesCacheAliasManager = () => {
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => {
+                        setSingleDeleteAlias({ ...alias, type: 'region' });
+                        setShowSingleDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -829,6 +855,17 @@ const CitiesCacheAliasManager = () => {
         onConfirm={handleDeleteSelected}
         title="حذف المرادفات المحددة"
         description={`هل أنت متأكد من حذف ${deleteType === 'city' ? selectedCityAliases.length : selectedRegionAliases.length} مرادف؟ لا يمكن التراجع عن هذا الإجراء.`}
+        confirmText="حذف"
+        cancelText="إلغاء"
+        type="danger"
+      />
+
+      <DeleteConfirmationDialog
+        open={showSingleDeleteDialog}
+        onOpenChange={setShowSingleDeleteDialog}
+        onConfirm={handleDeleteSingle}
+        title="حذف المرادف"
+        description={`هل أنت متأكد من حذف المرادف "${singleDeleteAlias?.alias_name}"؟ لا يمكن التراجع عن هذا الإجراء.`}
         confirmText="حذف"
         cancelText="إلغاء"
         type="danger"
