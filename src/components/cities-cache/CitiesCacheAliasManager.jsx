@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, MapPin, Building2, Search, Download, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Building2, Search, Download, Upload, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
+import { BulkAliasInput } from './BulkAliasInput';
+import { iraqCitiesCommonAliases, getCityAliases } from '@/lib/iraqCitiesAliases';
 
 const CitiesCacheAliasManager = () => {
   const { cities, regions } = useCitiesCache();
@@ -30,6 +32,13 @@ const CitiesCacheAliasManager = () => {
     cityId: '',
     regionId: ''
   });
+
+  // States for bulk operations
+  const [bulkAliases, setBulkAliases] = useState([]);
+  const [isCommonAliasesDialogOpen, setIsCommonAliasesDialogOpen] = useState(false);
+  const [selectedCommonAliases, setSelectedCommonAliases] = useState([]);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [isAddingAliases, setIsAddingAliases] = useState(false);
 
   // جلب المرادفات عند التحميل
   useEffect(() => {
@@ -115,7 +124,7 @@ const CitiesCacheAliasManager = () => {
   };
 
   const handleAddAlias = async () => {
-    if (!newAlias.name || !newAlias.alias) {
+    if (!newAlias.name || (!newAlias.alias && bulkAliases.length === 0)) {
       toast({
         title: "خطأ",
         description: "يجب ملء جميع الحقول المطلوبة",
@@ -124,50 +133,64 @@ const CitiesCacheAliasManager = () => {
       return;
     }
 
+    setIsAddingAliases(true);
     try {
-      if (newAlias.type === 'city') {
-        const cityId = cities.find(c => c.name === newAlias.name)?.id;
-        if (!cityId) {
-          toast({
-            title: "خطأ",
-            description: "المدينة المحددة غير موجودة",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const { error } = await supabase.from('city_aliases').insert([{
-          city_id: cityId,
-          alias_name: newAlias.alias,
-          normalized_name: newAlias.alias.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
-          confidence_score: newAlias.confidence
-        }]);
-
-        if (error) throw error;
-      } else {
-        const regionId = regions.find(r => r.name === newAlias.name)?.id;
-        if (!regionId) {
-          toast({
-            title: "خطأ",
-            description: "المنطقة المحددة غير موجودة",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        const { error } = await supabase.from('region_aliases').insert([{
-          region_id: regionId,
-          alias_name: newAlias.alias,
-          normalized_name: newAlias.alias.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
-          confidence_score: newAlias.confidence
-        }]);
-
-        if (error) throw error;
+      const cityId = cities.find(c => c.name === newAlias.name)?.id;
+      if (!cityId) {
+        toast({
+          title: "خطأ",
+          description: "المدينة المحددة غير موجودة",
+          variant: "destructive"
+        });
+        return;
       }
 
+      // Prepare aliases to add
+      const aliasesToAdd = isBulkMode ? bulkAliases : [newAlias.alias];
+      
+      if (aliasesToAdd.length === 0) {
+        toast({
+          title: "تنبيه",
+          description: "لا توجد مرادفات صالحة للإضافة",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check for existing aliases
+      const { data: existingAliases } = await supabase
+        .from('city_aliases')
+        .select('alias_name')
+        .in('alias_name', aliasesToAdd);
+
+      const existingAliasNames = existingAliases?.map(a => a.alias_name) || [];
+      const newAliasesToAdd = aliasesToAdd.filter(a => !existingAliasNames.includes(a));
+
+      if (newAliasesToAdd.length === 0) {
+        toast({
+          title: "تنبيه",
+          description: "جميع المرادفات موجودة مسبقاً",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Insert new aliases
+      const aliasObjects = newAliasesToAdd.map(alias => ({
+        city_id: cityId,
+        alias_name: alias,
+        normalized_name: alias.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+        confidence_score: newAlias.confidence
+      }));
+
+      const { error } = await supabase.from('city_aliases').insert(aliasObjects);
+
+      if (error) throw error;
+
+      const skippedCount = aliasesToAdd.length - newAliasesToAdd.length;
       toast({
         title: "نجح الإضافة",
-        description: "تم إضافة المرادف بنجاح",
+        description: `تم إضافة ${newAliasesToAdd.length} مرادف${skippedCount > 0 ? `، تم تجاهل ${skippedCount} مكررات` : ''}`,
         variant: "default"
       });
 
@@ -180,6 +203,8 @@ const CitiesCacheAliasManager = () => {
         cityId: '',
         regionId: ''
       });
+      setBulkAliases([]);
+      setIsBulkMode(false);
       
       fetchAliases();
     } catch (error) {
@@ -189,6 +214,84 @@ const CitiesCacheAliasManager = () => {
         description: error.message || "حدث خطأ أثناء إضافة المرادف",
         variant: "destructive"
       });
+    } finally {
+      setIsAddingAliases(false);
+    }
+  };
+
+  const handleAddCommonAliases = async () => {
+    if (!newAlias.name || selectedCommonAliases.length === 0) {
+      toast({
+        title: "خطأ",
+        description: "يجب اختيار مرادفات للإضافة",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAddingAliases(true);
+    try {
+      const cityId = cities.find(c => c.name === newAlias.name)?.id;
+      if (!cityId) {
+        toast({
+          title: "خطأ",
+          description: "المدينة المحددة غير موجودة",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check for existing aliases
+      const aliasNames = selectedCommonAliases.map(a => a.text);
+      const { data: existingAliases } = await supabase
+        .from('city_aliases')
+        .select('alias_name')
+        .in('alias_name', aliasNames);
+
+      const existingAliasNames = existingAliases?.map(a => a.alias_name) || [];
+      const newAliasesToAdd = selectedCommonAliases.filter(a => !existingAliasNames.includes(a.text));
+
+      if (newAliasesToAdd.length === 0) {
+        toast({
+          title: "تنبيه",
+          description: "جميع المرادفات المحددة موجودة مسبقاً",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Insert new aliases
+      const aliasObjects = newAliasesToAdd.map(alias => ({
+        city_id: cityId,
+        alias_name: alias.text,
+        normalized_name: alias.text.toLowerCase().replace(/[أإآ]/g, 'ا').replace(/[ة]/g, 'ه'),
+        confidence_score: alias.confidence
+      }));
+
+      const { error } = await supabase.from('city_aliases').insert(aliasObjects);
+
+      if (error) throw error;
+
+      const skippedCount = selectedCommonAliases.length - newAliasesToAdd.length;
+      toast({
+        title: "نجح الإضافة",
+        description: `تم إضافة ${newAliasesToAdd.length} مرادف${skippedCount > 0 ? `، تم تجاهل ${skippedCount} مكررات` : ''}`,
+        variant: "default"
+      });
+
+      setIsCommonAliasesDialogOpen(false);
+      setSelectedCommonAliases([]);
+      
+      fetchAliases();
+    } catch (error) {
+      console.error('خطأ في إضافة المرادفات:', error);
+      toast({
+        title: "فشل الإضافة",
+        description: error.message || "حدث خطأ أثناء إضافة المرادفات",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAddingAliases(false);
     }
   };
 
@@ -246,80 +349,246 @@ const CitiesCacheAliasManager = () => {
           </p>
         </div>
         
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              إضافة مرادف
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>إضافة مرادف جديد</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>النوع</Label>
-                <Select value={newAlias.type} onValueChange={(value) => setNewAlias({...newAlias, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر النوع" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="city">مدينة</SelectItem>
-                    <SelectItem value="region">منطقة</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="flex gap-2">
+          <Dialog open={isCommonAliasesDialogOpen} onOpenChange={setIsCommonAliasesDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Sparkles className="h-4 w-4 mr-2" />
+                مرادفات شائعة
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>إضافة المرادفات الشائعة</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>المدينة</Label>
+                  <Select value={newAlias.name} onValueChange={(value) => {
+                    setNewAlias({...newAlias, name: value});
+                    setSelectedCommonAliases([]);
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المدينة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities.map(city => (
+                        <SelectItem key={city.id} value={city.name}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {newAlias.name && (() => {
+                  const cityData = Object.values(iraqCitiesCommonAliases).find(
+                    c => c.name === newAlias.name
+                  );
+                  
+                  if (!cityData) return <p className="text-sm text-muted-foreground">لا توجد مرادفات شائعة لهذه المدينة</p>;
+
+                  const aliasesByType = {
+                    english: cityData.aliases.filter(a => a.type === 'english'),
+                    misspelling: cityData.aliases.filter(a => a.type === 'misspelling'),
+                    alternative: cityData.aliases.filter(a => a.type === 'alternative'),
+                    abbreviation: cityData.aliases.filter(a => a.type === 'abbreviation'),
+                    kurdish: cityData.aliases.filter(a => a.type === 'kurdish'),
+                  };
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">اختر المرادفات للإضافة:</p>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSelectedCommonAliases(cityData.aliases)}
+                          >
+                            تحديد الكل ({cityData.aliases.length})
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => setSelectedCommonAliases([])}
+                          >
+                            إلغاء التحديد
+                          </Button>
+                        </div>
+                      </div>
+
+                      {Object.entries(aliasesByType).map(([type, aliases]) => {
+                        if (aliases.length === 0) return null;
+                        
+                        const typeLabels = {
+                          english: 'إنجليزي',
+                          misspelling: 'أخطاء إملائية',
+                          alternative: 'بدائل',
+                          abbreviation: 'اختصارات',
+                          kurdish: 'كردي'
+                        };
+
+                        return (
+                          <div key={type} className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground">{typeLabels[type]}</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {aliases.map((alias, idx) => {
+                                const isSelected = selectedCommonAliases.some(a => a.text === alias.text);
+                                return (
+                                  <Badge
+                                    key={idx}
+                                    variant={isSelected ? "default" : "outline"}
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                      if (isSelected) {
+                                        setSelectedCommonAliases(prev => prev.filter(a => a.text !== alias.text));
+                                      } else {
+                                        setSelectedCommonAliases(prev => [...prev, alias]);
+                                      }
+                                    }}
+                                  >
+                                    {alias.text} ({(alias.confidence * 100).toFixed(0)}%)
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <div className="pt-4 border-t">
+                        <p className="text-sm text-muted-foreground mb-2">
+                          المرادفات المحددة: {selectedCommonAliases.length}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={handleAddCommonAliases} 
+                            disabled={selectedCommonAliases.length === 0 || isAddingAliases}
+                            className="flex-1"
+                          >
+                            {isAddingAliases ? 'جاري الإضافة...' : `إضافة ${selectedCommonAliases.length} مرادف`}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setIsCommonAliasesDialogOpen(false)} 
+                            className="flex-1"
+                          >
+                            إلغاء
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-              
-              <div>
-                <Label>{newAlias.type === 'city' ? 'المدينة الأصلية' : 'المنطقة الأصلية'}</Label>
-                <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={`اختر ${newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(newAlias.type === 'city' ? cities : regions).map(item => (
-                      <SelectItem key={item.id} value={item.name}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={showAddDialog} onOpenChange={(open) => {
+            setShowAddDialog(open);
+            if (!open) {
+              setIsBulkMode(false);
+              setBulkAliases([]);
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                إضافة مرادف
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>إضافة مرادف جديد</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>وضع الإضافة</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant={!isBulkMode ? "default" : "outline"}
+                      onClick={() => setIsBulkMode(false)}
+                    >
+                      مفرد
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={isBulkMode ? "default" : "outline"}
+                      onClick={() => setIsBulkMode(true)}
+                    >
+                      متعدد
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>المدينة الأصلية</Label>
+                  <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المدينة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cities.map(item => (
+                        <SelectItem key={item.id} value={item.name}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {!isBulkMode ? (
+                  <div>
+                    <Label>المرادف</Label>
+                    <Input
+                      value={newAlias.alias}
+                      onChange={(e) => setNewAlias({...newAlias, alias: e.target.value})}
+                      placeholder="أدخل المرادف"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>المرادفات (كل مرادف في سطر منفصل)</Label>
+                    <BulkAliasInput
+                      value={bulkAliases}
+                      onChange={setBulkAliases}
+                      existingAliases={cityAliases}
+                      placeholder="أدخل المرادفات (كل مرادف في سطر منفصل)"
+                    />
+                  </div>
+                )}
+                
+                <div>
+                  <Label>درجة الثقة ({(newAlias.confidence * 100).toFixed(0)}%)</Label>
+                  <input
+                    type="range"
+                    min="0.1"
+                    max="1.0"
+                    step="0.1"
+                    value={newAlias.confidence}
+                    onChange={(e) => setNewAlias({...newAlias, confidence: parseFloat(e.target.value)})}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleAddAlias} 
+                    className="flex-1"
+                    disabled={isAddingAliases}
+                  >
+                    {isAddingAliases ? 'جاري الإضافة...' : 'إضافة'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
+                    إلغاء
+                  </Button>
+                </div>
               </div>
-              
-              <div>
-                <Label>المرادف</Label>
-                <Input
-                  value={newAlias.alias}
-                  onChange={(e) => setNewAlias({...newAlias, alias: e.target.value})}
-                  placeholder="أدخل المرادف"
-                />
-              </div>
-              
-              <div>
-                <Label>درجة الثقة ({newAlias.confidence})</Label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="1.0"
-                  step="0.1"
-                  value={newAlias.confidence}
-                  onChange={(e) => setNewAlias({...newAlias, confidence: parseFloat(e.target.value)})}
-                  className="w-full"
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={handleAddAlias} className="flex-1">
-                  إضافة
-                </Button>
-                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
-                  إلغاء
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Search and Filter */}
