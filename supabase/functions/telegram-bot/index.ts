@@ -378,31 +378,8 @@ async function getProductButtons(employeeId: string): Promise<any> {
 
     if (error) {
       console.error('❌ خطأ في RPC getProductButtons:', error);
-      // Fallback: استعلام مباشر من جدول المنتجات
-      console.log('🔄 Trying fallback query...');
-      const { data: productsData, error: fallbackError } = await supabase
-        .from('products')
-        .select('id, name')
-        .eq('is_active', true)
-        .limit(8);
-      
-      if (fallbackError) {
-        console.error('❌ Fallback query failed:', fallbackError);
-        return null;
-      }
-      
-      if (!productsData || productsData.length === 0) {
-        console.log('⚠️ No products in fallback');
-        return null;
-      }
-      
-      console.log('✅ Fallback succeeded, products:', productsData.length);
-      const buttons = productsData.map((p: any) => [{
-        text: `🛍️ ${p.name}`,
-        callback_data: `select_product_${p.id}`
-      }]);
-      
-      return { inline_keyboard: buttons };
+      console.log('⚠️ فشل جلب صلاحيات المنتجات');
+      return null;
     }
 
     if (!data || data.length === 0) {
