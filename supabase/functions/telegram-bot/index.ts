@@ -154,7 +154,11 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
   }
 
   try {
-    const { data, error } = await supabase.rpc('get_unified_inventory_stats');
+    console.log('📊 جلب الإحصائيات للموظف:', employeeId);
+    
+    const { data, error } = await supabase.rpc('get_unified_inventory_stats', { 
+      p_employee_id: employeeId 
+    });
 
     if (error) throw error;
 
@@ -163,15 +167,15 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
       return '📊 لا توجد بيانات متاحة حالياً.';
     }
 
-    const totalStock = stats.total_variants || 0;
+    const totalQuantity = stats.total_quantity || 0;
     const reservedStock = stats.reserved_stock_count || 0;
-    const availableStock = totalStock - reservedStock;
+    const availableStock = totalQuantity - reservedStock;
 
     return `📊 إحصائيات المخزون الخاص بك:
 
 ✅ إجمالي المنتجات: ${stats.total_products || 0}
 🎨 إجمالي المتغيرات: ${stats.total_variants || 0}
-📦 إجمالي المخزون: ${totalStock}
+📦 إجمالي المخزون: ${totalQuantity}
 🟢 المتاح للبيع: ${availableStock}
 🔒 المحجوز: ${reservedStock}
 ⚠️ منخفض المخزون: ${stats.low_stock_count || 0}
@@ -394,7 +398,7 @@ async function getProductButtons(employeeId: string): Promise<any> {
     }
 
     if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد منتجات للموظف');
+      console.log('⚠️ لا توجد منتجات للموظف حسب صلاحياته');
       return null;
     }
 
@@ -410,6 +414,11 @@ async function getProductButtons(employeeId: string): Promise<any> {
     });
 
     console.log('✅ Unique products found:', uniqueProducts.size);
+
+    if (uniqueProducts.size === 0) {
+      console.log('⚠️ No unique products after filtering');
+      return null;
+    }
 
     // أخذ أول 8 منتجات
     const products = Array.from(uniqueProducts.values()).slice(0, 8);
@@ -815,18 +824,22 @@ serve(async (req) => {
       const chatId = callback_query.message?.chat?.id;
       const data = callback_query.data;
 
-      console.log(`🔘 ضغطة زر من ${callback_query.from?.id}: "${data}"`);
+      console.log(`🔘 ضغطة زر من ${callback_query.from?.id}: "${data}" في المحادثة ${chatId}`);
 
       if (chatId && data) {
-        // Answer the callback query
-        await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+        // Answer the callback query فوراً لإزالة "يتم التحميل..."
+        console.log('⏳ إرسال answerCallbackQuery...');
+        const answerResponse = await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             callback_query_id: callback_query.id,
-            text: '✅ تم الاختيار'
+            text: '✅ جاري المعالجة...'
           })
         });
+        
+        const answerResult = await answerResponse.json();
+        console.log('✅ answerCallbackQuery نتيجة:', answerResult.ok ? 'نجح' : 'فشل');
 
         // Get employee data for inventory commands
         const { data: employeeData } = await supabase
