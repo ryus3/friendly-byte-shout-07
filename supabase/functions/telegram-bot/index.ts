@@ -353,6 +353,8 @@ async function handleSmartInventorySearch(employeeId: string | null, searchText:
 
 // Helper function to get product list buttons
 async function getProductButtons(employeeId: string): Promise<any> {
+  console.log('🔍 getProductButtons called for employee:', employeeId);
+  
   try {
     const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
       p_employee_id: employeeId,
@@ -360,9 +362,35 @@ async function getProductButtons(employeeId: string): Promise<any> {
       p_filter_value: null
     });
 
+    console.log('📊 RPC result - error:', error, 'data length:', data?.length);
+
     if (error) {
       console.error('❌ خطأ في RPC getProductButtons:', error);
-      return null;
+      // Fallback: استعلام مباشر من جدول المنتجات
+      console.log('🔄 Trying fallback query...');
+      const { data: productsData, error: fallbackError } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('is_active', true)
+        .limit(8);
+      
+      if (fallbackError) {
+        console.error('❌ Fallback query failed:', fallbackError);
+        return null;
+      }
+      
+      if (!productsData || productsData.length === 0) {
+        console.log('⚠️ No products in fallback');
+        return null;
+      }
+      
+      console.log('✅ Fallback succeeded, products:', productsData.length);
+      const buttons = productsData.map((p: any) => [{
+        text: `🛍️ ${p.name}`,
+        callback_data: `select_product_${p.id}`
+      }]);
+      
+      return { inline_keyboard: buttons };
     }
 
     if (!data || data.length === 0) {
@@ -381,6 +409,8 @@ async function getProductButtons(employeeId: string): Promise<any> {
       }
     });
 
+    console.log('✅ Unique products found:', uniqueProducts.size);
+
     // أخذ أول 8 منتجات
     const products = Array.from(uniqueProducts.values()).slice(0, 8);
     const buttons = products.map((p: any) => [{
@@ -392,6 +422,7 @@ async function getProductButtons(employeeId: string): Promise<any> {
       buttons.push([{ text: '⬇️ المزيد...', callback_data: 'more_products' }]);
     }
 
+    console.log('🔘 Buttons created:', buttons.length);
     return { inline_keyboard: buttons };
   } catch (error) {
     console.error('❌ خطأ في جلب قائمة المنتجات:', error);
@@ -814,39 +845,52 @@ serve(async (req) => {
         
         // Handle inventory button presses
         if (data === 'inv_product') {
-          // عرض قائمة المنتجات بأزرار تفاعلية
-          const productButtons = await getProductButtons(employeeId);
-          if (productButtons) {
-            await sendTelegramMessage(chatId, '🛍️ اختر منتج أو اكتب اسمه:', botToken, productButtons);
-            shouldSaveState = true;
-            stateAction = 'inv_product';
-            responseMessage = ''; // Don't send the default message
-          } else {
-            responseMessage = '🛍️ اكتب اسم المنتج الذي تريد الاستعلام عنه:\n\nمثال: برشلونة';
-            shouldSaveState = true;
-            stateAction = 'inv_product';
+          console.log('🛍️ Processing inv_product for employee:', employeeId);
+          try {
+            const productButtons = await getProductButtons(employeeId);
+            console.log('📊 productButtons:', productButtons ? 'exists' : 'null');
+            
+            if (productButtons && productButtons.inline_keyboard && productButtons.inline_keyboard.length > 0) {
+              console.log('✅ Sending buttons:', productButtons.inline_keyboard.length);
+              await sendTelegramMessage(chatId, '🛍️ اختر منتج:', botToken, productButtons);
+              shouldSaveState = true;
+              stateAction = 'inv_product';
+              responseMessage = '';
+            } else {
+              console.log('⚠️ No buttons, asking text');
+              responseMessage = '🛍️ اكتب اسم المنتج:\n\nمثال: برشلونة';
+              shouldSaveState = true;
+              stateAction = 'inv_product';
+            }
+          } catch (err) {
+            console.error('❌ inv_product error:', err);
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_category') {
-          // عرض قائمة التصنيفات بأزرار تفاعلية
-          const catButtons = await getCategoryButtons();
-          if (catButtons) {
-            await sendTelegramMessage(chatId, '🏷️ اختر تصنيف أو اكتب اسمه:', botToken, catButtons);
-            shouldSaveState = true;
-            stateAction = 'inv_category';
-            responseMessage = '';
-          } else {
-            responseMessage = '🏷️ اكتب اسم التصنيف الذي تريد الاستعلام عنه:\n\nمثال: تيشرتات';
-            shouldSaveState = true;
-            stateAction = 'inv_category';
+          try {
+            const catButtons = await getCategoryButtons();
+            if (catButtons && catButtons.inline_keyboard && catButtons.inline_keyboard.length > 0) {
+              await sendTelegramMessage(chatId, '🏷️ اختر تصنيف:', botToken, catButtons);
+              shouldSaveState = true;
+              stateAction = 'inv_category';
+              responseMessage = '';
+            } else {
+              responseMessage = '🏷️ اكتب اسم التصنيف:\n\nمثال: تيشرتات';
+              shouldSaveState = true;
+              stateAction = 'inv_category';
+            }
+          } catch (err) {
+            console.error('❌ inv_category error:', err);
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_color') {
-          // عرض قائمة الألوان بأزرار تفاعلية
-          const colorButtons = await getColorButtons(employeeId);
-          if (colorButtons) {
-            await sendTelegramMessage(chatId, '🎨 اختر لون أو اكتب اسمه:', botToken, colorButtons);
-            shouldSaveState = true;
-            stateAction = 'inv_color';
-            responseMessage = '';
+          try {
+            const colorButtons = await getColorButtons(employeeId);
+            if (colorButtons && colorButtons.inline_keyboard && colorButtons.inline_keyboard.length > 0) {
+              await sendTelegramMessage(chatId, '🎨 اختر لون:', botToken, colorButtons);
+              shouldSaveState = true;
+              stateAction = 'inv_color';
+              responseMessage = '';
           } else {
             responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
             shouldSaveState = true;
