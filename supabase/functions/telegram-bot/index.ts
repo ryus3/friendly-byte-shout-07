@@ -154,24 +154,29 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
   }
 
   try {
-    const { data: stats, error } = await supabase.rpc('get_unified_inventory_stats');
+    const { data, error } = await supabase.rpc('get_unified_inventory_stats');
 
     if (error) throw error;
 
+    const stats = data?.[0];
     if (!stats) {
       return '📊 لا توجد بيانات متاحة حالياً.';
     }
+
+    const totalStock = stats.total_variants || 0;
+    const reservedStock = stats.reserved_stock_count || 0;
+    const availableStock = totalStock - reservedStock;
 
     return `📊 إحصائيات المخزون الخاص بك:
 
 ✅ إجمالي المنتجات: ${stats.total_products || 0}
 🎨 إجمالي المتغيرات: ${stats.total_variants || 0}
-📦 إجمالي المخزون: ${stats.total_quantity || 0}
-🟢 المتاح للبيع: ${stats.available_quantity || 0}
-🔒 المحجوز: ${stats.reserved_quantity || 0}
+📦 إجمالي المخزون: ${totalStock}
+🟢 المتاح للبيع: ${availableStock}
+🔒 المحجوز: ${reservedStock}
 ⚠️ منخفض المخزون: ${stats.low_stock_count || 0}
 ❌ نفذ من المخزون: ${stats.out_of_stock_count || 0}
-💰 قيمة المخزون: ${(stats.total_value || 0).toLocaleString()} د.ع`;
+💰 قيمة المخزون: ${(stats.total_inventory_value || 0).toLocaleString()} د.ع`;
   } catch (error) {
     console.error('❌ خطأ في جلب الإحصائيات:', error);
     return '❌ حدث خطأ في جلب الإحصائيات. يرجى المحاولة لاحقاً.';
@@ -547,11 +552,17 @@ serve(async (req) => {
         });
       }
 
-      // Handle /product command
+      // Handle /product command with interactive buttons
       if (text.startsWith('/product')) {
         const searchValue = text.replace(/^\/product\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم المنتج بعد الأمر\nمثال: /product برشلونة', botToken);
+          // Show product buttons
+          const productButtons = await getProductButtons(employeeId);
+          if (productButtons) {
+            await sendTelegramMessage(chatId, '🛍️ اختر المنتج الذي تريد معرفة جرده:', botToken, productButtons);
+          } else {
+            await sendTelegramMessage(chatId, '❌ لا توجد منتجات متاحة حالياً', botToken);
+          }
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'product', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -562,11 +573,17 @@ serve(async (req) => {
         });
       }
 
-      // Handle /category command
+      // Handle /category command with interactive buttons
       if (text.startsWith('/category')) {
         const searchValue = text.replace(/^\/category\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم التصنيف بعد الأمر\nمثال: /category تيشرتات', botToken);
+          // Show category buttons
+          const categoryButtons = await getCategoryButtons();
+          if (categoryButtons) {
+            await sendTelegramMessage(chatId, '🏷️ اختر التصنيف الذي تريد معرفة جرده:', botToken, categoryButtons);
+          } else {
+            await sendTelegramMessage(chatId, '❌ لا توجد تصنيفات متاحة حالياً', botToken);
+          }
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'category', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -607,11 +624,20 @@ serve(async (req) => {
         });
       }
 
-      // Handle /season command
+      // Handle /season command with interactive buttons
       if (text.startsWith('/season')) {
         const searchValue = text.replace(/^\/season\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم الموسم بعد الأمر\nمثال: /season صيفي', botToken);
+          // Show season buttons inline
+          const seasonButtons = {
+            inline_keyboard: [
+              [{ text: '☀️ صيف', callback_data: 'select_season_صيف' }],
+              [{ text: '🍂 خريف', callback_data: 'select_season_خريف' }],
+              [{ text: '❄️ شتاء', callback_data: 'select_season_شتاء' }],
+              [{ text: '🌸 ربيع', callback_data: 'select_season_ربيع' }]
+            ]
+          };
+          await sendTelegramMessage(chatId, '🗓️ اختر الموسم الذي تريد معرفة جرده:', botToken, seasonButtons);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'season', searchValue);
           await sendTelegramMessage(chatId, inventoryMessage, botToken);
@@ -876,6 +902,9 @@ serve(async (req) => {
         } else if (data.startsWith('select_category_')) {
           const catName = data.replace('select_category_', '').replace(/_/g, ' ');
           responseMessage = await handleInventorySearch(employeeId, 'category', catName);
+        } else if (data.startsWith('select_season_')) {
+          const seasonName = data.replace('select_season_', '').replace(/_/g, ' ');
+          responseMessage = await handleInventorySearch(employeeId, 'season', seasonName);
         }
         
         // Save state if needed
