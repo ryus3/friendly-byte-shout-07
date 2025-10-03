@@ -88,15 +88,18 @@ const CitiesCacheAliasManager = () => {
 
       if (regionsError) throw regionsError;
 
-      const regionAliasesWithNames = (regionData || []).map(alias => {
-        const region = regionsData?.find(region => region.id === alias.region_id);
-        const city = citiesData?.find(city => city.id === region?.city_id);
-        return {
-          ...alias,
-          regions_cache: region,
-          city_name: city?.name || 'غير معروف'
-        };
-      });
+      // فلترة المرادفات التي تشير إلى مناطق موجودة فقط
+      const regionAliasesWithNames = (regionData || [])
+        .map(alias => {
+          const region = regionsData?.find(region => region.id === alias.region_id);
+          const city = citiesData?.find(city => city.id === region?.city_id);
+          return {
+            ...alias,
+            regions_cache: region,
+            city_name: city?.name || 'غير معروف'
+          };
+        })
+        .filter(alias => alias.regions_cache !== undefined); // إزالة المرادفات الفاسدة
 
       setCityAliases(cityAliasesWithNames);
       setRegionAliases(regionAliasesWithNames);
@@ -702,11 +705,26 @@ const CitiesCacheAliasManager = () => {
               <p>لا توجد مرادفات للمدن</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[65vh] overflow-y-auto">
               {filteredCityAliases.map(alias => (
-                <Card key={alias.id} className="p-4 group hover:border-destructive/50 transition-colors">
-                  <div className="flex items-center gap-4">
+                <Card 
+                  key={alias.id} 
+                  className="p-3 md:p-4 group hover:border-destructive/50 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    // تجنب التفعيل عند النقر على الأزرار
+                    if (e.target.closest('button')) return;
+                    
+                    const isSelected = selectedCityAliases.includes(alias.id);
+                    if (isSelected) {
+                      setSelectedCityAliases(selectedCityAliases.filter(id => id !== alias.id));
+                    } else {
+                      setSelectedCityAliases([...selectedCityAliases, alias.id]);
+                    }
+                  }}
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                     <Checkbox
+                      className="h-5 w-5"
                       checked={selectedCityAliases.includes(alias.id)}
                       onCheckedChange={(checked) => {
                         if (checked) {
@@ -716,14 +734,14 @@ const CitiesCacheAliasManager = () => {
                         }
                       }}
                     />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{alias.cities_cache?.name}</span>
+                    <div className="flex-1 space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-sm sm:text-base">{alias.cities_cache?.name}</span>
                         <span className="text-muted-foreground">←</span>
-                        <span className="text-blue-600">{alias.alias_name}</span>
+                        <span className="text-blue-600 text-sm sm:text-base break-all">{alias.alias_name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={getConfidenceColor(alias.confidence_score)}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={`text-xs ${getConfidenceColor(alias.confidence_score)}`}>
                           ثقة: {(alias.confidence_score * 100).toFixed(0)}%
                         </Badge>
                         <span className="text-xs text-muted-foreground">
@@ -734,8 +752,11 @@ const CitiesCacheAliasManager = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteSingle(alias.id, 'city')}
+                      className="opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSingle(alias.id, 'city');
+                      }}
                       disabled={deletingSingleId === alias.id}
                     >
                       {deletingSingleId === alias.id ? (
@@ -797,11 +818,26 @@ const CitiesCacheAliasManager = () => {
               <p>لا توجد مرادفات للمناطق</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[65vh] overflow-y-auto">
               {filteredRegionAliases.map(alias => (
-                <Card key={alias.id} className="p-4 group hover:border-destructive/50 transition-colors">
-                  <div className="flex items-center gap-4">
+                <Card 
+                  key={alias.id} 
+                  className="p-3 md:p-4 group hover:border-destructive/50 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    // تجنب التفعيل عند النقر على الأزرار
+                    if (e.target.closest('button')) return;
+                    
+                    const isSelected = selectedRegionAliases.includes(alias.id);
+                    if (isSelected) {
+                      setSelectedRegionAliases(selectedRegionAliases.filter(id => id !== alias.id));
+                    } else {
+                      setSelectedRegionAliases([...selectedRegionAliases, alias.id]);
+                    }
+                  }}
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                     <Checkbox
+                      className="h-5 w-5"
                       checked={selectedRegionAliases.includes(alias.id)}
                       onCheckedChange={(checked) => {
                         if (checked) {
@@ -811,18 +847,18 @@ const CitiesCacheAliasManager = () => {
                         }
                       }}
                     />
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
+                    <div className="flex-1 space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="text-xs shrink-0">
                           <Building2 className="h-3 w-3 mr-1" />
                           {alias.city_name}
                         </Badge>
-                        <span className="font-medium">{alias.regions_cache?.name}</span>
+                        <span className="font-medium text-sm sm:text-base">{alias.regions_cache?.name || 'غير معروف'}</span>
                         <span className="text-muted-foreground">←</span>
-                        <span className="text-orange-600">{alias.alias_name}</span>
+                        <span className="text-orange-600 text-sm sm:text-base break-all">{alias.alias_name}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={getConfidenceColor(alias.confidence_score)}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className={`text-xs ${getConfidenceColor(alias.confidence_score)}`}>
                           ثقة: {(alias.confidence_score * 100).toFixed(0)}%
                         </Badge>
                         <span className="text-xs text-muted-foreground">
@@ -833,8 +869,11 @@ const CitiesCacheAliasManager = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteSingle(alias.id, 'region')}
+                      className="opacity-100 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSingle(alias.id, 'region');
+                      }}
                       disabled={deletingSingleId === alias.id}
                     >
                       {deletingSingleId === alias.id ? (
