@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit2, Trash2, MapPin, Building2, Search, Download, Upload, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, MapPin, Building2, Search, Download, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
@@ -350,11 +350,11 @@ const CitiesCacheAliasManager = () => {
         </div>
         
         <div className="flex gap-2">
-          <Dialog open={isCommonAliasesDialogOpen} onOpenChange={setIsCommonAliasesDialogOpen}>
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline">
-                <Sparkles className="h-4 w-4 mr-2" />
-                مرادفات شائعة
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                إضافة مرادف
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
