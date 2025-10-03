@@ -4706,14 +4706,12 @@ export type Database = {
       get_unified_inventory_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
-          archived_products_count: number
-          departments_data: Json
-          high_stock_count: number
           low_stock_count: number
-          medium_stock_count: number
           out_of_stock_count: number
+          reserved_stock_count: number
           total_inventory_value: number
           total_products: number
+          total_quantity: number
           total_variants: number
         }[]
       }
