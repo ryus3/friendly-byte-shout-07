@@ -337,35 +337,6 @@ const CitiesCacheAliasManager = () => {
     return 'bg-red-100 text-red-800';
   };
 
-  const handlePopulateAllAliases = async () => {
-    setIsAddingAliases(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('populate-city-aliases');
-      
-      if (error) throw error;
-      
-      if (data.success) {
-        toast({
-          title: "نجحت العملية",
-          description: `تم إضافة ${data.summary.total_added} مرادف، تم تجاهل ${data.summary.total_skipped} مكررات`,
-          variant: "default"
-        });
-        fetchAliases();
-      } else {
-        throw new Error(data.error || 'فشلت العملية');
-      }
-    } catch (error) {
-      console.error('خطأ في إضافة المرادفات:', error);
-      toast({
-        title: "فشلت العملية",
-        description: error.message || "حدث خطأ أثناء إضافة المرادفات",
-        variant: "destructive"
-      });
-    } finally {
-      setIsAddingAliases(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       
@@ -379,15 +350,6 @@ const CitiesCacheAliasManager = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button 
-            variant="outline"
-            onClick={handlePopulateAllAliases}
-            disabled={isAddingAliases}
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            {isAddingAliases ? 'جاري الإضافة...' : 'إضافة جميع المرادفات'}
-          </Button>
-
           <Dialog open={isCommonAliasesDialogOpen} onOpenChange={setIsCommonAliasesDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
