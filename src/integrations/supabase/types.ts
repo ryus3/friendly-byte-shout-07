@@ -4582,6 +4582,23 @@ export type Database = {
         Args: { p_full_name: string }
         Returns: string
       }
+      get_all_inventory_simple: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          available_quantity: number
+          base_price: number
+          category_name: string
+          color_hex: string
+          color_name: string
+          cost_price: number
+          product_id: string
+          product_name: string
+          reserved_quantity: number
+          size_name: string
+          total_quantity: number
+          variant_id: string
+        }[]
+      }
       get_available_stock: {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
