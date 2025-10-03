@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const SearchableSelectFixed = ({ 
+export const SearchableSelectFixed = ({ 
   value, 
   onValueChange, 
   options = [], 
