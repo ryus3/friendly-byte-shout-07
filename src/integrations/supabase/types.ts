@@ -4704,7 +4704,7 @@ export type Database = {
         }[]
       }
       get_unified_inventory_stats: {
-        Args: Record<PropertyKey, never>
+        Args: { p_employee_id: string }
         Returns: {
           low_stock_count: number
           out_of_stock_count: number

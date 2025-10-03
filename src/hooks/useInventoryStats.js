@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/hooks/useAuth';
 
 /**
  * Hook موحد لإحصائيات المخزون
@@ -8,6 +9,7 @@ import { useInventory } from '@/contexts/InventoryContext';
  */
 const useInventoryStats = () => {
   const { orders, products } = useInventory();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalVariants: 0,
@@ -61,7 +63,9 @@ const useInventoryStats = () => {
       
       console.log('🔍 [InventoryStats] بدء جلب إحصائيات المخزون...');
 
-      const { data, error: statsError } = await supabase.rpc('get_unified_inventory_stats');
+      const { data, error: statsError } = await supabase.rpc('get_unified_inventory_stats', {
+        p_employee_id: user?.id
+      });
       
       console.log('📊 [InventoryStats] استجابة قاعدة البيانات:', { data, error: statsError });
       
