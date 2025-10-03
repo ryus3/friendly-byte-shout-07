@@ -4642,12 +4642,12 @@ export type Database = {
         }
         Returns: {
           available_quantity: number
-          color_id: string
+          category_name: string
           color_name: string
           product_id: string
           product_name: string
+          quantity: number
           reserved_quantity: number
-          size_id: string
           size_name: string
           total_quantity: number
           variant_id: string
