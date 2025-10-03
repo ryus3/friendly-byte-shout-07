@@ -4586,11 +4586,9 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: {
           available_quantity: number
-          base_price: number
           category_name: string
-          color_hex: string
           color_name: string
-          cost_price: number
+          price: number
           product_id: string
           product_name: string
           reserved_quantity: number
