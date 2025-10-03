@@ -164,11 +164,40 @@ function normalizeArabicText(text: string): string {
 }
 
 // ==========================================
+// Get Delivery Partner Setting
+// ==========================================
+async function getDeliveryPartnerSetting(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'telegram_bot_delivery_partner')
+      .maybeSingle();
+    
+    if (error) throw error;
+    
+    // Extract string value from jsonb
+    const partner = typeof data?.value === 'string' 
+      ? data.value 
+      : (data?.value as any);
+    
+    return partner || 'alwaseet';
+  } catch (error) {
+    console.error('❌ خطأ في قراءة إعداد شركة التوصيل:', error);
+    return 'alwaseet'; // Default fallback
+  }
+}
+
+// ==========================================
 // Load Cities/Regions Cache
 // ==========================================
 async function loadCitiesRegionsCache(): Promise<boolean> {
   try {
     console.log('🔄 تحميل cache المدن والمناطق...');
+    
+    // Get delivery partner setting
+    const deliveryPartner = await getDeliveryPartnerSetting();
+    console.log(`📦 شركة التوصيل المختارة: ${deliveryPartner}`);
     
     // Load cities
     const { data: cities, error: citiesError } = await supabase
@@ -198,7 +227,7 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
       // Continue without aliases
     }
     
-    // Normalize and cache
+    // Normalize and cache - تخزين جميع المدن والمناطق الخاصة بشركة التوصيل
     citiesCache = (cities || []).map(c => ({
       id: c.id,
       name: c.name,
@@ -223,7 +252,7 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     lastCacheUpdate = Date.now();
     
-    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل`);
+    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     return true;
   } catch (error) {
     console.error('❌ فشل تحميل cache المدن والمناطق:', error);
