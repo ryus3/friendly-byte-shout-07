@@ -4705,7 +4705,18 @@ export type Database = {
       }
       get_unified_inventory_stats: {
         Args: { p_employee_id: string }
-        Returns: Json
+        Returns: {
+          archived_products_count: number
+          departments_data: Json
+          high_stock_count: number
+          low_stock_count: number
+          medium_stock_count: number
+          out_of_stock_count: number
+          reserved_stock_count: number
+          total_inventory_value: number
+          total_products: number
+          total_variants: number
+        }[]
       }
       get_unified_orders_analytics: {
         Args: Record<PropertyKey, never>
