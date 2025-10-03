@@ -4704,7 +4704,7 @@ export type Database = {
         }[]
       }
       get_unified_inventory_stats: {
-        Args: { p_employee_id?: string }
+        Args: { p_employee_id: string }
         Returns: Json
       }
       get_unified_orders_analytics: {
