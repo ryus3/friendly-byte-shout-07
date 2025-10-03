@@ -1,4 +1,4 @@
-// Telegram Bot Edge Function - Force redeploy 2025-10-03
+// Telegram Bot Edge Function - Force redeploy 2025-10-03 with Local Cache
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 
@@ -6,6 +6,15 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// ==========================================
+// Local Cities/Regions Cache
+// ==========================================
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+let citiesCache: Array<{ id: number; name: string; normalized: string; alwaseet_id: number }> = [];
+let regionsCache: Array<{ id: number; city_id: number; name: string; normalized: string; alwaseet_id: number }> = [];
+let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
+let lastCacheUpdate: number | null = null;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -125,6 +134,172 @@ function extractPhoneFromText(text: string): string {
     }
   }
   return '';
+}
+
+// ==========================================
+// Text Normalization for Cities/Regions
+// ==========================================
+function normalizeArabicText(text: string): string {
+  try {
+    let normalized = text.toLowerCase().trim();
+    // إزالة "ال" التعريف من البداية
+    normalized = normalized.replace(/^ال/, '');
+    // توحيد الهمزات
+    normalized = normalized.replace(/[أإآ]/g, 'ا');
+    // توحيد التاء المربوطة
+    normalized = normalized.replace(/[ة]/g, 'ه');
+    // توحيد الواو
+    normalized = normalized.replace(/[ؤ]/g, 'و');
+    // توحيد الياء
+    normalized = normalized.replace(/[ئ]/g, 'ي');
+    // إزالة الهمزة المفردة
+    normalized = normalized.replace(/[ء]/g, '');
+    // توحيد المسافات
+    normalized = normalized.replace(/\s+/g, ' ');
+    return normalized;
+  } catch (error) {
+    console.error('❌ خطأ في تطبيع النص:', error);
+    return text.toLowerCase().trim();
+  }
+}
+
+// ==========================================
+// Load Cities/Regions Cache
+// ==========================================
+async function loadCitiesRegionsCache(): Promise<boolean> {
+  try {
+    console.log('🔄 تحميل cache المدن والمناطق...');
+    
+    // Load cities
+    const { data: cities, error: citiesError } = await supabase
+      .from('cities_cache')
+      .select('id, name, alwaseet_id')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (citiesError) throw citiesError;
+    
+    // Load regions
+    const { data: regions, error: regionsError } = await supabase
+      .from('regions_cache')
+      .select('id, city_id, name, alwaseet_id')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (regionsError) throw regionsError;
+    
+    // Load city aliases
+    const { data: aliases, error: aliasesError } = await supabase
+      .from('city_aliases')
+      .select('city_id, alias_name, confidence_score');
+    
+    if (aliasesError) {
+      console.warn('⚠️ تحذير: فشل تحميل city_aliases:', aliasesError);
+      // Continue without aliases
+    }
+    
+    // Normalize and cache
+    citiesCache = (cities || []).map(c => ({
+      id: c.id,
+      name: c.name,
+      normalized: normalizeArabicText(c.name),
+      alwaseet_id: c.alwaseet_id
+    }));
+    
+    regionsCache = (regions || []).map(r => ({
+      id: r.id,
+      city_id: r.city_id,
+      name: r.name,
+      normalized: normalizeArabicText(r.name),
+      alwaseet_id: r.alwaseet_id
+    }));
+    
+    cityAliasesCache = (aliases || []).map(a => ({
+      city_id: a.city_id,
+      alias: a.alias_name,
+      normalized: normalizeArabicText(a.alias_name),
+      confidence: a.confidence_score || 0.8
+    }));
+    
+    lastCacheUpdate = Date.now();
+    
+    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل`);
+    return true;
+  } catch (error) {
+    console.error('❌ فشل تحميل cache المدن والمناطق:', error);
+    return false;
+  }
+}
+
+// ==========================================
+// Search City Locally
+// ==========================================
+function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number } | null {
+  try {
+    const normalized = normalizeArabicText(text);
+    
+    // Direct match in cities
+    const exactCity = citiesCache.find(c => c.normalized === normalized);
+    if (exactCity) {
+      return { cityId: exactCity.id, cityName: exactCity.name, confidence: 1.0 };
+    }
+    
+    // Starts with match
+    const startsWithCity = citiesCache.find(c => c.normalized.startsWith(normalized) || normalized.startsWith(c.normalized));
+    if (startsWithCity) {
+      return { cityId: startsWithCity.id, cityName: startsWithCity.name, confidence: 0.9 };
+    }
+    
+    // Check aliases
+    const alias = cityAliasesCache.find(a => a.normalized === normalized);
+    if (alias) {
+      const city = citiesCache.find(c => c.id === alias.city_id);
+      if (city) {
+        return { cityId: city.id, cityName: city.name, confidence: alias.confidence };
+      }
+    }
+    
+    // Contains match
+    const containsCity = citiesCache.find(c => c.normalized.includes(normalized) || normalized.includes(c.normalized));
+    if (containsCity) {
+      return { cityId: containsCity.id, cityName: containsCity.name, confidence: 0.7 };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ خطأ في البحث المحلي عن المدينة:', error);
+    return null;
+  }
+}
+
+// ==========================================
+// Search Regions Locally
+// ==========================================
+function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
+  try {
+    const normalized = normalizeArabicText(text);
+    const cityRegions = regionsCache.filter(r => r.city_id === cityId);
+    
+    const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+    
+    for (const region of cityRegions) {
+      if (region.normalized === normalized) {
+        matches.push({ regionId: region.id, regionName: region.name, confidence: 1.0 });
+      } else if (region.normalized.startsWith(normalized) || normalized.startsWith(region.normalized)) {
+        matches.push({ regionId: region.id, regionName: region.name, confidence: 0.9 });
+      } else if (region.normalized.includes(normalized) || normalized.includes(region.normalized)) {
+        matches.push({ regionId: region.id, regionName: region.name, confidence: 0.7 });
+      }
+    }
+    
+    // Sort by confidence
+    matches.sort((a, b) => b.confidence - a.confidence);
+    
+    return matches;
+  } catch (error) {
+    console.error('❌ خطأ في البحث المحلي عن المناطق:', error);
+    return [];
+  }
 }
 
 // Note: City and product extraction is now handled by the smart database function process_telegram_order
@@ -764,14 +939,122 @@ serve(async (req) => {
 
         // No pending state - treat as order
         try {
-          console.log('🔄 معالجة الطلب باستخدام الدالة الذكية الصحيحة...');
+          console.log('🔄 معالجة الطلب...');
           
           // We already fetched employeeData above, use it
           const employeeCode = employeeData?.telegram_code || '';
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
-          // استدعاء الدالة الذكية الجديدة بالمعاملات الصحيحة
+          // ==========================================
+          // المرحلة 1: محاولة التحليل المحلي للعنوان
+          // ==========================================
+          let shouldUseLocalCache = false;
+          let localCityResult: { cityId: number; cityName: string; confidence: number } | null = null;
+          let localRegionMatches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+          
+          try {
+            // تحميل cache إذا لم يكن محملاً أو انتهت صلاحيته
+            if (!lastCacheUpdate || (Date.now() - lastCacheUpdate > CACHE_TTL)) {
+              const cacheLoaded = await loadCitiesRegionsCache();
+              if (!cacheLoaded) {
+                console.warn('⚠️ فشل تحميل cache، استخدام الطريقة التقليدية');
+                shouldUseLocalCache = false;
+              } else {
+                shouldUseLocalCache = true;
+              }
+            } else {
+              shouldUseLocalCache = true;
+            }
+            
+            if (shouldUseLocalCache && citiesCache.length > 0) {
+              console.log('🔍 محاولة التحليل المحلي للعنوان...');
+              
+              // البحث عن المدينة محلياً
+              localCityResult = searchCityLocal(text);
+              
+              if (localCityResult && localCityResult.confidence >= 0.7) {
+                console.log(`✅ تم العثور على مدينة: ${localCityResult.cityName} (ثقة: ${localCityResult.confidence})`);
+                
+                // البحث عن المناطق المحتملة
+                localRegionMatches = searchRegionsLocal(localCityResult.cityId, text);
+                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة`);
+                
+                // السيناريو 1: مدينة واضحة + منطقة واحدة واضحة
+                if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.9) {
+                  console.log('✅ السيناريو 1: مدينة ومنطقة واضحة - إنشاء طلب مباشرة');
+                  // Continue to normal order creation with resolved location
+                  // The location will be saved in ai_orders with city_id and region_id
+                  shouldUseLocalCache = false; // Let process_telegram_order handle it normally
+                }
+                // السيناريو 2: مدينة واضحة + عدة مناطق محتملة - "هل تقصد؟"
+                else if (localRegionMatches.length > 1) {
+                  console.log('⚠️ السيناريو 2: عدة مناطق محتملة - عرض "هل تقصد؟"');
+                  
+                  // حذف أي حالة معلقة سابقة
+                  await supabase
+                    .from('telegram_pending_selections')
+                    .delete()
+                    .eq('chat_id', chatId);
+                  
+                  // حفظ بيانات الطلب مؤقتاً
+                  await supabase
+                    .from('telegram_pending_selections')
+                    .insert({
+                      chat_id: chatId,
+                      action: 'region_clarification',
+                      context: {
+                        original_text: text,
+                        employee_code: employeeCode,
+                        city_id: localCityResult.cityId,
+                        city_name: localCityResult.cityName
+                      }
+                    });
+                  
+                  // بناء أزرار المناطق (أقصى 5 مناطق)
+                  const regionButtons = localRegionMatches.slice(0, 5).map(r => [{
+                    text: `📍 ${r.regionName}`,
+                    callback_data: `region_${r.regionId}`
+                  }]);
+                  
+                  // إضافة زر "لا شيء مما سبق"
+                  regionButtons.push([{
+                    text: '❌ لا شيء مما سبق',
+                    callback_data: 'region_none'
+                  }]);
+                  
+                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد إحدى هذه المناطق؟`;
+                  
+                  await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
+                  
+                  return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                  });
+                }
+                // السيناريو 3: مدينة واضحة + لا توجد مناطق
+                else {
+                  console.log('⚠️ السيناريو 3: لا توجد مناطق محددة - استخدام الطريقة التقليدية');
+                  shouldUseLocalCache = false;
+                }
+              } else {
+                console.log('⚠️ لم يتم العثور على مدينة واضحة - استخدام الطريقة التقليدية');
+                shouldUseLocalCache = false;
+              }
+            }
+          } catch (localCacheError) {
+            console.error('❌ خطأ في التحليل المحلي:', localCacheError);
+            shouldUseLocalCache = false;
+          }
+
+          // ==========================================
+          // المرحلة 2: Fallback للطريقة التقليدية
+          // ==========================================
+          if (!shouldUseLocalCache) {
+            console.log('🔄 استخدام الطريقة التقليدية (process_telegram_order)...');
+          }
+          
+          // استدعاء الدالة الذكية (مع أو بدون التحليل المحلي)
           const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
             p_employee_code: employeeCode,
             p_message_text: text,
@@ -992,6 +1275,93 @@ serve(async (req) => {
               action: stateAction,
               context: {}
             });
+        }
+        // ==========================================
+        // Handle Region Selection from "Did you mean?"
+        // ==========================================
+        else if (data.startsWith('region_')) {
+          try {
+            // جلب الحالة المعلقة
+            const { data: pendingData } = await supabase
+              .from('telegram_pending_selections')
+              .select('*')
+              .eq('chat_id', chatId)
+              .eq('action', 'region_clarification')
+              .gt('expires_at', new Date().toISOString())
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (!pendingData) {
+              responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+            } else if (data === 'region_none') {
+              // المستخدم اختار "لا شيء مما سبق" - استخدام الطريقة التقليدية
+              responseMessage = '🔄 جاري معالجة طلبك بالطريقة التقليدية...';
+              
+              const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+                p_employee_code: pendingData.context.employee_code,
+                p_message_text: pendingData.context.original_text,
+                p_telegram_chat_id: chatId
+              });
+              
+              if (orderError) throw orderError;
+              
+              if (orderResult?.success) {
+                responseMessage = orderResult.message;
+              } else {
+                responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
+              }
+              
+              // حذف الحالة المعلقة
+              await supabase
+                .from('telegram_pending_selections')
+                .delete()
+                .eq('id', pendingData.id);
+            } else {
+              // المستخدم اختار منطقة محددة
+              const regionId = parseInt(data.replace('region_', ''));
+              
+              // إنشاء الطلب مع city_id و region_id المحددين
+              const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+                p_employee_code: pendingData.context.employee_code,
+                p_message_text: pendingData.context.original_text,
+                p_telegram_chat_id: chatId
+              });
+              
+              if (orderError) throw orderError;
+              
+              // تحديث ai_order مع city_id و region_id الصحيحين
+              if (orderResult?.ai_order_id) {
+                await supabase
+                  .from('ai_orders')
+                  .update({
+                    city_id: pendingData.context.city_id,
+                    region_id: regionId,
+                    location_confidence: 1.0
+                  })
+                  .eq('id', orderResult.ai_order_id);
+              }
+              
+              if (orderResult?.success) {
+                // الحصول على اسم المنطقة المختارة
+                const selectedRegion = regionsCache.find(r => r.id === regionId);
+                const regionName = selectedRegion?.name || 'المنطقة المختارة';
+                
+                responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+              } else {
+                responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
+              }
+              
+              // حذف الحالة المعلقة
+              await supabase
+                .from('telegram_pending_selections')
+                .delete()
+                .eq('id', pendingData.id);
+            }
+          } catch (regionError) {
+            console.error('❌ خطأ في معالجة اختيار المنطقة:', regionError);
+            responseMessage = '❌ حدث خطأ في معالجة اختيارك. يرجى إعادة إرسال طلبك.';
+          }
         }
         // Handle city selection
         else if (data.startsWith('city_')) {
