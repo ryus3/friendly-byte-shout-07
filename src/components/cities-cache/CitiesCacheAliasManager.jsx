@@ -45,6 +45,7 @@ const CitiesCacheAliasManager = () => {
   const [selectedRegionAliases, setSelectedRegionAliases] = useState([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteType, setDeleteType] = useState('city');
+  const [deletingSingleId, setDeletingSingleId] = useState(null);
 
   // جلب المرادفات عند التحميل
   useEffect(() => {
@@ -359,6 +360,37 @@ const CitiesCacheAliasManager = () => {
     }
   };
 
+  const handleDeleteSingle = async (aliasId, type) => {
+    setDeletingSingleId(aliasId);
+    try {
+      const tableName = type === 'city' ? 'city_aliases' : 'region_aliases';
+
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .eq('id', aliasId);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "نجح الحذف",
+        description: "تم حذف المرادف بنجاح",
+        variant: "default"
+      });
+      
+      fetchAliases();
+    } catch (error) {
+      console.error('خطأ في حذف المرادف:', error);
+      toast({
+        title: "فشل الحذف",
+        description: error.message || "حدث خطأ أثناء حذف المرادف",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingSingleId(null);
+    }
+  };
+
   const handleDeleteSelected = async () => {
     try {
       const tableName = deleteType === 'city' ? 'city_aliases' : 'region_aliases';
@@ -443,36 +475,7 @@ const CitiesCacheAliasManager = () => {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button
-            onClick={handleAddSmartCityAliases}
-            disabled={isAddingAliases}
-            variant="outline"
-            size="sm"
-          >
-            {isAddingAliases ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            مرادفات المدن الذكية
-          </Button>
-
-          <Button
-            onClick={handleAddSmartSamawahRegionAliases}
-            disabled={isAddingAliases}
-            variant="outline"
-            size="sm"
-          >
-            {isAddingAliases ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            مرادفات مناطق السماوة
-          </Button>
-
-          <Dialog open={showAddDialog} onOpenChange={(open) => {
+        <Dialog open={showAddDialog} onOpenChange={(open) => {
             setShowAddDialog(open);
             if (!open) {
               setIsBulkMode(false);
@@ -702,7 +705,7 @@ const CitiesCacheAliasManager = () => {
           ) : (
             <div className="space-y-2">
               {filteredCityAliases.map(alias => (
-                <Card key={alias.id} className="p-4">
+                <Card key={alias.id} className="p-4 group hover:border-destructive/50 transition-colors">
                   <div className="flex items-center gap-4">
                     <Checkbox
                       checked={selectedCityAliases.includes(alias.id)}
@@ -729,6 +732,19 @@ const CitiesCacheAliasManager = () => {
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteSingle(alias.id, 'city')}
+                      disabled={deletingSingleId === alias.id}
+                    >
+                      {deletingSingleId === alias.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -784,7 +800,7 @@ const CitiesCacheAliasManager = () => {
           ) : (
             <div className="space-y-2">
               {filteredRegionAliases.map(alias => (
-                <Card key={alias.id} className="p-4">
+                <Card key={alias.id} className="p-4 group hover:border-destructive/50 transition-colors">
                   <div className="flex items-center gap-4">
                     <Checkbox
                       checked={selectedRegionAliases.includes(alias.id)}
@@ -815,6 +831,19 @@ const CitiesCacheAliasManager = () => {
                         </span>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteSingle(alias.id, 'region')}
+                      disabled={deletingSingleId === alias.id}
+                    >
+                      {deletingSingleId === alias.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </Card>
               ))}
