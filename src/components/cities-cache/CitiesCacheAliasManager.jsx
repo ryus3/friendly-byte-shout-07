@@ -476,122 +476,121 @@ const CitiesCacheAliasManager = () => {
         </div>
         
         <Dialog open={showAddDialog} onOpenChange={(open) => {
-            setShowAddDialog(open);
-            if (!open) {
-              setIsBulkMode(false);
-              setBulkAliases([]);
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                إضافة مرادف
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>إضافة مرادف جديد</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>النوع</Label>
-                  <Select value={newAlias.type} onValueChange={(value) => setNewAlias({...newAlias, type: value, name: ''})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="city">مدينة</SelectItem>
-                      <SelectItem value="region">منطقة</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          setShowAddDialog(open);
+          if (!open) {
+            setIsBulkMode(false);
+            setBulkAliases([]);
+          }
+        }}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              إضافة مرادف
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>إضافة مرادف جديد</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>النوع</Label>
+                <Select value={newAlias.type} onValueChange={(value) => setNewAlias({...newAlias, type: value, name: ''})}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="city">مدينة</SelectItem>
+                    <SelectItem value="region">منطقة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <Label>وضع الإضافة</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant={!isBulkMode ? "default" : "outline"}
-                      onClick={() => setIsBulkMode(false)}
-                    >
-                      مفرد
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={isBulkMode ? "default" : "outline"}
-                      onClick={() => setIsBulkMode(true)}
-                    >
-                      متعدد
-                    </Button>
-                  </div>
-                </div>
-
-                <div>
-                  <Label>{newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}</Label>
-                  <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={`اختر ${newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(newAlias.type === 'city' ? cities : regions).map(item => (
-                        <SelectItem key={item.id} value={item.name}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {!isBulkMode ? (
-                  <div>
-                    <Label>المرادف</Label>
-                    <Input
-                      value={newAlias.alias}
-                      onChange={(e) => setNewAlias({...newAlias, alias: e.target.value})}
-                      placeholder="أدخل المرادف"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label>المرادفات (كل مرادف في سطر منفصل)</Label>
-                    <BulkAliasInput
-                      value={bulkAliases}
-                      onChange={setBulkAliases}
-                      existingAliases={newAlias.type === 'city' ? cityAliases : regionAliases}
-                      placeholder="أدخل المرادفات (كل مرادف في سطر منفصل)"
-                    />
-                  </div>
-                )}
-                
-                <div>
-                  <Label>درجة الثقة ({(newAlias.confidence * 100).toFixed(0)}%)</Label>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="1.0"
-                    step="0.1"
-                    value={newAlias.confidence}
-                    onChange={(e) => setNewAlias({...newAlias, confidence: parseFloat(e.target.value)})}
-                    className="w-full"
-                  />
-                </div>
-                
+              <div className="flex items-center justify-between">
+                <Label>وضع الإضافة</Label>
                 <div className="flex gap-2">
-                  <Button 
-                    onClick={handleAddAlias} 
-                    className="flex-1"
-                    disabled={isAddingAliases}
+                  <Button
+                    size="sm"
+                    variant={!isBulkMode ? "default" : "outline"}
+                    onClick={() => setIsBulkMode(false)}
                   >
-                    {isAddingAliases ? 'جاري الإضافة...' : 'إضافة'}
+                    مفرد
                   </Button>
-                  <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
-                    إلغاء
+                  <Button
+                    size="sm"
+                    variant={isBulkMode ? "default" : "outline"}
+                    onClick={() => setIsBulkMode(true)}
+                  >
+                    متعدد
                   </Button>
                 </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+
+              <div>
+                <Label>{newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}</Label>
+                <Select value={newAlias.name} onValueChange={(value) => setNewAlias({...newAlias, name: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`اختر ${newAlias.type === 'city' ? 'المدينة' : 'المنطقة'}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(newAlias.type === 'city' ? cities : regions).map(item => (
+                      <SelectItem key={item.id} value={item.name}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {!isBulkMode ? (
+                <div>
+                  <Label>المرادف</Label>
+                  <Input
+                    value={newAlias.alias}
+                    onChange={(e) => setNewAlias({...newAlias, alias: e.target.value})}
+                    placeholder="أدخل المرادف"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <Label>المرادفات (كل مرادف في سطر منفصل)</Label>
+                  <BulkAliasInput
+                    value={bulkAliases}
+                    onChange={setBulkAliases}
+                    existingAliases={newAlias.type === 'city' ? cityAliases : regionAliases}
+                    placeholder="أدخل المرادفات (كل مرادف في سطر منفصل)"
+                  />
+                </div>
+              )}
+              
+              <div>
+                <Label>درجة الثقة ({(newAlias.confidence * 100).toFixed(0)}%)</Label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.1"
+                  value={newAlias.confidence}
+                  onChange={(e) => setNewAlias({...newAlias, confidence: parseFloat(e.target.value)})}
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleAddAlias} 
+                  className="flex-1"
+                  disabled={isAddingAliases}
+                >
+                  {isAddingAliases ? 'جاري الإضافة...' : 'إضافة'}
+                </Button>
+                <Button variant="outline" onClick={() => setShowAddDialog(false)} className="flex-1">
+                  إلغاء
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}
