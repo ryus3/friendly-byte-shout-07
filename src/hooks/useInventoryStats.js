@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 
 /**
  * Hook موحد لإحصائيات المخزون
@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
  */
 const useInventoryStats = () => {
   const { orders, products } = useInventory();
-  const { user } = useAuth();
+  const { user } = usePermissions();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalVariants: 0,
