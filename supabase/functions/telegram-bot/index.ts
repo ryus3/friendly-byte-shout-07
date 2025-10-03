@@ -368,18 +368,45 @@ async function getProductButtons(employeeId: string): Promise<any> {
   console.log('🔍 getProductButtons called for employee:', employeeId);
   
   try {
-    const { data, error } = await supabase.rpc('get_all_inventory_simple');
+    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
+      p_employee_id: employeeId,
+      p_filter_type: null,
+      p_filter_value: null
+    });
 
     console.log('📊 RPC result - error:', error, 'data length:', data?.length);
 
     if (error) {
       console.error('❌ خطأ في RPC getProductButtons:', error);
-      console.log('⚠️ فشل جلب المنتجات');
-      return null;
+      // Fallback: استعلام مباشر من جدول المنتجات
+      console.log('🔄 Trying fallback query...');
+      const { data: productsData, error: fallbackError } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('is_active', true)
+        .limit(8);
+      
+      if (fallbackError) {
+        console.error('❌ Fallback query failed:', fallbackError);
+        return null;
+      }
+      
+      if (!productsData || productsData.length === 0) {
+        console.log('⚠️ No products in fallback');
+        return null;
+      }
+      
+      console.log('✅ Fallback succeeded, products:', productsData.length);
+      const buttons = productsData.map((p: any) => [{
+        text: `🛍️ ${p.name}`,
+        callback_data: `select_product_${p.id}`
+      }]);
+      
+      return { inline_keyboard: buttons };
     }
 
     if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد منتجات');
+      console.log('⚠️ لا توجد منتجات للموظف حسب صلاحياته');
       return null;
     }
 
@@ -445,63 +472,19 @@ async function getColorButtons(employeeId: string): Promise<any> {
 }
 
 // Helper function to get size buttons
-async function getSizeButtons(employeeId: string | null): Promise<any> {
-  console.log('🔍 getSizeButtons called for employee:', employeeId);
-  
+async function getSizeButtons(): Promise<any> {
   try {
-    // استخدام RPC الجديدة للحصول على القياسات
-    const { data, error } = await supabase.rpc('get_all_inventory_simple');
+    const { data, error } = await supabase
+      .from('sizes')
+      .select('id, name')
+      .limit(8);
 
-    if (error) {
-      console.error('❌ خطأ في RPC getSizeButtons:', error);
-      // Fallback: استعلام مباشر من جدول القياسات
-      const { data: sizesData, error: fallbackError } = await supabase
-        .from('sizes')
-        .select('id, name')
-        .limit(8);
-      
-      if (fallbackError || !sizesData || sizesData.length === 0) {
-        return null;
-      }
-
-      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-      const sortedSizes = sizesData.sort((a: any, b: any) => {
-        const aIndex = sizeOrder.indexOf(a.name);
-        const bIndex = sizeOrder.indexOf(b.name);
-        if (aIndex === -1 && bIndex === -1) return 0;
-        if (aIndex === -1) return 1;
-        if (bIndex === -1) return -1;
-        return aIndex - bIndex;
-      });
-
-      const buttons = sortedSizes.map((s: any) => [{
-        text: `📏 ${s.name}`,
-        callback_data: `select_size_${s.name}`
-      }]);
-
-      return { inline_keyboard: buttons };
-    }
-
-    if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد قياسات');
+    if (error || !data || data.length === 0) {
       return null;
     }
 
-    // استخراج القياسات الفريدة
-    const uniqueSizes = new Map<string, any>();
-    data.forEach((item: any) => {
-      if (item.size_name && !uniqueSizes.has(item.size_name)) {
-        uniqueSizes.set(item.size_name, { name: item.size_name });
-      }
-    });
-
-    if (uniqueSizes.size === 0) {
-      return null;
-    }
-
-    // ترتيب القياسات
     const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-    const sortedSizes = Array.from(uniqueSizes.values()).sort((a: any, b: any) => {
+    const sortedSizes = data.sort((a: any, b: any) => {
       const aIndex = sizeOrder.indexOf(a.name);
       const bIndex = sizeOrder.indexOf(b.name);
       if (aIndex === -1 && bIndex === -1) return 0;
@@ -510,12 +493,11 @@ async function getSizeButtons(employeeId: string | null): Promise<any> {
       return aIndex - bIndex;
     });
 
-    const buttons = sortedSizes.slice(0, 8).map((s: any) => [{
+    const buttons = sortedSizes.map((s: any) => [{
       text: `📏 ${s.name}`,
       callback_data: `select_size_${s.name}`
     }]);
 
-    console.log('🔘 Size buttons created:', buttons.length);
     return { inline_keyboard: buttons };
   } catch (error) {
     console.error('❌ خطأ في جلب قائمة القياسات:', error);
@@ -543,79 +525,6 @@ async function getCategoryButtons(): Promise<any> {
     return { inline_keyboard: buttons };
   } catch (error) {
     console.error('❌ خطأ في جلب قائمة التصنيفات:', error);
-    return null;
-  }
-}
-
-// Helper function to get season buttons
-async function getSeasonButtons(employeeId: string | null): Promise<any> {
-  console.log('🔍 getSeasonButtons called for employee:', employeeId);
-  
-  try {
-    // استخدام RPC للحصول على المواسم بناءً على الصلاحيات
-    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
-      p_employee_id: employeeId,
-      p_filter_type: null,
-      p_filter_value: null
-    });
-
-    if (error) {
-      console.error('❌ خطأ في RPC getSeasonButtons:', error);
-      // Fallback: استعلام مباشر من جدول المواسم
-      const { data: seasonsData, error: fallbackError } = await supabase
-        .from('seasons')
-        .select('id, name')
-        .limit(8);
-      
-      if (fallbackError || !seasonsData || seasonsData.length === 0) {
-        return null;
-      }
-
-      const buttons = seasonsData.map((s: any) => [{
-        text: `🌤️ ${s.name}`,
-        callback_data: `select_season_${s.name}`
-      }]);
-
-      return { inline_keyboard: buttons };
-    }
-
-    if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد مواسم للموظف حسب صلاحياته');
-      return null;
-    }
-
-    // جلب أسماء المواسم من جدول products
-    const productIds = [...new Set(data.map((item: any) => item.product_id))];
-    const { data: productsData, error: productsError } = await supabase
-      .from('products')
-      .select('id, season_id, seasons(name)')
-      .in('id', productIds.slice(0, 50));
-
-    if (productsError || !productsData) {
-      return null;
-    }
-
-    // استخراج المواسم الفريدة
-    const uniqueSeasons = new Map<string, any>();
-    productsData.forEach((product: any) => {
-      if (product.seasons?.name && !uniqueSeasons.has(product.seasons.name)) {
-        uniqueSeasons.set(product.seasons.name, { name: product.seasons.name });
-      }
-    });
-
-    if (uniqueSeasons.size === 0) {
-      return null;
-    }
-
-    const buttons = Array.from(uniqueSeasons.values()).slice(0, 8).map((s: any) => [{
-      text: `🌤️ ${s.name}`,
-      callback_data: `select_season_${s.name}`
-    }]);
-
-    console.log('🔘 Season buttons created:', buttons.length);
-    return { inline_keyboard: buttons };
-  } catch (error) {
-    console.error('❌ خطأ في جلب قائمة المواسم:', error);
     return null;
   }
 }
@@ -969,12 +878,14 @@ serve(async (req) => {
               stateAction = 'inv_product';
               responseMessage = '';
             } else {
-              console.log('⚠️ No products available for employee:', employeeId);
-              responseMessage = '⚠️ لا توجد منتجات متاحة في صلاحياتك.\n\n💡 يرجى التواصل مع المدير لإضافة صلاحيات المنتجات.\n\n✅ يمكنك استخدام البحث الذكي: /search اسم_المنتج';
+              console.log('⚠️ No buttons, asking text');
+              responseMessage = '🛍️ اكتب اسم المنتج:\n\nمثال: برشلونة';
+              shouldSaveState = true;
+              stateAction = 'inv_product';
             }
           } catch (err) {
             console.error('❌ inv_product error:', err);
-            responseMessage = '❌ حدث خطأ في جلب المنتجات. حاول مرة أخرى.';
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_category') {
           try {
@@ -985,12 +896,13 @@ serve(async (req) => {
               stateAction = 'inv_category';
               responseMessage = '';
             } else {
-              console.log('⚠️ No categories available');
-              responseMessage = '⚠️ لا توجد تصنيفات متاحة حالياً.\n\n💡 يرجى التواصل مع المدير.';
+              responseMessage = '🏷️ اكتب اسم التصنيف:\n\nمثال: تيشرتات';
+              shouldSaveState = true;
+              stateAction = 'inv_category';
             }
           } catch (err) {
             console.error('❌ inv_category error:', err);
-            responseMessage = '❌ حدث خطأ في جلب التصنيفات. حاول مرة أخرى.';
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_color') {
           try {
@@ -1001,45 +913,31 @@ serve(async (req) => {
               stateAction = 'inv_color';
               responseMessage = '';
             } else {
-              console.log('⚠️ No colors available for employee:', employeeId);
-              responseMessage = '⚠️ لا توجد ألوان متاحة في صلاحياتك.\n\n💡 يرجى التواصل مع المدير.';
+              responseMessage = '🎨 اكتب اسم اللون:\n\nمثال: أحمر';
+              shouldSaveState = true;
+              stateAction = 'inv_color';
             }
           } catch (err) {
             console.error('❌ inv_color error:', err);
-            responseMessage = '❌ حدث خطأ في جلب الألوان. حاول مرة أخرى.';
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_size') {
-          try {
-            const sizeButtons = await getSizeButtons(employeeId);
-            if (sizeButtons && sizeButtons.inline_keyboard && sizeButtons.inline_keyboard.length > 0) {
-              await sendTelegramMessage(chatId, '📏 اختر قياس:', sizeButtons, botToken);
-              shouldSaveState = true;
-              stateAction = 'inv_size';
-              responseMessage = '';
-            } else {
-              console.log('⚠️ No sizes available for employee:', employeeId);
-              responseMessage = '⚠️ لا توجد قياسات متاحة في صلاحياتك.\n\n💡 يرجى التواصل مع المدير.';
-            }
-          } catch (err) {
-            console.error('❌ inv_size error:', err);
-            responseMessage = '❌ حدث خطأ في جلب القياسات. حاول مرة أخرى.';
+          // عرض قائمة القياسات بأزرار تفاعلية
+          const sizeButtons = await getSizeButtons();
+          if (sizeButtons) {
+            await sendTelegramMessage(chatId, '📏 اختر قياس أو اكتب اسمه:', sizeButtons, botToken);
+            shouldSaveState = true;
+            stateAction = 'inv_size';
+            responseMessage = '';
+          } else {
+            responseMessage = '📏 اكتب القياس الذي تريد الاستعلام عنه:\n\nمثال: سمول';
+            shouldSaveState = true;
+            stateAction = 'inv_size';
           }
         } else if (data === 'inv_season') {
-          try {
-            const seasonButtons = await getSeasonButtons(employeeId);
-            if (seasonButtons && seasonButtons.inline_keyboard && seasonButtons.inline_keyboard.length > 0) {
-              await sendTelegramMessage(chatId, '🌤️ اختر موسم:', seasonButtons, botToken);
-              shouldSaveState = true;
-              stateAction = 'inv_season';
-              responseMessage = '';
-            } else {
-              console.log('⚠️ No seasons available for employee:', employeeId);
-              responseMessage = '⚠️ لا توجد مواسم متاحة في صلاحياتك.\n\n💡 يرجى التواصل مع المدير.';
-            }
-          } catch (err) {
-            console.error('❌ inv_season error:', err);
-            responseMessage = '❌ حدث خطأ في جلب المواسم. حاول مرة أخرى.';
-          }
+          responseMessage = '🌞 اكتب اسم الموسم الذي تريد الاستعلام عنه:\n\nمثال: صيفي';
+          shouldSaveState = true;
+          stateAction = 'inv_season';
         } else if (data === 'inv_search') {
           responseMessage = '🔍 اكتب نص البحث الذكي:\n\nمثال: برشلونة أحمر';
           shouldSaveState = true;
