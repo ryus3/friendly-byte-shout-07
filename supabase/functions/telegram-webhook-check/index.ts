@@ -37,7 +37,7 @@ async function setWebhook(botToken: string) {
   const resp = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: EXPECTED_WEBHOOK_URL, allowed_updates: ['message'] })
+    body: JSON.stringify({ url: EXPECTED_WEBHOOK_URL, allowed_updates: ['message', 'callback_query'] })
   });
   const data = await resp.json();
   return data;
