@@ -891,10 +891,14 @@ serve(async (req) => {
               shouldSaveState = true;
               stateAction = 'inv_color';
               responseMessage = '';
-          } else {
-            responseMessage = '🎨 اكتب اسم اللون الذي تريد الاستعلام عنه:\n\nمثال: أحمر';
-            shouldSaveState = true;
-            stateAction = 'inv_color';
+            } else {
+              responseMessage = '🎨 اكتب اسم اللون:\n\nمثال: أحمر';
+              shouldSaveState = true;
+              stateAction = 'inv_color';
+            }
+          } catch (err) {
+            console.error('❌ inv_color error:', err);
+            responseMessage = '❌ حدث خطأ. حاول مرة أخرى.';
           }
         } else if (data === 'inv_size') {
           // عرض قائمة القياسات بأزرار تفاعلية
