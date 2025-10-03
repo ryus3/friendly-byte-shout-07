@@ -368,22 +368,18 @@ async function getProductButtons(employeeId: string): Promise<any> {
   console.log('🔍 getProductButtons called for employee:', employeeId);
   
   try {
-    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
-      p_employee_id: employeeId,
-      p_filter_type: null,
-      p_filter_value: null
-    });
+    const { data, error } = await supabase.rpc('get_all_inventory_simple');
 
     console.log('📊 RPC result - error:', error, 'data length:', data?.length);
 
     if (error) {
       console.error('❌ خطأ في RPC getProductButtons:', error);
-      console.log('⚠️ فشل جلب صلاحيات المنتجات');
+      console.log('⚠️ فشل جلب المنتجات');
       return null;
     }
 
     if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد منتجات للموظف حسب صلاحياته');
+      console.log('⚠️ لا توجد منتجات');
       return null;
     }
 
@@ -453,12 +449,8 @@ async function getSizeButtons(employeeId: string | null): Promise<any> {
   console.log('🔍 getSizeButtons called for employee:', employeeId);
   
   try {
-    // استخدام RPC للحصول على القياسات بناءً على الصلاحيات
-    const { data, error } = await supabase.rpc('get_inventory_by_permissions', {
-      p_employee_id: employeeId,
-      p_filter_type: null,
-      p_filter_value: null
-    });
+    // استخدام RPC الجديدة للحصول على القياسات
+    const { data, error } = await supabase.rpc('get_all_inventory_simple');
 
     if (error) {
       console.error('❌ خطأ في RPC getSizeButtons:', error);
@@ -491,7 +483,7 @@ async function getSizeButtons(employeeId: string | null): Promise<any> {
     }
 
     if (!data || data.length === 0) {
-      console.log('⚠️ لا توجد قياسات للموظف حسب صلاحياته');
+      console.log('⚠️ لا توجد قياسات');
       return null;
     }
 
