@@ -163,9 +163,7 @@ async function handleInventoryStats(employeeId: string | null): Promise<string> 
   try {
     console.log('📊 جلب الإحصائيات للموظف:', employeeId);
     
-    const { data, error } = await supabase.rpc('get_unified_inventory_stats', { 
-      p_user_id: employeeId 
-    });
+    const { data, error } = await supabase.rpc('get_unified_inventory_stats');
 
     if (error) throw error;
 
