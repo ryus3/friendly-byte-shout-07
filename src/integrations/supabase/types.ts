@@ -4635,23 +4635,21 @@ export type Database = {
         }[]
       }
       get_inventory_by_permissions: {
-        Args:
-          | {
-              p_employee_id: string
-              p_filter_type?: string
-              p_filter_value?: string
-            }
-          | { p_user_id: string }
+        Args: {
+          p_employee_id: string
+          p_filter_type?: string
+          p_filter_value?: string
+        }
         Returns: {
           available_quantity: number
-          category_name: string
+          barcode: string
           color_name: string
+          price: number
           product_id: string
           product_name: string
           quantity: number
           reserved_quantity: number
           size_name: string
-          total_quantity: number
           variant_id: string
         }[]
       }
