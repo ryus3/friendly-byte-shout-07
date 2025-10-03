@@ -56,5 +56,4 @@ const DeleteConfirmationDialog = ({
   );
 };
 
-export { DeleteConfirmationDialog };
 export default DeleteConfirmationDialog;
