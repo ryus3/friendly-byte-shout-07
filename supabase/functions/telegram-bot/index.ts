@@ -80,9 +80,16 @@ async function getBotToken(): Promise<string | null> {
   return null;
 }
 
-async function sendTelegramMessage(chatId: number, text: string, botToken: string, replyMarkup?: any) {
+async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: any, botToken?: string) {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    // If botToken is not provided, get it from the function
+    const token = botToken || await getBotToken();
+    if (!token) {
+      console.error('❌ لا يوجد رمز بوت متاح');
+      throw new Error('Bot token not available');
+    }
+
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -551,7 +558,7 @@ serve(async (req) => {
 
       // Handle /start command
       if (text === '/start') {
-        await sendTelegramMessage(chatId, WELCOME_MESSAGE, botToken, INVENTORY_KEYBOARD);
+        await sendTelegramMessage(chatId, WELCOME_MESSAGE, INVENTORY_KEYBOARD, botToken);
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -575,7 +582,7 @@ serve(async (req) => {
       // Handle /stats command
       if (text === '/stats') {
         const statsMessage = await handleInventoryStats(employeeId);
-        await sendTelegramMessage(chatId, statsMessage, botToken);
+        await sendTelegramMessage(chatId, statsMessage, undefined, botToken);
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -585,7 +592,7 @@ serve(async (req) => {
       // Handle /inventory command (quick inventory with keyboard)
       if (text === '/inventory') {
         const inventoryMessage = '📦 اختر نوع الجرد الذي تريده:';
-        await sendTelegramMessage(chatId, inventoryMessage, botToken, INVENTORY_KEYBOARD);
+        await sendTelegramMessage(chatId, inventoryMessage, INVENTORY_KEYBOARD, botToken);
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -599,13 +606,13 @@ serve(async (req) => {
           // Show product buttons
           const productButtons = await getProductButtons(employeeId);
           if (productButtons) {
-            await sendTelegramMessage(chatId, '🛍️ اختر المنتج الذي تريد معرفة جرده:', botToken, productButtons);
+            await sendTelegramMessage(chatId, '🛍️ اختر المنتج الذي تريد معرفة جرده:', productButtons, botToken);
           } else {
-            await sendTelegramMessage(chatId, '❌ لا توجد منتجات متاحة حالياً', botToken);
+            await sendTelegramMessage(chatId, '❌ لا توجد منتجات متاحة حالياً', undefined, botToken);
           }
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'product', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -620,13 +627,13 @@ serve(async (req) => {
           // Show category buttons
           const categoryButtons = await getCategoryButtons();
           if (categoryButtons) {
-            await sendTelegramMessage(chatId, '🏷️ اختر التصنيف الذي تريد معرفة جرده:', botToken, categoryButtons);
+            await sendTelegramMessage(chatId, '🏷️ اختر التصنيف الذي تريد معرفة جرده:', categoryButtons, botToken);
           } else {
-            await sendTelegramMessage(chatId, '❌ لا توجد تصنيفات متاحة حالياً', botToken);
+            await sendTelegramMessage(chatId, '❌ لا توجد تصنيفات متاحة حالياً', undefined, botToken);
           }
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'category', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -638,10 +645,10 @@ serve(async (req) => {
       if (text.startsWith('/color')) {
         const searchValue = text.replace(/^\/color\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم اللون بعد الأمر\nمثال: /color أحمر', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة اسم اللون بعد الأمر\nمثال: /color أحمر', undefined, botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'color', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -653,10 +660,10 @@ serve(async (req) => {
       if (text.startsWith('/size')) {
         const searchValue = text.replace(/^\/size\s*/i, '').trim();
         if (!searchValue) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة القياس بعد الأمر\nمثال: /size سمول', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة القياس بعد الأمر\nمثال: /size سمول', undefined, botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'size', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -677,10 +684,10 @@ serve(async (req) => {
               [{ text: '🌸 ربيع', callback_data: 'select_season_ربيع' }]
             ]
           };
-          await sendTelegramMessage(chatId, '🗓️ اختر الموسم الذي تريد معرفة جرده:', botToken, seasonButtons);
+          await sendTelegramMessage(chatId, '🗓️ اختر الموسم الذي تريد معرفة جرده:', seasonButtons, botToken);
         } else {
           const inventoryMessage = await handleInventorySearch(employeeId, 'season', searchValue);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -692,10 +699,10 @@ serve(async (req) => {
       if (text.startsWith('/search')) {
         const searchQuery = text.replace(/^\/search\s*/i, '').trim();
         if (!searchQuery) {
-          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة نص البحث بعد الأمر\nمثال: /search برشلونة أحمر', botToken);
+          await sendTelegramMessage(chatId, '⚠️ يرجى كتابة نص البحث بعد الأمر\nمثال: /search برشلونة أحمر', undefined, botToken);
         } else {
           const inventoryMessage = await handleSmartInventorySearch(employeeId, searchQuery);
-          await sendTelegramMessage(chatId, inventoryMessage, botToken);
+          await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
         }
         return new Response(JSON.stringify({ success: true }), {
           status: 200,
@@ -739,7 +746,7 @@ serve(async (req) => {
           }
           
           if (inventoryMessage) {
-            await sendTelegramMessage(chatId, inventoryMessage, botToken);
+            await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
             
             // Delete the pending state
             await supabase
@@ -781,7 +788,7 @@ serve(async (req) => {
               errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
             }
             
-            await sendTelegramMessage(chatId, errorMessage, botToken);
+            await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
             return new Response(JSON.stringify({ error: orderError.message }), {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -794,11 +801,11 @@ serve(async (req) => {
           if (orderResult?.success) {
             console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
             // استخدام الرسالة الجاهزة من الدالة (تحتوي على العنوان المُحلّل)
-            await sendTelegramMessage(chatId, orderResult.message, botToken);
+            await sendTelegramMessage(chatId, orderResult.message, undefined, botToken);
           } else {
             // معالجة الأخطاء
             let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
-            await sendTelegramMessage(chatId, errorMessage, botToken);
+            await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
           }
 
         } catch (processingError) {
@@ -814,7 +821,7 @@ serve(async (req) => {
             }
           }
           
-          await sendTelegramMessage(chatId, errorMessage, botToken);
+          await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
         }
       }
 
@@ -865,7 +872,7 @@ serve(async (req) => {
             
             if (productButtons && productButtons.inline_keyboard && productButtons.inline_keyboard.length > 0) {
               console.log('✅ Sending buttons:', productButtons.inline_keyboard.length);
-              await sendTelegramMessage(chatId, '🛍️ اختر منتج:', botToken, productButtons);
+              await sendTelegramMessage(chatId, '🛍️ اختر منتج:', productButtons, botToken);
               shouldSaveState = true;
               stateAction = 'inv_product';
               responseMessage = '';
@@ -883,7 +890,7 @@ serve(async (req) => {
           try {
             const catButtons = await getCategoryButtons();
             if (catButtons && catButtons.inline_keyboard && catButtons.inline_keyboard.length > 0) {
-              await sendTelegramMessage(chatId, '🏷️ اختر تصنيف:', botToken, catButtons);
+              await sendTelegramMessage(chatId, '🏷️ اختر تصنيف:', catButtons, botToken);
               shouldSaveState = true;
               stateAction = 'inv_category';
               responseMessage = '';
@@ -900,7 +907,7 @@ serve(async (req) => {
           try {
             const colorButtons = await getColorButtons(employeeId);
             if (colorButtons && colorButtons.inline_keyboard && colorButtons.inline_keyboard.length > 0) {
-              await sendTelegramMessage(chatId, '🎨 اختر لون:', botToken, colorButtons);
+              await sendTelegramMessage(chatId, '🎨 اختر لون:', colorButtons, botToken);
               shouldSaveState = true;
               stateAction = 'inv_color';
               responseMessage = '';
@@ -917,7 +924,7 @@ serve(async (req) => {
           // عرض قائمة القياسات بأزرار تفاعلية
           const sizeButtons = await getSizeButtons();
           if (sizeButtons) {
-            await sendTelegramMessage(chatId, '📏 اختر قياس أو اكتب اسمه:', botToken, sizeButtons);
+            await sendTelegramMessage(chatId, '📏 اختر قياس أو اكتب اسمه:', sizeButtons, botToken);
             shouldSaveState = true;
             stateAction = 'inv_size';
             responseMessage = '';
