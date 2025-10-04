@@ -460,7 +460,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         confidence = 0.90;
         score = 90;
       }
-      // المستوى 4: مطابقة كلمات مفردة - ENHANCED
+      // المستوى 4: مطابقة كلمات مفردة - SUPER ENHANCED
       else {
         const regionWords = region.normalized.split(/\s+/).filter(w => w.length > 1);
         let matchedWords = 0;
@@ -472,30 +472,43 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
           const foundStartsWith = regionWords.find(rw => rw.startsWith(word) || word.startsWith(rw));
           const foundContains = regionWords.find(rw => rw.includes(word) || word.includes(rw));
           
+          // ✅ NEW: مطابقة عكسية - اسم المنطقة يحتوي الكلمة المدخلة
+          const reverseContains = region.normalized.includes(word);
+          
           if (foundExact) {
             matchedWords++;
             totalImportance += word.length; // الكلمات الأطول أهم
             score += 30; // مطابقة كاملة للكلمة
           } else if (foundStartsWith) {
+            matchedWords += 0.8;
+            totalImportance += word.length * 0.8;
+            score += 25; // مطابقة جزئية قوية
+          } else if (reverseContains) {
+            // ✅ NEW: إذا كانت الكلمة موجودة في اسم المنطقة بأي شكل
             matchedWords += 0.7;
             totalImportance += word.length * 0.7;
-            score += 20; // مطابقة جزئية قوية
+            score += 20;
           } else if (foundContains) {
             matchedWords += 0.5;
             totalImportance += word.length * 0.5;
-            score += 10; // مطابقة جزئية ضعيفة
+            score += 15; // مطابقة جزئية متوسطة
           }
         }
         
-        // حساب نسبة المطابقة
+        // حساب نسبة المطابقة - ENHANCED
         if (words.length > 0 && matchedWords > 0) {
           const matchRatio = matchedWords / words.length;
           const importanceBonus = totalImportance / (words.length * 5); // normalize importance
           
-          confidence = Math.min(0.85, matchRatio * 0.7 + importanceBonus * 0.3);
+          confidence = Math.min(0.90, matchRatio * 0.6 + importanceBonus * 0.4);
           
           // إضافة bonus للمطابقات القوية
           if (matchedWords >= words.length * 0.8) {
+            confidence += 0.05;
+          }
+          
+          // ✅ NEW: bonus إضافي للكلمات المهمة (أطول من 4 أحرف)
+          if (words.some(w => w.length >= 4 && region.normalized.includes(w))) {
             confidence += 0.05;
           }
         }
@@ -511,8 +524,8 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // ✅ تصفية محسنة: خفض الحد من 75% إلى 50%
-    const filteredMatches = matches.filter(m => m.score >= 50 || m.confidence >= 0.5);
+    // ✅ تصفية محسنة جداً: خفض الحد إلى 30% للعثور على جميع المطابقات
+    const filteredMatches = matches.filter(m => m.score >= 30 || m.confidence >= 0.3);
     
     // ترتيب حسب الثقة ثم النقاط ثم طول الاسم
     filteredMatches.sort((a, b) => {
@@ -1239,18 +1252,32 @@ serve(async (req) => {
                 // البحث عن المناطق المحتملة في النص المنظف فقط
                 localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
+                console.log(`🏆 أفضل 10 نتائج:`, localRegionMatches.slice(0, 10).map(r => `${r.regionName} (${Math.round(r.confidence * 100)}%)`));
                 
-                // 🎯 السيناريو 1: مطابقة واحدة عالية الثقة (>= 0.80) أو مطابقة واحدة مميزة
-                // التحسين: إذا كانت أعلى ثقة > 0.75 وبقية المطابقات < 0.5، اختر الأعلى
+                // 🎯 السيناريو المحسّن: تحليل ذكي للمطابقات
                 const highestConfidence = localRegionMatches[0]?.confidence || 0;
                 const secondHighest = localRegionMatches[1]?.confidence || 0;
-                const shouldAutoSelect = (
-                  (localRegionMatches.length === 1 && highestConfidence >= 0.80) ||
-                  (highestConfidence >= 0.75 && secondHighest < 0.5)
-                );
+                const confidenceGap = highestConfidence - secondHighest;
+                
+                let shouldAutoSelect = false;
+                let selectionReason = '';
+                
+                if (localRegionMatches.length === 1) {
+                  // مطابقة واحدة فقط - اختيار تلقائي
+                  shouldAutoSelect = true;
+                  selectionReason = `مطابقة واحدة فقط بثقة ${Math.round(highestConfidence * 100)}%`;
+                } else if (highestConfidence >= 0.80 && confidenceGap >= 0.3) {
+                  // ثقة عالية جداً مع فجوة كبيرة
+                  shouldAutoSelect = true;
+                  selectionReason = `ثقة عالية ${Math.round(highestConfidence * 100)}% مع فجوة ${Math.round(confidenceGap * 100)}%`;
+                } else if (highestConfidence >= 0.75 && secondHighest < 0.5) {
+                  // ثقة قوية بدون منافسين أقوياء
+                  shouldAutoSelect = true;
+                  selectionReason = `ثقة قوية ${Math.round(highestConfidence * 100)}% بدون منافسين (${Math.round(secondHighest * 100)}%)`;
+                }
                 
                 if (shouldAutoSelect) {
-                  console.log(`✅ السيناريو 1: اختيار تلقائي - أعلى ثقة: ${highestConfidence}, ثاني أعلى: ${secondHighest}`);
+                  console.log(`✅ السيناريو 1: اختيار تلقائي - ${selectionReason}`);
                   console.log(`📍 المدينة: ${localCityResult.cityName} (ID: ${localCityResult.cityId})`);
                   console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId}, ثقة: ${localRegionMatches[0].confidence})`);
                   
@@ -1270,18 +1297,21 @@ serve(async (req) => {
                     });
                   }
                   
-                  // تحديث ai_order بـ city_id و region_id
+                  // ✅ تحديث ai_order بـ city_id و region_id و resolved names
                   if (orderResult?.ai_order_id) {
                     const { error: updateError } = await supabase.from('ai_orders').update({
                       city_id: localCityResult.cityId,
                       region_id: localRegionMatches[0].regionId,
+                      resolved_city_name: localCityResult.cityName,
+                      resolved_region_name: localRegionMatches[0].regionName,
                       location_confidence: localRegionMatches[0].confidence
                     }).eq('id', orderResult.ai_order_id);
                     
                     if (updateError) {
                       console.error('❌ خطأ في تحديث العنوان:', updateError);
                     } else {
-                      console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بـ city_id=${localCityResult.cityId} و region_id=${localRegionMatches[0].regionId}`);
+                      console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بـ city_id=${localCityResult.cityId}, region_id=${localRegionMatches[0].regionId}`);
+                      console.log(`   📍 المدينة: ${localCityResult.cityName}, المنطقة: ${localRegionMatches[0].regionName}`);
                     }
                     
                     // جلب بيانات الطلب الكاملة لرسالة التأكيد
@@ -1861,8 +1891,9 @@ serve(async (req) => {
                 
                 if (orderError) throw orderError;
                 
-                // ✅ FIX: تحديث ai_order مع city_id و region_id الصحيحين
+                // ✅ CRITICAL FIX: تحديث ai_order مع city_id و region_id الصحيحين
                 if (orderResult?.ai_order_id) {
+                  const selectedRegion = pendingData.context.all_regions?.find((r: any) => r.regionId === regionId);
                   const { error: updateError } = await supabase
                     .from('ai_orders')
                     .update({
@@ -1870,14 +1901,16 @@ serve(async (req) => {
                       region_id: regionId,
                       location_confidence: 1.0,
                       resolved_city_name: pendingData.context.city_name,
-                      resolved_region_name: pendingData.context.all_regions?.find((r: any) => r.regionId === regionId)?.regionName
+                      resolved_region_name: selectedRegion?.regionName || 'غير محدد'
                     })
                     .eq('id', orderResult.ai_order_id);
                   
                   if (updateError) {
                     console.error('❌ خطأ في تحديث ai_order:', updateError);
                   } else {
-                    console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} مع city_id=${pendingData.context.city_id}, region_id=${regionId}`);
+                    console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بنجاح:`);
+                    console.log(`   📍 city_id: ${pendingData.context.city_id}, region_id: ${regionId}`);
+                    console.log(`   📍 المدينة: ${pendingData.context.city_name}, المنطقة: ${selectedRegion?.regionName}`);
                   }
                 }
                 
