@@ -1352,7 +1352,7 @@ serve(async (req) => {
                     const remainingAfterFirst = totalRegions - 5;
                     const nextBatch = Math.min(10, remainingAfterFirst);
                     regionButtons.push([{
-                      text: `➕ عرض ${nextBatch} خيارات إضافية`,
+                      text: `🟡 عرض ${nextBatch} خيارات إضافية`,
                       callback_data: `region_page2_${localCityResult.cityId}`
                     }]);
                   }
@@ -1528,7 +1528,7 @@ serve(async (req) => {
               const remainingAfterPage2 = totalRegions - 15;
               const nextBatch = Math.min(15, remainingAfterPage2);
               page2Buttons.push([{
-                text: `➕ عرض ${nextBatch} خيار إضافي`,
+                text: `🟡 عرض ${nextBatch} خيار إضافي`,
                 callback_data: `region_page3_${cityId}`
               }]);
             }
@@ -1547,6 +1547,7 @@ serve(async (req) => {
             const page2Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page2Message, { inline_keyboard: page2Buttons }, botToken);
+            await answerCallbackQuery(callbackQueryId, botToken);
             console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 6 إلى 15)`);
             responseMessage = '';
           } else {
@@ -1588,6 +1589,7 @@ serve(async (req) => {
             const page3Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
+            await answerCallbackQuery(callbackQueryId, botToken);
             console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 16 إلى 30)`);
             responseMessage = '';
           } else {
@@ -1617,7 +1619,7 @@ serve(async (req) => {
               const remainingAfterFirst = totalRegions - 5;
               const nextBatch = Math.min(10, remainingAfterFirst);
               regionButtons.push([{
-                text: `➕ عرض ${nextBatch} خيارات إضافية`,
+                text: `🟡 عرض ${nextBatch} خيارات إضافية`,
                 callback_data: `region_page2_${pendingData.context.city_id}`
               }]);
             }
@@ -1630,6 +1632,7 @@ serve(async (req) => {
             const backMessage = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, backMessage, { inline_keyboard: regionButtons }, botToken);
+            await answerCallbackQuery(callbackQueryId, botToken);
             console.log(`✅ العودة للصفحة 1: عرض ${topRegions.length} منطقة`);
             responseMessage = '';
           } else {
