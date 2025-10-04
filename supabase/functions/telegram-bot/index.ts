@@ -1,4 +1,4 @@
-// Telegram Bot Edge Function - Force redeploy 2025-10-03 with Local Cache
+// Telegram Bot Edge Function - Force redeploy 2025-10-04 with Local Cache
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 
