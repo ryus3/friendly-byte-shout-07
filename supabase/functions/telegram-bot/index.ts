@@ -335,14 +335,42 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
 }
 
 // ==========================================
-// Search Regions Locally - ENHANCED WITH SMART MATCHING
+// Extract Location from Text - حذف الهواتف والمنتجات
+// ==========================================
+function extractLocationFromText(text: string): string {
+  // إزالة أرقام الهواتف (07XXXXXXXXX أو 009647XXXXXXXXX أو +9647XXXXXXXXX)
+  let cleaned = text.replace(/(\+?964|00964)?0?7[0-9]{9}/g, '');
+  
+  // إزالة كلمات المنتجات الشائعة
+  const productKeywords = [
+    'برشلونة', 'برشلونه', 'ريال', 'مدريد', 'ارجنتين', 'ريال مدريد',
+    'قميص', 'تيشرت', 'تيشيرت', 'بلوزة', 'بنطلون', 'شورت',
+    'احمر', 'ازرق', 'اخضر', 'اصفر', 'ابيض', 'اسود', 'سمائي', 'وردي',
+    'سمول', 'ميديم', 'لارج', 'اكس', 'دبل', 'xl', 'xxl', 'l', 'm', 's', 'xs'
+  ];
+  
+  for (const keyword of productKeywords) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    cleaned = cleaned.replace(regex, '');
+  }
+  
+  // إزالة المسافات الزائدة
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  return cleaned;
+}
+
+// ==========================================
+// Search Regions Locally - ENHANCED WITH SMART LOCATION EXTRACTION
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
   try {
-    const normalized = normalizeArabicText(text);
+    // 🔥 STEP 1: استخراج المنطقة فقط من النص (إزالة الهواتف والمنتجات)
+    const locationText = extractLocationFromText(text);
+    const normalized = normalizeArabicText(locationText);
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
     
-    console.log(`🔍 بحث محلي عن منطقة: "${text}" → "${normalized}" في مدينة ${cityId}`);
+    console.log(`🔍 بحث محلي عن منطقة: "${text}" → استخراج: "${locationText}" → منظف: "${normalized}" في مدينة ${cityId}`);
     console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
     
     const matches: Array<{ regionId: number; regionName: string; confidence: number; score: number }> = [];
@@ -370,7 +398,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         confidence = 0.8;
         score = 80;
       }
-// المستوى 4: مطابقة الكلمات المفردة (مُحسّن - يتطلب 80%+ تطابق)
+      // المستوى 4: مطابقة الكلمات المفردة (مُحسّن - يتطلب 80%+ تطابق)
       else {
         const normalizedWords = normalized.split(' ').filter(w => w.length > 2);
         const regionWords = region.normalized.split(' ').filter(w => w.length > 2);

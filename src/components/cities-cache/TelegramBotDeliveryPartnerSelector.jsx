@@ -115,21 +115,6 @@ const TelegramBotDeliveryPartnerSelector = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         
-        {/* شرح النظام */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Bot className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-blue-900">
-                نظام "هل تقصد؟" الذكي في بوت تليغرام
-              </p>
-              <p className="text-xs text-blue-700">
-                يستخدم البوت cache المدن والمناطق (يُحفظ 30 يوم) الخاص بشركة التوصيل المختارة لتحليل العناوين بدقة عالية.
-                البحث يتم فقط في مناطق المدينة المختارة لضمان سرعة ودقة النتائج.
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* اختيار شركة التوصيل */}
         <div className="space-y-3">
