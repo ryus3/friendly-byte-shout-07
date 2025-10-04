@@ -376,29 +376,41 @@ function extractLocationFromText(text: string): string {
 function removeCityFromLine(cityLine: string, cityName: string): string {
   try {
     let cleaned = cityLine;
-    const normalizedCityName = normalizeArabicText(cityName);
     
-    // إزالة اسم المدينة ومرادفاتها من السطر باستخدام المتغيرات الصحيحة
-    const cityAliases = cityAliasesCache.filter(a => 
-      normalizeArabicText(a.original_name) === normalizedCityName
+    // ✅ 1. إزالة اسم المدينة الأصلي أولاً
+    const cityNamePattern = new RegExp(cityName, 'gi');
+    cleaned = cleaned.replace(cityNamePattern, '').trim();
+    
+    // ✅ 2. البحث عن المدينة في citiesCache للحصول على city_id
+    const cityObj = citiesCache.find(c => 
+      normalizeArabicText(c.name) === normalizeArabicText(cityName)
     );
     
-    // إزالة اسم المدينة الأصلي
-    cleaned = cleaned.replace(new RegExp(cityName, 'gi'), ' ');
+    if (cityObj) {
+      // ✅ 3. إزالة جميع المرادفات لهذه المدينة (استخدام city_id بدلاً من original_name)
+      const cityAliases = cityAliasesCache.filter(a => a.city_id === cityObj.id);
+      
+      cityAliases.forEach(alias => {
+        const aliasPattern = new RegExp(alias.alias, 'gi');
+        cleaned = cleaned.replace(aliasPattern, '');
+      });
+      
+      console.log(`🔍 تم إزالة ${cityAliases.length} مرادف للمدينة ${cityName}`);
+    }
     
-    // إزالة المرادفات
-    cityAliases.forEach(alias => {
-      cleaned = cleaned.replace(new RegExp(alias.alias, 'gi'), ' ');
-    });
+    // ✅ 4. تنظيف المسافات والفواصل الزائدة
+    cleaned = cleaned
+      .replace(/\s+/g, ' ')                    // مسافات متعددة → مسافة واحدة
+      .replace(/^[\s,،-]+|[\s,،-]+$/g, '')     // إزالة المسافات/الفواصل من البداية والنهاية
+      .trim();
     
-    // تنظيف المسافات الزائدة
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${cityLine}" → "${cleaned}"`);
     
-    console.log(`🧹 تنظيف السطر: "${cityLine}" → "${cleaned}"`);
-    return cleaned;
+    // إذا كان الناتج فارغاً، نرجع النص الأصلي كـ fallback
+    return cleaned || cityLine;
   } catch (error) {
     console.error('❌ خطأ في removeCityFromLine:', error);
-    return cityLine; // إرجاع النص الأصلي في حالة الخطأ
+    return cityLine;
   }
 }
 
