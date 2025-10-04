@@ -10,6 +10,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import RegionDistribution from './RegionDistribution';
 import CitiesCacheAliasManager from './CitiesCacheAliasManager';
 import SmartSearchTester from './SmartSearchTester';
+import TelegramBotDeliveryPartnerSelector from './TelegramBotDeliveryPartnerSelector';
 
 const CitiesCacheManager = () => {
   const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0, message: '' });
@@ -147,10 +148,14 @@ const CitiesCacheManager = () => {
       <CardContent className="space-y-4">
         
         <Tabs defaultValue="cache" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="cache" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Cache
+            </TabsTrigger>
+            <TabsTrigger value="bot-settings" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              إعدادات البوت
             </TabsTrigger>
             <TabsTrigger value="aliases" className="flex items-center gap-2">
               <Edit2 className="h-4 w-4" />
@@ -310,6 +315,10 @@ const CitiesCacheManager = () => {
             <p>• عند تغيير شركة التوصيل، يتم تحديث Cache تلقائياً حسب الشركة الجديدة</p>
           )}
         </div>
+          </TabsContent>
+
+          <TabsContent value="bot-settings" className="mt-6">
+            <TelegramBotDeliveryPartnerSelector />
           </TabsContent>
 
           <TabsContent value="aliases" className="mt-6">

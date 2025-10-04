@@ -978,47 +978,61 @@ serve(async (req) => {
           // ==========================================
           // المرحلة 1: محاولة التحليل المحلي للعنوان
           // ==========================================
+          // CRITICAL FIX: Local "Did you mean?" system
+          // ==========================================
+          console.log('🔄 بدء نظام "هل تقصد؟" المحلي...');
+          
           let shouldUseLocalCache = false;
           let localCityResult: { cityId: number; cityName: string; confidence: number } | null = null;
           let localRegionMatches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
           
           try {
             // تحميل cache إذا لم يكن محملاً أو انتهت صلاحيته
+            console.log(`🔍 فحص cache: lastUpdate=${lastCacheUpdate}, age=${lastCacheUpdate ? Date.now() - lastCacheUpdate : 'none'}, TTL=${CACHE_TTL}`);
+            
             if (!lastCacheUpdate || (Date.now() - lastCacheUpdate > CACHE_TTL)) {
+              console.log('🔄 تحميل cache جديد...');
               const cacheLoaded = await loadCitiesRegionsCache();
-              if (!cacheLoaded) {
-                console.warn('⚠️ فشل تحميل cache، استخدام الطريقة التقليدية');
+              console.log(`✅ نتيجة تحميل cache: ${cacheLoaded}, المدن: ${citiesCache.length}, المناطق: ${regionsCache.length}`);
+              
+              if (!cacheLoaded || citiesCache.length === 0) {
+                console.warn('⚠️ فشل تحميل cache أو cache فارغ - استخدام الطريقة التقليدية');
                 shouldUseLocalCache = false;
               } else {
+                console.log('✅ تم تحميل cache بنجاح - تفعيل النظام المحلي');
                 shouldUseLocalCache = true;
               }
             } else {
+              console.log(`✅ استخدام cache موجود: ${citiesCache.length} مدينة، ${regionsCache.length} منطقة`);
               shouldUseLocalCache = true;
             }
             
             if (shouldUseLocalCache && citiesCache.length > 0) {
               console.log('🔍 محاولة التحليل المحلي للعنوان...');
+              console.log(`📝 النص المدخل: "${text}"`);
               
               // البحث عن المدينة محلياً
               localCityResult = searchCityLocal(text);
+              console.log(`🏙️ نتيجة البحث عن المدينة:`, localCityResult);
               
               if (localCityResult && localCityResult.confidence >= 0.7) {
                 console.log(`✅ تم العثور على مدينة: ${localCityResult.cityName} (ثقة: ${localCityResult.confidence})`);
                 
                 // البحث عن المناطق المحتملة
                 localRegionMatches = searchRegionsLocal(localCityResult.cityId, text);
-                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة`);
+                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 
                 // السيناريو 1: مدينة واضحة + منطقة واحدة واضحة
                 if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.9) {
                   console.log('✅ السيناريو 1: مدينة ومنطقة واضحة - إنشاء طلب مباشرة');
-                  // Continue to normal order creation with resolved location
-                  // The location will be saved in ai_orders with city_id and region_id
-                  shouldUseLocalCache = false; // Let process_telegram_order handle it normally
+                  console.log(`📍 المدينة: ${localCityResult.cityName} (ID: ${localCityResult.cityId})`);
+                  console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId})`);
+                  // Continue to process_telegram_order with resolved location
+                  shouldUseLocalCache = false;
                 }
                 // السيناريو 2: مدينة واضحة + عدة مناطق محتملة - "هل تقصد؟"
-                else if (localRegionMatches.length > 1) {
-                  console.log('⚠️ السيناريو 2: عدة مناطق محتملة - عرض "هل تقصد؟"');
+                else if (localRegionMatches.length >= 2) {
+                  console.log(`⚠️ السيناريو 2: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
                   
                   // حذف أي حالة معلقة سابقة
                   await supabase
