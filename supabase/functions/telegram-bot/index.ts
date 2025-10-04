@@ -257,7 +257,8 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
       .from('cities_cache')
       .select('id, name, alwaseet_id')
       .eq('is_active', true)
-      .order('name');
+      .order('name')
+      .limit(100);
     
     if (citiesError) throw citiesError;
     
@@ -266,7 +267,8 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
       .from('regions_cache')
       .select('id, city_id, name, alwaseet_id')
       .eq('is_active', true)
-      .order('name');
+      .order('name')
+      .limit(10000);
     
     if (regionsError) throw regionsError;
     
