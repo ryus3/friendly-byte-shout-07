@@ -378,9 +378,8 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
     let cleaned = cityLine;
     const normalizedCityName = normalizeArabicText(cityName);
     
-    // إزالة اسم المدينة ومرادفاتها من السطر
-    const cityCache = globalCache.cities;
-    const cityAliases = globalCache.aliases.filter(a => 
+    // إزالة اسم المدينة ومرادفاتها من السطر باستخدام المتغيرات الصحيحة
+    const cityAliases = cityAliasesCache.filter(a => 
       normalizeArabicText(a.original_name) === normalizedCityName
     );
     
