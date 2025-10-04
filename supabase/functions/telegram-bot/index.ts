@@ -524,8 +524,8 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // ✅ رفع الحد الأدنى من 30% إلى 50% للحصول على نتائج أكثر دقة
-    const filteredMatches = matches.filter(m => m.score >= 50 || m.confidence >= 0.5);
+    // ✅ خفض الحد الأدنى من 50% إلى 30% لعرض جميع المطابقات المحتملة
+    const filteredMatches = matches.filter(m => m.score >= 30 || m.confidence >= 0.3);
     
     // ترتيب حسب الثقة ثم النقاط ثم طول الاسم
     filteredMatches.sort((a, b) => {
@@ -1282,18 +1282,18 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ بناء أزرار لجميع المناطق المطابقة (حتى 10 مناطق)
-                  const maxDisplay = Math.min(localRegionMatches.length, 10);
+                  // ✅ بناء أزرار لجميع المناطق المطابقة (حتى 15 منطقة)
+                  const maxDisplay = Math.min(localRegionMatches.length, 15);
                   const topRegions = localRegionMatches.slice(0, maxDisplay);
                   const regionButtons = topRegions.map(r => [{
                     text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
                     callback_data: `region_${r.regionId}`
                   }]);
                   
-                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية (أكثر من 10)
-                  if (localRegionMatches.length > 10) {
+                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية (أكثر من 15)
+                  if (localRegionMatches.length > 15) {
                     regionButtons.push([{
-                      text: `➕ عرض ${localRegionMatches.length - 10} منطقة إضافية`,
+                      text: `➕ عرض ${localRegionMatches.length - 15} منطقة إضافية`,
                       callback_data: `region_more_${localCityResult.cityId}`
                     }]);
                   }
@@ -1305,8 +1305,8 @@ serve(async (req) => {
                   }]);
                   
                   const clarificationMessage = localRegionMatches.length === 1
-                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`
-                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
+                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟\n\n🔍 بحث عن: "${extractedLocation}"`
+                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⬇️ اختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
