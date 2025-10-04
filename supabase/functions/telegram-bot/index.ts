@@ -159,6 +159,9 @@ function normalizeArabicText(text: string): string {
     // توحيد الياء
     normalized = normalized.replace(/[ئى]/g, 'ي');
     
+    // 🔥 تطبيع "ة" إلى "ه" للتعامل مع الاختلافات في الكتابة
+    normalized = normalized.replace(/ة/g, 'ه');
+    
     // إزالة الهمزة المفردة
     normalized = normalized.replace(/[ء]/g, '');
     
@@ -1284,38 +1287,32 @@ serve(async (req) => {
                       }
                     });
                   
-                  const regionButtons = [
-                    [{
-                      text: `📍 ${localRegionMatches[0].regionName}`,
-                      callback_data: `region_${localRegionMatches[0].regionId}`
-                    }],
-                    [{
-                      text: '❌ لا شيء مما سبق',
-                      callback_data: 'region_none'
-                    }]
-                  ];
+                  // 🔥 إنشاء أزرار لجميع المناطق (حد أقصى 10)
+                  const regionButtons = localRegionMatches.slice(0, 10).map(region => ([{
+                    text: `📍 ${region.regionName}`,
+                    callback_data: `region_${region.regionId}`
+                  }]));
                   
-                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`;
+                  // إضافة زر "لا شيء مما سبق"
+                  regionButtons.push([{
+                    text: '❌ لا شيء مما سبق',
+                    callback_data: 'region_none'
+                  }]);
+                  
+                  // رسالة مختلفة حسب عدد المناطق
+                  const clarificationMessage = localRegionMatches.length === 1
+                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`
+                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
-                  console.log(`✅ تم إرسال "هل تقصد؟" مع منطقة واحدة`);
+                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${localRegionMatches.length} منطقة`);
                   
                   return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
                     status: 200,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                   });
                 }
-                
-                // 🎯 السيناريو 3: عدة مطابقات (>= 2) - عرض "هل تقصد؟"
-                else if (localRegionMatches.length >= 2) {
-                  console.log(`✅ السيناريو 3: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
-                  
-                  // حذف أي حالة معلقة سابقة
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .delete()
-                    .eq('chat_id', chatId);
                   
                   // حفظ بيانات الطلب مؤقتاً
                   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
