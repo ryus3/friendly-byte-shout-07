@@ -149,9 +149,9 @@ function normalizeArabicText(text: string): string {
     // توحيد الهمزات
     normalized = normalized.replace(/[أإآ]/g, 'ا');
     
-    // CRITICAL: توحيد التاء المربوطة والهاء
-    // "دوره" = "دورة" = "دوره"
-    normalized = normalized.replace(/[ةه]/g, 'ه');
+    // ✅ CRITICAL FIX: توحيد التاء المربوطة والهاء بشكل كامل
+    // "كرادة" = "كراده" | "دورة" = "دوره"
+    normalized = normalized.replace(/ة/g, 'ه');  // ة → ه
     
     // توحيد الواو
     normalized = normalized.replace(/[ؤ]/g, 'و');
@@ -524,8 +524,8 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // ✅ تصفية محسنة جداً: خفض الحد إلى 30% للعثور على جميع المطابقات
-    const filteredMatches = matches.filter(m => m.score >= 30 || m.confidence >= 0.3);
+    // ✅ رفع الحد الأدنى من 30% إلى 50% للحصول على نتائج أكثر دقة
+    const filteredMatches = matches.filter(m => m.score >= 50 || m.confidence >= 0.5);
     
     // ترتيب حسب الثقة ثم النقاط ثم طول الاسم
     filteredMatches.sort((a, b) => {
@@ -1254,101 +1254,11 @@ serve(async (req) => {
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 console.log(`🏆 أفضل 10 نتائج:`, localRegionMatches.slice(0, 10).map(r => `${r.regionName} (${Math.round(r.confidence * 100)}%)`));
                 
-                // 🎯 السيناريو المحسّن: تحليل ذكي للمطابقات
-                const highestConfidence = localRegionMatches[0]?.confidence || 0;
-                const secondHighest = localRegionMatches[1]?.confidence || 0;
-                const confidenceGap = highestConfidence - secondHighest;
+                // ✅ إلغاء الاختيار التلقائي - دائماً عرض "هل تقصد؟" للمستخدم
+                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة - عرض "هل تقصد؟"`);
                 
-                let shouldAutoSelect = false;
-                let selectionReason = '';
-                
-                if (localRegionMatches.length === 1) {
-                  // مطابقة واحدة فقط - اختيار تلقائي
-                  shouldAutoSelect = true;
-                  selectionReason = `مطابقة واحدة فقط بثقة ${Math.round(highestConfidence * 100)}%`;
-                } else if (highestConfidence >= 0.80 && confidenceGap >= 0.3) {
-                  // ثقة عالية جداً مع فجوة كبيرة
-                  shouldAutoSelect = true;
-                  selectionReason = `ثقة عالية ${Math.round(highestConfidence * 100)}% مع فجوة ${Math.round(confidenceGap * 100)}%`;
-                } else if (highestConfidence >= 0.75 && secondHighest < 0.5) {
-                  // ثقة قوية بدون منافسين أقوياء
-                  shouldAutoSelect = true;
-                  selectionReason = `ثقة قوية ${Math.round(highestConfidence * 100)}% بدون منافسين (${Math.round(secondHighest * 100)}%)`;
-                }
-                
-                if (shouldAutoSelect) {
-                  console.log(`✅ السيناريو 1: اختيار تلقائي - ${selectionReason}`);
-                  console.log(`📍 المدينة: ${localCityResult.cityName} (ID: ${localCityResult.cityId})`);
-                  console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId}, ثقة: ${localRegionMatches[0].confidence})`);
-                  
-                  // إنشاء الطلب أولاً
-                  const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-                    p_employee_code: employeeCode,
-                    p_message_text: text,
-                    p_telegram_chat_id: chatId
-                  });
-                  
-                  if (orderError) {
-                    console.error('❌ خطأ في إنشاء الطلب:', orderError);
-                    await sendTelegramMessage(chatId, '⚠️ حدث خطأ في معالجة الطلب', undefined, botToken);
-                    return new Response(JSON.stringify({ error: orderError.message }), {
-                      status: 500,
-                      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                    });
-                  }
-                  
-                  // ✅ تحديث ai_order بـ city_id و region_id و resolved names
-                  if (orderResult?.ai_order_id) {
-                    const { error: updateError } = await supabase.from('ai_orders').update({
-                      city_id: localCityResult.cityId,
-                      region_id: localRegionMatches[0].regionId,
-                      resolved_city_name: localCityResult.cityName,
-                      resolved_region_name: localRegionMatches[0].regionName,
-                      location_confidence: localRegionMatches[0].confidence
-                    }).eq('id', orderResult.ai_order_id);
-                    
-                    if (updateError) {
-                      console.error('❌ خطأ في تحديث العنوان:', updateError);
-                    } else {
-                      console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بـ city_id=${localCityResult.cityId}, region_id=${localRegionMatches[0].regionId}`);
-                      console.log(`   📍 المدينة: ${localCityResult.cityName}, المنطقة: ${localRegionMatches[0].regionName}`);
-                    }
-                    
-                    // جلب بيانات الطلب الكاملة لرسالة التأكيد
-                    const { data: aiOrder } = await supabase
-                      .from('ai_orders')
-                      .select('*, cities_cache!inner(name), regions_cache!inner(name)')
-                      .eq('id', orderResult.ai_order_id)
-                      .maybeSingle();
-                    
-                    if (aiOrder) {
-                      const cityName = (aiOrder.cities_cache as any)?.name || localCityResult.cityName;
-                      const regionName = (aiOrder.regions_cache as any)?.name || localRegionMatches[0].regionName;
-                      
-                      const confirmationMessage = `✅ تم تثبيت الطلب بنجاح!\n\n` +
-                        `📍 العنوان: ${cityName} - ${regionName}\n` +
-                        `📞 الهاتف: ${aiOrder.customer_phone || ''}\n` +
-                        `📦 المنتجات: ${(aiOrder.items as any[])?.length || 0}\n` +
-                        `💰 المبلغ: ${aiOrder.total_amount || 0} دينار`;
-                      
-                      await sendTelegramMessage(chatId, confirmationMessage, undefined, botToken);
-                    } else {
-                      await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
-                    }
-                  } else {
-                    await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
-                  }
-                  
-                  return new Response(JSON.stringify({ success: true }), {
-                    status: 200,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                  });
-                }
-                
-                // 🎯 السيناريو 2: مطابقة واحدة متوسطة الثقة (0.5 - 0.85) - عرض "هل تقصد؟"
-                else if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.5 && localRegionMatches[0].confidence < 0.85) {
-                  console.log(`✅ السيناريو 2: منطقة واحدة متوسطة الثقة (${localRegionMatches[0].confidence}) - عرض "هل تقصد؟"`);
-                  
+                // 🎯 عرض "هل تقصد؟" لأي عدد من المطابقات (1 أو أكثر)
+                if (localRegionMatches.length >= 1) {
                   // حذف أي حالة معلقة سابقة
                   await supabase
                     .from('telegram_pending_selections')
@@ -1372,67 +1282,18 @@ serve(async (req) => {
                       }
                     });
                   
-                  const regionButtons = [
-                    [{
-                      text: `📍 ${localRegionMatches[0].regionName}`,
-                      callback_data: `region_${localRegionMatches[0].regionId}`
-                    }],
-                    [{
-                      text: '❌ لا شيء مما سبق',
-                      callback_data: 'region_none'
-                    }]
-                  ];
-                  
-                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`;
-                  
-                  await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
-                  
-                  console.log(`✅ تم إرسال "هل تقصد؟" مع منطقة واحدة`);
-                  
-                  return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
-                    status: 200,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                  });
-                }
-                
-                // 🎯 السيناريو 3: عدة مطابقات (>= 2) - عرض "هل تقصد؟"
-                else if (localRegionMatches.length >= 2) {
-                  console.log(`✅ السيناريو 3: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
-                  
-                  // حذف أي حالة معلقة سابقة
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .delete()
-                    .eq('chat_id', chatId);
-                  
-                  // حفظ بيانات الطلب مؤقتاً
-                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .insert({
-                      chat_id: chatId,
-                      action: 'region_clarification',
-                      expires_at: expiresAt.toISOString(),
-                      context: {
-                        original_text: text,
-                        employee_code: employeeCode,
-                        city_id: localCityResult.cityId,
-                        city_name: localCityResult.cityName,
-                        all_regions: localRegionMatches
-                      }
-                    });
-                  
-                  // بناء أزرار المناطق (أقصى 5 مناطق)
-                  const topRegions = localRegionMatches.slice(0, 5);
+                  // ✅ بناء أزرار لجميع المناطق المطابقة (حتى 10 مناطق)
+                  const maxDisplay = Math.min(localRegionMatches.length, 10);
+                  const topRegions = localRegionMatches.slice(0, maxDisplay);
                   const regionButtons = topRegions.map(r => [{
-                    text: `📍 ${r.regionName}`,
+                    text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
                     callback_data: `region_${r.regionId}`
                   }]);
                   
-                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية
-                  if (localRegionMatches.length > 5) {
+                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية (أكثر من 10)
+                  if (localRegionMatches.length > 10) {
                     regionButtons.push([{
-                      text: '➕ عرض المزيد من الخيارات',
+                      text: `➕ عرض ${localRegionMatches.length - 10} منطقة إضافية`,
                       callback_data: `region_more_${localCityResult.cityId}`
                     }]);
                   }
@@ -1443,11 +1304,13 @@ serve(async (req) => {
                     callback_data: 'region_none'
                   }]);
                   
-                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
+                  const clarificationMessage = localRegionMatches.length === 1
+                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`
+                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
-                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} منطقة`);
+                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} من أصل ${localRegionMatches.length} منطقة`);
                   
                   return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
                     status: 200,
