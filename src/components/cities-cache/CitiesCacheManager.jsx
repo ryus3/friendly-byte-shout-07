@@ -4,12 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Database, MapPin, Clock, Building2, Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { RefreshCw, Database, MapPin, Clock, Building2, Edit2 } from 'lucide-react';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import RegionDistribution from './RegionDistribution';
 import CitiesCacheAliasManager from './CitiesCacheAliasManager';
-import SmartSearchTester from './SmartSearchTester';
 import TelegramBotDeliveryPartnerSelector from './TelegramBotDeliveryPartnerSelector';
 
 const CitiesCacheManager = () => {
@@ -148,26 +147,22 @@ const CitiesCacheManager = () => {
       <CardContent className="space-y-4">
         
         <Tabs defaultValue="cache" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-1">
+          <TabsList className="grid w-full grid-cols-4 gap-1">
             <TabsTrigger value="cache" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
-              Cache
+              كاش
             </TabsTrigger>
             <TabsTrigger value="bot-settings" className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
-              إعدادات البوت
+              البوت
             </TabsTrigger>
             <TabsTrigger value="aliases" className="flex items-center gap-2">
               <Edit2 className="h-4 w-4" />
               المرادفات
             </TabsTrigger>
-            <TabsTrigger value="test" className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              اختبار البحث
-            </TabsTrigger>
             <TabsTrigger value="regions" className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              توزيع المناطق
+              المناطق
             </TabsTrigger>
           </TabsList>
 
@@ -323,10 +318,6 @@ const CitiesCacheManager = () => {
 
           <TabsContent value="aliases" className="mt-6">
             <CitiesCacheAliasManager />
-          </TabsContent>
-
-          <TabsContent value="test" className="mt-6">
-            <SmartSearchTester />
           </TabsContent>
 
           <TabsContent value="regions" className="mt-6">

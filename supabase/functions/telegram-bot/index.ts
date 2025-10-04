@@ -371,6 +371,39 @@ function extractLocationFromText(text: string): string {
 }
 
 // ==========================================
+// Remove City Name from Line - للحصول على المنطقة فقط
+// ==========================================
+function removeCityFromLine(cityLine: string, cityName: string): string {
+  try {
+    let cleaned = cityLine;
+    const normalizedCityName = normalizeArabicText(cityName);
+    
+    // إزالة اسم المدينة ومرادفاتها من السطر
+    const cityCache = globalCache.cities;
+    const cityAliases = globalCache.aliases.filter(a => 
+      normalizeArabicText(a.original_name) === normalizedCityName
+    );
+    
+    // إزالة اسم المدينة الأصلي
+    cleaned = cleaned.replace(new RegExp(cityName, 'gi'), ' ');
+    
+    // إزالة المرادفات
+    cityAliases.forEach(alias => {
+      cleaned = cleaned.replace(new RegExp(alias.alias, 'gi'), ' ');
+    });
+    
+    // تنظيف المسافات الزائدة
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+    
+    console.log(`🧹 تنظيف السطر: "${cityLine}" → "${cleaned}"`);
+    return cleaned;
+  } catch (error) {
+    console.error('❌ خطأ في removeCityFromLine:', error);
+    return cityLine; // إرجاع النص الأصلي في حالة الخطأ
+  }
+}
+
+// ==========================================
 // Search Regions Locally - ENHANCED WITH SMART LOCATION EXTRACTION
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
@@ -1162,8 +1195,12 @@ serve(async (req) => {
                 console.log(`✅ تم العثور على مدينة: ${localCityResult.cityName} (ثقة: ${localCityResult.confidence})`);
                 console.log(`📍 سطر العنوان المحدد: "${localCityResult.cityLine}"`);
                 
-                // البحث عن المناطق المحتملة في سطر العنوان فقط
-                localRegionMatches = searchRegionsLocal(localCityResult.cityId, localCityResult.cityLine);
+                // 🔥 إزالة اسم المدينة من السطر قبل البحث عن المنطقة
+                const cleanedLine = removeCityFromLine(localCityResult.cityLine, localCityResult.cityName);
+                console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${cleanedLine}"`);
+                
+                // البحث عن المناطق المحتملة في النص المنظف فقط
+                localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 
                 // السيناريو 1: مدينة واضحة + منطقة واحدة واضحة
