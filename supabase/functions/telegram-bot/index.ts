@@ -294,37 +294,47 @@ async function warmupCache() {
 }
 
 // ==========================================
-// Search City Locally
+// Search City Locally - مع استخراج السطر الذي يحتوي على المدينة
 // ==========================================
-function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number } | null {
+function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number; cityLine: string } | null {
   try {
-    const normalized = normalizeArabicText(text);
+    // تقسيم النص إلى أسطر
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    // Direct match in cities
-    const exactCity = citiesCache.find(c => c.normalized === normalized);
-    if (exactCity) {
-      return { cityId: exactCity.id, cityName: exactCity.name, confidence: 1.0 };
-    }
-    
-    // Starts with match
-    const startsWithCity = citiesCache.find(c => c.normalized.startsWith(normalized) || normalized.startsWith(c.normalized));
-    if (startsWithCity) {
-      return { cityId: startsWithCity.id, cityName: startsWithCity.name, confidence: 0.9 };
-    }
-    
-    // Check aliases
-    const alias = cityAliasesCache.find(a => a.normalized === normalized);
-    if (alias) {
-      const city = citiesCache.find(c => c.id === alias.city_id);
-      if (city) {
-        return { cityId: city.id, cityName: city.name, confidence: alias.confidence };
+    // البحث في كل سطر عن المدينة
+    for (const line of lines) {
+      const normalized = normalizeArabicText(line);
+      
+      // Direct match in cities
+      const exactCity = citiesCache.find(c => c.normalized === normalized || normalized.includes(c.normalized));
+      if (exactCity) {
+        console.log(`✅ تم العثور على المدينة "${exactCity.name}" في السطر: "${line}"`);
+        return { cityId: exactCity.id, cityName: exactCity.name, confidence: 1.0, cityLine: line };
       }
-    }
-    
-    // Contains match
-    const containsCity = citiesCache.find(c => c.normalized.includes(normalized) || normalized.includes(c.normalized));
-    if (containsCity) {
-      return { cityId: containsCity.id, cityName: containsCity.name, confidence: 0.7 };
+      
+      // Starts with match
+      const startsWithCity = citiesCache.find(c => c.normalized.startsWith(normalized) || normalized.startsWith(c.normalized));
+      if (startsWithCity) {
+        console.log(`✅ تم العثور على المدينة "${startsWithCity.name}" في السطر: "${line}"`);
+        return { cityId: startsWithCity.id, cityName: startsWithCity.name, confidence: 0.9, cityLine: line };
+      }
+      
+      // Check aliases
+      const alias = cityAliasesCache.find(a => a.normalized === normalized || normalized.includes(a.normalized));
+      if (alias) {
+        const city = citiesCache.find(c => c.id === alias.city_id);
+        if (city) {
+          console.log(`✅ تم العثور على المدينة "${city.name}" عبر المرادف في السطر: "${line}"`);
+          return { cityId: city.id, cityName: city.name, confidence: alias.confidence, cityLine: line };
+        }
+      }
+      
+      // Contains match
+      const containsCity = citiesCache.find(c => c.normalized.includes(normalized) || normalized.includes(c.normalized));
+      if (containsCity) {
+        console.log(`✅ تم العثور على المدينة "${containsCity.name}" في السطر: "${line}"`);
+        return { cityId: containsCity.id, cityName: containsCity.name, confidence: 0.7, cityLine: line };
+      }
     }
     
     return null;
@@ -1150,9 +1160,10 @@ serve(async (req) => {
               
               if (localCityResult && localCityResult.confidence >= 0.7) {
                 console.log(`✅ تم العثور على مدينة: ${localCityResult.cityName} (ثقة: ${localCityResult.confidence})`);
+                console.log(`📍 سطر العنوان المحدد: "${localCityResult.cityLine}"`);
                 
-                // البحث عن المناطق المحتملة
-                localRegionMatches = searchRegionsLocal(localCityResult.cityId, text);
+                // البحث عن المناطق المحتملة في سطر العنوان فقط
+                localRegionMatches = searchRegionsLocal(localCityResult.cityId, localCityResult.cityLine);
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 
                 // السيناريو 1: مدينة واضحة + منطقة واحدة واضحة

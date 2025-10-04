@@ -148,7 +148,7 @@ const CitiesCacheManager = () => {
       <CardContent className="space-y-4">
         
         <Tabs defaultValue="cache" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-5 gap-1">
             <TabsTrigger value="cache" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Cache
