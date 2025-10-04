@@ -1343,7 +1343,7 @@ serve(async (req) => {
                   const topRegions = localRegionMatches.slice(0, firstPageSize);
                   
                   const regionButtons = topRegions.map(r => [{
-                    text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
+                    text: `📍 ${r.regionName}`,
                     callback_data: `region_${r.regionId}`
                   }]);
                   
@@ -1364,8 +1364,8 @@ serve(async (req) => {
                   }]);
                   
                   const clarificationMessage = totalRegions === 1
-                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على منطقة واحدة مطابقة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ يرجى التأكيد على المنطقة:`
-                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على ${totalRegions} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ عرض 1-${firstPageSize} من ${totalRegions}\n\n📍 اختر المنطقة الصحيحة:`;
+                    ? `✅ تم العثور على منطقة واحدة (${extractedLocation})\n📍 اختر المنطقة الصحيحة:`
+                    : `✅ تم العثور على ${totalRegions} منطقة (${extractedLocation})\n📍 اختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
@@ -1519,7 +1519,7 @@ serve(async (req) => {
             const page2Regions = allRegions.slice(5, 15);
             
             const page2Buttons = page2Regions.map((r: any) => [{
-              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
+              text: `📍 ${r.regionName}`,
               callback_data: `region_${r.regionId}`
             }]);
             
@@ -1544,7 +1544,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const page2Message = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 6-${Math.min(15, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            const page2Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page2Message, { inline_keyboard: page2Buttons }, botToken);
             console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 6 إلى 15)`);
@@ -1570,7 +1570,7 @@ serve(async (req) => {
             const page3Regions = allRegions.slice(15, 30);
             
             const page3Buttons = page3Regions.map((r: any) => [{
-              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
+              text: `📍 ${r.regionName}`,
               callback_data: `region_${r.regionId}`
             }]);
             
@@ -1585,7 +1585,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const page3Message = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 16-${Math.min(30, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            const page3Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
             console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 16 إلى 30)`);
@@ -1609,7 +1609,7 @@ serve(async (req) => {
             const topRegions = allRegions.slice(0, 5);
             
             const regionButtons = topRegions.map((r: any) => [{
-              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
+              text: `📍 ${r.regionName}`,
               callback_data: `region_${r.regionId}`
             }]);
             
@@ -1627,7 +1627,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const backMessage = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 1-${Math.min(5, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            const backMessage = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, backMessage, { inline_keyboard: regionButtons }, botToken);
             console.log(`✅ العودة للصفحة 1: عرض ${topRegions.length} منطقة`);
