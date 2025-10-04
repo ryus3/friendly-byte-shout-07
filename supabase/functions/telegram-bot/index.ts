@@ -137,25 +137,40 @@ function extractPhoneFromText(text: string): string {
 }
 
 // ==========================================
-// Text Normalization for Cities/Regions
+// Text Normalization for Cities/Regions - ENHANCED
 // ==========================================
 function normalizeArabicText(text: string): string {
   try {
     let normalized = text.toLowerCase().trim();
-    // إزالة "ال" التعريف من البداية
-    normalized = normalized.replace(/^ال/, '');
+    
+    // إزالة "ال" التعريف من البداية (بجميع الأشكال)
+    normalized = normalized.replace(/^(ال|أل)/g, '');
+    
     // توحيد الهمزات
     normalized = normalized.replace(/[أإآ]/g, 'ا');
-    // توحيد التاء المربوطة
-    normalized = normalized.replace(/[ة]/g, 'ه');
+    
+    // CRITICAL: توحيد التاء المربوطة والهاء
+    // "دوره" = "دورة" = "دوره"
+    normalized = normalized.replace(/[ةه]/g, 'ه');
+    
     // توحيد الواو
     normalized = normalized.replace(/[ؤ]/g, 'و');
+    
     // توحيد الياء
-    normalized = normalized.replace(/[ئ]/g, 'ي');
+    normalized = normalized.replace(/[ئى]/g, 'ي');
+    
     // إزالة الهمزة المفردة
     normalized = normalized.replace(/[ء]/g, '');
-    // توحيد المسافات
+    
+    // توحيد المسافات المتعددة إلى مسافة واحدة
     normalized = normalized.replace(/\s+/g, ' ');
+    
+    // إزالة الفواصل والنقاط والشرطات
+    normalized = normalized.replace(/[،.؛:\-_]/g, ' ');
+    
+    // تنظيف نهائي للمسافات
+    normalized = normalized.trim().replace(/\s+/g, ' ');
+    
     return normalized;
   } catch (error) {
     console.error('❌ خطأ في تطبيع النص:', error);
@@ -302,29 +317,84 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
 }
 
 // ==========================================
-// Search Regions Locally
+// Search Regions Locally - ENHANCED WITH SMART MATCHING
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
   try {
     const normalized = normalizeArabicText(text);
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
     
-    const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+    console.log(`🔍 بحث محلي عن منطقة: "${text}" → "${normalized}" في مدينة ${cityId}`);
+    console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
+    
+    const matches: Array<{ regionId: number; regionName: string; confidence: number; score: number }> = [];
     
     for (const region of cityRegions) {
+      let confidence = 0;
+      let score = 0;
+      
+      // المستوى 1: مطابقة كاملة (100%)
       if (region.normalized === normalized) {
-        matches.push({ regionId: region.id, regionName: region.name, confidence: 1.0 });
-      } else if (region.normalized.startsWith(normalized) || normalized.startsWith(region.normalized)) {
-        matches.push({ regionId: region.id, regionName: region.name, confidence: 0.9 });
-      } else if (region.normalized.includes(normalized) || normalized.includes(region.normalized)) {
-        matches.push({ regionId: region.id, regionName: region.name, confidence: 0.7 });
+        confidence = 1.0;
+        score = 100;
+      }
+      // المستوى 2: يبدأ بـ أو ينتهي بـ (90%)
+      else if (region.normalized.startsWith(normalized)) {
+        confidence = 0.95;
+        score = 95;
+      }
+      else if (normalized.startsWith(region.normalized)) {
+        confidence = 0.9;
+        score = 90;
+      }
+      // المستوى 3: يحتوي على (بدون فواصل) (80%)
+      else if (region.normalized.includes(normalized) || normalized.includes(region.normalized)) {
+        confidence = 0.8;
+        score = 80;
+      }
+      // المستوى 4: مطابقة الكلمات المفردة (70%)
+      else {
+        const normalizedWords = normalized.split(' ').filter(w => w.length > 2);
+        const regionWords = region.normalized.split(' ').filter(w => w.length > 2);
+        
+        let matchedWords = 0;
+        for (const word of normalizedWords) {
+          if (regionWords.some(rw => rw.includes(word) || word.includes(rw))) {
+            matchedWords++;
+          }
+        }
+        
+        if (matchedWords > 0) {
+          confidence = 0.6 + (matchedWords / Math.max(normalizedWords.length, regionWords.length)) * 0.2;
+          score = 60 + (matchedWords / Math.max(normalizedWords.length, regionWords.length)) * 20;
+        }
+      }
+      
+      if (confidence > 0) {
+        matches.push({ 
+          regionId: region.id, 
+          regionName: region.name, 
+          confidence,
+          score
+        });
       }
     }
     
-    // Sort by confidence
-    matches.sort((a, b) => b.confidence - a.confidence);
+    // ترتيب حسب الثقة ثم النتيجة
+    matches.sort((a, b) => {
+      if (b.confidence !== a.confidence) {
+        return b.confidence - a.confidence;
+      }
+      return b.score - a.score;
+    });
     
-    return matches;
+    console.log(`✅ تم العثور على ${matches.length} مطابقة`);
+    if (matches.length > 0) {
+      console.log(`🏆 أفضل 3 نتائج:`, matches.slice(0, 3).map(m => `${m.regionName} (${(m.confidence * 100).toFixed(0)}%)`));
+    }
+    
+    // إرجاع فقط الحقول المطلوبة (بدون score)
+    return matches.map(({ regionId, regionName, confidence }) => ({ regionId, regionName, confidence }));
   } catch (error) {
     console.error('❌ خطأ في البحث المحلي عن المناطق:', error);
     return [];
@@ -1032,7 +1102,7 @@ serve(async (req) => {
                 }
                 // السيناريو 2: مدينة واضحة + عدة مناطق محتملة - "هل تقصد؟"
                 else if (localRegionMatches.length >= 2) {
-                  console.log(`⚠️ السيناريو 2: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
+                  console.log(`✅ السيناريو 2 مُفعّل: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
                   
                   // حذف أي حالة معلقة سابقة
                   await supabase
@@ -1054,8 +1124,9 @@ serve(async (req) => {
                       }
                     });
                   
-                  // بناء أزرار المناطق (أقصى 5 مناطق)
-                  const regionButtons = localRegionMatches.slice(0, 5).map(r => [{
+                  // بناء أزرار المناطق (أقصى 10 مناطق)
+                  const topRegions = localRegionMatches.slice(0, 10);
+                  const regionButtons = topRegions.map(r => [{
                     text: `📍 ${r.regionName}`,
                     callback_data: `region_${r.regionId}`
                   }]);
@@ -1066,9 +1137,11 @@ serve(async (req) => {
                     callback_data: 'region_none'
                   }]);
                   
-                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد إحدى هذه المناطق؟`;
+                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
+                  
+                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} منطقة`);
                   
                   return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
                     status: 200,
