@@ -143,9 +143,17 @@ function normalizeArabicText(text: string): string {
   try {
     let normalized = text.toLowerCase().trim();
     
-    // ✅ CRITICAL: إزالة "ال" التعريف من بداية كل كلمة (ليس فقط من البداية)
-    normalized = normalized.replace(/\bال/g, '');
-    normalized = normalized.replace(/\bأل/g, '');
+    // ✅ CRITICAL FIX: إزالة "ال" من بداية كل كلمة بشكل صريح
+    // معالجة خاصة: "عبيدي" و "العبيدي" يجب أن يكونا متطابقين
+    normalized = normalized
+      .split(/\s+/)
+      .map(word => {
+        // إزالة "ال" أو "أل" من بداية الكلمة
+        if (word.startsWith('ال')) return word.substring(2);
+        if (word.startsWith('أل')) return word.substring(2);
+        return word;
+      })
+      .join(' ');
     
     // توحيد الهمزات
     normalized = normalized.replace(/[أإآ]/g, 'ا');
@@ -464,16 +472,20 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       // المستوى 4: مطابقة كلمات مفردة - SUPER ENHANCED
       else {
         const regionWords = region.normalized.split(/\s+/).filter(w => w.length > 1);
+        
+        // ✅ CRITICAL FIX: تطبيع كلمات المنطقة أيضاً لإزالة "ال"
+        const normalizedRegionWords = regionWords.map(rw => normalizeArabicText(rw));
+        
         let matchedWords = 0;
         let totalImportance = 0;
         
         for (const word of words) {
-          // البحث عن الكلمة في كلمات المنطقة
-          const foundExact = regionWords.find(rw => rw === word);
-          const foundStartsWith = regionWords.find(rw => rw.startsWith(word) || word.startsWith(rw));
-          const foundContains = regionWords.find(rw => rw.includes(word) || word.includes(rw));
+          // البحث عن الكلمة في كلمات المنطقة المطبعة
+          const foundExact = normalizedRegionWords.find(rw => rw === word);
+          const foundStartsWith = normalizedRegionWords.find(rw => rw.startsWith(word) || word.startsWith(rw));
+          const foundContains = normalizedRegionWords.find(rw => rw.includes(word) || word.includes(rw));
           
-          // ✅ NEW: مطابقة عكسية - اسم المنطقة يحتوي الكلمة المدخلة
+          // ✅ مطابقة عكسية - اسم المنطقة يحتوي الكلمة المدخلة
           const reverseContains = region.normalized.includes(word);
           
           if (foundExact) {
@@ -485,7 +497,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
             totalImportance += word.length * 0.8;
             score += 25; // مطابقة جزئية قوية
           } else if (reverseContains) {
-            // ✅ NEW: إذا كانت الكلمة موجودة في اسم المنطقة بأي شكل
+            // ✅ إذا كانت الكلمة موجودة في اسم المنطقة بأي شكل
             matchedWords += 0.7;
             totalImportance += word.length * 0.7;
             score += 20;
@@ -1260,11 +1272,11 @@ serve(async (req) => {
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 console.log(`🏆 أفضل 10 نتائج:`, localRegionMatches.slice(0, 10).map(r => `${r.regionName} (${Math.round(r.confidence * 100)}%)`));
                 
-                // ✅ إلغاء الاختيار التلقائي - دائماً عرض "هل تقصد؟" للمستخدم
-                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة - عرض "هل تقصد؟"`);
+                // ✅ CRITICAL FIX: دائماً عرض "هل تقصد؟" حتى للمطابقات المثالية
+                console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة - عرض "هل تقصد؟" للتأكيد`);
                 
                 // 🎯 عرض "هل تقصد؟" لأي عدد من المطابقات (1 أو أكثر)
-                if (localRegionMatches.length >= 1) {
+                if (localRegionMatches.length > 0) {
                   // حذف أي حالة معلقة سابقة
                   await supabase
                     .from('telegram_pending_selections')
@@ -1311,8 +1323,8 @@ serve(async (req) => {
                   }]);
                   
                   const clarificationMessage = localRegionMatches.length === 1
-                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟\n\n🔍 بحث عن: "${extractedLocation}"`
-                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⬇️ اختر المنطقة الصحيحة:`;
+                    ? `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على منطقة واحدة مطابقة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ يرجى التأكيد على المنطقة:`
+                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على ${localRegionMatches.length} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ يرجى اختيار المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
@@ -1345,27 +1357,58 @@ serve(async (req) => {
           // ==========================================
           // المرحلة 2: Fallback للطريقة التقليدية
           // ==========================================
-          // 🔥 CRITICAL: فقط استدعاء process_telegram_order إذا فشل النظام المحلي
-          if (!localSystemSucceeded && !shouldUseLocalCache) {
-            console.log('🔄 استخدام الطريقة التقليدية (process_telegram_order)...');
-          
-            // استدعاء الدالة الذكية (مع أو بدون التحليل المحلي)
-            const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-              p_employee_code: employeeCode,
-              p_message_text: text,
-              p_telegram_chat_id: chatId
+          // 🔥 CRITICAL FIX: تعطيل النظام القديم بالكامل - فقط عند عدم العثور على مدينة
+          if (!localCityResult) {
+            console.log('⚠️ لم يتم العثور على مدينة - إرسال رسالة خطأ');
+            
+            await sendTelegramMessage(
+              chatId,
+              '⚠️ لم أتمكن من تحديد المدينة في طلبك.\n\n' +
+              'يرجى كتابة العنوان بالصيغة التالية:\n' +
+              '📍 المدينة المنطقة\n\n' +
+              'مثال:\n' +
+              '• بغداد الكرادة\n' +
+              '• البصرة المعقل\n' +
+              '• الموصل الزهور',
+              undefined,
+              botToken
+            );
+            
+            return new Response(JSON.stringify({ error: 'no_city_found', message: 'لم يتم العثور على مدينة' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
+          }
+          
+          // 🔥 إذا لم نجد مناطق مطابقة، نرسل رسالة خطأ بدلاً من استدعاء النظام القديم
+          if (localRegionMatches.length === 0) {
+            console.log('⚠️ لم يتم العثور على مناطق مطابقة - إرسال رسالة خطأ');
+            
+            await sendTelegramMessage(
+              chatId,
+              `⚠️ لم أتمكن من تحديد المنطقة في <b>${localCityResult.cityName}</b>.\n\n` +
+              '🔍 يرجى التأكد من كتابة اسم المنطقة بشكل صحيح.\n\n' +
+              'مثال:\n' +
+              '• بغداد الكرادة\n' +
+              '• بغداد المنصور\n' +
+              '• بغداد الدورة',
+              undefined,
+              botToken
+            );
+            
+            return new Response(JSON.stringify({ error: 'no_region_found', message: 'لم يتم العثور على منطقة' }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          // ❌ تم تعطيل استدعاء process_telegram_order بالكامل
+          // النظام المحلي فقط هو المسؤول عن معالجة الطلبات
+          console.log('✅ النظام المحلي يعمل بشكل كامل - لا حاجة للنظام القديم');
 
-            if (orderError) {
-              console.error('❌ خطأ في معالجة الطلب:', orderError);
-              
-              let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
-              
-              if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
-                errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
-              } else if (orderError.message?.includes('permission')) {
-                errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
-              }
+          
+          // ❌ تم حذف كل منطق النظام القديم
+          // النظام الجديد يتولى كل شيء
               
               await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
               return new Response(JSON.stringify({ error: orderError.message }), {
