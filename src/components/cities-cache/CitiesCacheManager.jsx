@@ -309,8 +309,16 @@ const CitiesCacheManager = () => {
                 );
                 
                 if (response.ok) {
-                  alert('✅ تم إعادة تشغيل البوت بنجاح! الـ Cache محدث الآن.');
+                  // انتظر قليلاً حتى يتم تحميل الـ cache
+                  await new Promise(resolve => setTimeout(resolve, 2000));
                   await fetchSyncInfo();
+                  
+                  // عرض البيانات الفعلية
+                  const syncData = syncInfo || await fetchSyncInfo();
+                  const citiesCount = syncData?.cities_count || cities.length;
+                  const regionsCount = syncData?.regions_count || regions.length;
+                  
+                  alert(`✅ تم إعادة تشغيل البوت بنجاح!\n\n📊 تم تحميل:\n• ${citiesCount} مدينة\n• ${regionsCount} منطقة\n• شركة التوصيل: ${currentPartner.name}`);
                 } else {
                   alert('❌ فشل إعادة التشغيل. جرب مرة أخرى.');
                 }
@@ -323,7 +331,7 @@ const CitiesCacheManager = () => {
             className="w-full"
           >
             <Database className="h-4 w-4 mr-2" />
-            إعادة تشغيل البوت
+            🔄 إعادة تشغيل البوت
           </Button>
           </div>
 
