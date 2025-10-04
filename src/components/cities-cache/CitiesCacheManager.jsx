@@ -265,19 +265,20 @@ const CitiesCacheManager = () => {
 
         {/* زر التحديث مع شريط التقدم */}
         <div className="space-y-4">
-          <Button 
-            onClick={handleUpdateCache}
-            disabled={loading || !isLoggedIn || activePartner === 'local'}
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                جاري التحديث من {currentPartner.name}...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
+          <div className="grid grid-cols-2 gap-3">
+            <Button 
+              onClick={handleUpdateCache}
+              disabled={loading || !isLoggedIn || activePartner === 'local'}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  جاري التحديث...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
                 {activePartner === 'local' 
                   ? 'غير متاح للتوصيل المحلي' 
                   : `تحديث Cache من ${currentPartner.name}`
@@ -285,6 +286,46 @@ const CitiesCacheManager = () => {
               </>
             )}
           </Button>
+
+          <Button 
+            onClick={async () => {
+              try {
+                const response = await fetch(
+                  'https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot',
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      update_id: Date.now(),
+                      message: {
+                        message_id: Date.now(),
+                        from: { id: 0, is_bot: true, first_name: 'System' },
+                        chat: { id: 0, type: 'private' },
+                        date: Math.floor(Date.now() / 1000),
+                        text: '/ping'
+                      }
+                    })
+                  }
+                );
+                
+                if (response.ok) {
+                  alert('✅ تم إعادة تشغيل البوت بنجاح! الـ Cache محدث الآن.');
+                  await fetchSyncInfo();
+                } else {
+                  alert('❌ فشل إعادة التشغيل. جرب مرة أخرى.');
+                }
+              } catch (error) {
+                console.error('Error restarting bot:', error);
+                alert('❌ حدث خطأ أثناء إعادة التشغيل.');
+              }
+            }}
+            variant="outline"
+            className="w-full"
+          >
+            <Database className="h-4 w-4 mr-2" />
+            إعادة تشغيل البوت
+          </Button>
+          </div>
 
           {/* شريط التقدم */}
           {updateProgress.total > 0 && (

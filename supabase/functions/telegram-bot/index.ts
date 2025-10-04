@@ -246,7 +246,8 @@ async function getDeliveryPartnerSetting(): Promise<string> {
 // ==========================================
 async function loadCitiesRegionsCache(): Promise<boolean> {
   try {
-    console.log('🔄 تحميل cache المدن والمناطق...');
+    // Force instance reload - تحديث مهم لتحميل جميع المناطق
+    console.log('🔄 تحميل cache المدن والمناطق - تحديث 2025-10-04...');
     
     // Get delivery partner setting
     const deliveryPartner = await getDeliveryPartnerSetting();
@@ -307,8 +308,14 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     lastCacheUpdate = Date.now();
     
+    // فحص عدد المناطق المحملة
+    if (regionsCache.length < 5000) {
+      console.warn(`⚠️ تحذير: عدد المناطق المحملة (${regionsCache.length}) أقل من المتوقع (6191 منطقة)`);
+    }
+    
     console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
+    console.log(`💾 الـ Cache سيبقى نشط حتى: ${new Date(lastCacheUpdate + CACHE_TTL).toLocaleDateString('ar-IQ')}`);
     return true;
   } catch (error) {
     console.error('❌ فشل تحميل cache المدن والمناطق:', error);
