@@ -468,7 +468,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
     const normalized = normalizeArabicText(text);
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
     
-    console.log(`🔍 بحث محلي عن منطقة: "${text}" → استخراج: "${locationText}" → منظف: "${normalized}" في مدينة ${cityId}`);
+    console.log(`🔍 بحث محلي عن منطقة: "${text}" → منظف: "${normalized}" في مدينة ${cityId}`);
     console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
     
     const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
