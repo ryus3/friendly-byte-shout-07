@@ -3897,30 +3897,39 @@ export type Database = {
       }
       telegram_pending_selections: {
         Row: {
+          action: string | null
           chat_id: number
           city_name: string | null
+          context: Json | null
           created_at: string
           expires_at: string
+          id: string | null
           options: Json
           original_text: string | null
           selection_type: string
           updated_at: string
         }
         Insert: {
+          action?: string | null
           chat_id: number
           city_name?: string | null
+          context?: Json | null
           created_at?: string
-          expires_at: string
+          expires_at?: string
+          id?: string | null
           options?: Json
           original_text?: string | null
           selection_type?: string
           updated_at?: string
         }
         Update: {
+          action?: string | null
           chat_id?: number
           city_name?: string | null
+          context?: Json | null
           created_at?: string
           expires_at?: string
+          id?: string | null
           options?: Json
           original_text?: string | null
           selection_type?: string

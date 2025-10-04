@@ -8,9 +8,9 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // ==========================================
-// Local Cities/Regions Cache
+// Local Cities/Regions Cache - 30 DAYS TTL
 // ==========================================
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 let citiesCache: Array<{ id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let regionsCache: Array<{ id: number; city_id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
@@ -268,10 +268,28 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     lastCacheUpdate = Date.now();
     
     console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
+    console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
     return true;
   } catch (error) {
     console.error('❌ فشل تحميل cache المدن والمناطق:', error);
     return false;
+  }
+}
+
+// ==========================================
+// Instance Warming - تحميل Cache عند بدء Edge Function
+// ==========================================
+async function warmupCache() {
+  if (citiesCache.length === 0 || regionsCache.length === 0) {
+    console.log('🔥 Instance Warming: تحميل cache المدن والمناطق...');
+    const loaded = await loadCitiesRegionsCache();
+    if (loaded) {
+      console.log('✅ Instance Warming مكتمل - Cache جاهز');
+    } else {
+      console.warn('⚠️ Instance Warming فشل - سيتم المحاولة لاحقاً');
+    }
+  } else {
+    console.log('✅ Cache موجود مسبقاً - لا حاجة للتحميل');
   }
 }
 
@@ -352,10 +370,12 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         confidence = 0.8;
         score = 80;
       }
-      // المستوى 4: مطابقة الكلمات المفردة (70%)
+// المستوى 4: مطابقة الكلمات المفردة (مُحسّن - يتطلب 80%+ تطابق)
       else {
         const normalizedWords = normalized.split(' ').filter(w => w.length > 2);
         const regionWords = region.normalized.split(' ').filter(w => w.length > 2);
+        
+        if (normalizedWords.length === 0 || regionWords.length === 0) continue;
         
         let matchedWords = 0;
         for (const word of normalizedWords) {
@@ -364,9 +384,12 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
           }
         }
         
-        if (matchedWords > 0) {
-          confidence = 0.6 + (matchedWords / Math.max(normalizedWords.length, regionWords.length)) * 0.2;
-          score = 60 + (matchedWords / Math.max(normalizedWords.length, regionWords.length)) * 20;
+        const matchRatio = matchedWords / Math.max(normalizedWords.length, regionWords.length);
+        
+        // يتطلب على الأقل 80% تطابق للكلمات
+        if (matchRatio >= 0.8) {
+          confidence = 0.75;
+          score = 75;
         }
       }
       
@@ -380,21 +403,28 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // ترتيب حسب الثقة ثم النتيجة
-    matches.sort((a, b) => {
+    // فلترة المطابقات الضعيفة جداً (أقل من 75%)
+    const filteredMatches = matches.filter(m => m.confidence >= 0.75);
+    
+    // ترتيب حسب الثقة ثم النتيجة، ثم طول الاسم (الأقصر أولاً)
+    filteredMatches.sort((a, b) => {
       if (b.confidence !== a.confidence) {
         return b.confidence - a.confidence;
       }
-      return b.score - a.score;
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      // الأسماء الأقصر أولاً في حالة التساوي
+      return a.regionName.length - b.regionName.length;
     });
     
-    console.log(`✅ تم العثور على ${matches.length} مطابقة`);
-    if (matches.length > 0) {
-      console.log(`🏆 أفضل 3 نتائج:`, matches.slice(0, 3).map(m => `${m.regionName} (${(m.confidence * 100).toFixed(0)}%)`));
+    console.log(`✅ تم العثور على ${filteredMatches.length} مطابقة`);
+    if (filteredMatches.length > 0) {
+      console.log(`🏆 أفضل 5 نتائج:`, filteredMatches.slice(0, 5).map(m => `${m.regionName} (${(m.confidence * 100).toFixed(0)}%)`));
     }
     
     // إرجاع فقط الحقول المطلوبة (بدون score)
-    return matches.map(({ regionId, regionName, confidence }) => ({ regionId, regionName, confidence }));
+    return filteredMatches.map(({ regionId, regionName, confidence }) => ({ regionId, regionName, confidence }));
   } catch (error) {
     console.error('❌ خطأ في البحث المحلي عن المناطق:', error);
     return [];
@@ -810,6 +840,11 @@ serve(async (req) => {
   }
 
   try {
+    // ==========================================
+    // Instance Warming: تحميل Cache عند أول request
+    // ==========================================
+    await warmupCache();
+    
     const botToken = await getBotToken();
     if (!botToken) {
       console.error('❌ لم يتم العثور على رمز البوت');
@@ -1110,12 +1145,14 @@ serve(async (req) => {
                     .delete()
                     .eq('chat_id', chatId);
                   
-                  // حفظ بيانات الطلب مؤقتاً
+                  // حفظ بيانات الطلب مؤقتاً مع تحديد expires_at صراحةً
+                  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 دقائق من الآن
                   await supabase
                     .from('telegram_pending_selections')
                     .insert({
                       chat_id: chatId,
                       action: 'region_clarification',
+                      expires_at: expiresAt.toISOString(),
                       context: {
                         original_text: text,
                         employee_code: employeeCode,
@@ -1124,8 +1161,8 @@ serve(async (req) => {
                       }
                     });
                   
-                  // بناء أزرار المناطق (أقصى 10 مناطق)
-                  const topRegions = localRegionMatches.slice(0, 10);
+                  // بناء أزرار المناطق (أقصى 5 مناطق)
+                  const topRegions = localRegionMatches.slice(0, 5);
                   const regionButtons = topRegions.map(r => [{
                     text: `📍 ${r.regionName}`,
                     callback_data: `region_${r.regionId}`
@@ -1459,11 +1496,39 @@ serve(async (req) => {
               }
               
               if (orderResult?.success) {
-                // الحصول على اسم المنطقة المختارة
-                const selectedRegion = regionsCache.find(r => r.id === regionId);
-                const regionName = selectedRegion?.name || 'المنطقة المختارة';
+                // جلب تفاصيل الطلب الكامل من ai_orders
+                const { data: aiOrderData } = await supabase
+                  .from('ai_orders')
+                  .select('*')
+                  .eq('id', orderResult.ai_order_id)
+                  .maybeSingle();
                 
-                responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+                if (aiOrderData) {
+                  // بناء رسالة جميلة مع التفاصيل الكاملة
+                  const selectedRegion = regionsCache.find(r => r.id === regionId);
+                  const regionName = selectedRegion?.name || 'المنطقة المختارة';
+                  
+                  // استخراج معلومات المنتجات
+                  let itemsText = '';
+                  if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+                    itemsText = aiOrderData.items.map((item: any) => 
+                      `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
+                    ).join('\n');
+                  }
+                  
+                  responseMessage = `✅ تم استلام الطلب!
+
+🔹 ريوس
+📍 ${pendingData.context.city_name} - ${regionName}
+📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
+${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
+💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('ar-IQ')} د.ع`;
+                } else {
+                  // Fallback للرسالة القديمة
+                  const selectedRegion = regionsCache.find(r => r.id === regionId);
+                  const regionName = selectedRegion?.name || 'المنطقة المختارة';
+                  responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+                }
               } else {
                 responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
               }

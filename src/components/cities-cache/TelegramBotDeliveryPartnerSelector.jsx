@@ -51,7 +51,7 @@ const TelegramBotDeliveryPartnerSelector = () => {
         .from('settings')
         .upsert({
           key: 'telegram_bot_delivery_partner',
-          value: `"${currentPartner}"`,
+          value: currentPartner,
           description: 'شركة التوصيل الافتراضية المستخدمة في بوت تليغرام'
         }, {
           onConflict: 'key'
@@ -124,8 +124,8 @@ const TelegramBotDeliveryPartnerSelector = () => {
                 نظام "هل تقصد؟" الذكي في بوت تليغرام
               </p>
               <p className="text-xs text-blue-700">
-                يستخدم البوت cache المدن والمناطق الخاص بشركة التوصيل المختارة لتحليل العناوين بذكاء.
-                عند وجود عدة مناطق محتملة، يعرض البوت رسالة "هل تقصد؟" مع قائمة بالخيارات.
+                يستخدم البوت cache المدن والمناطق (يُحفظ 30 يوم) الخاص بشركة التوصيل المختارة لتحليل العناوين بدقة عالية.
+                البحث يتم فقط في مناطق المدينة المختارة لضمان سرعة ودقة النتائج.
               </p>
             </div>
           </div>
@@ -179,16 +179,19 @@ const TelegramBotDeliveryPartnerSelector = () => {
             <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
             <div className="space-y-1">
               <p className="text-sm font-medium text-yellow-900">
-                ملاحظة مهمة
+                ملاحظة مهمة عن إعادة التشغيل
               </p>
               <p className="text-xs text-yellow-700">
-                • التغيير يتطلب إعادة تشغيل البوت لتحميل cache جديد
+                • البوت يُعيد تشغيل نفسه تلقائياً عند عدم النشاط (Instance Warmup)
               </p>
               <p className="text-xs text-yellow-700">
-                • سيتم تحميل المدن والمناطق تلقائياً من الشركة المختارة
+                • Cache المدن والمناطق يُحمّل تلقائياً عند أول طلب
               </p>
               <p className="text-xs text-yellow-700">
-                • تأكد من تحديث cache المدن والمناطق بعد التغيير
+                • Cache محفوظ لمدة 30 يوم لتقليل الاستدعاءات
+              </p>
+              <p className="text-xs text-yellow-700">
+                • البحث محصور في مناطق المدينة المختارة فقط لسرعة عالية
               </p>
             </div>
           </div>
@@ -215,8 +218,9 @@ const TelegramBotDeliveryPartnerSelector = () => {
 
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>• يستخدم البوت هذا الإعداد لتحديد أي cache مدن ومناطق يجب استخدامه</p>
-          <p>• نظام "هل تقصد؟" يعمل فقط مع cache محدث ونشط</p>
+          <p>• Cache يُحفظ 30 يوم لتقليل عدد المرات المطلوب تحديثه</p>
+          <p>• البحث الذكي يعمل فقط في مناطق المدينة المختارة (سرعة + دقة)</p>
+          <p>• يعرض حتى 5 مناطق محتملة فقط في "هل تقصد؟"</p>
           <p>• في المستقبل، يمكن إضافة دعم لشركات توصيل أخرى</p>
         </div>
 
