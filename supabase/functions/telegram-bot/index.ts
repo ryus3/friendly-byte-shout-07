@@ -264,13 +264,13 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     if (citiesError) throw citiesError;
     
-    // Load regions
+    // Load regions - CRITICAL FIX: limit() must come BEFORE order() to work correctly
     const { data: regions, error: regionsError } = await supabase
       .from('regions_cache')
       .select('id, city_id, name, alwaseet_id')
       .eq('is_active', true)
-      .order('name')
-      .limit(10000);
+      .limit(10000)  // ← MOVED HERE: limit before order fixes the 1000 region bug
+      .order('name');
     
     if (regionsError) throw regionsError;
     

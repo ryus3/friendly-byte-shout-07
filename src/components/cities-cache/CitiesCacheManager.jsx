@@ -318,13 +318,31 @@ const CitiesCacheManager = () => {
                   const citiesCount = syncData?.cities_count || cities.length;
                   const regionsCount = syncData?.regions_count || regions.length;
                   
-                  alert(`✅ تم إعادة تشغيل البوت بنجاح!\n\n📊 تم تحميل:\n• ${citiesCount} مدينة\n• ${regionsCount} منطقة\n• شركة التوصيل: ${currentPartner.name}`);
+                  toast({
+                    title: "✅ تم إعادة تشغيل البوت بنجاح!",
+                    description: (
+                      <div className="space-y-1 text-sm">
+                        <p className="font-semibold">📊 تم تحميل:</p>
+                        <p>• {citiesCount} مدينة</p>
+                        <p>• {regionsCount} منطقة</p>
+                        <p>• شركة التوصيل: {currentPartner.name}</p>
+                      </div>
+                    ),
+                  });
                 } else {
-                  alert('❌ فشل إعادة التشغيل. جرب مرة أخرى.');
+                  toast({
+                    variant: "destructive",
+                    title: "❌ فشل إعادة التشغيل",
+                    description: "جرب مرة أخرى",
+                  });
                 }
               } catch (error) {
                 console.error('Error restarting bot:', error);
-                alert('❌ حدث خطأ أثناء إعادة التشغيل.');
+                toast({
+                  variant: "destructive",
+                  title: "❌ حدث خطأ",
+                  description: "أثناء إعادة التشغيل",
+                });
               }
             }}
             variant="outline"
