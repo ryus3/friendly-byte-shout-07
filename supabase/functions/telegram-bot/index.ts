@@ -1406,33 +1406,6 @@ serve(async (req) => {
           // النظام المحلي فقط هو المسؤول عن معالجة الطلبات
           console.log('✅ النظام المحلي يعمل بشكل كامل - لا حاجة للنظام القديم');
 
-          
-          // ❌ تم حذف كل منطق النظام القديم
-          // النظام الجديد يتولى كل شيء
-              
-              await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
-              return new Response(JSON.stringify({ error: orderError.message }), {
-                status: 500,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              });
-            }
-
-            console.log('✅ نتيجة معالجة الطلب:', orderResult);
-
-            // التعامل مع النتيجة
-            if (orderResult?.success) {
-              console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
-              // استخدام الرسالة الجاهزة من الدالة (تحتوي على العنوان المُحلّل)
-              await sendTelegramMessage(chatId, orderResult.message, undefined, botToken);
-            } else {
-              // معالجة الأخطاء
-              let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
-              await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
-            }
-          } else {
-            console.log('✅ تم تجاوز استدعاء process_telegram_order - النظام المحلي نجح');
-          }
-
         } catch (processingError) {
           console.error('❌ خطأ عام في معالجة الطلب:', processingError);
           
