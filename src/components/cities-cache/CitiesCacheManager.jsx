@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, Database, MapPin, Clock, Building2, Edit2 } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import RegionDistribution from './RegionDistribution';
@@ -266,93 +265,26 @@ const CitiesCacheManager = () => {
 
         {/* زر التحديث مع شريط التقدم */}
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              onClick={handleUpdateCache}
-              disabled={loading || !isLoggedIn || activePartner === 'local'}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                  جاري التحديث...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                {activePartner === 'local' 
-                  ? 'غير متاح للتوصيل المحلي' 
-                  : `تحديث Cache من ${currentPartner.name}`
-                }
-              </>
-            )}
-          </Button>
-
           <Button 
-            onClick={async () => {
-              try {
-                const response = await fetch(
-                  'https://tkheostkubborwkwzugl.supabase.co/functions/v1/telegram-bot',
-                  {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      update_id: Date.now(),
-                      message: {
-                        message_id: Date.now(),
-                        from: { id: 0, is_bot: true, first_name: 'System' },
-                        chat: { id: 0, type: 'private' },
-                        date: Math.floor(Date.now() / 1000),
-                        text: '/ping'
-                      }
-                    })
-                  }
-                );
-                
-                if (response.ok) {
-                  // انتظر قليلاً حتى يتم تحميل الـ cache
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                  await fetchSyncInfo();
-                  
-                  // عرض البيانات الفعلية
-                  const syncData = syncInfo || await fetchSyncInfo();
-                  const citiesCount = syncData?.cities_count || cities.length;
-                  const regionsCount = syncData?.regions_count || regions.length;
-                  
-                  toast({
-                    title: "✅ تم إعادة تشغيل البوت بنجاح!",
-                    description: (
-                      <div className="space-y-1 text-sm">
-                        <p className="font-semibold">📊 تم تحميل:</p>
-                        <p>• {citiesCount} مدينة</p>
-                        <p>• {regionsCount} منطقة</p>
-                        <p>• شركة التوصيل: {currentPartner.name}</p>
-                      </div>
-                    ),
-                  });
-                } else {
-                  toast({
-                    variant: "destructive",
-                    title: "❌ فشل إعادة التشغيل",
-                    description: "جرب مرة أخرى",
-                  });
-                }
-              } catch (error) {
-                console.error('Error restarting bot:', error);
-                toast({
-                  variant: "destructive",
-                  title: "❌ حدث خطأ",
-                  description: "أثناء إعادة التشغيل",
-                });
-              }
-            }}
-            variant="outline"
+            onClick={handleUpdateCache}
+            disabled={loading || !isLoggedIn || activePartner === 'local'}
             className="w-full"
           >
-            <Database className="h-4 w-4 mr-2" />
-            🔄 إعادة تشغيل البوت
-          </Button>
-          </div>
+            {loading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                جاري التحديث...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+              {activePartner === 'local' 
+                ? 'غير متاح للتوصيل المحلي' 
+                : `تحديث Cache من ${currentPartner.name}`
+              }
+            </>
+          )}
+        </Button>
 
           {/* شريط التقدم */}
           {updateProgress.total > 0 && (
