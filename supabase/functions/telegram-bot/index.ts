@@ -1210,8 +1210,10 @@ serve(async (req) => {
           console.log('🔄 بدء نظام "هل تقصد؟" المحلي...');
           
           let shouldUseLocalCache = false;
+          let localSystemSucceeded = false; // 🔥 تتبع نجاح النظام المحلي
           let localCityResult: { cityId: number; cityName: string; confidence: number } | null = null;
           let localRegionMatches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+          let extractedLocation = ''; // 🔥 تعريف المتغير المفقود
           
           try {
             // تحميل cache إذا لم يكن محملاً أو انتهت صلاحيته
@@ -1249,6 +1251,9 @@ serve(async (req) => {
                 // 🔥 إزالة اسم المدينة من السطر قبل البحث عن المنطقة
                 const cleanedLine = removeCityFromLine(localCityResult.cityLine, localCityResult.cityName);
                 console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${cleanedLine}"`);
+                
+                // 🔥 تعيين extractedLocation للاستخدام في رسالة "هل تقصد؟"
+                extractedLocation = cleanedLine.trim();
                 
                 // البحث عن المناطق المحتملة في النص المنظف فقط
                 localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
@@ -1313,6 +1318,9 @@ serve(async (req) => {
                   
                   console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} من أصل ${localRegionMatches.length} منطقة`);
                   
+                  // 🔥 CRITICAL: تعيين localSystemSucceeded = true لمنع استدعاء process_telegram_order
+                  localSystemSucceeded = true;
+                  
                   return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
                     status: 200,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1337,46 +1345,49 @@ serve(async (req) => {
           // ==========================================
           // المرحلة 2: Fallback للطريقة التقليدية
           // ==========================================
-          if (!shouldUseLocalCache) {
+          // 🔥 CRITICAL: فقط استدعاء process_telegram_order إذا فشل النظام المحلي
+          if (!localSystemSucceeded && !shouldUseLocalCache) {
             console.log('🔄 استخدام الطريقة التقليدية (process_telegram_order)...');
-          }
           
-          // استدعاء الدالة الذكية (مع أو بدون التحليل المحلي)
-          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-            p_employee_code: employeeCode,
-            p_message_text: text,
-            p_telegram_chat_id: chatId
-          });
-
-          if (orderError) {
-            console.error('❌ خطأ في معالجة الطلب:', orderError);
-            
-            let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
-            
-            if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
-              errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
-            } else if (orderError.message?.includes('permission')) {
-              errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
-            }
-            
-            await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
-            return new Response(JSON.stringify({ error: orderError.message }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            // استدعاء الدالة الذكية (مع أو بدون التحليل المحلي)
+            const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+              p_employee_code: employeeCode,
+              p_message_text: text,
+              p_telegram_chat_id: chatId
             });
-          }
 
-          console.log('✅ نتيجة معالجة الطلب:', orderResult);
+            if (orderError) {
+              console.error('❌ خطأ في معالجة الطلب:', orderError);
+              
+              let errorMessage = '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.';
+              
+              if (orderError.message?.includes('function') && orderError.message?.includes('not unique')) {
+                errorMessage = '🔧 النظام قيد الصيانة، يرجى المحاولة خلال دقائق قليلة.';
+              } else if (orderError.message?.includes('permission')) {
+                errorMessage = '🔒 لا يوجد صلاحية للوصول، يرجى التواصل مع الدعم.';
+              }
+              
+              await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
+              return new Response(JSON.stringify({ error: orderError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
 
-          // التعامل مع النتيجة
-          if (orderResult?.success) {
-            console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
-            // استخدام الرسالة الجاهزة من الدالة (تحتوي على العنوان المُحلّل)
-            await sendTelegramMessage(chatId, orderResult.message, undefined, botToken);
+            console.log('✅ نتيجة معالجة الطلب:', orderResult);
+
+            // التعامل مع النتيجة
+            if (orderResult?.success) {
+              console.log('✅ تم معالجة الطلب بنجاح:', orderResult);
+              // استخدام الرسالة الجاهزة من الدالة (تحتوي على العنوان المُحلّل)
+              await sendTelegramMessage(chatId, orderResult.message, undefined, botToken);
+            } else {
+              // معالجة الأخطاء
+              let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
+              await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
+            }
           } else {
-            // معالجة الأخطاء
-            let errorMessage = orderResult?.message || 'لم أتمكن من فهم طلبك بشكل كامل.';
-            await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
+            console.log('✅ تم تجاوز استدعاء process_telegram_order - النظام المحلي نجح');
           }
 
         } catch (processingError) {
