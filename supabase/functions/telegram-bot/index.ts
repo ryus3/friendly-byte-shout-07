@@ -1622,110 +1622,187 @@ serve(async (req) => {
         // ==========================================
         else if (data.startsWith('region_')) {
           try {
-            // جلب الحالة المعلقة
-            const { data: pendingData } = await supabase
-              .from('telegram_pending_selections')
-              .select('*')
-              .eq('chat_id', chatId)
-              .eq('action', 'region_clarification')
-              .gt('expires_at', new Date().toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            
-            if (!pendingData) {
-              responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
-            } else if (data === 'region_none') {
-              // المستخدم اختار "لا شيء مما سبق" - استخدام الطريقة التقليدية
-              responseMessage = '🔄 جاري معالجة طلبك بالطريقة التقليدية...';
+            // ✅ معالجة "المزيد من الخيارات"
+            if (data.startsWith('region_more_')) {
+              const cityId = parseInt(data.replace('region_more_', ''));
               
-              const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-                p_employee_code: pendingData.context.employee_code,
-                p_message_text: pendingData.context.original_text,
-                p_telegram_chat_id: chatId
-              });
-              
-              if (orderError) throw orderError;
-              
-              if (orderResult?.success) {
-                responseMessage = orderResult.message;
-              } else {
-                responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
-              }
-              
-              // حذف الحالة المعلقة
-              await supabase
+              const { data: pendingData } = await supabase
                 .from('telegram_pending_selections')
-                .delete()
-                .eq('id', pendingData.id);
-            } else {
-              // المستخدم اختار منطقة محددة
-              const regionId = parseInt(data.replace('region_', ''));
+                .select('*')
+                .eq('chat_id', chatId)
+                .eq('action', 'region_clarification')
+                .gt('expires_at', new Date().toISOString())
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
               
-              // إنشاء الطلب مع city_id و region_id المحددين
-              const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-                p_employee_code: pendingData.context.employee_code,
-                p_message_text: pendingData.context.original_text,
-                p_telegram_chat_id: chatId
-              });
-              
-              if (orderError) throw orderError;
-              
-              // تحديث ai_order مع city_id و region_id الصحيحين
-              if (orderResult?.ai_order_id) {
-                await supabase
-                  .from('ai_orders')
-                  .update({
-                    city_id: pendingData.context.city_id,
-                    region_id: regionId,
-                    location_confidence: 1.0
-                  })
-                  .eq('id', orderResult.ai_order_id);
-              }
-              
-              if (orderResult?.success) {
-                // جلب تفاصيل الطلب الكامل من ai_orders
-                const { data: aiOrderData } = await supabase
-                  .from('ai_orders')
-                  .select('*')
-                  .eq('id', orderResult.ai_order_id)
-                  .maybeSingle();
+              if (pendingData?.context?.all_regions && Array.isArray(pendingData.context.all_regions)) {
+                const allRegions = pendingData.context.all_regions;
+                const moreRegions = allRegions.slice(5, 15);
                 
-                if (aiOrderData) {
-                  // بناء رسالة جميلة مع التفاصيل الكاملة
-                  const selectedRegion = regionsCache.find(r => r.id === regionId);
-                  const regionName = selectedRegion?.name || 'المنطقة المختارة';
+                if (moreRegions.length > 0) {
+                  const moreButtons = moreRegions.map((r: any) => [{
+                    text: `📍 ${r.regionName}`,
+                    callback_data: `region_${r.regionId}`
+                  }]);
                   
-                  // استخراج معلومات المنتجات
-                  let itemsText = '';
-                  if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-                    itemsText = aiOrderData.items.map((item: any) => 
-                      `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
-                    ).join('\n');
-                  }
+                  moreButtons.push([{
+                    text: '🔙 العودة للخيارات الأولى',
+                    callback_data: `region_back_${cityId}`
+                  }]);
                   
-                  responseMessage = `✅ تم استلام الطلب!
+                  await sendTelegramMessage(chatId, '📋 المزيد من المناطق المحتملة:', { inline_keyboard: moreButtons }, botToken);
+                  responseMessage = '';
+                } else {
+                  responseMessage = '✅ لا توجد مناطق إضافية.';
+                }
+              } else {
+                responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+              }
+            }
+            // ✅ معالجة العودة للخيارات الأولى
+            else if (data.startsWith('region_back_')) {
+              const { data: pendingData } = await supabase
+                .from('telegram_pending_selections')
+                .select('*')
+                .eq('chat_id', chatId)
+                .eq('action', 'region_clarification')
+                .gt('expires_at', new Date().toISOString())
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (pendingData?.context?.all_regions && Array.isArray(pendingData.context.all_regions)) {
+                const allRegions = pendingData.context.all_regions;
+                const topRegions = allRegions.slice(0, 5);
+                const regionButtons = topRegions.map((r: any) => [{
+                  text: `📍 ${r.regionName}`,
+                  callback_data: `region_${r.regionId}`
+                }]);
+                
+                if (allRegions.length > 5) {
+                  regionButtons.push([{
+                    text: '➕ عرض المزيد من الخيارات',
+                    callback_data: `region_more_${pendingData.context.city_id}`
+                  }]);
+                }
+                
+                regionButtons.push([{
+                  text: '❌ لا شيء مما سبق',
+                  callback_data: 'region_none'
+                }]);
+                
+                const cityName = pendingData.context.city_name || 'المدينة';
+                await sendTelegramMessage(chatId, `🏙️ <b>${cityName}</b>\n\n🤔 اختر المنطقة الصحيحة:`, { inline_keyboard: regionButtons }, botToken);
+                responseMessage = '';
+              } else {
+                responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+              }
+            }
+            // ✅ معالجة اختيار منطقة محددة أو "لا شيء مما سبق"
+            else {
+              // جلب الحالة المعلقة
+              const { data: pendingData } = await supabase
+                .from('telegram_pending_selections')
+                .select('*')
+                .eq('chat_id', chatId)
+                .eq('action', 'region_clarification')
+                .gt('expires_at', new Date().toISOString())
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (!pendingData) {
+                responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+              } else if (data === 'region_none') {
+                // ✅ المستخدم اختار "لا شيء مما سبق" - طلب إدخال يدوي
+                responseMessage = `❌ لم نجد المنطقة المطلوبة ضمن الخيارات.\n\n` +
+                  `📝 يرجى إعادة إرسال طلبك مع كتابة العنوان بشكل أوضح.\n\n` +
+                  `💡 مثال:\n` +
+                  `بغداد الكرادة شارع 62\n` +
+                  `07712345678\n` +
+                  `برشلونة ازرق سمول`;
+                
+                // حذف الحالة المعلقة
+                await supabase
+                  .from('telegram_pending_selections')
+                  .delete()
+                  .eq('id', pendingData.id);
+              } else {
+                // ✅ المستخدم اختار منطقة محددة
+                const regionId = parseInt(data.replace('region_', ''));
+                
+                console.log(`✅ المستخدم اختار المنطقة: ${regionId}`);
+                
+                // إنشاء الطلب مع city_id و region_id المحددين
+                const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+                  p_employee_code: pendingData.context.employee_code,
+                  p_message_text: pendingData.context.original_text,
+                  p_telegram_chat_id: chatId
+                });
+                
+                if (orderError) throw orderError;
+                
+                // تحديث ai_order مع city_id و region_id الصحيحين
+                if (orderResult?.ai_order_id) {
+                  await supabase
+                    .from('ai_orders')
+                    .update({
+                      city_id: pendingData.context.city_id,
+                      region_id: regionId,
+                      location_confidence: 1.0
+                    })
+                    .eq('id', orderResult.ai_order_id);
+                  
+                  console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} مع city_id=${pendingData.context.city_id}, region_id=${regionId}`);
+                }
+                
+                if (orderResult?.success) {
+                  // جلب تفاصيل الطلب الكامل من ai_orders
+                  const { data: aiOrderData } = await supabase
+                    .from('ai_orders')
+                    .select('*')
+                    .eq('id', orderResult.ai_order_id)
+                    .maybeSingle();
+                  
+                  if (aiOrderData) {
+                    // بناء رسالة جميلة مع التفاصيل الكاملة
+                    const allRegions = pendingData.context.all_regions || [];
+                    const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
+                    const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
+                    
+                    // استخراج معلومات المنتجات
+                    let itemsText = '';
+                    if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+                      itemsText = aiOrderData.items.map((item: any) => 
+                        `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
+                      ).join('\n');
+                    }
+                    
+                    responseMessage = `✅ تم استلام الطلب!
 
 🔹 ريوس
 📍 ${pendingData.context.city_name} - ${regionName}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('ar-IQ')} د.ع`;
+                  } else {
+                    // Fallback للرسالة القديمة
+                    const allRegions = pendingData.context.all_regions || [];
+                    const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
+                    const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
+                    responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+                  }
                 } else {
-                  // Fallback للرسالة القديمة
-                  const selectedRegion = regionsCache.find(r => r.id === regionId);
-                  const regionName = selectedRegion?.name || 'المنطقة المختارة';
-                  responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+                  responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
                 }
-              } else {
-                responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
+                
+                // حذف الحالة المعلقة
+                await supabase
+                  .from('telegram_pending_selections')
+                  .delete()
+                  .eq('id', pendingData.id);
               }
-              
-              // حذف الحالة المعلقة
-              await supabase
-                .from('telegram_pending_selections')
-                .delete()
-                .eq('id', pendingData.id);
             }
           } catch (regionError) {
             console.error('❌ خطأ في معالجة اختيار المنطقة:', regionError);
