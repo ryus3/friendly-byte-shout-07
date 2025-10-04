@@ -143,8 +143,9 @@ function normalizeArabicText(text: string): string {
   try {
     let normalized = text.toLowerCase().trim();
     
-    // إزالة "ال" التعريف من البداية (بجميع الأشكال)
-    normalized = normalized.replace(/^(ال|أل)/g, '');
+    // ✅ CRITICAL: إزالة "ال" التعريف من بداية كل كلمة (ليس فقط من البداية)
+    normalized = normalized.replace(/\bال/g, '');
+    normalized = normalized.replace(/\bأل/g, '');
     
     // توحيد الهمزات
     normalized = normalized.replace(/[أإآ]/g, 'ا');
