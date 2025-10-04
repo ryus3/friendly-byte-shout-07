@@ -377,9 +377,16 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
   try {
     let cleaned = cityLine;
     
-    // ✅ 1. إزالة اسم المدينة الأصلي أولاً
-    const cityNamePattern = new RegExp(cityName, 'gi');
-    cleaned = cleaned.replace(cityNamePattern, '').trim();
+    // ✅ 1. إزالة اسم المدينة من البداية أولاً (مع المسافات)
+    const cityNameEscaped = cityName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cityAtStartPattern = new RegExp(`^${cityNameEscaped}[\\s,،-]*`, 'gi');
+    cleaned = cleaned.replace(cityAtStartPattern, '').trim();
+    
+    // إذا لم تُزل من البداية، حاول إزالتها من أي مكان
+    if (cleaned === cityLine) {
+      const cityAnywherePattern = new RegExp(`[\\s,،-]*${cityNameEscaped}[\\s,،-]*`, 'gi');
+      cleaned = cleaned.replace(cityAnywherePattern, ' ').trim();
+    }
     
     // ✅ 2. البحث عن المدينة في citiesCache للحصول على city_id
     const cityObj = citiesCache.find(c => 
@@ -387,21 +394,22 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
     );
     
     if (cityObj) {
-      // ✅ 3. إزالة جميع المرادفات لهذه المدينة (استخدام city_id بدلاً من original_name)
+      // ✅ 3. إزالة جميع المرادفات لهذه المدينة
       const cityAliases = cityAliasesCache.filter(a => a.city_id === cityObj.id);
       
       cityAliases.forEach(alias => {
-        const aliasPattern = new RegExp(alias.alias, 'gi');
-        cleaned = cleaned.replace(aliasPattern, '');
+        const aliasEscaped = alias.alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const aliasPattern = new RegExp(`[\\s,،-]*${aliasEscaped}[\\s,،-]*`, 'gi');
+        cleaned = cleaned.replace(aliasPattern, ' ');
       });
       
       console.log(`🔍 تم إزالة ${cityAliases.length} مرادف للمدينة ${cityName}`);
     }
     
-    // ✅ 4. تنظيف المسافات والفواصل الزائدة
+    // ✅ 4. تنظيف شامل للمسافات والفواصل
     cleaned = cleaned
       .replace(/\s+/g, ' ')                    // مسافات متعددة → مسافة واحدة
-      .replace(/^[\s,،-]+|[\s,،-]+$/g, '')     // إزالة المسافات/الفواصل من البداية والنهاية
+      .replace(/^[\s,،-]+|[\s,،-]+$/g, '')     // إزالة من البداية والنهاية
       .trim();
     
     console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${cityLine}" → "${cleaned}"`);
@@ -1219,8 +1227,26 @@ serve(async (req) => {
                   console.log('✅ السيناريو 1: مدينة ومنطقة واضحة - إنشاء طلب مباشرة');
                   console.log(`📍 المدينة: ${localCityResult.cityName} (ID: ${localCityResult.cityId})`);
                   console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId})`);
-                  // Continue to process_telegram_order with resolved location
-                  shouldUseLocalCache = false;
+                  
+                  const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+                    p_employee_code: employeeCode,
+                    p_message_text: text,
+                    p_telegram_chat_id: chatId
+                  });
+                  
+                  if (!orderError && orderResult?.ai_order_id) {
+                    await supabase.from('ai_orders').update({
+                      city_id: localCityResult.cityId,
+                      region_id: localRegionMatches[0].regionId,
+                      location_confidence: localRegionMatches[0].confidence
+                    }).eq('id', orderResult.ai_order_id);
+                  }
+                  
+                  await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
+                  return new Response(JSON.stringify({ success: true }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                  });
                 }
                 // السيناريو 2: مدينة واضحة + عدة مناطق محتملة - "هل تقصد؟"
                 else if (localRegionMatches.length >= 2) {
@@ -1233,7 +1259,7 @@ serve(async (req) => {
                     .eq('chat_id', chatId);
                   
                   // حفظ بيانات الطلب مؤقتاً مع تحديد expires_at صراحةً
-                  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 دقائق من الآن
+                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // ✅ 30 دقيقة
                   await supabase
                     .from('telegram_pending_selections')
                     .insert({
@@ -1244,7 +1270,8 @@ serve(async (req) => {
                         original_text: text,
                         employee_code: employeeCode,
                         city_id: localCityResult.cityId,
-                        city_name: localCityResult.cityName
+                        city_name: localCityResult.cityName,
+                        all_regions: localRegionMatches
                       }
                     });
                   
@@ -1254,6 +1281,14 @@ serve(async (req) => {
                     text: `📍 ${r.regionName}`,
                     callback_data: `region_${r.regionId}`
                   }]);
+                  
+                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية
+                  if (localRegionMatches.length > 5) {
+                    regionButtons.push([{
+                      text: '➕ عرض المزيد من الخيارات',
+                      callback_data: `region_more_${localCityResult.cityId}`
+                    }]);
+                  }
                   
                   // إضافة زر "لا شيء مما سبق"
                   regionButtons.push([{
@@ -1387,8 +1422,74 @@ serve(async (req) => {
         let shouldSaveState = false;
         let stateAction = '';
         
+        // ✅ معالجة "المزيد من الخيارات"
+        if (data.startsWith('region_more_')) {
+          const cityId = parseInt(data.replace('region_more_', ''));
+          
+          // جلب الحالة المعلقة
+          const { data: pendingData } = await supabase
+            .from('telegram_pending_selections')
+            .select('*')
+            .eq('telegram_chat_id', chatId)
+            .eq('action', 'region_selection')
+            .maybeSingle();
+          
+          if (pendingData?.context?.all_regions) {
+            // عرض المناطق من 6 إلى 15
+            const moreRegions = pendingData.context.all_regions.slice(5, 15);
+            const moreButtons = moreRegions.map((r: any) => [{
+              text: `📍 ${r.regionName}`,
+              callback_data: `region_${r.regionId}`
+            }]);
+            
+            // زر العودة
+            moreButtons.push([{
+              text: '🔙 العودة للخيارات الأولى',
+              callback_data: `region_back_${cityId}`
+            }]);
+            
+            await sendTelegramMessage(chatId, '📋 المزيد من المناطق المحتملة:', { inline_keyboard: moreButtons }, botToken);
+            responseMessage = '';
+          } else {
+            responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+          }
+        }
+        // ✅ معالجة العودة للخيارات الأولى
+        else if (data.startsWith('region_back_')) {
+          const { data: pendingData } = await supabase
+            .from('telegram_pending_selections')
+            .select('*')
+            .eq('telegram_chat_id', chatId)
+            .eq('action', 'region_selection')
+            .maybeSingle();
+          
+          if (pendingData?.context?.all_regions) {
+            const topRegions = pendingData.context.all_regions.slice(0, 5);
+            const regionButtons = topRegions.map((r: any) => [{
+              text: `📍 ${r.regionName}`,
+              callback_data: `region_${r.regionId}`
+            }]);
+            
+            if (pendingData.context.all_regions.length > 5) {
+              regionButtons.push([{
+                text: '➕ عرض المزيد من الخيارات',
+                callback_data: `region_more_${pendingData.context.city_id}`
+              }]);
+            }
+            
+            regionButtons.push([{
+              text: '❌ لا شيء مما سبق',
+              callback_data: 'region_none'
+            }]);
+            
+            await sendTelegramMessage(chatId, `🏙️ <b>${pendingData.context.city_name}</b>\n\n🤔 اختر المنطقة الصحيحة:`, { inline_keyboard: regionButtons }, botToken);
+            responseMessage = '';
+          } else {
+            responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+          }
+        }
         // Handle inventory button presses
-        if (data === 'inv_product') {
+        else if (data === 'inv_product') {
           console.log('🛍️ Processing inv_product for employee:', employeeId);
           try {
             const productButtons = await getProductButtons(employeeId);
