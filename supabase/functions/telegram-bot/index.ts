@@ -465,8 +465,7 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
   try {
-    const locationText = extractLocationFromText(text);
-    const normalized = normalizeArabicText(locationText);
+    const normalized = normalizeArabicText(text);
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
     
     console.log(`🔍 بحث محلي عن منطقة: "${text}" → استخراج: "${locationText}" → منظف: "${normalized}" في مدينة ${cityId}`);
