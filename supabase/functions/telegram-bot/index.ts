@@ -374,7 +374,7 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
     console.log(`💾 الـ Cache سيبقى نشط حتى: ${new Date(lastCacheUpdate + CACHE_TTL).toLocaleDateString('ar-IQ')}`);
-    console.log(`🔄 إصدار التحميل: ${FORCE_RELOAD_VERSION}`);
+    console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
     return true;
   } catch (error) {
     console.error('❌ فشل تحميل cache المدن والمناطق:', error);
@@ -1337,35 +1337,39 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ بناء أزرار لجميع المناطق المطابقة (حتى 15 منطقة)
-                  const maxDisplay = Math.min(localRegionMatches.length, 15);
-                  const topRegions = localRegionMatches.slice(0, maxDisplay);
+                  // ✅ نظام pagination احترافي: 5 → 10 → 15
+                  const totalRegions = localRegionMatches.length;
+                  const firstPageSize = Math.min(5, totalRegions);
+                  const topRegions = localRegionMatches.slice(0, firstPageSize);
+                  
                   const regionButtons = topRegions.map(r => [{
                     text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
                     callback_data: `region_${r.regionId}`
                   }]);
                   
-                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية (أكثر من 15)
-                  if (localRegionMatches.length > 15) {
+                  // زر "المزيد من الخيارات" (10 إضافية) إذا كان هناك أكثر من 5
+                  if (totalRegions > 5) {
+                    const remainingAfterFirst = totalRegions - 5;
+                    const nextBatch = Math.min(10, remainingAfterFirst);
                     regionButtons.push([{
-                      text: `➕ عرض ${localRegionMatches.length - 15} منطقة إضافية`,
-                      callback_data: `region_more_${localCityResult.cityId}`
+                      text: `➕ عرض ${nextBatch} خيارات إضافية`,
+                      callback_data: `region_page2_${localCityResult.cityId}`
                     }]);
                   }
                   
-                  // إضافة زر "لا شيء مما سبق"
+                  // زر "لا شيء مما سبق" دائماً في الأسفل
                   regionButtons.push([{
                     text: '❌ لا شيء مما سبق',
                     callback_data: 'region_none'
                   }]);
                   
-                  const clarificationMessage = localRegionMatches.length === 1
+                  const clarificationMessage = totalRegions === 1
                     ? `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على منطقة واحدة مطابقة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ يرجى التأكيد على المنطقة:`
-                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على ${localRegionMatches.length} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ يرجى اختيار المنطقة الصحيحة:`;
+                    : `🏙️ <b>${localCityResult.cityName}</b>\n\n✅ تم العثور على ${totalRegions} منطقة محتملة\n🔍 بحث عن: "${extractedLocation}"\n\n⚠️ عرض 1-${firstPageSize} من ${totalRegions}\n\n📍 اختر المنطقة الصحيحة:`;
                   
                   await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
                   
-                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} من أصل ${localRegionMatches.length} منطقة`);
+                  console.log(`✅ تم إرسال "هل تقصد؟" - صفحة 1: ${firstPageSize} من أصل ${totalRegions} منطقة`);
                   
                   // 🔥 CRITICAL: تعيين localSystemSucceeded = true لمنع استدعاء process_telegram_order
                   localSystemSucceeded = true;
@@ -1498,11 +1502,10 @@ serve(async (req) => {
         let shouldSaveState = false;
         let stateAction = '';
         
-        // ✅ معالجة "المزيد من الخيارات"
-        if (data.startsWith('region_more_')) {
-          const cityId = parseInt(data.replace('region_more_', ''));
+        // ✅ الصفحة 2: عرض 10 مناطق إضافية (من 6 إلى 15)
+        if (data.startsWith('region_page2_')) {
+          const cityId = parseInt(data.replace('region_page2_', ''));
           
-          // جلب الحالة المعلقة
           const { data: pendingData } = await supabase
             .from('telegram_pending_selections')
             .select('*')
@@ -1511,26 +1514,87 @@ serve(async (req) => {
             .maybeSingle();
           
           if (pendingData?.context?.all_regions) {
-            // عرض المناطق من 6 إلى 15
-            const moreRegions = pendingData.context.all_regions.slice(5, 15);
-            const moreButtons = moreRegions.map((r: any) => [{
-              text: `📍 ${r.regionName}`,
+            const allRegions = pendingData.context.all_regions;
+            const totalRegions = allRegions.length;
+            const page2Regions = allRegions.slice(5, 15);
+            
+            const page2Buttons = page2Regions.map((r: any) => [{
+              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
               callback_data: `region_${r.regionId}`
             }]);
             
+            // زر "المزيد" (15 إضافية) إذا كان هناك أكثر من 15
+            if (totalRegions > 15) {
+              const remainingAfterPage2 = totalRegions - 15;
+              const nextBatch = Math.min(15, remainingAfterPage2);
+              page2Buttons.push([{
+                text: `➕ عرض ${nextBatch} خيار إضافي`,
+                callback_data: `region_page3_${cityId}`
+              }]);
+            }
+            
             // زر العودة
-            moreButtons.push([{
+            page2Buttons.push([{
               text: '🔙 العودة للخيارات الأولى',
               callback_data: `region_back_${cityId}`
             }]);
             
-            await sendTelegramMessage(chatId, '📋 المزيد من المناطق المحتملة:', { inline_keyboard: moreButtons }, botToken);
+            page2Buttons.push([{
+              text: '❌ لا شيء مما سبق',
+              callback_data: 'region_none'
+            }]);
+            
+            const page2Message = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 6-${Math.min(15, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            
+            await sendTelegramMessage(chatId, page2Message, { inline_keyboard: page2Buttons }, botToken);
+            console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 6 إلى 15)`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
           }
         }
-        // ✅ معالجة العودة للخيارات الأولى
+        // ✅ الصفحة 3: عرض 15 منطقة إضافية (من 16 إلى 30)
+        else if (data.startsWith('region_page3_')) {
+          const cityId = parseInt(data.replace('region_page3_', ''));
+          
+          const { data: pendingData } = await supabase
+            .from('telegram_pending_selections')
+            .select('*')
+            .eq('telegram_chat_id', chatId)
+            .eq('action', 'region_selection')
+            .maybeSingle();
+          
+          if (pendingData?.context?.all_regions) {
+            const allRegions = pendingData.context.all_regions;
+            const totalRegions = allRegions.length;
+            const page3Regions = allRegions.slice(15, 30);
+            
+            const page3Buttons = page3Regions.map((r: any) => [{
+              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
+              callback_data: `region_${r.regionId}`
+            }]);
+            
+            // زر العودة
+            page3Buttons.push([{
+              text: '🔙 العودة للخيارات الأولى',
+              callback_data: `region_back_${cityId}`
+            }]);
+            
+            page3Buttons.push([{
+              text: '❌ لا شيء مما سبق',
+              callback_data: 'region_none'
+            }]);
+            
+            const page3Message = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 16-${Math.min(30, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            
+            await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
+            console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 16 إلى 30)`);
+            responseMessage = '';
+          } else {
+            responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+          }
+        }
+        // ✅ العودة للصفحة الأولى
         else if (data.startsWith('region_back_')) {
           const { data: pendingData } = await supabase
             .from('telegram_pending_selections')
@@ -1540,16 +1604,21 @@ serve(async (req) => {
             .maybeSingle();
           
           if (pendingData?.context?.all_regions) {
-            const topRegions = pendingData.context.all_regions.slice(0, 5);
+            const allRegions = pendingData.context.all_regions;
+            const totalRegions = allRegions.length;
+            const topRegions = allRegions.slice(0, 5);
+            
             const regionButtons = topRegions.map((r: any) => [{
-              text: `📍 ${r.regionName}`,
+              text: `📍 ${r.regionName} (${Math.round(r.confidence * 100)}%)`,
               callback_data: `region_${r.regionId}`
             }]);
             
-            if (pendingData.context.all_regions.length > 5) {
+            if (totalRegions > 5) {
+              const remainingAfterFirst = totalRegions - 5;
+              const nextBatch = Math.min(10, remainingAfterFirst);
               regionButtons.push([{
-                text: '➕ عرض المزيد من الخيارات',
-                callback_data: `region_more_${pendingData.context.city_id}`
+                text: `➕ عرض ${nextBatch} خيارات إضافية`,
+                callback_data: `region_page2_${pendingData.context.city_id}`
               }]);
             }
             
@@ -1558,7 +1627,10 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            await sendTelegramMessage(chatId, `🏙️ <b>${pendingData.context.city_name}</b>\n\n🤔 اختر المنطقة الصحيحة:`, { inline_keyboard: regionButtons }, botToken);
+            const backMessage = `🏙️ <b>${pendingData.context.city_name}</b>\n\n📍 عرض 1-${Math.min(5, totalRegions)} من ${totalRegions}\n\n⚠️ اختر المنطقة الصحيحة:`;
+            
+            await sendTelegramMessage(chatId, backMessage, { inline_keyboard: regionButtons }, botToken);
+            console.log(`✅ العودة للصفحة 1: عرض ${topRegions.length} منطقة`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
