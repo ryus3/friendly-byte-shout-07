@@ -1313,56 +1313,6 @@ serve(async (req) => {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                   });
                 }
-                  
-                  // حفظ بيانات الطلب مؤقتاً
-                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .insert({
-                      chat_id: chatId,
-                      action: 'region_clarification',
-                      expires_at: expiresAt.toISOString(),
-                      context: {
-                        original_text: text,
-                        employee_code: employeeCode,
-                        city_id: localCityResult.cityId,
-                        city_name: localCityResult.cityName,
-                        all_regions: localRegionMatches
-                      }
-                    });
-                  
-                  // بناء أزرار المناطق (أقصى 5 مناطق)
-                  const topRegions = localRegionMatches.slice(0, 5);
-                  const regionButtons = topRegions.map(r => [{
-                    text: `📍 ${r.regionName}`,
-                    callback_data: `region_${r.regionId}`
-                  }]);
-                  
-                  // إضافة زر "المزيد من الخيارات" إذا كان هناك مناطق إضافية
-                  if (localRegionMatches.length > 5) {
-                    regionButtons.push([{
-                      text: '➕ عرض المزيد من الخيارات',
-                      callback_data: `region_more_${localCityResult.cityId}`
-                    }]);
-                  }
-                  
-                  // إضافة زر "لا شيء مما سبق"
-                  regionButtons.push([{
-                    text: '❌ لا شيء مما سبق',
-                    callback_data: 'region_none'
-                  }]);
-                  
-                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 يوجد ${localRegionMatches.length} منطقة محتملة\nاختر المنطقة الصحيحة:`;
-                  
-                  await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
-                  
-                  console.log(`✅ تم إرسال "هل تقصد؟" مع ${topRegions.length} منطقة`);
-                  
-                  return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
-                    status: 200,
-                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-                  });
-                }
                 
                 // 🎯 السيناريو 4: لا توجد مطابقات - الرجوع للنظام التقليدي
                 else {
