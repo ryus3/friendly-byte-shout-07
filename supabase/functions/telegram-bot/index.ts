@@ -1222,35 +1222,73 @@ serve(async (req) => {
                 localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 
-                // السيناريو 1: مدينة واضحة + منطقة واحدة واضحة
-                if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.9) {
-                  console.log('✅ السيناريو 1: مدينة ومنطقة واضحة - إنشاء طلب مباشرة');
+                // 🎯 السيناريو 1: مطابقة واحدة عالية الثقة (>= 0.85) - اختيار مباشر
+                if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.85) {
+                  console.log('✅ السيناريو 1: منطقة واحدة عالية الثقة - اختيار مباشر');
                   console.log(`📍 المدينة: ${localCityResult.cityName} (ID: ${localCityResult.cityId})`);
-                  console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId})`);
+                  console.log(`📍 المنطقة: ${localRegionMatches[0].regionName} (ID: ${localRegionMatches[0].regionId}, ثقة: ${localRegionMatches[0].confidence})`);
                   
+                  // إنشاء الطلب أولاً
                   const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
                     p_employee_code: employeeCode,
                     p_message_text: text,
                     p_telegram_chat_id: chatId
                   });
                   
-                  if (!orderError && orderResult?.ai_order_id) {
-                    await supabase.from('ai_orders').update({
+                  if (orderError) {
+                    console.error('❌ خطأ في إنشاء الطلب:', orderError);
+                    await sendTelegramMessage(chatId, '⚠️ حدث خطأ في معالجة الطلب', undefined, botToken);
+                    return new Response(JSON.stringify({ error: orderError.message }), {
+                      status: 500,
+                      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                    });
+                  }
+                  
+                  // تحديث ai_order بـ city_id و region_id
+                  if (orderResult?.ai_order_id) {
+                    const { error: updateError } = await supabase.from('ai_orders').update({
                       city_id: localCityResult.cityId,
                       region_id: localRegionMatches[0].regionId,
                       location_confidence: localRegionMatches[0].confidence
                     }).eq('id', orderResult.ai_order_id);
+                    
+                    if (updateError) {
+                      console.error('❌ خطأ في تحديث العنوان:', updateError);
+                    } else {
+                      console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بـ city_id=${localCityResult.cityId} و region_id=${localRegionMatches[0].regionId}`);
+                    }
+                    
+                    // جلب بيانات الطلب الكاملة لرسالة التأكيد
+                    const { data: aiOrder } = await supabase
+                      .from('ai_orders')
+                      .select('*, cities(name), regions(name)')
+                      .eq('id', orderResult.ai_order_id)
+                      .single();
+                    
+                    if (aiOrder) {
+                      const confirmationMessage = `✅ تم تثبيت الطلب بنجاح!\n\n` +
+                        `📍 العنوان: ${aiOrder.cities?.name || ''} - ${aiOrder.regions?.name || ''}\n` +
+                        `📞 الهاتف: ${aiOrder.customer_phone || ''}\n` +
+                        `📦 المنتجات: ${aiOrder.items_count || 0}\n` +
+                        `💰 المبلغ: ${aiOrder.total_amount || 0} دينار`;
+                      
+                      await sendTelegramMessage(chatId, confirmationMessage, undefined, botToken);
+                    } else {
+                      await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
+                    }
+                  } else {
+                    await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
                   }
                   
-                  await sendTelegramMessage(chatId, orderResult?.message || 'تم استلام الطلب', undefined, botToken);
                   return new Response(JSON.stringify({ success: true }), {
                     status: 200,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                   });
                 }
-                // السيناريو 2: مدينة واضحة + عدة مناطق محتملة - "هل تقصد؟"
-                else if (localRegionMatches.length >= 2) {
-                  console.log(`✅ السيناريو 2 مُفعّل: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
+                
+                // 🎯 السيناريو 2: مطابقة واحدة متوسطة الثقة (0.5 - 0.85) - عرض "هل تقصد؟"
+                else if (localRegionMatches.length === 1 && localRegionMatches[0].confidence >= 0.5 && localRegionMatches[0].confidence < 0.85) {
+                  console.log(`✅ السيناريو 2: منطقة واحدة متوسطة الثقة (${localRegionMatches[0].confidence}) - عرض "هل تقصد؟"`);
                   
                   // حذف أي حالة معلقة سابقة
                   await supabase
@@ -1258,8 +1296,58 @@ serve(async (req) => {
                     .delete()
                     .eq('chat_id', chatId);
                   
-                  // حفظ بيانات الطلب مؤقتاً مع تحديد expires_at صراحةً
-                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // ✅ 30 دقيقة
+                  // حفظ بيانات الطلب مؤقتاً
+                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+                  await supabase
+                    .from('telegram_pending_selections')
+                    .insert({
+                      chat_id: chatId,
+                      action: 'region_clarification',
+                      expires_at: expiresAt.toISOString(),
+                      context: {
+                        original_text: text,
+                        employee_code: employeeCode,
+                        city_id: localCityResult.cityId,
+                        city_name: localCityResult.cityName,
+                        all_regions: localRegionMatches
+                      }
+                    });
+                  
+                  const regionButtons = [
+                    [{
+                      text: `📍 ${localRegionMatches[0].regionName}`,
+                      callback_data: `region_${localRegionMatches[0].regionId}`
+                    }],
+                    [{
+                      text: '❌ لا شيء مما سبق',
+                      callback_data: 'region_none'
+                    }]
+                  ];
+                  
+                  const clarificationMessage = `🏙️ <b>${localCityResult.cityName}</b>\n\n🤔 هل تقصد هذه المنطقة؟`;
+                  
+                  await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
+                  
+                  console.log(`✅ تم إرسال "هل تقصد؟" مع منطقة واحدة`);
+                  
+                  return new Response(JSON.stringify({ success: true, action: 'clarification_sent' }), {
+                    status: 200,
+                    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                  });
+                }
+                
+                // 🎯 السيناريو 3: عدة مطابقات (>= 2) - عرض "هل تقصد؟"
+                else if (localRegionMatches.length >= 2) {
+                  console.log(`✅ السيناريو 3: ${localRegionMatches.length} مناطق محتملة - عرض "هل تقصد؟"`);
+                  
+                  // حذف أي حالة معلقة سابقة
+                  await supabase
+                    .from('telegram_pending_selections')
+                    .delete()
+                    .eq('chat_id', chatId);
+                  
+                  // حفظ بيانات الطلب مؤقتاً
+                  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
                   await supabase
                     .from('telegram_pending_selections')
                     .insert({
@@ -1307,9 +1395,10 @@ serve(async (req) => {
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
                   });
                 }
-                // السيناريو 3: مدينة واضحة + لا توجد مناطق
+                
+                // 🎯 السيناريو 4: لا توجد مطابقات - الرجوع للنظام التقليدي
                 else {
-                  console.log('⚠️ السيناريو 3: لا توجد مناطق محددة - استخدام الطريقة التقليدية');
+                  console.log('⚠️ السيناريو 4: لا توجد مطابقات مناسبة - الرجوع للنظام التقليدي');
                   shouldUseLocalCache = false;
                 }
               } else {
