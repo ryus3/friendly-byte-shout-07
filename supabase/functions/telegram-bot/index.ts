@@ -137,48 +137,77 @@ function extractPhoneFromText(text: string): string {
 }
 
 // ==========================================
-// Text Normalization for Cities/Regions - ENHANCED
+// 🚀 Levenshtein Distance - قياس التشابه بين نصين
+// ==========================================
+function levenshteinDistance(str1: string, str2: string): number {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix: number[][] = [];
+
+  // Initialize matrix
+  for (let i = 0; i <= len1; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= len2; j++) {
+    matrix[0][j] = j;
+  }
+
+  // Fill matrix
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+
+  return matrix[len1][len2];
+}
+
+// ==========================================
+// 🎯 Calculate Similarity - حساب نسبة التشابه (0-100%)
+// ==========================================
+function calculateSimilarity(str1: string, str2: string): number {
+  const maxLen = Math.max(str1.length, str2.length);
+  if (maxLen === 0) return 100;
+  
+  const distance = levenshteinDistance(str1, str2);
+  return ((maxLen - distance) / maxLen) * 100;
+}
+
+// ==========================================
+// ✨ Text Normalization - تطبيع متقدم للنصوص العربية
 // ==========================================
 function normalizeArabicText(text: string): string {
   try {
     let normalized = text.toLowerCase().trim();
     
-    // ✅ CRITICAL FIX: إزالة "ال" من بداية كل كلمة بشكل صريح
-    // معالجة خاصة: "عبيدي" و "العبيدي" يجب أن يكونا متطابقين
+    // ✅ إزالة "ال" و "أل" من بداية كل كلمة
     normalized = normalized
       .split(/\s+/)
       .map(word => {
-        // إزالة "ال" أو "أل" من بداية الكلمة
         if (word.startsWith('ال')) return word.substring(2);
         if (word.startsWith('أل')) return word.substring(2);
         return word;
       })
       .join(' ');
     
-    // توحيد الهمزات
-    normalized = normalized.replace(/[أإآ]/g, 'ا');
+    // ✅ توحيد جميع الأحرف المتشابهة
+    normalized = normalized
+      .replace(/[أإآا]/g, 'ا')     // همزات → ا
+      .replace(/ة/g, 'ه')           // ة → ه  
+      .replace(/ى/g, 'ي')           // ى → ي
+      .replace(/[ؤئء]/g, '')        // إزالة همزات متوسطة
+      .replace(/[،.؛:\-_]/g, ' ');  // إزالة علامات
     
-    // ✅ CRITICAL FIX: توحيد التاء المربوطة والهاء بشكل كامل
-    // "كرادة" = "كراده" | "دورة" = "دوره"
-    normalized = normalized.replace(/ة/g, 'ه');  // ة → ه
-    
-    // توحيد الواو
-    normalized = normalized.replace(/[ؤ]/g, 'و');
-    
-    // توحيد الياء
-    normalized = normalized.replace(/[ئى]/g, 'ي');
-    
-    // إزالة الهمزة المفردة
-    normalized = normalized.replace(/[ء]/g, '');
-    
-    // توحيد المسافات المتعددة إلى مسافة واحدة
-    normalized = normalized.replace(/\s+/g, ' ');
-    
-    // إزالة الفواصل والنقاط والشرطات
-    normalized = normalized.replace(/[،.؛:\-_]/g, ' ');
-    
-    // تنظيف نهائي للمسافات
-    normalized = normalized.trim().replace(/\s+/g, ' ');
+    // ✅ توحيد المسافات وإزالة الأحرف غير العربية/الأرقام/الإنجليزية
+    normalized = normalized
+      .replace(/[^\u0600-\u06FF\s0-9a-zA-Z]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     
     return normalized;
   } catch (error) {
@@ -432,11 +461,10 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
 }
 
 // ==========================================
-// Search Regions Locally - SIMPLIFIED & DIRECT
+// 🚀 Search Regions Locally - نظام بحث ذكي مع Fuzzy Matching
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
   try {
-    // 🔥 STEP 1: استخراج المنطقة فقط من النص (إزالة الهواتف والمنتجات)
     const locationText = extractLocationFromText(text);
     const normalized = normalizeArabicText(locationText);
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
@@ -445,41 +473,59 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
     console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
     
     const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
-    
-    // تقسيم النص إلى كلمات للمطابقة
     const words = normalized.split(/\s+/).filter(w => w.length > 1);
     console.log(`📝 الكلمات المستخرجة للبحث:`, words);
     
-    // 🚀 البحث البسيط والمباشر
+    // 🎯 البحث الذكي مع 4 مستويات
     for (const region of cityRegions) {
-      let matched = false;
-      let confidence = 0.9; // ثقة موحدة لكل المطابقات
+      const regionTokens = region.normalized.split(/\s+/);
+      let bestScore = 0;
       
-      // ✅ البحث المباشر في كل كلمة
       for (const word of words) {
-        // تخطي الكلمات القصيرة جداً
         if (word.length < 2) continue;
         
-        // 🎯 البحث في اسم المنطقة المُطبّع
-        if (region.normalized.includes(word) || word.includes(region.normalized)) {
-          matched = true;
-          break;
+        for (const token of regionTokens) {
+          // ✅ Level 1: مطابقة كاملة - 100%
+          if (token === word) {
+            bestScore = Math.max(bestScore, 100);
+          }
+          // ✅ Level 2: مطابقة جزئية - 95%
+          else if (token.includes(word) || word.includes(token)) {
+            bestScore = Math.max(bestScore, 95);
+          }
+          // ✅ Level 3: البحث في بداية الكلمة - 90%
+          else if (token.startsWith(word) || word.startsWith(token)) {
+            bestScore = Math.max(bestScore, 90);
+          }
+          // 🧠 Level 4: Fuzzy Matching - 70-85%
+          else {
+            const similarity = calculateSimilarity(word, token);
+            if (similarity >= 70) {
+              bestScore = Math.max(bestScore, similarity);
+            }
+          }
         }
       }
       
-      // ✅ إضافة المطابقة
-      if (matched) {
+      // ✅ إضافة المطابقات فوق عتبة الثقة (70%)
+      if (bestScore >= 70) {
         matches.push({
           regionId: region.id,
           regionName: region.name,
-          confidence: confidence
+          confidence: bestScore / 100
         });
       }
     }
     
+    // 🏆 ترتيب النتائج حسب الثقة (الأعلى أولاً)
+    matches.sort((a, b) => b.confidence - a.confidence);
+    
     console.log(`✅ تم العثور على ${matches.length} مطابقة`);
     if (matches.length > 0) {
-      console.log(`🏆 أفضل 20 نتيجة:`, matches.slice(0, 20).map(m => `${m.regionName}`));
+      const topMatches = matches.slice(0, 10).map(m => 
+        `${m.regionName} (${Math.round(m.confidence * 100)}%)`
+      );
+      console.log(`🏆 أفضل 10 نتائج:`, topMatches);
     }
     
     return matches;
