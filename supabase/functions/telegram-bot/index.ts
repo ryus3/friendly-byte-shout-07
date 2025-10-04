@@ -432,7 +432,7 @@ function removeCityFromLine(cityLine: string, cityName: string): string {
 }
 
 // ==========================================
-// Search Regions Locally - ENHANCED WITH SMART LOCATION EXTRACTION
+// Search Regions Locally - SIMPLIFIED & DIRECT
 // ==========================================
 function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: number; regionName: string; confidence: number }> {
   try {
@@ -444,121 +444,45 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
     console.log(`🔍 بحث محلي عن منطقة: "${text}" → استخراج: "${locationText}" → منظف: "${normalized}" في مدينة ${cityId}`);
     console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
     
-    const matches: Array<{ regionId: number; regionName: string; confidence: number; score: number }> = [];
+    const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
     
-    // تقسيم النص إلى كلمات للمطابقة الذكية
+    // تقسيم النص إلى كلمات للمطابقة
     const words = normalized.split(/\s+/).filter(w => w.length > 1);
     console.log(`📝 الكلمات المستخرجة للبحث:`, words);
     
+    // 🚀 البحث البسيط والمباشر
     for (const region of cityRegions) {
-      let confidence = 0;
-      let score = 0;
+      let matched = false;
+      let confidence = 0.9; // ثقة موحدة لكل المطابقات
       
-      // المستوى 1: مطابقة كاملة (100%)
-      if (region.normalized === normalized) {
-        confidence = 1.0;
-        score = 100;
-      }
-      // المستوى 2: يبدأ بـ (95%)
-      else if (region.normalized.startsWith(normalized) || normalized.startsWith(region.normalized)) {
-        confidence = 0.95;
-        score = 95;
-      }
-      // المستوى 3: يحتوي على (90%)
-      else if (region.normalized.includes(normalized) || normalized.includes(region.normalized)) {
-        confidence = 0.90;
-        score = 90;
-      }
-      // المستوى 4: مطابقة كلمات مفردة - SUPER ENHANCED
-      else {
-        const regionWords = region.normalized.split(/\s+/).filter(w => w.length > 1);
+      // ✅ البحث المباشر في كل كلمة
+      for (const word of words) {
+        // تخطي الكلمات القصيرة جداً
+        if (word.length < 2) continue;
         
-        // ✅ CRITICAL FIX: تطبيع كلمات المنطقة أيضاً لإزالة "ال"
-        const normalizedRegionWords = regionWords.map(rw => normalizeArabicText(rw));
-        
-        let matchedWords = 0;
-        let totalImportance = 0;
-        
-        for (const word of words) {
-          // البحث عن الكلمة في كلمات المنطقة المطبعة
-          const foundExact = normalizedRegionWords.find(rw => rw === word);
-          const foundStartsWith = normalizedRegionWords.find(rw => rw.startsWith(word) || word.startsWith(rw));
-          const foundContains = normalizedRegionWords.find(rw => rw.includes(word) || word.includes(rw));
-          
-          // ✅ مطابقة عكسية - اسم المنطقة يحتوي الكلمة المدخلة
-          const reverseContains = region.normalized.includes(word);
-          
-          if (foundExact) {
-            matchedWords++;
-            totalImportance += word.length; // الكلمات الأطول أهم
-            score += 30; // مطابقة كاملة للكلمة
-          } else if (foundStartsWith) {
-            matchedWords += 0.8;
-            totalImportance += word.length * 0.8;
-            score += 25; // مطابقة جزئية قوية
-          } else if (reverseContains) {
-            // ✅ إذا كانت الكلمة موجودة في اسم المنطقة بأي شكل
-            matchedWords += 0.7;
-            totalImportance += word.length * 0.7;
-            score += 20;
-          } else if (foundContains) {
-            matchedWords += 0.5;
-            totalImportance += word.length * 0.5;
-            score += 15; // مطابقة جزئية متوسطة
-          }
-        }
-        
-        // حساب نسبة المطابقة - ENHANCED
-        if (words.length > 0 && matchedWords > 0) {
-          const matchRatio = matchedWords / words.length;
-          const importanceBonus = totalImportance / (words.length * 5); // normalize importance
-          
-          confidence = Math.min(0.90, matchRatio * 0.6 + importanceBonus * 0.4);
-          
-          // إضافة bonus للمطابقات القوية
-          if (matchedWords >= words.length * 0.8) {
-            confidence += 0.05;
-          }
-          
-          // ✅ NEW: bonus إضافي للكلمات المهمة (أطول من 4 أحرف)
-          if (words.some(w => w.length >= 4 && region.normalized.includes(w))) {
-            confidence += 0.05;
-          }
+        // 🎯 البحث في اسم المنطقة المُطبّع
+        if (region.normalized.includes(word) || word.includes(region.normalized)) {
+          matched = true;
+          break;
         }
       }
       
-      if (score > 0 || confidence > 0) {
+      // ✅ إضافة المطابقة
+      if (matched) {
         matches.push({
           regionId: region.id,
           regionName: region.name,
-          confidence: Math.min(1.0, confidence),
-          score
+          confidence: confidence
         });
       }
     }
     
-    // ✅ خفض الحد الأدنى من 50% إلى 30% لعرض جميع المطابقات المحتملة
-    const filteredMatches = matches.filter(m => m.score >= 30 || m.confidence >= 0.3);
-    
-    // ترتيب حسب الثقة ثم النقاط ثم طول الاسم
-    filteredMatches.sort((a, b) => {
-      if (b.confidence !== a.confidence) {
-        return b.confidence - a.confidence;
-      }
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
-      // الأسماء الأقصر أولاً في حالة التساوي
-      return a.regionName.length - b.regionName.length;
-    });
-    
-    console.log(`✅ تم العثور على ${filteredMatches.length} مطابقة`);
-    if (filteredMatches.length > 0) {
-      console.log(`🏆 أفضل 10 نتائج:`, filteredMatches.slice(0, 10).map(m => `${m.regionName} (${(m.confidence * 100).toFixed(0)}%)`));
+    console.log(`✅ تم العثور على ${matches.length} مطابقة`);
+    if (matches.length > 0) {
+      console.log(`🏆 أفضل 20 نتيجة:`, matches.slice(0, 20).map(m => `${m.regionName}`));
     }
     
-    // إرجاع فقط الحقول المطلوبة (بدون score)
-    return filteredMatches.map(({ regionId, regionName, confidence }) => ({ regionId, regionName, confidence }));
+    return matches;
   } catch (error) {
     console.error('❌ خطأ في البحث المحلي عن المناطق:', error);
     return [];
