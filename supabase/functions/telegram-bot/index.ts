@@ -1,4 +1,5 @@
-// Telegram Bot Edge Function - Force redeploy 2025-10-04 with Local Cache
+// Telegram Bot Edge Function - PAGINATION FIX 2025-10-05
+const BOT_VERSION = "v2025-10-05-PAGINATION-FIX";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 
@@ -246,9 +247,7 @@ async function getDeliveryPartnerSetting(): Promise<string> {
 // ==========================================
 async function loadCitiesRegionsCache(): Promise<boolean> {
   try {
-    // CRITICAL: Force complete instance reload to load ALL 6191 regions
-    const FORCE_RELOAD_VERSION = 'v2025-10-04-FINAL-FIX';
-    console.log(`🔄 تحميل cache المدن والمناطق - إصدار ${FORCE_RELOAD_VERSION}`);
+    console.log(`🔄 تحميل cache المدن والمناطق - إصدار ${BOT_VERSION}`);
     
     // Get delivery partner setting
     const deliveryPartner = await getDeliveryPartnerSetting();
@@ -264,15 +263,55 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     if (citiesError) throw citiesError;
     
-    // Load regions - ULTIMATE FIX: using range() instead of limit() to guarantee all regions load
-    const { data: regions, error: regionsError } = await supabase
-      .from('regions_cache')
-      .select('id, city_id, name, alwaseet_id')
-      .eq('is_active', true)
-      .range(0, 9999)  // ← CRITICAL: range() forces Supabase to load all 6191 regions
-      .order('name');
+    // ==========================================
+    // CRITICAL FIX: Manual Pagination Loop
+    // ==========================================
+    console.log('📥 بدء تحميل المناطق باستخدام pagination يدوي...');
+    let allRegions: any[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    let hasMore = true;
     
-    if (regionsError) throw regionsError;
+    while (hasMore) {
+      const startRange = page * PAGE_SIZE;
+      const endRange = startRange + PAGE_SIZE - 1;
+      
+      console.log(`📦 دفعة ${page + 1}: جلب المناطق من ${startRange} إلى ${endRange}...`);
+      
+      const { data: regionsBatch, error: regionsError } = await supabase
+        .from('regions_cache')
+        .select('id, city_id, name, alwaseet_id')
+        .eq('is_active', true)
+        .range(startRange, endRange)
+        .order('name');
+      
+      if (regionsError) {
+        console.error(`❌ خطأ في تحميل دفعة ${page + 1}:`, regionsError);
+        throw regionsError;
+      }
+      
+      const batchSize = regionsBatch?.length || 0;
+      allRegions = allRegions.concat(regionsBatch || []);
+      
+      console.log(`✅ دفعة ${page + 1}: تم تحميل ${batchSize} منطقة (الإجمالي حتى الآن: ${allRegions.length})`);
+      
+      // Check if we got less than PAGE_SIZE (means we're at the end)
+      if (batchSize < PAGE_SIZE) {
+        hasMore = false;
+        console.log(`🏁 اكتمل التحميل - آخر دفعة تحتوي على ${batchSize} منطقة فقط`);
+      }
+      
+      page++;
+      
+      // Safety limit to prevent infinite loops
+      if (page > 20) {
+        console.error('⚠️ تحذير: تم الوصول إلى الحد الأقصى للدفعات (20)');
+        hasMore = false;
+      }
+    }
+    
+    const regions = allRegions;
+    
     
     // Load city aliases
     const { data: aliases, error: aliasesError } = await supabase
@@ -308,6 +347,21 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     }));
     
     lastCacheUpdate = Date.now();
+    
+    // ==========================================
+    // CRITICAL VALIDATION
+    // ==========================================
+    const totalRegions = regionsCache.length;
+    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
+    
+    if (totalRegions < 6000) {
+      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${totalRegions}) أقل بكثير من المتوقع (6191 منطقة)!`);
+      console.error(`🔍 المطلوب: التأكد من أن pagination loop يعمل بشكل صحيح`);
+    } else {
+      console.log(`✅ نجح! تم تحميل جميع المناطق المتوقعة (${totalRegions} ≥ 6000)`);
+    }
+    
+    console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
     
     // فحص حرج لعدد المناطق المحملة - يجب أن يكون قريباً من 6191
     if (regionsCache.length < 6000) {
