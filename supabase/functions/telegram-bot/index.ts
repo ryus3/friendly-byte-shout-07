@@ -1883,40 +1883,24 @@ serve(async (req) => {
               } else {
                 // ✅ المستخدم اختار منطقة محددة
                 const regionId = parseInt(data.replace('region_', ''));
+                const selectedRegion = pendingData.context.all_regions?.find((r: any) => r.regionId === regionId);
                 
-                console.log(`✅ المستخدم اختار المنطقة: ${regionId}`);
+                console.log(`✅ المستخدم اختار المنطقة: ${regionId} (${selectedRegion?.regionName})`);
                 
-                // إنشاء الطلب مع city_id و region_id المحددين
+                // ✅ إنشاء الطلب مع تمرير معلومات نظام "هل تقصد؟" مباشرة
                 const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
                   p_employee_code: pendingData.context.employee_code,
                   p_message_text: pendingData.context.original_text,
-                  p_telegram_chat_id: chatId
+                  p_telegram_chat_id: chatId,
+                  p_city_id: pendingData.context.city_id,
+                  p_region_id: regionId,
+                  p_city_name: pendingData.context.city_name,
+                  p_region_name: selectedRegion?.regionName || 'غير محدد'
                 });
                 
                 if (orderError) throw orderError;
                 
-                // ✅ CRITICAL FIX: تحديث ai_order مع city_id و region_id الصحيحين
-                if (orderResult?.ai_order_id) {
-                  const selectedRegion = pendingData.context.all_regions?.find((r: any) => r.regionId === regionId);
-                  const { error: updateError } = await supabase
-                    .from('ai_orders')
-                    .update({
-                      city_id: pendingData.context.city_id,
-                      region_id: regionId,
-                      location_confidence: 1.0,
-                      resolved_city_name: pendingData.context.city_name,
-                      resolved_region_name: selectedRegion?.regionName || 'غير محدد'
-                    })
-                    .eq('id', orderResult.ai_order_id);
-                  
-                  if (updateError) {
-                    console.error('❌ خطأ في تحديث ai_order:', updateError);
-                  } else {
-                    console.log(`✅ تم تحديث ai_order ${orderResult.ai_order_id} بنجاح:`);
-                    console.log(`   📍 city_id: ${pendingData.context.city_id}, region_id: ${regionId}`);
-                    console.log(`   📍 المدينة: ${pendingData.context.city_name}, المنطقة: ${selectedRegion?.regionName}`);
-                  }
-                }
+                console.log(`✅ تم إنشاء الطلب مع العنوان الصحيح: ${pendingData.context.city_name} - ${selectedRegion?.regionName}`);
                 
                 if (orderResult?.success) {
                   // جلب تفاصيل الطلب الكامل من ai_orders
