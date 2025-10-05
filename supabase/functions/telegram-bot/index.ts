@@ -1938,7 +1938,7 @@ serve(async (req) => {
                     responseMessage = `✅ تم استلام الطلب!
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
-📍 ${pendingData.context.city_name} - ${regionName}
+📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${((aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0)).toLocaleString('en-US')} د.ع`;
