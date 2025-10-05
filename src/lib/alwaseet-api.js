@@ -204,9 +204,9 @@ const mapToAlWaseetFields = (orderData) => {
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
     client_mobile: orderData.customer_phone || orderData.phone || orderData.client_mobile || '',
     client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
-    // البحث أولاً في البيانات المباشرة ثم في order_data
-    city_id: parseInt(orderData.city_id || orderData.customer_city_id || orderData.order_data?.city_id || 0),
-    region_id: parseInt(orderData.region_id || orderData.customer_region_id || orderData.order_data?.region_id || 0),
+    // البحث أولاً في البيانات المباشرة ثم في order_data - أولوية لـ alwaseet_* IDs
+    city_id: parseInt(orderData.alwaseet_city_id || orderData.city_id || orderData.customer_city_id || orderData.order_data?.city_id || 0),
+    region_id: parseInt(orderData.alwaseet_region_id || orderData.region_id || orderData.customer_region_id || orderData.order_data?.region_id || 0),
     location: cleanedLocation, // أقرب نقطة دالة فقط
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),

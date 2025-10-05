@@ -50,6 +50,12 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           };
 
           console.log('📦 إرسال للوسيط:', alWaseetPayload);
+          console.log('🔍 معرفات المدينة والمنطقة:', {
+            customer_city_id: customerInfo.customer_city_id,
+            customer_region_id: customerInfo.customer_region_id,
+            city_id_sent: alWaseetPayload.city_id,
+            region_id_sent: alWaseetPayload.region_id
+          });
           
           // استخدام توكن الحساب المحدد إذا تم تمريره
           const useToken = aiOrderData?.accountData?.token || waseetToken;
@@ -85,7 +91,9 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               {
                 delivery_partner_order_id: waseetInternalId || null,
                 tracking_number: qrId || null,
-                delivery_partner: 'alwaseet'
+                delivery_partner: 'alwaseet',
+                alwaseet_city_id: customerInfo.customer_city_id || null,
+                alwaseet_region_id: customerInfo.customer_region_id || null
               }
             );
 
