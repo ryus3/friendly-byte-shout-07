@@ -1768,7 +1768,11 @@ serve(async (req) => {
         // ==========================================
         // Handle Region Selection from "Did you mean?"
         // ==========================================
-        else if (data.startsWith('region_')) {
+        else if (data.startsWith('region_') && 
+                  !data.startsWith('region_page2_') && 
+                  !data.startsWith('region_page3_') && 
+                  !data.startsWith('region_back_') &&
+                  !data.startsWith('region_more_')) {
           try {
             // ✅ معالجة "المزيد من الخيارات"
             if (data.startsWith('region_more_')) {
