@@ -5014,6 +5014,15 @@ export type Database = {
               p_telegram_chat_id: number
             }
           | {
+              p_city_id?: number
+              p_employee_identifier?: string
+              p_location_confidence?: number
+              p_location_suggestions?: Json
+              p_message_text: string
+              p_region_id?: number
+              p_telegram_chat_id: number
+            }
+          | {
               p_customer_city: string
               p_customer_phone: string
               p_items: Json
