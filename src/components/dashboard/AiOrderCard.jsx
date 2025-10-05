@@ -146,7 +146,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const createdByName = useMemo(() => {
     const by = order.created_by || order.order_data?.created_by || order.user_id || order.created_by_employee_code;
     if (!by) return 'غير محدد';
-    const profile = users.find(u => u?.employee_code === by || u?.user_id === by || u?.id === by || u?.username === by);
+    const profile = users.find(u => u?.employee_code === by || u?.user_id === by || u?.id === by || u?.username === by || u?.email === by);
     return profile?.full_name || profile?.username || by;
   }, [users, order]);
 

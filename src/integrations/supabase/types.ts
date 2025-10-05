@@ -5040,6 +5040,7 @@ export type Database = {
               p_telegram_chat_id: number
               p_telegram_username?: string
             }
+          | { p_order_data: Json; p_telegram_chat_id: number }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
