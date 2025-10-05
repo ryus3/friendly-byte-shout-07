@@ -1544,7 +1544,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const page2Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
+            const page2Message = `📍 الصفحة 2 - اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page2Message, { inline_keyboard: page2Buttons }, botToken);
             console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 6 إلى 15)`);
@@ -1585,7 +1585,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const page3Message = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
+            const page3Message = `📍 الصفحة 3 - اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
             console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 16 إلى 30)`);
@@ -1627,7 +1627,7 @@ serve(async (req) => {
               callback_data: 'region_none'
             }]);
             
-            const backMessage = `✅ تم العثور على ${totalRegions} منطقة (${pendingData.context.extracted_location || 'بحث'})\n📍 اختر المنطقة الصحيحة:`;
+            const backMessage = `📍 الصفحة 1 - اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, backMessage, { inline_keyboard: regionButtons }, botToken);
             console.log(`✅ العودة للصفحة 1: عرض ${topRegions.length} منطقة`);
@@ -1952,7 +1952,7 @@ ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
                     const allRegions = pendingData.context.all_regions || [];
                     const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
                     const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
-                    responseMessage = `✅ تم تأكيد العنوان:\n🏙️ ${pendingData.context.city_name} - ${regionName}\n\n` + orderResult.message;
+                    responseMessage = orderResult.message;
                   }
                 } else {
                   responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
