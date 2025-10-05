@@ -5036,6 +5036,16 @@ export type Database = {
               p_total_amount: number
             }
           | {
+              p_customer_address?: string
+              p_customer_name?: string
+              p_customer_phone?: string
+              p_delivery_fee?: number
+              p_employee_code: string
+              p_items: Json
+              p_original_text?: string
+              p_telegram_chat_id?: number
+            }
+          | {
               p_customer_city: string
               p_customer_phone: string
               p_items: Json
