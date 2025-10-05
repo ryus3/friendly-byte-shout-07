@@ -1907,7 +1907,7 @@ serve(async (req) => {
                   const { data: aiOrderData } = await supabase
                     .from('ai_orders')
                     .select('*')
-                    .eq('id', orderResult.ai_order_id)
+                    .eq('id', orderResult.order_id)
                     .maybeSingle();
                   
                   if (aiOrderData) {
