@@ -5051,11 +5051,6 @@ export type Database = {
               p_original_text: string
               p_telegram_chat_id: number
             }
-          | {
-              p_employee_code: string
-              p_message_text: string
-              p_telegram_chat_id: number
-            }
           | { p_order_data: Json; p_telegram_chat_id: number }
           | {
               p_order_text: string
