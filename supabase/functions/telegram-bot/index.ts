@@ -1926,7 +1926,7 @@ serve(async (req) => {
                     
                     responseMessage = `✅ تم استلام الطلب!
 
-🔹 ريوس
+🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
