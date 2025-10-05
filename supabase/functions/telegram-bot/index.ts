@@ -1299,13 +1299,24 @@ serve(async (req) => {
                 
                 // 🔥 إزالة اسم المدينة من السطر قبل البحث عن المنطقة
                 const cleanedLine = removeCityFromLine(localCityResult.cityLine, localCityResult.cityName);
-                console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${cleanedLine}"`);
+                console.log(`🧹 النص المُنظف للبحث عن المنطقة: "${localCityResult.cityLine}" → "${cleanedLine}"`);
+                
+                // 🔪 القطع عند كلمة "قرب" فقط - للبحث عن المنطقة الصحيحة
+                const qarabIndex = cleanedLine.indexOf('قرب');
+                const cleanTextForRegionSearch = qarabIndex !== -1 
+                  ? cleanedLine.substring(0, qarabIndex).trim() 
+                  : cleanedLine;
+                
+                console.log(`📍 النص الأصلي بعد المدينة: "${cleanedLine}"`);
+                if (qarabIndex !== -1) {
+                  console.log(`🔪 تم القطع عند "قرب": البحث في "${cleanTextForRegionSearch}" فقط`);
+                }
                 
                 // 🔥 تعيين extractedLocation للاستخدام في رسالة "هل تقصد؟"
-                extractedLocation = cleanedLine.trim();
+                extractedLocation = cleanTextForRegionSearch.trim();
                 
-                // البحث عن المناطق المحتملة في النص المنظف فقط
-                localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
+                // البحث عن المناطق المحتملة في النص المقطوع فقط
+                localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanTextForRegionSearch);
                 console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
                 console.log(`🏆 أفضل 10 نتائج:`, localRegionMatches.slice(0, 10).map(r => `${r.regionName} (${Math.round(r.confidence * 100)}%)`));
                 

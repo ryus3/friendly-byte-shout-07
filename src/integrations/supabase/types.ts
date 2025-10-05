@@ -4990,73 +4990,15 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args:
-          | {
-              p_address: string
-              p_chat_id?: number
-              p_phone: string
-              p_products_text: string
-            }
-          | { p_chat_id: number; p_employee_id?: string; p_order_data: Json }
-          | {
-              p_chat_id: number
-              p_message_text: string
-              p_telegram_user_id?: number
-              p_telegram_username?: string
-            }
-          | {
-              p_city_id: number
-              p_city_name: string
-              p_employee_code: string
-              p_message_text: string
-              p_region_id: number
-              p_region_name: string
-              p_telegram_chat_id: number
-            }
-          | {
-              p_city_id?: number
-              p_employee_identifier?: string
-              p_location_confidence?: number
-              p_location_suggestions?: Json
-              p_message_text: string
-              p_region_id?: number
-              p_telegram_chat_id: number
-            }
-          | {
-              p_customer_address: string
-              p_customer_city: string
-              p_customer_name: string
-              p_customer_phone: string
-              p_customer_province: string
-              p_delivery_fee: number
-              p_items: Json
-              p_original_text: string
-              p_telegram_chat_id: number
-              p_total_amount: number
-            }
-          | {
-              p_customer_address?: string
-              p_customer_name?: string
-              p_customer_phone?: string
-              p_delivery_fee?: number
-              p_employee_code: string
-              p_items: Json
-              p_original_text?: string
-              p_telegram_chat_id?: number
-            }
-          | {
-              p_customer_city: string
-              p_customer_phone: string
-              p_items: Json
-              p_original_text: string
-              p_telegram_chat_id: number
-            }
-          | { p_order_data: Json; p_telegram_chat_id: number }
-          | {
-              p_order_text: string
-              p_telegram_chat_id: number
-              p_telegram_code: string
-            }
+        Args: {
+          p_city_id: number
+          p_city_name: string
+          p_employee_code: string
+          p_message_text: string
+          p_region_id: number
+          p_region_name: string
+          p_telegram_chat_id: number
+        }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
