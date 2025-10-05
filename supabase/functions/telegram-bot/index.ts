@@ -1509,8 +1509,8 @@ serve(async (req) => {
           const { data: pendingData } = await supabase
             .from('telegram_pending_selections')
             .select('*')
-            .eq('telegram_chat_id', chatId)
-            .eq('action', 'region_selection')
+            .eq('chat_id', chatId)
+            .eq('action', 'region_clarification')
             .maybeSingle();
           
           if (pendingData?.context?.all_regions) {
@@ -1560,8 +1560,8 @@ serve(async (req) => {
           const { data: pendingData } = await supabase
             .from('telegram_pending_selections')
             .select('*')
-            .eq('telegram_chat_id', chatId)
-            .eq('action', 'region_selection')
+            .eq('chat_id', chatId)
+            .eq('action', 'region_clarification')
             .maybeSingle();
           
           if (pendingData?.context?.all_regions) {
@@ -1599,8 +1599,8 @@ serve(async (req) => {
           const { data: pendingData } = await supabase
             .from('telegram_pending_selections')
             .select('*')
-            .eq('telegram_chat_id', chatId)
-            .eq('action', 'region_selection')
+            .eq('chat_id', chatId)
+            .eq('action', 'region_clarification')
             .maybeSingle();
           
           if (pendingData?.context?.all_regions) {
