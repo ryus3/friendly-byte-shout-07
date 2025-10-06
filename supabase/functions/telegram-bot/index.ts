@@ -378,24 +378,16 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     // تحديث وقت آخر تحميل
     lastCacheLoadTime = Date.now();
-    console.log(`📅 Cache TTL: 30 أيام (${Math.round(CACHE_MAX_AGE / (24 * 60 * 60 * 1000))} يوم)`);
+    console.log('Cache TTL: 30 days - ' + Math.round(CACHE_MAX_AGE / (24 * 60 * 60 * 1000)) + ' days');
     
     if (totalRegions < 6000) {
-      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${totalRegions)} أقل بكثير من المتوقع (6191 منطقة)!`);
-      console.error(`🔍 المطلوب: التأكد من أن pagination loop يعمل بشكل صحيح`);
+      console.error('Critical error: Loaded regions (' + totalRegions + ') much less than expected (6191 regions)!');
+      console.error('Required: Verify pagination loop works correctly');
     } else {
-      console.log(`✅ نجح! تم تحميل جميع المناطق المتوقعة (${totalRegions} ≥ 6000)`);
+      console.log('Success! All expected regions loaded (' + totalRegions + ' >= 6000)');
     }
     
-    console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
-    
-    // فحص حرج لعدد المناطق المحملة - يجب أن يكون قريباً من 6191
-    if (regionsCache.size < 6000) {
-      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${regionsCache.size}) أقل بكثير من المتوقع (6191 منطقة)!`);
-      console.error('🔍 المطلوب: التأكد من أن limit(10000) يعمل بشكل صحيح في السطر 272');
-    } else {
-      console.log(`✅ تم تحميل عدد مناسب من المناطق: ${regionsCache.size} منطقة`);
-    }
+    console.log('Load version: ' + BOT_VERSION);
     
     console.log(`✅ تم تحميل ${citiesCache.size} مدينة و ${regionsCache.size} منطقة و ${cityAliasesCache.size} اسم بديل لشركة ${deliveryPartner}`);
     console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
