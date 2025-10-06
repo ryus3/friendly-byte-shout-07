@@ -67,7 +67,10 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             type: 'new',
             promocode: customerInfo.promo_code || '',
             city_id: finalCityId,
-            region_id: finalRegionId
+            region_id: finalRegionId,
+            // 🎯 إضافة المعرفات الصريحة للوسيط
+            alwaseet_city_id: finalCityId,
+            alwaseet_region_id: finalRegionId
           };
 
           console.log('📦 [AlWaseetUnifiedOrderCreator] إرسال للوسيط:', {
