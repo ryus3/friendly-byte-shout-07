@@ -79,6 +79,15 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               console.warn('⚠️ No qr_id received from Al-Waseet, will set tracking_number to null');
             }
             
+            console.log('🔍 [UnifiedOrderCreator] customerInfo قبل إنشاء الطلب المحلي:', {
+              customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
+              customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
+              customerInfo_customer_city_id: customerInfo.customer_city_id,
+              customerInfo_customer_region_id: customerInfo.customer_region_id,
+              final_alwaseet_city_id: customerInfo.alwaseet_city_id || customerInfo.customer_city_id || null,
+              final_alwaseet_region_id: customerInfo.alwaseet_region_id || customerInfo.customer_region_id || null
+            });
+
             // Create local order with qr_id as tracking_number (primary identifier)
             // delivery_partner_order_id can be null initially - we can look it up later if needed
             const localResult = await createOrder(

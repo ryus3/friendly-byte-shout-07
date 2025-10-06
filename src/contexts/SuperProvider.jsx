@@ -1031,6 +1031,21 @@ export const SuperProvider = ({ children }) => {
         // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح مع fallback من customerInfo
         alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || arg1?.customer_city_id || null,
         alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || arg1?.customer_region_id || null,
+      };
+
+      console.log('🔍 [SuperProvider] orderRow قبل الحفظ في قاعدة البيانات:', {
+        deliveryPartnerDataArg_alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id,
+        deliveryPartnerDataArg_alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id,
+        arg1_alwaseet_city_id: arg1?.alwaseet_city_id,
+        arg1_customer_city_id: arg1?.customer_city_id,
+        arg1_alwaseet_region_id: arg1?.alwaseet_region_id,
+        arg1_customer_region_id: arg1?.customer_region_id,
+        orderRow_alwaseet_city_id: orderRow.alwaseet_city_id,
+        orderRow_alwaseet_region_id: orderRow.alwaseet_region_id
+      });
+
+      const orderRowToInsert = {
+        ...orderRow
         // ✅ إصلاح حفظ delivery_partner_order_id من جميع المصادر المحتملة
         delivery_partner_order_id: 
           deliveryPartnerDataArg?.delivery_partner_order_id || 
@@ -1051,9 +1066,19 @@ export const SuperProvider = ({ children }) => {
       // إنشاء الطلب
       const { data: createdOrder, error: orderErr } = await supabase
         .from('orders')
-        .insert(orderRow)
+        .insert(orderRowToInsert)
         .select()
         .single();
+
+      if (createdOrder) {
+        console.log('✅ [SuperProvider] الطلب المُنشأ في قاعدة البيانات:', {
+          order_id: createdOrder.id,
+          alwaseet_city_id: createdOrder.alwaseet_city_id,
+          alwaseet_region_id: createdOrder.alwaseet_region_id,
+          tracking_number: createdOrder.tracking_number,
+          delivery_partner: createdOrder.delivery_partner
+        });
+      }
       if (orderErr) {
         // إلغاء الحجوزات
         for (const r of reservedSoFar) {

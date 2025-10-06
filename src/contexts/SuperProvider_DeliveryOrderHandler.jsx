@@ -25,6 +25,15 @@ export const useDeliveryOrderHandler = () => {
         delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
       };
 
+      console.log('🔍 [DeliveryOrderHandler] customerInfo المُنشأ:', {
+        aiOrder_city_id: aiOrder.city_id,
+        aiOrder_region_id: aiOrder.region_id,
+        customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
+        customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
+        customerInfo_customer_city_id: customerInfo.customer_city_id,
+        customerInfo_customer_region_id: customerInfo.customer_region_id
+      });
+
       // تحويل العناصر إلى صيغة cart
       const cart = itemsInput.map(item => ({
         id: item.product_id || `temp-${Date.now()}-${Math.random()}`,
