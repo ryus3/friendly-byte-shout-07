@@ -249,12 +249,13 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
 
     console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الـ cache`);
 
-    // معالجة المناطق بشكل متوازي (مجموعات صغيرة)
+    // معالجة المناطق - بنفس طريقة update-cities-cache القديم
     let totalRegionsUpdated = 0;
-    const batchSize = 3;
+    const cityBatchSize = 2; // مدينتين فقط في نفس الوقت
+    const maxRegionsPerBatch = 100; // 100 منطقة لكل دفعة
     
-    for (let i = 0; i < cities.length; i += batchSize) {
-      const cityBatch = cities.slice(i, i + batchSize);
+    for (let i = 0; i < cities.length; i += cityBatchSize) {
+      const cityBatch = cities.slice(i, i + cityBatchSize);
       
       // تحديث اسم المدينة الحالية
       await supabase
@@ -265,41 +266,39 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
         })
         .eq('id', progressId);
       
+      // معالجة كل مدينة
       const batchPromises = cityBatch.map(async (city) => {
         try {
+          // جلب مناطق المدينة
           const regions = await fetchRegionsFromAlWaseet(token, city.id);
           
-          // معالجة المناطق في مجموعات صغيرة
+          // تحديث المناطق في دفعات صغيرة
           let regionsUpdated = 0;
-          const maxRegionsPerBatch = 100;
-          
           for (let j = 0; j < regions.length; j += maxRegionsPerBatch) {
             const regionsBatch = regions.slice(j, j + maxRegionsPerBatch);
-            const processedRegions = regionsBatch.map(region => ({
-              ...region,
-              city_id: city.id
-            }));
-            
-            const batchUpdated = await updateRegionsCache(processedRegions);
+            const batchUpdated = await updateRegionsCache(regionsBatch);
             regionsUpdated += batchUpdated;
             
+            // delay صغير بين الدفعات
             if (j + maxRegionsPerBatch < regions.length) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise(resolve => setTimeout(resolve, 50));
             }
           }
           
-          return regionsUpdated;
+          return { regionsUpdated, cityProcessed: 1 };
         } catch (error) {
-          console.error(`❌ خطأ في معالجة مناطق المدينة ${city.id}:`, error);
-          return 0;
+          console.error(`❌ خطأ في معالجة ${city.name}:`, error);
+          return { regionsUpdated: 0, cityProcessed: 0 };
         }
       });
 
+      // انتظار إكمال الدفعة
       const batchResults = await Promise.all(batchPromises);
-      const batchTotal = batchResults.reduce((sum, count) => sum + count, 0);
-      totalRegionsUpdated += batchTotal;
+      batchResults.forEach(result => {
+        totalRegionsUpdated += result.regionsUpdated;
+      });
 
-      // تحديث progress: المناطق
+      // تحديث التقدم
       await supabase
         .from('background_sync_progress')
         .update({
@@ -309,8 +308,9 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
         })
         .eq('id', progressId);
 
-      if (i + batchSize < cities.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+      // delay بين مجموعات المدن
+      if (i + cityBatchSize < cities.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
@@ -346,16 +346,34 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
   } catch (error) {
     console.error('❌ خطأ في المزامنة الذكية:', error);
     
+    const endTime = new Date();
+    const duration = (endTime.getTime() - startTime.getTime()) / 1000;
+    
     // تحديث حالة الفشل
     await supabase
       .from('background_sync_progress')
       .update({
         status: 'failed',
         error_message: error instanceof Error ? error.message : String(error),
-        completed_at: new Date().toISOString(),
+        completed_at: endTime.toISOString(),
         updated_at: new Date().toISOString()
       })
       .eq('id', progressId);
+    
+    // تسجيل الفشل في cities_regions_sync_log
+    await supabase
+      .from('cities_regions_sync_log')
+      .insert({
+        last_sync_at: endTime.toISOString(),
+        started_at: startTime.toISOString(),
+        ended_at: endTime.toISOString(),
+        cities_count: 0,
+        regions_count: 0,
+        sync_duration_seconds: duration,
+        success: false,
+        error_message: error instanceof Error ? error.message : String(error),
+        triggered_by: userId
+      });
   }
 }
 
