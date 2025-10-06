@@ -59,6 +59,9 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             phone: customerInfo.customer_phone || customerInfo.phone,
             second_phone: customerInfo.second_phone || '',
             address: customerInfo.customer_address || customerInfo.address,
+            // ✅ إضافة المدينة والمنطقة لتنظيف العنوان في alwaseet-api
+            customer_city: customerInfo.customer_city,
+            customer_province: customerInfo.customer_province,
             notes: customerInfo.notes || '',
             details: (cart || []).filter(item => item != null).map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
             quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
