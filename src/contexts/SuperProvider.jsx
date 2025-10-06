@@ -2331,9 +2331,9 @@ export const SuperProvider = ({ children }) => {
         customer_address: extractedData.full_address || `${aiOrder.customer_city || ''} ${aiOrder.customer_address || ''}`.trim(),
         customer_city: cityName || aiOrder.customer_city || extractedData.city,
         customer_province: regionName || aiOrder.customer_province || extractedData.region,
-        // 🎯 الإصلاح النهائي: إضافة معرفات المدينة والمنطقة مباشرة من aiOrder
-        alwaseet_city_id: aiOrder.city_id,
-        alwaseet_region_id: aiOrder.region_id,
+        // 🎯 إعطاء الأولوية لبيانات الوسيط ثم aiOrder كاحتياطي
+        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || aiOrder.city_id,
+        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || aiOrder.region_id,
         total_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
