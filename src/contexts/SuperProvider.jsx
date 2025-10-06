@@ -2319,6 +2319,16 @@ export const SuperProvider = ({ children }) => {
       // إنشاء طلب حقيقي مع دعم شركة التوصيل
       const trackingNumber = deliveryPartnerData.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`;
       
+      // ✅ دالة لتنظيف العنوان واستخراج فقط جزء "قرب"
+      const cleanAddress = (address) => {
+        if (!address) return '';
+        const qarabIndex = address.indexOf('قرب');
+        if (qarabIndex !== -1) {
+          return address.substring(qarabIndex).trim();
+        }
+        return address.trim();
+      };
+
       // ✅ استخدام البيانات المستخرجة من extractedData
       const extractedData = aiOrder.order_data?.extracted_data || {};
       const orderRow = {
@@ -2326,10 +2336,11 @@ export const SuperProvider = ({ children }) => {
         // ✅ استخدام اسم الزبون المستخرج
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        // ✅ بناء العنوان من المكونات المطابقة لضمان الاتساق
-        customer_address: aiOrder.customer_address,
+        // ✅ تنظيف العنوان لاستخراج فقط "قرب شارع اليوسف"
+        customer_address: cleanAddress(aiOrder.customer_address),
         customer_city: cityName || aiOrder.customer_city || extractedData.city,
-        customer_province: regionName || aiOrder.customer_province || extractedData.region,
+        // ✅ استخدام resolved_region_name الصحيح من regions_master
+        customer_province: regionName || aiOrder.resolved_region_name || extractedData.region,
         // 🎯 إعطاء الأولوية لبيانات الوسيط ثم aiOrder كاحتياطي
         alwaseet_city_id: deliveryPartnerData?.alwaseet_city_id || aiOrder.city_id,
         alwaseet_region_id: deliveryPartnerData?.alwaseet_region_id || aiOrder.region_id,
