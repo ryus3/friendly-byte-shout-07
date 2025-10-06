@@ -135,9 +135,11 @@ async function updateCitiesCache(cities: AlWaseetCity[]): Promise<number> {
   
   for (const city of cities) {
     try {
-      const { error } = await supabase
-        .from('cities_cache')
+      // تحديث cities_master (النظام الموحد)
+      const { error: masterError } = await supabase
+        .from('cities_master')
         .upsert({
+          id: city.id,              // استخدام alwaseet_id كمعرف موحد
           alwaseet_id: city.id,
           name: city.name,
           name_ar: city.name_ar || city.name,
@@ -145,11 +147,30 @@ async function updateCitiesCache(cities: AlWaseetCity[]): Promise<number> {
           is_active: true,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'alwaseet_id'
+          onConflict: 'id'
         });
 
-      if (error) {
-        console.error(`❌ خطأ في تحديث المدينة ${city.name}:`, error);
+      if (masterError) {
+        console.error(`❌ خطأ في تحديث cities_master للمدينة ${city.name}:`, masterError);
+        continue;
+      }
+
+      // تحديث city_delivery_mappings للوسيط
+      const { error: mappingError } = await supabase
+        .from('city_delivery_mappings')
+        .upsert({
+          city_id: city.id,
+          delivery_partner: 'alwaseet',
+          external_id: String(city.id),
+          external_name: city.name,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'city_id,delivery_partner'
+        });
+
+      if (mappingError) {
+        console.error(`❌ خطأ في تحديث mappings للمدينة ${city.name}:`, mappingError);
       } else {
         updatedCount++;
       }
@@ -164,59 +185,54 @@ async function updateCitiesCache(cities: AlWaseetCity[]): Promise<number> {
 async function updateRegionsCache(regions: AlWaseetRegion[]): Promise<number> {
   if (regions.length === 0) return 0;
   
-  try {
-    // محاولة bulk insert محسنة
-    const regionsData = regions.map(region => ({
-      alwaseet_id: region.id,
-      city_id: region.city_id,
-      name: region.name,
-      name_ar: region.name_ar || region.name,
-      name_en: region.name_en || null,
-      is_active: true,
-      updated_at: new Date().toISOString()
-    }));
+  let updatedCount = 0;
+  
+  for (const region of regions) {
+    try {
+      // تحديث regions_master (النظام الموحد)
+      const { error: masterError } = await supabase
+        .from('regions_master')
+        .upsert({
+          id: region.id,              // استخدام alwaseet_id كمعرف موحد
+          alwaseet_id: region.id,
+          city_id: region.city_id,    // city_id الموحد (= alwaseet city id)
+          name: region.name,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
+        });
 
-    const { error } = await supabase
-      .from('regions_cache')
-      .upsert(regionsData, {
-        onConflict: 'alwaseet_id'
-      });
-
-    if (error) {
-      console.error('❌ خطأ في bulk update للمناطق:', error);
-      // fallback إلى التحديث الفردي
-      let updatedCount = 0;
-      for (const region of regions) {
-        try {
-          const { error: individualError } = await supabase
-            .from('regions_cache')
-            .upsert({
-              alwaseet_id: region.id,
-              city_id: region.city_id,
-              name: region.name,
-              name_ar: region.name_ar || region.name,
-              name_en: region.name_en || null,
-              is_active: true,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'alwaseet_id'
-            });
-
-          if (!individualError) {
-            updatedCount++;
-          }
-        } catch (individualError) {
-          console.error(`❌ خطأ في تحديث المنطقة ${region.name}:`, individualError);
-        }
+      if (masterError) {
+        console.error(`❌ خطأ في تحديث regions_master للمنطقة ${region.name}:`, masterError);
+        continue;
       }
-      return updatedCount;
-    }
 
-    return regions.length;
-  } catch (error) {
-    console.error('❌ خطأ في تحديث cache المناطق:', error);
-    return 0;
+      // تحديث region_delivery_mappings للوسيط
+      const { error: mappingError } = await supabase
+        .from('region_delivery_mappings')
+        .upsert({
+          region_id: region.id,
+          delivery_partner: 'alwaseet',
+          external_id: String(region.id),
+          external_name: region.name,
+          is_active: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'region_id,delivery_partner'
+        });
+
+      if (mappingError) {
+        console.error(`❌ خطأ في تحديث mappings للمنطقة ${region.name}:`, mappingError);
+      } else {
+        updatedCount++;
+      }
+    } catch (error) {
+      console.error(`❌ خطأ في معالجة المنطقة ${region.name}:`, error);
+    }
   }
+
+  return updatedCount;
 }
 
 serve(async (req) => {

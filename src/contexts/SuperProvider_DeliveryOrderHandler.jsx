@@ -11,6 +11,25 @@ export const useDeliveryOrderHandler = () => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
+      // 🎯 الحصول على المعرفات الخارجية لشركة التوصيل المحددة
+      const { data: externalCityId } = await supabase.rpc('get_city_external_id', {
+        p_city_id: aiOrder.city_id,
+        p_delivery_partner: destination.toLowerCase()
+      });
+
+      const { data: externalRegionId } = await supabase.rpc('get_region_external_id', {
+        p_region_id: aiOrder.region_id,
+        p_delivery_partner: destination.toLowerCase()
+      });
+
+      console.log('🔍 [DeliveryOrderHandler] المعرفات الخارجية:', {
+        unified_city_id: aiOrder.city_id,
+        unified_region_id: aiOrder.region_id,
+        external_city_id: externalCityId,
+        external_region_id: externalRegionId,
+        delivery_partner: destination
+      });
+
       // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder
       const customerInfo = {
         customer_name: aiOrder.customer_name,
@@ -18,21 +37,12 @@ export const useDeliveryOrderHandler = () => {
         customer_address: aiOrder.customer_address,
         customer_city: aiOrder.customer_city,
         customer_province: aiOrder.customer_province,
-        customer_city_id: aiOrder.city_id,
-        customer_region_id: aiOrder.region_id,
-        alwaseet_city_id: aiOrder.city_id,
-        alwaseet_region_id: aiOrder.region_id,
+        customer_city_id: aiOrder.city_id,           // المعرف الموحد
+        customer_region_id: aiOrder.region_id,       // المعرف الموحد
+        alwaseet_city_id: parseInt(externalCityId),  // المعرف الخارجي
+        alwaseet_region_id: parseInt(externalRegionId), // المعرف الخارجي
         delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
       };
-
-      console.log('🔍 [DeliveryOrderHandler] customerInfo المُنشأ:', {
-        aiOrder_city_id: aiOrder.city_id,
-        aiOrder_region_id: aiOrder.region_id,
-        customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
-        customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
-        customerInfo_customer_city_id: customerInfo.customer_city_id,
-        customerInfo_customer_region_id: customerInfo.customer_region_id
-      });
 
       // تحويل العناصر إلى صيغة cart
       const cart = itemsInput.map(item => ({

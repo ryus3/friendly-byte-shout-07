@@ -11,11 +11,11 @@ export const useCitiesCache = () => {
   const [syncInfo, setSyncInfo] = useState(null);
   const { token } = useAlWaseet();
 
-  // جلب المدن من cache
+  // جلب المدن من الجدول الموحد
   const fetchCities = async () => {
     try {
       const { data, error } = await supabase
-        .from('cities_cache')
+        .from('cities_master')
         .select('*')
         .eq('is_active', true)
         .order('name');
@@ -34,11 +34,11 @@ export const useCitiesCache = () => {
     }
   };
 
-  // جلب جميع المناطق من cache
+  // جلب جميع المناطق من الجدول الموحد
   const fetchAllRegions = async () => {
     try {
       const { data, error } = await supabase
-        .from('regions_cache')
+        .from('regions_master')
         .select('*')
         .eq('is_active', true)
         .order('name');
@@ -52,11 +52,11 @@ export const useCitiesCache = () => {
     }
   };
 
-  // جلب المناطق لمدينة معينة من cache
+  // جلب المناطق لمدينة معينة من الجدول الموحد
   const fetchRegionsByCity = async (cityId) => {
     try {
       const { data, error } = await supabase
-        .from('regions_cache')
+        .from('regions_master')
         .select('*')
         .eq('city_id', cityId)
         .eq('is_active', true)
