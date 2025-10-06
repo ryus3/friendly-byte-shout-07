@@ -373,8 +373,8 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     // ==========================================
     // CRITICAL VALIDATION
     // ==========================================
-    const totalRegions = regionsCache.length;
-    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
+    const totalRegions = regionsCache.size;
+    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.size} اسم بديل لشركة ${deliveryPartner}`);
     
     // تحديث وقت آخر تحميل
     lastCacheLoadTime = Date.now();
@@ -390,14 +390,14 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
     
     // فحص حرج لعدد المناطق المحملة - يجب أن يكون قريباً من 6191
-    if (regionsCache.length < 6000) {
-      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${regionsCache.length}) أقل بكثير من المتوقع (6191 منطقة)!`);
+    if (regionsCache.size < 6000) {
+      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${regionsCache.size}) أقل بكثير من المتوقع (6191 منطقة)!`);
       console.error('🔍 المطلوب: التأكد من أن limit(10000) يعمل بشكل صحيح في السطر 272');
     } else {
-      console.log(`✅ تم تحميل عدد مناسب من المناطق: ${regionsCache.length} منطقة`);
+      console.log(`✅ تم تحميل عدد مناسب من المناطق: ${regionsCache.size} منطقة`);
     }
     
-    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
+    console.log(`✅ تم تحميل ${citiesCache.size} مدينة و ${regionsCache.size} منطقة و ${cityAliasesCache.size} اسم بديل لشركة ${deliveryPartner}`);
     console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
     console.log(`💾 الـ Cache سيبقى نشط حتى: ${new Date(lastCacheUpdate + CACHE_TTL).toLocaleDateString('ar-IQ')}`);
     console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
