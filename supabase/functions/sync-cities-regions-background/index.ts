@@ -279,13 +279,13 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
       
       // معالجة كل مدينة
       const batchPromises = cityBatch.map(async (city) => {
-        if (isTimedOut) return 0;
+        if (isTimedOut) return { regionsUpdated: 0, cityName: city.name };
         
         try {
           console.log(`📍 معالجة ${city.name}...`);
           const regions = await fetchRegionsFromAlWaseet(token, city.id);
           
-          if (isTimedOut) return 0;
+          if (isTimedOut) return { regionsUpdated: 0, cityName: city.name };
           
           // تحديث المناطق في دفعات
           let regionsUpdated = 0;
@@ -293,28 +293,44 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
             const regionsBatch = regions.slice(j, Math.min(j + maxRegionsPerBatch, regions.length));
             const batchUpdated = await updateRegionsCache(regionsBatch);
             regionsUpdated += batchUpdated;
+            
+            // تحديث تقدم المناطق فوراً بعد كل دفعة
+            totalRegionsUpdated += batchUpdated;
+            await supabase
+              .from('background_sync_progress')
+              .update({
+                completed_regions: totalRegionsUpdated,
+                current_city_name: city.name,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', progressId);
+            
+            console.log(`    ✓ دفعة: ${batchUpdated} منطقة (الإجمالي: ${totalRegionsUpdated})`);
           }
           
-          console.log(`  ✓ ${city.name}: ${regionsUpdated} منطقة`);
-          return regionsUpdated;
+          console.log(`  ✅ ${city.name}: ${regionsUpdated} منطقة`);
+          return { regionsUpdated, cityName: city.name };
         } catch (error) {
           console.error(`❌ خطأ في معالجة ${city.name}:`, error);
-          return 0;
+          return { regionsUpdated: 0, cityName: city.name };
         }
       });
 
       const batchResults = await Promise.all(batchPromises);
-      totalRegionsUpdated += batchResults.reduce((sum, count) => sum + count, 0);
+      const citiesCompleted = i + cityBatch.length;
 
-      // تحديث progress
+      // تحديث progress للمدن المكتملة
       await supabase
         .from('background_sync_progress')
         .update({
+          completed_cities: citiesCompleted,
           completed_regions: totalRegionsUpdated,
           current_city_name: cityBatch[cityBatch.length - 1]?.name,
           updated_at: new Date().toISOString()
         })
         .eq('id', progressId);
+      
+      console.log(`🎯 مجموعة المدن ${i + 1}-${citiesCompleted} مكتملة | المناطق: ${totalRegionsUpdated}`);
     }
 
     const endTime = new Date();
