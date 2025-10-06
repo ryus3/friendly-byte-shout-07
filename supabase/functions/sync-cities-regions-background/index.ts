@@ -249,68 +249,45 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
 
     console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الـ cache`);
 
-    // معالجة المناطق - بنفس طريقة update-cities-cache القديم
+    // معالجة المناطق - بدون تحديثات progress وسطية
     let totalRegionsUpdated = 0;
-    const cityBatchSize = 2; // مدينتين فقط في نفس الوقت
-    const maxRegionsPerBatch = 100; // 100 منطقة لكل دفعة
+    const cityBatchSize = 3; // معالجة 3 مدن في نفس الوقت
+    const maxRegionsPerBatch = 200; // 200 منطقة لكل دفعة
     
     for (let i = 0; i < cities.length; i += cityBatchSize) {
       const cityBatch = cities.slice(i, i + cityBatchSize);
       
-      // تحديث اسم المدينة الحالية
-      await supabase
-        .from('background_sync_progress')
-        .update({
-          current_city_name: cityBatch.map(c => c.name).join(', '),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', progressId);
-      
-      // معالجة كل مدينة
+      // معالجة كل مدينة بدون تحديثات وسطية
       const batchPromises = cityBatch.map(async (city) => {
         try {
-          // جلب مناطق المدينة
           const regions = await fetchRegionsFromAlWaseet(token, city.id);
           
-          // تحديث المناطق في دفعات صغيرة
+          // تحديث المناطق في دفعات
           let regionsUpdated = 0;
           for (let j = 0; j < regions.length; j += maxRegionsPerBatch) {
             const regionsBatch = regions.slice(j, j + maxRegionsPerBatch);
             const batchUpdated = await updateRegionsCache(regionsBatch);
             regionsUpdated += batchUpdated;
             
-            // delay صغير بين الدفعات
+            // delay مُصغّر بين الدفعات
             if (j + maxRegionsPerBatch < regions.length) {
-              await new Promise(resolve => setTimeout(resolve, 50));
+              await new Promise(resolve => setTimeout(resolve, 20));
             }
           }
           
-          return { regionsUpdated, cityProcessed: 1 };
+          return regionsUpdated;
         } catch (error) {
           console.error(`❌ خطأ في معالجة ${city.name}:`, error);
-          return { regionsUpdated: 0, cityProcessed: 0 };
+          return 0;
         }
       });
 
-      // انتظار إكمال الدفعة
       const batchResults = await Promise.all(batchPromises);
-      batchResults.forEach(result => {
-        totalRegionsUpdated += result.regionsUpdated;
-      });
+      totalRegionsUpdated += batchResults.reduce((sum, count) => sum + count, 0);
 
-      // تحديث التقدم
-      await supabase
-        .from('background_sync_progress')
-        .update({
-          completed_regions: totalRegionsUpdated,
-          total_regions: totalRegionsUpdated,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', progressId);
-
-      // delay بين مجموعات المدن
+      // delay مُصغّر بين مجموعات المدن
       if (i + cityBatchSize < cities.length) {
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
