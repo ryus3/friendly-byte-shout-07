@@ -92,8 +92,8 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
                 delivery_partner_order_id: waseetInternalId || null,
                 tracking_number: qrId || null,
                 delivery_partner: 'alwaseet',
-                alwaseet_city_id: customerInfo.customer_city_id || null,
-                alwaseet_region_id: customerInfo.customer_region_id || null
+                alwaseet_city_id: customerInfo.alwaseet_city_id || customerInfo.customer_city_id || null,
+                alwaseet_region_id: customerInfo.alwaseet_region_id || customerInfo.customer_region_id || null
               }
             );
 
