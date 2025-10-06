@@ -34,18 +34,43 @@ export const useCitiesCache = () => {
     }
   };
 
-  // جلب جميع المناطق من الجدول الموحد
+  // جلب جميع المناطق من الجدول الموحد مع pagination
   const fetchAllRegions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('regions_master')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      let allRegions = [];
+      let hasMore = true;
+      let page = 0;
+      const pageSize = 1000;
 
-      if (error) throw error;
-      setRegions(data || []);
-      return data || [];
+      console.log('🔄 بدء جلب المناطق مع pagination...');
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('regions_master')
+          .select('*')
+          .eq('is_active', true)
+          .order('name')
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allRegions = [...allRegions, ...data];
+          console.log(`✅ جلب ${data.length} منطقة (الصفحة ${page + 1})، الإجمالي: ${allRegions.length}`);
+        }
+
+        hasMore = data && data.length === pageSize;
+        page++;
+
+        // تأخير صغير لتجنب إغراق الـ API
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+
+      console.log(`✅ اكتمل جلب جميع المناطق: ${allRegions.length} منطقة`);
+      setRegions(allRegions);
+      return allRegions;
     } catch (error) {
       console.error('❌ خطأ في جلب المناطق من cache:', error);
       return [];
