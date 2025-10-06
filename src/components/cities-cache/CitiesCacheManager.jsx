@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw, Database, MapPin, Clock, Building2, Edit2 } from 'lucide-react';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { supabase } from '@/integrations/supabase/client';
 import RegionDistribution from './RegionDistribution';
 import CitiesCacheAliasManager from './CitiesCacheAliasManager';
 import TelegramBotDeliveryPartnerSelector from './TelegramBotDeliveryPartnerSelector';
@@ -87,8 +88,8 @@ const CitiesCacheManager = () => {
 
   const handleUpdateCache = async (e) => {
     if (e) {
-      e.preventDefault(); // منع تحديث الصفحة
-      e.stopPropagation(); // منع انتشار الحدث
+      e.preventDefault();
+      e.stopPropagation();
     }
     
     try {
@@ -99,7 +100,6 @@ const CitiesCacheManager = () => {
       if (result?.success) {
         setUpdateProgress({ current: 100, total: 100, message: 'اكتمل التحديث بنجاح' });
         
-        // إخفاء شريط التقدم بعد ثانيتين
         setTimeout(() => {
           setUpdateProgress({ current: 0, total: 0, message: '' });
         }, 2000);
@@ -111,6 +111,42 @@ const CitiesCacheManager = () => {
       setUpdateProgress({ current: 0, total: 0, message: '' });
     }
   };
+
+  // ===================================================================
+  // 🚀 المرحلة 4: Real-time Progress باستخدام Supabase Realtime
+  // ===================================================================
+  useEffect(() => {
+    const channel = supabase
+      .channel('sync-progress-updates')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'cities_regions_sync_log' 
+        },
+        (payload) => {
+          console.log('📡 تحديث مباشر:', payload);
+          
+          if (payload.new) {
+            const { cities_count, regions_count } = payload.new;
+            const total = 6200; // تقريبي: 18 مدينة + ~6191 منطقة
+            const current = (cities_count || 0) + (regions_count || 0);
+            
+            setUpdateProgress({
+              current,
+              total,
+              message: `تم: ${cities_count || 0} مدينة، ${regions_count || 0} منطقة`
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Force refresh syncInfo when component mounts or cities/regions change
   useEffect(() => {

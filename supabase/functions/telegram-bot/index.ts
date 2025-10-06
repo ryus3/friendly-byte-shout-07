@@ -243,6 +243,28 @@ async function getDeliveryPartnerSetting(): Promise<string> {
 }
 
 // ==========================================
+// 🚀 المرحلة 3: Cache Auto-Refresh للبوت
+// ==========================================
+
+// ⏰ مدة صلاحية الـ cache: 30 يوم
+const CACHE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 يوم بالميلي ثانية
+let lastCacheLoadTime = 0;
+
+// دالة فحص إذا كان الـ cache يحتاج تحديث
+function shouldRefreshCache(): boolean {
+  if (lastCacheLoadTime === 0) return true; // لم يتم التحميل بعد
+  
+  const age = Date.now() - lastCacheLoadTime;
+  const needsRefresh = age > CACHE_MAX_AGE;
+  
+  if (needsRefresh) {
+    console.log(`⏰ مرت ${Math.round(age / (24 * 60 * 60 * 1000))} يوم - يحتاج تحديث`);
+  }
+  
+  return needsRefresh;
+}
+
+// ==========================================
 // Load Cities/Regions Cache
 // ==========================================
 async function loadCitiesRegionsCache(): Promise<boolean> {
@@ -354,8 +376,12 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     const totalRegions = regionsCache.length;
     console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     
+    // تحديث وقت آخر تحميل
+    lastCacheLoadTime = Date.now();
+    console.log(`📅 Cache TTL: 30 أيام (${Math.round(CACHE_MAX_AGE / (24 * 60 * 60 * 1000))} يوم)`);
+    
     if (totalRegions < 6000) {
-      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${totalRegions}) أقل بكثير من المتوقع (6191 منطقة)!`);
+      console.error(`❌ خطأ حرج: عدد المناطق المحملة (${totalRegions)} أقل بكثير من المتوقع (6191 منطقة)!`);
       console.error(`🔍 المطلوب: التأكد من أن pagination loop يعمل بشكل صحيح`);
     } else {
       console.log(`✅ نجح! تم تحميل جميع المناطق المتوقعة (${totalRegions} ≥ 6000)`);
@@ -1265,11 +1291,11 @@ serve(async (req) => {
           let extractedLocation = ''; // 🔥 تعريف المتغير المفقود
           
           try {
-            // تحميل cache إذا لم يكن محملاً أو انتهت صلاحيته
-            console.log(`🔍 فحص cache: lastUpdate=${lastCacheUpdate}, age=${lastCacheUpdate ? Date.now() - lastCacheUpdate : 'none'}, TTL=${CACHE_TTL}`);
-            
-            if (!lastCacheUpdate || (Date.now() - lastCacheUpdate > CACHE_TTL)) {
-              console.log('🔄 تحميل cache جديد...');
+            // ===================================================================
+            // 🔄 Auto-Refresh: فحص إذا كان الـ cache يحتاج تحديث
+            // ===================================================================
+            if (shouldRefreshCache()) {
+              console.log('🔄 مرت 30 يوم أو cache فارغ - إعادة تحميل تلقائياً...');
               const cacheLoaded = await loadCitiesRegionsCache();
               console.log(`✅ نتيجة تحميل cache: ${cacheLoaded}, المدن: ${citiesCache.length}, المناطق: ${regionsCache.length}`);
               

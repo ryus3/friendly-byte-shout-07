@@ -98,8 +98,8 @@ export const useCitiesCache = () => {
     }
   };
 
-  // تحديث cache من شركة التوصيل
-  const updateCache = async () => {
+  // 🚀 المزامنة الذكية في الخلفية (بدون timeout)
+  const updateCacheBackground = async () => {
     if (!token) {
       toast({
         title: "تنبيه",
@@ -113,7 +113,7 @@ export const useCitiesCache = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      const { data, error } = await supabase.functions.invoke('update-cities-cache', {
+      const { data, error } = await supabase.functions.invoke('sync-cities-regions-background', {
         body: { 
           token,
           user_id: session?.user?.id 
@@ -122,41 +122,33 @@ export const useCitiesCache = () => {
 
       if (error) throw error;
 
-      const success = data?.success;
-      if (success) {
-        // تحديث معلومات المزامنة أولاً
-        await fetchSyncInfo();
-        
-        // ثم تحديث قائمة المدن والمناطق
-        await fetchCities();
-        await fetchAllRegions();
-        
+      if (data?.success) {
         toast({
-          title: "نجح التحديث",
-          description: data.message || "تم تحديث cache المدن والمناطق بنجاح",
+          title: "بدأت المزامنة الذكية",
+          description: "جاري تحديث المدن والمناطق في الخلفية - ستظهر النتائج تلقائياً",
           variant: "default"
         });
         
-        return {
-          success: true,
-          cities_updated: data.cities_updated || 0,
-          regions_updated: data.regions_updated || 0,
-          duration_seconds: data.duration_seconds || 0,
-          timestamp: data.timestamp
-        };
+        return { success: true, progress_id: data.progress_id };
       }
       return { success: false };
     } catch (error) {
-      console.error('❌ خطأ في تحديث cache:', error);
+      console.error('❌ خطأ في بدء المزامنة:', error);
       toast({
-        title: "فشل التحديث", 
-        description: error.message || "حدث خطأ أثناء تحديث cache المدن والمناطق",
+        title: "فشل بدء المزامنة", 
+        description: error.message,
         variant: "destructive"
       });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
+  };
+
+  // تحديث cache من شركة التوصيل (الطريقة التقليدية)
+  const updateCache = async () => {
+    // استخدام المزامنة الذكية بدلاً من الطريقة التقليدية
+    return await updateCacheBackground();
   };
 
   // فحص إذا كان cache فارغ أو قديم

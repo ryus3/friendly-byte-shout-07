@@ -280,6 +280,57 @@ export type Database = {
         }
         Relationships: []
       }
+      background_sync_progress: {
+        Row: {
+          completed_at: string | null
+          completed_cities: number
+          completed_regions: number
+          created_at: string
+          current_city_name: string | null
+          error_message: string | null
+          id: string
+          started_at: string
+          status: string
+          sync_type: string
+          total_cities: number
+          total_regions: number
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_cities?: number
+          completed_regions?: number
+          created_at?: string
+          current_city_name?: string | null
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type?: string
+          total_cities?: number
+          total_regions?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_cities?: number
+          completed_regions?: number
+          created_at?: string
+          current_city_name?: string | null
+          error_message?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          sync_type?: string
+          total_cities?: number
+          total_regions?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -502,10 +553,12 @@ export type Database = {
         Row: {
           cities_count: number | null
           created_at: string | null
+          ended_at: string | null
           error_message: string | null
           id: string
           last_sync_at: string
           regions_count: number | null
+          started_at: string | null
           success: boolean | null
           sync_duration_seconds: number | null
           triggered_by: string | null
@@ -513,10 +566,12 @@ export type Database = {
         Insert: {
           cities_count?: number | null
           created_at?: string | null
+          ended_at?: string | null
           error_message?: string | null
           id?: string
           last_sync_at?: string
           regions_count?: number | null
+          started_at?: string | null
           success?: boolean | null
           sync_duration_seconds?: number | null
           triggered_by?: string | null
@@ -524,10 +579,12 @@ export type Database = {
         Update: {
           cities_count?: number | null
           created_at?: string | null
+          ended_at?: string | null
           error_message?: string | null
           id?: string
           last_sync_at?: string
           regions_count?: number | null
+          started_at?: string | null
           success?: boolean | null
           sync_duration_seconds?: number | null
           triggered_by?: string | null
