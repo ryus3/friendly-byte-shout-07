@@ -138,7 +138,7 @@ export const useCitiesCache = () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      const { data, error } = await supabase.functions.invoke('sync-cities-regions-background', {
+      const { data, error } = await supabase.functions.invoke('update-cities-cache', {
         body: { 
           token,
           user_id: session?.user?.id 
