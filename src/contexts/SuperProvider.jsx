@@ -1028,9 +1028,9 @@ export const SuperProvider = ({ children }) => {
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: baseOrder.notes,
         created_by: resolveCurrentUserUUID(),
-        // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح
-        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || null,
-        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || null,
+        // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح مع fallback من customerInfo
+        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || arg1?.customer_city_id || null,
+        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || arg1?.customer_region_id || null,
         // ✅ إصلاح حفظ delivery_partner_order_id من جميع المصادر المحتملة
         delivery_partner_order_id: 
           deliveryPartnerDataArg?.delivery_partner_order_id || 
