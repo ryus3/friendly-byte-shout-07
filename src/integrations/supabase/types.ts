@@ -5183,6 +5183,16 @@ export type Database = {
           sync_duration_seconds: number
         }[]
       }
+      get_last_successful_cities_regions_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          cities_count: number
+          last_sync_at: string
+          regions_count: number
+          success: boolean
+          sync_duration_seconds: number
+        }[]
+      }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {

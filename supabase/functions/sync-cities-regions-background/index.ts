@@ -216,16 +216,29 @@ async function updateRegionsCache(regions: AlWaseetRegion[]): Promise<number> {
 }
 
 // ===================================================================
-// 🎯 Background Sync Task
+// 🎯 Background Sync Task مع Timeout Protection
 // ===================================================================
 async function performBackgroundSync(token: string, userId: string, progressId: string) {
   const startTime = new Date();
+  const MAX_EXECUTION_TIME = 23000; // 23 ثانية (قبل 25 ثانية الحد الأقصى)
+  let isTimedOut = false;
+  
+  const checkTimeout = () => {
+    const elapsed = new Date().getTime() - startTime.getTime();
+    if (elapsed > MAX_EXECUTION_TIME) {
+      isTimedOut = true;
+      return true;
+    }
+    return false;
+  };
   
   try {
     console.log(`🚀 بدء المزامنة الذكية في الخلفية - Progress ID: ${progressId}`);
     
     // جلب المدن
     const cities = await fetchCitiesFromAlWaseet(token);
+    
+    if (checkTimeout()) throw new Error('Timeout: تجاوز وقت التنفيذ المسموح');
     
     // تحديث progress: المدن
     await supabase
@@ -249,32 +262,45 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
 
     console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الـ cache`);
 
-    // معالجة المناطق - بدون تحديثات progress وسطية
+    if (checkTimeout()) throw new Error('Timeout: تجاوز وقت التنفيذ المسموح');
+
+    // معالجة المناطق بدفعات صغيرة ومع timeout protection
     let totalRegionsUpdated = 0;
-    const cityBatchSize = 3; // معالجة 3 مدن في نفس الوقت
-    const maxRegionsPerBatch = 200; // 200 منطقة لكل دفعة
+    const cityBatchSize = 2; // معالجة مدينتين في المرة الواحدة
+    const maxRegionsPerBatch = 150; // 150 منطقة لكل دفعة
     
-    for (let i = 0; i < cities.length; i += cityBatchSize) {
-      const cityBatch = cities.slice(i, i + cityBatchSize);
+    for (let i = 0; i < cities.length && !isTimedOut; i += cityBatchSize) {
+      if (checkTimeout()) {
+        console.warn(`⚠️ اقتراب Timeout - توقف عند المدينة ${i}/${cities.length}`);
+        break;
+      }
       
-      // معالجة كل مدينة بدون تحديثات وسطية
+      const cityBatch = cities.slice(i, Math.min(i + cityBatchSize, cities.length));
+      
+      // معالجة كل مدينة
       const batchPromises = cityBatch.map(async (city) => {
+        if (isTimedOut) return 0;
+        
         try {
+          console.log(`📍 معالجة ${city.name}...`);
           const regions = await fetchRegionsFromAlWaseet(token, city.id);
+          
+          if (isTimedOut) return 0;
           
           // تحديث المناطق في دفعات
           let regionsUpdated = 0;
-          for (let j = 0; j < regions.length; j += maxRegionsPerBatch) {
-            const regionsBatch = regions.slice(j, j + maxRegionsPerBatch);
+          for (let j = 0; j < regions.length && !isTimedOut; j += maxRegionsPerBatch) {
+            const regionsBatch = regions.slice(j, Math.min(j + maxRegionsPerBatch, regions.length));
             const batchUpdated = await updateRegionsCache(regionsBatch);
             regionsUpdated += batchUpdated;
             
-            // delay مُصغّر بين الدفعات
-            if (j + maxRegionsPerBatch < regions.length) {
+            // تأخير صغير بين الدفعات
+            if (j + maxRegionsPerBatch < regions.length && !isTimedOut) {
               await new Promise(resolve => setTimeout(resolve, 20));
             }
           }
           
+          console.log(`  ✓ ${city.name}: ${regionsUpdated} منطقة`);
           return regionsUpdated;
         } catch (error) {
           console.error(`❌ خطأ في معالجة ${city.name}:`, error);
@@ -285,22 +311,37 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
       const batchResults = await Promise.all(batchPromises);
       totalRegionsUpdated += batchResults.reduce((sum, count) => sum + count, 0);
 
-      // delay مُصغّر بين مجموعات المدن
-      if (i + cityBatchSize < cities.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // تحديث progress
+      await supabase
+        .from('background_sync_progress')
+        .update({
+          completed_regions: totalRegionsUpdated,
+          current_city_name: cityBatch[cityBatch.length - 1]?.name,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', progressId);
+
+      // تأخير صغير بين مجموعات المدن
+      if (i + cityBatchSize < cities.length && !isTimedOut) {
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
 
     const endTime = new Date();
     const duration = (endTime.getTime() - startTime.getTime()) / 1000;
 
+    const finalStatus = isTimedOut ? 'partial' : 'completed';
+    const successFlag = !isTimedOut;
+
     // تحديث حالة الإكمال
     await supabase
       .from('background_sync_progress')
       .update({
-        status: 'completed',
+        status: finalStatus,
+        completed_regions: totalRegionsUpdated,
         completed_at: endTime.toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        error_message: isTimedOut ? 'توقف جزئياً: اقتراب Timeout' : null
       })
       .eq('id', progressId);
 
@@ -314,11 +355,12 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
         cities_count: citiesUpdated,
         regions_count: totalRegionsUpdated,
         sync_duration_seconds: duration,
-        success: true,
+        success: successFlag,
+        error_message: isTimedOut ? 'توقف جزئياً: اقتراب Timeout' : null,
         triggered_by: userId
       });
 
-    console.log(`🎉 المزامنة الذكية مكتملة: ${citiesUpdated} مدينة، ${totalRegionsUpdated} منطقة في ${duration}ث`);
+    console.log(`${isTimedOut ? '⚠️' : '🎉'} المزامنة ${isTimedOut ? 'الجزئية' : 'الكاملة'} مكتملة: ${citiesUpdated} مدينة، ${totalRegionsUpdated} منطقة في ${duration.toFixed(1)}ث`);
     
   } catch (error) {
     console.error('❌ خطأ في المزامنة الذكية:', error);

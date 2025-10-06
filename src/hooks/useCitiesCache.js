@@ -100,13 +100,13 @@ export const useCitiesCache = () => {
     }
   };
 
-  // جلب معلومات آخر مزامنة
+  // جلب معلومات آخر مزامنة ناجحة فقط
   const fetchSyncInfo = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_last_cities_regions_sync');
+      const { data, error } = await supabase.rpc('get_last_successful_cities_regions_sync');
       if (error) throw error;
       
-      console.log('🔍 fetchSyncInfo نتيجة:', data);
+      console.log('🔍 fetchSyncInfo (successful only) نتيجة:', data);
       
       // Handle array response from RPC function
       const syncData = Array.isArray(data) ? data[0] : data;
