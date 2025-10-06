@@ -998,11 +998,8 @@ export const AlWaseetProvider = ({ children }) => {
             }
           }
           
-          // تحديث حالة استلام الإيصال
-          if (waseetOrder.deliver_confirmed_fin === 1) {
-            updates.receipt_received = true;
-            needsUpdate = true;
-          }
+          // deliver_confirmed_fin = 1 يعني فقط "تم التسليم" - لا يعني استلام فاتورة
+          // receipt_received يُحدّث فقط عند استلام فاتورة فعلية من واجهة الفواتير
         }
         
         // تطبيق التحديثات إذا كانت مطلوبة
@@ -1388,10 +1385,9 @@ export const AlWaseetProvider = ({ children }) => {
           if (dp >= 0) updates.delivery_fee = dp;
         }
 
-        // تحديث استلام الإيصال والترقية للحالة المكتملة
+        // ترقية للحالة المكتملة عند التأكيد المالي
+        // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
         if (finConfirmed) {
-          updates.receipt_received = true;
-          // ترقية للحالة المكتملة إذا كان الطلب مُسَلَّم أو قيد التسليم
           if (localStatus === 'delivered' || localOrder.status === 'delivered') {
             updates.status = 'completed';
           }
@@ -1562,13 +1558,9 @@ export const AlWaseetProvider = ({ children }) => {
             
             // تأكيد الاستلام المالي مع تطبيع المقارنة
             const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-            if (finConfirmed && existingOrder.receipt_received !== true) {
-              updates.receipt_received = true;
-              // ملاحظة: لا نُحدث status إلى completed تلقائياً - فقط عند استلام الفاتورة يدوياً
-              // فقط delivery_confirmed_fin = 1 يعني "تم التسليم والمصادقة المالية" من الوسيط
-              if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
-                updates.status = 'completed';
-              }
+            // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
+            if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
+              updates.status = 'completed';
             }
             
             const needUpdate = (
@@ -1822,13 +1814,10 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // تحديث حالة استلام الإيصال - فقط عند تأكيد الوسيط المالي
-      if (waseetOrder.deliver_confirmed_fin === 1) {
-        updates.receipt_received = true;
-        // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
-        if (correctLocalStatus === 'delivered') {
-          updates.status = 'completed';
-        }
+      // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
+      // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
+      if (waseetOrder.deliver_confirmed_fin === 1 && correctLocalStatus === 'delivered') {
+        updates.status = 'completed';
       }
 
       // تطبيق التحديثات
@@ -2092,14 +2081,11 @@ export const AlWaseetProvider = ({ children }) => {
       if (dp >= 0 && dp !== (existingOrder?.delivery_fee || 0)) {
         updates.delivery_fee = dp;
       }
-      // تأكيد الاستلام المالي مع تطبيع المقارنة وترقية الحالة
+      // ترقية للحالة المكتملة فقط عند التأكيد المالي من الوسيط
+      // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
       const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-      if (finConfirmed && existingOrder?.receipt_received !== true) {
-        updates.receipt_received = true;
-        // ترقية للحالة المكتملة فقط عند التأكيد المالي من الوسيط
-        if (localStatus === 'delivered' || existingOrder?.status === 'delivered') {
-          updates.status = 'completed';
-        }
+      if (finConfirmed && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
+        updates.status = 'completed';
       }
 
       const needs_update = existingOrder ? (
@@ -2419,12 +2405,10 @@ export const AlWaseetProvider = ({ children }) => {
         }
         
         // إصلاح الحالة بناءً على deliver_confirmed_fin
+        // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-        if (finConfirmed) {
-          updates.receipt_received = true;
-          if (localOrder.status === 'delivered') {
-            updates.status = 'completed';
-          }
+        if (finConfirmed && localOrder.status === 'delivered') {
+          updates.status = 'completed';
         }
         
         // تطبيق الإصلاحات إذا لزم الأمر
