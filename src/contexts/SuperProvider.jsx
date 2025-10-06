@@ -2098,9 +2098,8 @@ export const SuperProvider = ({ children }) => {
           client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          // ✅ استخدام العنوان الكامل المستخرج مع المدينة والمنطقة و landmark
-          location: extractedData.full_address || 
-            `${foundCityName} - ${foundRegionName}${nearestPoint && nearestPoint !== 'غير محدد' ? ' - ' + nearestPoint : ''}`,
+          // ✅ بناء العنوان من المكونات المطابقة لضمان التطابق التام مع المعرفات
+          location: `${foundCityName}, ${foundRegionName}${nearestPoint && nearestPoint !== 'غير محدد' ? ', قرب ' + nearestPoint : ''}`,
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
@@ -2327,8 +2326,8 @@ export const SuperProvider = ({ children }) => {
         // ✅ استخدام اسم الزبون المستخرج
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        // ✅ استخدام البيانات الأصلية من aiOrder مباشرة
-        customer_address: extractedData.full_address || `${aiOrder.customer_city || ''} ${aiOrder.customer_address || ''}`.trim(),
+        // ✅ بناء العنوان من المكونات المطابقة لضمان الاتساق
+        customer_address: `${cityName || foundCityName || aiOrder.customer_city}, ${regionName || foundRegionName || aiOrder.customer_province}${nearestPoint && nearestPoint !== 'غير محدد' ? ', قرب ' + nearestPoint : ''}`,
         customer_city: cityName || aiOrder.customer_city || extractedData.city,
         customer_province: regionName || aiOrder.customer_province || extractedData.region,
         // 🎯 إعطاء الأولوية لبيانات الوسيط ثم aiOrder كاحتياطي
