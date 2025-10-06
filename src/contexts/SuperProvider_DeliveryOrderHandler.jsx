@@ -22,14 +22,7 @@ export const useDeliveryOrderHandler = () => {
         p_delivery_partner: destination.toLowerCase()
       });
 
-      // 🎯 الحصول على اسم المنطقة الصحيح من regions_master
-      const { data: regionData } = await supabase
-        .from('regions_master')
-        .select('name')
-        .eq('id', aiOrder.region_id)
-        .maybeSingle();
-
-      const correctRegionName = regionData?.name || aiOrder.resolved_region_name || aiOrder.customer_province;
+      // ✅ استخدام البيانات مباشرة من الطلب الذكي (نقل مباشر دون معالجة)
 
       console.log('🔍 [DeliveryOrderHandler] المعرفات الخارجية:', {
         unified_city_id: aiOrder.city_id,
@@ -39,17 +32,17 @@ export const useDeliveryOrderHandler = () => {
         delivery_partner: destination
       });
 
-      // تحويل بيانات الطلب الذكي إلى صيغة createUnifiedOrder
+      // ✅ نقل مباشر للبيانات من الطلب الذكي دون أي معالجة إضافية
       const customerInfo = {
         customer_name: aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        customer_address: aiOrder.customer_address,
-        customer_city: aiOrder.customer_city,
-        customer_province: correctRegionName, // ✅ استخدام اسم المنطقة الصحيح
-        customer_city_id: aiOrder.city_id,           // المعرف الموحد
-        customer_region_id: aiOrder.region_id,       // المعرف الموحد
-        alwaseet_city_id: parseInt(externalCityId),  // المعرف الخارجي
-        alwaseet_region_id: parseInt(externalRegionId), // المعرف الخارجي
+        customer_address: aiOrder.customer_address,              // نقل مباشر
+        customer_city: aiOrder.customer_city,                    // نقل مباشر
+        customer_province: aiOrder.resolved_region_name,         // ✅ نقل مباشر من الطلب الذكي
+        customer_city_id: aiOrder.city_id,                       // المعرف الموحد
+        customer_region_id: aiOrder.region_id,                   // المعرف الموحد
+        alwaseet_city_id: parseInt(externalCityId),              // المعرف الخارجي
+        alwaseet_region_id: parseInt(externalRegionId),          // المعرف الخارجي
         delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
       };
 
