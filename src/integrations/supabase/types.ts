@@ -432,6 +432,72 @@ export type Database = {
         }
         Relationships: []
       }
+      cities_cache_backup: {
+        Row: {
+          alwaseet_id: number | null
+          created_at: string | null
+          id: number | null
+          is_active: boolean | null
+          name: string | null
+          name_ar: string | null
+          name_en: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alwaseet_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          name?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alwaseet_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          name?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      cities_master: {
+        Row: {
+          alwaseet_id: number
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          name_ar: string | null
+          name_en: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alwaseet_id: number
+          created_at?: string | null
+          id: number
+          is_active?: boolean | null
+          name: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alwaseet_id?: number
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       cities_regions_sync_log: {
         Row: {
           cities_count: number | null
@@ -494,6 +560,36 @@ export type Database = {
           created_at?: string | null
           id?: string
           normalized_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      city_aliases_backup: {
+        Row: {
+          alias_name: string | null
+          city_id: number | null
+          confidence_score: number | null
+          created_at: string | null
+          id: string | null
+          normalized_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alias_name?: string | null
+          city_id?: number | null
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string | null
+          normalized_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alias_name?: string | null
+          city_id?: number | null
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string | null
+          normalized_name?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -563,6 +659,47 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_delivery_mappings: {
+        Row: {
+          city_id: number
+          created_at: string | null
+          delivery_partner: string
+          external_id: string
+          external_name: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          city_id: number
+          created_at?: string | null
+          delivery_partner: string
+          external_id: string
+          external_name: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          city_id?: number
+          created_at?: string | null
+          delivery_partner?: string
+          external_id?: string
+          external_name?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_delivery_mappings_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities_master"
             referencedColumns: ["id"]
           },
         ]
@@ -2461,6 +2598,144 @@ export type Database = {
           },
         ]
       }
+      orders_backup: {
+        Row: {
+          alwaseet_city_id: number | null
+          alwaseet_region_id: number | null
+          assigned_to: string | null
+          cash_source_id: string | null
+          created_at: string | null
+          created_by: string | null
+          custom_discount: number | null
+          customer_address: string | null
+          customer_city: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_phone2: string | null
+          customer_province: string | null
+          delivery_account_code: string | null
+          delivery_account_used: string | null
+          delivery_fee: number | null
+          delivery_partner: string | null
+          delivery_partner_invoice_date: string | null
+          delivery_partner_invoice_id: string | null
+          delivery_partner_order_id: string | null
+          delivery_status: string | null
+          discount: number | null
+          discount_reason: string | null
+          final_amount: number | null
+          id: string | null
+          invoice_received_at: string | null
+          invoice_received_by: string | null
+          isarchived: boolean | null
+          notes: string | null
+          order_number: string | null
+          payment_received_source_id: string | null
+          payment_status: string | null
+          qr_id: string | null
+          receipt_received: boolean | null
+          receipt_received_at: string | null
+          receipt_received_by: string | null
+          sales_amount: number | null
+          source: string | null
+          status: string | null
+          total_amount: number | null
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alwaseet_city_id?: number | null
+          alwaseet_region_id?: number | null
+          assigned_to?: string | null
+          cash_source_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_discount?: number | null
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_phone2?: string | null
+          customer_province?: string | null
+          delivery_account_code?: string | null
+          delivery_account_used?: string | null
+          delivery_fee?: number | null
+          delivery_partner?: string | null
+          delivery_partner_invoice_date?: string | null
+          delivery_partner_invoice_id?: string | null
+          delivery_partner_order_id?: string | null
+          delivery_status?: string | null
+          discount?: number | null
+          discount_reason?: string | null
+          final_amount?: number | null
+          id?: string | null
+          invoice_received_at?: string | null
+          invoice_received_by?: string | null
+          isarchived?: boolean | null
+          notes?: string | null
+          order_number?: string | null
+          payment_received_source_id?: string | null
+          payment_status?: string | null
+          qr_id?: string | null
+          receipt_received?: boolean | null
+          receipt_received_at?: string | null
+          receipt_received_by?: string | null
+          sales_amount?: number | null
+          source?: string | null
+          status?: string | null
+          total_amount?: number | null
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alwaseet_city_id?: number | null
+          alwaseet_region_id?: number | null
+          assigned_to?: string | null
+          cash_source_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          custom_discount?: number | null
+          customer_address?: string | null
+          customer_city?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_phone2?: string | null
+          customer_province?: string | null
+          delivery_account_code?: string | null
+          delivery_account_used?: string | null
+          delivery_fee?: number | null
+          delivery_partner?: string | null
+          delivery_partner_invoice_date?: string | null
+          delivery_partner_invoice_id?: string | null
+          delivery_partner_order_id?: string | null
+          delivery_status?: string | null
+          discount?: number | null
+          discount_reason?: string | null
+          final_amount?: number | null
+          id?: string | null
+          invoice_received_at?: string | null
+          invoice_received_by?: string | null
+          isarchived?: boolean | null
+          notes?: string | null
+          order_number?: string | null
+          payment_received_source_id?: string | null
+          payment_status?: string | null
+          qr_id?: string | null
+          receipt_received?: boolean | null
+          receipt_received_at?: string | null
+          receipt_received_by?: string | null
+          sales_amount?: number | null
+          source?: string | null
+          status?: string | null
+          total_amount?: number | null
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       permissions: {
         Row: {
           category: string
@@ -3274,6 +3549,77 @@ export type Database = {
         }
         Relationships: []
       }
+      region_aliases_backup: {
+        Row: {
+          alias_name: string | null
+          confidence_score: number | null
+          created_at: string | null
+          id: string | null
+          normalized_name: string | null
+          region_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          alias_name?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string | null
+          normalized_name?: string | null
+          region_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          alias_name?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          id?: string | null
+          normalized_name?: string | null
+          region_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      region_delivery_mappings: {
+        Row: {
+          created_at: string | null
+          delivery_partner: string
+          external_id: string
+          external_name: string
+          id: string
+          is_active: boolean | null
+          region_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_partner: string
+          external_id: string
+          external_name: string
+          id?: string
+          is_active?: boolean | null
+          region_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_partner?: string
+          external_id?: string
+          external_name?: string
+          id?: string
+          is_active?: boolean | null
+          region_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "region_delivery_mappings_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions_master"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       regions_cache: {
         Row: {
           alwaseet_id: number
@@ -3315,6 +3661,80 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cities_cache"
             referencedColumns: ["alwaseet_id"]
+          },
+        ]
+      }
+      regions_cache_backup: {
+        Row: {
+          alwaseet_id: number | null
+          city_id: number | null
+          created_at: string | null
+          id: number | null
+          is_active: boolean | null
+          name: string | null
+          name_ar: string | null
+          name_en: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alwaseet_id?: number | null
+          city_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          name?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alwaseet_id?: number | null
+          city_id?: number | null
+          created_at?: string | null
+          id?: number | null
+          is_active?: boolean | null
+          name?: string | null
+          name_ar?: string | null
+          name_en?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      regions_master: {
+        Row: {
+          alwaseet_id: number
+          city_id: number
+          created_at: string | null
+          id: number
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          alwaseet_id: number
+          city_id: number
+          created_at?: string | null
+          id: number
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          alwaseet_id?: number
+          city_id?: number
+          created_at?: string | null
+          id?: number
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regions_master_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities_master"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -4610,6 +5030,10 @@ export type Database = {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
       }
+      get_city_external_id: {
+        Args: { p_city_id: number; p_delivery_partner?: string }
+        Returns: string
+      }
       get_customer_auto_discount: {
         Args: {
           p_customer_city: string
@@ -4712,6 +5136,10 @@ export type Database = {
           total_revenue: number
           variant_id: string
         }[]
+      }
+      get_region_external_id: {
+        Args: { p_delivery_partner?: string; p_region_id: number }
+        Returns: string
       }
       get_safe_user_filter: {
         Args: { p_delivery_account_code?: string; p_user_id?: string }
