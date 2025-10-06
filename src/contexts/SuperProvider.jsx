@@ -2327,7 +2327,7 @@ export const SuperProvider = ({ children }) => {
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         // ✅ بناء العنوان من المكونات المطابقة لضمان الاتساق
-        customer_address: `${cityName || foundCityName || aiOrder.customer_city}, ${regionName || foundRegionName || aiOrder.customer_province}${nearestPoint && nearestPoint !== 'غير محدد' ? ', قرب ' + nearestPoint : ''}`,
+        customer_address: aiOrder.customer_address,
         customer_city: cityName || aiOrder.customer_city || extractedData.city,
         customer_province: regionName || aiOrder.customer_province || extractedData.region,
         // 🎯 إعطاء الأولوية لبيانات الوسيط ثم aiOrder كاحتياطي
