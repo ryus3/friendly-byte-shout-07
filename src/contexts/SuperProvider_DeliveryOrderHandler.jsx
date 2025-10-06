@@ -22,6 +22,15 @@ export const useDeliveryOrderHandler = () => {
         p_delivery_partner: destination.toLowerCase()
       });
 
+      // 🎯 الحصول على اسم المنطقة الصحيح من regions_master
+      const { data: regionData } = await supabase
+        .from('regions_master')
+        .select('name')
+        .eq('id', aiOrder.region_id)
+        .maybeSingle();
+
+      const correctRegionName = regionData?.name || aiOrder.resolved_region_name || aiOrder.customer_province;
+
       console.log('🔍 [DeliveryOrderHandler] المعرفات الخارجية:', {
         unified_city_id: aiOrder.city_id,
         unified_region_id: aiOrder.region_id,
@@ -36,7 +45,7 @@ export const useDeliveryOrderHandler = () => {
         customer_phone: aiOrder.customer_phone,
         customer_address: aiOrder.customer_address,
         customer_city: aiOrder.customer_city,
-        customer_province: aiOrder.customer_province,
+        customer_province: correctRegionName, // ✅ استخدام اسم المنطقة الصحيح
         customer_city_id: aiOrder.city_id,           // المعرف الموحد
         customer_region_id: aiOrder.region_id,       // المعرف الموحد
         alwaseet_city_id: parseInt(externalCityId),  // المعرف الخارجي
