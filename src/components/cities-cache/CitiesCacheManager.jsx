@@ -129,7 +129,7 @@ const CitiesCacheManager = () => {
           console.log('📡 تحديث مباشر:', payload);
           
           if (payload.new) {
-            const { cities_count, regions_count } = payload.new;
+            const { cities_count, regions_count, success } = payload.new;
             const total = 6200; // تقريبي: 18 مدينة + ~6191 منطقة
             const current = (cities_count || 0) + (regions_count || 0);
             
@@ -138,6 +138,14 @@ const CitiesCacheManager = () => {
               total,
               message: `تم: ${cities_count || 0} مدينة، ${regions_count || 0} منطقة`
             });
+
+            // عند اكتمال المزامنة بنجاح، حدّث البيانات
+            if (success === true && payload.eventType === 'INSERT') {
+              setTimeout(() => {
+                fetchSyncInfo();
+                fetchCities();
+              }, 500);
+            }
           }
         }
       )
@@ -146,7 +154,7 @@ const CitiesCacheManager = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchSyncInfo, fetchCities]);
 
   // Force refresh syncInfo when component mounts or cities/regions change
   useEffect(() => {
@@ -239,26 +247,6 @@ const CitiesCacheManager = () => {
             </Badge>
           </div>
         </div>
-
-        {/* معلومات إضافية عن آخر مزامنة */}
-        {syncInfo && syncInfo.sync_duration_seconds && (
-          <div className="p-4 bg-secondary/20 rounded-lg">
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-purple-500" />
-                <span>مدة المزامنة:</span>
-                <Badge variant="outline">{Math.round(syncInfo.sync_duration_seconds)}ث</Badge>
-              </div>
-              {syncInfo.last_sync_at && (
-                <div className="flex items-center gap-2">
-                  <span>التاريخ والوقت:</span>
-                  <span className="text-xs font-medium">{formatDate(syncInfo.last_sync_at)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
 
         {/* تنبيه حسب نوع شركة التوصيل */}
         {activePartner === 'local' && (

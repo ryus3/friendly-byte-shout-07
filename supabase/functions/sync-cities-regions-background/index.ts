@@ -266,8 +266,8 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
 
     // معالجة المناطق بدفعات صغيرة ومع timeout protection
     let totalRegionsUpdated = 0;
-    const cityBatchSize = 2; // معالجة مدينتين في المرة الواحدة
-    const maxRegionsPerBatch = 150; // 150 منطقة لكل دفعة
+    const cityBatchSize = 4; // معالجة 4 مدن في المرة الواحدة
+    const maxRegionsPerBatch = 500; // 500 منطقة لكل دفعة
     
     for (let i = 0; i < cities.length && !isTimedOut; i += cityBatchSize) {
       if (checkTimeout()) {
@@ -293,11 +293,6 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
             const regionsBatch = regions.slice(j, Math.min(j + maxRegionsPerBatch, regions.length));
             const batchUpdated = await updateRegionsCache(regionsBatch);
             regionsUpdated += batchUpdated;
-            
-            // تأخير صغير بين الدفعات
-            if (j + maxRegionsPerBatch < regions.length && !isTimedOut) {
-              await new Promise(resolve => setTimeout(resolve, 20));
-            }
           }
           
           console.log(`  ✓ ${city.name}: ${regionsUpdated} منطقة`);
@@ -320,11 +315,6 @@ async function performBackgroundSync(token: string, userId: string, progressId: 
           updated_at: new Date().toISOString()
         })
         .eq('id', progressId);
-
-      // تأخير صغير بين مجموعات المدن
-      if (i + cityBatchSize < cities.length && !isTimedOut) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
     }
 
     const endTime = new Date();
