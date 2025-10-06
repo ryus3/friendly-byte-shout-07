@@ -1010,6 +1010,10 @@ export const SuperProvider = ({ children }) => {
         notes: arg1?.notes,
       };
 
+      // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg دون fallback معقد
+      const finalAlwaseetCityId = deliveryPartnerDataArg?.alwaseet_city_id || null;
+      const finalAlwaseetRegionId = deliveryPartnerDataArg?.alwaseet_region_id || null;
+
       const orderRow = {
         order_number: orderNumber,
         customer_name: baseOrder.customer_name,
@@ -1028,10 +1032,9 @@ export const SuperProvider = ({ children }) => {
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: baseOrder.notes,
         created_by: resolveCurrentUserUUID(),
-        // ✅ الحل الجذري - حفظ معرفات الوسيط بشكل صحيح مع fallback من customerInfo
-        alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id || arg1?.alwaseet_city_id || arg1?.customer_city_id || null,
-        alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id || arg1?.alwaseet_region_id || arg1?.customer_region_id || null,
-        // ✅ إصلاح حفظ delivery_partner_order_id من جميع المصادر المحتملة
+        // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg
+        alwaseet_city_id: finalAlwaseetCityId,
+        alwaseet_region_id: finalAlwaseetRegionId,
         delivery_partner_order_id: 
           deliveryPartnerDataArg?.delivery_partner_order_id || 
           deliveryPartnerDataArg?.id || 
@@ -1048,15 +1051,15 @@ export const SuperProvider = ({ children }) => {
           null,
       };
 
-      console.log('🔍 [SuperProvider] orderRow قبل الحفظ في قاعدة البيانات:', {
+      console.log('🔍 [SuperProvider] orderRow قبل الحفظ - الإصلاح الجذري:', {
+        deliveryPartnerDataArg_exists: !!deliveryPartnerDataArg,
         deliveryPartnerDataArg_alwaseet_city_id: deliveryPartnerDataArg?.alwaseet_city_id,
         deliveryPartnerDataArg_alwaseet_region_id: deliveryPartnerDataArg?.alwaseet_region_id,
-        arg1_alwaseet_city_id: arg1?.alwaseet_city_id,
-        arg1_customer_city_id: arg1?.customer_city_id,
-        arg1_alwaseet_region_id: arg1?.alwaseet_region_id,
-        arg1_customer_region_id: arg1?.customer_region_id,
+        finalAlwaseetCityId,
+        finalAlwaseetRegionId,
         orderRow_alwaseet_city_id: orderRow.alwaseet_city_id,
-        orderRow_alwaseet_region_id: orderRow.alwaseet_region_id
+        orderRow_alwaseet_region_id: orderRow.alwaseet_region_id,
+        delivery_partner: orderRow.delivery_partner
       });
 
       // إنشاء الطلب

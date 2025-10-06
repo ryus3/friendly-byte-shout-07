@@ -56,8 +56,19 @@ export const useDeliveryOrderHandler = () => {
       });
 
       if (result.success) {
-        // حذف الطلب الذكي بأمان مع الربط
-        await deleteAiOrderWithLink(aiOrder.id, result.orderId);
+        // ✅ الإصلاح الجذري: ربط الطلب الذكي بدون حذفه للحفاظ على البيانات
+        const { linkAiOrderToRealOrder } = await import('@/hooks/useAiOrdersCleanup');
+        await linkAiOrderToRealOrder(aiOrder.id, result.orderId);
+
+        // تحديث حالة الطلب الذكي إلى "معالج" بدلاً من حذفه
+        await supabase
+          .from('ai_orders')
+          .update({ 
+            status: 'processed',
+            processed_at: new Date().toISOString(),
+            processed_by: resolveCurrentUserUUID()
+          })
+          .eq('id', aiOrder.id);
 
         // تحديث الطلب المنشأ لإضافة معلومات الحساب المستخدم
         if (result.orderId && selectedAccount) {
@@ -71,7 +82,9 @@ export const useDeliveryOrderHandler = () => {
           orderId: result.orderId,
           trackingNumber: result.trackingNumber,
           partner: destination,
-          account: selectedAccount
+          account: selectedAccount,
+          aiOrderId: aiOrder.id,
+          aiOrderStatus: 'processed'
         });
 
         return {

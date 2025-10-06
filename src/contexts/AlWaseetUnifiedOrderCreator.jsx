@@ -24,6 +24,14 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
     console.log('🚀 بدء إنشاء طلب موحد:', { customerInfo, cart, discount, activePartner });
     
     try {
+      // ✅ validation: التحقق من وجود معرفات المدينة والمنطقة للوسيط
+      if (activePartner === 'alwaseet' && (!customerInfo.alwaseet_city_id && !customerInfo.customer_city_id)) {
+        throw new Error('معرف المدينة مطلوب لطلبات الوسيط');
+      }
+      if (activePartner === 'alwaseet' && (!customerInfo.alwaseet_region_id && !customerInfo.customer_region_id)) {
+        throw new Error('معرف المنطقة مطلوب لطلبات الوسيط');
+      }
+
       // حساب المبلغ الإجمالي
       const subtotal = cart.reduce((sum, item) => sum + (item.total || 0), 0);
       const finalAmount = Math.max(0, subtotal - discount);
@@ -32,6 +40,19 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
       if (activePartner === 'alwaseet' && isWaseetLoggedIn && waseetToken) {
         console.log('🔗 إنشاء طلب خارجي مع التوحيد الكامل...');
         
+        // ✅ استخدام alwaseet_city_id و alwaseet_region_id مباشرة
+        const finalCityId = customerInfo.alwaseet_city_id || customerInfo.customer_city_id;
+        const finalRegionId = customerInfo.alwaseet_region_id || customerInfo.customer_region_id;
+
+        console.log('🔍 [AlWaseetUnifiedOrderCreator] معرفات المدينة والمنطقة النهائية:', {
+          alwaseet_city_id: customerInfo.alwaseet_city_id,
+          customer_city_id: customerInfo.customer_city_id,
+          finalCityId,
+          alwaseet_region_id: customerInfo.alwaseet_region_id,
+          customer_region_id: customerInfo.customer_region_id,
+          finalRegionId
+        });
+
         try {
           const alWaseetPayload = {
             name: customerInfo.customer_name || customerInfo.name,
@@ -41,20 +62,18 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             notes: customerInfo.notes || '',
             details: (cart || []).filter(item => item != null).map(item => `${item?.productName} (${item?.color}, ${item?.size}) ×${item?.quantity || 1}`).join(' | '),
             quantity: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
-            price: finalAmount + (settings?.delivery_fee || 50000), // إضافة رسوم التوصيل
+            price: finalAmount + (settings?.delivery_fee || 50000),
             size: 'عادي',
             type: 'new',
             promocode: customerInfo.promo_code || '',
-            city_id: customerInfo.customer_city_id,
-            region_id: customerInfo.customer_region_id
+            city_id: finalCityId,
+            region_id: finalRegionId
           };
 
-          console.log('📦 إرسال للوسيط:', alWaseetPayload);
-          console.log('🔍 معرفات المدينة والمنطقة:', {
-            customer_city_id: customerInfo.customer_city_id,
-            customer_region_id: customerInfo.customer_region_id,
-            city_id_sent: alWaseetPayload.city_id,
-            region_id_sent: alWaseetPayload.region_id
+          console.log('📦 [AlWaseetUnifiedOrderCreator] إرسال للوسيط:', {
+            ...alWaseetPayload,
+            city_id: finalCityId,
+            region_id: finalRegionId
           });
           
           // استخدام توكن الحساب المحدد إذا تم تمريره
@@ -79,17 +98,17 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               console.warn('⚠️ No qr_id received from Al-Waseet, will set tracking_number to null');
             }
             
+            // ✅ الإصلاح الجذري: استخدام نفس القيم المرسلة للوسيط
             console.log('🔍 [UnifiedOrderCreator] customerInfo قبل إنشاء الطلب المحلي:', {
               customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
               customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
               customerInfo_customer_city_id: customerInfo.customer_city_id,
               customerInfo_customer_region_id: customerInfo.customer_region_id,
-              final_alwaseet_city_id: customerInfo.alwaseet_city_id || customerInfo.customer_city_id || null,
-              final_alwaseet_region_id: customerInfo.alwaseet_region_id || customerInfo.customer_region_id || null
+              finalCityId,
+              finalRegionId
             });
 
             // Create local order with qr_id as tracking_number (primary identifier)
-            // delivery_partner_order_id can be null initially - we can look it up later if needed
             const localResult = await createOrder(
               customerInfo,
               cart,
@@ -101,8 +120,8 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
                 delivery_partner_order_id: waseetInternalId || null,
                 tracking_number: qrId || null,
                 delivery_partner: 'alwaseet',
-                alwaseet_city_id: customerInfo.alwaseet_city_id || customerInfo.customer_city_id || null,
-                alwaseet_region_id: customerInfo.alwaseet_region_id || customerInfo.customer_region_id || null
+                alwaseet_city_id: finalCityId,
+                alwaseet_region_id: finalRegionId
               }
             );
 
