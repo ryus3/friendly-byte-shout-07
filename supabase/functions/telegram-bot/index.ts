@@ -253,9 +253,9 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     const deliveryPartner = await getDeliveryPartnerSetting();
     console.log(`📦 شركة التوصيل المختارة: ${deliveryPartner}`);
     
-    // Load cities
+    // Load cities from UNIFIED cities_master table
     const { data: cities, error: citiesError } = await supabase
-      .from('cities_cache')
+      .from('cities_master')
       .select('id, name, alwaseet_id')
       .eq('is_active', true)
       .order('name')
@@ -279,7 +279,7 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
       console.log(`📦 دفعة ${page + 1}: جلب المناطق من ${startRange} إلى ${endRange}...`);
       
       const { data: regionsBatch, error: regionsError } = await supabase
-        .from('regions_cache')
+        .from('regions_master')
         .select('id, city_id, name, alwaseet_id')
         .eq('is_active', true)
         .range(startRange, endRange)
