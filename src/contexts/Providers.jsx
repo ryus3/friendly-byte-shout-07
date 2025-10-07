@@ -9,6 +9,7 @@ import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider, useAlWaseet } from '@/contexts/AlWaseetContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
+import { UnifiedOrderCreatorProvider } from '@/contexts/AlWaseetUnifiedOrderCreator.jsx';
 import { GlobalSyncProgress } from '@/components/GlobalSyncProgress.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
 
@@ -43,12 +44,14 @@ export const AppProviders = ({ children }) => {
               <NotificationsProvider>
                 <AiChatProvider>
                   <ProfitsProvider>
-                    <SuperProvider>
-                      <VariantsProvider>
-                        <AppStartSync />
-                        {children}
-                      </VariantsProvider>
-                    </SuperProvider>
+                    <UnifiedOrderCreatorProvider>
+                      <SuperProvider>
+                        <VariantsProvider>
+                          <AppStartSync />
+                          {children}
+                        </VariantsProvider>
+                      </SuperProvider>
+                    </UnifiedOrderCreatorProvider>
                   </ProfitsProvider>
                 </AiChatProvider>
               </NotificationsProvider>
