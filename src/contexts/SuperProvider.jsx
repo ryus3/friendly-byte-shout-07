@@ -1910,6 +1910,7 @@ export const SuperProvider = ({ children }) => {
       let foundCityName = null;
       let regionId = null;
       let foundRegionName = null;
+      let nearestPoint = '';
       
       // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
       if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
