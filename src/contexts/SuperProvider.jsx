@@ -2364,7 +2364,7 @@ export const SuperProvider = ({ children }) => {
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         // ✅ استخدام nearestPoint كعنوان أساسي
-        customer_address: nearestPoint || cleanAddress(aiOrder.customer_address) || 'غير محدد',
+        customer_address: extractedData.landmark || cleanAddress(aiOrder.customer_address) || 'غير محدد',
         customer_city: cityName || aiOrder.resolved_city_name || aiOrder.customer_city || extractedData.city,
         // ✅ الأولوية المطلقة لـ resolved_region_name من ai_orders (بدون nearestPoint)
         customer_province: aiOrder.resolved_region_name || regionName || extractedData.region,
