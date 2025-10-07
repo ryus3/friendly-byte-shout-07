@@ -140,24 +140,8 @@ export const createAlWaseetOrder = async (orderData, token) => {
 const mapToAlWaseetFields = (orderData) => {
   console.log('🔍 mapToAlWaseetFields - Input data:', orderData);
   
-  // استخراج أقرب نقطة دالة - استخدام landmark من النتيجة المحدثة
-  let cleanedLocation = '';
-  
-  // أولوية للـ landmark المستخرج من العنوان المعالج
-  if (orderData.order_data?.landmark && orderData.order_data.landmark.trim()) {
-    cleanedLocation = orderData.order_data.landmark.trim();
-  } 
-  // إذا لم يكن متوفراً، استخدم العنوان الكامل وقم بتنظيفه
-  else {
-    cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
-    
-    // تنظيف أساسي: إزالة أرقام الهاتف والأرقام القصيرة
-    cleanedLocation = cleanedLocation.replace(/\b\d{7,}\b/g, ''); // أرقام الهاتف
-    cleanedLocation = cleanedLocation.replace(/\b\d{1,3}\b/g, ''); // الكميات
-    
-    // إزالة أسماء المنتجات والألوان والأحجام فقط
-    const unwantedTerms = [
-      // منتجات
+  // ✅ استخدام customer_address مباشرة - يحتوي فقط على أقرب نقطة دالة
+  const cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
       'تيشرت', 'تشيرت', 'بنطال', 'جينز', 'قميص', 'فستان', 'سوت', 'شيك',
       'برشلونة', 'ارجنتين', 'ريال', 'مدريد', 'باريس', 'سان', 'جيرمان',
       // ألوان
@@ -173,30 +157,10 @@ const mapToAlWaseetFields = (orderData) => {
       const regex = new RegExp('\\b' + term + '\\b', 'gi');
       cleanedLocation = cleanedLocation.replace(regex, '');
     });
-    
-    // إزالة أسماء المدن والمناطق المحددة مسبقاً
-    if (orderData.customer_city) {
-      const cityRegex = new RegExp('\\b' + orderData.customer_city + '\\b', 'gi');
-      cleanedLocation = cleanedLocation.replace(cityRegex, '');
-    }
-    if (orderData.customer_province && orderData.customer_province !== orderData.customer_city) {
-      const regionRegex = new RegExp('\\b' + orderData.customer_province + '\\b', 'gi');
-      cleanedLocation = cleanedLocation.replace(regionRegex, '');
-    }
-  }
   
-  // تنظيف المسافات الإضافية
-  cleanedLocation = cleanedLocation.replace(/\s+/g, ' ').replace(/[,،\-\s]+$/, '').trim();
-  
-  // إذا كان العنوان قصيراً جداً، اتركه فارغ
-  if (cleanedLocation.length < 3) {
-    cleanedLocation = '';
-  }
-  
-  console.log('🧹 تنظيف العنوان:', {
-    original: orderData.customer_address,
-    landmark: orderData.order_data?.landmark,
-    cleaned: cleanedLocation
+  console.log('🧹 استخدام العنوان:', {
+    customer_address: orderData.customer_address,
+    final_location: cleanedLocation
   });
   
   const mapped = {
