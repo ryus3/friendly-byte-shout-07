@@ -1902,11 +1902,17 @@ export const SuperProvider = ({ children }) => {
             }
           }
           
-          return candidates;
-        };
-        
-        // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
-        if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
+        return candidates;
+      };
+      
+      // تعريف المتغيرات مسبقاً
+      let cityId = null;
+      let foundCityName = null;
+      let regionId = null;
+      let foundRegionName = null;
+      
+      // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
+      if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
           console.log('✅ استخدام بيانات ai_orders مباشرة (صحيحة 100%):', {
             city_id: aiOrder.city_id,
             city_name: aiOrder.resolved_city_name,
@@ -1943,14 +1949,11 @@ export const SuperProvider = ({ children }) => {
             city: cityToSearch,
             region: regionToSearch,
             landmark: nearestPoint,
-            full_address: extractedData.full_address
-          });
-          
-          // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
-          cityId = null;
-          foundCityName = '';
-          
-          if (cityToSearch) {
+          full_address: extractedData.full_address
+        });
+        
+        // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
+        if (cityToSearch) {
             const searchCity = normalizeArabic(cityToSearch);
             console.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
             
