@@ -1926,6 +1926,7 @@ export const SuperProvider = ({ children }) => {
           foundCityName = aiOrder.resolved_city_name;
           regionId = aiOrder.region_id;
           foundRegionName = aiOrder.resolved_region_name;
+          nearestPoint = extractedData.landmark || aiOrder.customer_address?.match(/قرب.*/)?.[0] || '';
           
           // الانتقال مباشرة لمرحلة تطبيع الهاتف
         } else {
@@ -1944,7 +1945,7 @@ export const SuperProvider = ({ children }) => {
             regionToSearch = addressWithoutCity.replace(/^[-\s,]+|[-\s,]+$/g, '').trim();
           }
         
-          let nearestPoint = extractedData.landmark || '';
+          nearestPoint = extractedData.landmark || '';
           
           console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
             city: cityToSearch,
