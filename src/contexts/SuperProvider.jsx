@@ -17,7 +17,8 @@ import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
-import { useDeliveryOrderHandler } from './SuperProvider_DeliveryOrderHandler';
+import { handleDeliveryPartnerOrder } from './SuperProvider_DeliveryOrderHandler';
+import { useUnifiedOrderCreator } from '@/contexts/AlWaseetUnifiedOrderCreator';
 
 const SuperContext = createContext();
 
@@ -89,7 +90,7 @@ export const SuperProvider = ({ children }) => {
   const { hasPermission } = usePermissions();
   const { addNotification } = useNotifications();
   const { notifyLowStock } = useNotificationsSystem();
-  const { handleDeliveryPartnerOrder } = useDeliveryOrderHandler();
+  const { createUnifiedOrder } = useUnifiedOrderCreator();
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
@@ -1724,7 +1725,8 @@ export const SuperProvider = ({ children }) => {
           itemsInput,
           destination,
           selectedAccount,
-          null // accountData سيتم جلبه داخل الدالة
+          null, // accountData سيتم جلبه داخل الدالة
+          createUnifiedOrder // ✅ تمرير createUnifiedOrder كمعامل
         );
       }
 
