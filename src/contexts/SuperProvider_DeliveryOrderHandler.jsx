@@ -11,24 +11,12 @@ export const useDeliveryOrderHandler = () => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
-      // 🎯 الحصول على المعرفات الخارجية لشركة التوصيل المحددة
-      const { data: externalCityId } = await supabase.rpc('get_city_external_id', {
-        p_city_id: aiOrder.city_id,
-        p_delivery_partner: destination.toLowerCase()
-      });
-
-      const { data: externalRegionId } = await supabase.rpc('get_region_external_id', {
-        p_region_id: aiOrder.region_id,
-        p_delivery_partner: destination.toLowerCase()
-      });
-
-      // ✅ استخدام البيانات مباشرة من الطلب الذكي (نقل مباشر دون معالجة)
-
-      console.log('🔍 [DeliveryOrderHandler] المعرفات الخارجية:', {
-        unified_city_id: aiOrder.city_id,
-        unified_region_id: aiOrder.region_id,
-        external_city_id: externalCityId,
-        external_region_id: externalRegionId,
+      // ✅ ai_orders يحتوي بالفعل على external IDs من البوت - لا حاجة للتحويل
+      console.log('🔍 [DeliveryOrderHandler] المعرفات من ai_orders:', {
+        city_id: aiOrder.city_id,           // external ID مباشرة
+        region_id: aiOrder.region_id,       // external ID مباشرة
+        city_name: aiOrder.resolved_city_name,
+        region_name: aiOrder.resolved_region_name,
         delivery_partner: destination
       });
 
@@ -39,10 +27,10 @@ export const useDeliveryOrderHandler = () => {
         customer_address: aiOrder.customer_address || 'لم يُحدد', // نقل حرفي كما هو
         customer_city: aiOrder.resolved_city_name,               // المدينة المحللة
         customer_province: aiOrder.resolved_region_name,         // المنطقة المحللة
-        customer_city_id: aiOrder.city_id,                       // المعرف الموحد
-        customer_region_id: aiOrder.region_id,                   // المعرف الموحد
-        alwaseet_city_id: parseInt(externalCityId),              // المعرف الخارجي للوسيط
-        alwaseet_region_id: parseInt(externalRegionId),          // المعرف الخارجي للوسيط
+        customer_city_id: aiOrder.city_id,                       // external ID مباشرة
+        customer_region_id: aiOrder.region_id,                   // external ID مباشرة
+        alwaseet_city_id: parseInt(aiOrder.city_id),             // external ID للوسيط
+        alwaseet_region_id: parseInt(aiOrder.region_id),         // external ID للوسيط
         delivery_type: 'توصيل'
       };
 
