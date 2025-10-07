@@ -5500,11 +5500,11 @@ export type Database = {
             }
           | {
               p_created_by?: string
-              p_employee_code: string
-              p_fallback_city?: string
-              p_fallback_confidence?: number
-              p_fallback_region?: string
+              p_customer_address?: string
+              p_customer_name?: string
+              p_customer_phone?: string
               p_message_text: string
+              p_source?: string
               p_telegram_chat_id: number
             }
         Returns: Json
