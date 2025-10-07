@@ -17,7 +17,6 @@ import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
-import { handleDeliveryPartnerOrder } from './SuperProvider_DeliveryOrderHandler';
 
 const SuperContext = createContext();
 
@@ -1715,26 +1714,481 @@ export const SuperProvider = ({ children }) => {
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
 
-      // ✅ استخدام handleDeliveryPartnerOrder للتوصيل عبر شركات التوصيل
+      // إذا كان الوجهة شركة توصيل، استخدم AlWaseet مباشرة
       if (destination !== 'local') {
-        console.log('📦 استخدام handleDeliveryPartnerOrder من SuperProvider_DeliveryOrderHandler');
+        console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
         
-        // استيراد createUnifiedOrder محليًا لتجنب circular dependency
-        const { useUnifiedOrderCreator } = await import('@/contexts/AlWaseetUnifiedOrderCreator');
-        const createUnifiedOrder = useUnifiedOrderCreator?.()?.createUnifiedOrder;
+        // التحقق من وجود الحساب أو جلبه من التفضيلات
+        let actualAccount = selectedAccount;
+        let profile = null; // تعريف profile خارج try-catch
         
-        if (!createUnifiedOrder) {
-          throw new Error('createUnifiedOrder غير متاح');
+        if (!actualAccount) {
+          console.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
+          try {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('selected_delivery_account, default_customer_name')
+              .eq('user_id', createdBy)
+              .single();
+            
+            profile = profileData;
+            actualAccount = profile?.selected_delivery_account;
+            console.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
+            console.log('👤 اسم الزبون الافتراضي:', profile?.default_customer_name);
+          } catch (error) {
+            console.error('❌ فشل في جلب الحساب من التفضيلات:', error);
+          }
+        }
+
+        if (!actualAccount) {
+          return { 
+            success: false, 
+            error: `لا يوجد حساب محدد لشركة التوصيل ${destination}. يرجى تحديد حساب في إعدادات وجهة الطلب.` 
+          };
         }
         
-        return await handleDeliveryPartnerOrder(
-          aiOrder,
-          itemsInput,
-          destination,
-          selectedAccount,
-          null, // accountData سيتم جلبه داخل الدالة
-          createUnifiedOrder // ✅ تمرير createUnifiedOrder كمعامل
-        );
+        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
+        try {
+          console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
+          
+          // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
+          const accountData = await getTokenForUser(createdBy, actualAccount);
+          if (!accountData?.token) {
+            console.error('❌ فشل في الحصول على توكن صالح للحساب:', actualAccount);
+            throw new Error('فشل في الحصول على توكن صالح للحساب المحدد');
+          }
+          
+          console.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
+          console.log('📋 بيانات الحساب:', { 
+            username: accountData.username,
+            hasToken: !!accountData.token,
+            expiresAt: accountData.expires_at
+          });
+          
+          setActivePartner('alwaseet');
+          
+          // مطابقة العناصر مع المنتجات الموجودة
+          const products = Array.isArray(allData.products) ? allData.products : [];
+          const lowercase = (v) => (v || '').toString().trim().toLowerCase();
+          const notMatched = [];
+
+        const matchedItems = itemsInput.map((it) => {
+          const name = lowercase(it.product_name || it.name);
+          const color = lowercase(it.color);
+          const size = lowercase(it.size);
+          const qty = Number(it.quantity || 1);
+          const price = Number(it.unit_price || it.price || 0);
+
+          // إذا كانت المعرّفات موجودة بالفعل استخدمها مباشرة
+          if (it.product_id && it.variant_id) {
+            return {
+              product_id: it.product_id,
+              variant_id: it.variant_id,
+              quantity: qty,
+              unit_price: price,
+            };
+          }
+
+          // ابحث بالاسم
+          let product = products.find(p => lowercase(p.name) === name) 
+            || products.find(p => lowercase(p.name).includes(name));
+
+          if (!product) {
+            notMatched.push(it.product_name || it.name || 'منتج غير معروف');
+            return null;
+          }
+
+          // مطابقة المتغير (اللون/المقاس)
+          const variants = Array.isArray(product.variants) ? product.variants : (product.product_variants || []);
+          let variant = null;
+          if (variants.length === 1) {
+            variant = variants[0];
+          } else {
+            variant = variants.find(v => lowercase(v.color || v.color_name) === color && lowercase(v.size || v.size_name) === size)
+                   || variants.find(v => lowercase(v.color || v.color_name) === color)
+                   || variants.find(v => lowercase(v.size || v.size_name) === size);
+          }
+
+          if (!variant) {
+            notMatched.push(`${product.name}${it.color || it.size ? ` (${it.color || ''} ${it.size || ''})` : ''}`);
+            return null;
+          }
+
+          return {
+            product_id: product.id,
+            variant_id: variant.id,
+            quantity: qty,
+            unit_price: price || Number(variant.price || 0),
+          };
+        });
+
+        if (notMatched.length > 0) {
+          return { success: false, error: `تعذر مطابقة المنتجات التالية مع المخزون: ${notMatched.join('، ')}` };
+        }
+
+        const normalizedItems = matchedItems.filter(Boolean);
+        if (!normalizedItems.length) {
+          return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
+        }
+
+        // ✅ استخدام البيانات المستخرجة من process_telegram_order مباشرة
+        const extractedData = aiOrder.order_data?.extracted_data || {};
+        
+        // إثراء العناصر بأسماء المنتجات الفعلية
+        const enrichedItems = normalizedItems.map(item => {
+          const product = products.find(p => p.id === item.product_id);
+          return {
+            ...item,
+            product_name: product?.name || 'منتج غير معروف'
+          };
+        });
+
+        // إنشاء payload للوسيط - استخدام الاسم من aiOrder مباشرة
+        const alwaseetPayload = {
+          customer_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
+          customer_phone: aiOrder.customer_phone,
+          customer_address: aiOrder.customer_address,
+          customer_city: aiOrder.customer_city,
+          customer_province: aiOrder.customer_province,
+          notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || '',
+          items: enrichedItems.map(item => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            price: item.unit_price
+          })),
+          total_amount: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+        };
+
+        console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
+        
+        // جلب المدن والمناطق - تماماً كما في صفحة الطلب السريع
+        console.log('🌆 جلب المدن من الوسيط...');
+        const citiesData = await getCities(accountData.token);
+        const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
+        
+        if (!cities.length) {
+          throw new Error('لم يتم جلب قائمة المدن من شركة التوصيل');
+        }
+        
+        // تطبيع النصوص العربية للبحث - نفس الطريقة الدقيقة من QuickOrderContent
+        const normalizeArabic = (text) => {
+          if (!text) return '';
+          return text.toString().trim()
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/[ة]/g, 'ه')
+            .replace(/[ي]/g, 'ى')
+            .toLowerCase()
+            // إزالة كلمات التوقف
+            .replace(/\b(حي|منطقة|محلة|شارع|زقاق|مقاطعة)\s*/g, '');
+        };
+        
+        // دالة لتوليد مرشحات متعددة الكلمات للمناطق
+        const generateRegionCandidates = (text) => {
+          if (!text) return [];
+          const words = text.split(/\s+/).filter(Boolean);
+          const candidates = [];
+          
+          // مرشحات بأطوال مختلفة (2-3 كلمات)
+          for (let len = 1; len <= Math.min(3, words.length); len++) {
+            for (let start = 0; start <= words.length - len; start++) {
+              const candidate = words.slice(start, start + len).join(' ');
+              if (candidate.length >= 2) {
+                candidates.push(candidate);
+              }
+            }
+          }
+          
+          return candidates;
+        };
+        
+        // استخدام customer_city للمدينة و customer_address للمنطقة
+        let cityToSearch = extractedData.city || aiOrder.customer_city || '';
+        let regionToSearch = extractedData.region || '';
+        
+        // استخراج المنطقة من customer_address إذا لم نجدها في extractedData
+        if (!regionToSearch && aiOrder.customer_address) {
+          // إزالة اسم المدينة من customer_address للحصول على المنطقة
+          let addressWithoutCity = aiOrder.customer_address;
+          if (cityToSearch) {
+            addressWithoutCity = addressWithoutCity.replace(cityToSearch, '').trim();
+          }
+          // تنظيف المنطقة من الفواصل والشرطات
+          regionToSearch = addressWithoutCity.replace(/^[-\s,]+|[-\s,]+$/g, '').trim();
+        }
+        
+        let nearestPoint = extractedData.landmark || '';
+        
+        console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
+          city: cityToSearch,
+          region: regionToSearch,
+          landmark: nearestPoint,
+          full_address: extractedData.full_address
+        });
+        
+        // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
+        let cityId = null;
+        let foundCityName = '';
+        
+        if (cityToSearch) {
+          const searchCity = normalizeArabic(cityToSearch);
+          console.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
+          
+          // مطابقة دقيقة أولاً
+          let cityMatch = cities.find(city => normalizeArabic(city.name) === searchCity);
+          
+          // مطابقة جزئية إذا لم نجد مطابقة دقيقة
+          if (!cityMatch) {
+            cityMatch = cities.find(city => 
+              normalizeArabic(city.name).includes(searchCity) ||
+              searchCity.includes(normalizeArabic(city.name))
+            );
+          }
+          
+          if (cityMatch) {
+            cityId = cityMatch.id;
+            foundCityName = cityMatch.name;
+            console.log('✅ تم العثور على المدينة:', { id: cityId, name: foundCityName });
+          }
+        }
+        
+        // إذا لم نجد المدينة، استخدم بغداد كافتراضي (نفس منطق QuickOrderContent)
+        if (!cityId) {
+          console.log('⚠️ لم يتم العثور على المدينة، البحث عن بغداد...');
+          const baghdadCity = cities.find(city => normalizeArabic(city.name).includes('بغداد'));
+          if (baghdadCity) {
+            cityId = baghdadCity.id;
+            foundCityName = baghdadCity.name;
+            console.log('✅ استخدام بغداد كافتراضي:', foundCityName);
+          } else {
+            throw new Error(`لم يتم العثور على مدينة مطابقة أو بغداد. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
+          }
+        }
+
+        // جلب المناطق للمدينة المحددة
+        console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
+        const regionsData = await getRegionsByCity(accountData.token, cityId);
+        const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
+        
+        let regionId = null;
+        let foundRegionName = '';
+        
+        if (regions.length > 0) {
+          if (regionToSearch) {
+            console.log('🔍 البحث عن المنطقة:', regionToSearch);
+            
+            // توليد جميع المرشحات المحتملة من النص
+            const allCandidates = generateRegionCandidates(regionToSearch);
+            let bestMatch = null;
+            let bestScore = 0;
+            let matchedText = '';
+            
+            // البحث عن أفضل مطابقة
+            for (const candidate of allCandidates) {
+              const normalizedCandidate = normalizeArabic(candidate);
+              
+              // البحث في جميع المناطق
+              for (const region of regions) {
+                const normalizedRegion = normalizeArabic(region.name);
+                let score = 0;
+                
+                // مطابقة دقيقة (أعلى درجة)
+                if (normalizedRegion === normalizedCandidate) {
+                  score = 100;
+                } 
+                // مطابقة تحتوي على النص كاملاً
+                else if (normalizedRegion.includes(normalizedCandidate) && normalizedCandidate.length >= 3) {
+                  score = 80;
+                }
+                // مطابقة جزئية
+                else if (normalizedCandidate.includes(normalizedRegion) && normalizedRegion.length >= 3) {
+                  score = 60;
+                }
+                
+                if (score > bestScore) {
+                  bestScore = score;
+                  bestMatch = region;
+                  matchedText = candidate;
+                }
+              }
+            }
+            
+            if (bestMatch && bestScore >= 60) {
+              regionId = bestMatch.id;
+              foundRegionName = bestMatch.name;
+              console.log('✅ تم العثور على المنطقة:', { 
+                id: regionId, 
+                name: foundRegionName, 
+                score: bestScore,
+                matchedText 
+              });
+              
+              // حساب نقطة الدلالة المتبقية
+              const remainingText = regionToSearch.replace(matchedText, '').trim();
+              if (remainingText.length >= 3) {
+                nearestPoint = remainingText;
+                console.log('📍 نقطة الدلالة:', nearestPoint);
+              }
+            } else {
+              console.log('⚠️ لم يتم العثور على مطابقة جيدة للمنطقة');
+            }
+          }
+          
+          // إذا لم نجد المنطقة، استخدم أول منطقة متاحة فقط إذا لم يكن هناك نص منطقة محدد
+          if (!regionId && !regionToSearch) {
+            regionId = regions[0].id;
+            foundRegionName = regions[0].name;
+            console.log('⚠️ استخدام أول منطقة متاحة (لعدم وجود نص منطقة):', foundRegionName);
+          } else if (!regionId && regionToSearch) {
+            console.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
+          }
+        }
+        
+        // لا نفشل العملية إذا لم نجد منطقة، بدلاً من ذلك نستخدم المدينة فقط
+        if (!regionId && regions.length > 0) {
+          regionId = regions[0].id;
+          foundRegionName = regions[0].name;
+          console.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
+        }
+
+        // تطبيع رقم الهاتف - نفس الطريقة من QuickOrderContent
+        const { normalizePhone } = await import('../utils/phoneUtils.js');
+        const normalizedPhone = normalizePhone(aiOrder.customer_phone);
+        if (!normalizedPhone) {
+          throw new Error('رقم الهاتف غير صحيح');
+        }
+
+        // بناء type_name بنفس طريقة QuickOrderContent - اسم المنتج + اللون + المقاس
+        const productNames = enrichedItems.map(item => {
+          const product = products.find(p => p.id === item.product_id);
+          const variants = product?.variants || product?.product_variants || [];
+          const variant = variants.find(v => v.id === item.variant_id);
+          
+          let displayName = item.product_name;
+          const color = variant?.color || variant?.color_name || variant?.colors?.name;
+          const size = variant?.size || variant?.size_name || variant?.sizes?.name;
+          
+          // تركيب الاسم: المنتج + اللون + المقاس (تماماً كما في QuickOrderContent)
+          if (color) displayName += ` ${color}`;
+          if (size) displayName += ` ${size}`;
+          
+          return displayName;
+        }).filter(Boolean).join(' + ');
+
+        // حساب السعر مع رسوم التوصيل (مطابق لـ QuickOrderContent)
+        const subtotalPrice = enrichedItems.reduce((sum, item) => sum + ((item.quantity || 1) * (item.unit_price || 0)), 0);
+        
+        // جلب رسوم التوصيل من الإعدادات
+        let deliveryFee = 5000; // القيمة الافتراضية
+        try {
+          const { data: ds } = await supabase
+            .from('settings')
+            .select('value')
+            .eq('key', 'delivery_fee')
+            .maybeSingle();
+          deliveryFee = Number(ds?.value) || 5000;
+        } catch (_) {}
+
+        const finalPrice = subtotalPrice + deliveryFee; // السعر النهائي مع رسوم التوصيل
+
+        // إعداد payload الوسيط - نفس البنية من QuickOrderContent مع ملاحظات فارغة لطلبات التليغرام
+        const updatedPayload = {
+          city_id: parseInt(cityId),
+          region_id: parseInt(regionId),
+          // ✅ استخدام اسم الزبون من الطلب الذكي مباشرة، ثم الافتراضي من الإعدادات
+          client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
+          client_mobile: normalizedPhone,
+          client_mobile2: '',
+          // ✅ بناء العنوان من المكونات المطابقة لضمان التطابق التام مع المعرفات
+          location: `${foundCityName}, ${foundRegionName}${nearestPoint && nearestPoint !== 'غير محدد' ? ', قرب ' + nearestPoint : ''}`,
+          type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
+          items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
+          price: finalPrice, // السعر النهائي مع رسوم التوصيل
+          package_size: 1,
+          merchant_notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
+          replacement: 0
+        };
+
+        console.log('📋 بيانات الطلب النهائية المرسلة للوسيط:', updatedPayload);
+        console.log('💰 السعر النهائي (مع رسوم التوصيل):', finalPrice);
+
+        // إنشاء الطلب في الوسيط - استخدام نفس منطق QuickOrderContent مع retry محسن
+        const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
+        const alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
+        
+        console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
+        
+        // معالجة qr_id - الآن من المفترض أن يحتوي على qr_id من التحسينات
+        let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
+        let orderId = alwaseetResult?.id || qrId;
+        
+        // Smart retry if qr_id is still missing - 3 attempts with proper delays
+        if (!qrId || qrId === 'undefined' || qrId === 'null') {
+          console.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
+          const maxRetries = 3;
+          const delayBetweenRetries = 1500; // 1.5 seconds
+          
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              console.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
+              await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
+              
+              const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
+              const recentOrders = await getMerchantOrders(accountData.token);
+              
+              // Advanced matching: by phone (last 10 digits), price, and recent creation
+              const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);
+              const candidates = recentOrders.filter(order => {
+                const orderPhone = (order?.client_mobile || '').replace(/\D/g, '').slice(-10);
+                return orderPhone === customerPhoneLast10;
+              });
+              
+              // Try exact price match first, then recent order
+              let matchingOrder = candidates.find(order => parseInt(order?.price) === finalPrice);
+              if (!matchingOrder && candidates.length > 0) {
+                // Sort by creation time and take the most recent
+                matchingOrder = candidates.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+              }
+              
+              if (matchingOrder) {
+                qrId = matchingOrder.qr_id || matchingOrder.tracking_number || matchingOrder.id;
+                orderId = matchingOrder.id || orderId;
+                console.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
+                break;
+              }
+              
+              console.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
+            } catch (retryError) {
+              console.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
+            }
+            
+            // If last attempt fails, log the issue
+            if (attempt === maxRetries) {
+              console.error('❌ فشل في جميع المحاولات للحصول على qr_id');
+            }
+          }
+        }
+        
+        if (!qrId || qrId === 'undefined' || qrId === 'null') {
+          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل بعد عدة محاولات');
+        }
+
+        console.log('🔍 qr_id المستخرج:', qrId);
+        console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
+
+        // إنشاء الطلب المحلي مع ربطه بالوسيط - استخدام orderId بدلاً من qrId
+        return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
+          delivery_partner: 'alwaseet',
+          delivery_partner_order_id: String(orderId || qrId),
+          qr_id: qrId,
+          tracking_number: qrId,
+          delivery_account_used: actualAccount,
+          alwaseet_city_id: parseInt(cityId),
+          alwaseet_region_id: parseInt(regionId)
+        }, foundCityName, foundRegionName);
+      } catch (err) {
+        console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
+        return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
+      }
       }
 
       // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
