@@ -1010,9 +1010,13 @@ export const SuperProvider = ({ children }) => {
         notes: arg1?.notes,
       };
 
-      // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg دون fallback معقد
-      const finalAlwaseetCityId = deliveryPartnerDataArg?.alwaseet_city_id || null;
-      const finalAlwaseetRegionId = deliveryPartnerDataArg?.alwaseet_region_id || null;
+      // ✅ الإصلاح النهائي: fallback ثنائي لضمان استخدام المعرفات الصحيحة
+      const finalAlwaseetCityId = deliveryPartnerDataArg?.alwaseet_city_id 
+        || arg1?.alwaseet_city_id 
+        || null;
+      const finalAlwaseetRegionId = deliveryPartnerDataArg?.alwaseet_region_id 
+        || arg1?.alwaseet_region_id 
+        || null;
 
       const orderRow = {
         order_number: orderNumber,
