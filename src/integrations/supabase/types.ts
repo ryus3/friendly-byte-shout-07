@@ -5487,21 +5487,17 @@ export type Database = {
       process_telegram_order: {
         Args:
           | {
-              p_chat_id: number
-              p_employee_code: string
-              p_employee_id: string
-              p_employee_name?: string
-              p_employee_username?: string
-              p_phone: string
-              p_text: string
-            }
-          | {
               p_city_id?: number
               p_city_name?: string
               p_employee_code: string
               p_message_text: string
               p_region_id?: number
               p_region_name?: string
+              p_telegram_chat_id: number
+            }
+          | {
+              p_employee_code: string
+              p_message_text: string
               p_telegram_chat_id: number
             }
         Returns: Json
