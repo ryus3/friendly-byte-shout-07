@@ -32,18 +32,18 @@ export const useDeliveryOrderHandler = () => {
         delivery_partner: destination
       });
 
-      // ✅ نقل مباشر للبيانات من الطلب الذكي دون أي معالجة إضافية
+      // ✅ نقل حرفي 100% من ai_orders إلى شركة التوصيل بدون أي معالجة
       const customerInfo = {
-        customer_name: aiOrder.customer_name,
-        customer_phone: aiOrder.customer_phone,
-        customer_address: aiOrder.customer_address,              // نقل مباشر
-        customer_city: aiOrder.customer_city,                    // نقل مباشر
-        customer_province: aiOrder.resolved_region_name,         // ✅ نقل مباشر من الطلب الذكي
+        customer_name: aiOrder.customer_name,                    // نقل مباشر
+        customer_phone: aiOrder.customer_phone,                  // نقل مباشر
+        customer_address: aiOrder.customer_address || 'لم يُحدد', // نقل حرفي كما هو
+        customer_city: aiOrder.resolved_city_name,               // المدينة المحللة
+        customer_province: aiOrder.resolved_region_name,         // المنطقة المحللة
         customer_city_id: aiOrder.city_id,                       // المعرف الموحد
         customer_region_id: aiOrder.region_id,                   // المعرف الموحد
-        alwaseet_city_id: parseInt(externalCityId),              // المعرف الخارجي
-        alwaseet_region_id: parseInt(externalRegionId),          // المعرف الخارجي
-        delivery_type: aiOrder.customer_address ? 'توصيل' : 'محلي'
+        alwaseet_city_id: parseInt(externalCityId),              // المعرف الخارجي للوسيط
+        alwaseet_region_id: parseInt(externalRegionId),          // المعرف الخارجي للوسيط
+        delivery_type: 'توصيل'
       };
 
       // تحويل العناصر إلى صيغة cart
