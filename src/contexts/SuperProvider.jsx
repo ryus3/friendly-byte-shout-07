@@ -2362,10 +2362,10 @@ export const SuperProvider = ({ children }) => {
         // ✅ استخدام اسم الزبون المستخرج
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
-        // ✅ تنظيف العنوان لاستخراج فقط "قرب شارع اليوسف"
-        customer_address: cleanAddress(aiOrder.customer_address),
+        // ✅ استخدام nearestPoint كعنوان أساسي
+        customer_address: nearestPoint || cleanAddress(aiOrder.customer_address) || 'غير محدد',
         customer_city: cityName || aiOrder.resolved_city_name || aiOrder.customer_city || extractedData.city,
-        // ✅ الأولوية المطلقة لـ resolved_region_name من ai_orders (صحيح 100%)
+        // ✅ الأولوية المطلقة لـ resolved_region_name من ai_orders (بدون nearestPoint)
         customer_province: aiOrder.resolved_region_name || regionName || extractedData.region,
         // 🎯 إعطاء الأولوية لبيانات الوسيط ثم aiOrder كاحتياطي
         alwaseet_city_id: deliveryPartnerData?.alwaseet_city_id || aiOrder.city_id,
