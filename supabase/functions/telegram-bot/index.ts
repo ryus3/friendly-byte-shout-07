@@ -429,34 +429,38 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
     for (const line of lines) {
       const normalized = normalizeArabicText(line);
       
-      // Direct match in cities
-      const exactCity = citiesCache.find(c => c.normalized === normalized || normalized.includes(c.normalized));
+      // استخراج الكلمة الأولى فقط من السطر
+      const firstWord = line.trim().split(/\s+/)[0];
+      const normalizedFirstWord = normalizeArabicText(firstWord);
+      
+      // Direct match in cities - باستخدام الكلمة الأولى فقط
+      const exactCity = citiesCache.find(c => c.normalized === normalizedFirstWord || normalizedFirstWord.includes(c.normalized));
       if (exactCity) {
-        console.log(`✅ تم العثور على المدينة "${exactCity.name}" في السطر: "${line}"`);
+        console.log(`✅ تم العثور على المدينة "${exactCity.name}" من الكلمة الأولى في السطر: "${line}"`);
         return { cityId: exactCity.id, cityName: exactCity.name, confidence: 1.0, cityLine: line };
       }
       
       // Starts with match
-      const startsWithCity = citiesCache.find(c => c.normalized.startsWith(normalized) || normalized.startsWith(c.normalized));
+      const startsWithCity = citiesCache.find(c => c.normalized.startsWith(normalizedFirstWord) || normalizedFirstWord.startsWith(c.normalized));
       if (startsWithCity) {
-        console.log(`✅ تم العثور على المدينة "${startsWithCity.name}" في السطر: "${line}"`);
+        console.log(`✅ تم العثور على المدينة "${startsWithCity.name}" من الكلمة الأولى في السطر: "${line}"`);
         return { cityId: startsWithCity.id, cityName: startsWithCity.name, confidence: 0.9, cityLine: line };
       }
       
-      // Check aliases
-      const alias = cityAliasesCache.find(a => a.normalized === normalized || normalized.includes(a.normalized));
+      // Check aliases - باستخدام الكلمة الأولى فقط
+      const alias = cityAliasesCache.find(a => a.normalized === normalizedFirstWord || normalizedFirstWord.includes(a.normalized));
       if (alias) {
         const city = citiesCache.find(c => c.id === alias.city_id);
         if (city) {
-          console.log(`✅ تم العثور على المدينة "${city.name}" عبر المرادف في السطر: "${line}"`);
+          console.log(`✅ تم العثور على المدينة "${city.name}" عبر المرادف من الكلمة الأولى في السطر: "${line}"`);
           return { cityId: city.id, cityName: city.name, externalId: city.alwaseet_id, confidence: alias.confidence, cityLine: line };
         }
       }
       
       // Contains match
-      const containsCity = citiesCache.find(c => c.normalized.includes(normalized) || normalized.includes(c.normalized));
+      const containsCity = citiesCache.find(c => c.normalized.includes(normalizedFirstWord) || normalizedFirstWord.includes(c.normalized));
       if (containsCity) {
-        console.log(`✅ تم العثور على المدينة "${containsCity.name}" في السطر: "${line}"`);
+        console.log(`✅ تم العثور على المدينة "${containsCity.name}" من الكلمة الأولى في السطر: "${line}"`);
         return { cityId: containsCity.id, cityName: containsCity.name, externalId: containsCity.alwaseet_id, confidence: 0.7, cityLine: line };
       }
     }
