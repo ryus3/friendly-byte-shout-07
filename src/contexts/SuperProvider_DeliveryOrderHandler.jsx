@@ -31,6 +31,7 @@ export const useDeliveryOrderHandler = () => {
         customer_region_id: aiOrder.region_id,                   // external ID مباشرة
         alwaseet_city_id: parseInt(aiOrder.city_id),             // external ID للوسيط
         alwaseet_region_id: parseInt(aiOrder.region_id),         // external ID للوسيط
+        notes: aiOrder.notes || '',                              // الملاحظات من الطلب الذكي
         delivery_type: 'توصيل'
       };
 
