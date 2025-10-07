@@ -1854,7 +1854,7 @@ export const SuperProvider = ({ children }) => {
           customer_address: aiOrder.customer_address,
           customer_city: aiOrder.customer_city,
           customer_province: aiOrder.customer_province,
-          notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || '',
+          notes: aiOrder.notes || '',
           items: enrichedItems.map(item => ({
             product_name: item.product_name,
             quantity: item.quantity,
