@@ -449,7 +449,7 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
         const city = citiesCache.find(c => c.id === alias.city_id);
         if (city) {
           console.log(`✅ تم العثور على المدينة "${city.name}" عبر المرادف في السطر: "${line}"`);
-          return { cityId: city.id, cityName: city.name, confidence: alias.confidence, cityLine: line };
+          return { cityId: city.id, cityName: city.name, externalId: city.alwaseet_id, confidence: alias.confidence, cityLine: line };
         }
       }
       
@@ -457,7 +457,7 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
       const containsCity = citiesCache.find(c => c.normalized.includes(normalized) || normalized.includes(c.normalized));
       if (containsCity) {
         console.log(`✅ تم العثور على المدينة "${containsCity.name}" في السطر: "${line}"`);
-        return { cityId: containsCity.id, cityName: containsCity.name, confidence: 0.7, cityLine: line };
+        return { cityId: containsCity.id, cityName: containsCity.name, externalId: containsCity.alwaseet_id, confidence: 0.7, cityLine: line };
       }
     }
     
@@ -595,8 +595,9 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       // ✅ إضافة المطابقات فوق عتبة الثقة (70%)
       if (bestScore >= 70) {
         matches.push({
-          regionId: region.id,
+          regionId: region.id,           // المعرف الموحد
           regionName: region.name,
+          externalId: region.alwaseet_id, // ✅ المعرف الخارجي للوسيط
           confidence: bestScore / 100
         });
       }
@@ -1362,7 +1363,11 @@ serve(async (req) => {
                         employee_code: employeeCode,
                         city_id: localCityResult.cityId,
                         city_name: localCityResult.cityName,
-                        all_regions: localRegionMatches
+                        city_external_id: localCityResult.externalId,
+                        all_regions: localRegionMatches.map(r => ({
+                          ...r,
+                          externalId: regionsCache.find(reg => reg.id === r.regionId)?.alwaseet_id
+                        }))
                       }
                     });
                   
@@ -1921,8 +1926,8 @@ serve(async (req) => {
                   p_employee_code: pendingData.context.employee_code,
                   p_message_text: pendingData.context.original_text,
                   p_telegram_chat_id: chatId,
-                  p_city_id: pendingData.context.city_id,
-                  p_region_id: regionId,
+                  p_city_id: pendingData.context.city_external_id || pendingData.context.city_id,
+                  p_region_id: selectedRegion?.externalId || regionId,
                   p_city_name: pendingData.context.city_name,
                   p_region_name: selectedRegion?.regionName || 'غير محدد'
                 });
