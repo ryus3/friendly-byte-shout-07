@@ -2125,8 +2125,8 @@ export const SuperProvider = ({ children }) => {
           client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           client_mobile: normalizedPhone,
           client_mobile2: '',
-          // ✅ بناء العنوان من المكونات المطابقة لضمان التطابق التام مع المعرفات
-          location: `${foundCityName}, ${foundRegionName}${nearestPoint && nearestPoint !== 'غير محدد' ? ', قرب ' + nearestPoint : ''}`,
+          // ✅ استخدام customer_address مباشرة - يحتوي فقط على أقرب نقطة دالة
+          location: aiOrder.customer_address || nearestPoint || 'غير محدد',
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: finalPrice, // السعر النهائي مع رسوم التوصيل
