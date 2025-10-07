@@ -18,7 +18,6 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import { handleDeliveryPartnerOrder } from './SuperProvider_DeliveryOrderHandler';
-import { useUnifiedOrderCreator } from '@/contexts/AlWaseetUnifiedOrderCreator';
 
 const SuperContext = createContext();
 
@@ -90,7 +89,6 @@ export const SuperProvider = ({ children }) => {
   const { hasPermission } = usePermissions();
   const { addNotification } = useNotifications();
   const { notifyLowStock } = useNotificationsSystem();
-  const { createUnifiedOrder } = useUnifiedOrderCreator();
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
@@ -1720,6 +1718,15 @@ export const SuperProvider = ({ children }) => {
       // ✅ استخدام handleDeliveryPartnerOrder للتوصيل عبر شركات التوصيل
       if (destination !== 'local') {
         console.log('📦 استخدام handleDeliveryPartnerOrder من SuperProvider_DeliveryOrderHandler');
+        
+        // استيراد createUnifiedOrder محليًا لتجنب circular dependency
+        const { useUnifiedOrderCreator } = await import('@/contexts/AlWaseetUnifiedOrderCreator');
+        const createUnifiedOrder = useUnifiedOrderCreator?.()?.createUnifiedOrder;
+        
+        if (!createUnifiedOrder) {
+          throw new Error('createUnifiedOrder غير متاح');
+        }
+        
         return await handleDeliveryPartnerOrder(
           aiOrder,
           itemsInput,

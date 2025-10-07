@@ -44,14 +44,14 @@ export const AppProviders = ({ children }) => {
               <NotificationsProvider>
                 <AiChatProvider>
                   <ProfitsProvider>
-                    <UnifiedOrderCreatorProvider>
-                      <SuperProvider>
+                    <SuperProvider>
+                      <UnifiedOrderCreatorProvider>
                         <VariantsProvider>
                           <AppStartSync />
                           {children}
                         </VariantsProvider>
-                      </SuperProvider>
-                    </UnifiedOrderCreatorProvider>
+                      </UnifiedOrderCreatorProvider>
+                    </SuperProvider>
                   </ProfitsProvider>
                 </AiChatProvider>
               </NotificationsProvider>
