@@ -5496,6 +5496,16 @@ export type Database = {
               p_region_name: string
               p_telegram_chat_id: number
             }
+          | {
+              p_customer_address: string
+              p_customer_name: string
+              p_customer_phone: string
+              p_employee_code: string
+              p_items: Json
+              p_order_data: Json
+              p_telegram_chat_id: number
+              p_total_amount: number
+            }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
