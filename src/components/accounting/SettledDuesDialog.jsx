@@ -19,16 +19,6 @@ import { supabase } from '@/lib/customSupabaseClient';
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
 
-  console.log('🔍 فحص بيانات الفاتورة:', {
-    invoice_number: invoice.invoice_number,
-    employee_id: invoice.employee_id,
-    order_ids: invoice.order_ids,
-    profit_ids: invoice.profit_ids,
-    settled_orders: invoice.settled_orders
-  });
-
-  console.log('🔍 الأرباح المسواة المرسلة:', settledProfits?.length || 0);
-  console.log('🔍 الطلبات المرسلة:', allOrders?.length || 0);
 
   // البحث عن الأرباح المرتبطة بهذه الفاتورة المحددة فقط
   const relatedProfits = settledProfits?.filter(profit => 
@@ -40,21 +30,21 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
      (!invoice.profit_ids && !invoice.order_ids))
   ) || [];
 
-  console.log('🔍 الأرباح المرتبطة بهذه الفاتورة فقط:', relatedProfits);
+  
 
   // البحث عن الطلبات المسواة
   let settledOrders = [];
   
   // أولاً: البحث عن الطلبات من order_ids إذا كانت موجودة
   if (invoice.order_ids && Array.isArray(invoice.order_ids) && invoice.order_ids.length > 0) {
-    console.log('✅ استخدام order_ids من الفاتورة:', invoice.order_ids);
+    
     settledOrders = allOrders?.filter(order => 
       invoice.order_ids.includes(order.id)
     ) || [];
   }
   // ثانياً: البحث في settled_orders إذا كانت موجودة  
   else if (invoice.settled_orders && Array.isArray(invoice.settled_orders) && invoice.settled_orders.length > 0) {
-    console.log('✅ استخدام settled_orders من الفاتورة:', invoice.settled_orders);
+    
     settledOrders = invoice.settled_orders.map(savedOrder => ({
       id: savedOrder.order_id,
       order_number: savedOrder.order_number,
@@ -66,20 +56,20 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
   }
   // ثالثاً: البحث عن طلبات الموظف من الأرباح المسواة
   else if (relatedProfits.length > 0) {
-    console.log('✅ استخدام الأرباح المسواة للبحث عن الطلبات');
+    
     settledOrders = allOrders?.filter(order => 
       relatedProfits.some(profit => profit.order_id === order.id)
     ) || [];
   }
   // رابعاً: البحث عن طلبات الموظف مباشرة
   else {
-    console.log('⚠️ البحث عن طلبات الموظف مباشرة');
+    
     settledOrders = allOrders?.filter(order => 
       order.created_by === invoice.employee_id
     ) || [];
   }
 
-  console.log('📋 الطلبات المسواة النهائية:', settledOrders);
+  
 
   // حساب الإحصائيات للفاتورة المحددة فقط
   const stats = useMemo(() => {
@@ -463,17 +453,17 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     const fetchSettledProfits = async () => {
       try {
         // تشغيل هجرة المصروفات إلى فواتير التسوية أولاً
-        console.log('🔄 تشغيل هجرة مصروفات مستحقات الموظفين...');
+        
         const { data: migrationResult, error: migrationError } = await supabase
           .rpc('migrate_employee_dues_expenses');
 
         if (migrationError) {
           console.error('❌ خطأ في الهجرة:', migrationError);
         } else if (migrationResult?.migrated_count > 0) {
-          console.log('✅ نجحت الهجرة:', migrationResult);
+          
         }
 
-        console.log('🔄 جلب الأرباح المسواة...');
+        
         const { data, error } = await supabase
           .from('profits')
           .select(`
@@ -485,7 +475,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         if (error) {
           console.error('❌ خطأ في جلب الأرباح المسواة:', error);
         } else {
-          console.log('✅ تم جلب الأرباح المسواة:', data?.length || 0);
+          
           const profitsWithOrderData = data?.map(profit => ({
             ...profit,
             order_number: profit.orders?.order_number,
@@ -494,7 +484,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           })) || [];
           
           setSettledProfits(profitsWithOrderData);
-          console.log('📊 الأرباح مع بيانات الطلبات:', profitsWithOrderData);
+          
         }
       } catch (error) {
         console.error('❌ خطأ غير متوقع:', error);
@@ -504,7 +494,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     // جلب جميع الطلبات للموظف المحدد
     const fetchAllOrdersForEmployee = async () => {
       try {
-        console.log('🔄 جلب جميع الطلبات للموظف المحدد...');
+        
         const { data, error } = await supabase
           .from('orders')
           .select('*')
@@ -513,7 +503,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         if (error) {
           console.error('❌ خطأ في جلب الطلبات:', error);
         } else {
-          console.log('✅ تم جلب طلبات الموظف:', data?.length || 0, data);
+          
         }
       } catch (error) {
         console.error('❌ خطأ غير متوقع في جلب الطلبات:', error);
@@ -579,7 +569,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         if (error) {
           console.error('خطأ في جلب فواتير التسوية الحقيقية:', error);
         } else {
-          console.log('✅ تم جلب فواتير التسوية الحقيقية:', data?.length || 0);
+          
           setRealSettlementInvoices(data || []);
         }
       } catch (error) {
@@ -596,7 +586,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
 
   // معالجة فواتير التحاسب - الفواتير الحقيقية أولاً
   const settlementInvoices = useMemo(() => {
-    console.log('🔄 معالجة فواتير التحاسب الحقيقية');
+    
     
     let allInvoices = [];
 
@@ -620,7 +610,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
       }));
       
       allInvoices = [...realInvoices];
-      console.log('✅ تمت إضافة الفواتير الحقيقية:', realInvoices.length);
+      
     }
 
     // إضافة الفواتير القديمة فقط إذا لم توجد نسخة حقيقية
@@ -651,7 +641,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         });
       
       allInvoices = [...allInvoices, ...legacyInvoices];
-      console.log('📝 تمت إضافة الفواتير القديمة:', legacyInvoices.length);
+      
     }
 
     return allInvoices;
@@ -674,17 +664,11 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const filteredInvoices = useMemo(() => {
     let filtered = settlementInvoices;
 
-    console.log('🔍 بدء فلترة الفواتير:', {
-      totalInvoices: settlementInvoices.length,
-      timePeriod,
-      selectedEmployeeFilter,
-      dateRange
-    });
 
     // تصفية حسب الموظف
     if (selectedEmployeeFilter !== 'all') {
       filtered = filtered.filter(invoice => invoice.employee_name === selectedEmployeeFilter);
-      console.log('📋 فلترة حسب الموظف:', { employeeFilter: selectedEmployeeFilter, remainingCount: filtered.length });
+      
     }
 
     // تصفية حسب الفترة الزمنية
@@ -698,17 +682,12 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
           const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
           
-          console.log('📅 فلتر اليوم:', {
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            currentTime: now.toISOString()
-          });
 
           filtered = filtered.filter(invoice => {
             // التأكد من وجود تاريخ صحيح
             const dateToCheck = invoice.settlement_date || invoice.created_at;
             if (!dateToCheck) {
-              console.log('⚠️ فاتورة بدون تاريخ:', invoice.invoice_number);
+              
               return false;
             }
 
@@ -716,19 +695,12 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
             
             // التحقق من صحة التاريخ
             if (isNaN(invoiceDate.getTime())) {
-              console.log('⚠️ تاريخ غير صحيح:', { invoice_number: invoice.invoice_number, dateToCheck });
+              
               return false;
             }
 
             const isInRange = invoiceDate >= startDate && invoiceDate <= endDate;
             
-            console.log('🔍 فحص فاتورة اليوم:', {
-              invoice_number: invoice.invoice_number,
-              invoiceDate: invoiceDate.toISOString(),
-              isInRange,
-              settlement_date: invoice.settlement_date,
-              created_at: invoice.created_at
-            });
 
             return isInRange;
           });
@@ -756,7 +728,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           break;
       }
 
-      console.log('📅 نتيجة فلتر الفترة الزمنية:', { timePeriod, remainingCount: filtered.length });
+      
     }
 
     // تصفية حسب النطاق الزمني المخصص (إذا كان محدداً)
@@ -767,7 +739,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         const invoiceDate = new Date(dateToCheck);
         return !isNaN(invoiceDate.getTime()) && invoiceDate >= dateRange.from && invoiceDate <= dateRange.to;
       });
-      console.log('📅 نتيجة فلتر النطاق المخصص:', { remainingCount: filtered.length });
+      
     }
 
     // ترتيب النتائج حسب التاريخ (الأحدث أولاً)
@@ -782,7 +754,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         return dateB - dateA;
       });
 
-    console.log('✅ نتيجة الفلترة النهائية:', { finalCount: sortedFiltered.length });
+    
     return sortedFiltered;
   }, [settlementInvoices, selectedEmployeeFilter, dateRange, timePeriod]);
 

@@ -59,7 +59,7 @@ const UnifiedAnalyticsSystem = () => {
   const analyticsData = useMemo(() => {
     if (!orders || loading || financialData.loading) return null;
 
-    console.log('🔍 فلترة البيانات للفترة:', timePeriod);
+    
     
     // فلترة الطلبات حسب الفترة الزمنية بدقة
     const filteredOrders = orders.filter(order => {
@@ -95,7 +95,7 @@ const UnifiedAnalyticsSystem = () => {
       }
     });
 
-    console.log(`📊 تمت فلترة ${filteredOrders.length} طلب من أصل ${orders.length} للفترة ${timePeriod}`);
+    
 
     // إحصائيات المبيعات الحقيقية
     const completedOrdersData = filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered');
@@ -135,7 +135,7 @@ const UnifiedAnalyticsSystem = () => {
       ) || 0
     };
 
-    console.log('📈 إحصائيات محسوبة:', { sales: salesStats, inventory: inventoryStats });
+    
 
     return {
       sales: salesStats,
@@ -158,9 +158,7 @@ const UnifiedAnalyticsSystem = () => {
     { label: 'هذا العام', value: TIME_PERIODS.YEAR },
   ];
 
-  // إضافة فعالية تغيير الفترة مع console log
   const handlePeriodChange = (newPeriod) => {
-    console.log('🔄 تغيير الفترة من', timePeriod, 'إلى', newPeriod);
     setTimePeriod(newPeriod);
     financialData.refreshData();
   };

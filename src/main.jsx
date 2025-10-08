@@ -10,6 +10,7 @@ import { disableReactDevTools } from '@fvilers/disable-react-devtools';
 import { setupRealtime } from '@/utils/realtime-setup.js';
 import { improvedSystemMonitor } from '@/utils/improvedSystemMonitor.js';
 import { enforceEmployeeCodeSystem } from '@/utils/employeeCodeEnforcer.js';
+import '@/utils/cleanConsole.js'; // Disable console in production
 
 if (import.meta.env.PROD) {
   disableReactDevTools();

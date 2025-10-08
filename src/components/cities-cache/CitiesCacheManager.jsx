@@ -30,21 +30,6 @@ const CitiesCacheManager = () => {
 
   const { isLoggedIn, activePartner, waseetUser } = useAlWaseet();
 
-  // Debug logging لمتابعة البيانات
-  console.log('🔍 CitiesCacheManager Debug:', {
-    citiesCount: cities?.length,
-    regionsCount: regions?.length,
-    syncInfo,
-    lastUpdated,
-    isCacheEmpty: isCacheEmpty(),
-    syncInfoValues: {
-      cities_count: syncInfo?.cities_count,
-      regions_count: syncInfo?.regions_count,
-      last_sync_at: syncInfo?.last_sync_at,
-      success: syncInfo?.success,
-      sync_duration_seconds: syncInfo?.sync_duration_seconds
-    }
-  });
 
   // تحديد شركة التوصيل الحالية
   const getCurrentDeliveryPartner = () => {
@@ -81,7 +66,7 @@ const CitiesCacheManager = () => {
         timeZone: 'Asia/Baghdad'
       }).format(dateObj);
     } catch (error) {
-      console.error('خطأ في تنسيق التاريخ:', error);
+      
       return 'غير محدد';
     }
   };
@@ -107,7 +92,6 @@ const CitiesCacheManager = () => {
         setUpdateProgress({ current: 0, total: 0, message: '' });
       }
     } catch (error) {
-      console.error('خطأ في تحديث cache:', error);
       setUpdateProgress({ current: 0, total: 0, message: '' });
     }
   };
@@ -126,7 +110,6 @@ const CitiesCacheManager = () => {
           table: 'cities_regions_sync_log' 
         },
         (payload) => {
-          console.log('📡 تحديث مباشر:', payload);
           
           if (payload.new) {
             const { cities_count, regions_count, success } = payload.new;

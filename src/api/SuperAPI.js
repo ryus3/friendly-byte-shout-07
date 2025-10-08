@@ -262,7 +262,7 @@ return this.fetch('all_data', async () => {
   const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, categories, departments, productTypes, seasons };
   Object.entries(nonCritical).forEach(([key, resp]) => {
     if (resp.error) {
-      console.warn(`⚠️ خطأ غير حرج في جلب ${key}:`, resp.error);
+      
     }
   });
 

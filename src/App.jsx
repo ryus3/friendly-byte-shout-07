@@ -71,7 +71,7 @@ function ProtectedRoute({ children, permission }) {
     const allowedByFlag = requested.some((p) => ['view_customers','manage_all_customers'].includes(p)) && (user?.customer_management_access === true);
     const allowed = allowedByPerms || allowedByFlag;
     if (!allowed) {
-      console.warn('🚫 ProtectedRoute blocked access', { requested, allowedByPerms, allowedByFlag, userDefault: user?.defaultPage || user?.default_page });
+      
       // إذا لم يملك المستخدم الصلاحية، انتقل للصفحة الافتراضية
       return <Navigate to={(user && (user.defaultPage || user.default_page)) || '/'} replace />;
     }

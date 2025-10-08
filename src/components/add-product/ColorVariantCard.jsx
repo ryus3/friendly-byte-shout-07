@@ -14,7 +14,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   const [addSizesDialogOpen, setAddSizesDialogOpen] = useState(false);
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
-    console.log(`🔧 تحديث المتغير: ${colorId}-${sizeId}, ${field} = ${value}`);
+    
     
     setVariants(prev => prev.map(v => {
       // استخدام المعيار الموحد: color_id و size_id حصرياً
@@ -42,7 +42,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
           updated[field] = value;
         }
         
-        console.log(`✅ تم تحديث المتغير - اللون: ${colorId}, القياس: ${sizeId}, ${field}: ${value}`, updated);
+        
         return updated;
       }
       return v;
@@ -54,7 +54,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   };
 
   const handleAddSizes = (newSizes) => {
-    console.log(`➕ إضافة قياسات جديدة للون ${color.name}:`, newSizes);
+    
     setVariants(prev => [...prev, ...newSizes]);
   };
 
@@ -157,7 +157,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                   );
                   
                   const sortedVariants = sortVariants(colorVariants);
-                  console.log(`🎨 عرض متغيرات اللون ${color.name} مرتبة:`, sortedVariants);
                   
                   return sortedVariants.map((variant, index) => {
                     const sizeName = variant.sizes?.name || variant.size || 'غير محدد';
@@ -320,7 +319,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                             value={currentQuantity || ''} 
                             onChange={e => {
                               const newQuantity = parseInt(e.target.value) || 0;
-                              console.log(`🔢 تحديث الكمية للون ${color.name} قياس ${sizeName}:`, newQuantity);
                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', newQuantity);
                             }} 
                             min="0"
