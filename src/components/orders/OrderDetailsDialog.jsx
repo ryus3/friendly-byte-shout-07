@@ -54,7 +54,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     name: order.customer_name,
     phone: order.customer_phone,
     address: order.customer_address,
-    city: order.customer_city
+    city: order.customer_city,
+    province: order.customer_province
   };
   
   const getOrderDate = () => {
