@@ -66,9 +66,6 @@ import React, { useState, useEffect } from 'react';
     
     return categoryMatch && dateMatch;
   });
-  
-  console.log('📊 [TRACE] إجمالي المصاريف قبل الفلترة:', expenses.length);
-  console.log('📊 [TRACE] إجمالي المصاريف بعد الفلترة:', filteredExpenses.length);
     
       const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -236,7 +233,6 @@ import React, { useState, useEffect } from 'react';
                       <DateRangePicker
                         date={filters.dateRange}
                         onDateChange={(range) => {
-                          console.log('تغيير نطاق التاريخ:', range);
                           setFilters(f => ({...f, dateRange: range || {from: null, to: null}}));
                         }}
                         className="w-full"

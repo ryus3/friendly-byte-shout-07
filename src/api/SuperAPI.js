@@ -16,7 +16,6 @@ class SuperAPI {
     this.CACHE_TTL = 30 * 1000;
     this.ORDER_CACHE_TTL = 10 * 1000; // 10 ثواني للطلبات فقط
     
-    console.log('🚀 SuperAPI: نظام موحد لحل فوضى البيانات');
     // مفتاح تخزين محلي
     this.persistPrefix = 'superapi_cache_';
     // مؤقت لتجميع الإبطال
@@ -35,7 +34,6 @@ class SuperAPI {
     const isValid = age < ttl;
     
     if (!isValid) {
-      console.log(`🗑️ انتهت صلاحية cache لـ: ${key} (${age}ms > ${ttl}ms)`);
       this.cache.delete(key);
       this.timestamps.delete(key);
     }
@@ -70,7 +68,6 @@ class SuperAPI {
     
     // استخدام البيانات المحفوظة
     if (!force && this.isCacheValid(key)) {
-      console.log(`📋 استخدام cache لـ: ${key}`);
       return this.cache.get(key);
     }
 
@@ -78,7 +75,6 @@ class SuperAPI {
     if (!force && typeof window !== 'undefined') {
       const persisted = this.readPersisted(key);
       if (persisted) {
-        console.log(`💾 استخدام cache المحفوظ محلياً لـ: ${key}`);
         this.cache.set(key, persisted);
         this.timestamps.set(key, Date.now());
         return persisted;
@@ -87,8 +83,6 @@ class SuperAPI {
 
     // منع الطلبات المتزامنة
     if (this.loading.has(key)) {
-      console.log(`⏳ انتظار طلب جاري لـ: ${key}`);
-      
       return new Promise((resolve) => {
         const checkInterval = setInterval(() => {
           if (!this.loading.has(key) && this.cache.has(key)) {
@@ -107,8 +101,6 @@ class SuperAPI {
 
     try {
       this.loading.add(key);
-      console.log(`🔄 جلب جديد لـ: ${key}`);
-      
       const startTime = Date.now();
       const data = await queryFn();
       const duration = Date.now() - startTime;
@@ -119,7 +111,6 @@ class SuperAPI {
       // حفظ محلي للتسريع وتقليل الاستهلاك
       this.writePersisted(key, data);
       
-      console.log(`✅ تم حفظ ${key} (${duration}ms)`) ;
       return data;
       
     } catch (error) {
@@ -134,7 +125,6 @@ class SuperAPI {
   invalidate(key) {
     this.cache.delete(key);
     this.timestamps.delete(key);
-    console.log(`🗑️ تم حذف cache: ${key}`);
   }
 
   // حذف جميع البيانات
@@ -142,7 +132,6 @@ class SuperAPI {
     this.cache.clear();
     this.timestamps.clear();
     this.loading.clear();
-    console.log('🧹 تم حذف جميع البيانات المحفوظة');
   }
 
   // تقليل الاستهلاك: إبطال مجمّع لتفادي إعادة الجلب المتكرر
@@ -166,8 +155,6 @@ class SuperAPI {
    */
   async getAllData() {
 return this.fetch('all_data', async () => {
-  console.log('🔥 جلب جميع البيانات في طلب واحد موحد...');
-  
   // طلب واحد كبير بدلاً من 170+ طلب منفصل
   const [
     products,
@@ -311,8 +298,6 @@ return this.fetch('all_data', async () => {
       customers: customers.data?.length || 0
     }
   };
-
-  console.log('✅ تم جلب جميع البيانات بنجاح:', allData.totalItems);
   
   return allData;
 });
@@ -416,7 +401,6 @@ return this.fetch('all_data', async () => {
     
     // تم إزالة استدعاء update_order_reservation_status من هنا
     // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
-    console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
     
     this.invalidate('all_data');
     this.invalidate('orders_only');
@@ -460,14 +444,11 @@ return this.fetch('all_data', async () => {
           schema: 'public',
           table: table
         }, (payload) => {
-          console.log(`🔄 تحديث فوري في ${table}:`, payload);
-          
           // معالجة فورية للطلبات وعناصرها بدون تأخير
           if (table === 'orders' || table === 'ai_orders' || table === 'order_items') {
             // إبطال فوري للطلبات لضمان الحصول على أحدث البيانات
             this.invalidate('all_data');
             this.invalidate('orders_only');
-            console.log(`⚡ تحديث فوري لـ ${table} مع إبطال cache فوري`);
           } else {
             // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
             this.debouncedInvalidateAll(50); // تقليل الوقت إلى 50ms للاستجابة السريعة
@@ -479,8 +460,6 @@ return this.fetch('all_data', async () => {
       
       this.subscriptions.set(table, channel);
     });
-    
-    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة مع التحديث المباشر');
   }
 
   /**
@@ -489,7 +468,6 @@ return this.fetch('all_data', async () => {
   unsubscribeAll() {
     this.subscriptions.forEach((channel, table) => {
       supabase.removeChannel(channel);
-      console.log(`📡❌ تم إلغاء اشتراك: ${table}`);
     });
     
     this.subscriptions.clear();

@@ -417,11 +417,6 @@ const NotificationsPanel = () => {
     } else if (notification.type === 'ai_order' || notification.type === 'new_ai_order') {
       // افتح نافذة طلبات الذكاء الاصطناعي فوق لوحة التحكم مع تحديد الطلب
       const aiOrderId = notification?.data?.ai_order_id || notification?.data?.id || notification?.related_entity_id;
-      console.log('🔔 NotificationsPanel: Opening AI Orders Manager for notification:', {
-        type: notification.type,
-        aiOrderId: aiOrderId,
-        data: notification.data
-      });
       window.dispatchEvent(new CustomEvent('openAiOrdersManager', { detail: { aiOrderId } }));
       setIsOpen(false);
       return;
@@ -462,16 +457,12 @@ const NotificationsPanel = () => {
       }
     } else if (notification.type === 'profit_settlement_request' || notification.type === 'settlement_request') {
       // طلب تحاسب من موظف - التوجه لصفحة متابعة الموظفين مع الفلترة
-      console.log('🔔 إشعار طلب التحاسب:', notification);
       const data = notification.data || {};
       const employeeId = data.employee_id || data.employeeId;
       const orderIds = data.order_ids || data.orderIds || [];
-      console.log('🔍 بيانات طلب التحاسب:', { employeeId, orderIds, data });
       if (employeeId && orderIds && orderIds.length > 0) {
-        console.log('📍 توجيه لصفحة متابعة الموظفين مع الطلبات المحددة');
         navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);
       } else {
-        console.warn('⚠️ بيانات التحاسب غير مكتملة، توجيه عادي');
         navigate('/employee-follow-up');
       }
     } else if (notification.type === 'profit_settlement') {
