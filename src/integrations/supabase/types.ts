@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       ai_orders: {
         Row: {
+          adjustment_type: string | null
+          calculated_total_amount: number | null
           city_id: number | null
           created_at: string
           created_by: string | null
@@ -32,6 +34,7 @@ export type Database = {
           notes: string | null
           order_data: Json
           original_text: string | null
+          price_adjustment: number | null
           processed_at: string | null
           processed_by: string | null
           region_id: number | null
@@ -43,8 +46,11 @@ export type Database = {
           telegram_chat_id: number | null
           total_amount: number
           updated_at: string
+          written_total_amount: number | null
         }
         Insert: {
+          adjustment_type?: string | null
+          calculated_total_amount?: number | null
           city_id?: number | null
           created_at?: string
           created_by?: string | null
@@ -61,6 +67,7 @@ export type Database = {
           notes?: string | null
           order_data: Json
           original_text?: string | null
+          price_adjustment?: number | null
           processed_at?: string | null
           processed_by?: string | null
           region_id?: number | null
@@ -72,8 +79,11 @@ export type Database = {
           telegram_chat_id?: number | null
           total_amount?: number
           updated_at?: string
+          written_total_amount?: number | null
         }
         Update: {
+          adjustment_type?: string | null
+          calculated_total_amount?: number | null
           city_id?: number | null
           created_at?: string
           created_by?: string | null
@@ -90,6 +100,7 @@ export type Database = {
           notes?: string | null
           order_data?: Json
           original_text?: string | null
+          price_adjustment?: number | null
           processed_at?: string | null
           processed_by?: string | null
           region_id?: number | null
@@ -101,6 +112,7 @@ export type Database = {
           telegram_chat_id?: number | null
           total_amount?: number
           updated_at?: string
+          written_total_amount?: number | null
         }
         Relationships: [
           {
@@ -4955,6 +4967,10 @@ export type Database = {
       extract_product_text_from_message: {
         Args: { input_text: string }
         Returns: string
+      }
+      extract_total_amount_from_text: {
+        Args: { input_text: string }
+        Returns: number
       }
       extractphonefromtext: {
         Args: { input_text: string }
