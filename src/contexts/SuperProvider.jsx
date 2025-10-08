@@ -2340,7 +2340,30 @@ export const SuperProvider = ({ children }) => {
         deliveryFeeSetting = Number(ds?.value) || 5000;
       } catch (_) {}
       const deliveryFee = deliveryType === 'توصيل' ? deliveryFeeSetting : 0;
-      const discount = 0;
+      
+      // ✅ معالجة الخصم/الزيادة من ai_orders
+      let discount = 0;
+      let priceAdjustment = Number(aiOrder.price_adjustment || 0);
+      let adjustmentType = aiOrder.adjustment_type;
+      
+      console.log('💰 معالجة التعديل السعري:', { 
+        subtotal, 
+        priceAdjustment, 
+        adjustmentType,
+        written_total_amount: aiOrder.written_total_amount,
+        calculated_total_amount: aiOrder.calculated_total_amount
+      });
+      
+      // في حالة الخصم: نحفظه كخصم منفصل
+      if (adjustmentType === 'discount' && priceAdjustment < 0) {
+        discount = Math.abs(priceAdjustment);
+        console.log('🎁 تطبيق خصم:', discount);
+      }
+      // في حالة الزيادة: لا نعمل شيء هنا، سيتم معالجتها في حساب الأرباح
+      else if (adjustmentType === 'markup' && priceAdjustment > 0) {
+        console.log('📈 سيتم توزيع الزيادة على الأرباح:', priceAdjustment);
+      }
+      
       const total = subtotal - discount + deliveryFee;
 
       // إنشاء طلب حقيقي مع دعم شركة التوصيل
@@ -2423,6 +2446,64 @@ export const SuperProvider = ({ children }) => {
           });
         }
         throw itemsErr;
+      }
+
+      // ✅ تطبيق الخصم في applied_customer_discounts إذا كان موجوداً
+      if (discount > 0) {
+        console.log('💾 حفظ الخصم في applied_customer_discounts:', discount);
+        try {
+          await supabase.from('applied_customer_discounts').insert({
+            order_id: createdOrder.id,
+            discount_amount: discount,
+            discount_type: 'custom_price',
+            notes: `خصم من السعر المكتوب (${aiOrder.written_total_amount} بدلاً من ${aiOrder.calculated_total_amount})`,
+            applied_by: resolveCurrentUserUUID()
+          });
+        } catch (discountErr) {
+          console.warn('⚠️ فشل حفظ الخصم:', discountErr);
+        }
+      }
+      
+      // ✅ معالجة الزيادة حسب قواعد أرباح الموظف
+      if (adjustmentType === 'markup' && priceAdjustment > 0) {
+        console.log('📈 معالجة الزيادة:', priceAdjustment);
+        
+        // التحقق من وجود قاعدة ربح للموظف لأي من المنتجات في الطلب
+        const employeeId = aiOrder.created_by || resolveCurrentUserUUID();
+        let hasEmployeeProfitRule = false;
+        
+        try {
+          // البحث عن قاعدة ربح للموظف لأي من منتجات الطلب
+          const productIds = normalizedItems.map(it => it.product_id);
+          const { data: profitRules } = await supabase
+            .from('employee_profit_rules')
+            .select('*')
+            .eq('employee_id', employeeId)
+            .eq('is_active', true)
+            .in('target_id', productIds);
+          
+          hasEmployeeProfitRule = profitRules && profitRules.length > 0;
+          
+          console.log('🔍 نتيجة البحث عن قواعد الأرباح:', { 
+            employeeId, 
+            hasEmployeeProfitRule,
+            productIds 
+          });
+          
+          // حفظ معلومة الزيادة في order_discounts كرصيد إضافي
+          // سيتم توزيعها على الأرباح عند حساب الأرباح
+          await supabase.from('order_discounts').insert({
+            order_id: createdOrder.id,
+            amount: -priceAdjustment, // سالب لأنها زيادة وليست خصم
+            type: hasEmployeeProfitRule ? 'employee_markup' : 'system_markup',
+            notes: `زيادة سعر (${aiOrder.written_total_amount} بدلاً من ${aiOrder.calculated_total_amount}) - ${hasEmployeeProfitRule ? 'ستُضاف لربح الموظف' : 'ستُضاف لربح النظام'}`,
+            applied_by: resolveCurrentUserUUID()
+          });
+          
+          console.log(`✅ تم حفظ الزيادة كـ ${hasEmployeeProfitRule ? 'employee_markup' : 'system_markup'}`);
+        } catch (markupErr) {
+          console.warn('⚠️ فشل حفظ معلومة الزيادة:', markupErr);
+        }
       }
 
       // حذف الطلب الذكي بأمان مع الربط
