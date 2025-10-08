@@ -2126,12 +2126,12 @@ export const SuperProvider = ({ children }) => {
           client_mobile: normalizedPhone,
           client_mobile2: '',
           // ✅ استخدام customer_address مباشرة - يحتوي فقط على أقرب نقطة دالة
-          location: aiOrder.customer_address || nearestPoint || 'غير محدد',
+          location: aiOrder.customer_address || nearestPoint || '',
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
           price: aiOrder.total_amount || finalPrice, // ✅ استخدام total_amount من الذكاء الاصطناعي (يشمل الخصم/الزيادة)
           package_size: 1,
-          merchant_notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
+          merchant_notes: aiOrder.notes || '', // ✅ إرسال ملاحظات الطلب الذكي إلى شركة التوصيل
           replacement: 0
         };
 
