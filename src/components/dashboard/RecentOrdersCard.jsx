@@ -139,8 +139,9 @@ const RecentOrdersCard = ({ recentOrders }) => {
                     <div className="flex items-center gap-2 mb-2">
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-sm font-medium text-foreground truncate max-w-[100px]">
-                          {order.customer_city || order.customer_province || 'غير محدد'}
+                        <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                          {order.customer_city}
+                          {order.customer_province && ` - ${order.customer_province}`}
                         </span>
                       </div>
                       

@@ -171,18 +171,16 @@ const SalesCard = ({
             )}
           </div>
 
-          {order.customer_city && (
+          {(order.customer_city || order.customer_province) && (
             <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-white/40 dark:border-white/10 backdrop-blur-sm">
               <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 flex items-center justify-center">
                 <MapPin className="w-4 h-4 text-green-600 dark:text-green-400" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-foreground dark:text-foreground">{order.customer_city}</div>
-                {order.customer_address && (
-                  <div className="text-xs text-muted-foreground line-clamp-1">
-                    {order.customer_address}
-                  </div>
-                )}
+                <div className="font-medium text-foreground dark:text-foreground">
+                  {order.customer_city}
+                  {order.customer_province && ` - ${order.customer_province}`}
+                </div>
               </div>
             </div>
           )}

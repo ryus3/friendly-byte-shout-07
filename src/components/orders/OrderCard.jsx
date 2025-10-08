@@ -508,14 +508,17 @@ const OrderCard = ({
                     <User className="h-4 w-4 text-primary" />
                     <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
-                    <Phone className="h-3 w-3" />
-                    <span>{order.customer_phone}</span>
-                  </div>
-                   {order.customer_city && (
+                   <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
+                     <Phone className="h-3 w-3" />
+                     <span>{order.customer_phone}</span>
+                   </div>
+                    {(order.customer_city || order.customer_province) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                       <MapPin className="h-3 w-3" />
-                      <span>{order.customer_address || `${order.customer_city}${order.customer_province ? ' - ' + order.customer_province : ''}`}</span>
+                      <span>
+                        {order.customer_city}
+                        {order.customer_province && ` - ${order.customer_province}`}
+                      </span>
                     </div>
                   )}
                 </div>
