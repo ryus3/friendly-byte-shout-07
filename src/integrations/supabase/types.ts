@@ -4949,16 +4949,16 @@ export type Database = {
         Returns: string
       }
       extract_product_items_from_text: {
-        Args: { p_employee_id?: string; p_text: string }
+        Args: { p_text: string; p_user_id: string }
         Returns: {
+          color_id: string
           color_name: string
-          confidence_score: number
-          match_details: Json
+          price: number
           product_id: string
           product_name: string
           quantity: number
+          size_id: string
           size_name: string
-          variant_id: string
         }[]
       }
       extract_product_text_from_message: {
