@@ -2129,14 +2129,14 @@ export const SuperProvider = ({ children }) => {
           location: aiOrder.customer_address || nearestPoint || 'غير محدد',
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
           items_number: enrichedItems.reduce((sum, item) => sum + (item.quantity || 1), 0),
-          price: finalPrice, // السعر النهائي مع رسوم التوصيل
+          price: aiOrder.total_amount || finalPrice, // ✅ استخدام total_amount من الذكاء الاصطناعي (يشمل الخصم/الزيادة)
           package_size: 1,
           merchant_notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
           replacement: 0
         };
 
         console.log('📋 بيانات الطلب النهائية المرسلة للوسيط:', updatedPayload);
-        console.log('💰 السعر النهائي (مع رسوم التوصيل):', finalPrice);
+        console.log('💰 السعر المرسل للوسيط:', aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
 
         // إنشاء الطلب في الوسيط - استخدام نفس منطق QuickOrderContent مع retry محسن
         const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
