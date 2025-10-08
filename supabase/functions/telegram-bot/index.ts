@@ -1968,7 +1968,7 @@ serve(async (req) => {
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
-💵 المبلغ الإجمالي: ${((aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0)).toLocaleString('en-US')} د.ع`;
+💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {
                     // Fallback للرسالة القديمة
                     const allRegions = pendingData.context.all_regions || [];

@@ -5504,15 +5504,17 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args: {
-          p_city_id: number
-          p_city_name: string
-          p_employee_code: string
-          p_message_text: string
-          p_region_id: number
-          p_region_name: string
-          p_telegram_chat_id: number
-        }
+        Args:
+          | {
+              p_city_id: number
+              p_city_name: string
+              p_employee_code: string
+              p_message_text: string
+              p_region_id: number
+              p_region_name: string
+              p_telegram_chat_id: number
+            }
+          | { p_order_data: Json; p_region_id?: number; p_user_id?: string }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
