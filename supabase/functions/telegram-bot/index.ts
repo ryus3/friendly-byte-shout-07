@@ -1962,20 +1962,13 @@ serve(async (req) => {
                       ).join('\n');
                     }
                     
-                    // حساب التفاصيل المالية الصحيحة
-                    const totalAmount = aiOrderData.total_amount || 0;
-                    const deliveryFee = aiOrderData.delivery_fee || 0;
-                    const baseAmount = totalAmount - deliveryFee;
-                    
                     responseMessage = `✅ تم استلام الطلب!
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
-💵 المبلغ: ${baseAmount.toLocaleString('en-US')} د.ع
-🚚 التوصيل: ${deliveryFee.toLocaleString('en-US')} د.ع
-💰 المجموع: ${totalAmount.toLocaleString('en-US')} د.ع`;
+💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {
                     // Fallback للرسالة القديمة
                     const allRegions = pendingData.context.all_regions || [];
