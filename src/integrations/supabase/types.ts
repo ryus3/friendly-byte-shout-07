@@ -4949,7 +4949,9 @@ export type Database = {
         Returns: string
       }
       extract_product_items_from_text: {
-        Args: { p_input_text: string }
+        Args:
+          | { input_text: string; p_employee_id?: string }
+          | { p_input_text: string }
         Returns: Json
       }
       extract_product_text_from_message: {
