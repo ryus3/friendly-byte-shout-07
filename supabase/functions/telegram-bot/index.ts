@@ -1217,6 +1217,9 @@ serve(async (req) => {
         .maybeSingle();
 
       const employeeId = employeeData?.user_id || null;
+      const employeeCode = employeeData?.telegram_code || null;
+      console.log('👤 معرف الموظف:', employeeId);
+      console.log('👤 رمز الموظف:', employeeCode);
       
       // Handle /stats command
       if (text === '/stats') {
@@ -1575,7 +1578,6 @@ serve(async (req) => {
           console.log('🔄 معالجة الطلب العادي...');
           
           // We already fetched employeeData above, use it
-          const employeeCode = employeeData?.telegram_code || '';
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
