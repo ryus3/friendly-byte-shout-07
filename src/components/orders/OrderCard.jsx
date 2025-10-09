@@ -595,6 +595,6 @@ const OrderCard = React.memo(({
       />
     </motion.div>
   );
-};
+});
 
-export default memo(OrderCard);
+export default OrderCard;
