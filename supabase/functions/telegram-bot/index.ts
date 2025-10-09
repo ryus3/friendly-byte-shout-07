@@ -1580,11 +1580,10 @@ serve(async (req) => {
         // معالجة الطلبات العادية
         if (orderType === 'regular') {
           console.log('🚀 بدء معالجة طلب عادي');
-        }
-
-        // No pending state - treat as regular order
-        try {
-          console.log('🔄 معالجة الطلب العادي...');
+          
+          // No pending state - treat as regular order
+          try {
+            console.log('🔄 معالجة الطلب العادي...');
           
           // We already fetched employeeData above, use it
           const employeeCode = employeeData?.telegram_code || '';
@@ -1816,6 +1815,7 @@ serve(async (req) => {
           }
           
           await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
+          }
         }
       }
 
