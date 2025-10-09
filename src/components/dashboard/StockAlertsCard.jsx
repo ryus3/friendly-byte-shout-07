@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
+import devLog from '@/lib/devLogger';
 
 import DefaultProductImage from '@/components/ui/default-product-image';
 
@@ -24,7 +25,7 @@ const StockAlertsCard = () => {
   useEffect(() => {
     const handleRefresh = async () => {
       // لا حاجة لإعادة تحديث المنتجات هنا - سيتم تحديثها تلقائياً من InventoryContext
-      console.log('📦 Stock alerts refreshed');
+      devLog.log('📦 Stock alerts refreshed');
     };
 
     // استمع لأحداث التحديث المخصصة فقط (للتوافق مع النظام القديم)

@@ -10,6 +10,7 @@ import { ar } from 'date-fns/locale';
 import { toast } from '@/components/ui/use-toast';
 import superAPI from '@/api/SuperAPI';
 import { useSuper } from '@/contexts/SuperProvider';
+import devLog from '@/lib/devLogger';
 
 const PendingProfitsDialog = ({ 
   open, 
@@ -88,7 +89,7 @@ const PendingProfitsDialog = ({
     const totalProfit = getTotalProfit(order);
     const managerProfit = getManagerProfit(order);
 
-    console.log('🔢 تفاصيل حساب ربح الطلب:', { 
+    devLog.log('🔢 تفاصيل حساب ربح الطلب:', { 
       orderNumber: order.order_number,
       createdBy: order.created_by,
       netSales,

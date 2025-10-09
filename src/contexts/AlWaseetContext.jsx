@@ -162,7 +162,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      console.log(`🔍 تم العثور على ${accounts.length} حساب، بعد إزالة التكرار: ${uniqueAccounts.length}`);
+      devLog.log(`🔍 تم العثور على ${accounts.length} حساب، بعد إزالة التكرار: ${uniqueAccounts.length}`);
       return uniqueAccounts;
     } catch (error) {
       console.error('خطأ في جلب حسابات المستخدم:', error);
@@ -236,11 +236,11 @@ export const AlWaseetProvider = ({ children }) => {
 
   const syncVisibleOrdersBatch = useCallback(async (visibleOrders, onProgress) => {
     if (!visibleOrders || visibleOrders.length === 0) {
-      console.log('لا توجد طلبات مرئية للمزامنة');
+      devLog.log('لا توجد طلبات مرئية للمزامنة');
       return { success: true, updatedCount: 0 };
     }
 
-    console.log(`🚀 بدء مزامنة ${visibleOrders.length} طلب مرئي بكفاءة...`);
+    devLog.log(`🚀 بدء مزامنة ${visibleOrders.length} طلب مرئي بكفاءة...`);
     
     try {
       // تجميع الطلبات حسب منشئها (created_by)
@@ -255,7 +255,7 @@ export const AlWaseetProvider = ({ children }) => {
         ordersByEmployee.get(order.created_by).push(order);
       }
 
-      console.log(`📊 تم تجميع الطلبات: ${ordersByEmployee.size} موظف`);
+      devLog.log(`📊 تم تجميع الطلبات: ${ordersByEmployee.size} موظف`);
       
       let totalUpdated = 0;
       let processedEmployees = 0;
@@ -266,17 +266,17 @@ export const AlWaseetProvider = ({ children }) => {
           // الحصول على توكن منشئ الطلب (وليس المدير الحالي)
           const employeeTokenData = await getTokenForUser(employeeId);
           if (!employeeTokenData) {
-            console.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
+            devLog.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
             continue;
           }
 
-          console.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي`);
+          devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي`);
           
           // جلب جميع طلبات الموظف من الوسيط باستخدام توكنه الشخصي
           const merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
           
           if (!merchantOrders || !Array.isArray(merchantOrders)) {
-            console.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
+            devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
             continue;
           }
 
@@ -398,26 +398,26 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة للتحقق من إمكانية حذف الطلب
   const canAutoDeleteOrder = useCallback((order, currentUser = user) => {
     if (!order || !currentUser) {
-      console.log('❌ canAutoDeleteOrder: فشل - طلب أو مستخدم غير موجود');
+      devLog.log('❌ canAutoDeleteOrder: فشل - طلب أو مستخدم غير موجود');
       return false;
     }
     
     // التحقق من أن الطلب من الوسيط
     if (order.delivery_partner !== 'alwaseet') {
-      console.log('❌ canAutoDeleteOrder: فشل - ليس طلب وسيط');
+      devLog.log('❌ canAutoDeleteOrder: فشل - ليس طلب وسيط');
       return false;
     }
     
     // لا يحذف الطلبات المستلمة الفواتير
     if (order.receipt_received) {
-      console.log('❌ canAutoDeleteOrder: فشل - تم استلام الفاتورة');
+      devLog.log('❌ canAutoDeleteOrder: فشل - تم استلام الفاتورة');
       return false;
     }
     
     // الحالات المسموح حذفها فقط
     const allowedStatuses = ['pending', 'shipped', 'delivery'];
     if (!allowedStatuses.includes(order.status)) {
-      console.log(`❌ canAutoDeleteOrder: فشل - حالة غير مسموحة: ${order.status}`);
+      devLog.log(`❌ canAutoDeleteOrder: فشل - حالة غير مسموحة: ${order.status}`);
       return false;
     }
     
@@ -425,23 +425,23 @@ export const AlWaseetProvider = ({ children }) => {
     const orderAge = Date.now() - new Date(order.created_at).getTime();
     const minAge = 1 * 60 * 1000; // دقيقة واحدة بالميلي ثانية
     if (orderAge < minAge) {
-      console.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
+      devLog.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
       return false;
     }
     
     // يجب وجود معرف تتبع
     if (!order.tracking_number && !order.qr_id && !order.delivery_partner_order_id) {
-      console.log('❌ canAutoDeleteOrder: فشل - لا يوجد معرف تتبع');
+      devLog.log('❌ canAutoDeleteOrder: فشل - لا يوجد معرف تتبع');
       return false;
     }
     
   // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
   if (!isOrderOwner(order, currentUser)) {
-    console.log('❌ canAutoDeleteOrder: فشل - المستخدم لا يملك الطلب (الحماية صالحة للجميع بما في ذلك المدير)');
+    devLog.log('❌ canAutoDeleteOrder: فشل - المستخدم لا يملك الطلب (الحماية صالحة للجميع بما في ذلك المدير)');
     return false;
   }
     
-    console.log(`✅ canAutoDeleteOrder: مسموح - الطلب ${order.tracking_number || order.qr_id} يمكن حذفه`);
+    devLog.log(`✅ canAutoDeleteOrder: مسموح - الطلب ${order.tracking_number || order.qr_id} يمكن حذفه`);
     return true;
   }, [user, isOrderOwner]);
   
@@ -546,7 +546,7 @@ export const AlWaseetProvider = ({ children }) => {
   const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText) => {
     // تم تعطيل هذه الدالة لمنع الإشعارات المكررة
     // Database trigger notify_alwaseet_status_change() يتولى إرسال الإشعارات الآن
-    console.log('🔕 تم إلغاء إرسال الإشعار من العميل - التريغر يتولى الأمر:', { trackingNumber, stateId, statusText });
+    devLog.log('🔕 تم إلغاء إرسال الإشعار من العميل - التريغر يتولى الأمر:', { trackingNumber, stateId, statusText });
     return;
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
@@ -555,7 +555,7 @@ export const AlWaseetProvider = ({ children }) => {
     
     // إذا كانت نفس الحالة، لا ترسل إشعار
     if (lastStateId === String(stateId)) {
-      console.log('🔄 منع تكرار - نفس الحالة:', { trackingNumber, stateId, lastStateId });
+      devLog.log('🔄 منع تكرار - نفس الحالة:', { trackingNumber, stateId, lastStateId });
       return;
     }
     
@@ -597,7 +597,7 @@ export const AlWaseetProvider = ({ children }) => {
         priority = statusConfig.priority || 'medium';
     }
     
-    console.log('✅ تحديث إشعار الوسيط:', {
+    devLog.log('✅ تحديث إشعار الوسيط:', {
       trackingNumber, 
       stateId, 
       message, 
@@ -641,9 +641,9 @@ export const AlWaseetProvider = ({ children }) => {
           .eq('id', existingNotifications[0].id);
           
         if (updateError) {
-          console.error('❌ خطأ في تحديث الإشعار:', updateError);
+          devLog.error('❌ خطأ في تحديث الإشعار:', updateError);
         } else {
-          console.log('🔄 تم تحديث الإشعار الموجود بنجاح');
+          devLog.log('🔄 تم تحديث الإشعار الموجود بنجاح');
         }
       } else {
         // إنشاء إشعار جديد
@@ -655,9 +655,9 @@ export const AlWaseetProvider = ({ children }) => {
           data: notificationData
         };
         
-        console.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
+        devLog.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
         await createNotification(newNotificationData);
-        console.log('🆕 تم إنشاء إشعار جديد');
+        devLog.log('🆕 تم إنشاء إشعار جديد');
       }
       
       // تحديث آخر حالة مرسلة
@@ -666,7 +666,7 @@ export const AlWaseetProvider = ({ children }) => {
         [trackingKey]: String(stateId)
       }));
       
-      console.log('🎯 تم تحديث إشعار الوسيط بنجاح');
+      devLog.log('🎯 تم تحديث إشعار الوسيط بنجاح');
       
     } catch (error) {
       console.error('❌ خطأ في معالجة إشعار الوسيط:', error);
@@ -749,7 +749,7 @@ export const AlWaseetProvider = ({ children }) => {
               .delete()
               .eq('id', account.id);
           }
-          console.log(`🧹 تم حذف ${accountsToDelete.length} حساب مكرر`);
+          devLog.log(`🧹 تم حذف ${accountsToDelete.length} حساب مكرر`);
         }
 
         const existingAccount = existingAccounts?.[0];
@@ -847,7 +847,7 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return;
     
     try {
-      console.log('🔄 تحميل حالات الطلبات من الوسيط...');
+      devLog.log('🔄 تحميل حالات الطلبات من الوسيط...');
       const statuses = await AlWaseetAPI.getOrderStatuses(token);
       
       // استيراد النظام الجديد لحالات الوسيط
@@ -862,11 +862,11 @@ export const AlWaseetProvider = ({ children }) => {
         // تطبيق الحالة الداخلية المناسبة
         statusMap.set(stateId, statusConfig.internalStatus);
         
-        console.log(`📋 State ID ${stateId}: "${status.status}" → ${statusConfig.internalStatus} ${statusConfig.releasesStock ? '(يحرر المخزون)' : '(محجوز)'}`);
+        devLog.log(`📋 State ID ${stateId}: "${status.status}" → ${statusConfig.internalStatus} ${statusConfig.releasesStock ? '(يحرر المخزون)' : '(محجوز)'}`);
       });
       
       setOrderStatusesMap(statusMap);
-      console.log('✅ تم تحميل حالات الطلبات بالنظام الجديد:', statusMap);
+      devLog.log('✅ تم تحميل حالات الطلبات بالنظام الجديد:', statusMap);
       return statusMap;
     } catch (error) {
       console.error('❌ خطأ في تحميل حالات الطلبات:', error);
@@ -886,7 +886,7 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token || correctionComplete) return { corrected: 0, linked: 0, updated: 0 };
     
     try {
-      console.log('🛠️ بدء التصحيح الجذري للطلبات الحالية...');
+      devLog.log('🛠️ بدء التصحيح الجذري للطلبات الحالية...');
       
       // تحميل حالات الطلبات إذا لم تكن محملة
       let statusMap = orderStatusesMap;
@@ -896,7 +896,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       // 1) جلب جميع طلبات الوسيط لبناء خريطة شاملة
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      console.log(`📦 جلب ${waseetOrders.length} طلب من الوسيط للتصحيح`);
+      devLog.log(`📦 جلب ${waseetOrders.length} طلب من الوسيط للتصحيح`);
       
       // بناء خرائط للبحث السريع
       const byQrId = new Map(); // qr_id -> order
@@ -944,7 +944,7 @@ export const AlWaseetProvider = ({ children }) => {
             updates.delivery_partner_order_id = String(waseetOrder.id);
             needsUpdate = true;
             linked++;
-            console.log(`🔗 ربط الطلب ${localOrder.id} مع معرف الوسيط ${waseetOrder.id}`);
+            devLog.log(`🔗 ربط الطلب ${localOrder.id} مع معرف الوسيط ${waseetOrder.id}`);
           }
           
           // تحديث الحالة إذا كانت مختلفة
@@ -967,7 +967,7 @@ export const AlWaseetProvider = ({ children }) => {
             updates.status = correctLocalStatus;
             needsUpdate = true;
             updated++;
-            console.log(`📝 تحديث حالة الطلب ${localOrder.id}: ${localOrder.status} → ${correctLocalStatus}`);
+            devLog.log(`📝 تحديث حالة الطلب ${localOrder.id}: ${localOrder.status} → ${correctLocalStatus}`);
           }
           
           if (localOrder.delivery_status !== waseetStatusText) {
@@ -999,9 +999,9 @@ export const AlWaseetProvider = ({ children }) => {
             
           if (!updateErr) {
             corrected++;
-            console.log(`✅ تصحيح الطلب ${localOrder.id} مكتمل`);
+            devLog.log(`✅ تصحيح الطلب ${localOrder.id} مكتمل`);
           } else {
-            console.warn('⚠️ فشل تصحيح الطلب:', localOrder.id, updateErr);
+            devLog.warn('⚠️ فشل تصحيح الطلب:', localOrder.id, updateErr);
           }
         }
       }
@@ -1009,7 +1009,7 @@ export const AlWaseetProvider = ({ children }) => {
       // تسجيل إتمام التصحيح
       setCorrectionComplete(true);
       
-      console.log(`✅ التصحيح الجذري مكتمل: ${corrected} طلب مُصحح، ${linked} طلب مربوط، ${updated} حالة محدثة`);
+      devLog.log(`✅ التصحيح الجذري مكتمل: ${corrected} طلب مُصحح، ${linked} طلب مربوط، ${updated} حالة محدثة`);
       
       if (corrected > 0) {
         toast({
@@ -1031,27 +1031,16 @@ export const AlWaseetProvider = ({ children }) => {
   const linkRemoteIdsForExistingOrders = useCallback(async () => {
     if (!token) return { linked: 0 };
     try {
-      console.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
-      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id مع تأمين فصل الحسابات
-      const { data: localOrders, error: localErr } = await scopeOrdersQuery(
-        supabase
-          .from('orders')
-          .select('id, tracking_number')
-          .eq('delivery_partner', 'alwaseet')
-          .is('delivery_partner_order_id', null)
-      ).limit(500);
-      if (localErr) {
-        console.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
-        return { linked: 0 };
-      }
+      devLog.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
+...
       if (!localOrders || localOrders.length === 0) {
-        console.log('✅ لا توجد طلبات بحاجة للربط حالياً');
+        devLog.log('✅ لا توجد طلبات بحاجة للربط حالياً');
         return { linked: 0 };
       }
 
       // 2) اجلب جميع طلبات الوسيط ثم ابنِ خريطة: qr_id -> waseet_id
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط لعملية الربط`);
+      devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط لعملية الربط`);
       const byQr = new Map();
       for (const o of waseetOrders) {
         const qr = o.qr_id || o.tracking_number;
@@ -1072,9 +1061,9 @@ export const AlWaseetProvider = ({ children }) => {
             .eq('id', lo.id);
           if (!upErr) {
             linked++;
-            console.log(`🔗 تم ربط الطلب ${lo.id} بمعرف الوسيط ${remoteId}`);
+            devLog.log(`🔗 تم ربط الطلب ${lo.id} بمعرف الوسيط ${remoteId}`);
           } else {
-            console.warn('⚠️ فشل تحديث ربط معرف الوسيط للطلب:', lo.id, upErr);
+            devLog.warn('⚠️ فشل تحديث ربط معرف الوسيط للطلب:', lo.id, upErr);
           }
         }
       }
@@ -1092,7 +1081,7 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة الحذف التلقائي للطلبات المحذوفة من الوسيط
   const handleAutoDeleteOrder = useCallback(async (orderId, source = 'manual') => {
     try {
-      console.log(`🗑️ handleAutoDeleteOrder: بدء حذف الطلب ${orderId} من ${source}`);
+      devLog.log(`🗑️ handleAutoDeleteOrder: بدء حذف الطلب ${orderId} من ${source}`);
       
       // 1. جلب تفاصيل الطلب قبل الحذف مع التحقق من الملكية
       const { data: orderToDelete, error: fetchError } = await scopeOrdersQuery(
@@ -1103,7 +1092,7 @@ export const AlWaseetProvider = ({ children }) => {
       ).single();
         
       if (fetchError || !orderToDelete) {
-        console.error('❌ فشل في جلب الطلب للحذف:', fetchError);
+        devLog.error('❌ فشل في جلب الطلب للحذف:', fetchError);
         return false;
       }
       

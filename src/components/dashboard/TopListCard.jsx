@@ -2,11 +2,12 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import devLog from '@/lib/devLogger';
 
 const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false, onViewAll }) => {
-  // إزالة التكرار في console.log
+  // إزالة التكرار في devLog
   React.useEffect(() => {
-    console.log(`📊 TopListCard [${title}] - البيانات:`, {
+    devLog.log(`📊 TopListCard [${title}] - البيانات:`, {
       count: items?.length || 0,
       hasData: !!(items && items.length > 0)
     });

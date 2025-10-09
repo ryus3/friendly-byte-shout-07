@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useSalesStats } from '@/hooks/useSalesStats';
+import devLog from '@/lib/devLogger';
 
 /**
  * هوك تحليل الأرباح المتقدم - يستخدم قواعد الأرباح المحددة لكل موظف ومنتج
@@ -109,7 +110,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       setLoading(true);
       setError(null);
 
-      console.log('📊 بدء تحليل الأرباح المتقدم باستخدام قواعد الأرباح...');
+      devLog.log('📊 بدء تحليل الأرباح المتقدم باستخدام قواعد الأرباح...');
 
       // جلب الطلبات المُسلمة والمُستلمة الفواتير في النطاق الزمني
       let ordersQuery = supabase
@@ -390,7 +391,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .sort((a, b) => b.profit - a.profit)
       };
 
-      console.log('📊 نتائج تحليل الأرباح باستخدام القواعد:', {
+      devLog.log('📊 نتائج تحليل الأرباح باستخدام القواعد:', {
         totalSystemProfit,
         totalEmployeeProfit,
         totalRevenue,

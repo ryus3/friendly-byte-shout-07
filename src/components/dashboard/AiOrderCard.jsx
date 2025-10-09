@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import devLog from '@/lib/devLogger';
 import { 
   Bot, 
   MessageSquare, 
@@ -629,9 +630,9 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           orderDestination.destination, 
                           orderDestination.account
                         );
-                        console.log('🔍 نتيجة الموافقة:', res);
+                        devLog.log('🔍 نتيجة الموافقة:', res);
                         if (res?.success) {
-                          console.log('✅ سيتم حذف الطلب من النافذة:', order.id);
+                          devLog.log('✅ سيتم حذف الطلب من النافذة:', order.id);
                           window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id: order.id } }));
                           const orderTypeText = orderDestination.destination === 'local' ? 'طلب عادي' : 'طلب توصيل';
                           toast({ title: 'تمت الموافقة', description: `تم تحويل الطلب الذكي إلى ${orderTypeText} بنجاح`, variant: 'success' });

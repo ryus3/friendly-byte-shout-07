@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +8,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import devLog from '@/lib/devLogger';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -98,9 +98,9 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useSuper();
     
-    // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
+    // إضافة devLog لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
-        console.log('🔥 Dashboard - البيانات من InventoryContext:', {
+        devLog.log('🔥 Dashboard - البيانات من InventoryContext:', {
             ordersCount: orders?.length || 0,
             orders: orders,
             firstOrder: orders?.[0],
@@ -127,9 +127,9 @@ const Dashboard = () => {
     // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة - نحتاج allProfits للحساب المحلي
     const { profitData: pendingProfitData, loading: pendingProfitLoading, allProfits } = useUnifiedProfits(periods.pendingProfit);
     
-    // إضافة لوج لتتبع البيانات
+    // إضافة devLog لتتبع البيانات
     useEffect(() => {
-        console.log('🔍 Dashboard - Unified Profit Data:', {
+        devLog.log('🔍 Dashboard - Unified Profit Data:', {
             data: unifiedProfitData,
             loading: unifiedProfitLoading,
             error: unifiedProfitError,
@@ -153,17 +153,17 @@ const Dashboard = () => {
     // إضافة listener للتحديثات اللحظية للطلبات الذكية
     useEffect(() => {
         const handleAiOrderCreated = (event) => {
-            console.log('🔥 AI Order Created Event:', event.detail);
+            devLog.log('🔥 AI Order Created Event:', event.detail);
             // تحديث فوري للإحصائيات
         };
 
         const handleAiOrderUpdated = (event) => {
-            console.log('🔥 AI Order Updated Event:', event.detail);
+            devLog.log('🔥 AI Order Updated Event:', event.detail);
             // تحديث فوري للإحصائيات
         };
 
         const handleAiOrderDeleted = (event) => {
-            console.log('🔥 AI Order Deleted Event:', event.detail);
+            devLog.log('🔥 AI Order Deleted Event:', event.detail);
             // تحديث فوري للإحصائيات
         };
 
@@ -381,7 +381,7 @@ const Dashboard = () => {
             order.created_by === getUserUUID(user)
         )) : [];
         
-        console.log('🔥 Dashboard - Orders for Analysis:', {
+        devLog.log('🔥 Dashboard - Orders for Analysis:', {
             totalOrders: orders?.length || 0,
             visibleOrders: visibleOrders.length,
             canViewAll: canViewAllData,
@@ -398,7 +398,7 @@ const Dashboard = () => {
                 const itemDate = parseISO(itemDateStr);
                 return isValid(itemDate) && itemDate >= from && itemDate <= to;
             } catch (error) {
-                console.warn('Invalid date format:', itemDateStr);
+                devLog.warn('Invalid date format:', itemDateStr);
                 return false;
             }
         };
@@ -454,7 +454,7 @@ const Dashboard = () => {
             if (!salesByDay[day]) salesByDay[day] = 0;
             salesByDay[day] += o.final_amount || o.total_amount || 0;
           } catch (error) {
-            console.warn('Invalid date format in order:', dateStr);
+            devLog.warn('Invalid date format in order:', dateStr);
           }
         });
         
@@ -466,7 +466,7 @@ const Dashboard = () => {
                 if (!expensesByDay[day]) expensesByDay[day] = 0;
                 expensesByDay[day] += e.amount;
             } catch (error) {
-                console.warn('Invalid date format in expense:', e.transaction_date);
+                devLog.warn('Invalid date format in expense:', e.transaction_date);
             }
         });
     
@@ -578,17 +578,17 @@ const Dashboard = () => {
             // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
             topCustomers: (() => {
                 const customers = getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
-                console.log('🔥 Dashboard - Top Customers Result:', customers);
+                devLog.log('🔥 Dashboard - Top Customers Result:', customers);
                 return customers;
             })(),
             topProvinces: (() => {
                 const provinces = getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
-                console.log('🔥 Dashboard - Top Provinces Result:', provinces);
+                devLog.log('🔥 Dashboard - Top Provinces Result:', provinces);
                 return provinces;
             })(),
             topProducts: (() => {
                 const products = canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
-                console.log('🔥 Dashboard - Top Products Result:', products);
+                devLog.log('🔥 Dashboard - Top Products Result:', products);
                 return products;
             })(),
         };
