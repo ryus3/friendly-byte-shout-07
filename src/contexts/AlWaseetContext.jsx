@@ -345,7 +345,6 @@ export const AlWaseetProvider = ({ children }) => {
 
                 if (!error) {
                   totalUpdated++;
-                  console.log(`✅ تم تحديث الطلب: ${localOrder.tracking_number}`);
                 } else {
                   console.error(`❌ خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
                 }
@@ -369,10 +368,8 @@ export const AlWaseetProvider = ({ children }) => {
           console.error(`❌ خطأ في مزامنة طلبات الموظف ${employeeId}:`, error);
         }
       }
-
-      console.log(`✅ انتهت المزامنة: تم تحديث ${totalUpdated} طلب من ${visibleOrders.length}`);
       
-      return { 
+      return {
         success: true, 
         updatedCount: totalUpdated,
         processedEmployees,
