@@ -1233,36 +1233,48 @@ serve(async (req) => {
           // User is responding to a previous button press
           console.log('📋 معالجة استجابة لحالة معلقة:', pendingState.action);
           
-          let inventoryMessage = '';
           const action = pendingState.action;
           
-          if (action === 'inv_product') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'product', text);
-          } else if (action === 'inv_category') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'category', text);
-          } else if (action === 'inv_color') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'color', text);
-          } else if (action === 'inv_size') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'size', text);
-          } else if (action === 'inv_season') {
-            inventoryMessage = await handleInventorySearch(employeeId, 'season', text);
-          } else if (action === 'inv_search') {
-            inventoryMessage = await handleSmartInventorySearch(employeeId, text);
-          }
-          
-          if (inventoryMessage) {
-            await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
-            
-            // Delete the pending state
+          // ⚠️ CRITICAL FIX: حذف region_clarification القديمة عند إرسال طلب جديد
+          if (action === 'region_clarification') {
+            console.log('🗑️ حذف حالة region_clarification قديمة - المستخدم أرسل طلب جديد');
             await supabase
               .from('telegram_pending_selections')
               .delete()
               .eq('id', pendingState.id);
+            // ⬇️ لا تعمل return - استمر في معالجة الطلب الجديد
+          } else {
+            // معالجة حالات inventory فقط
+            let inventoryMessage = '';
             
-            return new Response(JSON.stringify({ success: true }), {
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            if (action === 'inv_product') {
+              inventoryMessage = await handleInventorySearch(employeeId, 'product', text);
+            } else if (action === 'inv_category') {
+              inventoryMessage = await handleInventorySearch(employeeId, 'category', text);
+            } else if (action === 'inv_color') {
+              inventoryMessage = await handleInventorySearch(employeeId, 'color', text);
+            } else if (action === 'inv_size') {
+              inventoryMessage = await handleInventorySearch(employeeId, 'size', text);
+            } else if (action === 'inv_season') {
+              inventoryMessage = await handleInventorySearch(employeeId, 'season', text);
+            } else if (action === 'inv_search') {
+              inventoryMessage = await handleSmartInventorySearch(employeeId, text);
+            }
+            
+            if (inventoryMessage) {
+              await sendTelegramMessage(chatId, inventoryMessage, undefined, botToken);
+              
+              // Delete the pending state
+              await supabase
+                .from('telegram_pending_selections')
+                .delete()
+                .eq('id', pendingState.id);
+              
+              return new Response(JSON.stringify({ success: true }), {
+                status: 200,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
           }
         }
 
