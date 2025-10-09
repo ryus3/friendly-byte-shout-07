@@ -566,6 +566,107 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, [userUUID]);
 
+  /**
+   * تعديل الأرباح عند إرجاع طلب
+   * @param {string} originalOrderId - معرف الطلب الأصلي
+   * @param {number} refundAmount - مبلغ الإرجاع
+   */
+  const adjustProfitsForReturn = useCallback(async (originalOrderId, refundAmount) => {
+    try {
+      const { data: profitRecord, error: fetchError } = await supabase
+        .from('profits')
+        .select('*')
+        .eq('order_id', originalOrderId)
+        .single();
+
+      if (fetchError || !profitRecord) {
+        console.error('خطأ في جلب سجل الربح:', fetchError);
+        return { success: false, error: 'سجل الربح غير موجود' };
+      }
+
+      const adjustedTotalRevenue = profitRecord.total_revenue - refundAmount;
+      const adjustedProfitAmount = profitRecord.profit_amount - refundAmount;
+      const adjustedEmployeeProfit = profitRecord.employee_profit - (refundAmount * (profitRecord.employee_percentage / 100));
+
+      const { error: updateError } = await supabase
+        .from('profits')
+        .update({
+          total_revenue: Math.max(0, adjustedTotalRevenue),
+          profit_amount: Math.max(0, adjustedProfitAmount),
+          employee_profit: Math.max(0, adjustedEmployeeProfit),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profitRecord.id);
+
+      if (updateError) {
+        console.error('خطأ في تعديل الربح:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      await refreshProfitsData();
+      return { success: true };
+
+    } catch (error) {
+      console.error('خطأ في adjustProfitsForReturn:', error);
+      return { success: false, error: error.message };
+    }
+  }, [refreshProfitsData]);
+
+  /**
+   * خصم رسوم توصيل التبديل من ربح الموظف
+   */
+  const deductReplacementDeliveryFee = useCallback(async (employeeId, deliveryFee, orderId) => {
+    try {
+      if (!deliveryFee || deliveryFee <= 0) {
+        return { success: true, message: 'لا توجد رسوم توصيل' };
+      }
+
+      const { error: expenseError } = await supabase
+        .from('accounting')
+        .insert({
+          type: 'expense',
+          category: 'رسوم توصيل تبديل',
+          amount: deliveryFee,
+          description: `رسوم توصيل تبديل - طلب ${orderId}`,
+          payment_method: 'نقدي',
+          created_by: employeeId,
+          expense_type: 'delivery',
+        });
+
+      if (expenseError) {
+        console.error('خطأ في تسجيل مصروف رسوم التوصيل:', expenseError);
+        return { success: false, error: expenseError.message };
+      }
+
+      const { data: employeeProfits } = await supabase
+        .from('profits')
+        .select('id, employee_profit')
+        .eq('employee_id', employeeId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (employeeProfits && employeeProfits.length > 0) {
+        const latestProfit = employeeProfits[0];
+        const adjustedProfit = Math.max(0, latestProfit.employee_profit - deliveryFee);
+
+        await supabase
+          .from('profits')
+          .update({ 
+            employee_profit: adjustedProfit,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', latestProfit.id);
+      }
+
+      return { success: true };
+
+    } catch (error) {
+      console.error('خطأ في deductReplacementDeliveryFee:', error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
   useEffect(() => {
     fetchProfitsData();
   }, [fetchProfitsData]);
@@ -582,7 +683,9 @@ export const ProfitsProvider = ({ children }) => {
     rejectSettlementRequest,
     markInvoiceReceived,
     fetchProfitsData,
-    refreshProfitsData
+    refreshProfitsData,
+    adjustProfitsForReturn,
+    deductReplacementDeliveryFee,
   };
 
   return (

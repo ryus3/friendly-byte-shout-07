@@ -47,10 +47,19 @@ function processFile(filePath) {
   // Remove console.log and console.info completely (keep console.error)
   const originalContent = content;
   
-  // Remove entire console.log statements including their content
-  content = content.replace(/\s*console\.log\([^;]*\);?\s*/g, '');
-  content = content.replace(/\s*console\.info\([^;]*\);?\s*/g, '');
-  content = content.replace(/\s*console\.warn\([^;]*\);?\s*/g, '');
+  // حذف أكثر ذكاءً - يتعامل مع console متعدد الأسطر
+  // Pattern 1: Single line console
+  content = content.replace(/\s*console\.log\([^)]*\);?\s*\n?/g, '');
+  content = content.replace(/\s*console\.info\([^)]*\);?\s*\n?/g, '');
+  content = content.replace(/\s*console\.warn\([^)]*\);?\s*\n?/g, '');
+  
+  // Pattern 2: Multi-line console with template literals
+  content = content.replace(/\s*console\.log\([^)]*`[^`]*`[^)]*\);?\s*\n?/g, '');
+  content = content.replace(/\s*console\.info\([^)]*`[^`]*`[^)]*\);?\s*\n?/g, '');
+  content = content.replace(/\s*console\.warn\([^)]*`[^`]*`[^)]*\);?\s*\n?/g, '');
+  
+  // تنظيف الأسطر الفارغة الزائدة
+  content = content.replace(/\n\s*\n\s*\n/g, '\n\n');
   
   if (content !== originalContent) {
     modified = true;
