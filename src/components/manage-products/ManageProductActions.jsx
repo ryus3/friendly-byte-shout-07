@@ -83,7 +83,7 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
         variant: "destructive" 
       });
     }
-  };
+  }, [product.id, product.name, deleteProducts]);
   
   const handleEditProduct = () => {
     // الانتقال لصفحة إضافة المنتج مع بيانات المنتج للتعديل
