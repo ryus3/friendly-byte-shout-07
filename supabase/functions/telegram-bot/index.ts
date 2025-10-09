@@ -1815,10 +1815,8 @@ serve(async (req) => {
           }
           
           await sendTelegramMessage(chatId, errorMessage, undefined, botToken);
-          }
         }
       }
-
     } else if (update.callback_query) {
       // Handle inline keyboard button presses
       const { callback_query } = update;
