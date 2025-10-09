@@ -21,7 +21,6 @@ export interface ReplacementOrderData {
     address: string;
   };
   deliveryFee: number;
-  priceAdjustment: number; // فرق السعر: موجب = العميل يدفع، سالب = نرجع للعميل
 }
 
 export interface ReturnOrderData {
@@ -90,11 +89,7 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
     const incomingProduct = parseProductString(incomingText);
 
     // السطر 5: رسوم التوصيل (اختياري)
-    const deliveryFee = lines[4] ? parseFloat(lines[4].replace(/[^\d.-]/g, '')) || 5000 : 5000;
-
-    // السطر 6: فرق السعر (اختياري)
-    // موجب = العميل يدفع إضافي، سالب = نرجع للعميل
-    const priceAdjustment = lines[5] ? parseFloat(lines[5].replace(/[^\d.-]/g, '')) || 0 : 0;
+    const deliveryFee = lines[4] ? parseFloat(lines[4].replace(/[^\d.]/g, '')) || 5000 : 5000;
 
     return {
       type: 'replacement',
@@ -106,8 +101,7 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
         city: customerCity,
         address: customerAddress
       },
-      deliveryFee,
-      priceAdjustment
+      deliveryFee
     };
   } catch (error) {
     console.error('❌ خطأ في تحليل طلب الاستبدال:', error);
