@@ -1032,7 +1032,18 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return { linked: 0 };
     try {
       devLog.log('🧩 محاولة ربط معرفات الوسيط للطلبات بدون معرف...');
-...
+      // 1) اجلب طلباتنا التي لا تملك delivery_partner_order_id مع تأمين فصل الحسابات
+      const { data: localOrders, error: localErr } = await scopeOrdersQuery(
+        supabase
+          .from('orders')
+          .select('id, tracking_number')
+          .eq('delivery_partner', 'alwaseet')
+          .is('delivery_partner_order_id', null)
+      ).limit(500);
+      if (localErr) {
+        devLog.error('❌ خطأ في جلب الطلبات المحلية بدون معرف وسيط:', localErr);
+        return { linked: 0 };
+      }
       if (!localOrders || localOrders.length === 0) {
         devLog.log('✅ لا توجد طلبات بحاجة للربط حالياً');
         return { linked: 0 };
