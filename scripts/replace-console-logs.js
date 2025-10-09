@@ -37,10 +37,6 @@ function processFile(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
   let modified = false;
   
-  // Check if devLog import exists
-  const hasDevLogImport = content.includes("from '@/lib/devLogger'") || 
-                          content.includes('from "@/lib/devLogger"');
-  
   // Check if there are console.log/info/warn calls
   const hasConsoleCalls = /console\.(log|info|warn)\(/g.test(content);
   
@@ -48,29 +44,13 @@ function processFile(filePath) {
     return false;
   }
   
-  // Add devLog import if needed
-  if (!hasDevLogImport) {
-    // Find the last import statement
-    const importRegex = /import\s+.*?from\s+['"][^'"]+['"]\s*;?\s*\n/g;
-    const imports = content.match(importRegex);
-    
-    if (imports && imports.length > 0) {
-      const lastImport = imports[imports.length - 1];
-      const lastImportIndex = content.lastIndexOf(lastImport);
-      const insertPosition = lastImportIndex + lastImport.length;
-      
-      content = content.slice(0, insertPosition) + 
-                "import devLog from '@/lib/devLogger';\n" +
-                content.slice(insertPosition);
-      modified = true;
-    }
-  }
-  
-  // Replace console calls with devLog
+  // Remove console.log and console.info completely (keep console.error)
   const originalContent = content;
-  content = content.replace(/console\.log\(/g, 'devLog.log(');
-  content = content.replace(/console\.info\(/g, 'devLog.info(');
-  content = content.replace(/console\.warn\(/g, 'devLog.warn(');
+  
+  // Remove entire console.log statements including their content
+  content = content.replace(/\s*console\.log\([^;]*\);?\s*/g, '');
+  content = content.replace(/\s*console\.info\([^;]*\);?\s*/g, '');
+  content = content.replace(/\s*console\.warn\([^;]*\);?\s*/g, '');
   
   if (content !== originalContent) {
     modified = true;
@@ -105,7 +85,7 @@ function main() {
   const srcDir = path.join(process.cwd(), 'src');
   let filesModified = 0;
   
-  console.log('🚀 Starting console.log replacement...');
+  console.log('🚀 Starting console.log deletion...');
   console.log('📁 Scanning directory:', srcDir);
   
   walkDirectory(srcDir, (filePath) => {
@@ -116,7 +96,8 @@ function main() {
   });
   
   console.log(`\n✨ Complete! Modified ${filesModified} files.`);
-  console.log('💡 All console.log/info/warn have been replaced with devLog');
+  console.log('💡 All console.log/info/warn have been permanently deleted');
+  console.log('💡 console.error has been kept for critical errors');
 }
 
 main();

@@ -31,6 +31,11 @@ const SalesCard = ({
   const [isHovered, setIsHovered] = useState(false);
   const { products, orderItems } = useSuper();
 
+  const handleViewDetails = useCallback((e) => {
+    if (e) e.stopPropagation();
+    onViewDetails?.(order);
+  }, [order, onViewDetails]);
+
   const getStatusInfo = (order) => {
     if (order.status === 'completed') {
       return {
@@ -97,17 +102,14 @@ const SalesCard = ({
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onViewDetails?.(order)}
+      onClick={handleViewDetails}
     >
       {/* Floating Action Button */}
       <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
         <Button 
           size="sm" 
           className="w-8 h-8 p-0 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewDetails?.(order);
-          }}
+          onClick={handleViewDetails}
         >
           <Eye className="w-4 h-4" />
         </Button>

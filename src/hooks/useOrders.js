@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
 
@@ -16,10 +16,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
   }, []);
 
-  const updateOrder = async (orderId, updates, newProducts = null, originalItems = null) => {
+  const updateOrder = useCallback(async (orderId, updates, newProducts = null, originalItems = null) => {
     try {
-      console.log('🔄 useOrders - بدء تحديث الطلب:', { orderId, updates, newProducts });
-      
       // تحديث الطلب في قاعدة البيانات
       const { data: updatedOrder, error: updateError } = await supabase
         .from('orders')
@@ -30,7 +28,6 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           customer_city: updates.customer_city,
           customer_province: updates.customer_province,
           customer_address: updates.customer_address,
-          // تخزين معرفات الوسيط عند توفرها
           alwaseet_city_id: updates.alwaseet_city_id ?? null,
           alwaseet_region_id: updates.alwaseet_region_id ?? null,
           notes: updates.notes,
@@ -48,8 +45,6 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       // تحديث المنتجات إذا تم تمريرها
       if (newProducts && Array.isArray(newProducts) && newProducts.length > 0) {
-        console.log('🔄 تحديث المنتجات - عدد المنتجات الجديدة:', newProducts.length);
-        
         // حذف المنتجات القديمة أولاً
         const { error: deleteError } = await supabase
           .from('order_items')
@@ -57,11 +52,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           .eq('order_id', orderId);
 
         if (deleteError) {
-          console.error('❌ خطأ في حذف المنتجات القديمة:', deleteError);
           throw new Error(`فشل في حذف المنتجات القديمة: ${deleteError.message}`);
         }
-
-        console.log('✅ تم حذف المنتجات القديمة بنجاح');
         
         // إضافة المنتجات الجديدة
         const orderItemsToInsert = newProducts.map(item => ({
@@ -78,11 +70,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           .insert(orderItemsToInsert);
 
         if (insertError) {
-          console.error('❌ خطأ في إضافة المنتجات الجديدة:', insertError);
           throw new Error(`فشل في إضافة المنتجات الجديدة: ${insertError.message}`);
         }
-
-        console.log('✅ تم إضافة المنتجات الجديدة بنجاح');
 
         // تحديث المخزون
         if (onStockUpdate) {
@@ -100,8 +89,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
       }
 
-      // تحديث حالة الطلبات المحلية مع تفاصيل أكثر
-      console.log('🔄 تحديث الحالة المحلية للطلب:', { orderId, updates, newProducts });
+      // تحديث حالة الطلبات المحلية
       setOrders(prevOrders => {
         const updatedOrders = prevOrders.map(order => 
           order.id === orderId 
@@ -110,16 +98,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
                 ...updates, 
                 items: newProducts || order.items,
                 updated_at: new Date().toISOString(),
-                // إضافة معرفات الوسيط إذا كانت متوفرة
                 alwaseet_city_id: updates.alwaseet_city_id || order.alwaseet_city_id,
                 alwaseet_region_id: updates.alwaseet_region_id || order.alwaseet_region_id
               }
             : order
         );
-        console.log('✅ تم تحديث الحالة المحلية بنجاح:', {
-          updatedOrderId: orderId,
-          updatedOrder: updatedOrders.find(o => o.id === orderId)
-        });
         
         // إرسال حدث للتأكد من تحديث كل المكونات
         setTimeout(() => {
@@ -143,15 +126,14 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         );
       }
 
-      console.log('✅ useOrders - اكتمل تحديث الطلب بنجاح:', { orderId, success: true });
       return { success: true, order: updatedOrder };
     } catch (error) {
       console.error('Error in updateOrder:', error);
       return { success: false, error: error.message };
     }
-  };
+  }, [onStockUpdate, addNotification]);
 
-  const deleteOrders = async (orderIds, isAiOrder = false) => {
+  const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
       // Implementation will be restored later
       return { success: true };
@@ -159,18 +141,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       console.error('Error in deleteOrders:', error);
       return { success: false, error: error.message };
     }
-  };
+  }, []);
 
   // دالة approveAiOrder للتوافق العكسي
-  const approveAiOrder = async (aiOrderId) => {
+  const approveAiOrder = useCallback(async (aiOrderId) => {
     try {
-      // سيتم تحديثه لاحقاً للعمل مع النظام الموحد
-      console.log('Approve AI order:', aiOrderId);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     }
-  };
+  }, []);
 
   return { 
     orders, 
