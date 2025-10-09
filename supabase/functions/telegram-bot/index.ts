@@ -419,140 +419,6 @@ async function warmupCache() {
 }
 
 // ==========================================
-// Handle "Did you mean?" System
-// ==========================================
-async function handleDidYouMean(
-  chatId: number,
-  locationText: string,
-  customerName: string,
-  customerPhone: string,
-  originalText: string,
-  employeeId: string | null,
-  employeeCode: string | null,
-  botToken: string,
-  supabase: any,
-  replacementData?: any
-) {
-  console.log('🔄 بدء نظام "هل تقصد؟" المحلي...');
-  
-  // Search for city
-  const localCityResult = searchCityLocal(locationText);
-  
-  if (!localCityResult) {
-    await sendTelegramMessage(
-      chatId,
-      '⚠️ لم أتمكن من تحديد المدينة في طلبك.\n\n' +
-      'يرجى كتابة العنوان بالصيغة التالية:\n' +
-      '📍 المدينة المنطقة\n\n' +
-      'مثال:\n' +
-      '• بغداد الكرادة\n' +
-      '• البصرة المعقل\n' +
-      '• الموصل الزهور',
-      undefined,
-      botToken
-    );
-    return;
-  }
-  
-  console.log(`🏙️ نتيجة البحث عن المدينة:`, localCityResult);
-  console.log(`📍 سطر العنوان المحدد: "${localCityResult.cityLine}"`);
-  
-  // Extract region text
-  const selectedCity = citiesCache.find(c => c.id === localCityResult.cityId);
-  const cleanedLine = removeCityFromLine(localCityResult.cityLine, selectedCity);
-  
-  console.log(`📍 النص الأصلي بعد المدينة: "${cleanedLine}"`);
-  
-  console.log(`📋 عدد المناطق في هذه المدينة: ${regionsCache.filter(r => r.city_id === localCityResult.cityId).length}`);
-  
-  // Search for regions
-  const localRegionMatches = searchRegionsLocal(localCityResult.cityId, cleanedLine);
-  console.log(`🔍 تم العثور على ${localRegionMatches.length} منطقة محتملة:`, localRegionMatches);
-  
-  if (localRegionMatches.length === 0) {
-    await sendTelegramMessage(
-      chatId,
-      `⚠️ لم أتمكن من تحديد المنطقة في <b>${localCityResult.cityName}</b>.\n\n` +
-      '🔍 يرجى التأكد من كتابة اسم المنطقة بشكل صحيح.\n\n' +
-      'مثال:\n' +
-      '• بغداد الكرادة\n' +
-      '• بغداد المنصور\n' +
-      '• بغداد الدورة',
-      undefined,
-      botToken
-    );
-    return;
-  }
-  
-  console.log(`✅ تم العثور على ${localRegionMatches.length} مطابقة`);
-  console.log(`🏆 أفضل 10 نتائج:`, localRegionMatches.slice(0, 10).map(r => `${r.regionName} (${Math.round(r.confidence * 100)}%)`));
-  
-  // Delete any previous pending state
-  await supabase
-    .from('telegram_pending_selections')
-    .delete()
-    .eq('chat_id', chatId);
-  
-  // Save pending data
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-  await supabase
-    .from('telegram_pending_selections')
-    .insert({
-      chat_id: chatId,
-      action: 'region_clarification',
-      expires_at: expiresAt.toISOString(),
-      context: {
-        original_text: originalText,
-        employee_code: employeeCode,
-        employee_id: employeeId,
-        city_id: localCityResult.cityId,
-        city_name: localCityResult.cityName,
-        city_external_id: selectedCity?.alwaseet_id,
-        customer_name: customerName,
-        customer_phone: customerPhone,
-        replacement_pending: !!replacementData,
-        replacement_data: replacementData,
-        all_regions: localRegionMatches.map(r => ({
-          ...r,
-          externalId: regionsCache.find(reg => reg.id === r.regionId)?.alwaseet_id
-        }))
-      }
-    });
-  
-  // Create pagination buttons
-  const totalRegions = localRegionMatches.length;
-  const firstPageSize = Math.min(5, totalRegions);
-  const topRegions = localRegionMatches.slice(0, firstPageSize);
-  
-  const regionButtons = topRegions.map(r => [{
-    text: `📍 ${r.regionName}`,
-    callback_data: `region_${r.regionId}`
-  }]);
-  
-  if (totalRegions > 5) {
-    const remainingAfterFirst = totalRegions - 5;
-    const nextBatch = Math.min(10, remainingAfterFirst);
-    regionButtons.push([{
-      text: `🟡 عرض ${nextBatch} خيارات إضافية`,
-      callback_data: `region_page2_${localCityResult.cityId}`
-    }]);
-  }
-  
-  regionButtons.push([{
-    text: '❌ لا شيء مما سبق',
-    callback_data: 'region_none'
-  }]);
-  
-  const clarificationMessage = totalRegions === 1
-    ? `✅ تم العثور على منطقة واحدة (${cleanedLine})\n📍 اختر المنطقة الصحيحة:`
-    : `✅ تم العثور على ${totalRegions} منطقة (${cleanedLine})\n📍 اختر المنطقة الصحيحة:`;
-  
-  await sendTelegramMessage(chatId, clarificationMessage, { inline_keyboard: regionButtons }, botToken);
-  
-  console.log(`✅ تم إرسال "هل تقصد؟" - صفحة 1: ${firstPageSize} من أصل ${totalRegions} منطقة`);
-}
-
-// ==========================================
 // Search City Locally - مع استخراج السطر الذي يحتوي على المدينة
 // ==========================================
 function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number; cityLine: string } | null {
@@ -1217,7 +1083,6 @@ serve(async (req) => {
         .maybeSingle();
 
       const employeeId = employeeData?.user_id || null;
-      const employeeCode = employeeData?.telegram_code || null;
       
       // Handle /stats command
       if (text === '/stats') {
@@ -1406,11 +1271,7 @@ serve(async (req) => {
         // ==========================================
         
         // فحص أولي: هل يحتوي النص على هاشتاج؟
-        const hasHashtag = text.includes('#ترجيع') || 
-                           text.includes('#تبديل') || 
-                           text.includes('#استبدال') ||
-                           text.includes('#استبذال') ||
-                           text.includes('#أستبدال');
+        const hasHashtag = text.includes('#ترجيع') || text.includes('#تبديل') || text.includes('#استبدال');
         
         let orderType = 'regular'; // افتراضي: طلب عادي
         
@@ -1439,8 +1300,121 @@ serve(async (req) => {
         // معالجة طلبات الاستبدال
         if (orderType === 'replacement') {
           const replacementData = parseReplacementOrder(text);
-          
-          if (!replacementData) {
+          if (replacementData) {
+            console.log('✅ تم تحليل طلب استبدال:', replacementData);
+            
+            // إنشاء UUID مشترك لربط طلبي الاستبدال
+            const pairId = crypto.randomUUID();
+            
+            // إنشاء طلب AI للمنتج الخارج (replacement_outgoing)
+            const { data: outgoingAiOrder, error: outgoingError } = await supabase
+              .from('ai_orders')
+              .insert({
+                source: 'telegram',
+                telegram_chat_id: chatId,
+                original_text: text,
+                order_data: {
+                  type: 'replacement_outgoing',
+                  pairId: pairId,
+                  outgoingProduct: replacementData.outgoingProduct,
+                  incomingProduct: replacementData.incomingProduct,
+                  customerInfo: replacementData.customerInfo,
+                  deliveryFee: replacementData.deliveryFee,
+                  timestamp: new Date().toISOString()
+                },
+                customer_name: replacementData.customerInfo.name,
+                customer_phone: replacementData.customerInfo.phone,
+                customer_city: replacementData.customerInfo.city,
+                customer_address: replacementData.customerInfo.address,
+                delivery_fee: replacementData.deliveryFee,
+                order_type: 'replacement_outgoing',
+                replacement_pair_id: pairId,
+                merchant_pays_delivery: true,
+                items: [{
+                  product_name: replacementData.outgoingProduct.name,
+                  color_name: replacementData.outgoingProduct.color,
+                  size_name: replacementData.outgoingProduct.size,
+                  quantity: 1
+                }],
+                total_amount: 0,
+                status: 'pending',
+                created_by: employeeId || employeeCode
+              })
+              .select()
+              .single();
+            
+            if (outgoingError) {
+              console.error('❌ خطأ في إنشاء طلب AI للمنتج الخارج:', outgoingError);
+              await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الاستبدال (المنتج الخارج)', undefined, botToken);
+              return new Response(JSON.stringify({ error: outgoingError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // إنشاء طلب AI للمنتج الداخل (replacement_incoming)
+            const { data: incomingAiOrder, error: incomingError } = await supabase
+              .from('ai_orders')
+              .insert({
+                source: 'telegram',
+                telegram_chat_id: chatId,
+                original_text: text,
+                order_data: {
+                  type: 'replacement_incoming',
+                  pairId: pairId,
+                  outgoingProduct: replacementData.outgoingProduct,
+                  incomingProduct: replacementData.incomingProduct,
+                  customerInfo: replacementData.customerInfo,
+                  timestamp: new Date().toISOString()
+                },
+                customer_name: replacementData.customerInfo.name,
+                customer_phone: replacementData.customerInfo.phone,
+                customer_city: replacementData.customerInfo.city,
+                customer_address: replacementData.customerInfo.address,
+                delivery_fee: 0,
+                order_type: 'replacement_incoming',
+                replacement_pair_id: pairId,
+                merchant_pays_delivery: false,
+                items: [{
+                  product_name: replacementData.incomingProduct.name,
+                  color_name: replacementData.incomingProduct.color,
+                  size_name: replacementData.incomingProduct.size,
+                  quantity: 1
+                }],
+                total_amount: 0,
+                status: 'pending',
+                created_by: employeeId || employeeCode
+              })
+              .select()
+              .single();
+            
+            if (incomingError) {
+              console.error('❌ خطأ في إنشاء طلب AI للمنتج الداخل:', incomingError);
+              await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الاستبدال (المنتج الداخل)', undefined, botToken);
+              return new Response(JSON.stringify({ error: incomingError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            await sendTelegramMessage(
+              chatId,
+              `✅ تم إنشاء طلب استبدال بنجاح!\n\n` +
+              `📤 المنتج الخارج: ${replacementData.outgoingProduct.name} ${replacementData.outgoingProduct.color || ''} ${replacementData.outgoingProduct.size || ''}\n` +
+              `📥 المنتج الداخل: ${replacementData.incomingProduct.name} ${replacementData.incomingProduct.color || ''} ${replacementData.incomingProduct.size || ''}\n\n` +
+              `👤 العميل: ${replacementData.customerInfo.name}\n` +
+              `📞 الهاتف: ${replacementData.customerInfo.phone}\n` +
+              `📍 المدينة: ${replacementData.customerInfo.city}\n\n` +
+              `🆔 رقم الطلب: ${outgoingAiOrder.id}`,
+              undefined,
+              botToken
+            );
+            
+            return new Response(JSON.stringify({ success: true, type: 'replacement', pair_id: pairId }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
             await sendTelegramMessage(
               chatId,
               '❌ فشل تحليل طلب الاستبدال.\n\n' +
@@ -1448,11 +1422,8 @@ serve(async (req) => {
               'أحمد\n' +
               'بغداد - الكرادة\n' +
               '07728020021\n' +
-              'برشلونة اسود سمول #استبدال برشلونة ازرق سمول\n' +
-              '5000 (رسوم التوصيل)\n' +
-              'أو:\n' +
-              '+10000 (فرق السعر)\n' +
-              '5000 (رسوم التوصيل)',
+              'برشلونة ازرق M #استبدال برشلونة ابيض S\n' +
+              '5000',
               undefined,
               botToken
             );
@@ -1461,28 +1432,6 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
-          
-          console.log('✅ تم تحليل طلب استبدال:', replacementData);
-          
-          // استدعاء نظام "هل تقصد؟"
-          const locationText = `${replacementData.customerInfo.city} ${replacementData.customerInfo.address}`;
-          await handleDidYouMean(
-            chatId,
-            locationText,
-            replacementData.customerInfo.name,
-            replacementData.customerInfo.phone,
-            text,
-            employeeId,
-            employeeCode,
-            botToken,
-            supabase,
-            replacementData
-          );
-          
-          return new Response(JSON.stringify({ success: true, type: 'replacement_did_you_mean' }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
         }
 
         // معالجة طلبات الترجيع
@@ -1576,6 +1525,7 @@ serve(async (req) => {
           console.log('🔄 معالجة الطلب العادي...');
           
           // We already fetched employeeData above, use it
+          const employeeCode = employeeData?.telegram_code || '';
           console.log('👤 رمز الموظف المستخدم:', employeeCode);
           console.log('👤 معرف الموظف المستخدم:', employeeId);
 
@@ -2227,229 +2177,69 @@ serve(async (req) => {
                 // ✅ المستخدم اختار منطقة محددة
                 const regionId = parseInt(data.replace('region_', ''));
                 const selectedRegion = pendingData.context.all_regions?.find((r: any) => r.regionId === regionId);
-                const selectedCity = citiesCache.find(c => c.id === pendingData.context.city_id);
                 
                 console.log(`✅ المستخدم اختار المنطقة: ${regionId} (${selectedRegion?.regionName})`);
                 
-                // ✅ فحص إذا كان طلب استبدال
-                if (pendingData.context.replacement_pending && pendingData.context.replacement_data) {
-                  const replacementData = pendingData.context.replacement_data;
-                  const employeeId = pendingData.context.employee_id;
-                  const employeeCode = pendingData.context.employee_code;
-                  
-                  // البحث عن المنتجات في قاعدة البيانات
-                  const { data: outgoingProductData } = await supabase
-                    .from('products')
-                    .select('id, name')
-                    .ilike('name', `%${replacementData.outgoingProduct.name}%`)
-                    .limit(1)
-                    .maybeSingle();
-                  
-                  const { data: incomingProductData } = await supabase
-                    .from('products')
-                    .select('id, name, cost_price')
-                    .ilike('name', `%${replacementData.incomingProduct.name}%`)
-                    .limit(1)
-                    .maybeSingle();
-                  
-                  // البحث عن الألوان
-                  let outgoingColorId = null;
-                  let incomingColorId = null;
-                  
-                  if (replacementData.outgoingProduct.color) {
-                    const { data: colorData } = await supabase
-                      .from('colors')
-                      .select('id')
-                      .ilike('name', `%${replacementData.outgoingProduct.color}%`)
-                      .limit(1)
-                      .maybeSingle();
-                    outgoingColorId = colorData?.id;
-                  }
-                  
-                  if (replacementData.incomingProduct.color) {
-                    const { data: colorData } = await supabase
-                      .from('colors')
-                      .select('id')
-                      .ilike('name', `%${replacementData.incomingProduct.color}%`)
-                      .limit(1)
-                      .maybeSingle();
-                    incomingColorId = colorData?.id;
-                  }
-                  
-                  // البحث عن الأحجام
-                  let outgoingSizeId = null;
-                  let incomingSizeId = null;
-                  
-                  if (replacementData.outgoingProduct.size) {
-                    const { data: sizeData } = await supabase
-                      .from('sizes')
-                      .select('id')
-                      .ilike('name', `%${replacementData.outgoingProduct.size}%`)
-                      .limit(1)
-                      .maybeSingle();
-                    outgoingSizeId = sizeData?.id;
-                  }
-                  
-                  if (replacementData.incomingProduct.size) {
-                    const { data: sizeData } = await supabase
-                      .from('sizes')
-                      .select('id')
-                      .ilike('name', `%${replacementData.incomingProduct.size}%`)
-                      .limit(1)
-                      .maybeSingle();
-                    incomingSizeId = sizeData?.id;
-                  }
-                  
-                  // حساب المبلغ النهائي
-                  const deliveryFee = replacementData.deliveryFee || 5000;
-                  const priceAdjustment = replacementData.priceAdjustment || 0;
-                  const finalAmount = deliveryFee + priceAdjustment;
-                  
-                  // إنشاء طلب AI واحد
-                  const { data: aiOrder, error: aiOrderError } = await supabase
+                // ✅ إنشاء الطلب مع تمرير معلومات نظام "هل تقصد؟" مباشرة
+                const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+                  p_employee_code: pendingData.context.employee_code,
+                  p_message_text: pendingData.context.original_text,
+                  p_telegram_chat_id: chatId,
+                  p_city_id: pendingData.context.city_external_id || pendingData.context.city_id,
+                  p_region_id: selectedRegion?.externalId || regionId,
+                  p_city_name: pendingData.context.city_name,
+                  p_region_name: selectedRegion?.regionName || 'غير محدد'
+                });
+                
+                if (orderError) throw orderError;
+                
+                console.log(`✅ تم إنشاء الطلب مع العنوان الصحيح: ${pendingData.context.city_name} - ${selectedRegion?.regionName}`);
+                
+                if (orderResult?.success) {
+                  // جلب تفاصيل الطلب الكامل من ai_orders
+                  const { data: aiOrderData } = await supabase
                     .from('ai_orders')
-                    .insert({
-                      source: 'telegram',
-                      telegram_chat_id: chatId,
-                      original_text: pendingData.context.original_text,
-                      order_type: 'replacement',
-                      order_data: {
-                        type: 'replacement',
-                        outgoing: {
-                          name: replacementData.outgoingProduct.name,
-                          color: replacementData.outgoingProduct.color,
-                          size: replacementData.outgoingProduct.size,
-                          product_id: outgoingProductData?.id,
-                          color_id: outgoingColorId,
-                          size_id: outgoingSizeId
-                        },
-                        incoming: {
-                          name: replacementData.incomingProduct.name,
-                          color: replacementData.incomingProduct.color,
-                          size: replacementData.incomingProduct.size,
-                          product_id: incomingProductData?.id,
-                          color_id: incomingColorId,
-                          size_id: incomingSizeId
-                        },
-                        deliveryFee: deliveryFee,
-                        priceAdjustment: priceAdjustment,
-                        timestamp: new Date().toISOString()
-                      },
-                      customer_name: replacementData.customerInfo.name,
-                      customer_phone: replacementData.customerInfo.phone,
-                      customer_city: selectedCity?.name || pendingData.context.city_name,
-                      customer_address: selectedRegion?.regionName,
-                      delivery_fee: deliveryFee,
-                      price_adjustment: priceAdjustment,
-                      notes: `استرجاع: ${replacementData.outgoingProduct.name} ${replacementData.outgoingProduct.color || ''} ${replacementData.outgoingProduct.size || ''}`.trim(),
-                      items: [{
-                        product_id: incomingProductData?.id,
-                        product_name: replacementData.incomingProduct.name,
-                        color_id: incomingColorId,
-                        color_name: replacementData.incomingProduct.color,
-                        size_id: incomingSizeId,
-                        size_name: replacementData.incomingProduct.size,
-                        quantity: 1
-                      }],
-                      total_amount: finalAmount,
-                      calculated_total_amount: finalAmount,
-                      status: 'pending',
-                      created_by: employeeId || employeeCode
-                    })
-                    .select()
-                    .single();
+                    .select('*')
+                    .eq('id', orderResult.order_id)
+                    .maybeSingle();
                   
-                  if (aiOrderError) {
-                    console.error('❌ خطأ في إنشاء طلب AI للاستبدال:', aiOrderError);
-                    await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الاستبدال', undefined, botToken);
-                  } else {
-                    // رسالة تأكيد بدون رقم طلب
-                    let confirmationMessage = `✅ تم إنشاء طلب استبدال بنجاح!\n\n`;
-                    confirmationMessage += `📤 المنتج الخارج: ${replacementData.outgoingProduct.name} ${replacementData.outgoingProduct.color || ''} ${replacementData.outgoingProduct.size || ''}`.trim() + '\n';
-                    confirmationMessage += `📥 المنتج الداخل: ${replacementData.incomingProduct.name} ${replacementData.incomingProduct.color || ''} ${replacementData.incomingProduct.size || ''}`.trim() + '\n\n';
-                    confirmationMessage += `👤 العميل: ${replacementData.customerInfo.name}\n`;
-                    confirmationMessage += `📞 الهاتف: ${replacementData.customerInfo.phone}\n`;
-                    confirmationMessage += `📍 ${pendingData.context.city_name} - ${selectedRegion?.regionName}\n\n`;
+                  if (aiOrderData) {
+                    // بناء رسالة جميلة مع التفاصيل الكاملة
+                    const allRegions = pendingData.context.all_regions || [];
+                    const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
+                    const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
                     
-                    if (priceAdjustment !== 0 || deliveryFee !== 5000) {
-                      confirmationMessage += `💰 التفاصيل المالية:\n`;
-                      if (deliveryFee > 0) confirmationMessage += `   • رسوم التوصيل: ${deliveryFee.toLocaleString()} دينار\n`;
-                      if (priceAdjustment > 0) confirmationMessage += `   • فرق السعر (للنظام): +${priceAdjustment.toLocaleString()} دينار\n`;
-                      if (priceAdjustment < 0) confirmationMessage += `   • فرق السعر (للزبون): ${priceAdjustment.toLocaleString()} دينار\n`;
-                      confirmationMessage += `   • المجموع: ${finalAmount.toLocaleString()} دينار\n`;
+                    // استخراج معلومات المنتجات
+                    let itemsText = '';
+                    if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+                      itemsText = aiOrderData.items.map((item: any) => 
+                        `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
+                      ).join('\n');
                     }
                     
-                    responseMessage = confirmationMessage;
-                  }
-                  
-                  // حذف السجل من pending_selections
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .delete()
-                    .eq('id', pendingData.id);
-                    
-                } else {
-                  // ✅ طلب عادي - استخدام النظام القديم
-                  const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
-                    p_employee_code: pendingData.context.employee_code,
-                    p_message_text: pendingData.context.original_text,
-                    p_telegram_chat_id: chatId,
-                    p_city_id: pendingData.context.city_external_id || pendingData.context.city_id,
-                    p_region_id: selectedRegion?.externalId || regionId,
-                    p_city_name: pendingData.context.city_name,
-                    p_region_name: selectedRegion?.regionName || 'غير محدد'
-                  });
-                  
-                  if (orderError) throw orderError;
-                  
-                  console.log(`✅ تم إنشاء الطلب مع العنوان الصحيح: ${pendingData.context.city_name} - ${selectedRegion?.regionName}`);
-                  
-                  if (orderResult?.success) {
-                    // جلب تفاصيل الطلب الكامل من ai_orders
-                    const { data: aiOrderData } = await supabase
-                      .from('ai_orders')
-                      .select('*')
-                      .eq('id', orderResult.order_id)
-                      .maybeSingle();
-                    
-                    if (aiOrderData) {
-                      // بناء رسالة جميلة مع التفاصيل الكاملة
-                      const allRegions = pendingData.context.all_regions || [];
-                      const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
-                      const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
-                      
-                      // استخراج معلومات المنتجات
-                      let itemsText = '';
-                      if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-                        itemsText = aiOrderData.items.map((item: any) => 
-                          `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
-                        ).join('\n');
-                      }
-                      
-                      responseMessage = `✅ تم استلام الطلب!
+                    responseMessage = `✅ تم استلام الطلب!
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
 📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
-                    } else {
-                      // Fallback للرسالة القديمة
-                      const allRegions = pendingData.context.all_regions || [];
-                      const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
-                      const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
-                      responseMessage = orderResult.message;
-                    }
                   } else {
-                    responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
+                    // Fallback للرسالة القديمة
+                    const allRegions = pendingData.context.all_regions || [];
+                    const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
+                    const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
+                    responseMessage = orderResult.message;
                   }
-                  
-                  // حذف الحالة المعلقة
-                  await supabase
-                    .from('telegram_pending_selections')
-                    .delete()
-                    .eq('id', pendingData.id);
+                } else {
+                  responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
                 }
+                
+                // حذف الحالة المعلقة
+                await supabase
+                  .from('telegram_pending_selections')
+                  .delete()
+                  .eq('id', pendingData.id);
               }
             }
           } catch (regionError) {

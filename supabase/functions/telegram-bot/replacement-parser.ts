@@ -21,7 +21,6 @@ export interface ReplacementOrderData {
     address: string;
   };
   deliveryFee: number;
-  priceAdjustment?: number;
 }
 
 export interface ReturnOrderData {
@@ -64,18 +63,11 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
     // السطر 1: الاسم
     const customerName = lines[0];
 
-    // السطر 2: المدينة - المنطقة (أو المدينة فقط إذا لم تكن هناك شرطة)
+    // السطر 2: المدينة - المنطقة
     const locationLine = lines[1];
     const locationParts = locationLine.split(/[-–—]/);
-    
-    // إذا لم تكن هناك شرطة، استخدم المدينة فقط من الكلمة الأولى
-    const customerCity = locationParts.length > 1 
-      ? locationParts[0]?.trim() || ''
-      : locationLine.split(/\s+/)[0] || ''; // الكلمة الأولى = المدينة
-    
-    const customerAddress = locationParts.length > 1 
-      ? locationParts.slice(1).join(' - ').trim() || ''
-      : locationLine.split(/\s+/).slice(1).join(' ').trim() || ''; // باقي الكلمات = المنطقة
+    const customerCity = locationParts[0]?.trim() || '';
+    const customerAddress = locationParts.slice(1).join(' - ').trim() || '';
 
     // السطر 3: رقم الهاتف
     const customerPhone = lines[2];
@@ -96,22 +88,8 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
     // تحليل المنتج الداخل
     const incomingProduct = parseProductString(incomingText);
 
-    // السطر 5 و 6: رسوم التوصيل وفرق السعر (اختياري)
-    let deliveryFee = 5000;
-    let priceAdjustment = 0;
-    
-    if (lines[4]) {
-      const line5Value = parseFloat(lines[4].replace(/[^\d.-]/g, '')) || 0;
-      // إذا كان سالب أو موجب كبير (أكثر من 10000)، فهو فرق سعر
-      if (line5Value < 0 || line5Value > 10000) {
-        priceAdjustment = line5Value;
-        // السطر 6: رسوم التوصيل
-        deliveryFee = lines[5] ? parseFloat(lines[5].replace(/[^\d.]/g, '')) || 5000 : 5000;
-      } else {
-        // السطر 5 هو رسوم توصيل
-        deliveryFee = line5Value;
-      }
-    }
+    // السطر 5: رسوم التوصيل (اختياري)
+    const deliveryFee = lines[4] ? parseFloat(lines[4].replace(/[^\d.]/g, '')) || 5000 : 5000;
 
     return {
       type: 'replacement',
@@ -123,8 +101,7 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
         city: customerCity,
         address: customerAddress
       },
-      deliveryFee,
-      priceAdjustment
+      deliveryFee
     };
   } catch (error) {
     console.error('❌ خطأ في تحليل طلب الاستبدال:', error);
@@ -144,18 +121,11 @@ export function parseReturnOrder(text: string): ReturnOrderData | null {
     // السطر 1: الاسم
     const customerName = lines[0];
 
-    // السطر 2: المدينة - المنطقة (أو المدينة فقط إذا لم تكن هناك شرطة)
+    // السطر 2: المدينة - المنطقة
     const locationLine = lines[1];
     const locationParts = locationLine.split(/[-–—]/);
-    
-    // إذا لم تكن هناك شرطة، استخدم المدينة فقط من الكلمة الأولى
-    const customerCity = locationParts.length > 1 
-      ? locationParts[0]?.trim() || ''
-      : locationLine.split(/\s+/)[0] || ''; // الكلمة الأولى = المدينة
-    
-    const customerAddress = locationParts.length > 1 
-      ? locationParts.slice(1).join(' - ').trim() || ''
-      : locationLine.split(/\s+/).slice(1).join(' ').trim() || ''; // باقي الكلمات = المنطقة
+    const customerCity = locationParts[0]?.trim() || '';
+    const customerAddress = locationParts.slice(1).join(' - ').trim() || '';
 
     // السطر 3: رقم الهاتف
     const customerPhone = lines[2];
