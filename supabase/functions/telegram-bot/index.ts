@@ -2230,13 +2230,13 @@ ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
                   .eq('id', pendingData.id);
                 }
               }
-            } catch (regionError) {
-              console.error('❌ خطأ في معالجة اختيار المنطقة:', regionError);
-              responseMessage = '❌ حدث خطأ في معالجة اختيارك. يرجى إعادة إرسال طلبك.';
-            }
+          } catch (regionError) {
+            console.error('❌ خطأ في معالجة اختيار المنطقة:', regionError);
+            responseMessage = '❌ حدث خطأ في معالجة اختيارك. يرجى إعادة إرسال طلبك.';
           }
-          // Handle city selection
-          else if (data.startsWith('city_')) {
+        }
+        // Handle city selection
+        else if (data.startsWith('city_')) {
           const cityName = data.split('_').slice(2).join('_');
           responseMessage = `✅ تم اختيار المدينة: ${cityName}\n\nيرجى الآن إعادة كتابة طلبك مع اسم المدينة الصحيح والمنطقة ورقم الهاتف.`;
         } 
