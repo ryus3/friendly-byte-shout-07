@@ -1,27 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductListItem from './ProductListItem';
 import { Package } from 'lucide-react';
 
 const ProductList = React.memo(({ products, onProductSelect }) => {
+  const productItems = useMemo(() => {
+    return products.map((product, index) => (
+      <motion.div
+        key={product.id}
+        layout
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        transition={{ duration: 0.3, delay: index * 0.05 }}
+      >
+        <ProductListItem
+          product={product}
+          onSelect={() => onProductSelect(product)}
+        />
+      </motion.div>
+    ));
+  }, [products, onProductSelect]);
+  
   return (
     <div className="space-y-3">
       <AnimatePresence>
-        {products.map((product, index) => (
-          <motion.div
-            key={product.id}
-            layout
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3, delay: index * 0.05 }}
-          >
-            <ProductListItem
-              product={product}
-              onSelect={() => onProductSelect(product)}
-            />
-          </motion.div>
-        ))}
+        {productItems}
       </AnimatePresence>
       {products.length === 0 && (
         <div className="text-center py-12 col-span-full">

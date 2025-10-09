@@ -8,8 +8,7 @@ import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import PurchasePrintButton from './PurchasePrintButton';
 
-
-const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
+const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) => {
   const totalCost = (purchase.total_amount || 0); // المبلغ الأساسي فقط
   const hasShipping = (purchase.shipping_cost || 0) > 0;
   const hasTransfer = (purchase.transfer_cost || 0) > 0;
@@ -168,6 +167,6 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
     </motion.div>
   );
-};
+});
 
 export default PurchaseCard;

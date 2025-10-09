@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { usePermissions } from '@/hooks/usePermissions';
 import ProductGrid from './ProductGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Eye, Package } from 'lucide-react';
 
-const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
+const PermissionBasedProductGrid = React.memo(({ products, isLoading, ...otherProps }) => {
   const { isAdmin } = usePermissions();
   
   // فلترة المنتجات حسب صلاحيات المستخدم باستخدام useFilteredProducts
@@ -31,6 +31,6 @@ const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
       {...otherProps}
     />
   );
-};
+});
 
 export default PermissionBasedProductGrid;

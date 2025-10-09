@@ -499,9 +499,9 @@ const OrderCard = ({
                    {(order.customer_city || order.customer_province) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                       <MapPin className="h-3 w-3" />
-                      <span>
+                       <span>
                         {order.customer_city}
-                        {order.customer_province && ` - ${order.customer_province}`}
+                        {order.customer_province && `-${order.customer_province}`}
                       </span>
                     </div>
                   )}
