@@ -228,12 +228,7 @@ const UnifiedEmployeePermissionsDialog = ({
     setIsProcessing(true);
     try {
       const data = getCurrentData();
-      
-      console.log('Approving user:', employee.user_id, 'with data:', data);
-      
       const result = await updateUser(employee.user_id, data);
-      
-      console.log('User approved successfully:', result);
       
       await refetchAdminData();
       
@@ -264,12 +259,7 @@ const UnifiedEmployeePermissionsDialog = ({
     setIsProcessing(true);
     try {
       const data = getCurrentData();
-      
-      console.log('Updating user:', employee.user_id, 'with data:', data);
-      
       const result = await updateUser(employee.user_id, data);
-      
-      console.log('User updated successfully:', result);
       
       await refetchAdminData();
       

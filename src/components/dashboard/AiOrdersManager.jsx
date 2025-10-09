@@ -59,13 +59,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [ordersFromContext, processedOrders]);
   
-  // تزامن مع البيانات من Context عند التحديث مع logging للتشخيص
+  // تزامن مع البيانات من Context عند التحديث
   useEffect(() => {
-    console.log('🔄 AiOrdersManager: تحديث الطلبات من Context', {
-      contextOrders: ordersFromContext.length,
-      dedupedOrders: dedupedContextOrders.length,
-      processedOrders: processedOrders.length
-    });
     setOrders(dedupedContextOrders);
   }, [dedupedContextOrders]);
   
@@ -84,15 +79,11 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   useEffect(() => {
     const handleAiOrderCreated = async (event) => {
       const newOrder = event.detail;
-      console.log('🎯 AiOrdersManager: استلام طلب جديد من', newOrder?.source, 'معرف:', newOrder?.id);
       if (newOrder?.id) {
         setOrders(prev => {
-          // تجنب التكرار
           if (prev.some(o => o.id === newOrder.id)) {
-            console.log('⚠️ طلب مكرر، تم تجاهله:', newOrder.id);
             return prev;
           }
-          console.log('✅ إضافة طلب جديد للقائمة من المساعد الذكي:', newOrder.id);
           return [newOrder, ...prev];
         });
 
@@ -117,7 +108,6 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           
           if (canAutoApprove) {
             try {
-              console.log('Auto-approving order:', newOrder.id, { destination: orderDestination.destination, account: orderDestination.account });
               const result = await approveAiOrder?.(
                 newOrder.id, 
                 orderDestination.destination, 
@@ -165,8 +155,6 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       const { aiOrderId, highlight } = event.detail || {};
       if (!open && typeof onClose === 'function') {
         // فتح النافذة إذا لم تكن مفتوحة
-        // Note: يجب تمرير دالة فتح من المكون الأب
-        console.log('🔄 طلب فتح نافذة إدارة الطلبات الذكية');
       }
       if (aiOrderId && highlight) {
         // تمييز الطلب المحدد
@@ -542,7 +530,7 @@ useEffect(() => {
             try { 
               window.dispatchEvent(new CustomEvent('aiOrderDeleted', { detail: { id } })); 
             } catch (error) {
-              console.warn('خطأ في إرسال حدث الحذف:', error);
+              // Silent error
             }
           });
           toast({ 

@@ -15,11 +15,6 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 
   const handleDirectApprove = async () => {
     try {
-      console.log('=== DIRECT APPROVAL START ===');
-      console.log('Target user:', user);
-      console.log('User ID being approved:', user.user_id);
-      
-      // استخدام function قاعدة البيانات الجديد للموافقة الكاملة
       await onApprove(user.user_id, { 
         useCompleteApproval: true,
         full_name: user.full_name 
@@ -36,7 +31,6 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 
   const handleDirectReject = async () => {
     try {
-      console.log('Direct rejection for user:', user.user_id);
       await onReject(user.user_id);
     } catch (error) {
       console.error('Direct rejection error:', error);
@@ -123,10 +117,7 @@ const PendingRegistrations = ({ onClose }) => {
   const [showUnifiedDialog, setShowUnifiedDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  console.log('PendingRegistrations rendered with:', pendingRegistrations);
-
   const handleDetailedReview = (user) => {
-    console.log('Opening detailed review for:', user);
     setSelectedEmployee(user);
     setShowUnifiedDialog(true);
   };
@@ -136,31 +127,18 @@ const PendingRegistrations = ({ onClose }) => {
     setIsProcessing(true);
     
     try {
-      console.log('=== APPROVAL PROCESS START ===');
-      console.log('User ID:', userId);
-      console.log('Approval data:', data);
-      
       const result = await updateUser(userId, data);
-      console.log('Update result:', result);
       
       if (result?.success !== false) {
-        console.log('Approval successful');
-        
         toast({
           title: "تمت الموافقة ✅",
           description: "تم تفعيل حساب الموظف بنجاح",
           variant: "default"
         });
         
-        // تحديث فوري للقوائم
-        console.log('Refreshing admin data...');
         await refetchAdminData();
-        
-        // إغلاق النوافذ
         setShowUnifiedDialog(false);
         setSelectedEmployee(null);
-        
-        console.log('=== APPROVAL PROCESS SUCCESS ===');
       } else {
         throw new Error(result?.error?.message || 'خطأ في الموافقة');
       }
@@ -181,34 +159,21 @@ const PendingRegistrations = ({ onClose }) => {
     setIsProcessing(true);
     
     try {
-      console.log('=== REJECTION PROCESS START ===');
-      console.log('Rejecting user:', userId);
-      
       const result = await updateUser(userId, { 
         status: 'rejected', 
         permissions: JSON.stringify([]) 
       });
       
-      console.log('Rejection result:', result);
-      
       if (result?.success !== false) {
-        console.log('Rejection successful');
-        
         toast({
           title: "تم الرفض ❌",
           description: "تم رفض طلب التسجيل",
           variant: "default"
         });
         
-        // تحديث فوري للقوائم
-        console.log('Refreshing admin data...');
         await refetchAdminData();
-        
-        // إغلاق النوافذ
         setShowUnifiedDialog(false);
         setSelectedEmployee(null);
-        
-        console.log('=== REJECTION PROCESS SUCCESS ===');
       } else {
         throw new Error(result?.error?.message || 'خطأ في الرفض');
       }
