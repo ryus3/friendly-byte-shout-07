@@ -4,6 +4,7 @@ import { useAuth } from './UnifiedAuthContext';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { linkReturnToOriginalOrder, getOriginalOrderForReturn } from '@/utils/return-order-linker';
 
 // إعادة توجيه ProfitsContext للنظام الموحد
 

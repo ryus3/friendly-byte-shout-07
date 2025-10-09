@@ -48,7 +48,7 @@ const formatWhatsAppNumber = (phone) => {
   return '964' + cleanNumber;
 };
 
-const CustomerCard = ({ 
+const CustomerCard = React.memo(({ 
   customer, 
   onSelect,
   index = 0
@@ -426,6 +426,6 @@ const CustomerCard = ({
       </Card>
     </motion.div>
   );
-};
+});
 
 export default CustomerCard;

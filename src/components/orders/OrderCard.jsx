@@ -31,7 +31,7 @@ import { getStatusForComponent } from '@/lib/order-status-translator';
 import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
 import ScrollingText from '@/components/ui/scrolling-text';
 
-const OrderCard = ({ 
+const OrderCard = React.memo(({ 
   order, 
   onViewOrder, 
   onSelect, 
@@ -43,30 +43,24 @@ const OrderCard = ({
   calculateProfit,
   profits,
   showEmployeeName = false,
-  additionalButtons // أزرار إضافية
+  additionalButtons
 }) => {
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // دالة تحديد ما إذا كان الطلب قابل للتعديل/الحذف (قبل الاستلام من المندوب)
   const isBeforePickup = (order) => {
-    // طلبات محلية: فقط pending
     if (isLocalOrder) {
       return order.status === 'pending';
     }
     
-    // طلبات خارجية: فعال أو في انتظار استلام المندوب
     const deliveryStatus = order.delivery_status?.toLowerCase() || '';
     return deliveryStatus.includes('فعال') || 
            deliveryStatus.includes('في انتظار استلام المندوب') ||
            deliveryStatus.includes('active');
   };
 
-
-  // تحديد نوع الطلب بناءً على tracking_number
   const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
   
-  // استخدام النظام الموحد للحالات
   const statusConfig = getStatusForComponent(order);
   
   const StatusIcon = statusConfig.icon;
@@ -74,12 +68,10 @@ const OrderCard = ({
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
-  // التحقق من الصلاحيات مع النظام الجديد
   const canEdit = React.useMemo(() => {
     if (isLocalOrder) {
       return order.status === 'pending';
     } else {
-      // للطلبات الخارجية، استخدم النظام الجديد
       return order.status === 'pending';
     }
   }, [isLocalOrder, order.status]);
@@ -88,18 +80,18 @@ const OrderCard = ({
     return canDeleteOrder(order);
   }, [order]);
 
-  const handleStatusChange = (newStatus) => {
+  const handleStatusChange = React.useCallback((newStatus) => {
     if (onUpdateStatus) {
       onUpdateStatus(order.id, newStatus);
     }
-  };
+  }, [onUpdateStatus, order.id]);
 
-  const handleDelete = () => {
+  const handleDelete = React.useCallback(() => {
     if (onDeleteOrder) {
-      onDeleteOrder([order.id]); // تمرير مصفوفة تحتوي على ID الطلب
+      onDeleteOrder([order.id]);
     }
     setShowDeleteDialog(false);
-  };
+  }, [onDeleteOrder, order.id]);
 
   const cardVariants = {
     rest: { scale: 1, y: 0 },
@@ -123,15 +115,12 @@ const OrderCard = ({
     });
   };
 
-  // تحضير معلومات المنتجات مع اسم المنتج واللون والقياس - النظام الاحترافي الكامل
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
-    // تصفية العناصر null/undefined وحساب المجموع بأمان
     const validItems = (order.items || []).filter(item => item != null && typeof item === 'object');
     const totalItems = validItems.reduce((sum, item) => sum + (Number(item?.quantity) || 1), 0);
     
-    // تجميع المنتجات حسب الاسم
     const groupedByProduct = validItems.reduce((acc, item) => {
       const productName = item?.productname || item?.product_name || item?.producttype || item?.product_type || 'منتج';
       if (!acc[productName]) {
@@ -143,12 +132,10 @@ const OrderCard = ({
     
     const uniqueProducts = Object.keys(groupedByProduct);
     
-    // الحالة 1: منتج واحد فقط
     if (uniqueProducts.length === 1) {
       const productName = uniqueProducts[0];
       const items = groupedByProduct[productName];
       
-      // منتج واحد بلون/حجم واحد
       if (items.length === 1) {
         const item = items[0];
         const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
@@ -166,9 +153,7 @@ const OrderCard = ({
         };
       }
       
-      // منتج واحد بألوان/أحجام متعددة
       else {
-        // تجميع الألوان والأحجام
         const variantsMap = {};
         items.forEach(item => {
           const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
@@ -180,7 +165,6 @@ const OrderCard = ({
           variantsMap[key] += item?.quantity || 1;
         });
         
-        // تحويل إلى نص منسق: أزرق S (2)، أحمر M (1)
         const variantsText = Object.entries(variantsMap)
           .map(([variant, qty]) => `${variant} (${qty})`)
           .join('، ');
@@ -195,11 +179,10 @@ const OrderCard = ({
       }
     }
     
-    // الحالة 2: منتجات مختلفة
     else {
       const products = uniqueProducts.map(productName => {
         const items = groupedByProduct[productName];
-        const item = items[0]; // نأخذ أول عنصر للحصول على اللون والقياس
+        const item = items[0];
         const colorInfo = item?.product_variants?.colors?.name || item?.color || '';
         const sizeInfo = item?.product_variants?.sizes?.name || item?.size || '';
         const parts = [colorInfo, sizeInfo].filter(Boolean);
@@ -222,51 +205,40 @@ const OrderCard = ({
 
   const productSummary = getProductSummary();
 
-  // حساب ربح الموظف من الطلب
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
     
-    // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
     if (!Array.isArray(profits)) return 0;
     
-    // البحث في profits أولاً
     const profitRecord = profits.find(p => p.order_id === order.id);
     if (profitRecord && profitRecord.employee_profit) {
       return profitRecord.employee_profit;
     }
     
-    // حساب من items إذا لم يوجد في profits - مع تصفية العناصر null/undefined
     const validItems = order.items.filter(item => item != null);
     return validItems.reduce((sum, item) => {
       return sum + (calculateProfit(item, order.created_by) || 0);
     }, 0);
   }, [calculateProfit, order, profits]);
 
-  // تحديد حالة الأرباح والدفع بدقة
   const paymentStatus = useMemo(() => {
-    // التأكد من وجود بيانات الأرباح وأن تكون مصفوفة
     if (!Array.isArray(profits)) {
       return null;
     }
     
-    // البحث عن سجل الربح
     const profitRecord = profits.find(p => String(p.order_id) === String(order.id));
     
-    // تحديد نوع الطلب
     const isLocalOrder = !order.tracking_number || order.tracking_number.startsWith('RYUS-') || order.delivery_partner === 'محلي';
     const isExternalOrder = !isLocalOrder;
     
-    // استبعاد طلبات المدير الرئيسي من وسوم التحاسب
     if (order.created_by === '91484496-b887-44f7-9e5d-be9db5567604') {
       return null;
     }
     
-    // إخفاء وسم التحاسب إذا لم يوجد سجل ربح أو إذا كان ربح الموظف صفر
     if (!profitRecord || !profitRecord.employee_profit || profitRecord.employee_profit <= 0) {
       return null;
     }
     
-    // للطلبات المحلية: عرض حالة التحاسب فقط للطلبات المُسلّمة مع فاتورة
     if (isLocalOrder) {
       if (order.status === 'delivered' && order.receipt_received === true) {
         if (profitRecord.status === 'settled') {
@@ -275,7 +247,6 @@ const OrderCard = ({
           return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
         }
       }
-      // للطلبات المكتملة المؤرشفة: إظهار "مدفوع" فقط
       else if (order.status === 'completed') {
         if (profitRecord.status === 'settled') {
           return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
@@ -283,7 +254,6 @@ const OrderCard = ({
       }
     }
     
-    // للطلبات الخارجية: عرض حالة التحاسب فقط عند التسليم مع فاتورة
     else if (isExternalOrder) {
       const isDelivered = order.delivery_status?.toLowerCase().includes('تسليم') || 
                          order.delivery_status?.toLowerCase().includes('مسلم') ||
@@ -296,7 +266,6 @@ const OrderCard = ({
           return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
         }
       }
-      // للطلبات المكتملة المؤرشفة: إظهار "مدفوع" فقط
       else if (order.status === 'completed') {
         if (profitRecord.status === 'settled') {
           return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
@@ -304,7 +273,6 @@ const OrderCard = ({
       }
     }
     
-    // لا تظهر حالة دفع في باقي الحالات
     return null;
   }, [order, profits]);
 
@@ -323,23 +291,19 @@ const OrderCard = ({
                        dark:shadow-white/5 dark:hover:shadow-primary/15
                        ${isSelected ? 'border-primary ring-4 ring-primary/20 shadow-2xl shadow-primary/30' : 'border-border/30 hover:border-primary/50'}`}>
         
-        {/* خلفية متدرجة عالمية */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-all duration-500" />
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-blue-500 opacity-60" />
         
         <CardContent className="relative p-4">
           <div className="space-y-3">
             
-            {/* Header العالمي - ترتيب موحد مع صفحة الطلبات */}
             <div className="flex items-start justify-between">
-              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية - يسار */}
               {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // تحديد الحالة التالية
                     const nextStatus = {
                       'pending': 'shipped',
                       'shipped': 'delivery', 
@@ -382,7 +346,6 @@ const OrderCard = ({
                 />
               </div>
               
-              {/* مؤشر دفع المستحقات */}
               {order.status === 'completed' && order.isArchived && (
                 <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -391,11 +354,9 @@ const OrderCard = ({
               )}
             </div>
 
-            {/* Customer Info مع الأيقونات في المنتصف - تصميم موحد */}
             <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
               <div className="grid grid-cols-3 gap-3 items-center">
                 
-                {/* Date & Delivery Info - يسار (موحد مع OrdersPage) */}
                 <div className="space-y-1 text-left">
                   <div className="flex items-center gap-2 justify-start">
                     <Calendar className="h-4 w-4 text-primary" />
@@ -405,7 +366,6 @@ const OrderCard = ({
                     <Clock className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
-                   {/* اسم الموظف صاحب الطلب */}
                    {order.created_by_name && (
                       <div className="flex items-center gap-2 justify-start">
                         <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
@@ -422,7 +382,6 @@ const OrderCard = ({
                            </Badge>
                        </div>
 
-                       {/* شارة رقم فاتورة الوسيط - مصغرة */}
                        {order.delivery_partner_invoice_id && (
                          <div className="flex justify-start w-full">
                            <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
@@ -434,10 +393,8 @@ const OrderCard = ({
                    </div>
                 </div>
                 
-                {/* Action Icons - منتصف */}
                 <div className="flex items-center justify-center gap-1">
                   
-                  {/* Delete - أقصى اليمين */}
                   {canDelete && (
                     <Button
                       variant="ghost"
@@ -450,7 +407,6 @@ const OrderCard = ({
                     </Button>
                   )}
 
-                  {/* Track - ثاني من اليمين */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -461,7 +417,6 @@ const OrderCard = ({
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
 
-                   {/* Edit - ثالث من اليمين */}
                    {canEdit && (
                     <Button
                       variant="ghost"
@@ -474,7 +429,6 @@ const OrderCard = ({
                     </Button>
                   )}
 
-                  {/* View - أقصى اليسار */}
                   <Button
                     variant="ghost"
                     size="sm"
@@ -486,7 +440,6 @@ const OrderCard = ({
                   </Button>
                 </div>
                 
-                {/* Customer Info - يسار */}
                 <div className="space-y-1 text-left">
                   <div className="flex items-center gap-2 flex-row-reverse">
                     <User className="h-4 w-4 text-primary" />
@@ -509,12 +462,10 @@ const OrderCard = ({
               </div>
             </div>
 
-            {/* Product & Price مع توصيل في نفس السطر */}
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
               <div className="flex items-center justify-between">
                  <div className="flex items-center gap-2 text-right">
                   <div className="space-y-1">
-                    {/* عرض ربح الموظف */}
                     {employeeProfit > 0 && (
                       <div className="flex items-center gap-1 text-xs justify-end">
                         <span className="font-bold text-emerald-600">
@@ -524,7 +475,6 @@ const OrderCard = ({
                       </div>
                     )}
                     
-                    {/* السعر (شامل التوصيل) */}
                     <div className="flex items-center gap-1 justify-end">
                       <span className="text-xs text-primary/70 font-bold">د.ع</span>
                       <span className="font-bold text-lg text-primary">
@@ -541,7 +491,6 @@ const OrderCard = ({
                       </span>
                     </div>
                     
-                    {/* حالة الدفع - فقط للطلبات المكتملة */}
                     {paymentStatus && (
                       <div className="flex items-center gap-1 justify-end">
                         <span className="text-xs font-medium">{paymentStatus.label}</span>
@@ -551,12 +500,10 @@ const OrderCard = ({
                   </div>
                 </div>
 
-                {/* معلومات المنتج - النظام الاحترافي الكامل */}
                 {productSummary && (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
                       
-                      {/* الحالة 1: منتج واحد بلون/حجم واحد */}
                       {productSummary.type === 'single' && (
                         <>
                           <div className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
@@ -578,7 +525,6 @@ const OrderCard = ({
                         </>
                       )}
                       
-                      {/* الحالة 2: منتج واحد بألوان/أحجام متعددة */}
                       {productSummary.type === 'single-multi-variant' && (
                         <>
                           <div className="flex items-center gap-2 text-primary font-bold flex-row-reverse">
@@ -598,7 +544,6 @@ const OrderCard = ({
                         </>
                       )}
                       
-                      {/* الحالة 3: منتجات مختلفة */}
                       {productSummary.type === 'multiple' && (
                         <div className="space-y-1">
                           {productSummary.products.map((product, index) => (
@@ -632,7 +577,6 @@ const OrderCard = ({
 
 
 
-            {/* Additional Buttons */}
             <div className="flex justify-center pt-2 gap-2">
               {additionalButtons}
               
