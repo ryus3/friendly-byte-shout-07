@@ -64,11 +64,18 @@ export function parseReplacementOrder(text: string): ReplacementOrderData | null
     // السطر 1: الاسم
     const customerName = lines[0];
 
-    // السطر 2: المدينة - المنطقة
+    // السطر 2: المدينة - المنطقة (أو المدينة فقط إذا لم تكن هناك شرطة)
     const locationLine = lines[1];
     const locationParts = locationLine.split(/[-–—]/);
-    const customerCity = locationParts[0]?.trim() || '';
-    const customerAddress = locationParts.slice(1).join(' - ').trim() || '';
+    
+    // إذا لم تكن هناك شرطة، استخدم المدينة فقط من الكلمة الأولى
+    const customerCity = locationParts.length > 1 
+      ? locationParts[0]?.trim() || ''
+      : locationLine.split(/\s+/)[0] || ''; // الكلمة الأولى = المدينة
+    
+    const customerAddress = locationParts.length > 1 
+      ? locationParts.slice(1).join(' - ').trim() || ''
+      : locationLine.split(/\s+/).slice(1).join(' ').trim() || ''; // باقي الكلمات = المنطقة
 
     // السطر 3: رقم الهاتف
     const customerPhone = lines[2];
@@ -137,11 +144,18 @@ export function parseReturnOrder(text: string): ReturnOrderData | null {
     // السطر 1: الاسم
     const customerName = lines[0];
 
-    // السطر 2: المدينة - المنطقة
+    // السطر 2: المدينة - المنطقة (أو المدينة فقط إذا لم تكن هناك شرطة)
     const locationLine = lines[1];
     const locationParts = locationLine.split(/[-–—]/);
-    const customerCity = locationParts[0]?.trim() || '';
-    const customerAddress = locationParts.slice(1).join(' - ').trim() || '';
+    
+    // إذا لم تكن هناك شرطة، استخدم المدينة فقط من الكلمة الأولى
+    const customerCity = locationParts.length > 1 
+      ? locationParts[0]?.trim() || ''
+      : locationLine.split(/\s+/)[0] || ''; // الكلمة الأولى = المدينة
+    
+    const customerAddress = locationParts.length > 1 
+      ? locationParts.slice(1).join(' - ').trim() || ''
+      : locationLine.split(/\s+/).slice(1).join(' ').trim() || ''; // باقي الكلمات = المنطقة
 
     // السطر 3: رقم الهاتف
     const customerPhone = lines[2];
