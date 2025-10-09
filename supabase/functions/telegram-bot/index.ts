@@ -2141,6 +2141,16 @@ serve(async (req) => {
                 console.log(`✅ المستخدم اختار المنطقة: ${regionId} (${selectedRegion?.regionName})`);
                 
                 // ✅ إنشاء الطلب مع تمرير معلومات نظام "هل تقصد؟" مباشرة
+                console.log('📤 استدعاء process_telegram_order مع المعاملات:', {
+                  p_employee_code: pendingData.context.employee_code,
+                  p_message_text: pendingData.context.original_text,
+                  p_telegram_chat_id: chatId,
+                  p_city_id: pendingData.context.city_external_id || pendingData.context.city_id,
+                  p_region_id: selectedRegion?.externalId || regionId,
+                  p_city_name: pendingData.context.city_name,
+                  p_region_name: selectedRegion?.regionName || 'غير محدد'
+                });
+                
                 const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
                   p_employee_code: pendingData.context.employee_code,
                   p_message_text: pendingData.context.original_text,
@@ -2151,7 +2161,22 @@ serve(async (req) => {
                   p_region_name: selectedRegion?.regionName || 'غير محدد'
                 });
                 
-                if (orderError) throw orderError;
+                console.log('📥 نتيجة process_telegram_order:', {
+                  orderResult,
+                  orderError,
+                  success: orderResult?.success,
+                  order_id: orderResult?.order_id,
+                  message: orderResult?.message
+                });
+                
+                if (orderError) {
+                  console.error('❌ خطأ في استدعاء process_telegram_order:', orderError);
+                  throw orderError;
+                }
+                
+                if (!orderResult?.success) {
+                  console.error('❌ فشل process_telegram_order:', orderResult?.message || 'سبب غير معروف');
+                }
                 
                 console.log(`✅ تم إنشاء الطلب مع العنوان الصحيح: ${pendingData.context.city_name} - ${selectedRegion?.regionName}`);
                 
