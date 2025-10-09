@@ -1267,19 +1267,11 @@ serve(async (req) => {
         }
 
         // ==========================================
-        // كشف نوع الطلب: عادي، استبدال، ترجيع
+        // CRITICAL FIX: كشف نوع الطلب قبل معالجة "هل تقصد؟"
         // ==========================================
-        const detectOrderType = (text: string): 'replacement' | 'return' | 'regular' => {
-          const replacementRegex = /#(استبدال|استبذال|أستبدال|تبديل)/;
-          const returnRegex = /#(ارجاع|ترجيع|استرجاع|إرجاع)/;
-          
-          if (replacementRegex.test(text)) return 'replacement';
-          if (returnRegex.test(text)) return 'return';
-          return 'regular';
-        };
-
         const orderType = detectOrderType(text);
         console.log('🔍 نوع الطلب المكتشف:', orderType);
+        console.log('📝 النص الكامل:', text);
 
         // معالجة طلبات الاستبدال
         if (orderType === 'replacement') {

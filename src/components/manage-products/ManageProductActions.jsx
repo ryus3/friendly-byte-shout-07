@@ -43,12 +43,11 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = React.useCallback(async () => {
     const productId = product.id;
     const productName = product.name;
     
     try {
-      // إغلاق الحوار فوراً
       setIsDeleteOpen(false);
       
       // عرض toast للتحميل

@@ -181,10 +181,7 @@ const AccountingPage = () => {
         productType: 'all'
     }), [selectedTimePeriod]);
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
     const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
-    console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
-    console.log('🔍 فترة مختارة:', selectedTimePeriod);
     
     // استخدام البيانات الموحدة لجميع الحسابات
     
@@ -200,7 +197,7 @@ const AccountingPage = () => {
             case 'week': return { from: startOfWeek(now, { weekStartsOn: 1 }), to: now };
             case 'year': return { from: startOfYear(now), to: now };
             case 'month': return { from: startOfMonth(now), to: endOfMonth(now) };
-            case 'all': return { from: null, to: null }; // كل الفترات
+            case 'all': return { from: null, to: null };
             default:
                 return { from: startOfMonth(now), to: endOfMonth(now) };
         }
@@ -220,14 +217,9 @@ const AccountingPage = () => {
             
             const capitalValue = Number(capitalData?.value) || 0;
             setInitialCapital(capitalValue);
-            
-            console.log('💰 تم تحديث رأس المال:', capitalValue);
 
-            // إعادة حساب الرصيد النقدي الفعلي
             const totalRealBalance = getTotalSourcesBalance();
             setRealCashBalance(totalRealBalance);
-            
-            console.log('💰 تم تحديث الرصيد النقدي الفعلي:', totalRealBalance);
             
         } catch (error) {
             console.error('❌ خطأ في تحديث البيانات المالية:', error);
@@ -265,12 +257,6 @@ const AccountingPage = () => {
                 const totalMainBalance = await getMainCashBalance();
                 const otherSourcesBalance = getTotalSourcesBalance();
                 const totalRealBalance = totalMainBalance + otherSourcesBalance;
-                
-                console.log('💰 الرصيد النقدي الفعلي الموحد:', {
-                    mainBalance: totalMainBalance,
-                    otherSources: otherSourcesBalance,
-                    total: totalRealBalance
-                });
                 
                 setRealCashBalance(totalRealBalance);
             } catch (error) {

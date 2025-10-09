@@ -372,7 +372,7 @@ const Dashboard = () => {
             case 'today': from = subDays(now, 1); to = now; break;
             case 'week': from = startOfWeek(now, { weekStartsOn: 1 }); to = now; break;
             case 'year': from = startOfYear(now); to = now; break;
-            case 'all': from = null; to = null; break; // كل الفترات - لا فلترة
+            case 'all': from = null; to = null; break;
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
@@ -380,15 +380,6 @@ const Dashboard = () => {
         const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
             order.created_by === getUserUUID(user)
         )) : [];
-        
-        devLog.log('🔥 Dashboard - Orders for Analysis:', {
-            totalOrders: orders?.length || 0,
-            visibleOrders: visibleOrders.length,
-            canViewAll: canViewAllData,
-            userId: user?.id,
-            userUserId: user?.user_id,
-            firstOrder: visibleOrders[0]
-        });
 
         if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
         
@@ -743,7 +734,6 @@ const Dashboard = () => {
                         pendingProfitOrders={dashboardData.pendingProfitOrders || []}
                         user={user}
                         onReceiveInvoices={() => {
-                            console.log('تم استلام الفواتير بنجاح');
                             fetchProfitsData();
                         }}
                     />
