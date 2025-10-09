@@ -1,7 +1,8 @@
-// Telegram Bot Edge Function - PAGINATION FIX 2025-10-05
-const BOT_VERSION = "v2025-10-05-PAGINATION-FIX";
+// Telegram Bot Edge Function - REPLACEMENT & RETURN SUPPORT 2025-10-09
+const BOT_VERSION = "v2025-10-09-REPLACEMENT-RETURN";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
+import { detectOrderType, parseReplacementOrder, parseReturnOrder } from './replacement-parser.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1265,9 +1266,223 @@ serve(async (req) => {
           }
         }
 
-        // No pending state - treat as order
+        // ==========================================
+        // كشف نوع الطلب: عادي، استبدال، ترجيع
+        // ==========================================
+        const detectOrderType = (text: string): 'replacement' | 'return' | 'regular' => {
+          const replacementRegex = /#(استبدال|استبذال|أستبدال|تبديل)/;
+          const returnRegex = /#(ارجاع|ترجيع|استرجاع|إرجاع)/;
+          
+          if (replacementRegex.test(text)) return 'replacement';
+          if (returnRegex.test(text)) return 'return';
+          return 'regular';
+        };
+
+        const orderType = detectOrderType(text);
+        console.log('🔍 نوع الطلب المكتشف:', orderType);
+
+        // معالجة طلبات الاستبدال
+        if (orderType === 'replacement') {
+          const replacementData = parseReplacementOrder(text);
+          if (replacementData) {
+            console.log('✅ تم تحليل طلب استبدال:', replacementData);
+            
+            // إنشاء UUID مشترك لربط طلبي الاستبدال
+            const pairId = crypto.randomUUID();
+            
+            // إنشاء طلب AI للمنتج الخارج (replacement_outgoing)
+            const { data: outgoingAiOrder, error: outgoingError } = await supabase
+              .from('ai_orders')
+              .insert({
+                source: 'telegram',
+                telegram_chat_id: chatId,
+                original_text: text,
+                customer_name: replacementData.customerInfo.name,
+                customer_phone: replacementData.customerInfo.phone,
+                customer_city: replacementData.customerInfo.city,
+                customer_address: replacementData.customerInfo.address,
+                delivery_fee: replacementData.deliveryFee,
+                order_type: 'replacement_outgoing',
+                replacement_pair_id: pairId,
+                merchant_pays_delivery: true,
+                items: [{
+                  product_name: replacementData.outgoingProduct.name,
+                  color_name: replacementData.outgoingProduct.color,
+                  size_name: replacementData.outgoingProduct.size,
+                  quantity: 1
+                }],
+                total_amount: 0,
+                status: 'pending',
+                created_by: employeeId || employeeCode
+              })
+              .select()
+              .single();
+            
+            if (outgoingError) {
+              console.error('❌ خطأ في إنشاء طلب AI للمنتج الخارج:', outgoingError);
+              await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الاستبدال (المنتج الخارج)', undefined, botToken);
+              return new Response(JSON.stringify({ error: outgoingError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            // إنشاء طلب AI للمنتج الداخل (replacement_incoming)
+            const { data: incomingAiOrder, error: incomingError } = await supabase
+              .from('ai_orders')
+              .insert({
+                source: 'telegram',
+                telegram_chat_id: chatId,
+                original_text: text,
+                customer_name: replacementData.customerInfo.name,
+                customer_phone: replacementData.customerInfo.phone,
+                customer_city: replacementData.customerInfo.city,
+                customer_address: replacementData.customerInfo.address,
+                delivery_fee: 0,
+                order_type: 'replacement_incoming',
+                replacement_pair_id: pairId,
+                merchant_pays_delivery: false,
+                items: [{
+                  product_name: replacementData.incomingProduct.name,
+                  color_name: replacementData.incomingProduct.color,
+                  size_name: replacementData.incomingProduct.size,
+                  quantity: 1
+                }],
+                total_amount: 0,
+                status: 'pending',
+                created_by: employeeId || employeeCode
+              })
+              .select()
+              .single();
+            
+            if (incomingError) {
+              console.error('❌ خطأ في إنشاء طلب AI للمنتج الداخل:', incomingError);
+              await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الاستبدال (المنتج الداخل)', undefined, botToken);
+              return new Response(JSON.stringify({ error: incomingError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            await sendTelegramMessage(
+              chatId,
+              `✅ تم إنشاء طلب استبدال بنجاح!\n\n` +
+              `📤 المنتج الخارج: ${replacementData.outgoingProduct.name} ${replacementData.outgoingProduct.color || ''} ${replacementData.outgoingProduct.size || ''}\n` +
+              `📥 المنتج الداخل: ${replacementData.incomingProduct.name} ${replacementData.incomingProduct.color || ''} ${replacementData.incomingProduct.size || ''}\n\n` +
+              `👤 العميل: ${replacementData.customerInfo.name}\n` +
+              `📞 الهاتف: ${replacementData.customerInfo.phone}\n` +
+              `📍 المدينة: ${replacementData.customerInfo.city}\n\n` +
+              `🆔 رقم الطلب: ${outgoingAiOrder.id}`,
+              undefined,
+              botToken
+            );
+            
+            return new Response(JSON.stringify({ success: true, type: 'replacement', pair_id: pairId }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            await sendTelegramMessage(
+              chatId,
+              '❌ فشل تحليل طلب الاستبدال.\n\n' +
+              'يرجى استخدام الصيغة التالية:\n' +
+              'أحمد\n' +
+              'بغداد - الكرادة\n' +
+              '07728020021\n' +
+              'برشلونة ازرق M #استبدال برشلونة ابيض S\n' +
+              '5000',
+              undefined,
+              botToken
+            );
+            return new Response(JSON.stringify({ error: 'invalid_replacement_format' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
+        // معالجة طلبات الترجيع
+        if (orderType === 'return') {
+          const returnData = parseReturnOrder(text);
+          if (returnData) {
+            console.log('✅ تم تحليل طلب ترجيع:', returnData);
+            
+            // إنشاء طلب AI للترجيع
+            const { data: returnAiOrder, error: returnError } = await supabase
+              .from('ai_orders')
+              .insert({
+                source: 'telegram',
+                telegram_chat_id: chatId,
+                original_text: text,
+                customer_name: returnData.customerInfo.name,
+                customer_phone: returnData.customerInfo.phone,
+                customer_city: returnData.customerInfo.city,
+                customer_address: returnData.customerInfo.address,
+                delivery_fee: 0,
+                order_type: 'return_only',
+                refund_amount: returnData.refundAmount,
+                items: [{
+                  product_name: returnData.product.name,
+                  color_name: returnData.product.color,
+                  size_name: returnData.product.size,
+                  quantity: 1
+                }],
+                total_amount: returnData.refundAmount,
+                status: 'pending',
+                created_by: employeeId || employeeCode
+              })
+              .select()
+              .single();
+            
+            if (returnError) {
+              console.error('❌ خطأ في إنشاء طلب الترجيع:', returnError);
+              await sendTelegramMessage(chatId, '❌ حدث خطأ في إنشاء طلب الترجيع', undefined, botToken);
+              return new Response(JSON.stringify({ error: returnError.message }), {
+                status: 500,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+            
+            await sendTelegramMessage(
+              chatId,
+              `✅ تم إنشاء طلب ترجيع بنجاح!\n\n` +
+              `📦 المنتج: ${returnData.product.name} ${returnData.product.color || ''} ${returnData.product.size || ''}\n` +
+              `💰 المبلغ المسترجع: ${returnData.refundAmount.toLocaleString()} د.ع\n\n` +
+              `👤 العميل: ${returnData.customerInfo.name}\n` +
+              `📞 الهاتف: ${returnData.customerInfo.phone}\n` +
+              `📍 المدينة: ${returnData.customerInfo.city}\n\n` +
+              `🆔 رقم الطلب: ${returnAiOrder.id}`,
+              undefined,
+              botToken
+            );
+            
+            return new Response(JSON.stringify({ success: true, type: 'return', order_id: returnAiOrder.id }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          } else {
+            await sendTelegramMessage(
+              chatId,
+              '❌ فشل تحليل طلب الترجيع.\n\n' +
+              'يرجى استخدام الصيغة التالية:\n' +
+              'أحمد\n' +
+              'بغداد - الكرادة\n' +
+              '07728020021\n' +
+              'برشلونة ازرق M #ترجيع\n' +
+              '15000',
+              undefined,
+              botToken
+            );
+            return new Response(JSON.stringify({ error: 'invalid_return_format' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
+        // No pending state - treat as regular order
         try {
-          console.log('🔄 معالجة الطلب...');
+          console.log('🔄 معالجة الطلب العادي...');
           
           // We already fetched employeeData above, use it
           const employeeCode = employeeData?.telegram_code || '';

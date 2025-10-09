@@ -497,8 +497,8 @@ const OrderCard = ({
                      <span>{order.customer_phone}</span>
                    </div>
                    {(order.customer_city || order.customer_province) && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground" dir="rtl">
-                      <MapPin className="h-3 w-3" />
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" dir="rtl">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
                       <span>
                         {order.customer_city}
                         {order.customer_province && ` – ${order.customer_province}`}

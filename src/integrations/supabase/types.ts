@@ -31,14 +31,19 @@ export type Database = {
           items: Json
           location_confidence: number | null
           location_suggestions: Json | null
+          merchant_pays_delivery: boolean | null
           notes: string | null
           order_data: Json
+          order_type: string | null
+          original_order_id: string | null
           original_text: string | null
           price_adjustment: number | null
           processed_at: string | null
           processed_by: string | null
+          refund_amount: number | null
           region_id: number | null
           related_order_id: string | null
+          replacement_pair_id: string | null
           resolved_city_name: string | null
           resolved_region_name: string | null
           source: string
@@ -64,14 +69,19 @@ export type Database = {
           items?: Json
           location_confidence?: number | null
           location_suggestions?: Json | null
+          merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_data: Json
+          order_type?: string | null
+          original_order_id?: string | null
           original_text?: string | null
           price_adjustment?: number | null
           processed_at?: string | null
           processed_by?: string | null
+          refund_amount?: number | null
           region_id?: number | null
           related_order_id?: string | null
+          replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
           source?: string
@@ -97,14 +107,19 @@ export type Database = {
           items?: Json
           location_confidence?: number | null
           location_suggestions?: Json | null
+          merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_data?: Json
+          order_type?: string | null
+          original_order_id?: string | null
           original_text?: string | null
           price_adjustment?: number | null
           processed_at?: string | null
           processed_by?: string | null
+          refund_amount?: number | null
           region_id?: number | null
           related_order_id?: string | null
+          replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
           source?: string
@@ -2520,14 +2535,19 @@ export type Database = {
           invoice_received_at: string | null
           invoice_received_by: string | null
           isarchived: boolean | null
+          merchant_pays_delivery: boolean | null
           notes: string | null
           order_number: string
+          order_type: string | null
+          original_order_id: string | null
           payment_received_source_id: string | null
           payment_status: string
           qr_id: string | null
           receipt_received: boolean | null
           receipt_received_at: string | null
           receipt_received_by: string | null
+          refund_amount: number | null
+          replacement_pair_id: string | null
           sales_amount: number | null
           source: string | null
           status: string
@@ -2565,14 +2585,19 @@ export type Database = {
           invoice_received_at?: string | null
           invoice_received_by?: string | null
           isarchived?: boolean | null
+          merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_number: string
+          order_type?: string | null
+          original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
           receipt_received_by?: string | null
+          refund_amount?: number | null
+          replacement_pair_id?: string | null
           sales_amount?: number | null
           source?: string | null
           status?: string
@@ -2610,14 +2635,19 @@ export type Database = {
           invoice_received_at?: string | null
           invoice_received_by?: string | null
           isarchived?: boolean | null
+          merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_number?: string
+          order_type?: string | null
+          original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
           receipt_received_by?: string | null
+          refund_amount?: number | null
+          replacement_pair_id?: string | null
           sales_amount?: number | null
           source?: string | null
           status?: string
@@ -5504,17 +5534,15 @@ export type Database = {
         Returns: Json
       }
       process_telegram_order: {
-        Args:
-          | {
-              p_city_id: number
-              p_city_name: string
-              p_employee_code: string
-              p_message_text: string
-              p_region_id: number
-              p_region_name: string
-              p_telegram_chat_id: number
-            }
-          | { p_order_data: Json; p_region_id?: number; p_user_id?: string }
+        Args: {
+          p_city_id: number
+          p_city_name: string
+          p_employee_code: string
+          p_message_text: string
+          p_region_id: number
+          p_region_name: string
+          p_telegram_chat_id: number
+        }
         Returns: Json
       }
       prune_delivery_invoices_for_user: {
