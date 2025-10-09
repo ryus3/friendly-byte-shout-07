@@ -2235,6 +2235,7 @@ ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
             responseMessage = '❌ حدث خطأ في معالجة اختيارك. يرجى إعادة إرسال طلبك.';
           }
         }
+        }
         // Handle city selection
         else if (data.startsWith('city_')) {
           const cityName = data.split('_').slice(2).join('_');
