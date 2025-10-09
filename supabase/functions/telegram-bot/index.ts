@@ -1034,6 +1034,32 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 🔄 Reset endpoint - حذف جميع الحالات المعلقة وإعادة تعيين البوت
+  if (req.method === 'GET' && new URL(req.url).searchParams.get('reset') === 'true') {
+    try {
+      const { error } = await supabase
+        .from('telegram_pending_selections')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'تم حذف جميع الحالات المعلقة وإعادة تعيين البوت',
+        timestamp: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: String(error) 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
   try {
     // ==========================================
     // Instance Warming: تحميل Cache عند أول request
@@ -1219,7 +1245,20 @@ serve(async (req) => {
       // Handle text messages (check for pending state first)
       // ==========================================
       if (text && text !== '/start') {
-        // First, check if there's a pending selection state
+        // 🧹 تنظيف تلقائي: حذف جميع الحالات المعلقة المنتهية الصلاحية
+        await supabase
+          .from('telegram_pending_selections')
+          .delete()
+          .lt('expires_at', new Date().toISOString());
+
+        // 🧹 حذف جميع حالات region_clarification للمستخدم الحالي عند إرسال رسالة جديدة
+        await supabase
+          .from('telegram_pending_selections')
+          .delete()
+          .eq('chat_id', chatId)
+          .eq('action', 'region_clarification');
+
+        // First, check if there's a pending selection state (فقط النشطة غير المنتهية)
         const { data: pendingState } = await supabase
           .from('telegram_pending_selections')
           .select('*')
@@ -1284,14 +1323,20 @@ serve(async (req) => {
         
         // فحص أولي: هل يحتوي النص على هاشتاج؟
         const hasHashtag = text.includes('#ترجيع') || text.includes('#تبديل') || text.includes('#استبدال');
+        console.log('🔍 فحص الهاشتاج:', { hasHashtag, textPreview: text.substring(0, 100) });
         
         let orderType = 'regular'; // افتراضي: طلب عادي
         
         // فقط إذا كان هناك هاشتاج، نكشف النوع
         if (hasHashtag) {
           orderType = detectOrderType(text);
-          console.log('🔍 نوع الطلب المكتشف:', orderType);
-          console.log('📝 النص الكامل:', text);
+          console.log('✅ نوع الطلب بعد التحليل:', orderType);
+        } else {
+          console.log('📦 طلب عادي (لا يوجد هاشتاج)');
+        }
+        
+        console.log('🔍 نوع الطلب النهائي:', orderType);
+        console.log('📝 النص الكامل:', text);
           
           // منع التداخل: ترجيع + استبدال معاً
           if (text.includes('#ترجيع') && (text.includes('#استبدال') || text.includes('#تبديل'))) {
@@ -1530,6 +1575,11 @@ serve(async (req) => {
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
             });
           }
+        }
+
+        // معالجة الطلبات العادية
+        if (orderType === 'regular') {
+          console.log('🚀 بدء معالجة طلب عادي');
         }
 
         // No pending state - treat as regular order
