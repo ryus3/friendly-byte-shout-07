@@ -1267,35 +1267,19 @@ serve(async (req) => {
         }
 
         // ==========================================
-        // CRITICAL FIX: فحص الهاشتاج أولاً قبل كشف النوع
+        // كشف نوع الطلب: عادي، استبدال، ترجيع
         // ==========================================
-        
-        // فحص أولي: هل يحتوي النص على هاشتاج؟
-        const hasHashtag = text.includes('#ترجيع') || text.includes('#تبديل') || text.includes('#استبدال');
-        
-        let orderType = 'regular'; // افتراضي: طلب عادي
-        
-        // فقط إذا كان هناك هاشتاج، نكشف النوع
-        if (hasHashtag) {
-          orderType = detectOrderType(text);
-          console.log('🔍 نوع الطلب المكتشف:', orderType);
-          console.log('📝 النص الكامل:', text);
+        const detectOrderType = (text: string): 'replacement' | 'return' | 'regular' => {
+          const replacementRegex = /#(استبدال|استبذال|أستبدال|تبديل)/;
+          const returnRegex = /#(ارجاع|ترجيع|استرجاع|إرجاع)/;
           
-          // منع التداخل: ترجيع + استبدال معاً
-          if (text.includes('#ترجيع') && (text.includes('#استبدال') || text.includes('#تبديل'))) {
-            await sendTelegramMessage(
-              chatId,
-              '❌ خطأ: لا يمكن إنشاء طلب ترجيع واستبدال في نفس الوقت!\n\n' +
-              'يرجى إرسال طلب واحد فقط.',
-              undefined,
-              botToken
-            );
-            return new Response(JSON.stringify({ error: 'conflicting_order_types' }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
-          }
-        }
+          if (replacementRegex.test(text)) return 'replacement';
+          if (returnRegex.test(text)) return 'return';
+          return 'regular';
+        };
+
+        const orderType = detectOrderType(text);
+        console.log('🔍 نوع الطلب المكتشف:', orderType);
 
         // معالجة طلبات الاستبدال
         if (orderType === 'replacement') {
@@ -1313,15 +1297,6 @@ serve(async (req) => {
                 source: 'telegram',
                 telegram_chat_id: chatId,
                 original_text: text,
-                order_data: {
-                  type: 'replacement_outgoing',
-                  pairId: pairId,
-                  outgoingProduct: replacementData.outgoingProduct,
-                  incomingProduct: replacementData.incomingProduct,
-                  customerInfo: replacementData.customerInfo,
-                  deliveryFee: replacementData.deliveryFee,
-                  timestamp: new Date().toISOString()
-                },
                 customer_name: replacementData.customerInfo.name,
                 customer_phone: replacementData.customerInfo.phone,
                 customer_city: replacementData.customerInfo.city,
@@ -1359,14 +1334,6 @@ serve(async (req) => {
                 source: 'telegram',
                 telegram_chat_id: chatId,
                 original_text: text,
-                order_data: {
-                  type: 'replacement_incoming',
-                  pairId: pairId,
-                  outgoingProduct: replacementData.outgoingProduct,
-                  incomingProduct: replacementData.incomingProduct,
-                  customerInfo: replacementData.customerInfo,
-                  timestamp: new Date().toISOString()
-                },
                 customer_name: replacementData.customerInfo.name,
                 customer_phone: replacementData.customerInfo.phone,
                 customer_city: replacementData.customerInfo.city,
@@ -1447,13 +1414,6 @@ serve(async (req) => {
                 source: 'telegram',
                 telegram_chat_id: chatId,
                 original_text: text,
-                order_data: {
-                  type: 'return',
-                  product: returnData.product,
-                  customerInfo: returnData.customerInfo,
-                  refundAmount: returnData.refundAmount,
-                  timestamp: new Date().toISOString()
-                },
                 customer_name: returnData.customerInfo.name,
                 customer_phone: returnData.customerInfo.phone,
                 customer_city: returnData.customerInfo.city,

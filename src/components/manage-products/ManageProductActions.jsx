@@ -43,11 +43,12 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
     }
   };
 
-  const handleDelete = React.useCallback(async () => {
+  const handleDelete = async () => {
     const productId = product.id;
     const productName = product.name;
     
     try {
+      // إغلاق الحوار فوراً
       setIsDeleteOpen(false);
       
       // عرض toast للتحميل
@@ -83,7 +84,7 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
         variant: "destructive" 
       });
     }
-  }, [product.id, product.name, deleteProducts]);
+  };
   
   const handleEditProduct = () => {
     // الانتقال لصفحة إضافة المنتج مع بيانات المنتج للتعديل
