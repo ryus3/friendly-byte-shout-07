@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const CashSourceCard = ({ 
+const CashSourceCard = React.memo(({
   cashSource, 
   movements = [], 
   onAddCash, 
@@ -50,22 +50,26 @@ const CashSourceCard = ({
   };
 
   const SourceIcon = getSourceIcon(cashSource.type);
-  const recentMovements = movements.slice(0, 3);
+  const recentMovements = useMemo(() => movements.slice(0, 3), [movements]);
   
-  // حساب إحصائيات سريعة
-  const todayMovements = movements.filter(m => {
-    const today = new Date().toDateString();
-    const movementDate = new Date(m.created_at).toDateString();
-    return today === movementDate;
-  });
-  
-  const todayIn = todayMovements
-    .filter(m => m.movement_type === 'in')
-    .reduce((sum, m) => sum + (m.amount || 0), 0);
+  // حساب إحصائيات سريعة مع useMemo
+  const { todayIn, todayOut } = useMemo(() => {
+    const todayMovements = movements.filter(m => {
+      const today = new Date().toDateString();
+      const movementDate = new Date(m.created_at).toDateString();
+      return today === movementDate;
+    });
     
-  const todayOut = todayMovements
-    .filter(m => m.movement_type === 'out')
-    .reduce((sum, m) => sum + (m.amount || 0), 0);
+    const inAmount = todayMovements
+      .filter(m => m.movement_type === 'in')
+      .reduce((sum, m) => sum + (m.amount || 0), 0);
+      
+    const outAmount = todayMovements
+      .filter(m => m.movement_type === 'out')
+      .reduce((sum, m) => sum + (m.amount || 0), 0);
+    
+    return { todayIn: inAmount, todayOut: outAmount };
+  }, [movements]);
 
   return (
     <Card className={cn(
@@ -236,5 +240,7 @@ const CashSourceCard = ({
     </Card>
   );
 };
+
+});
 
 export default CashSourceCard;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,10 +62,6 @@ const CashManagementPage = () => {
         const mainBalance = await getMainCashBalance();
         const totalAllSources = getTotalAllSourcesBalance(); // لا تحتاج await لأنها دالة عادية الآن
         
-        console.log('📊 البيانات المُحدثة:', {
-          mainBalance: mainBalance?.toLocaleString() || '0',
-          totalAllSources: totalAllSources?.toLocaleString() || '0'
-        });
         
         // تحديث جميع الحالات من البيانات الحقيقية
         setMainCashBalance(mainBalance);
@@ -93,11 +89,6 @@ const CashManagementPage = () => {
             grossProfit: finalBalance
           });
 
-          console.log('💰 النظام المالي الحقيقي محدث:', {
-            mainBalance: mainBalance?.toLocaleString() || '0',
-            totalAllSources: totalAllSources?.toLocaleString() || '0',
-            enhancedBalance: finalBalance?.toLocaleString() || '0'
-          });
         }
       } catch (error) {
         console.error('❌ خطأ في النظام المالي الحقيقي:', error);
@@ -204,7 +195,7 @@ const CashManagementPage = () => {
     new Date(m.effective_at || m.created_at) >= monthStart
   );
 
-  const calculateStats = (movements) => {
+  const calculateStats = useCallback((movements) => {
     const totalIn = movements
       .filter(m => m.movement_type === 'in')
       .reduce((sum, m) => sum + (m.amount || 0), 0);
@@ -214,11 +205,11 @@ const CashManagementPage = () => {
       .reduce((sum, m) => sum + (m.amount || 0), 0);
     
     return { totalIn, totalOut, net: totalIn - totalOut };
-  };
+  }, []);
 
-  const todayStats = calculateStats(todayMovements);
-  const weekStats = calculateStats(weekMovements);
-  const monthStats = calculateStats(monthMovements);
+  const todayStats = useMemo(() => calculateStats(todayMovements), [todayMovements, calculateStats]);
+  const weekStats = useMemo(() => calculateStats(weekMovements), [weekMovements, calculateStats]);
+  const monthStats = useMemo(() => calculateStats(monthMovements), [monthMovements, calculateStats]);
 
   // إحصائيات المؤشرات الرئيسية - النظام الموحد
   const kpiCards = [
@@ -364,7 +355,7 @@ const CashManagementPage = () => {
                       movements={sourceMovements}
                       onAddCash={handleAddCash}
                       onWithdrawCash={handleWithdrawCash}
-                      onViewDetails={() => console.log('View details:', source)}
+                      onViewDetails={() => {/* View details */}}
                       onDelete={handleDeleteSource}
                       realBalance={displayBalance}
                     />
@@ -392,10 +383,7 @@ const CashManagementPage = () => {
               totalPurchases={enhancedFinancialData?.totalPurchases || 0}
               totalExpenses={enhancedFinancialData?.totalExpenses || 0}
               inventoryValue={0}
-              onFilterChange={(period, dateRange) => {
-                // لا حاجة لإعادة جلب - النظام محدث تلقائياً
-                console.log('🔄 تغيير الفلتر:', period, dateRange);
-              }}
+              onFilterChange={() => {/* Automatic update */}}
             />
             
             {/* إحصائيات فترية */}

@@ -5832,6 +5832,16 @@ export type Database = {
         Args: { p_username: string }
         Returns: boolean
       }
+      validate_cash_balance_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          current_balance: number
+          difference: number
+          is_synced: boolean
+          last_movement_balance: number
+          source_name: string
+        }[]
+      }
       validate_cash_source_balances: {
         Args: Record<PropertyKey, never>
         Returns: {
