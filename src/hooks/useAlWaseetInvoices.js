@@ -815,6 +815,120 @@ export const useAlWaseetInvoices = () => {
     }
   }, [token, isLoggedIn, user?.id, fetchInvoices]);
 
+  /**
+   * إعادة معالجة فاتورة مستلمة لتحديث الطلبات المرتبطة بها
+   */
+  const reprocessReceivedInvoice = useCallback(async (invoiceExternalId) => {
+    try {
+      console.log(`🔄 بدء إعادة معالجة الفاتورة: ${invoiceExternalId}`);
+      
+      // 1. جلب الفاتورة من قاعدة البيانات
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('delivery_invoices')
+        .select('*')
+        .eq('external_id', invoiceExternalId)
+        .eq('partner', 'alwaseet')
+        .single();
+
+      if (invoiceError || !invoice) {
+        console.error('❌ خطأ في جلب الفاتورة:', invoiceError);
+        toast.error('لم يتم العثور على الفاتورة');
+        return;
+      }
+
+      // 2. جلب جميع الطلبات المرتبطة بالفاتورة
+      const { data: invoiceOrders, error: ordersError } = await supabase
+        .from('delivery_invoice_orders')
+        .select('order_id, external_order_id')
+        .eq('invoice_id', invoice.id);
+
+      if (ordersError) {
+        console.error('❌ خطأ في جلب طلبات الفاتورة:', ordersError);
+        toast.error('خطأ في جلب طلبات الفاتورة');
+        return;
+      }
+
+      if (!invoiceOrders || invoiceOrders.length === 0) {
+        console.warn('⚠️ لا توجد طلبات مرتبطة بالفاتورة');
+        toast.error('لا توجد طلبات مرتبطة بالفاتورة');
+        return;
+      }
+
+      console.log(`📦 تم العثور على ${invoiceOrders.length} طلب مرتبط بالفاتورة`);
+
+      // 3. تحديث كل طلب مرتبط
+      let updatedCount = 0;
+      const currentUserId = user?.id || '91484496-b887-44f7-9e5d-be9db5567604';
+
+      for (const invoiceOrder of invoiceOrders) {
+        if (!invoiceOrder.order_id) continue;
+
+        // تحديث جدول orders
+        const { error: updateOrderError } = await supabase
+          .from('orders')
+          .update({
+            receipt_received: true,
+            receipt_received_at: new Date().toISOString(),
+            receipt_received_by: currentUserId,
+            delivery_partner_invoice_id: invoiceExternalId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', invoiceOrder.order_id);
+
+        if (updateOrderError) {
+          console.error(`❌ خطأ في تحديث الطلب ${invoiceOrder.order_id}:`, updateOrderError);
+          continue;
+        }
+
+        // تحديث جدول profits
+        const { error: updateProfitError } = await supabase
+          .from('profits')
+          .update({
+            status: 'invoice_received',
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_id', invoiceOrder.order_id);
+
+        if (updateProfitError) {
+          console.error(`❌ خطأ في تحديث الأرباح للطلب ${invoiceOrder.order_id}:`, updateProfitError);
+        }
+
+        updatedCount++;
+        console.log(`✅ تم تحديث الطلب ${invoiceOrder.order_id} بنجاح`);
+      }
+
+      // 4. تحديث حالة الفاتورة إذا لم تكن مستلمة
+      if (!invoice.received) {
+        const { error: updateInvoiceError } = await supabase
+          .from('delivery_invoices')
+          .update({
+            received: true,
+            received_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', invoice.id);
+
+        if (updateInvoiceError) {
+          console.error('❌ خطأ في تحديث حالة الفاتورة:', updateInvoiceError);
+        }
+      }
+
+      console.log(`✅ تمت إعادة معالجة الفاتورة بنجاح - تم تحديث ${updatedCount} طلب`);
+      toast.success(`تمت إعادة معالجة الفاتورة - تم تحديث ${updatedCount} طلب`);
+
+      // 5. تحديث القائمة
+      window.dispatchEvent(new CustomEvent('invoiceReceived', { 
+        detail: { invoiceId: invoiceExternalId } 
+      }));
+
+      return { success: true, updatedCount };
+    } catch (error) {
+      console.error('❌ خطأ في إعادة معالجة الفاتورة:', error);
+      toast.error('خطأ في إعادة معالجة الفاتورة');
+      return { success: false, error };
+    }
+  }, [user?.id]);
+
   // Clear invoices state when logged out or switched away from AlWaseet
   useEffect(() => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
@@ -832,6 +946,7 @@ export const useAlWaseetInvoices = () => {
     fetchInvoices,
     fetchInvoiceOrders,
     receiveInvoice,
+    reprocessReceivedInvoice,
     linkInvoiceWithLocalOrders,
     getInvoiceStats,
     applyCustomDateRangeFilter,
