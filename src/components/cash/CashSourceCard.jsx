@@ -239,8 +239,6 @@ const CashSourceCard = React.memo(({
       </CardContent>
     </Card>
   );
-};
-
 });
 
 export default CashSourceCard;
