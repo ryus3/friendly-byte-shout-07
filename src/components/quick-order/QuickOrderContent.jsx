@@ -55,14 +55,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     second_phone: '', 
     city_id: '', 
     region_id: '', 
-    city: 'بغداد', // القيمة الافتراضية للمدينة
+    city: 'بغداد',
     region: '', 
     address: '', 
     notes: '', 
     details: '', 
     quantity: 1, 
     price: 0, 
-    size: 'عادي', // القيمة الافتراضية لحجم الطلب
+    priceType: 'positive',
+    size: 'عادي',
     type: 'new', 
     promocode: '',
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''

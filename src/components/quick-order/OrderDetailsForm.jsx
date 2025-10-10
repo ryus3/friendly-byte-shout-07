@@ -221,7 +221,40 @@ const OrderDetailsForm = ({
         </div>
         <div className="space-y-2">
           <Label htmlFor="price">السعر مع التوصيل</Label>
-          <Input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required disabled={isSubmittingState} placeholder="يتم حساب السعر تلقائياً" />
+          <div className="flex gap-2">
+            <SearchableSelectFixed
+              value={formData.priceType || 'positive'}
+              onValueChange={(v) => handleSelectChange('priceType', v)}
+              options={[
+                { value: 'positive', label: 'موجب (+)' },
+                { value: 'negative', label: 'سالب (-)' }
+              ]}
+              placeholder="نوع السعر"
+              className="w-32"
+              disabled={isSubmittingState}
+            />
+            <Input 
+              type="number" 
+              id="price" 
+              name="price" 
+              value={Math.abs(formData.price)} 
+              onChange={(e) => {
+                const absoluteValue = Math.max(0, Number(e.target.value));
+                const finalValue = (formData.priceType === 'negative') ? -absoluteValue : absoluteValue;
+                handleChange({ target: { name: 'price', value: finalValue } });
+              }} 
+              required 
+              disabled={isSubmittingState} 
+              placeholder="المبلغ" 
+              className="flex-1"
+            />
+          </div>
+          {formData.priceType === 'negative' && (
+            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <span>⚠️</span>
+              <span>سعر سالب - سيتم دفع المبلغ للزبون أو خصمه من الفاتورة</span>
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label>حجم الطلب</Label>

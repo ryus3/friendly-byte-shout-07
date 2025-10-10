@@ -156,10 +156,10 @@ const mapToAlWaseetFields = (orderData) => {
     // البحث أولاً في البيانات المباشرة ثم في order_data - أولوية لـ alwaseet_* IDs
     city_id: parseInt(orderData.alwaseet_city_id || orderData.city_id || orderData.customer_city_id || orderData.order_data?.city_id || 0),
     region_id: parseInt(orderData.alwaseet_region_id || orderData.region_id || orderData.customer_region_id || orderData.order_data?.region_id || 0),
-    location: cleanedLocation, // أقرب نقطة دالة فقط
+    location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    price: parseInt(orderData.price || orderData.final_total || orderData.total_amount || 0),
+    price: Math.round(Number(orderData.price || orderData.final_total || orderData.total_amount || 0)),
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
     merchant_notes: orderData.notes || orderData.merchant_notes || '',
     replacement: parseInt(orderData.replacement || 0)
@@ -221,7 +221,7 @@ export const editAlWaseetOrder = async (orderData, token) => {
   }
   
   // Ensure numeric fields are properly formatted
-  formattedData.price = parseInt(formattedData.price) || 0;
+  formattedData.price = Math.round(Number(formattedData.price)) || 0;
   formattedData.items_number = parseInt(formattedData.items_number) || 0;
   formattedData.city_id = parseInt(formattedData.city_id) || 0;
   formattedData.region_id = parseInt(formattedData.region_id) || 0;
