@@ -245,21 +245,21 @@ const OrderDetailsForm = ({
           </div>
           
           {/* حقل السعر - أكبر حجماً */}
-          <Input 
-            type="number" 
-            id="price" 
-            name="price" 
-            value={Math.abs(formData.price)} 
-            onChange={(e) => {
-              const absoluteValue = Math.max(0, Number(e.target.value));
-              const finalValue = (formData.priceType === 'negative') ? -absoluteValue : absoluteValue;
-              handleChange({ target: { name: 'price', value: finalValue } });
-            }} 
-            required 
-            disabled={isSubmittingState} 
-            placeholder="أدخل المبلغ" 
-            className="text-lg font-semibold h-12"
-          />
+              <Input 
+                type="number" 
+                id="price" 
+                name="price" 
+                value={Math.abs(formData.price || 0)} 
+                onChange={(e) => {
+                  const absoluteValue = Math.max(0, Number(e.target.value));
+                  const finalValue = (formData.priceType === 'negative') ? -absoluteValue : absoluteValue;
+                  handleChange({ target: { name: 'price', value: finalValue } });
+                }} 
+                required 
+                disabled={isSubmittingState} 
+                placeholder="أدخل المبلغ" 
+                className="text-lg font-semibold h-12 text-right"
+              />
           
           {/* التحذير عند السعر السالب */}
           {formData.priceType === 'negative' && (

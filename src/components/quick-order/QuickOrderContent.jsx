@@ -18,7 +18,11 @@ import { iraqiProvinces } from '@/lib/iraq-provinces';
 import DeliveryStatusCard from './DeliveryStatusCard';
 import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
+import { ExchangeProductsForm } from './ExchangeProductsForm';
+import { ReturnProductForm } from './ReturnProductForm';
 import useLocalStorage from '@/hooks/useLocalStorage.jsx';
+import { processReplacementInventory } from '@/utils/replacement-inventory-handler';
+import { handleReplacementFinancials } from '@/utils/replacement-financial-handler';
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
@@ -44,6 +48,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
+  
+  // حالات الاستبدال والإرجاع
+  const [outgoingProduct, setOutgoingProduct] = useState(null);
+  const [incomingProduct, setIncomingProduct] = useState(null);
+  const [returnProduct, setReturnProduct] = useState(null);
+  const [refundAmount, setRefundAmount] = useState(0);
   
   // Local storage for default customer name and delivery partner
   const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
@@ -1159,7 +1169,52 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleSubmit = async (e) => {
     e?.preventDefault();
     
-    console.log('🚀 QuickOrderContent - بدء معالجة الطلب', { isEditMode });
+    console.log('🚀 QuickOrderContent - بدء معالجة الطلب', { isEditMode, type: formData.type });
+    
+    // التحقق من متطلبات الاستبدال
+    if (formData.type === 'exchange') {
+      if (!outgoingProduct || !incomingProduct) {
+        toast({
+          title: "خطأ",
+          description: "يجب اختيار المنتج الخارج والداخل للاستبدال",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // حساب فرق السعر
+      const priceDiff = incomingProduct.price - outgoingProduct.price;
+      const calculatedDeliveryFee = settings?.deliveryFee || 5000;
+      const finalPrice = priceDiff + calculatedDeliveryFee;
+      
+      // تحديث السعر في النموذج
+      setFormData(prev => ({
+        ...prev,
+        price: finalPrice,
+        priceType: finalPrice >= 0 ? 'positive' : 'negative',
+        notes: `${prev.notes ? prev.notes + ' | ' : ''}استبدال: خارج ${outgoingProduct.productName} (${outgoingProduct.price.toLocaleString()}) → داخل ${incomingProduct.productName} (${incomingProduct.price.toLocaleString()}) | فرق: ${priceDiff.toLocaleString()} د.ع`
+      }));
+    }
+    
+    // التحقق من متطلبات الإرجاع
+    if (formData.type === 'return') {
+      if (!returnProduct || !refundAmount) {
+        toast({
+          title: "خطأ",
+          description: "يجب اختيار المنتج ومبلغ الإرجاع",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // تحديث السعر في النموذج (سالب)
+      setFormData(prev => ({
+        ...prev,
+        price: -refundAmount,
+        priceType: 'negative',
+        notes: `${prev.notes ? prev.notes + ' | ' : ''}إرجاع: ${returnProduct.productName} | المبلغ المُرجع: ${refundAmount.toLocaleString()} د.ع`
+      }));
+    }
     
     const isFormValid = validateForm();
     if (!isFormValid) {
@@ -1167,7 +1222,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       return;
     }
 
-    if (cart.length === 0) {
+    if (cart.length === 0 && formData.type !== 'exchange' && formData.type !== 'return') {
       toast({
         title: "خطأ",
         description: "يجب اختيار منتج واحد على الأقل",
@@ -1537,7 +1592,104 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
-        // إزالة المزامنة الإضافية لمنع التجمد - ستتم المزامنة تلقائياً عبر النظام الموحد
+        // معالجة ما بعد إنشاء الطلب
+        const createdOrderId = result.orderId || result.id;
+        
+        // معالجة الاستبدال
+        if (formData.type === 'exchange' && outgoingProduct && incomingProduct && createdOrderId) {
+          try {
+            // معالجة المخزون
+            await processReplacementInventory(
+              createdOrderId,
+              [outgoingProduct.variantId],
+              [incomingProduct.variantId]
+            );
+            
+            // معالجة الأمور المالية
+            const priceDiff = incomingProduct.price - outgoingProduct.price;
+            await handleReplacementFinancials(
+              createdOrderId,
+              null, // لا يوجد طلب أصلي للاستبدال الجديد
+              priceDiff,
+              deliveryFeeAmount,
+              user.id
+            );
+            
+            console.log('✅ تمت معالجة الاستبدال بنجاح');
+          } catch (err) {
+            console.error('❌ خطأ في معالجة الاستبدال:', err);
+            toast({
+              title: "تحذير",
+              description: "تم إنشاء الطلب لكن حدث خطأ في معالجة الاستبدال",
+              variant: "destructive"
+            });
+          }
+        }
+        
+        // معالجة الإرجاع
+        if (formData.type === 'return' && returnProduct && createdOrderId) {
+          try {
+            // إضافة المنتج للمخزون
+            await supabase.rpc('update_variant_stock', {
+              p_variant_id: returnProduct.variantId,
+              p_quantity_change: 1,
+              p_reason: `إرجاع - طلب ${createdOrderId}`
+            });
+            
+            // البحث عن الطلب الأصلي وتعديل الأرباح
+            const normalizedPhone = normalizePhone(formData.phone);
+            const { data: originalOrders } = await supabase
+              .from('orders')
+              .select('id')
+              .ilike('customer_phone', `%${normalizedPhone}%`)
+              .in('status', ['delivered', 'completed'])
+              .order('created_at', { ascending: false })
+              .limit(1);
+            
+            if (originalOrders && originalOrders.length > 0) {
+              // تعديل الربح للطلب الأصلي
+              const { data: profitData } = await supabase
+                .from('profits')
+                .select('*')
+                .eq('order_id', originalOrders[0].id)
+                .single();
+              
+              if (profitData) {
+                const newRevenue = Math.max(0, profitData.total_revenue - refundAmount);
+                const newProfit = newRevenue - profitData.total_cost;
+                
+                await supabase
+                  .from('profits')
+                  .update({
+                    total_revenue: newRevenue,
+                    profit_amount: newProfit,
+                    employee_profit: Math.max(0, newProfit * (profitData.employee_percentage / 100)),
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', profitData.id);
+                
+                // تسجيل في المحاسبة
+                await supabase.from('accounting').insert({
+                  type: 'expense',
+                  category: 'customer_refund',
+                  amount: refundAmount,
+                  description: `إرجاع منتج - طلب ${createdOrderId}`,
+                  reference_type: 'order',
+                  reference_id: createdOrderId
+                });
+              }
+            }
+            
+            console.log('✅ تمت معالجة الإرجاع بنجاح');
+          } catch (err) {
+            console.error('❌ خطأ في معالجة الإرجاع:', err);
+            toast({
+              title: "تحذير",
+              description: "تم إنشاء الطلب لكن حدث خطأ في معالجة الإرجاع",
+              variant: "destructive"
+            });
+          }
+        }
         
         // إشعار محسن مع QR ID
         toast({ 
@@ -1552,6 +1704,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <p><strong>QR ID:</strong> {result.qr_id || result.trackingNumber}</p>
               <p><strong>العميل:</strong> {formData.name}</p>
               <p><strong>المبلغ:</strong> {Math.round(finalTotal).toLocaleString()} د.ع</p>
+              {formData.type === 'exchange' && <p className="text-xs text-green-600">✅ تم معالجة الاستبدال</p>}
+              {formData.type === 'return' && <p className="text-xs text-orange-600">✅ تم معالجة الإرجاع</p>}
               {activePartner === 'alwaseet' && <p className="text-xs text-muted-foreground">سيتم تحديث حالة الطلب تلقائياً خلال دقائق...</p>}
             </div>
           ),
@@ -1942,6 +2096,35 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             cart={cart}
             removeFromCart={removeFromCart}
           />
+          
+          {/* نماذج الاستبدال والإرجاع */}
+          {formData.type === 'exchange' && (
+            <ExchangeProductsForm
+              cart={cart}
+              onSelectOutgoing={(productId) => {
+                const product = cart.find(item => item.id === productId);
+                setOutgoingProduct(product);
+              }}
+              onSelectIncoming={(product) => setIncomingProduct(product)}
+              outgoingProduct={outgoingProduct}
+              incomingProduct={incomingProduct}
+              deliveryFee={settings?.deliveryFee || 5000}
+            />
+          )}
+          
+          {formData.type === 'return' && (
+            <ReturnProductForm
+              cart={cart}
+              customerPhone={formData.phone}
+              onSelectReturn={(productId) => {
+                const product = cart.find(item => item.id === productId);
+                setReturnProduct(product);
+              }}
+              returnProduct={returnProduct}
+              refundAmount={refundAmount}
+              onRefundAmountChange={setRefundAmount}
+            />
+          )}
         </fieldset>
 
         {!isDialog && (
