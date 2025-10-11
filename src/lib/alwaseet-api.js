@@ -152,8 +152,8 @@ const mapToAlWaseetFields = (orderData) => {
     final_location: cleanedLocation
   });
   
-  // ✅ حساب السعر (قد يكون سالباً للإرجاع)
-  const finalPrice = orderData.price || orderData.final_amount || orderData.final_total || orderData.total_amount || 0;
+  // ✅ حساب السعر - دعم الأسعار السالبة للإرجاع
+  const finalPrice = orderData.final_amount || orderData.price || orderData.final_total || orderData.total_amount || 0;
   const merchantPrice = Math.round(Number(finalPrice));
   
   const mapped = {
@@ -161,18 +161,19 @@ const mapToAlWaseetFields = (orderData) => {
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
     client_mobile: orderData.customer_phone || orderData.phone || orderData.client_mobile || '',
     client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
-    // البحث أولاً في البيانات المباشرة ثم في order_data - أولوية لـ alwaseet_* IDs
     city_id: parseInt(orderData.alwaseet_city_id || orderData.city_id || orderData.customer_city_id || orderData.order_data?.city_id || 0),
     region_id: parseInt(orderData.alwaseet_region_id || orderData.region_id || orderData.customer_region_id || orderData.order_data?.region_id || 0),
     location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    // ✅ للأسعار السالبة (إرجاع)، استخدام customer_payout
+    // ✅ للإرجاع: price = 0 و customer_payout = المبلغ الإيجابي
     price: merchantPrice >= 0 ? merchantPrice : 0,
     customer_payout: merchantPrice < 0 ? Math.abs(merchantPrice) : undefined,
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
-    merchant_notes: orderData.notes || orderData.merchant_notes || '',
-    replacement: parseInt(orderData.replacement || 0)
+    // ✅ استخدام merchant_notes أولاً، ثم notes
+    merchant_notes: orderData.merchant_notes || orderData.notes || '',
+    // ✅ تمييز الإرجاع والاستبدال
+    replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
   };
   
   // إزالة customer_payout إذا لم يكن مطلوباً

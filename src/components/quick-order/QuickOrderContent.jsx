@@ -1463,24 +1463,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       let orderItems = cart;
       let actualRefundAmount = 0;
       
-      // ✅ معالجة الإرجاع - تطبيق القيم مباشرة قبل إنشاء الطلب
+      // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير الملاحظات قبل الإرسال
       if (formData.type === 'return' && returnProduct && refundAmount > 0) {
-        // السعر = -المبلغ المُرجع (سالب)
-        finalTotal = -refundAmount;
+        // المبلغ النهائي = -(المبلغ المُرجع + رسوم التوصيل)
+        finalTotal = -(refundAmount + deliveryFeeAmount);
         actualRefundAmount = refundAmount;
         
-        // ملاحظات تفصيلية
+        // ملاحظات تفصيلية للإرجاع
         orderNotes = `🔙 إرجاع
 ━━━━━━━━━━━━━━━
 📦 المنتج المُرجع: ${returnProduct.productName} (${returnProduct.color}, ${returnProduct.size})
 💵 السعر الأصلي: ${returnProduct.price.toLocaleString()} د.ع
 
 💰 المبلغ المُرجع: ${refundAmount.toLocaleString()} د.ع
+🚚 رسوم التوصيل: ${deliveryFeeAmount.toLocaleString()} د.ع
 ━━━━━━━━━━━━━━━
+💵 الإجمالي للزبون: ${(refundAmount + deliveryFeeAmount).toLocaleString()} د.ع
 ⚠️ يُدفع للزبون عند استلام المنتج (حالة 17)
 ${originalOrder ? `🔗 مرتبط بالطلب: ${originalOrder.order_number}` : ''}`;
 
-        // ❗ لا نُنشئ order_items للإرجاع - فقط metadata
+        // ❗ لا نُنشئ order_items للإرجاع - سلة فارغة
         orderItems = [];
       }
       
@@ -1578,19 +1580,24 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
               throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
             }
             
+            // ✅ بناء payload للوسيط باستخدام القيم المحسوبة من handleCreateOrder
             const alWaseetPayload = {
               client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
-              client_mobile: normalizedPhone, // استخدام الرقم المطبع
+              client_mobile: normalizedPhone,
               client_mobile2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
               city_id: effectiveCityId, 
               region_id: effectiveRegionId,
               location: formData.address,
               type_name: formData.details, 
-              items_number: formData.quantity,
-              price: formData.price,
+              items_number: orderItems.length > 0 ? orderItems.length : 1, // عدد المنتجات الفعلي
+              // ✅ للإرجاع: السعر = 0 و customer_payout = المبلغ السالب
+              price: finalTotal >= 0 ? Math.round(finalTotal) : 0,
+              customer_payout: finalTotal < 0 ? Math.abs(Math.round(finalTotal)) : undefined,
               package_size: formData.size,
-              merchant_notes: formData.notes,
-              replacement: formData.type === 'exchange' ? 1 : 0
+              // ✅ استخدام orderNotes المحسوبة (تحتوي على تفاصيل الإرجاع)
+              merchant_notes: orderNotes,
+              // ✅ تمييز الإرجاع والاستبدال
+              replacement: (formData.type === 'return' || formData.type === 'exchange') ? 1 : 0
            };
            console.log('🔍 Diagnostic check before Al-Waseet order creation:', {
              city_id: effectiveCityId,
@@ -1640,7 +1647,25 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
+      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
+      const result = await createOrder(
+        customerInfoPayload, 
+        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
+        trackingNumber, 
+        discount, 
+        orderStatus, 
+        qrLink, 
+        { 
+          ...deliveryPartnerData, 
+          ...deliveryData,
+          // ✅ إضافة البيانات الإضافية للإرجاع
+          order_type: actualOrderType,
+          refund_amount: actualRefundAmount,
+          original_order_id: originalOrder?.id || null,
+          final_amount: finalTotal,
+          notes: orderNotes
+        }
+      );
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;

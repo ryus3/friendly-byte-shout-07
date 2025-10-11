@@ -955,7 +955,13 @@ export const SuperProvider = ({ children }) => {
             total_price: i.quantity * i.price
           }));
 
-      if (!items.length) return { success: false, error: 'لا توجد عناصر في الطلب' };
+      // ✅ للإرجاع: يُسمح بسلة فارغة (لا order_items)
+      const orderType = deliveryPartnerDataArg?.order_type || arg1?.order_type || 'regular';
+      const isReturn = orderType === 'return';
+      
+      if (!items.length && !isReturn) {
+        return { success: false, error: 'لا توجد عناصر في الطلب' };
+      }
 
       // حساب المجاميع
       const subtotal = items.reduce((s, it) => s + (it.total_price || 0), 0);
@@ -977,27 +983,31 @@ export const SuperProvider = ({ children }) => {
         ? (arg1.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`)
         : (trackingNumberArg || `RYUS-${Date.now().toString().slice(-6)}`);
 
-      // محاولة حجز المخزون لكل عنصر
+      // ✅ حجز المخزون - تجاهل للإرجاع
       const reservedSoFar = [];
-      for (const it of items) {
-        const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
-          p_product_id: it.product_id,
-          p_variant_id: it.variant_id || null,
-          p_quantity: it.quantity
-        });
-        if (reserveErr || reserveRes?.success === false) {
-          // تراجع عن أي حجوزات سابقة
-          for (const r of reservedSoFar) {
-            await supabase.rpc('release_stock_item', {
-              p_product_id: r.product_id,
-              p_variant_id: r.variant_id || null,
-              p_quantity: r.quantity
-            });
+      if (!isReturn && items.length > 0) {
+        for (const it of items) {
+          const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
+            p_product_id: it.product_id,
+            p_variant_id: it.variant_id || null,
+            p_quantity: it.quantity
+          });
+          if (reserveErr || reserveRes?.success === false) {
+            // تراجع عن أي حجوزات سابقة
+            for (const r of reservedSoFar) {
+              await supabase.rpc('release_stock_item', {
+                p_product_id: r.product_id,
+                p_variant_id: r.variant_id || null,
+                p_quantity: r.quantity
+              });
+            }
+            const msg = reserveErr?.message || reserveRes?.error || 'المخزون المتاح غير كافٍ';
+            return { success: false, error: msg };
           }
-          const msg = reserveErr?.message || reserveRes?.error || 'المخزون المتاح غير كافٍ';
-          return { success: false, error: msg };
+          reservedSoFar.push(it);
         }
-        reservedSoFar.push(it);
+      } else if (isReturn) {
+        console.log('⏭️ تخطي حجز المخزون - طلب إرجاع');
       }
 
       // بيانات الطلب للإدراج
@@ -1028,13 +1038,16 @@ export const SuperProvider = ({ children }) => {
         total_amount: subtotal,
         discount,
         delivery_fee: deliveryFee,
-        final_amount: total,
+        // ✅ للإرجاع: استخدام final_amount من deliveryPartnerDataArg (قد يكون سالباً)
+        final_amount: deliveryPartnerDataArg?.final_amount !== undefined 
+          ? deliveryPartnerDataArg.final_amount 
+          : total,
         status: 'pending',
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
-        notes: baseOrder.notes,
+        notes: deliveryPartnerDataArg?.notes || baseOrder.notes,
         created_by: resolveCurrentUserUUID(),
         // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg
         alwaseet_city_id: finalAlwaseetCityId,
@@ -1053,6 +1066,10 @@ export const SuperProvider = ({ children }) => {
           arg1?.qr_code ||
           trackingNumber || 
           null,
+        // ✅ إضافة حقول الإرجاع
+        order_type: orderType,
+        refund_amount: deliveryPartnerDataArg?.refund_amount || 0,
+        original_order_id: deliveryPartnerDataArg?.original_order_id || null,
       };
 
       console.log('🔍 [SuperProvider] orderRow قبل الحفظ - الإصلاح الجذري:', {
@@ -1094,27 +1111,31 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: orderErr.message };
       }
 
-      // إدراج عناصر الطلب
-      const itemsRows = items.map(it => ({
-        order_id: createdOrder.id,
-        product_id: it.product_id,
-        variant_id: it.variant_id || null,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        total_price: it.total_price
-      }));
-      const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
-      if (itemsErr) {
-        // حذف الطلب والتراجع عن الحجوزات
-        await supabase.from('orders').delete().eq('id', createdOrder.id);
-        for (const r of reservedSoFar) {
-          await supabase.rpc('release_stock_item', {
-            p_product_id: r.product_id,
-            p_variant_id: r.variant_id || null,
-            p_quantity: r.quantity
-          });
+      // ✅ إدراج عناصر الطلب - تجاهل للإرجاع (سلة فارغة)
+      if (items.length > 0) {
+        const itemsRows = items.map(it => ({
+          order_id: createdOrder.id,
+          product_id: it.product_id,
+          variant_id: it.variant_id || null,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          total_price: it.total_price
+        }));
+        const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
+        if (itemsErr) {
+          // حذف الطلب والتراجع عن الحجوزات
+          await supabase.from('orders').delete().eq('id', createdOrder.id);
+          for (const r of reservedSoFar) {
+            await supabase.rpc('release_stock_item', {
+              p_product_id: r.product_id,
+              p_variant_id: r.variant_id || null,
+              p_quantity: r.quantity
+            });
+          }
+          return { success: false, error: itemsErr.message };
         }
-        return { success: false, error: 'فشل في إضافة عناصر الطلب' };
+      } else {
+        console.log('⏭️ تخطي إنشاء order_items - طلب إرجاع');
       }
 
       // عرض الطلب فوراً مع البيانات المحلية (نهج جديد لسرعة فائقة)
