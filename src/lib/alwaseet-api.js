@@ -98,6 +98,10 @@ export const createAlWaseetOrder = async (orderData, token) => {
   }
 
   // Ensure numeric fields are properly formatted (align with edit behavior)
+  // ✅ الحفاظ على customer_payout إذا كانت موجودة (للأسعار السالبة)
+  if (formattedData.customer_payout !== undefined) {
+    formattedData.customer_payout = parseInt(formattedData.customer_payout) || 0;
+  }
   formattedData.price = parseInt(formattedData.price) || 0;
   formattedData.items_number = parseInt(formattedData.items_number) || 0;
   formattedData.city_id = parseInt(formattedData.city_id) || 0;
@@ -148,6 +152,10 @@ const mapToAlWaseetFields = (orderData) => {
     final_location: cleanedLocation
   });
   
+  // ✅ حساب السعر (قد يكون سالباً للإرجاع)
+  const finalPrice = orderData.price || orderData.final_amount || orderData.final_total || orderData.total_amount || 0;
+  const merchantPrice = Math.round(Number(finalPrice));
+  
   const mapped = {
     qr_id: orderData.tracking_number || orderData.qr_id || orderData.delivery_partner_order_id,
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
@@ -159,11 +167,18 @@ const mapToAlWaseetFields = (orderData) => {
     location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    price: Math.round(Number(orderData.price || orderData.final_total || orderData.total_amount || 0)),
+    // ✅ للأسعار السالبة (إرجاع)، استخدام customer_payout
+    price: merchantPrice >= 0 ? merchantPrice : 0,
+    customer_payout: merchantPrice < 0 ? Math.abs(merchantPrice) : undefined,
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
     merchant_notes: orderData.notes || orderData.merchant_notes || '',
     replacement: parseInt(orderData.replacement || 0)
   };
+  
+  // إزالة customer_payout إذا لم يكن مطلوباً
+  if (mapped.customer_payout === undefined) {
+    delete mapped.customer_payout;
+  }
   
   console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
   

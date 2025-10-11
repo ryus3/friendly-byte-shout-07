@@ -1456,27 +1456,77 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-    const finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+      let finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+      let orderNotes = formData.notes || '';
+      let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
+                           formData.type === 'return' ? 'return' : 'regular';
+      let orderItems = cart;
+      let actualRefundAmount = 0;
+      
+      // ✅ معالجة الإرجاع - تطبيق القيم مباشرة قبل إنشاء الطلب
+      if (formData.type === 'return' && returnProduct && refundAmount > 0) {
+        // السعر = -المبلغ المُرجع (سالب)
+        finalTotal = -refundAmount;
+        actualRefundAmount = refundAmount;
+        
+        // ملاحظات تفصيلية
+        orderNotes = `🔙 إرجاع
+━━━━━━━━━━━━━━━
+📦 المنتج المُرجع: ${returnProduct.productName} (${returnProduct.color}, ${returnProduct.size})
+💵 السعر الأصلي: ${returnProduct.price.toLocaleString()} د.ع
+
+💰 المبلغ المُرجع: ${refundAmount.toLocaleString()} د.ع
+━━━━━━━━━━━━━━━
+⚠️ يُدفع للزبون عند استلام المنتج (حالة 17)
+${originalOrder ? `🔗 مرتبط بالطلب: ${originalOrder.order_number}` : ''}`;
+
+        // ❗ لا نُنشئ order_items للإرجاع - فقط metadata
+        orderItems = [];
+      }
+      
+      // ✅ معالجة الاستبدال
+      if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
+        const priceDiff = incomingProduct.price - outgoingProduct.price;
+        const calculatedDeliveryFee = settings?.deliveryFee || 5000;
+        finalTotal = priceDiff + calculatedDeliveryFee;
+        
+        orderNotes = `🔄 استبدال
+━━━━━━━━━━━━━━━
+📤 منتج صادر: ${outgoingProduct.productName} (${outgoingProduct.color}, ${outgoingProduct.size})
+   السعر: ${outgoingProduct.price.toLocaleString()} د.ع
+
+📥 منتج وارد: ${incomingProduct.productName} (${incomingProduct.color}, ${incomingProduct.size})
+   السعر: ${incomingProduct.price.toLocaleString()} د.ع
+
+💰 فرق السعر: ${priceDiff >= 0 ? '+' : ''}${priceDiff.toLocaleString()} د.ع
+🚚 رسوم التوصيل (${activePartner === 'alwaseet' ? 'الوسيط' : 'محلي'}): ${calculatedDeliveryFee.toLocaleString()} د.ع
+━━━━━━━━━━━━━━━
+✅ المبلغ الإجمالي: ${finalTotal.toLocaleString()} د.ع
+${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toLocaleString() + ' د.ع' : '💵 يُجمع من الزبون: ' + finalTotal.toLocaleString() + ' د.ع'}`;
+      }
     
     const orderData = {
       ...formData,
-      items: cart.map(item => ({
+      order_type: actualOrderType, // ✅ ضبط النوع الصحيح
+      items: orderItems.map(item => ({
         product_id: item.id,
         variant_id: item.variantId,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.price * item.quantity
       })),
-      total_amount: Math.round(finalTotal),
+      total_amount: Math.round(Math.abs(finalTotal)), // القيمة المطلقة
+      final_amount: Math.round(finalTotal), // مع السالب للإرجاع
+      refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
+      original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
       discount,
       delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
-      final_amount: Math.round(finalTotal),
       customer_name: formData.name,
       customer_phone: formData.phone,
       customer_address: formData.address,
       customer_city: formData.city,
       customer_province: formData.province,
-      notes: formData.notes,
+      notes: orderNotes, // ✅ الملاحظات التفصيلية
       payment_status: 'pending',
       delivery_status: 'pending',
       status: 'pending'
