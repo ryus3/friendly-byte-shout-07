@@ -221,39 +221,54 @@ const OrderDetailsForm = ({
         </div>
         <div className="space-y-2">
           <Label htmlFor="price">السعر مع التوصيل</Label>
-          <div className="flex gap-2">
-            <SearchableSelectFixed
-              value={formData.priceType || 'positive'}
-              onValueChange={(v) => handleSelectChange('priceType', v)}
-              options={[
-                { value: 'positive', label: 'موجب (+)' },
-                { value: 'negative', label: 'سالب (-)' }
-              ]}
-              placeholder="نوع السعر"
-              className="w-32"
+          
+          {/* Toggle Buttons للموجب/السالب */}
+          <div className="flex gap-2 mb-2">
+            <Button
+              type="button"
+              variant={formData.priceType === 'positive' ? 'default' : 'outline'}
+              className={`flex-1 ${formData.priceType === 'positive' ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+              onClick={() => handleSelectChange('priceType', 'positive')}
               disabled={isSubmittingState}
-            />
-            <Input 
-              type="number" 
-              id="price" 
-              name="price" 
-              value={Math.abs(formData.price)} 
-              onChange={(e) => {
-                const absoluteValue = Math.max(0, Number(e.target.value));
-                const finalValue = (formData.priceType === 'negative') ? -absoluteValue : absoluteValue;
-                handleChange({ target: { name: 'price', value: finalValue } });
-              }} 
-              required 
-              disabled={isSubmittingState} 
-              placeholder="المبلغ" 
+            >
+              ✅ موجب (+)
+            </Button>
+            <Button
+              type="button"
+              variant={formData.priceType === 'negative' ? 'destructive' : 'outline'}
+              onClick={() => handleSelectChange('priceType', 'negative')}
+              disabled={isSubmittingState}
               className="flex-1"
-            />
+            >
+              ❌ سالب (-)
+            </Button>
           </div>
+          
+          {/* حقل السعر - أكبر حجماً */}
+          <Input 
+            type="number" 
+            id="price" 
+            name="price" 
+            value={Math.abs(formData.price)} 
+            onChange={(e) => {
+              const absoluteValue = Math.max(0, Number(e.target.value));
+              const finalValue = (formData.priceType === 'negative') ? -absoluteValue : absoluteValue;
+              handleChange({ target: { name: 'price', value: finalValue } });
+            }} 
+            required 
+            disabled={isSubmittingState} 
+            placeholder="أدخل المبلغ" 
+            className="text-lg font-semibold h-12"
+          />
+          
+          {/* التحذير عند السعر السالب */}
           {formData.priceType === 'negative' && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <span>⚠️</span>
-              <span>سعر سالب - سيتم دفع المبلغ للزبون أو خصمه من الفاتورة</span>
-            </p>
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+              <span className="text-amber-600 dark:text-amber-400 text-xl">⚠️</span>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <strong>سعر سالب:</strong> سيتم دفع المبلغ للزبون أو خصمه من فاتورة الوسيط
+              </p>
+            </div>
           )}
         </div>
         <div className="space-y-2">
