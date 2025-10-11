@@ -1128,7 +1128,7 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
-      // 2. حذف السجلات المرتبطة أولاً (Foreign Key Fix)
+      // 2. حذف الخصومات المطبقة أولاً (Fallback - CASCADE سيحذفها تلقائياً)
       try {
         const { error: discountsDeleteError } = await supabase
           .from('applied_customer_discounts')

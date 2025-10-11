@@ -250,11 +250,9 @@ return this.fetch('all_data', async () => {
   
   // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
   if (products.error) {
-    console.error('❌ خطأ في جلب المنتجات:', products.error);
     throw products.error;
   }
   if (orders.error) {
-    console.error('❌ خطأ في جلب الطلبات:', orders.error);
     throw orders.error;
   }
   

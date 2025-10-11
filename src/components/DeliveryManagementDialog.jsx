@@ -63,7 +63,6 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       await loadSyncLogs();
 
     } catch (error) {
-      console.error('خطأ في تحميل البيانات:', error);
       toast({
         title: "خطأ في التحميل",
         description: error.message,
@@ -106,7 +105,7 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       });
 
     } catch (error) {
-      console.error('خطأ في تحميل الإحصائيات:', error);
+      // Error silently handled
     }
   };
 
@@ -120,7 +119,7 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
 
       setSyncLogs(data || []);
     } catch (error) {
-      console.error('خطأ في تحميل سجلات المزامنة:', error);
+      // Error silently handled
     }
   };
 
@@ -155,7 +154,6 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       });
 
     } catch (error) {
-      console.error('خطأ في حفظ الإعدادات:', error);
       toast({
         title: "خطأ في الحفظ",
         description: error.message,
@@ -189,7 +187,7 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       }
 
     } catch (error) {
-      console.error('خطأ في المزامنة اليدوية:', error);
+      // Error silently handled
     }
   };
 
@@ -212,7 +210,6 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
       await loadStats();
 
     } catch (error) {
-      console.error('خطأ في تنظيف البيانات:', error);
       toast({
         title: "خطأ في التنظيف",
         description: error.message,
