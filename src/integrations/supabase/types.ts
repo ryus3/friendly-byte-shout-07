@@ -4747,6 +4747,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      adjust_profit_for_return: {
+        Args: {
+          p_original_order_id: string
+          p_refund_amount: number
+          p_return_order_id: string
+        }
+        Returns: Json
+      }
       analyze_customer_gender: {
         Args: { customer_id_param: string }
         Returns: string
@@ -5381,6 +5389,17 @@ export type Database = {
         Args: { p_permission_type: string; p_user_id: string }
         Returns: Json
       }
+      handle_exchange_price_difference: {
+        Args: {
+          p_delivery_fee: number
+          p_delivery_partner: string
+          p_employee_id: string
+          p_exchange_order_id: string
+          p_original_order_id: string
+          p_price_difference: number
+        }
+        Returns: Json
+      }
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
@@ -5592,6 +5611,10 @@ export type Database = {
       }
       restore_manager_orders: {
         Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      return_items_to_inventory: {
+        Args: { p_order_id: string }
         Returns: Json
       }
       review_archive_status: {

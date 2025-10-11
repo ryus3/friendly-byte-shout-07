@@ -30,7 +30,7 @@ export const ExchangeProductsForm = ({
       </h3>
       
       {/* المنتج الصادر (الخارج للزبون) */}
-      <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/10">
+      <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 relative z-10">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Package className="w-4 h-4" />
@@ -97,10 +97,13 @@ export const ExchangeProductsForm = ({
           <ProductSelectionDialog
             open={productSelectOpen}
             onOpenChange={setProductSelectOpen}
-            onSelectProduct={(product) => {
-              onSelectIncoming(product);
-              setProductSelectOpen(false);
+            onConfirm={(selectedItems) => {
+              if (selectedItems.length > 0) {
+                onSelectIncoming(selectedItems[0]);
+                setProductSelectOpen(false);
+              }
             }}
+            initialCart={[]}
           />
         </CardContent>
       </Card>

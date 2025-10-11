@@ -1595,100 +1595,63 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;
         
-        // معالجة الاستبدال
-        if (formData.type === 'exchange' && outgoingProduct && incomingProduct && createdOrderId) {
-          try {
-            // معالجة المخزون
-            await processReplacementInventory(
-              createdOrderId,
-              [outgoingProduct.variantId],
-              [incomingProduct.variantId]
-            );
-            
-            // معالجة الأمور المالية
-            const priceDiff = incomingProduct.price - outgoingProduct.price;
-            await handleReplacementFinancials(
-              createdOrderId,
-              null, // لا يوجد طلب أصلي للاستبدال الجديد
-              priceDiff,
-              deliveryFeeAmount,
-              user.id
-            );
-            
-            console.log('✅ تمت معالجة الاستبدال بنجاح');
-          } catch (err) {
-            console.error('❌ خطأ في معالجة الاستبدال:', err);
-            toast({
-              title: "تحذير",
-              description: "تم إنشاء الطلب لكن حدث خطأ في معالجة الاستبدال",
-              variant: "destructive"
-            });
+        // معالجة ما بعد إنشاء الطلب للاستبدال/الإرجاع
+        if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
+          const priceDiff = incomingProduct.price - outgoingProduct.price;
+          
+          // معالجة المحاسبة الكاملة
+          const { error: accountingError } = await supabase.rpc('handle_exchange_price_difference', {
+            p_exchange_order_id: createdOrderId,
+            p_original_order_id: originalOrder?.id || null,
+            p_price_difference: priceDiff,
+            p_delivery_fee: deliveryFeeAmount,
+            p_delivery_partner: activePartner === 'alwaseet' ? 'الوسيط' : 'محلي',
+            p_employee_id: user.id
+          });
+          
+          if (accountingError) {
+            console.error('خطأ في معالجة المحاسبة:', accountingError);
           }
+          
+          // Toast مع تعليمات واضحة للموظف
+          const actionMessage = priceDiff + deliveryFeeAmount >= 0
+            ? `✅ اجمع ${(priceDiff + deliveryFeeAmount).toLocaleString()} د.ع من الزبون`
+            : `💰 ادفع ${Math.abs(priceDiff + deliveryFeeAmount).toLocaleString()} د.ع للزبون`;
+          
+          toast({
+            title: "✅ تم إنشاء طلب استبدال",
+            description: actionMessage,
+            duration: 5000,
+          });
         }
         
-        // معالجة الإرجاع
-        if (formData.type === 'return' && returnProduct && createdOrderId) {
-          try {
-            // إضافة المنتج للمخزون
-            await supabase.rpc('update_variant_stock', {
-              p_variant_id: returnProduct.variantId,
-              p_quantity_change: 1,
-              p_reason: `إرجاع - طلب ${createdOrderId}`
-            });
-            
-            // البحث عن الطلب الأصلي وتعديل الأرباح
-            const normalizedPhone = normalizePhone(formData.phone);
-            const { data: originalOrders } = await supabase
-              .from('orders')
-              .select('id')
-              .ilike('customer_phone', `%${normalizedPhone}%`)
-              .in('status', ['delivered', 'completed'])
-              .order('created_at', { ascending: false })
-              .limit(1);
-            
-            if (originalOrders && originalOrders.length > 0) {
-              // تعديل الربح للطلب الأصلي
-              const { data: profitData } = await supabase
-                .from('profits')
-                .select('*')
-                .eq('order_id', originalOrders[0].id)
-                .single();
-              
-              if (profitData) {
-                const newRevenue = Math.max(0, profitData.total_revenue - refundAmount);
-                const newProfit = newRevenue - profitData.total_cost;
-                
-                await supabase
-                  .from('profits')
-                  .update({
-                    total_revenue: newRevenue,
-                    profit_amount: newProfit,
-                    employee_profit: Math.max(0, newProfit * (profitData.employee_percentage / 100)),
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', profitData.id);
-                
-                // تسجيل في المحاسبة
-                await supabase.from('accounting').insert({
-                  type: 'expense',
-                  category: 'customer_refund',
-                  amount: refundAmount,
-                  description: `إرجاع منتج - طلب ${createdOrderId}`,
-                  reference_type: 'order',
-                  reference_id: createdOrderId
-                });
-              }
-            }
-            
-            console.log('✅ تمت معالجة الإرجاع بنجاح');
-          } catch (err) {
-            console.error('❌ خطأ في معالجة الإرجاع:', err);
-            toast({
-              title: "تحذير",
-              description: "تم إنشاء الطلب لكن حدث خطأ في معالجة الإرجاع",
-              variant: "destructive"
-            });
+        if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
+          // ربط الطلب بالطلب الأصلي
+          await supabase
+            .from('orders')
+            .update({ 
+              related_order_id: originalOrder.id,
+              original_order_id: originalOrder.id 
+            })
+            .eq('id', createdOrderId);
+          
+          // معالجة الأرباح والمحاسبة
+          const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return', {
+            p_original_order_id: originalOrder.id,
+            p_refund_amount: refundAmount,
+            p_return_order_id: createdOrderId
+          });
+          
+          if (adjustError) {
+            console.error('خطأ في معالجة الإرجاع:', adjustError);
           }
+          
+          // Toast مع تعليمات واضحة
+          toast({
+            title: "✅ تم إنشاء طلب إرجاع",
+            description: `💰 ادفع ${refundAmount.toLocaleString()} د.ع للزبون عند استلام المنتج`,
+            duration: 5000,
+          });
         }
         
         // إشعار محسن مع QR ID

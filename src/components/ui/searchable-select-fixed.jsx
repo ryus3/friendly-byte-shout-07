@@ -181,15 +181,14 @@ export const SearchableSelectFixed = ({
   const renderDropdownContent = () => (
     <div 
       ref={dropdownRef}
-      className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+      className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 z-[100]"
       style={{ 
         direction: 'rtl',
         minWidth: '200px',
         maxWidth: '400px',
         pointerEvents: 'auto',
         backgroundColor: 'hsl(var(--background))',
-        borderColor: 'hsl(var(--border))',
-        zIndex: 99999
+        borderColor: 'hsl(var(--border))'
       }}
     >
       {/* Search Input */}
@@ -326,12 +325,11 @@ export const SearchableSelectFixed = ({
       {open && (
         <div 
           className={cn(
-            "absolute z-50 w-full",
+            "absolute z-[100] w-full",
             dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
           )}
           style={{
-            direction: 'rtl',
-            zIndex: 50
+            direction: 'rtl'
           }}
         >
           {renderDropdownContent()}
