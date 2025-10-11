@@ -48,7 +48,7 @@ const SalesPage = () => {
   }, [orders]);
 
   // دالة تحديد نطاق التاريخ المحسنة
-  const getDateRange = (filter) => {
+  const getDateRange = useCallback((filter) => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
@@ -73,7 +73,7 @@ const SalesPage = () => {
       default:
         return null;
     }
-  };
+  }, []);
 
   // Filter orders based on selected employee and other filters
   const filteredOrders = useMemo(() => {
