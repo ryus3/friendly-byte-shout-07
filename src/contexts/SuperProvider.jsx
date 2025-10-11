@@ -17,6 +17,7 @@ import { useProfits } from '@/contexts/ProfitsContext.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
+import devLog from '@/lib/devLogger';
 
 const SuperContext = createContext();
 
@@ -44,7 +45,7 @@ const filterDataByEmployeeCode = (data, user) => {
 
   // المديرون يرون كل شيء
   if (isPrivileged) {
-    console.log('👑 عرض جميع البيانات بدون تصفية (صلاحيات المدير)');
+    devLog.log('👑 عرض جميع البيانات بدون تصفية (صلاحيات المدير)');
     return data;
   }
 
@@ -72,7 +73,7 @@ const filterDataByEmployeeCode = (data, user) => {
     aiOrders: data.aiOrders || [],
   };
 
-  console.log('🛡️ تصفية حسب المستخدم العادي:', {
+  devLog.log('🛡️ تصفية حسب المستخدم العادي:', {
     user: { id: user?.id, user_id: user?.user_id, employee_code: user?.employee_code },
     ordersBefore: data.orders?.length || 0,
     ordersAfter: filtered.orders.length,
@@ -242,7 +243,7 @@ export const SuperProvider = ({ children }) => {
       })
     }));
 
-    console.log('🔒 نظام الحجز الموحد:', {
+    devLog.log('🔒 نظام الحجز الموحد:', {
       totalVariants: reservationMap.size,
       reservedItems: Array.from(reservationMap.entries()).filter(([_, qty]) => qty > 0).length,
       sampleReservations: Array.from(reservationMap.entries()).slice(0, 3)
@@ -307,13 +308,13 @@ export const SuperProvider = ({ children }) => {
     
     // إعداد timeout protection لمنع التجمد
     const timeoutId = setTimeout(() => {
-      console.warn('⚠️ SuperProvider: انتهت مهلة تحميل البيانات - إجبار setLoading(false)');
+      devLog.warn('⚠️ SuperProvider: انتهت مهلة تحميل البيانات - إجبار setLoading(false)');
       setLoading(false);
     }, 15000);
     
     try {
       setLoading(true);
-      console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
+      devLog.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
       
       const data = await superAPI.getAllData();
       
@@ -339,7 +340,7 @@ export const SuperProvider = ({ children }) => {
           .select('key, value');
         
         if (!settingsError && settingsData?.length) {
-          console.log('🔧 SuperProvider: تم جلب الإعدادات من قاعدة البيانات:', settingsData);
+          devLog.log('🔧 SuperProvider: تم جلب الإعدادات من قاعدة البيانات:', settingsData);
           (settingsData || []).filter(setting => setting != null && typeof setting === 'object').forEach(setting => {
             try {
               // محاولة تحويل القيمة إلى رقم إذا كانت رقمية
@@ -355,11 +356,11 @@ export const SuperProvider = ({ children }) => {
                 }
               }
             } catch (err) {
-              console.warn('تحذير: فشل في معالجة إعداد', setting.key, setting.value);
+              devLog.warn('تحذير: فشل في معالجة إعداد', setting.key, setting.value);
               settingsObject[setting.key] = setting.value;
             }
           });
-          console.log('✅ SuperProvider: تم تحويل الإعدادات بنجاح:', settingsObject);
+          devLog.log('✅ SuperProvider: تم تحويل الإعدادات بنجاح:', settingsObject);
         }
       } catch (settingsErr) {
         console.error('❌ SuperProvider: خطأ في جلب الإعدادات:', settingsErr);
@@ -394,7 +395,7 @@ export const SuperProvider = ({ children }) => {
         });
       }
       
-      console.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
+      devLog.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
         products: filteredData.products?.length || 0,
         orders: filteredData.orders?.length || 0,
         customers: filteredData.customers?.length || 0,

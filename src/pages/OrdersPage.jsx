@@ -15,6 +15,7 @@ import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import devLog from '@/lib/devLogger';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -99,7 +100,7 @@ const OrdersPage = () => {
           await supabase.functions.invoke('sync-alwaseet-invoices', {
             body: { sync_time: 'orders_page_open', scheduled: false }
           });
-          console.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
+          devLog.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
           
           // تشغيل المزامنة السريعة ومرور الحذف بعد المزامنة الشاملة
           if (fastSyncPendingOrders) {
@@ -107,20 +108,20 @@ const OrdersPage = () => {
               await fastSyncPendingOrders(false); // مزامنة صامتة
               // ✅ إضافة مرور الحذف التلقائي بعد المزامنة السريعة
               if (performDeletionPassAfterStatusSync) {
-                console.log('🗑️ تشغيل عملية الحذف التلقائي من OrdersPage...');
+                devLog.log('🗑️ تشغيل عملية الحذف التلقائي من OrdersPage...');
                 try {
                   const deletionResult = await performDeletionPassAfterStatusSync();
-                  console.log('🗑️ نتيجة الحذف التلقائي من OrdersPage:', deletionResult);
+                  devLog.log('🗑️ نتيجة الحذف التلقائي من OrdersPage:', deletionResult);
                 } catch (deletionError) {
-                  console.warn('⚠️ خطأ في عملية الحذف التلقائي من OrdersPage:', deletionError);
+                  devLog.warn('⚠️ خطأ في عملية الحذف التلقائي من OrdersPage:', deletionError);
                 }
               }
             } catch (syncErr) {
-              console.log('تعذر المزامنة السريعة الإضافية:', syncErr);
+              devLog.log('تعذر المزامنة السريعة الإضافية:', syncErr);
             }
           }
         } catch (err) {
-          console.log('تعذر المزامنة التلقائية:', err);
+          devLog.log('تعذر المزامنة التلقائية:', err);
         }
       };
       
@@ -132,9 +133,9 @@ const OrdersPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (fastSyncPendingOrders) {
-        console.log('🔄 تشغيل مزامنة سريعة تلقائية عند دخول صفحة الطلبات...');
+        devLog.log('🔄 تشغيل مزامنة سريعة تلقائية عند دخول صفحة الطلبات...');
         fastSyncPendingOrders(false).then(result => {
-          console.log('✅ نتيجة المزامنة السريعة التلقائية:', result);
+          devLog.log('✅ نتيجة المزامنة السريعة التلقائية:', result);
         }).catch(error => {
           console.error('❌ خطأ في المزامنة السريعة التلقائية:', error);
         });
@@ -157,7 +158,7 @@ const OrdersPage = () => {
         },
         (payload) => {
           const newOrder = payload.new;
-          console.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
+          devLog.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
           
           // إشعار فوري عند إنشاء طلب جديد فقط
           toast({
@@ -192,7 +193,7 @@ const OrdersPage = () => {
           const updatedOrder = payload.new;
           const oldOrder = payload.old;
           
-          console.log('🔄 تحديث طلب فوري:', {
+          devLog.log('🔄 تحديث طلب فوري:', {
             id: updatedOrder.id,
             old_status: oldOrder?.status,
             new_status: updatedOrder.status,
@@ -222,7 +223,7 @@ const OrdersPage = () => {
           }
           
           if (!oldOrder?.delivery_partner_order_id && updatedOrder.delivery_partner_order_id) {
-            console.log('✅ تم ربط معرف شركة التوصيل:', updatedOrder.delivery_partner_order_id);
+            devLog.log('✅ تم ربط معرف شركة التوصيل:', updatedOrder.delivery_partner_order_id);
             toast({
               title: "تم ربط الطلب مع شركة التوصيل",
               description: `الطلب ${updatedOrder.qr_id || updatedOrder.order_number} مرتبط الآن مع معرف التوصيل: ${updatedOrder.delivery_partner_order_id}`,
@@ -247,7 +248,7 @@ const OrdersPage = () => {
     const handleOrderDeleted = (event) => {
       const orderId = event.detail?.id;
       if (orderId) {
-        console.log('🗑️ OrdersPage: حذف طلب فوري:', orderId, 'confirmed:', event.detail?.confirmed);
+        devLog.log('🗑️ OrdersPage: حذف طلب فوري:', orderId, 'confirmed:', event.detail?.confirmed);
         
         // تسجيل كمحذوف نهائياً
         deletedOrdersSet.current.add(orderId);
@@ -260,7 +261,7 @@ const OrdersPage = () => {
     const handleAiOrderDeleted = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        console.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
+        devLog.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
         deletedOrdersSet.current.add(deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
@@ -270,12 +271,12 @@ const OrdersPage = () => {
     const handleOrderDeletedConfirmed = (event) => {
       const deletedOrderId = event.detail?.id;
       if (deletedOrderId) {
-        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
+        devLog.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
         deletedOrdersSet.current.add(deletedOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
         
         if (event.detail?.final) {
-          console.log('🔒 طلب محذوف نهائياً - منع العودة:', deletedOrderId);
+          devLog.log('🔒 طلب محذوف نهائياً - منع العودة:', deletedOrderId);
         }
       }
     };
@@ -283,7 +284,7 @@ const OrdersPage = () => {
     const handleAiOrderDeletedConfirmed = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        console.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
+        devLog.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
     };
@@ -292,10 +293,10 @@ const OrdersPage = () => {
     const handleOrderUpdated = (event) => {
       const { id: orderId, updates, timestamp } = event.detail || {};
       if (orderId && updates) {
-        console.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, updates, timestamp });
+        devLog.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, updates, timestamp });
         // تحديث فوري للواجهة عن طريق استدعاء refreshOrders
         if (refreshOrders) {
-          console.log('🔄 OrdersPage: تنشيط تحديث البيانات');
+          devLog.log('🔄 OrdersPage: تنشيط تحديث البيانات');
           refreshOrders();
         }
       }
@@ -433,7 +434,7 @@ const OrdersPage = () => {
         return isExplicitlyArchived || isCompletedWithReceipt || isReturnedToStock || isExternalArchived;
       });
       
-      console.log('🗂️ تشخيص الأرشيف - العدد:', tempOrders.length, 'الطلبات:', tempOrders.map(o => ({
+      devLog.log('🗂️ تشخيص الأرشيف - العدد:', tempOrders.length, 'الطلبات:', tempOrders.map(o => ({
         orderNumber: o.order_number,
         status: o.status,
         deliveryStatus: o.delivery_status,
@@ -586,7 +587,7 @@ const OrdersPage = () => {
     };
 
     const orderIds = normalizeToIds(ordersToDelete);
-    console.log('🗑️ معرفات الطلبات المطلوب حذفها:', orderIds);
+    devLog.log('🗑️ معرفات الطلبات المطلوب حذفها:', orderIds);
     
     const ordersToDeleteFiltered = orderIds.filter(id => 
       !deletedOrdersSet.current.has(id) && 
@@ -594,7 +595,7 @@ const OrdersPage = () => {
     );
     
     if (ordersToDeleteFiltered.length === 0) {
-      console.log('⚠️ لا توجد طلبات صالحة للحذف');
+      devLog.log('⚠️ لا توجد طلبات صالحة للحذف');
       toast({ title: 'لا توجد طلبات صالحة للحذف', variant: 'destructive' });
       return;
     }
@@ -615,7 +616,7 @@ const OrdersPage = () => {
         const result = await deleteOrdersContext(ordersToDeleteFiltered);
         
         if (result && result.success) {
-            console.log('✅ حذف طلبات مكتمل بنجاح');
+            devLog.log('✅ حذف طلبات مكتمل بنجاح');
             toast({
                 title: 'تم الحذف بنجاح',
                 description: `تم حذف ${ordersToDeleteFiltered.length} طلب نهائياً وتحرير المخزون.`,

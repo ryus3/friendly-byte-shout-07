@@ -482,8 +482,8 @@ export const AlWaseetProvider = ({ children }) => {
     const notificationsSystem = useNotificationsSystem();
     createNotification = notificationsSystem.createNotification;
   } catch (error) {
-    // NotificationsSystemProvider غير متاح بعد
-    console.log('NotificationsSystem not ready yet');
+      // NotificationsSystemProvider غير متاح بعد
+    devLog.log('NotificationsSystem not ready yet');
   }
 // state moved earlier to avoid TDZ
 
@@ -1124,11 +1124,27 @@ export const AlWaseetProvider = ({ children }) => {
       // 🔒 تأمين نهائي: التحقق من ملكية الطلب قبل الحذف الفعلي
       if (!verifyOrderOwnership(orderToDelete, user)) {
         logSecurityWarning('final_delete_attempt', orderId, user);
-        console.error('🚫 منع الحذف: الطلب غير مملوك للمستخدم الحالي');
+        devLog.error('🚫 منع الحذف: الطلب غير مملوك للمستخدم الحالي');
         return false;
       }
       
-      // 2. تحرير المخزون المحجوز
+      // 2. حذف السجلات المرتبطة أولاً (Foreign Key Fix)
+      try {
+        const { error: discountsDeleteError } = await supabase
+          .from('applied_customer_discounts')
+          .delete()
+          .eq('order_id', orderId);
+        
+        if (discountsDeleteError) {
+          devLog.warn('⚠️ تعذر حذف الخصومات المرتبطة:', discountsDeleteError);
+        } else {
+          devLog.log('✅ تم حذف الخصومات المرتبطة للطلب');
+        }
+      } catch (discountError) {
+        devLog.warn('⚠️ خطأ في حذف الخصومات:', discountError);
+      }
+      
+      // 3. تحرير المخزون المحجوز
       if (orderToDelete.order_items && orderToDelete.order_items.length > 0) {
         for (const item of orderToDelete.order_items) {
           try {
@@ -1137,14 +1153,14 @@ export const AlWaseetProvider = ({ children }) => {
               p_variant_id: item.variant_id,
               p_quantity: item.quantity
             });
-            console.log(`📦 تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
+            devLog.log(`📦 تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
           } catch (releaseError) {
-            console.warn('⚠️ تعذر تحرير المخزون للعنصر:', item.product_id, releaseError);
+            devLog.warn('⚠️ تعذر تحرير المخزون للعنصر:', item.product_id, releaseError);
           }
         }
       }
       
-      // 3. حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
+      // 4. حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
       const { error: deleteError } = await scopeOrdersQuery(
         supabase
           .from('orders')
@@ -1153,13 +1169,13 @@ export const AlWaseetProvider = ({ children }) => {
       );
         
       if (deleteError) {
-        console.error('❌ فشل في حذف الطلب:', deleteError);
+        devLog.error('❌ فشل في حذف الطلب:', deleteError);
         return false;
       }
       
-      console.log(`✅ تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number || orderId} تلقائياً من ${source}`);
+      devLog.log(`✅ تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number || orderId} تلقائياً من ${source}`);
       
-      // 4. إشعار المستخدم عند الحذف التلقائي
+      // 5. إشعار المستخدم عند الحذف التلقائي
       if (source === 'fastSync') {
         toast({
           title: "حذف طلب تلقائي",
@@ -1170,7 +1186,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       return true;
     } catch (error) {
-      console.error('❌ خطأ في الحذف التلقائي:', error);
+      devLog.error('❌ خطأ في الحذف التلقائي:', error);
       return false;
     }
   }, [supabase, toast, scopeOrdersQuery]);
@@ -1190,10 +1206,10 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         const { data: invoiceSyncRes, error: invoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
         if (invoiceSyncRes?.updated_orders_count > 0) {
-          console.log(`✅ مزامنة الفواتير: تم تحديث ${invoiceSyncRes.updated_orders_count} طلب`);
+          devLog.log(`✅ مزامنة الفواتير: تم تحديث ${invoiceSyncRes.updated_orders_count} طلب`);
         }
       } catch (invoiceError) {
-        console.warn('⚠️ خطأ في مزامنة الفواتير:', invoiceError);
+        devLog.warn('⚠️ خطأ في مزامنة الفواتير:', invoiceError);
       }
       
       // تأكد من تحميل خريطة الحالات
@@ -1229,7 +1245,7 @@ export const AlWaseetProvider = ({ children }) => {
 
       // 2) اجلب جميع طلبات الوسيط لعمل fallback search
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+      devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
 
       // 3) بناء خرائط للبحث السريع
       const byWaseetId = new Map();
@@ -1280,32 +1296,32 @@ export const AlWaseetProvider = ({ children }) => {
               const orderOwnerId = localOrder.created_by;
               const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
               
-              console.log(`🔍 فحص نهائي للطلب ${confirmKey} في ${ownerAccounts.length} حساب قبل الحذف`);
+              devLog.log(`🔍 فحص نهائي للطلب ${confirmKey} في ${ownerAccounts.length} حساب قبل الحذف`);
               
               for (const account of ownerAccounts) {
                 if (!account.token) continue;
                 try {
                   const found = await AlWaseetAPI.getOrderByQR(account.token, confirmKey);
                   if (found) {
-                    console.log(`✅ وُجد الطلب ${confirmKey} في حساب ${account.account_username} - لن يُحذف`);
+                    devLog.log(`✅ وُجد الطلب ${confirmKey} في حساب ${account.account_username} - لن يُحذف`);
                     remoteCheck = found;
                     break;
                   }
                 } catch (e) {
-                  console.warn(`⚠️ فشل البحث في حساب ${account.account_username}:`, e.message);
+                  devLog.warn(`⚠️ فشل البحث في حساب ${account.account_username}:`, e.message);
                 }
               }
               
               if (!remoteCheck) {
-                console.log(`❌ الطلب ${confirmKey} غير موجود في جميع الحسابات (${ownerAccounts.length}) - سيُحذف`);
+                devLog.log(`❌ الطلب ${confirmKey} غير موجود في جميع الحسابات (${ownerAccounts.length}) - سيُحذف`);
               }
             } catch (e) {
-              console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف:', e);
+              devLog.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف:', e);
             }
           }
           
           if (!remoteCheck) {
-            console.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+            devLog.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
             await handleAutoDeleteOrder(localOrder.id, 'fastSync');
             continue;
           }
@@ -1327,7 +1343,7 @@ export const AlWaseetProvider = ({ children }) => {
             })
             .eq('id', localOrder.id);
           repaired++;
-          console.log(`🔧 تم إصلاح معرف الوسيط للطلب ${localOrder.tracking_number}: ${waseetOrder.id}`);
+          devLog.log(`🔧 تم إصلاح معرف الوسيط للطلب ${localOrder.tracking_number}: ${waseetOrder.id}`);
         }
 
         // إصلاح رقم التتبع إذا كان مساوياً لمعرف الوسيط (نمط الخطأ)
@@ -1343,7 +1359,7 @@ export const AlWaseetProvider = ({ children }) => {
             })
             .eq('id', localOrder.id);
           repaired++;
-          console.log(`🔧 تم إصلاح رقم التتبع للطلب ${localOrder.id}: ${localTn} → ${waseetQr}`);
+          devLog.log(`🔧 تم إصلاح رقم التتبع للطلب ${localOrder.id}: ${localTn} → ${waseetQr}`);
         }
         
         // 5) معالجة التحديثات
@@ -1424,7 +1440,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         if (!upErr) {
           updated++;
-          console.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
+          devLog.log(`✅ تحديث سريع: ${localOrder.tracking_number} → ${updates.status || localStatus} | ${waseetStatusText}`);
           
           // تطبيق الحذف التلقائي إذا كان الطلب غير موجود في الوسيط
           if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
@@ -1435,22 +1451,22 @@ export const AlWaseetProvider = ({ children }) => {
               try {
                 remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
               } catch (e) {
-                console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (داخل التحديث):', e);
+                devLog.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف (داخل التحديث):', e);
               }
             }
             if (!remoteCheck) {
-              console.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+              devLog.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
               await handleAutoDeleteOrder(localOrder.id, 'fastSync');
             }
           }
         } else {
-          console.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
+          devLog.warn('⚠️ فشل تحديث الطلب (fast sync):', localOrder.id, upErr);
         }
       }
 
       // إشعار عن الإصلاحات إذا حدثت
       if (repaired > 0) {
-        console.log(`🔧 تم إصلاح ${repaired} معرف وسيط في المزامنة السريعة`);
+        devLog.log(`🔧 تم إصلاح ${repaired} معرف وسيط في المزامنة السريعة`);
       }
 
       // إشعارات ذكية مجمعة
@@ -1491,10 +1507,10 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         const { data: finalInvoiceSyncRes } = await supabase.rpc('sync_recent_received_invoices');
         if (finalInvoiceSyncRes?.updated_orders_count > 0) {
-          console.log(`✅ مزامنة فواتير نهائية: تم تحديث ${finalInvoiceSyncRes.updated_orders_count} طلب إضافي`);
+          devLog.log(`✅ مزامنة فواتير نهائية: تم تحديث ${finalInvoiceSyncRes.updated_orders_count} طلب إضافي`);
         }
       } catch (finalInvoiceError) {
-        console.warn('⚠️ خطأ في المزامنة النهائية للفواتير:', finalInvoiceError);
+        devLog.warn('⚠️ خطأ في المزامنة النهائية للفواتير:', finalInvoiceError);
       }
 
       return { updated, checked, statusChanges: statusChanges.length };
@@ -1518,7 +1534,7 @@ export const AlWaseetProvider = ({ children }) => {
     
     try {
       setLoading(true);
-      console.log('🔄 بدء المزامنة الشاملة للطلبات...');
+      devLog.log('🔄 بدء المزامنة الشاملة للطلبات...');
       
       // تحميل حالات الطلبات إذا لم تكن محملة
       let statusMap = orderStatusesMap;
@@ -1528,7 +1544,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       // جلب طلبات الوسيط
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      console.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط`);
+      devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط`);
       
       let updatedCount = 0;
       
@@ -1601,7 +1617,7 @@ export const AlWaseetProvider = ({ children }) => {
                 .update(updates)
                 .eq('id', existingOrder.id);
               updatedCount++;
-              console.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
+              devLog.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
               
               // إرسال إشعار تغيير الحالة للحالات المهمة مع تحديد state_id الصحيح
               const actualStateId = waseetOrder.state_id || waseetOrder.status_id || waseetOrder.statusId;
