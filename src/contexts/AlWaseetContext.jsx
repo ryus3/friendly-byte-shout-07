@@ -136,9 +136,10 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('delivery_partner_tokens')
-        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token')
+        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token, expires_at')
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
+        .eq('is_active', true)  // فقط التوكنات النشطة
         .not('token', 'is', null)  // فقط الحسابات التي لديها توكن صالح
         .neq('token', '')  // تجنب التوكنات الفارغة
         .order('is_default', { ascending: false })
@@ -155,6 +156,11 @@ export const AlWaseetProvider = ({ children }) => {
       const seenUsernames = new Set();
 
       for (const account of accounts) {
+        // فلترة التوكنات المنتهية
+        if (account.expires_at && new Date(account.expires_at) <= new Date()) {
+          continue;
+        }
+        
         const normalizedUsername = account.account_username?.trim()?.toLowerCase();
         if (normalizedUsername && !seenUsernames.has(normalizedUsername)) {
           seenUsernames.add(normalizedUsername);
@@ -162,7 +168,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      devLog.log(`🔍 تم العثور على ${accounts.length} حساب، بعد إزالة التكرار: ${uniqueAccounts.length}`);
+      devLog.log(`🔍 تم العثور على ${accounts.length} حساب نشط، بعد إزالة التكرار والمنتهية: ${uniqueAccounts.length}`);
       return uniqueAccounts;
     } catch (error) {
       console.error('خطأ في جلب حسابات المستخدم:', error);
@@ -807,6 +813,17 @@ export const AlWaseetProvider = ({ children }) => {
       setIsLoggedIn(true);
       setActivePartner(partner);
       toast({ title: "نجاح", description: `تم تسجيل الدخول بنجاح في ${deliveryPartners[partner].name}.` });
+      
+      // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
+      setTimeout(() => {
+        console.log('🔄 تشغيل فحص الطلبات المحذوفة بعد تجديد التوكن...');
+        fastSyncPendingOrders(false).then(result => {
+          console.log('✅ نتيجة الفحص التلقائي بعد تجديد التوكن:', result);
+        }).catch(error => {
+          console.error('❌ خطأ في الفحص التلقائي:', error);
+        });
+      }, 5000);
+      
       return { success: true };
     } catch (error) {
       toast({ title: "خطأ في تسجيل الدخول", description: error.message, variant: "destructive" });
@@ -1253,16 +1270,40 @@ export const AlWaseetProvider = ({ children }) => {
 
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
         if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
-          // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking
+          // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking - فحص بجميع التوكنات
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
           let remoteCheck = null;
+          
           if (confirmKey) {
             try {
-              remoteCheck = await AlWaseetAPI.getOrderByQR(token, confirmKey);
+              // استخدام نفس دالة الفحص المتعدد المستخدمة في syncOrderByQR
+              const orderOwnerId = localOrder.created_by;
+              const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+              
+              console.log(`🔍 فحص نهائي للطلب ${confirmKey} في ${ownerAccounts.length} حساب قبل الحذف`);
+              
+              for (const account of ownerAccounts) {
+                if (!account.token) continue;
+                try {
+                  const found = await AlWaseetAPI.getOrderByQR(account.token, confirmKey);
+                  if (found) {
+                    console.log(`✅ وُجد الطلب ${confirmKey} في حساب ${account.account_username} - لن يُحذف`);
+                    remoteCheck = found;
+                    break;
+                  }
+                } catch (e) {
+                  console.warn(`⚠️ فشل البحث في حساب ${account.account_username}:`, e.message);
+                }
+              }
+              
+              if (!remoteCheck) {
+                console.log(`❌ الطلب ${confirmKey} غير موجود في جميع الحسابات (${ownerAccounts.length}) - سيُحذف`);
+              }
             } catch (e) {
               console.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف:', e);
             }
           }
+          
           if (!remoteCheck) {
             console.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
             await handleAutoDeleteOrder(localOrder.id, 'fastSync');
