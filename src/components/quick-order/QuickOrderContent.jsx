@@ -1695,12 +1695,14 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         }
         
         if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
-          // ربط الطلب بالطلب الأصلي
+          // ربط الطلب بالطلب الأصلي وتعيين الحالة الصحيحة
           await supabase
             .from('orders')
             .update({ 
               related_order_id: originalOrder.id,
-              original_order_id: originalOrder.id 
+              original_order_id: originalOrder.id,
+              status: 'return_pending', // ✅ حالة 21 - بانتظار استلام الراجع
+              delivery_status: '21' // ✅ حالة الوسيط 21
             })
             .eq('id', createdOrderId);
           

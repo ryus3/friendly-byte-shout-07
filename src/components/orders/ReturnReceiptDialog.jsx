@@ -14,38 +14,56 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
     try {
       setIsProcessing(true);
 
-      // تحديث المخزون لكل منتج في الطلب
-      for (const item of orderItems) {
-        // إضافة الكمية المرجعة إلى المخزون
-        const { error: inventoryError } = await supabase
-          .rpc('update_reserved_stock', {
-            p_product_id: item.product_id,
-            p_quantity_change: -item.quantity, // إضافة للمخزون
-            p_sku: item.variant_id
-          });
+      // ✅ فحص: هل مرّ الطلب بحالة 21 (return_pending)؟
+      const { data: statusHistory } = await supabase
+        .from('order_status_history')
+        .select('new_status, new_delivery_status')
+        .eq('order_id', order.id)
+        .order('changed_at', { ascending: false });
+      
+      const hasPassed21 = statusHistory?.some(
+        h => h.new_status === 'return_pending' || h.new_delivery_status === '21'
+      ) || order.status === 'return_pending' || order.delivery_status === '21';
 
-        if (inventoryError) {
-          console.error('خطأ في تحديث المخزون:', inventoryError);
-        }
+      // ✅ معالجة المخزون فقط إذا مرّ بحالة 21
+      if (hasPassed21) {
+        // تحديث المخزون لكل منتج في الطلب
+        for (const item of orderItems) {
+          // إضافة الكمية المرجعة إلى المخزون
+          const { error: inventoryError } = await supabase
+            .rpc('update_reserved_stock', {
+              p_product_id: item.product_id,
+              p_quantity_change: -item.quantity, // إضافة للمخزون
+              p_sku: item.variant_id
+            });
 
-        // تحديث الكمية الفعلية في المخزون
-        const { data: currentInventory } = await supabase
-          .from('inventory')
-          .select('quantity')
-          .eq('product_id', item.product_id)
-          .eq('variant_id', item.variant_id || null)
-          .single();
+          if (inventoryError) {
+            console.error('خطأ في تحديث المخزون:', inventoryError);
+          }
 
-        if (currentInventory) {
-          await supabase
+          // تحديث الكمية الفعلية في المخزون
+          const { data: currentInventory } = await supabase
             .from('inventory')
-            .update({
-              quantity: currentInventory.quantity + item.quantity,
-              updated_at: new Date().toISOString()
-            })
+            .select('quantity')
             .eq('product_id', item.product_id)
-            .eq('variant_id', item.variant_id || null);
+            .eq('variant_id', item.variant_id || null)
+            .single();
+
+          if (currentInventory) {
+            await supabase
+              .from('inventory')
+              .update({
+                quantity: currentInventory.quantity + item.quantity,
+                updated_at: new Date().toISOString()
+              })
+              .eq('product_id', item.product_id)
+              .eq('variant_id', item.variant_id || null);
+          }
         }
+
+        console.log('✅ تم إرجاع المنتجات للمخزون - الطلب مرّ بحالة 21');
+      } else {
+        console.log('⚠️ إلغاء إرجاع - الطلب لم يمر بحالة 21 - لا تحديث للمخزون');
       }
 
       // تحديث حالة الطلب إلى "مستلم الراجع"
@@ -53,6 +71,7 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
         .from('orders')
         .update({
           status: 'return_received',
+          delivery_status: '17', // ✅ حالة الوسيط 17
           updated_at: new Date().toISOString()
         })
         .eq('id', order.id);
@@ -62,8 +81,10 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
       }
 
       toast({
-        title: "تم استلام الراجع بنجاح",
-        description: "تم إرجاع جميع المنتجات إلى المخزون",
+        title: hasPassed21 ? "✅ تم استلام الراجع بنجاح" : "⚠️ تم إلغاء الإرجاع",
+        description: hasPassed21 
+          ? "تم إرجاع جميع المنتجات إلى المخزون" 
+          : "تم تحديث الحالة بدون معالجة المخزون",
         variant: "success"
       });
 
