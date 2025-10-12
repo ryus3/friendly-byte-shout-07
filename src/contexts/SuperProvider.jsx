@@ -1118,15 +1118,17 @@ export const SuperProvider = ({ children }) => {
       }
 
       // ✅ إدراج عناصر الطلب - تجاهل للإرجاع (سلة فارغة)
+      // نقل تعريف itemsRows خارج block الشرط لتجنب خطأ "Can't find variable"
+      const itemsRows = items.length > 0 ? items.map(it => ({
+        order_id: createdOrder.id,
+        product_id: it.product_id,
+        variant_id: it.variant_id || null,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        total_price: it.total_price
+      })) : [];
+
       if (items.length > 0) {
-        const itemsRows = items.map(it => ({
-          order_id: createdOrder.id,
-          product_id: it.product_id,
-          variant_id: it.variant_id || null,
-          quantity: it.quantity,
-          unit_price: it.unit_price,
-          total_price: it.total_price
-        }));
         const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
         if (itemsErr) {
           // حذف الطلب والتراجع عن الحجوزات
@@ -1150,13 +1152,13 @@ export const SuperProvider = ({ children }) => {
       // إنشاء طلب محلي فوري من البيانات المتاحة
       const instantOrder = {
         ...createdOrder,
-        // ✅ إصلاح: للإرجاع، السلة فارغة فلا يوجد itemsRows
-        order_items: items.length > 0 ? itemsRows.map((item, index) => ({
+        // الآن itemsRows متاح دائماً (مصفوفة فارغة للإرجاع)
+        order_items: itemsRows.map((item, index) => ({
           ...item,
           id: `instant_${Date.now()}_${index}`,
           products: allData.products?.find(p => p.id === item.product_id),
           product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
-        })) : [],
+        })),
         _instantDisplay: true
       };
       

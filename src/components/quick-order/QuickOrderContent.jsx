@@ -1456,7 +1456,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      let finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+      // ✅ إصلاح: إضافة أجور التوصيل دائماً لشركة الوسيط
+      let finalTotal = subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
       let orderNotes = formData.notes || '';
       let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
                            formData.type === 'return' ? 'return' : 'regular';
@@ -1633,7 +1634,8 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
       // معلومات شريك التوصيل
       const deliveryData = {
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-        delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0),
+        // ✅ إصلاح: استخدام deliveryFeeAmount المحسوبة بدلاً من deliveryPartnerData
+        delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
         // ✅ الحل الجذري - حفظ معرفات الوسيط
         alwaseet_city_id: effectiveCityId || null,
         alwaseet_region_id: effectiveRegionId || null,
