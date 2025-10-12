@@ -3,11 +3,17 @@
  * تحتوي على جميع المعادلات والقواعد المالية المعتمدة
  */
 
-// أنواع المصاريف المستبعدة من الحسابات العامة
+// أنواع المصاريف
 export const EXCLUDED_EXPENSE_TYPES = {
   SYSTEM: 'system',
   EMPLOYEE_DUES: 'مستحقات الموظفين',
   PURCHASE_RELATED: 'شراء بضاعة'
+};
+
+// تصنيف المصاريف (COGS vs General)
+export const EXPENSE_CATEGORIES = {
+  COGS: ['شراء بضاعة', 'purchase_goods'],
+  GENERAL: ['shipping', 'transfer_fees', 'مصاريف عامة', 'rent', 'salaries', 'utilities']
 };
 
 // حالات الطلبات المعتمدة للحسابات المالية
