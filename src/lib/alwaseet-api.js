@@ -152,7 +152,9 @@ const mapToAlWaseetFields = (orderData) => {
     final_location: cleanedLocation
   });
   
-  // ✅ حساب السعر - دعم الأسعار السالبة للإرجاع
+  // ✅ حساب السعر - دعم طلبات الإرجاع والاستبدال
+  const isReturn = orderData.order_type === 'return';
+  const refundAmount = orderData.refund_amount || 0;
   const finalPrice = orderData.final_amount || orderData.price || orderData.final_total || orderData.total_amount || 0;
   const merchantPrice = Math.round(Number(finalPrice));
   
@@ -166,9 +168,9 @@ const mapToAlWaseetFields = (orderData) => {
     location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    // ✅ للإرجاع: price = 0 و customer_payout = المبلغ الإيجابي
-    price: merchantPrice >= 0 ? merchantPrice : 0,
-    customer_payout: merchantPrice < 0 ? Math.abs(merchantPrice) : undefined,
+    // ✅ للإرجاع: استخدام refund_amount مباشرة بدلاً من final_amount السالب
+    price: isReturn ? 0 : (merchantPrice >= 0 ? merchantPrice : 0),
+    customer_payout: isReturn && refundAmount > 0 ? Math.round(Number(refundAmount)) : (merchantPrice < 0 ? Math.abs(merchantPrice) : undefined),
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
     // ✅ استخدام merchant_notes أولاً، ثم notes
     merchant_notes: orderData.merchant_notes || orderData.notes || '',

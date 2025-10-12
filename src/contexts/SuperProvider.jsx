@@ -1145,12 +1145,13 @@ export const SuperProvider = ({ children }) => {
       // إنشاء طلب محلي فوري من البيانات المتاحة
       const instantOrder = {
         ...createdOrder,
-        order_items: itemsRows.map((item, index) => ({
+        // ✅ إصلاح: للإرجاع، السلة فارغة فلا يوجد itemsRows
+        order_items: items.length > 0 ? itemsRows.map((item, index) => ({
           ...item,
           id: `instant_${Date.now()}_${index}`,
           products: allData.products?.find(p => p.id === item.product_id),
           product_variants: allData.products?.find(p => p.id === item.product_id)?.product_variants?.find(v => v.id === item.variant_id)
-        })),
+        })) : [],
         _instantDisplay: true
       };
       
