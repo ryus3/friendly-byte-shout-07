@@ -1425,6 +1425,80 @@ export const AlWaseetProvider = ({ children }) => {
           if (dp >= 0) updates.delivery_fee = dp;
         }
 
+        // ✅ Phase 3: معالجة تغيير السعر (الحالة 18)
+        if (waseetStatusId === '18' || waseetStatusId === 18 || waseetStatusText.includes('تغيير سعر') || waseetStatusText.includes('تغيير السعر')) {
+          const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+          const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+          
+          if (waseetPrice !== currentPrice && waseetPrice > 0) {
+            const priceDifference = waseetPrice - currentPrice;
+            
+            devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}: ${currentPrice} → ${waseetPrice} (فرق: ${priceDifference})`);
+            
+            // تحديث السعر في الطلب
+            updates.final_amount = waseetPrice;
+            updates.total_amount = waseetPrice;
+            
+            // إعادة حساب الأرباح
+            try {
+              const { data: profitRecord } = await supabase
+                .from('profits')
+                .select('id, profit_amount, employee_profit, employee_percentage, total_revenue')
+                .eq('order_id', localOrder.id)
+                .single();
+              
+              if (profitRecord) {
+                // حساب التعديل
+                const employeeShare = (profitRecord.employee_percentage / 100.0) * priceDifference;
+                const systemShare = priceDifference - employeeShare;
+                
+                // تحديث الأرباح
+                await supabase
+                  .from('profits')
+                  .update({
+                    profit_amount: profitRecord.profit_amount + priceDifference,
+                    employee_profit: profitRecord.employee_profit + employeeShare,
+                    total_revenue: profitRecord.total_revenue + priceDifference,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', profitRecord.id);
+                
+                // تسجيل في accounting
+                await supabase
+                  .from('accounting')
+                  .insert({
+                    type: priceDifference > 0 ? 'income' : 'expense',
+                    category: 'تغيير سعر من الوسيط',
+                    amount: Math.abs(priceDifference),
+                    description: `تغيير سعر طلب #${localOrder.order_number} من ${currentPrice.toLocaleString()} إلى ${waseetPrice.toLocaleString()} د.ع (فرق: ${priceDifference.toLocaleString()})`,
+                    reference_type: 'order',
+                    reference_id: localOrder.id,
+                    created_by: user.id
+                  });
+                
+                devLog.log(`✅ تم تحديث الأرباح لطلب ${localOrder.order_number}:`, {
+                  oldProfit: profitRecord.profit_amount,
+                  newProfit: profitRecord.profit_amount + priceDifference,
+                  employeeShare,
+                  systemShare
+                });
+                
+                // إشعار المستخدم
+                if (showNotifications) {
+                  toast({
+                    title: "💰 تغيير سعر من الوسيط",
+                    description: `طلب #${localOrder.order_number}: ${currentPrice.toLocaleString()} ← ${waseetPrice.toLocaleString()} د.ع\nالفرق: ${priceDifference > 0 ? '+' : ''}${priceDifference.toLocaleString()} د.ع`,
+                    variant: priceDifference > 0 ? "default" : "warning",
+                    duration: 8000
+                  });
+                }
+              }
+            } catch (profitError) {
+              devLog.warn('⚠️ خطأ في تحديث الأرباح عند تغيير السعر:', profitError);
+            }
+          }
+        }
+
         // ترقية للحالة المكتملة عند التأكيد المالي
         // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
         if (finConfirmed) {
