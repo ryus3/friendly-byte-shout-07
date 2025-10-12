@@ -1639,10 +1639,22 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
+      // ✅ إنشاء cart للإرجاع يحتوي على المنتج المُرجع (لإرجاع المخزون عند حالة 17)
+      const returnCart = formData.type === 'return' && returnProduct 
+        ? [{
+            product_id: returnProduct.product_id || returnProduct.id,
+            variant_id: returnProduct.variant_id,
+            quantity: returnProduct.quantity || 1,
+            price: 0,  // السعر 0 لأنه إرجاع
+            cost_price: returnProduct.cost_price || 0,
+            is_return_item: true,  // ✅ علامة للتمييز (لن يُحجز المخزون)
+            name: returnProduct.name || returnProduct.product_name
+          }]
+        : cart;
+
       const result = await createOrder(
         customerInfoPayload, 
-        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
+        returnCart,  // ✅ بدلاً من سلة فارغة
         trackingNumber, 
         discount, 
         orderStatus, 
@@ -1693,7 +1705,8 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         }
         
         if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
-          // ربط الطلب بالطلب الأصلي
+          // ✅ فقط ربط الطلب بالطلب الأصلي
+          // المعالجة المالية والمخزون ستتم تلقائياً عند حالة 17
           await supabase
             .from('orders')
             .update({ 
@@ -1701,17 +1714,6 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
               original_order_id: originalOrder.id 
             })
             .eq('id', createdOrderId);
-          
-          // معالجة الأرباح والمحاسبة
-          const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return', {
-            p_original_order_id: originalOrder.id,
-            p_refund_amount: refundAmount,
-            p_return_order_id: createdOrderId
-          });
-          
-          if (adjustError) {
-            console.error('خطأ في معالجة الإرجاع:', adjustError);
-          }
           
           // Toast مع تعليمات واضحة
           toast({

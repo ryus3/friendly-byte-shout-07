@@ -1566,6 +1566,60 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_debts: {
+        Row: {
+          amount: number
+          created_at: string
+          debt_type: string
+          description: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          order_id: string
+          original_order_id: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          remaining_amount: number | null
+          settled_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debt_type: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          original_order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          remaining_amount?: number | null
+          settled_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debt_type?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          original_order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          remaining_amount?: number | null
+          settled_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_invoice_sync_log: {
         Row: {
           created_at: string | null
@@ -2467,6 +2521,64 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_delivery_status: string | null
+          new_status: string | null
+          notes: string | null
+          old_delivery_status: string | null
+          old_status: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_delivery_status?: string | null
+          new_status?: string | null
+          notes?: string | null
+          old_delivery_status?: string | null
+          old_status?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_delivery_status?: string | null
+          new_status?: string | null
+          notes?: string | null
+          old_delivery_status?: string | null
+          old_status?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
             referencedColumns: ["id"]
           },
         ]
@@ -4774,6 +4886,14 @@ export type Database = {
         }
         Returns: Json
       }
+      adjust_profit_for_return_safe: {
+        Args: {
+          p_original_order_id: string
+          p_refund_amount: number
+          p_return_order_id: string
+        }
+        Returns: Json
+      }
       analyze_customer_gender: {
         Args: { customer_id_param: string }
         Returns: string
@@ -4897,6 +5017,10 @@ export type Database = {
       check_monthly_loyalty_discount_eligibility: {
         Args: { p_customer_id: string }
         Returns: Json
+      }
+      check_status_21_before_17: {
+        Args: { p_order_id: string }
+        Returns: boolean
       }
       check_user_permission: {
         Args: { p_permission_name: string; p_user_id: string }
@@ -5612,6 +5736,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_return_cash_movement: {
+        Args: {
+          p_cash_source_id?: string
+          p_refund_amount: number
+          p_return_order_id: string
+        }
+        Returns: Json
+      }
       refresh_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -5642,7 +5774,7 @@ export type Database = {
       }
       return_items_to_inventory: {
         Args: { p_order_id: string }
-        Returns: undefined
+        Returns: Json
       }
       review_archive_status: {
         Args: Record<PropertyKey, never>
