@@ -1566,6 +1566,60 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_debts: {
+        Row: {
+          amount: number
+          created_at: string
+          debt_type: string
+          description: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          order_id: string
+          original_order_id: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          remaining_amount: number | null
+          settled_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debt_type: string
+          description?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          order_id: string
+          original_order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          remaining_amount?: number | null
+          settled_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debt_type?: string
+          description?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          order_id?: string
+          original_order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          remaining_amount?: number | null
+          settled_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_invoice_sync_log: {
         Row: {
           created_at: string | null
@@ -2467,6 +2521,64 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_delivery_status: string | null
+          new_status: string | null
+          notes: string | null
+          old_delivery_status: string | null
+          old_status: string | null
+          order_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_delivery_status?: string | null
+          new_status?: string | null
+          notes?: string | null
+          old_delivery_status?: string | null
+          old_status?: string | null
+          order_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_delivery_status?: string | null
+          new_status?: string | null
+          notes?: string | null
+          old_delivery_status?: string | null
+          old_status?: string | null
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
             referencedColumns: ["id"]
           },
         ]
