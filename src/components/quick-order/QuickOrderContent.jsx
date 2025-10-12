@@ -42,25 +42,45 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       console.log('🧹 QuickOrderContent - تنظيف شامل عند الخروج');
       
       // 1. تنظيف السلة عند الخروج من الصفحة (ليس dialog)
-      if (cart && cart.length > 0 && !isDialog) {
-        console.log('🗑️ تنظيف السلة:', cart.length, 'منتجات');
+      if (!isDialog && clearCart) {
+        console.log('🗑️ تنظيف السلة');
         clearCart();
       }
       
-      // 2. إعادة تعيين الحالة للقيم الافتراضية
-      setFormData(initialFormData);
-      setErrors({});
-      setIsResetting(false);
+      // 2. إعادة تعيين الحالة للقيم الافتراضية (استخدام قيم ثابتة)
+      if (setFormData) {
+        setFormData({
+          name: defaultCustomerName || user?.default_customer_name || '',
+          phone: '',
+          second_phone: '',
+          city_id: '',
+          region_id: '',
+          city: 'بغداد',
+          region: '',
+          address: '',
+          notes: '',
+          details: '',
+          quantity: 1,
+          price: 0,
+          priceType: 'positive',
+          size: 'عادي',
+          type: 'new',
+          promocode: '',
+          defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
+        });
+      }
+      
+      if (setErrors) setErrors({});
       
       // 3. تنظيف حالات الاستبدال/الإرجاع
-      setOutgoingProduct(null);
-      setIncomingProduct(null);
-      setReturnProduct(null);
-      setRefundAmount(0);
+      if (setOutgoingProduct) setOutgoingProduct(null);
+      if (setIncomingProduct) setIncomingProduct(null);
+      if (setReturnProduct) setReturnProduct(null);
+      if (setRefundAmount) setRefundAmount(0);
       
       console.log('✅ تم التنظيف الشامل بنجاح');
     };
-  }, [cart, clearCart, isDialog, initialFormData]);
+  }, [isDialog]); // تقليل dependencies لتجنب مشاكل التهيئة
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
