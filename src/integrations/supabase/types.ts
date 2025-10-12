@@ -3105,6 +3105,7 @@ export type Database = {
           sku: string | null
           sold_quantity: number
           updated_at: string
+          weighted_avg_cost: number | null
         }
         Insert: {
           barcode?: string | null
@@ -3122,6 +3123,7 @@ export type Database = {
           sku?: string | null
           sold_quantity?: number
           updated_at?: string
+          weighted_avg_cost?: number | null
         }
         Update: {
           barcode?: string | null
@@ -3139,6 +3141,7 @@ export type Database = {
           sku?: string | null
           sold_quantity?: number
           updated_at?: string
+          weighted_avg_cost?: number | null
         }
         Relationships: [
           {
@@ -3503,6 +3506,9 @@ export type Database = {
           cash_source_id: string | null
           created_at: string
           created_by: string
+          currency: string | null
+          currency_amount: number | null
+          exchange_rate: number | null
           id: string
           items: Json | null
           notes: string | null
@@ -3523,6 +3529,9 @@ export type Database = {
           cash_source_id?: string | null
           created_at?: string
           created_by: string
+          currency?: string | null
+          currency_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           items?: Json | null
           notes?: string | null
@@ -3543,6 +3552,9 @@ export type Database = {
           cash_source_id?: string | null
           created_at?: string
           created_by?: string
+          currency?: string | null
+          currency_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           items?: Json | null
           notes?: string | null
@@ -4844,6 +4856,10 @@ export type Database = {
       }
       calculate_sold_quantity: {
         Args: { p_product_id: string; p_variant_id: string }
+        Returns: number
+      }
+      calculate_weighted_avg_cost: {
+        Args: { p_variant_id: string }
         Returns: number
       }
       can_access_order: {

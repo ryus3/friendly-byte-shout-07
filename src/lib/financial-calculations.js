@@ -120,7 +120,9 @@ export const calculateCOGS = (orders, dateRange) => {
     }
     
     return orderSum + order.order_items.reduce((itemSum, item) => {
-      const costPrice = item.product_variants?.cost_price || 
+      // استخدام متوسط التكلفة المرجح أولاً، ثم cost_price
+      const costPrice = item.product_variants?.weighted_avg_cost || 
+                       item.product_variants?.cost_price || 
                        item.products?.cost_price || 
                        item.cost_price || 0;
       const quantity = item.quantity || 0;
@@ -144,9 +146,14 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
       expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
       expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES
     );
-    const isPurchaseRelated = (
+    
+    // استبعاد COGS (شراء بضاعة)
+    const isPurchaseGoods = (
       expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED ||
-      expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED
+      expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED ||
+      expense.category === 'شراء بضاعة' ||
+      expense.category === 'purchase_goods' ||
+      expense.category === 'شراء'
     );
     
     // استبعاد مصاريف التوصيل والشحن بجميع أشكالها (لمنع التكرار مع خصم الإيراد)
@@ -162,11 +169,15 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
       expense.category === 'توصيل' ||
       expense.category === 'التوصيل'
     );
+    
+    // فقط المصاريف التي affects_cogs = false
+    const affectsCOGS = expense.metadata?.affects_cogs === true;
 
-    // استبعاد: مصاريف نظامية + مستحقات الموظفين + مصاريف الشراء + مصاريف التوصيل
+    // استبعاد: مصاريف نظامية + مستحقات الموظفين + COGS + مصاريف التوصيل
     if (isSystemExpense) return false;
     if (isEmployeeDue) return false;
-    if (isPurchaseRelated) return false;
+    if (isPurchaseGoods) return false;
+    if (affectsCOGS) return false;
     if (isDeliveryExpense) return false; // منع تكرار مصاريف التوصيل
 
     // اعتماد الحالة إذا وُجدت فقط

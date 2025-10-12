@@ -94,25 +94,8 @@ export const useImprovedPurchases = () => {
       // انتظار معالجة جميع المنتجات
       await Promise.all(productProcessingPromises);
 
-      // 4. خصم المبلغ الكلي مرة واحدة من مصدر النقد
-      if (purchaseData.cashSourceId && grandTotal > 0) {
-        const { data: cashResult, error: cashError } = await supabase.rpc('update_cash_source_balance', {
-          p_cash_source_id: purchaseData.cashSourceId,
-          p_amount: grandTotal,
-          p_movement_type: 'out',
-          p_reference_type: 'purchase',
-          p_reference_id: newPurchase.id,
-          p_description: `شراء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع`,
-          p_created_by: user.id
-        });
-
-        if (cashError) {
-          devLog.error(`❌ [${uniqueId}] خطأ في تحديث رصيد مصدر النقد:`, cashError);
-          throw cashError;
-        }
-        
-        devLog.info(`✅ [${uniqueId}] تم خصم ${grandTotal} د.ع من مصدر النقد`);
-      }
+      // تم حذف RPC القديم - الآن trigger_create_cash_movement_for_expense يُنشئ الحركات تلقائياً
+      devLog.info(`ℹ️ [${uniqueId}] سيتم إنشاء حركات النقد تلقائياً من خلال trigger expense`);
 
       // 5. إنشاء سجلات المصاريف (شراء بضاعة = COGS، شحن وتحويل = عامة)
       const expensePromises = [];
