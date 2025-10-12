@@ -43,7 +43,7 @@ export const useCashSources = () => {
           )
         `)
         .eq('cash_sources.is_active', true)
-        .order('effective_at', { ascending: false })
+        .order('effective_at', { ascending: true })
         .limit(limit);
 
       if (sourceId) {
