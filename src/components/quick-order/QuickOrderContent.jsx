@@ -98,6 +98,294 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [formData, setFormData] = useState(initialFormData);
   
   const originalOrder = aiOrderData?.originalOrder || null;
+
+  // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
+  useEffect(() => {
+    console.log('🚀 QuickOrderContent - AI/Edit Order Data received:', aiOrderData, { isEditMode });
+    if (aiOrderData) {
+      // Parse city and address intelligently
+      const parseLocationData = (address, city) => {
+        let parsedCity = city || '';
+        let parsedRegion = '';
+        
+        if (address) {
+          // Try to extract city from address if not provided
+          const addressLower = address.toLowerCase();
+          const iraqiCities = ['بغداد', 'البصرة', 'أربيل', 'الموصل', 'كربلاء', 'النجف', 'بابل', 'ذي قار', 'ديالى', 'الأنبار'];
+          
+          if (!parsedCity) {
+            for (const cityName of iraqiCities) {
+              if (addressLower.includes(cityName.toLowerCase())) {
+                parsedCity = cityName;
+                break;
+              }
+            }
+          }
+          
+          // Extract potential region/district from address
+          const regionPatterns = [
+            /منطقة\s+([^،\s]+)/,
+            /حي\s+([^،\s]+)/,
+            /شارع\s+([^،\s]+)/,
+            /محلة\s+([^،\s]+)/,
+            /قضاء\s+([^،\s]+)/
+          ];
+          
+          for (const pattern of regionPatterns) {
+            const match = address.match(pattern);
+            if (match) {
+              parsedRegion = match[1];
+              break;
+            }
+          }
+        }
+        
+        return { parsedCity, parsedRegion };
+      };
+      
+      const { parsedCity, parsedRegion } = parseLocationData(aiOrderData.customer_address, aiOrderData.customer_city);
+      
+      // في وضع التعديل، استخدم البيانات الأصلية مباشرة
+      if (isEditMode) {
+        console.log('🔧 Setting form data for edit mode:', aiOrderData);
+        setFormData(prev => ({
+          ...prev,
+          name: aiOrderData.customer_name || '',
+          phone: aiOrderData.customer_phone || '',
+          second_phone: aiOrderData.customer_phone2 || '',
+          city: aiOrderData.customer_city || 'بغداد',
+          city_id: aiOrderData.city_id || '',  // معرف المدينة للوسيط
+          region: aiOrderData.customer_province || '',
+          region_id: aiOrderData.region_id || '',  // معرف المنطقة للوسيط
+          address: aiOrderData.customer_address || '',
+          notes: aiOrderData.notes || '',
+          price: aiOrderData.final_total || aiOrderData.total_amount || 0,
+          delivery_fee: aiOrderData.delivery_fee || 0,
+          // ضمان عرض السعر الصحيح مع التوصيل
+          total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0),
+          
+          // إضافة البيانات الأصلية للعرض
+          originalCity: aiOrderData.customer_city || '',
+          originalRegion: aiOrderData.customer_province || '',
+          
+          // إصلاح نوع الطلب الافتراضي - ضمان تطبيقه
+          type: 'new'
+        }));
+        
+        console.log('✅ Form data set for edit mode');
+        console.log('📍 Address data:', {
+          city: aiOrderData.customer_city,
+          city_id: aiOrderData.city_id,
+          province: aiOrderData.customer_province,
+          region_id: aiOrderData.region_id,
+          address: aiOrderData.customer_address
+        });
+        
+        // إضافة useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي
+        setTimeout(() => {
+          setFormData(prev => ({
+            ...prev,
+            type: 'new'
+          }));
+        }, 100);
+        
+        // تحديد شريك التوصيل وتحميل البيانات اللازمة
+        if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
+          setActivePartner('alwaseet');
+          
+          // في وضع التعديل، تحديد المدينة والمنطقة من المعرفات الأصلية
+          if (aiOrderData.city_id) {
+            console.log('🔧 Setting city ID for edit mode:', aiOrderData.city_id);
+            setSelectedCityId(aiOrderData.city_id);
+            // تحديث formData مباشرة لضمان ظهور القيمة في dropdown
+            setFormData(prev => ({ ...prev, city_id: aiOrderData.city_id }));
+          }
+          if (aiOrderData.region_id) {
+            console.log('🔧 Setting region ID for edit mode:', aiOrderData.region_id);
+            // تأخير تحديد المنطقة لضمان تحميل البيانات أولاً
+            setTimeout(() => {
+              setSelectedRegionId(aiOrderData.region_id);
+              setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
+              console.log('✅ تم تحديد المنطقة في وضع التعديل:', aiOrderData.region_id);
+            }, 500);
+          }
+          
+          console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
+            city_id: aiOrderData.city_id,
+            region_id: aiOrderData.region_id
+          });
+        } else {
+          setActivePartner('local');
+        }
+        
+         // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
+         if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
+           console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
+           clearCart();
+           
+           (aiOrderData.items || []).filter(item => item != null).forEach((item, index) => {
+             if (item && item.product_id && item.variant_id) {
+               console.log(`🔍 Loading real product ${index + 1}:`, item);
+               
+               // التحقق من صحة البيانات قبل المعالجة
+               const safeItem = {
+                 ...item,
+                 quantity: item.quantity || 1,
+                 price: item.unit_price || item.price || 0,
+                 cost_price: item.costPrice || item.cost_price || 0
+               };
+               
+               // استخدام البيانات الأصلية مع المعرفات الصحيحة
+               const tempProduct = {
+                 id: safeItem.product_id,
+                 name: safeItem.productName || safeItem.product_name || 'منتج',
+                 images: [safeItem.image || '/placeholder.svg'],
+                 price: safeItem.price,
+                 cost_price: safeItem.cost_price
+               };
+               
+               const tempVariant = {
+                 id: safeItem.variant_id,
+                 sku: safeItem.sku || '',
+                 color: safeItem.color || '',
+                 size: safeItem.size || '',
+                 quantity: safeItem.stock || 999,
+                 reserved: 0,
+                 price: safeItem.price,
+                 cost_price: safeItem.cost_price,
+                 image: safeItem.image || '/placeholder.svg',
+                 barcode: safeItem.barcode || ''
+               };
+               
+               console.log(`✅ Adding product ${index + 1} to cart for edit mode:`, { tempProduct, tempVariant, quantity: safeItem.quantity });
+               addToCart(tempProduct, tempVariant, safeItem.quantity, false, true); // تجاهل فحص المخزون في وضع التعديل
+             } else {
+               console.warn(`⚠️ Skipping invalid item ${index + 1}:`, item);
+             }
+           });
+           console.log('✅ Cart loaded successfully for edit mode');
+         } else {
+           console.log('⚠️ No items found in aiOrderData for edit mode');
+         }
+        
+        return; // انتهاء وضع التعديل
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        name: aiOrderData.customer_name || '',
+        phone: aiOrderData.customer_phone || '',
+        city: parsedCity || 'بغداد',
+        region: parsedRegion || '',
+        address: aiOrderData.source === 'telegram' ? '' : (aiOrderData.customer_address || ''),
+        notes: aiOrderData.order_data?.delivery_type ? `نوع التوصيل: ${aiOrderData.order_data.delivery_type}` : '',
+        details: Array.isArray(aiOrderData.items) ? 
+          aiOrderData.items.map(item => {
+            const colorSize = [item.color, item.size].filter(Boolean).join(' ');
+            return `${item.product_name || item.name}${colorSize ? ` (${colorSize})` : ''} × ${item.quantity}`;
+          }).join(' + ') : '',
+        quantity: Array.isArray(aiOrderData.items) ? 
+          aiOrderData.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 1,
+        price: aiOrderData.total_amount || 0,
+        deliveryPartner: aiOrderData.order_data?.delivery_type === 'توصيل' ? 'الوسيط' : 'محلي'
+      }));
+      
+      // إضافة المنتجات للسلة مع التحقق من وجودها في قاعدة البيانات
+      if (Array.isArray(aiOrderData.items)) {
+        clearCart();
+        
+        const loadAiOrderItems = async () => {
+          for (const item of aiOrderData.items) {
+            // إذا كان لدينا product_id و variant_id، استخدمهما مباشرة
+            if (item.product_id && item.variant_id) {
+              // جلب بيانات المنتج من قاعدة البيانات
+              try {
+                const { data: productData } = await supabase
+                  .from('products')
+                  .select(`
+                    id,
+                    name,
+                    images,
+                    product_variants!inner (
+                      id,
+                      price,
+                      cost_price,
+                      colors (name),
+                      sizes (name)
+                    )
+                  `)
+                  .eq('id', item.product_id)
+                  .eq('product_variants.id', item.variant_id)
+                  .maybeSingle();
+
+                if (productData && productData.product_variants && productData.product_variants[0]) {
+                  console.log('Found product data for AI order:', productData);
+                  const variant = productData.product_variants[0];
+                  const product = {
+                    id: productData.id,
+                    name: productData.name,
+                    images: productData.images || []
+                  };
+                  const variantData = {
+                    id: variant.id,
+                    sku: variant.id, // استخدام ID كـ SKU
+                    price: variant.price,
+                    cost_price: variant.cost_price,
+                    color: variant.colors?.name || item.color || '',
+                    size: variant.sizes?.name || item.size || '',
+                    barcode: variant.barcode || '',
+                    quantity: 100 // افتراضي للمخزون
+                  };
+                  addToCart(product, variantData, item.quantity || 1, false);
+                  console.log('Added product to cart:', product, variantData);
+                } else {
+                  // fallback للطريقة القديمة
+                  fallbackAddToCart(item);
+                }
+              } catch (error) {
+                console.error('Error fetching product data:', error);
+                fallbackAddToCart(item);
+              }
+            } else {
+              console.log('Product data not found, using fallback for:', item);
+              fallbackAddToCart(item);
+            }
+          }
+        };
+        
+        loadAiOrderItems();
+      }
+    
+      function fallbackAddToCart(item) {
+        const product = { 
+          id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
+          name: item.name || item.product_name,
+          images: item.images || []
+        };
+        const variant = { 
+          sku: item.variant_id || `fallback-${Date.now()}`,
+          price: item.price || 0, 
+          cost_price: item.cost_price || 0,
+          color: item.color || '', 
+          size: item.size || '',
+          barcode: item.barcode || '',
+          quantity: 100 // افتراضي للمخزون
+        };
+        addToCart(product, variant, item.quantity || 1, false);
+      }
+    }
+  }, [aiOrderData, clearCart, addToCart, isEditMode]);
+
+  // useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي في وضع التعديل
+  useEffect(() => {
+    if (aiOrderData?.editMode && formData.type !== 'new') {
+      console.log('🔧 Forcing order type to "new" in edit mode');
+      setFormData(prev => ({
+        ...prev,
+        type: 'new'
+      }));
+    }
+  }, [aiOrderData?.editMode, formData.type]);
   
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
@@ -256,9 +544,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // مراقبة تغييرات المدينة والمنطقة لمسح الأخطاء
   useEffect(() => {
-    // منع التنفيذ أثناء عملية المسح
-    if (isResetting) return;
-    
     setErrors(prev => {
       const newErrors = { ...prev };
       if (formData.city && activePartner === 'local') {
@@ -275,7 +560,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
       return newErrors;
     });
-  }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner, isResetting]);
+  }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner]);
   
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -378,125 +663,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }, [applyLoyaltyDelivery, settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
   const finalTotal = useMemo(() => total + deliveryFee, [total, deliveryFee]);
-  
-  // ✅ ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
-  // نقل useEffect إلى هنا بعد تعريف selectedCityId و selectedRegionId
-  useEffect(() => {
-    console.log('🚀 QuickOrderContent - AI/Edit Order Data received:', aiOrderData, { isEditMode });
-    if (!aiOrderData) return;
-    
-    // في وضع التعديل، استخدم البيانات الأصلية مباشرة
-    if (isEditMode) {
-      console.log('🔧 Setting form data for edit mode:', aiOrderData);
-      setFormData(prev => ({
-        ...prev,
-        name: aiOrderData.customer_name || '',
-        phone: aiOrderData.customer_phone || '',
-        second_phone: aiOrderData.customer_phone2 || '',
-        city: aiOrderData.customer_city || 'بغداد',
-        city_id: aiOrderData.city_id || '',
-        region: aiOrderData.customer_province || '',
-        region_id: aiOrderData.region_id || '',
-        address: aiOrderData.customer_address || '',
-        notes: aiOrderData.notes || '',
-        type: 'new'
-      }));
-      
-      // تحديد شريك التوصيل
-      if (aiOrderData.delivery_partner && aiOrderData.delivery_partner !== 'محلي') {
-        setActivePartner('alwaseet');
-        if (aiOrderData.city_id) {
-          setSelectedCityId(aiOrderData.city_id);
-          setFormData(prev => ({ ...prev, city_id: aiOrderData.city_id }));
-        }
-        if (aiOrderData.region_id) {
-          setTimeout(() => {
-            setSelectedRegionId(aiOrderData.region_id);
-            setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
-          }, 500);
-        }
-      } else {
-        setActivePartner('local');
-      }
-      
-      // تحميل المنتجات في وضع التعديل
-      if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-        clearCart();
-        (aiOrderData.items || []).filter(item => item != null).forEach((item, index) => {
-          if (item && item.product_id && item.variant_id) {
-            const safeItem = {
-              ...item,
-              quantity: item.quantity || 1,
-              price: item.unit_price || item.price || 0,
-              cost_price: item.costPrice || item.cost_price || 0
-            };
-            
-            const tempProduct = {
-              id: safeItem.product_id,
-              name: safeItem.productName || safeItem.product_name || 'منتج',
-              images: [safeItem.image || '/placeholder.svg'],
-              price: safeItem.price,
-              cost_price: safeItem.cost_price
-            };
-            
-            const tempVariant = {
-              id: safeItem.variant_id,
-              sku: safeItem.sku || '',
-              color: safeItem.color || '',
-              size: safeItem.size || '',
-              quantity: safeItem.stock || 999,
-              reserved: 0,
-              price: safeItem.price,
-              cost_price: safeItem.cost_price,
-              image: safeItem.image || '/placeholder.svg',
-              barcode: safeItem.barcode || ''
-            };
-            
-            addToCart(tempProduct, tempVariant, safeItem.quantity, false, true);
-          }
-        });
-      }
-      return;
-    }
-    
-    // وضع AI order عادي (غير التعديل)
-    setFormData(prev => ({
-      ...prev,
-      name: aiOrderData.customer_name || '',
-      phone: aiOrderData.customer_phone || '',
-      city: aiOrderData.customer_city || 'بغداد',
-      region: aiOrderData.customer_province || '',
-      address: aiOrderData.customer_address || '',
-      notes: aiOrderData.notes || ''
-    }));
-    
-    // تحميل المنتجات للـ AI order العادي
-    if (Array.isArray(aiOrderData.items)) {
-      clearCart();
-      aiOrderData.items.forEach(item => {
-        if (item && item.product_id && item.variant_id) {
-          const tempProduct = {
-            id: item.product_id,
-            name: item.product_name || item.name || 'منتج',
-            images: [item.image || '/placeholder.svg'],
-            price: item.price || 0
-          };
-          
-          const tempVariant = {
-            id: item.variant_id,
-            sku: item.sku || '',
-            color: item.color || '',
-            size: item.size || '',
-            quantity: 999,
-            price: item.price || 0,
-            image: item.image || '/placeholder.svg'
-          };
-          
-          addToCart(tempProduct, tempVariant, item.quantity || 1, false);
-        }
-      });
-    }
-  }, [aiOrderData, isEditMode, setActivePartner, setSelectedCityId, setSelectedRegionId, clearCart, addToCart, setFormData]);
   
   const resetForm = useCallback(() => {
     // تفعيل حالة المسح
