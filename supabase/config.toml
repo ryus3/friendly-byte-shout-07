@@ -10,13 +10,13 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.resolve-location-with-ai]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-location-patterns]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-cities-regions-background]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sync-order-updates]
 verify_jwt = false
