@@ -1469,18 +1469,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         finalTotal = -(refundAmount + deliveryFeeAmount);
         actualRefundAmount = refundAmount;
         
-        // ملاحظات تفصيلية للإرجاع
-        orderNotes = `🔙 إرجاع
-━━━━━━━━━━━━━━━
-📦 المنتج المُرجع: ${returnProduct.productName} (${returnProduct.color}, ${returnProduct.size})
-💵 السعر الأصلي: ${returnProduct.price.toLocaleString()} د.ع
-
-💰 المبلغ المُرجع: ${refundAmount.toLocaleString()} د.ع
-🚚 رسوم التوصيل: ${deliveryFeeAmount.toLocaleString()} د.ع
-━━━━━━━━━━━━━━━
-💵 الإجمالي للزبون: ${(refundAmount + deliveryFeeAmount).toLocaleString()} د.ع
-⚠️ يُدفع للزبون عند استلام المنتج (حالة 17)
-${originalOrder ? `🔗 مرتبط بالطلب: ${originalOrder.order_number}` : ''}`;
+        // ملاحظات مختصرة بالإنجليزية للوسيط
+        orderNotes = `RETURN ORDER
+Product: ${returnProduct.productName} (${returnProduct.color}, ${returnProduct.size})
+Pay Customer: ${refundAmount.toLocaleString()} IQD
+Delivery Fee: ${deliveryFeeAmount.toLocaleString()} IQD
+Total Deduction: ${(refundAmount + deliveryFeeAmount).toLocaleString()} IQD
+${originalOrder ? `Original Order: ${originalOrder.order_number}` : ''}
+${formData.notes ? `Notes: ${formData.notes}` : ''}`;
 
         // ❗ لا نُنشئ order_items للإرجاع - سلة فارغة
         orderItems = [];

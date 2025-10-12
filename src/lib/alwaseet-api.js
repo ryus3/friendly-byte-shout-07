@@ -97,11 +97,7 @@ export const createAlWaseetOrder = async (orderData, token) => {
     }
   }
 
-  // Ensure numeric fields are properly formatted (align with edit behavior)
-  // ✅ الحفاظ على customer_payout إذا كانت موجودة (للأسعار السالبة)
-  if (formattedData.customer_payout !== undefined) {
-    formattedData.customer_payout = parseInt(formattedData.customer_payout) || 0;
-  }
+  // Ensure numeric fields are properly formatted
   formattedData.price = parseInt(formattedData.price) || 0;
   formattedData.items_number = parseInt(formattedData.items_number) || 0;
   formattedData.city_id = parseInt(formattedData.city_id) || 0;
@@ -155,6 +151,7 @@ const mapToAlWaseetFields = (orderData) => {
   // ✅ حساب السعر - دعم طلبات الإرجاع والاستبدال
   const isReturn = orderData.order_type === 'return';
   const refundAmount = orderData.refund_amount || 0;
+  const deliveryFee = orderData.delivery_fee || 0;
   const finalPrice = orderData.final_amount || orderData.price || orderData.final_total || orderData.total_amount || 0;
   const merchantPrice = Math.round(Number(finalPrice));
   
@@ -168,19 +165,15 @@ const mapToAlWaseetFields = (orderData) => {
     location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    // ✅ للإرجاع: استخدام refund_amount مباشرة بدلاً من final_amount السالب
-    price: isReturn ? 0 : (merchantPrice >= 0 ? merchantPrice : 0),
-    customer_payout: isReturn && refundAmount > 0 ? Math.round(Number(refundAmount)) : (merchantPrice < 0 ? Math.abs(merchantPrice) : undefined),
+    // ✅ إرسال final_amount السالب كامل للإرجاع (-21000)
+    price: isReturn ? merchantPrice : (merchantPrice >= 0 ? merchantPrice : 0),
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
-    // ✅ استخدام merchant_notes أولاً، ثم notes
-    merchant_notes: orderData.merchant_notes || orderData.notes || '',
+    // ✅ ملاحظات مختصرة بالإنجليزية للإرجاع
+    merchant_notes: isReturn 
+      ? `RETURN - Product: ${orderData.type_name || 'Product'} | Pay Customer: ${Math.round(Number(refundAmount))} IQD | Delivery: ${Math.round(Number(deliveryFee))} IQD`
+      : (orderData.merchant_notes || orderData.notes || ''),
     // ✅ تمييز الإرجاع والاستبدال
     replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
-  };
-  
-  // إزالة customer_payout إذا لم يكن مطلوباً
-  if (mapped.customer_payout === undefined) {
-    delete mapped.customer_payout;
   }
   
   console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
