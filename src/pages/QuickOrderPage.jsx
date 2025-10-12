@@ -4,15 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 
 const QuickOrderPage = () => {
-    const navigate = useNavigate();
     const formRef = useRef(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const handleOrderCreated = () => {
-        setTimeout(() => {
-            navigate('/');
-        }, 150);
-    };
     
     return (
         <>
@@ -24,7 +17,6 @@ const QuickOrderPage = () => {
                 formRef={formRef} 
                 setIsSubmitting={setIsSubmitting} 
                 isSubmittingState={isSubmitting}
-                onOrderCreated={handleOrderCreated}
             />
         </>
     );
