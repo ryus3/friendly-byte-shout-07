@@ -97,8 +97,10 @@ export const createAlWaseetOrder = async (orderData, token) => {
     }
   }
 
-  // Ensure numeric fields are properly formatted
-  formattedData.price = parseInt(formattedData.price) || 0;
+  // Ensure numeric fields are properly formatted (handle negative prices correctly)
+  formattedData.price = formattedData.price !== undefined && formattedData.price !== null 
+    ? Number(formattedData.price) 
+    : 0;
   formattedData.items_number = parseInt(formattedData.items_number) || 0;
   formattedData.city_id = parseInt(formattedData.city_id) || 0;
   formattedData.region_id = parseInt(formattedData.region_id) || 0;

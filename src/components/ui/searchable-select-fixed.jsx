@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, ChevronDown, Search } from 'lucide-react';
@@ -23,6 +24,7 @@ export const SearchableSelectFixed = ({
   const [isNavigatingWithKeyboard, setIsNavigatingWithKeyboard] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [dropdownDirection, setDropdownDirection] = useState('down');
+  const [buttonRect, setButtonRect] = useState(null);
 
   const filteredOptions = useMemo(() => {
     if (!search) return options;
@@ -40,7 +42,7 @@ export const SearchableSelectFixed = ({
   const displayText = selectedOption?.label || selectedOption?.name || 
     (value && !selectedOption && options.length === 0 ? `القيمة: ${value}` : placeholder);
   
-  // Detect touch device, dialog presence, and calculate dropdown direction
+  // Detect touch device, dialog presence, calculate dropdown direction, and update button position
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
@@ -48,9 +50,11 @@ export const SearchableSelectFixed = ({
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
       setIsInDialog(!!dialogContainer);
       
-      // Calculate available space to determine dropdown direction
+      // Calculate available space to determine dropdown direction and update button rect
       if (open) {
         const rect = buttonRef.current.getBoundingClientRect();
+        setButtonRect(rect);
+        
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
         
@@ -181,18 +185,13 @@ export const SearchableSelectFixed = ({
   const renderDropdownContent = () => (
       <div 
         ref={dropdownRef}
-        className="bg-white dark:bg-slate-900 border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 z-[9999] backdrop-blur-sm"
+        className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
         style={{ 
           direction: 'rtl',
           minWidth: '200px',
           maxWidth: '400px',
           pointerEvents: 'auto',
-          backgroundColor: 'var(--color-background, white)',
-          borderColor: 'hsl(var(--border))',
-          zIndex: 9999,
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          isolation: 'isolate'
+          borderColor: 'hsl(var(--border))'
         }}
       >
       {/* Search Input */}
@@ -325,20 +324,26 @@ export const SearchableSelectFixed = ({
         <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 opacity-50 transition-transform", open && "rotate-180")} />
       </Button>
 
-      {/* Dropdown - Absolute Positioning Only (No Portal) */}
-      {open && (
+      {/* Dropdown - Using Portal for proper z-index */}
+      {open && buttonRect && createPortal(
         <div 
-          className={cn(
-            "absolute z-[9999] w-full",
-            dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
-          )}
+          className="fixed"
           style={{
             direction: 'rtl',
-            zIndex: 9999
+            zIndex: 99999,
+            left: buttonRect.left + 'px',
+            top: dropdownDirection === 'down' 
+              ? (buttonRect.bottom + 4) + 'px' 
+              : 'auto',
+            bottom: dropdownDirection === 'up' 
+              ? (window.innerHeight - buttonRect.top + 4) + 'px' 
+              : 'auto',
+            width: buttonRect.width + 'px'
           }}
         >
           {renderDropdownContent()}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
