@@ -4886,6 +4886,14 @@ export type Database = {
         }
         Returns: Json
       }
+      adjust_profit_for_return_safe: {
+        Args: {
+          p_original_order_id: string
+          p_refund_amount: number
+          p_return_order_id: string
+        }
+        Returns: Json
+      }
       analyze_customer_gender: {
         Args: { customer_id_param: string }
         Returns: string
@@ -5009,6 +5017,10 @@ export type Database = {
       check_monthly_loyalty_discount_eligibility: {
         Args: { p_customer_id: string }
         Returns: Json
+      }
+      check_status_21_before_17: {
+        Args: { p_order_id: string }
+        Returns: boolean
       }
       check_user_permission: {
         Args: { p_permission_name: string; p_user_id: string }
@@ -5723,6 +5735,14 @@ export type Database = {
           p_order_id: string
         }
         Returns: undefined
+      }
+      record_return_cash_movement: {
+        Args: {
+          p_cash_source_id?: string
+          p_refund_amount: number
+          p_return_order_id: string
+        }
+        Returns: Json
       }
       refresh_main_cash_balance: {
         Args: Record<PropertyKey, never>
