@@ -98,93 +98,15 @@ export const useImprovedPurchases = () => {
       // انتظار معالجة جميع المنتجات
       await Promise.all(productProcessingPromises);
 
-      // تم حذف RPC القديم - الآن trigger_create_cash_movement_for_expense يُنشئ الحركات تلقائياً
-      devLog.info(`ℹ️ [${uniqueId}] سيتم إنشاء حركات النقد تلقائياً من خلال trigger expense`);
-
-      // 5. إنشاء سجلات المصاريف (شراء بضاعة = COGS، شحن وتحويل = عامة)
-      const expensePromises = [];
-      let expenseCount = 0;
-      
-      if (itemsTotal > 0) {
-        expenseCount++;
-        expensePromises.push(
-          supabase.from('expenses').insert({
-            category: 'شراء بضاعة',
-            expense_type: 'purchase_goods',
-            amount: itemsTotal,
-            description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number} من ${purchaseData.supplier}`,
-            receipt_number: newPurchase.purchase_number,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              affects_cogs: true,
-              expense_component: 'main_purchase'
-            }
-          })
-        );
-      }
-
-      if (shippingCost > 0) {
-        expenseCount++;
-        expensePromises.push(
-          supabase.from('expenses').insert({
-            category: 'مصاريف عامة',
-            expense_type: 'shipping',
-            amount: shippingCost,
-            description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
-            receipt_number: `${newPurchase.purchase_number}-SHIP`,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              affects_cogs: false,
-              expense_component: 'shipping'
-            }
-          })
-        );
-      }
-
-      if (transferCost > 0) {
-        expenseCount++;
-        expensePromises.push(
-          supabase.from('expenses').insert({
-            category: 'مصاريف عامة',
-            expense_type: 'transfer_fees',
-            amount: transferCost,
-            description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
-            receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              affects_cogs: false,
-              expense_component: 'transfer'
-            }
-          })
-        );
-      }
-
-      if (expensePromises.length > 0) {
-        const expenseResults = await Promise.all(expensePromises);
-        const successCount = expenseResults.filter(r => !r.error).length;
-        devLog.info(`✅ [${uniqueId}] تم إنشاء ${successCount}/${expensePromises.length} مصروف`);
-      }
+      // ✅ النظام الجديد: Trigger سينشئ حركة نقد واحدة تلقائياً
+      // لا حاجة لإنشاء مصاريف منفصلة - كل شيء في حركة واحدة
+      devLog.info(`✅ [${uniqueId}] سيتم إنشاء حركة نقد موحدة بقيمة ${grandTotal.toLocaleString()} د.ع`);
 
       devLog.info(`🎉 [${uniqueId}] تمت إضافة الفاتورة بنجاح - رقم:`, newPurchase.purchase_number);
       
       toast({
         title: "نجح الحفظ",
-        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع مع ${expenseCount} مصروف`,
+        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع (شراء بضاعة)`,
       });
 
       // إعادة جلب البيانات

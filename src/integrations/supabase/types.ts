@@ -5588,6 +5588,10 @@ export type Database = {
         Args: { p_keep?: number }
         Returns: number
       }
+      recalculate_all_cash_movements: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       recompute_cash_source_balances: {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
