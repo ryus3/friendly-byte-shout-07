@@ -36,6 +36,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
+  // ✅ المرحلة 1: Cleanup عند unmount
+  useEffect(() => {
+    return () => {
+      console.log('🧹 QuickOrderContent - تنظيف عند الخروج');
+    };
+  }, []);
+  
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
   
@@ -1695,33 +1702,105 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         }
         
         if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
-          // ربط الطلب بالطلب الأصلي وتعيين الحالة الصحيحة
+          // ✅ المرحلة 3: معالجة كاملة للإرجاع
+          
+          // 1. حساب ربح المنتج
+          const productCost = returnProduct.cost_price || 0;
+          const productPrice = returnProduct.price || 0;
+          const productProfit = (productPrice - productCost) * returnProduct.quantity;
+          
+          console.log('💰 تفاصيل الإرجاع:', {
+            سعر_البيع: productPrice * returnProduct.quantity,
+            التكلفة: productCost * returnProduct.quantity,
+            ربح_المنتج: productProfit,
+            مبلغ_الإرجاع: refundAmount,
+            من_الربح: productProfit,
+            من_الإيراد: refundAmount - productProfit
+          });
+          
+          // 2. ربط الطلب وتعيين الحالة
           await supabase
             .from('orders')
             .update({ 
               related_order_id: originalOrder.id,
               original_order_id: originalOrder.id,
-              status: 'return_pending', // ✅ حالة 21 - بانتظار استلام الراجع
-              delivery_status: '21' // ✅ حالة الوسيط 21
+              status: 'return_pending',
+              delivery_status: '21',
+              notes: `إرجاع من طلب #${originalOrder.order_number}\nربح المنتج: ${productProfit.toLocaleString()} د.ع\nمن الإيراد: ${(refundAmount - productProfit).toLocaleString()} د.ع`
             })
             .eq('id', createdOrderId);
           
-          // معالجة الأرباح والمحاسبة
-          const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return', {
+          // 3. معالجة الأرباح (RPC الجديد v2)
+          const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return_v2', {
             p_original_order_id: originalOrder.id,
             p_refund_amount: refundAmount,
+            p_product_profit: productProfit,
             p_return_order_id: createdOrderId
           });
           
           if (adjustError) {
-            console.error('خطأ في معالجة الإرجاع:', adjustError);
+            console.error('❌ خطأ في معالجة الأرباح:', adjustError);
+          } else {
+            console.log('✅ نتيجة معالجة الأرباح:', adjustResult);
           }
           
-          // Toast مع تعليمات واضحة
+          // 4. تسجيل حركة نقد (سحب من القاصة)
+          const { data: cashSources } = await supabase
+            .from('cash_sources')
+            .select('id, current_balance')
+            .eq('name', 'القاصة الرئيسية')
+            .maybeSingle();
+          
+          if (cashSources) {
+            const newBalance = cashSources.current_balance - refundAmount;
+            
+            const { error: cashError } = await supabase
+              .from('cash_movements')
+              .insert({
+                cash_source_id: cashSources.id,
+                movement_type: 'withdrawal',
+                amount: refundAmount,
+                balance_before: cashSources.current_balance,
+                balance_after: newBalance,
+                description: `إرجاع للزبون - طلب #${result.orderNumber} - بانتظار الاستلام`,
+                reference_type: 'order',
+                reference_id: createdOrderId,
+                created_by: user.id,
+                effective_at: new Date().toISOString()
+              });
+            
+            if (cashError) {
+              console.error('❌ خطأ في تسجيل حركة النقد:', cashError);
+            } else {
+              await supabase
+                .from('cash_sources')
+                .update({ current_balance: newBalance })
+                .eq('id', cashSources.id);
+              
+              console.log('✅ تم تسجيل حركة النقد:', refundAmount);
+            }
+          }
+          
+          // 5. Toast محسّن مع تفاصيل دقيقة
           toast({
             title: "✅ تم إنشاء طلب إرجاع",
-            description: `💰 ادفع ${refundAmount.toLocaleString()} د.ع للزبون عند استلام المنتج`,
-            duration: 5000,
+            description: (
+              <div className="space-y-2 text-sm">
+                <p className="font-bold text-base">💰 ادفع {refundAmount.toLocaleString()} د.ع للزبون عند الاستلام</p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                  <p className="text-xs">📊 تفاصيل المبلغ:</p>
+                  <ul className="text-xs space-y-1 mt-1">
+                    <li>• من الربح: {productProfit.toLocaleString()} د.ع</li>
+                    <li>• من الإيراد: {(refundAmount - productProfit).toLocaleString()} د.ع</li>
+                    {adjustResult?.employee_share > 0 && (
+                      <li>• خصم من ربح الموظف: {adjustResult.employee_share.toLocaleString()} د.ع</li>
+                    )}
+                  </ul>
+                </div>
+                <p className="text-xs text-orange-600">⏳ الحالة: بانتظار استلام الراجع (21)</p>
+              </div>
+            ),
+            duration: 8000,
           });
         }
         

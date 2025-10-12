@@ -80,10 +80,27 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
         throw new Error(`خطأ في تحديث حالة الطلب: ${orderError.message}`);
       }
 
+      // ✅ المرحلة 4: تحديث حالة حركة النقد عند الاستلام
+      if (hasPassed21) {
+        await supabase
+          .from('cash_movements')
+          .update({ 
+            description: `إرجاع للزبون - طلب #${order.tracking_number} - ✅ تم الدفع عند الاستلام`
+          })
+          .eq('reference_id', order.id)
+          .eq('reference_type', 'order')
+          .eq('movement_type', 'withdrawal');
+      }
+
       toast({
         title: hasPassed21 ? "✅ تم استلام الراجع بنجاح" : "⚠️ تم إلغاء الإرجاع",
         description: hasPassed21 
-          ? "تم إرجاع جميع المنتجات إلى المخزون" 
+          ? (
+            <div className="space-y-1 text-sm">
+              <p>• تم إرجاع المنتجات للمخزون</p>
+              <p>• تم تسجيل دفع المبلغ للزبون</p>
+            </div>
+          )
           : "تم تحديث الحالة بدون معالجة المخزون",
         variant: "success"
       });
