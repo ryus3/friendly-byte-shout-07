@@ -5774,7 +5774,7 @@ export type Database = {
       }
       return_items_to_inventory: {
         Args: { p_order_id: string }
-        Returns: undefined
+        Returns: Json
       }
       review_archive_status: {
         Args: Record<PropertyKey, never>
