@@ -4,6 +4,7 @@ import { toast } from '@/hooks/use-toast';
 export const useCart = (isEditMode = false) => {
   const [cart, setCart] = useState([]);
   const isMountedRef = useRef(true);
+  const clearingRef = useRef(false); // ✅ حماية من تعدد الاستدعاءات
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -161,7 +162,20 @@ export const useCart = (isEditMode = false) => {
       console.warn('⚠️ clearCart: تم الاستدعاء بعد unmount - تم التجاهل');
       return;
     }
+    
+    // ✅ منع تعدد الاستدعاءات المتزامنة
+    if (clearingRef.current) {
+      console.warn('⚠️ clearCart: عملية مسح جارية بالفعل - تم التجاهل');
+      return;
+    }
+    
+    clearingRef.current = true;
     setCart([]);
+    
+    // إعادة تعيين flag بعد التنفيذ
+    setTimeout(() => {
+      clearingRef.current = false;
+    }, 100);
   }, []);
 
   return {

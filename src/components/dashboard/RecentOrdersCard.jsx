@@ -57,7 +57,8 @@ const RecentOrdersCard = ({ recentOrders }) => {
   };
 
   const getOrderId = (order) => {
-    return order.order_number || String(order.id || 0).padStart(4, '0');
+    // عرض رقم التتبع إن وجد، وإلا رقم الطلب
+    return order.tracking_number || order.qr_id || order.delivery_partner_order_id || order.order_number || String(order.id || 0).padStart(4, '0');
   };
 
   const getOrderProducts = (order) => {

@@ -715,6 +715,7 @@ export const SuperProvider = ({ children }) => {
             receiptReceived: rowNew.receipt_received
           });
           
+          // ✅ تحديث مع debounce لتجنب re-renders الزائدة
           setAllData(prev => ({
             ...prev,
             orders: (prev.orders || [])

@@ -36,30 +36,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
-  // ✅ المرحلة 2: Cleanup آمن 100% - فقط clearCart مع حماية كاملة
+  // ✅ ref للتحقق من mount status
+  const isMountedRef = useRef(true);
+  
+  // ✅ النهائي: Cleanup آمن بدون setTimeout
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
-      console.log('🧹 QuickOrderContent - تنظيف آمن عند الخروج');
-      
-      // فقط تنظيف السلة عند الخروج من الصفحة (ليس dialog)
-      // clearCart محمي الآن بـ isMountedRef في useCart.jsx
+      isMountedRef.current = false;
+      console.log('🧹 QuickOrderContent - تنظيف نهائي');
+      // إزالة setTimeout - التنفيذ الفوري مع حماية isMountedRef
       if (!isDialog && clearCart) {
-        // استخدام setTimeout لتأخير التنفيذ بعد unmount
-        setTimeout(() => {
-          if (clearCart && typeof clearCart === 'function') {
-            try {
-              console.log('🗑️ تنظيف السلة بشكل آمن');
-              clearCart();
-            } catch (err) {
-              console.warn('⚠️ خطأ تم تجاهله في clearCart:', err);
-            }
-          }
-        }, 50); // تأخير 50ms
+        clearCart(); // محمي بـ isMountedRef داخلياً
       }
-      
-      console.log('✅ اكتمل التنظيف بنجاح');
     };
-  }, [isDialog, clearCart]); // فقط isDialog و clearCart
+  }, [isDialog, clearCart]);
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
@@ -1843,11 +1834,13 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
           variant: 'success',
           duration: 5000
         });
-        // تأخير resetForm لمنع التجمد أثناء العمليات الأخرى
+        // ✅ تأجيل resetForm بشكل آمن مع check للـ mount
         setTimeout(() => {
-          resetForm();
-          if(onOrderCreated) onOrderCreated();
-        }, 100);
+          if (isMountedRef.current) {
+            resetForm();
+            if(onOrderCreated) onOrderCreated();
+          }
+        }, 300); // زيادة ل 300ms
       } else { 
         throw new Error(result.error || "فشل إنشاء الطلب في النظام."); 
       }
@@ -2011,11 +2004,13 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         duration: 4000
       });
 
-      // إعادة تعيين النموذج والإغلاق
+      // ✅ إعادة تعيين النموذج بشكل آمن
       setTimeout(() => {
-        resetForm();
-        if(onOrderCreated) onOrderCreated();
-      }, 100);
+        if (isMountedRef.current) {
+          resetForm();
+          if(onOrderCreated) onOrderCreated();
+        }
+      }, 300); // زيادة ل 300ms
 
     } catch (error) {
       console.error('❌ خطأ في تحديث الطلب:', error);
