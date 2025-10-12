@@ -771,8 +771,10 @@ export const SuperProvider = ({ children }) => {
           (async () => {
             try {
               const full = await superAPI.getOrderById(orderId);
-              const normalized = normalizeOrder(full, prev.users);
+              
+              // ✅ نقل normalizeOrder داخل setAllData لتجنب ReferenceError
               setAllData(prev => {
+                const normalized = normalizeOrder(full, prev.users);
                 const existingOrderIndex = (prev.orders || []).findIndex(o => o.id === orderId);
                 
                 let updatedData;
