@@ -227,9 +227,14 @@ const Layout = ({ children }) => {
     if (sidebarOpen) {
       setSidebarOpen(false);
     }
+    
+    // ✅ إغلاق dialogs عند تغيير المسار
+    setDialogs({ cart: false, quickOrder: false });
+    setAiOrderForEdit(null);
+    
     // Scroll to top عند تغيير الصفحة
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [location]);
+  }, [location.pathname]);
 
   const childrenWithProps = React.Children.map(children, child => {
     if (React.isValidElement(child)) {

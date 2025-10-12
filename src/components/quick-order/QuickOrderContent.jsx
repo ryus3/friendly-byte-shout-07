@@ -36,51 +36,30 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
-  // ✅ المرحلة 1: Cleanup شامل عند unmount لحل مشكلة التجمد
+  // ✅ المرحلة 2: Cleanup آمن 100% - فقط clearCart مع حماية كاملة
   useEffect(() => {
     return () => {
-      console.log('🧹 QuickOrderContent - تنظيف شامل عند الخروج');
+      console.log('🧹 QuickOrderContent - تنظيف آمن عند الخروج');
       
-      // 1. تنظيف السلة عند الخروج من الصفحة (ليس dialog)
+      // فقط تنظيف السلة عند الخروج من الصفحة (ليس dialog)
+      // clearCart محمي الآن بـ isMountedRef في useCart.jsx
       if (!isDialog && clearCart) {
-        console.log('🗑️ تنظيف السلة');
-        clearCart();
+        // استخدام setTimeout لتأخير التنفيذ بعد unmount
+        setTimeout(() => {
+          if (clearCart && typeof clearCart === 'function') {
+            try {
+              console.log('🗑️ تنظيف السلة بشكل آمن');
+              clearCart();
+            } catch (err) {
+              console.warn('⚠️ خطأ تم تجاهله في clearCart:', err);
+            }
+          }
+        }, 50); // تأخير 50ms
       }
       
-      // 2. إعادة تعيين الحالة للقيم الافتراضية (استخدام قيم ثابتة)
-      if (setFormData) {
-        setFormData({
-          name: defaultCustomerName || user?.default_customer_name || '',
-          phone: '',
-          second_phone: '',
-          city_id: '',
-          region_id: '',
-          city: 'بغداد',
-          region: '',
-          address: '',
-          notes: '',
-          details: '',
-          quantity: 1,
-          price: 0,
-          priceType: 'positive',
-          size: 'عادي',
-          type: 'new',
-          promocode: '',
-          defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
-        });
-      }
-      
-      if (setErrors) setErrors({});
-      
-      // 3. تنظيف حالات الاستبدال/الإرجاع
-      if (setOutgoingProduct) setOutgoingProduct(null);
-      if (setIncomingProduct) setIncomingProduct(null);
-      if (setReturnProduct) setReturnProduct(null);
-      if (setRefundAmount) setRefundAmount(0);
-      
-      console.log('✅ تم التنظيف الشامل بنجاح');
+      console.log('✅ اكتمل التنظيف بنجاح');
     };
-  }, [isDialog]); // تقليل dependencies لتجنب مشاكل التهيئة
+  }, [isDialog, clearCart]); // فقط isDialog و clearCart
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());

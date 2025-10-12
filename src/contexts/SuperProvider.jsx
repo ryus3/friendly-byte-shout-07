@@ -717,7 +717,9 @@ export const SuperProvider = ({ children }) => {
           
           setAllData(prev => ({
             ...prev,
-            orders: (prev.orders || []).map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
+            orders: (prev.orders || [])
+              .map(o => o.id === rowNew.id ? { ...o, ...rowNew } : o)
+              .filter(o => o && o.id) // ✅ إزالة أي قيم null/undefined
           }));
         } else if (type === 'DELETE') {
           console.log('🗑️ Real-time: تأكيد حذف طلب فورياً - ID:', rowOld.id);
