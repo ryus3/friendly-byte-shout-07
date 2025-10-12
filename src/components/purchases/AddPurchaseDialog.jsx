@@ -26,6 +26,11 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
     const [mainCashSourceBalance, setMainCashSourceBalance] = useState(0);
+    
+    // حقول دعم الدولار
+    const [currency, setCurrency] = useState('IQD');
+    const [exchangeRate, setExchangeRate] = useState(1);
+    const [showExchangeRate, setShowExchangeRate] = useState(false);
 
     // جلب رصيد القاصة الرئيسية
     useEffect(() => {
@@ -99,6 +104,10 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
             const finalShippingCost = Number(shippingCost) || 0;
             const finalTransferCost = Number(transferCost) || 0;
             
+            // حساب المبالغ بالعملة المختارة
+            const totalInSelectedCurrency = totalCost;
+            const totalInIQD = currency === 'USD' ? totalCost * exchangeRate : totalCost;
+            
             const purchaseData = {
                 supplier,
                 purchaseDate: new Date(purchaseDate),
@@ -111,7 +120,11 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                 shippingCost: finalShippingCost,
                 transferCost: finalTransferCost,
                 cashSourceId: selectedCashSource,
-                status: 'completed'
+                status: 'completed',
+                // دعم الدولار
+                currency: currency,
+                exchangeRate: currency === 'USD' ? exchangeRate : 1.0,
+                totalInUSD: currency === 'USD' ? totalCost : null
             };
             
             console.log('Purchase data with shipping:', purchaseData);
@@ -148,6 +161,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
         setShippingCost('');
         setTransferCost(''); // إعادة تعيين تكاليف التحويل
         setItems([]);
+        setCurrency('IQD');
+        setExchangeRate(1);
+        setShowExchangeRate(false);
     };
 
     const handleOpenChange = (isOpen) => {
@@ -200,6 +216,43 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         </div>
                     </div>
 
+                    {/* اختيار العملة ودعم الدولار */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>العملة</Label>
+                            <Select 
+                                value={currency} 
+                                onValueChange={(val) => {
+                                    setCurrency(val);
+                                    setShowExchangeRate(val === 'USD');
+                                    if (val === 'IQD') setExchangeRate(1);
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="IQD">دينار عراقي (IQD)</SelectItem>
+                                    <SelectItem value="USD">دولار أمريكي ($)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {showExchangeRate && (
+                            <div className="space-y-2">
+                                <Label>سعر الصرف (1$ = ؟ د.ع)</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="1480"
+                                    value={exchangeRate}
+                                    onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                                    min="1"
+                                    step="0.01"
+                                />
+                            </div>
+                        )}
+                    </div>
+
                     {/* مصدر الأموال */}
                     <div className="space-y-2">
                         <Label htmlFor="cashSource" className="flex items-center gap-2">
@@ -237,6 +290,25 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                             <PlusCircle className="w-4 h-4 ml-2" />
                             إضافة منتج
                         </Button>
+                    </div>
+
+                    {/* المبلغ الإجمالي */}
+                    <div className="bg-primary/10 p-4 rounded-lg">
+                        <p className="text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
+                        {currency === 'USD' ? (
+                            <>
+                                <p className="text-2xl font-bold">
+                                    ${(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0)).toLocaleString()}
+                                </p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    = {(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0) * exchangeRate + Number(shippingCost || 0) + Number(transferCost || 0)).toLocaleString()} د.ع
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-2xl font-bold">
+                                {(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0) + Number(shippingCost || 0) + Number(transferCost || 0)).toLocaleString()} د.ع
+                            </p>
+                        )}
                     </div>
 
                     <DialogFooter>

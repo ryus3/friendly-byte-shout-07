@@ -79,7 +79,11 @@ export const useImprovedPurchases = () => {
           cash_source_id: purchaseData.cashSourceId,
           status: 'completed',
           items: purchaseData.items,
-          created_by: user.id
+          created_by: user.id,
+          // دعم الدولار
+          currency: purchaseData.currency || 'IQD',
+          exchange_rate: purchaseData.currency === 'USD' ? purchaseData.exchangeRate : 1.0,
+          currency_amount: purchaseData.currency === 'USD' ? purchaseData.totalInUSD : null,
         })
         .select()
         .single();
