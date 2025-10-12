@@ -27,37 +27,34 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
 
       // ✅ معالجة المخزون فقط إذا مرّ بحالة 21
       if (hasPassed21) {
-        // تحديث المخزون لكل منتج في الطلب
+        // إضافة المنتجات للمخزون باستخدام RPC
         for (const item of orderItems) {
-          // إضافة الكمية المرجعة إلى المخزون
-          const { error: inventoryError } = await supabase
-            .rpc('update_reserved_stock', {
-              p_product_id: item.product_id,
-              p_quantity_change: -item.quantity, // إضافة للمخزون
-              p_sku: item.variant_id
-            });
+          const { error: stockError } = await supabase.rpc('update_variant_stock', {
+            p_variant_id: item.variant_id,
+            p_quantity_change: item.quantity,
+            p_reason: `إرجاع للمخزون - ${order.tracking_number}`
+          });
 
-          if (inventoryError) {
-            console.error('خطأ في تحديث المخزون:', inventoryError);
+          if (stockError) {
+            console.error('خطأ في إضافة المخزون:', stockError);
+          } else {
+            console.log(`✅ تم إرجاع ${item.quantity} قطعة للمخزون`);
           }
+        }
 
-          // تحديث الكمية الفعلية في المخزون
-          const { data: currentInventory } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('product_id', item.product_id)
-            .eq('variant_id', item.variant_id || null)
-            .single();
+        // ✅ معالجة المحاسبة تلقائياً
+        if (order.original_order_id && order.final_amount < 0) {
+          const { error: financialError } = await supabase.rpc('adjust_profit_for_return_v2', {
+            p_original_order_id: order.original_order_id,
+            p_refund_amount: Math.abs(order.final_amount),
+            p_product_profit: 0, // سيحسبه النظام
+            p_return_order_id: order.id
+          });
 
-          if (currentInventory) {
-            await supabase
-              .from('inventory')
-              .update({
-                quantity: currentInventory.quantity + item.quantity,
-                updated_at: new Date().toISOString()
-              })
-              .eq('product_id', item.product_id)
-              .eq('variant_id', item.variant_id || null);
+          if (financialError) {
+            console.error('خطأ في المعالجة المالية:', financialError);
+          } else {
+            console.log('✅ تم تعديل الأرباح تلقائياً');
           }
         }
 

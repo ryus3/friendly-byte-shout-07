@@ -100,12 +100,40 @@ const ReplacementProductSelector = ({ order, open, onOpenChange, onComplete }) =
       const result = await processReplacementInventory(order.id, outgoingItems, incomingItems);
 
       if (result.success) {
+        // ✅ حساب فرق السعر
+        const outgoingTotal = orderItems
+          .filter(item => outgoingItems.includes(item.id))
+          .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const incomingTotal = orderItems
+          .filter(item => incomingItems.includes(item.id))
+          .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const priceDifference = incomingTotal - outgoingTotal;
+        
+        // ✅ معالجة فرق السعر ورسوم التوصيل
+        if (priceDifference !== 0 || order.delivery_fee) {
+          const { handleReplacementFinancials } = await import('@/utils/replacement-financial-handler');
+          
+          const financialResult = await handleReplacementFinancials(
+            order.id,
+            order.original_order_id,
+            priceDifference,
+            order.delivery_fee || 0,
+            order.created_by
+          );
+          
+          if (!financialResult.success) {
+            console.error('خطأ في المعالجة المالية:', financialResult.error);
+          }
+        }
+        
         // تحديث الطلب بعلامة المعالجة
         const { error: updateError } = await supabase
           .from('orders')
           .update({
             replacement_processed_at: new Date().toISOString(),
-            notes: `${order.notes || ''}\n\n🔄 معالجة الاستبدال:\n- منتجات صادرة: ${outgoingItems.length}\n- منتجات واردة: ${incomingItems.length}`
+            notes: `${order.notes || ''}\n\n🔄 معالجة الاستبدال:\n- منتجات صادرة: ${outgoingItems.length}\n- منتجات واردة: ${incomingItems.length}\n- فرق السعر: ${priceDifference.toLocaleString()} د.ع`
           })
           .eq('id', order.id);
 
@@ -113,7 +141,16 @@ const ReplacementProductSelector = ({ order, open, onOpenChange, onComplete }) =
 
         toast({
           title: '✅ تمت المعالجة بنجاح',
-          description: `تم تحديث المخزون: ${result.outgoingProcessed} صادر، ${result.incomingProcessed} وارد`
+          description: (
+            <div className="space-y-1">
+              <p>تم تحديث المخزون: {result.outgoingProcessed} صادر، {result.incomingProcessed} وارد</p>
+              {priceDifference !== 0 && (
+                <p className="text-xs">
+                  {priceDifference > 0 ? '💰 إيراد' : '💸 خصم'}: {Math.abs(priceDifference).toLocaleString()} د.ع
+                </p>
+              )}
+            </div>
+          )
         });
 
         onComplete?.();

@@ -1684,10 +1684,27 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
           const priceDiff = incomingProduct.price - outgoingProduct.price;
           
+          // ✅ 1. ربط بالطلب الأصلي
+          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
+          const linkResult = await linkReturnToOriginalOrder(createdOrderId, customerInfoPayload.phone);
+          
+          // ✅ 2. حجز المنتج الخارج من المخزون
+          const { error: reserveError } = await supabase.rpc('update_variant_stock', {
+            p_variant_id: outgoingProduct.variant_id,
+            p_quantity_change: -outgoingProduct.quantity,
+            p_reason: `حجز استبدال - ${result.trackingNumber || createdOrderId}`
+          });
+          
+          if (reserveError) {
+            console.error('خطأ في حجز المخزون:', reserveError);
+          } else {
+            console.log('✅ تم حجز المنتج الخارج:', outgoingProduct.name);
+          }
+          
           // معالجة المحاسبة الكاملة
           const { error: accountingError } = await supabase.rpc('handle_exchange_price_difference', {
             p_exchange_order_id: createdOrderId,
-            p_original_order_id: originalOrder?.id || null,
+            p_original_order_id: linkResult.originalOrderId || null,
             p_price_difference: priceDiff,
             p_delivery_fee: deliveryFeeAmount,
             p_delivery_partner: activePartner === 'alwaseet' ? 'الوسيط' : 'محلي',
@@ -1705,7 +1722,12 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
           
           toast({
             title: "✅ تم إنشاء طلب استبدال",
-            description: actionMessage,
+            description: (
+              <div className="space-y-1">
+                <p>{actionMessage}</p>
+                {linkResult.success && <p className="text-xs">🔗 تم ربطه بالطلب #{linkResult.originalOrderNumber}</p>}
+              </div>
+            ),
             duration: 5000,
           });
         }
@@ -1713,7 +1735,11 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
           // ✅ المرحلة 3: معالجة كاملة للإرجاع
           
-          // 1. حساب ربح المنتج
+          // ✅ 1. ربط الطلب بالطلب الأصلي
+          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
+          await linkReturnToOriginalOrder(createdOrderId, customerInfoPayload.phone);
+          
+          // 2. حساب ربح المنتج
           const productCost = returnProduct.cost_price || 0;
           const productPrice = returnProduct.price || 0;
           const productProfit = (productPrice - productCost) * returnProduct.quantity;
@@ -1834,13 +1860,14 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
           variant: 'success',
           duration: 5000
         });
-        // ✅ تأجيل resetForm بشكل آمن مع check للـ mount
-        setTimeout(() => {
-          if (isMountedRef.current) {
-            resetForm();
-            if(onOrderCreated) onOrderCreated();
-          }
-        }, 300); // زيادة ل 300ms
+        // ✅ إصلاح التجمد: إعادة تعيين فورية بدون setTimeout
+        if (isMountedRef.current) {
+          resetForm();
+        }
+        // استدعاء onOrderCreated مع delay بسيط للتنقل فقط
+        if (onOrderCreated) {
+          setTimeout(() => onOrderCreated(), 100);
+        }
       } else { 
         throw new Error(result.error || "فشل إنشاء الطلب في النظام."); 
       }
@@ -2004,13 +2031,13 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         duration: 4000
       });
 
-      // ✅ إعادة تعيين النموذج بشكل آمن
-      setTimeout(() => {
-        if (isMountedRef.current) {
-          resetForm();
-          if(onOrderCreated) onOrderCreated();
-        }
-      }, 300); // زيادة ل 300ms
+      // ✅ إصلاح التجمد: إعادة تعيين فورية
+      if (isMountedRef.current) {
+        resetForm();
+      }
+      if (onOrderCreated) {
+        setTimeout(() => onOrderCreated(), 100);
+      }
 
     } catch (error) {
       console.error('❌ خطأ في تحديث الطلب:', error);
