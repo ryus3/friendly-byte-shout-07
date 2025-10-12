@@ -36,12 +36,31 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
-  // ✅ المرحلة 1: Cleanup عند unmount
+  // ✅ المرحلة 1: Cleanup شامل عند unmount لحل مشكلة التجمد
   useEffect(() => {
     return () => {
-      console.log('🧹 QuickOrderContent - تنظيف عند الخروج');
+      console.log('🧹 QuickOrderContent - تنظيف شامل عند الخروج');
+      
+      // 1. تنظيف السلة عند الخروج من الصفحة (ليس dialog)
+      if (cart && cart.length > 0 && !isDialog) {
+        console.log('🗑️ تنظيف السلة:', cart.length, 'منتجات');
+        clearCart();
+      }
+      
+      // 2. إعادة تعيين الحالة للقيم الافتراضية
+      setFormData(initialFormData);
+      setErrors({});
+      setIsResetting(false);
+      
+      // 3. تنظيف حالات الاستبدال/الإرجاع
+      setOutgoingProduct(null);
+      setIncomingProduct(null);
+      setReturnProduct(null);
+      setRefundAmount(0);
+      
+      console.log('✅ تم التنظيف الشامل بنجاح');
     };
-  }, []);
+  }, [cart, clearCart, isDialog, initialFormData]);
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
