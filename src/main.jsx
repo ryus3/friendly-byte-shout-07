@@ -20,8 +20,7 @@ if (import.meta.env.PROD) {
 improvedSystemMonitor.initialize();
 enforceEmployeeCodeSystem();
 
-// تفعيل Real-time عند بدء التطبيق (بدون إعادة تحميل)
-setupRealtime(); // مفعّل لضمان التحديث اللحظي بدون إعادة تحميل
+// Real-time subscriptions يتم إدارتها بالكامل في SuperProvider لتجنب التضارب
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <AppProviders>

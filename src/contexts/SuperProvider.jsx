@@ -160,7 +160,11 @@ export const SuperProvider = ({ children }) => {
   const pendingAiDeletesRef = useRef(new Set());
 
   const normalizeOrder = useCallback((o, usersArray = null) => {
-    if (!o) return o;
+    // ✅ حماية قوية من البيانات الفارغة أو غير الصالحة
+    if (!o || typeof o !== 'object' || !o.id) {
+      console.warn('⚠️ normalizeOrder: بيانات طلب غير صالحة:', o);
+      return null;
+    }
     
     // دعم الطلبات الجديدة بدون order_items
     const items = Array.isArray(o.order_items)

@@ -1,9 +1,16 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 
 export const useCart = (isEditMode = false) => {
   const [cart, setCart] = useState([]);
+  const isMountedRef = useRef(true);
+  
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const addToCart = useCallback((product, variant, quantity, showToast = true, skipStockCheck = false) => {
     // التحقق من صحة البيانات المدخلة أولاً
@@ -150,6 +157,10 @@ export const useCart = (isEditMode = false) => {
   }, [isEditMode]);
 
   const clearCart = useCallback(() => {
+    if (!isMountedRef.current) {
+      console.warn('⚠️ clearCart: تم الاستدعاء بعد unmount - تم التجاهل');
+      return;
+    }
     setCart([]);
   }, []);
 
