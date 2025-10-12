@@ -98,34 +98,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [formData, setFormData] = useState(initialFormData);
   
   const originalOrder = aiOrderData?.originalOrder || null;
-
-  // Local storage for default customer name and delivery partner
-  const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
-  const [defaultDeliveryPartner, setDefaultDeliveryPartner] = useLocalStorage('defaultDeliveryPartner', activePartner || '');
-
-  const initialFormData = useMemo(() => ({
-    name: defaultCustomerName || user?.default_customer_name || '', 
-    phone: '', 
-    second_phone: '', 
-    city_id: '', 
-    region_id: '', 
-    city: 'بغداد',
-    region: '', 
-    address: '', 
-    notes: '', 
-    details: '', 
-    quantity: 1, 
-    price: 0, 
-    priceType: 'positive',
-    size: 'عادي',
-    type: 'new', 
-    promocode: '',
-    defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
-  }), [defaultCustomerName, user?.default_customer_name]);
-  const [formData, setFormData] = useState(initialFormData);
-  
-  const [errors, setErrors] = useState({});
-  }, [aiOrderData?.editMode, formData.type]);
   
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
