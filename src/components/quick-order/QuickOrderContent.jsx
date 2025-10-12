@@ -65,6 +65,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   
+  // ✅ متغيرات لتتبع المعرفات المحددة للمدن والمناطق - يجب أن تكون هنا قبل الاستخدام
+  const [selectedCityId, setSelectedCityId] = useState('');
+  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [selectedPackageSize, setSelectedPackageSize] = useState('عادي');
+  
   // حالات الاستبدال والإرجاع
   const [outgoingProduct, setOutgoingProduct] = useState(null);
   const [incomingProduct, setIncomingProduct] = useState(null);
@@ -573,11 +578,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
-  
-  // متغيرات لتتبع المعرفات المحددة للمدن والمناطق والحزم
-  const [selectedCityId, setSelectedCityId] = useState('');
-  const [selectedRegionId, setSelectedRegionId] = useState('');
-  const [selectedPackageSize, setSelectedPackageSize] = useState('عادي');
   
   // حالات إضافية لإصلاح المشاكل
   const [isResetting, setIsResetting] = useState(false);
