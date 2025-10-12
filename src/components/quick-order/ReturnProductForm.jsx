@@ -102,7 +102,7 @@ export const ReturnProductForm = ({
             </div>
             <div className="space-y-1 text-sm">
               <p>
-                <strong>رقم التتبع:</strong> {originalOrder.tracking_number || originalOrder.order_number || 'غير متوفر'}
+                <strong>رقم الطلب:</strong> #{originalOrder.order_number}
               </p>
               <p>
                 <strong>التاريخ:</strong>{' '}
