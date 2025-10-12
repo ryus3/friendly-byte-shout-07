@@ -1241,6 +1241,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // وضع الإنشاء العادي
         await handleCreateOrder();
       }
+      
+      // ✅ انتظار إضافي قصير للتأكد من اكتمال جميع العمليات
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
     } catch (error) {
       console.error('❌ QuickOrderContent - خطأ في معالجة الطلب:', error);
       toast({
@@ -1673,6 +1677,33 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;
+        
+        // ✅ انتظار اكتمال التزامن الكامل قبل السماح بالتنقل
+        console.log('⏳ انتظار اكتمال التزامن الكامل للطلب:', createdOrderId);
+        const syncComplete = await new Promise((resolve) => {
+          const syncHandler = (event) => {
+            if (event.detail.orderId === createdOrderId) {
+              console.log('✅ تم اكتمال التزامن الكامل للطلب:', event.detail);
+              window.removeEventListener('orderFullySynced', syncHandler);
+              resolve(true);
+            }
+          };
+          
+          window.addEventListener('orderFullySynced', syncHandler);
+          
+          // Fallback timeout بعد 3 ثواني للسماح بالمتابعة
+          setTimeout(() => {
+            console.log('⚠️ انتهت مهلة الانتظار - السماح بالمتابعة');
+            window.removeEventListener('orderFullySynced', syncHandler);
+            resolve(false);
+          }, 3000);
+        });
+        
+        if (syncComplete) {
+          console.log('✅ التزامن الكامل اكتمل بنجاح');
+        } else {
+          console.log('⚠️ تم المتابعة بدون انتظار التزامن الكامل');
+        }
         
         // معالجة ما بعد إنشاء الطلب للاستبدال/الإرجاع
         if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
@@ -2160,33 +2191,45 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
         </fieldset>
 
         {!isDialog && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="space-y-3">
               <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitDisabled}>
                 {isSubmittingState && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 تأكيد وإنشاء الطلب
               </Button>
+              {isSubmittingState && (
+                <p className="text-xs text-center text-muted-foreground animate-pulse">
+                  جاري معالجة الطلب وتحديث البيانات...
+                </p>
+              )}
           </motion.div>
         )}
         
         {isDialog && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Button
-                type="submit"
-                disabled={isSubmittingState || cart.length === 0 || !isDeliveryPartnerSelected}
-                className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
-              >
-                {isSubmittingState ? (
-                  <>
-                    <Loader2 className="ml-2 h-5 w-5 animate-spin" />
-                    {isEditMode ? 'جاري الحفظ...' : 'جاري الإرسال...'}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="ml-2 h-5 w-5" />
-                    {isEditMode ? 'حفظ التعديلات' : 'إرسال الطلب'}
-                  </>
+              <div className="space-y-3">
+                <Button
+                  type="submit"
+                  disabled={isSubmittingState || cart.length === 0 || !isDeliveryPartnerSelected}
+                  className="w-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]"
+                >
+                  {isSubmittingState ? (
+                    <>
+                      <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      {isEditMode ? 'جاري الحفظ...' : 'جاري الإرسال...'}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="ml-2 h-5 w-5" />
+                      {isEditMode ? 'حفظ التعديلات' : 'إرسال الطلب'}
+                    </>
+                  )}
+                </Button>
+                {isSubmittingState && (
+                  <p className="text-xs text-center text-muted-foreground animate-pulse">
+                    جاري معالجة الطلب وتحديث البيانات...
+                  </p>
                 )}
-              </Button>
+              </div>
           </motion.div>
         )}
       </PageWrapper>

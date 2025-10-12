@@ -1182,9 +1182,26 @@ export const SuperProvider = ({ children }) => {
               )
             }));
             console.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
+            
+            // إرسال حدث مخصص لإعلام الواجهة بانتهاء التزامن الكامل
+            window.dispatchEvent(new CustomEvent('orderFullySynced', {
+              detail: { 
+                orderId: createdOrder.id, 
+                orderNumber: normalized.order_number,
+                success: true 
+              }
+            }));
           }
         } catch (error) {
           console.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
+          // إرسال الحدث حتى في حالة الفشل للسماح بالمتابعة
+          window.dispatchEvent(new CustomEvent('orderFullySynced', {
+            detail: { 
+              orderId: createdOrder.id, 
+              success: false,
+              error: error.message
+            }
+          }));
         }
       }, 1500); // تأخير أطول لمنع التداخل مع العمليات الأخرى
 
