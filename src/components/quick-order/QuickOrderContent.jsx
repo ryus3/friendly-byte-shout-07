@@ -1500,6 +1500,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const calculatedDeliveryFee = settings?.deliveryFee || 5000;
         finalTotal = priceDiff + calculatedDeliveryFee;
         
+        // ملاحظات مبسطة للوسيط
+        const merchantNotes = `استبدال: ${outgoingProduct.productName} (${outgoingProduct.color}) ${outgoingProduct.size} x${outgoingProduct.quantity || 1} ← استلام: ${incomingProduct.productName} (${incomingProduct.color}) ${incomingProduct.size} x${incomingProduct.quantity || 1}`;
+        
+        // ملاحظات تفصيلية للنظام الداخلي
         orderNotes = `🔄 استبدال
 ━━━━━━━━━━━━━━━
 📤 منتج صادر: ${outgoingProduct.productName} (${outgoingProduct.color}, ${outgoingProduct.size})
@@ -1539,7 +1543,28 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
       notes: orderNotes, // ✅ الملاحظات التفصيلية
       payment_status: 'pending',
       delivery_status: 'pending',
-      status: 'pending'
+      status: 'pending',
+      // ✅ حفظ بيانات الاستبدال في exchange_metadata
+      exchange_metadata: formData.type === 'exchange' && outgoingProduct ? {
+        outgoing_items: [{
+          variant_id: outgoingProduct.variantId,
+          product_id: outgoingProduct.id,
+          quantity: outgoingProduct.quantity || 1,
+          product_name: outgoingProduct.productName,
+          color: outgoingProduct.color,
+          size: outgoingProduct.size,
+          price: outgoingProduct.price
+        }],
+        incoming_items: incomingProduct ? [{
+          variant_id: incomingProduct.variantId,
+          product_id: incomingProduct.id,
+          quantity: incomingProduct.quantity || 1,
+          product_name: incomingProduct.productName,
+          color: incomingProduct.color,
+          size: incomingProduct.size,
+          price: incomingProduct.price
+        }] : []
+      } : null
     };
 
     // إذا كان هذا تعديل على طلب ذكي، قم بالموافقة عليه وإنشاء طلب عادي
@@ -1603,8 +1628,8 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
               // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلبات العادية)
               price: Math.round(finalTotal),
               package_size: formData.size,
-              // ✅ استخدام orderNotes المحسوبة (تحتوي على تفاصيل الإرجاع)
-              merchant_notes: orderNotes,
+              // ✅ استخدام merchantNotes المبسطة للوسيط في حالة الاستبدال
+              merchant_notes: formData.type === 'exchange' ? merchantNotes : orderNotes,
               // ✅ تمييز الإرجاع والاستبدال
               replacement: (formData.type === 'return' || formData.type === 'exchange') ? 1 : 0
            };

@@ -2642,6 +2642,7 @@ export type Database = {
           delivery_status: string
           discount: number
           discount_reason: string | null
+          exchange_metadata: Json | null
           final_amount: number
           id: string
           invoice_received_at: string | null
@@ -2692,6 +2693,7 @@ export type Database = {
           delivery_status?: string
           discount?: number
           discount_reason?: string | null
+          exchange_metadata?: Json | null
           final_amount?: number
           id?: string
           invoice_received_at?: string | null
@@ -2742,6 +2744,7 @@ export type Database = {
           delivery_status?: string
           discount?: number
           discount_reason?: string | null
+          exchange_metadata?: Json | null
           final_amount?: number
           id?: string
           invoice_received_at?: string | null
@@ -5823,18 +5826,11 @@ export type Database = {
         Returns: boolean
       }
       should_release_stock_for_order: {
-        Args:
-          | {
-              p_delivery_partner?: string
-              p_delivery_status?: string
-              p_order_id?: string
-              p_status: string
-            }
-          | {
-              p_delivery_partner?: string
-              p_delivery_status?: string
-              p_status: string
-            }
+        Args: {
+          p_delivery_partner?: string
+          p_delivery_status?: string
+          p_status: string
+        }
         Returns: boolean
       }
       should_send_stock_notification: {

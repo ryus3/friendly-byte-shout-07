@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Package, PackageCheck } from 'lucide-react';
@@ -15,12 +17,14 @@ export const ExchangeProductsForm = ({
   deliveryFee = 5000
 }) => {
   const [productSelectOpen, setProductSelectOpen] = useState(false);
+  const [manualPriceDiff, setManualPriceDiff] = useState(0);
   
   const priceDiff = incomingProduct && outgoingProduct 
     ? incomingProduct.price - outgoingProduct.price 
     : 0;
   
-  const totalAmount = priceDiff + deliveryFee;
+  const totalPriceDiff = priceDiff + manualPriceDiff;
+  const totalAmount = totalPriceDiff + deliveryFee;
 
   return (
     <div className="space-y-4 mt-6">
@@ -111,15 +115,41 @@ export const ExchangeProductsForm = ({
       {/* ملخص الحسابات */}
       {outgoingProduct && incomingProduct && (
         <Card className="border-purple-300 bg-purple-50 dark:bg-purple-900/20">
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-4">
             <h4 className="font-semibold mb-3">ملخص الحسابات</h4>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>فرق السعر:</span>
+                <span>فرق السعر التلقائي:</span>
                 <span className={`font-semibold ${priceDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {priceDiff >= 0 ? '+' : ''}{priceDiff.toLocaleString()} د.ع
                 </span>
               </div>
+              
+              {/* حقل فرق السعر اليدوي */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="manualPriceDiff" className="text-xs">فرق سعر إضافي (اختياري)</Label>
+                <Input
+                  id="manualPriceDiff"
+                  type="number"
+                  value={manualPriceDiff}
+                  onChange={(e) => setManualPriceDiff(Number(e.target.value) || 0)}
+                  placeholder="0"
+                  className="h-8"
+                />
+                <p className="text-xs text-muted-foreground">
+                  يُضاف للفرق التلقائي
+                </p>
+              </div>
+              
+              {manualPriceDiff !== 0 && (
+                <div className="flex justify-between text-blue-600">
+                  <span>فرق السعر الإجمالي:</span>
+                  <span className="font-semibold">
+                    {totalPriceDiff >= 0 ? '+' : ''}{totalPriceDiff.toLocaleString()} د.ع
+                  </span>
+                </div>
+              )}
+              
               <div className="flex justify-between">
                 <span>رسوم التوصيل:</span>
                 <span className="font-semibold">{deliveryFee.toLocaleString()} د.ع</span>

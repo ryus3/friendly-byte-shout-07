@@ -96,8 +96,9 @@ const ReplacementProductSelector = ({ order, open, onOpenChange, onComplete }) =
 
     setProcessing(true);
     try {
-      // معالجة المخزون
-      const result = await processReplacementInventory(order.id, outgoingItems, incomingItems);
+      // ✅ معالجة المخزون - نرسل [] للمنتجات الخارجة لأنها خُصمت في حالة 21
+      // فقط المنتجات الواردة تُضاف للمخزون في حالة 17
+      const result = await processReplacementInventory(order.id, [], incomingItems);
 
       if (result.success) {
         // ✅ حساب فرق السعر
