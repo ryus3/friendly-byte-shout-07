@@ -167,13 +167,11 @@ const mapToAlWaseetFields = (orderData) => {
     location: cleanedLocation,
     type_name: orderData.details || orderData.type_name || 'طلب عادي',
     items_number: parseInt(orderData.quantity || orderData.items_number || 1),
-    // ✅ إرسال final_amount السالب كامل للإرجاع (-21000)
-    price: isReturn ? merchantPrice : (merchantPrice >= 0 ? merchantPrice : 0),
+    // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلب العادي)
+    price: merchantPrice,
     package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
-    // ✅ ملاحظات مختصرة بالإنجليزية للإرجاع
-    merchant_notes: isReturn 
-      ? `RETURN - Product: ${orderData.type_name || 'Product'} | Pay Customer: ${Math.round(Number(refundAmount))} IQD | Delivery: ${Math.round(Number(deliveryFee))} IQD`
-      : (orderData.merchant_notes || orderData.notes || ''),
+    // ✅ استخدام الملاحظات المُمررة مباشرة من QuickOrderContent
+    merchant_notes: orderData.merchant_notes || orderData.notes || '',
     // ✅ تمييز الإرجاع والاستبدال
     replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
   }
