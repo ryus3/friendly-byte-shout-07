@@ -311,15 +311,18 @@ export const useCashSources = () => {
       )
       .subscribe();
 
-    // Real-time subscription للمشتريات
+  // Real-time subscription للمشتريات - تحديث فوري للواجهة
     const purchasesSubscription = supabase
       .channel('purchases_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'purchases' },
-        () => {
-          console.log('🔄 Purchases changed, refreshing cash sources...');
-          fetchCashSources();
-          fetchCashMovements();
+        async () => {
+          console.log('🔄 Purchases changed, refreshing cash sources immediately...');
+          // تحديث فوري للبيانات بدون تأخير
+          await Promise.all([
+            fetchCashSources(),
+            fetchCashMovements()
+          ]);
         }
       )
       .subscribe();
