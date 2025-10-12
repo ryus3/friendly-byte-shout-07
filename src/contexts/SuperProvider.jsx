@@ -1036,13 +1036,18 @@ export const SuperProvider = ({ children }) => {
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,
-        total_amount: subtotal,
+        // ✅ للإرجاع: total_amount = refund_amount فقط (بدون delivery_fee)
+        total_amount: orderType === 'return' 
+          ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
+          : subtotal,
         discount,
         delivery_fee: deliveryFee,
-        // ✅ للإرجاع: استخدام final_amount من deliveryPartnerDataArg (قد يكون سالباً)
-        final_amount: deliveryPartnerDataArg?.final_amount !== undefined 
-          ? deliveryPartnerDataArg.final_amount 
-          : total,
+        // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
+        final_amount: (orderType === 'return' || orderType === 'exchange') && deliveryPartnerDataArg?.final_amount !== undefined
+          ? deliveryPartnerDataArg.final_amount  // ← قد يكون سالباً للإرجاع
+          : (deliveryPartnerDataArg?.final_amount !== undefined 
+              ? deliveryPartnerDataArg.final_amount 
+              : total),
         status: 'pending',
         delivery_status: 'pending',
         payment_status: 'pending',

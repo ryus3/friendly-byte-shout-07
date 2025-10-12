@@ -179,18 +179,22 @@ export const SearchableSelectFixed = ({
 
   // Render dropdown content
   const renderDropdownContent = () => (
-    <div 
-      ref={dropdownRef}
-      className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 z-[100]"
-      style={{ 
-        direction: 'rtl',
-        minWidth: '200px',
-        maxWidth: '400px',
-        pointerEvents: 'auto',
-        backgroundColor: 'hsl(var(--background))',
-        borderColor: 'hsl(var(--border))'
-      }}
-    >
+      <div 
+        ref={dropdownRef}
+        className="bg-white dark:bg-slate-900 border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 z-[9999] backdrop-blur-sm"
+        style={{ 
+          direction: 'rtl',
+          minWidth: '200px',
+          maxWidth: '400px',
+          pointerEvents: 'auto',
+          backgroundColor: 'var(--color-background, white)',
+          borderColor: 'hsl(var(--border))',
+          zIndex: 9999,
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          isolation: 'isolate'
+        }}
+      >
       {/* Search Input */}
       <div className="p-1 border-b border-border">
         <div className="relative">
@@ -325,11 +329,12 @@ export const SearchableSelectFixed = ({
       {open && (
         <div 
           className={cn(
-            "absolute z-[100] w-full",
+            "absolute z-[9999] w-full",
             dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
           )}
           style={{
-            direction: 'rtl'
+            direction: 'rtl',
+            zIndex: 9999
           }}
         >
           {renderDropdownContent()}

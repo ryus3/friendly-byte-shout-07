@@ -148,6 +148,48 @@ export const ReturnProductForm = ({
           )}
         </CardContent>
       </Card>
+
+      {/* ملخص مالي تفصيلي */}
+      {returnProduct && refundAmount > 0 && (
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/10">
+          <CardContent className="p-4">
+            <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
+              <span>💰</span>
+              <span>الحسابات المالية</span>
+            </h3>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>مبلغ الإرجاع:</span>
+                <span className="font-bold">{refundAmount.toLocaleString()} د.ع</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span>رسوم التوصيل:</span>
+                <span>5,000 د.ع</span>
+              </div>
+              
+              <div className="border-t border-blue-200 dark:border-blue-700 my-2"></div>
+              
+              <div className="flex justify-between text-base font-bold text-red-600 dark:text-red-400">
+                <span>المبلغ الكلي (سالب):</span>
+                <span>-{(refundAmount + 5000).toLocaleString()} د.ع</span>
+              </div>
+            </div>
+
+            <Alert className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700">
+              <AlertDescription className="text-xs space-y-1">
+                <p className="font-bold">⚠️ ملاحظات مهمة:</p>
+                <ul className="space-y-1 mr-4">
+                  <li>• المندوب سيدفع {refundAmount.toLocaleString()} د.ع للزبون عند استلام المنتج</li>
+                  <li>• سيتم خصم {(refundAmount + 5000).toLocaleString()} د.ع من فاتورة الوسيط</li>
+                  <li>• عند حالة "17": سيتم تسجيل حركة نقد تلقائياً</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
