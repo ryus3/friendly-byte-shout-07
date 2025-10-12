@@ -544,6 +544,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // مراقبة تغييرات المدينة والمنطقة لمسح الأخطاء
   useEffect(() => {
+    // منع التنفيذ أثناء عملية المسح
+    if (isResetting) return;
+    
     setErrors(prev => {
       const newErrors = { ...prev };
       if (formData.city && activePartner === 'local') {
@@ -560,7 +563,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
       return newErrors;
     });
-  }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner]);
+  }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner, isResetting]);
   
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
