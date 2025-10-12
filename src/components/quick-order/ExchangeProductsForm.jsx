@@ -14,10 +14,18 @@ export const ExchangeProductsForm = ({
   onSelectIncoming,
   outgoingProduct,
   incomingProduct,
-  deliveryFee = 5000
+  deliveryFee = 5000,
+  onManualPriceDiffChange
 }) => {
   const [productSelectOpen, setProductSelectOpen] = useState(false);
   const [manualPriceDiff, setManualPriceDiff] = useState(0);
+  
+  const handleManualPriceDiffChange = (value) => {
+    setManualPriceDiff(value);
+    if (onManualPriceDiffChange) {
+      onManualPriceDiffChange(value);
+    }
+  };
   
   const priceDiff = incomingProduct && outgoingProduct 
     ? incomingProduct.price - outgoingProduct.price 
@@ -132,7 +140,7 @@ export const ExchangeProductsForm = ({
                   id="manualPriceDiff"
                   type="number"
                   value={manualPriceDiff}
-                  onChange={(e) => setManualPriceDiff(Number(e.target.value) || 0)}
+                  onChange={(e) => handleManualPriceDiffChange(Number(e.target.value) || 0)}
                   placeholder="0"
                   className="h-8"
                 />

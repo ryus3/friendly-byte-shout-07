@@ -70,6 +70,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [incomingProduct, setIncomingProduct] = useState(null);
   const [returnProduct, setReturnProduct] = useState(null);
   const [refundAmount, setRefundAmount] = useState(0);
+  const [manualExchangePriceDiff, setManualExchangePriceDiff] = useState(0);
   
   // Local storage for default customer name and delivery partner
   const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
@@ -1494,29 +1495,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         orderItems = [];
       }
       
+      // ✅ تعريف merchantNotes خارج الشرط لتجنب الخطأ
+      let merchantNotes = orderNotes;
+      
       // ✅ معالجة الاستبدال
       if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
-        const priceDiff = incomingProduct.price - outgoingProduct.price;
+        const autoPriceDiff = incomingProduct.price - outgoingProduct.price;
+        const priceDiff = autoPriceDiff + manualExchangePriceDiff;
         const calculatedDeliveryFee = settings?.deliveryFee || 5000;
         finalTotal = priceDiff + calculatedDeliveryFee;
         
-        // ملاحظات مبسطة للوسيط
-        const merchantNotes = `استبدال: ${outgoingProduct.productName} (${outgoingProduct.color}) ${outgoingProduct.size} x${outgoingProduct.quantity || 1} ← استلام: ${incomingProduct.productName} (${incomingProduct.color}) ${incomingProduct.size} x${incomingProduct.quantity || 1}`;
+        // ملاحظات مبسطة للوسيط (بدون رموز)
+        merchantNotes = `استبدال منتج ${outgoingProduct.productName} قياس ${outgoingProduct.size} عدد ${outgoingProduct.quantity || 1} واستلام من الزبون ${incomingProduct.productName} قياس ${incomingProduct.size} عدد ${incomingProduct.quantity || 1}`;
         
-        // ملاحظات تفصيلية للنظام الداخلي
-        orderNotes = `🔄 استبدال
+        // ملاحظات تفصيلية للنظام الداخلي (بدون رموز)
+        orderNotes = `استبدال
 ━━━━━━━━━━━━━━━
-📤 منتج صادر: ${outgoingProduct.productName} (${outgoingProduct.color}, ${outgoingProduct.size})
+منتج صادر: ${outgoingProduct.productName} (${outgoingProduct.color}, ${outgoingProduct.size})
    السعر: ${outgoingProduct.price.toLocaleString()} د.ع
 
-📥 منتج وارد: ${incomingProduct.productName} (${incomingProduct.color}, ${incomingProduct.size})
+منتج وارد: ${incomingProduct.productName} (${incomingProduct.color}, ${incomingProduct.size})
    السعر: ${incomingProduct.price.toLocaleString()} د.ع
 
-💰 فرق السعر: ${priceDiff >= 0 ? '+' : ''}${priceDiff.toLocaleString()} د.ع
-🚚 رسوم التوصيل (${activePartner === 'alwaseet' ? 'الوسيط' : 'محلي'}): ${calculatedDeliveryFee.toLocaleString()} د.ع
+فرق السعر التلقائي: ${autoPriceDiff >= 0 ? '+' : ''}${autoPriceDiff.toLocaleString()} د.ع${manualExchangePriceDiff !== 0 ? '\nفرق السعر اليدوي: ' + (manualExchangePriceDiff >= 0 ? '+' : '') + manualExchangePriceDiff.toLocaleString() + ' د.ع' : ''}
+فرق السعر الإجمالي: ${priceDiff >= 0 ? '+' : ''}${priceDiff.toLocaleString()} د.ع
+رسوم التوصيل: ${calculatedDeliveryFee.toLocaleString()} د.ع
 ━━━━━━━━━━━━━━━
-✅ المبلغ الإجمالي: ${finalTotal.toLocaleString()} د.ع
-${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toLocaleString() + ' د.ع' : '💵 يُجمع من الزبون: ' + finalTotal.toLocaleString() + ' د.ع'}`;
+المبلغ الإجمالي: ${finalTotal.toLocaleString()} د.ع`;
       }
     
     const orderData = {
@@ -2287,6 +2292,7 @@ ${finalTotal < 0 ? '⚠️ يُدفع للزبون: ' + Math.abs(finalTotal).toL
               outgoingProduct={outgoingProduct}
               incomingProduct={incomingProduct}
               deliveryFee={settings?.deliveryFee || 5000}
+              onManualPriceDiffChange={setManualExchangePriceDiff}
             />
           )}
           
