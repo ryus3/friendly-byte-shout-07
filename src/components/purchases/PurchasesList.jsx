@@ -36,7 +36,7 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
             <TableHead>عدد الأصناف</TableHead>
             <TableHead>تكلفة الشحن</TableHead>
             <TableHead>تكلفة التحويل</TableHead>
-            <TableHead>الإجمالي</TableHead>
+            <TableHead>العملة / الإجمالي</TableHead>
             <TableHead>إجراءات</TableHead>
           </TableRow>
         </TableHeader>
@@ -51,7 +51,16 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
               </TableCell>
               <TableCell className="text-orange-600 font-medium">{(purchase.shipping_cost || 0).toLocaleString()} د.ع</TableCell>
               <TableCell className="text-purple-600 font-medium">{(purchase.transfer_cost || 0).toLocaleString()} د.ع</TableCell>
-              <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
+              <TableCell>
+                {purchase.currency === 'USD' ? (
+                  <div className="text-sm">
+                    <p className="font-bold text-primary">${purchase.currency_amount?.toLocaleString() || '0'}</p>
+                    <p className="text-xs text-muted-foreground">× {purchase.exchange_rate} = {(purchase.total_amount || 0).toLocaleString()} د.ع</p>
+                  </div>
+                ) : (
+                  <p className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</p>
+                )}
+              </TableCell>
                <TableCell>
                  <div className="flex gap-1">
                    <Button variant="ghost" size="sm" onClick={() => onViewDetails(purchase)} className="text-blue-600 hover:text-blue-700">
