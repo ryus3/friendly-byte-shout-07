@@ -1962,41 +1962,49 @@ export const AlWaseetProvider = ({ children }) => {
       // السعر من الوسيط = المبلغ الكلي شامل التوصيل
       if (waseetOrder.price !== undefined) {
         const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
-        const currentTotalAmount = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+        
+        // ✅ استخدام final_amount كمرجع للسعر الأصلي
+        const originalTotalAmount = parseInt(String(localOrder.final_amount)) || parseInt(String(localOrder.total_amount)) || 0;
+        const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
         const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
         
         // السماح بالأسعار صفر أو سالبة (الشرط: فقط إذا تغير السعر)
         if (waseetTotalPrice !== currentTotalAmount) {
-          const priceDifference = waseetTotalPrice - currentTotalAmount;
-          const percentageChange = currentTotalAmount > 0 ? Math.abs((priceDifference / currentTotalAmount) * 100) : 100;
+          // ✅ حساب الفرق بناءً على السعر الأصلي
+          const priceDifference = waseetTotalPrice - originalTotalAmount;
+          const discountAmount = priceDifference < 0 ? Math.abs(priceDifference) : 0;
+          const additionalProfit = priceDifference > 0 ? priceDifference : 0;
+          
+          const percentageChange = originalTotalAmount > 0 ? Math.abs((priceDifference / originalTotalAmount) * 100) : 100;
           
           // ✅ **حماية**: تحذير إذا كان التغيير كبير (أكثر من 50%)
           if (percentageChange > 50) {
             console.warn(`⚠️ تغيير كبير في سعر الطلب ${localOrder.order_number}:`);
-            console.warn(`   - المبلغ الكلي الحالي: ${currentTotalAmount.toLocaleString()} د.ع`);
-            console.warn(`   - المبلغ الكلي الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            console.warn(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
+            console.warn(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
             console.warn(`   - التغيير: ${percentageChange.toFixed(1)}%`);
             console.warn(`   - تأكد أن هذا ليس خطأ أو بيانات cached قديمة!`);
           }
           
-          // تحديد نوع التغيير
-          const changeType = priceDifference < 0 ? 'خصم' : priceDifference > 0 ? 'ربح إضافي' : 'تعديل';
-          
-          console.log(`💰 ${changeType} في سعر الطلب ${localOrder.order_number || qrId}:`);
-          console.log(`   - المبلغ الكلي الحالي (شامل التوصيل): ${currentTotalAmount.toLocaleString()} د.ع`);
-          console.log(`   - المبلغ الكلي الجديد (شامل التوصيل): ${waseetTotalPrice.toLocaleString()} د.ع`);
+          console.log(`💰 تغيير السعر للطلب ${localOrder.order_number || qrId}:`);
+          console.log(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
+          console.log(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
           console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          console.log(`   - الفرق: ${priceDifference.toLocaleString()} د.ع (${changeType})`);
+          if (discountAmount > 0) {
+            console.log(`   - 🔻 خصم: ${discountAmount.toLocaleString()} د.ع`);
+          } else if (additionalProfit > 0) {
+            console.log(`   - 🔺 زيادة: ${additionalProfit.toLocaleString()} د.ع`);
+          }
           
-          // ✅ الحساب الصحيح: السعر من الوسيط = المبلغ الكلي شامل التوصيل
-          updates.final_amount = waseetTotalPrice;
+          // ✅ الحساب الصحيح: final_amount يبقى كما هو (السعر الأصلي)
+          // total_amount يُحدّث للسعر الجديد
           updates.total_amount = waseetTotalPrice;
           
-          // ✅ sales_amount = المبلغ الكلي - رسوم التوصيل
+          // ✅ sales_amount = المبلغ الكلي من الوسيط - رسوم التوصيل
           const newSalesAmount = waseetTotalPrice - deliveryFee;
           updates.sales_amount = newSalesAmount;
           
-          console.log(`   - سعر المنتج الجديد (بدون توصيل): ${newSalesAmount.toLocaleString()} د.ع`);
+          console.log(`   - سعر البيع الجديد (بدون توصيل): ${newSalesAmount.toLocaleString()} د.ع`);
           
           // ✅ تحديث الأرباح
           try {
