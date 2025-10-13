@@ -246,15 +246,31 @@ export const AlWaseetProvider = ({ children }) => {
       return { success: true, updatedCount: 0 };
     }
 
-    devLog.log(`🚀 بدء مزامنة ${visibleOrders.length} طلب مرئي بكفاءة...`);
+    // ✅ فلترة مزدوجة - استبعاد الطلبات المكتملة والمرجعة
+    const syncableOrders = visibleOrders.filter(order => {
+      if (!order.created_by || order.delivery_partner !== 'alwaseet') return false;
+      
+      // استبعاد حالة delivery_status = 4 (تم التسليم للزبون)
+      if (order.delivery_status === '4') return false;
+      
+      // استبعاد حالة delivery_status = 17 (تم الإرجاع للتاجر)
+      if (order.delivery_status === '17') return false;
+      
+      return true;
+    });
+
+    if (syncableOrders.length === 0) {
+      devLog.log('لا توجد طلبات نشطة للمزامنة (تم استبعاد المكتملة والمرجعة)');
+      return { success: true, updatedCount: 0 };
+    }
+
+    devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
     
     try {
       // تجميع الطلبات حسب منشئها (created_by)
       const ordersByEmployee = new Map();
       
-      for (const order of visibleOrders) {
-        if (!order.created_by || order.delivery_partner !== 'alwaseet') continue;
-        
+      for (const order of syncableOrders) {
         if (!ordersByEmployee.has(order.created_by)) {
           ordersByEmployee.set(order.created_by, []);
         }
