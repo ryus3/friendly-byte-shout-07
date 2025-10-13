@@ -1893,12 +1893,23 @@ export const AlWaseetProvider = ({ children }) => {
             console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
           }
           
+          // ✅ **حماية**: لا تحدّث إذا لم يوجد الطلب في شركة التوصيل
           if (!waseetOrder) {
             return null;
           }
         } else {
           console.log(`✅ وُجد الطلب ${qrId} في أحد الحسابات الأخرى`);
         }
+      }
+
+      // ✅ **حماية إضافية**: التحقق من صحة البيانات المُسترجعة
+      if (!waseetOrder || !waseetOrder.qr_id) {
+        console.error(`❌ البيانات المُسترجعة للطلب ${qrId} غير صالحة:`, waseetOrder);
+        return {
+          needs_update: false,
+          invalid_data: true,
+          message: 'البيانات المُسترجعة من شركة التوصيل غير صالحة أو قديمة'
+        };
       }
 
       console.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
@@ -1954,6 +1965,16 @@ export const AlWaseetProvider = ({ children }) => {
         
         if (waseetPrice !== currentPrice && waseetPrice > 0) {
           const priceDifference = waseetPrice - currentPrice;
+          const percentageChange = currentPrice > 0 ? Math.abs((priceDifference / currentPrice) * 100) : 100;
+          
+          // ✅ **حماية**: تحذير إذا كان التغيير كبير (أكثر من 50%)
+          if (percentageChange > 50) {
+            console.warn(`⚠️ تغيير كبير في سعر الطلب ${localOrder.order_number}:`);
+            console.warn(`   - السعر الحالي: ${currentPrice.toLocaleString()} د.ع`);
+            console.warn(`   - السعر الجديد: ${waseetPrice.toLocaleString()} د.ع`);
+            console.warn(`   - التغيير: ${percentageChange.toFixed(1)}%`);
+            console.warn(`   - تأكد أن هذا ليس خطأ أو بيانات cached قديمة!`);
+          }
           
           console.log(`💰 تغيير سعر الطلب ${localOrder.order_number || qrId}:`);
           console.log(`   - السعر الحالي: ${currentPrice.toLocaleString()} د.ع`);
