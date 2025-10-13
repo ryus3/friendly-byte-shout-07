@@ -5183,7 +5183,7 @@ export type Database = {
         Args:
           | { p_product_id: string; p_quantity: number; p_variant_id: string }
           | { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+        Returns: boolean
       }
       find_city_in_cache: {
         Args: { p_city_text: string }
