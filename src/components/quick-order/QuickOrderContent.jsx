@@ -39,18 +39,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ✅ ref للتحقق من mount status
   const isMountedRef = useRef(true);
   
-  // ✅ النهائي: Cleanup آمن بدون setTimeout
+  // ✅ النهائي: Cleanup آمن بدون clearCart
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
       console.log('🧹 QuickOrderContent - تنظيف نهائي');
-      // إزالة setTimeout - التنفيذ الفوري مع حماية isMountedRef
-      if (!isDialog && clearCart) {
-        clearCart(); // محمي بـ isMountedRef داخلياً
-      }
     };
-  }, [isDialog, clearCart]);
+  }, [isDialog]);
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
@@ -668,26 +664,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     // تفعيل حالة المسح
     setIsResetting(true);
     
-    // إنشاء نموذج فارغ تماماً بدلاً من استخدام initialFormData
-    const emptyFormData = {
-      name: '', 
-      phone: '', 
-      second_phone: '', 
-      city_id: null, 
-      region_id: null,
-      city: '', 
-      region: '', 
-      address: '', 
-      notes: '', 
-      details: '', 
-      quantity: 1, 
-      price: 0, 
-      size: 'عادي', 
-      type: 'new', 
-      promocode: '',
-      defaultCustomerName: ''
-    };
-    
     console.log('🔄 مسح النموذج - بدء العملية');
     
     // مسح البيانات بشكل فوري ومنظم
@@ -702,17 +678,40 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setSelectedRegionId('');
     setPreservedRegionId('');
     
-    // مسح النموذج فوراً بدون setTimeout لتجنب التجمد
-    setFormData(emptyFormData);
+    // استعادة الإعدادات الافتراضية فوراً
+    const defaultName = defaultCustomerName || user?.default_customer_name || '';
+    const defaultCity = cities.length > 0 ? (cities.find(c => c.name?.toLowerCase().includes('بغداد')) || cities[0]) : null;
+    
+    setFormData({
+      name: defaultName,
+      phone: '', 
+      second_phone: '', 
+      city_id: defaultCity ? String(defaultCity.id) : '', 
+      region_id: '',
+      city: defaultCity?.name || 'بغداد', 
+      region: '', 
+      address: '', 
+      notes: '', 
+      details: '', 
+      quantity: 1, 
+      price: 0, 
+      size: 'عادي', 
+      type: 'new', 
+      promocode: '',
+      defaultCustomerName: defaultName
+    });
+    
+    if (defaultCity) {
+      setSelectedCityId(String(defaultCity.id));
+    }
+    
     setNameTouched(false);
     
-    // إنهاء حالة المسح بعد فترة قصيرة
-    setTimeout(() => {
-      setIsResetting(false);
-    }, 200);
+    // إنهاء حالة المسح فوراً
+    setIsResetting(false);
     
     console.log('✅ مسح النموذج - تم بنجاح');
-  }, [clearCart, activePartner]);
+  }, [clearCart, defaultCustomerName, user?.default_customer_name, cities]);
 
   // إصلاح جذري: إعادة تعيين المدينة الافتراضية بعد resetForm
   useEffect(() => {
@@ -1890,13 +1889,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           variant: 'success',
           duration: 5000
         });
-        // ✅ إصلاح التجمد: إعادة تعيين فورية بدون setTimeout
+        // ✅ إصلاح التجمد: إعادة تعيين فورية
         if (isMountedRef.current) {
           resetForm();
-        }
-        // استدعاء onOrderCreated مع delay بسيط للتنقل فقط
-        if (onOrderCreated) {
-          setTimeout(() => onOrderCreated(), 100);
+          // استدعاء onOrderCreated فوراً
+          if (onOrderCreated) {
+            onOrderCreated();
+          }
         }
       } else { 
         throw new Error(result.error || "فشل إنشاء الطلب في النظام."); 

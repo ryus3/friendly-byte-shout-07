@@ -1,11 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 
 const QuickOrderPage = () => {
     const formRef = useRef(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const handleOrderCreated = useCallback(() => {
+        console.log('✅ تم إنشاء الطلب بنجاح - الصفحة جاهزة لطلب جديد');
+    }, []);
     
     return (
         <>
@@ -17,6 +20,7 @@ const QuickOrderPage = () => {
                 formRef={formRef} 
                 setIsSubmitting={setIsSubmitting} 
                 isSubmittingState={isSubmitting}
+                onOrderCreated={handleOrderCreated}
             />
         </>
     );
