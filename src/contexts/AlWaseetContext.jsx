@@ -1448,13 +1448,19 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log(`   - الفرق: ${priceDifference.toLocaleString()} د.ع`);
           devLog.log(`   - الحالة: ${waseetStatusText}`);
           
-          // تحديث السعر
-          updates.final_amount = waseetPrice;
+          // ✅ المنطق الصحيح:
+          // - waseetOrder.price = السعر الكلي شامل التوصيل من شركة التوصيل
+          // - total_amount = السعر الكلي الحالي (يتغير عند تغيير السعر)
+          // - final_amount = السعر الأصلي عند الإنشاء (ثابت - لا يتغير أبداً)
+          // - sales_amount = total_amount - delivery_fee (سعر البيع بدون توصيل)
+          
+          // تحديث السعر الكلي فقط (final_amount يبقى كما هو)
           updates.total_amount = waseetPrice;
           
-          // حساب sales_amount
+          // حساب sales_amount الصحيح (السعر الكلي - رسوم التوصيل)
           const deliveryFee = parseInt(String(waseetOrder.delivery_price)) || parseInt(String(localOrder.delivery_fee)) || 0;
-          updates.sales_amount = waseetPrice - deliveryFee;
+          const salesAmount = waseetPrice - deliveryFee;
+          updates.sales_amount = salesAmount;
           
           // ✅ تحديث الأرباح
           try {
@@ -1465,8 +1471,8 @@ export const AlWaseetProvider = ({ children }) => {
               .maybeSingle();
             
             if (profitRecord) {
-              // حساب الربح الجديد
-              const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
+              // ✅ الربح = سعر البيع (بدون توصيل) - التكلفة
+              const newProfit = salesAmount - profitRecord.total_cost;
               const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
               // تحديث سجل الربح
