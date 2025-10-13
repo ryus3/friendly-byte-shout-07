@@ -1931,6 +1931,61 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
+      // ✅ تحديث السعر دائماً إذا تغير من الوسيط
+      if (waseetOrder.price) {
+        const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
+        const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+        
+        if (waseetPrice !== currentPrice && waseetPrice > 0) {
+          const priceDifference = waseetPrice - currentPrice;
+          
+          console.log(`💰 تغيير سعر الطلب ${localOrder.order_number || qrId}:`);
+          console.log(`   - السعر الحالي: ${currentPrice.toLocaleString()} د.ع`);
+          console.log(`   - السعر الجديد: ${waseetPrice.toLocaleString()} د.ع`);
+          console.log(`   - الفرق: ${priceDifference.toLocaleString()} د.ع`);
+          
+          updates.final_amount = waseetPrice;
+          updates.total_amount = waseetPrice;
+          
+          // حساب sales_amount (السعر - رسوم التوصيل)
+          const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
+          updates.sales_amount = waseetPrice - deliveryFee;
+          
+          // ✅ تحديث الأرباح
+          try {
+            const { data: profitRecord } = await supabase
+              .from('profits')
+              .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
+              .eq('order_id', localOrder.id)
+              .maybeSingle();
+            
+            if (profitRecord) {
+              const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
+              const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
+              
+              await supabase
+                .from('profits')
+                .update({
+                  total_revenue: waseetPrice,
+                  profit_amount: newProfit,
+                  employee_profit: employeeShare,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', profitRecord.id);
+              
+              console.log(`✅ تحديث الأرباح:`);
+              console.log(`   - الربح القديم: ${profitRecord.profit_amount.toLocaleString()} د.ع`);
+              console.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
+              console.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
+            } else {
+              console.warn(`⚠️ لا يوجد سجل ربح للطلب ${localOrder.order_number || qrId}`);
+            }
+          } catch (profitError) {
+            console.error('❌ خطأ في تحديث الأرباح:', profitError);
+          }
+        }
+      }
+
       // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
       // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
       if (waseetOrder.deliver_confirmed_fin === 1 && correctLocalStatus === 'delivered') {
