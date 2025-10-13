@@ -1,8 +1,16 @@
 // Telegram Bot Edge Function - REPLACEMENT & RETURN SUPPORT 2025-10-09
-const BOT_VERSION = "v2025-10-09-REPLACEMENT-RETURN";
+const BOT_VERSION = "v2025-10-09-REPLACEMENT-RETURN-SECURED";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
 import { detectOrderType, parseReplacementOrder, parseReturnOrder } from './replacement-parser.ts';
+import { 
+  validateCustomerName, 
+  validatePhoneNumber, 
+  validateAddress, 
+  validateOrderItems,
+  sanitizeText,
+  checkRateLimit 
+} from './validation.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -1036,6 +1044,18 @@ serve(async (req) => {
 
   try {
     // ==========================================
+    // Security: Request Size Validation
+    // ==========================================
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 100000) {
+      console.error('❌ Request too large:', contentLength);
+      return new Response(JSON.stringify({ error: 'Request too large' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // ==========================================
     // Instance Warming: تحميل Cache عند أول request
     // ==========================================
     await warmupCache();
@@ -1050,6 +1070,17 @@ serve(async (req) => {
     }
 
     const update = await req.json();
+    
+    // ==========================================
+    // Security: Input Validation
+    // ==========================================
+    if (!update || typeof update !== 'object') {
+      console.error('❌ Invalid update format');
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
     console.log('📨 تحديث تليغرام:', JSON.stringify(update, null, 2));
 
     // Handle different types of updates
@@ -1057,9 +1088,36 @@ serve(async (req) => {
       const { message } = update;
       const chatId = message.chat.id;
       const userId = message.from?.id;
-      const text = message.text?.trim() || '';
+      let text = message.text?.trim() || '';
 
-      console.log(`💬 رسالة جديدة من ${userId}: "${text}"`);
+      // ==========================================
+      // Security: Rate Limiting
+      // ==========================================
+      if (!checkRateLimit(chatId, 30, 60000)) {
+        console.warn(`⚠️ Rate limit exceeded for chat ${chatId}`);
+        await sendTelegramMessage(chatId, '⚠️ عدد كبير من الرسائل. يرجى الانتظار قليلاً.', undefined, botToken);
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==========================================
+      // Security: Sanitize and Validate Input
+      // ==========================================
+      if (text.length > 5000) {
+        console.warn(`⚠️ Message too long from ${userId}: ${text.length} characters`);
+        await sendTelegramMessage(chatId, '⚠️ الرسالة طويلة جداً. الحد الأقصى 5000 حرف.', undefined, botToken);
+        return new Response(JSON.stringify({ error: 'Message too long' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Sanitize text to remove dangerous characters
+      text = sanitizeText(text);
+
+      console.log(`💬 رسالة جديدة من ${userId}: "${text.substring(0, 100)}"`);
 
       // Handle /start command
       if (text === '/start') {
