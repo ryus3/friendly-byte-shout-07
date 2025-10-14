@@ -1518,8 +1518,8 @@ export const AlWaseetProvider = ({ children }) => {
             updates.delivery_fee = dp;
             
             // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-            if (updates.final_amount) {
-              updates.sales_amount = updates.final_amount - dp;
+            if (updates.total_amount) {
+              updates.sales_amount = updates.total_amount - dp;
             }
           }
         }
