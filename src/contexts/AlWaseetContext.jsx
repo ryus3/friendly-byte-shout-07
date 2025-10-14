@@ -1437,7 +1437,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ تحديث السعر دائماً إذا تغير (ليس فقط الحالة 18)
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
 
         if (waseetPrice !== currentPrice && waseetPrice > 0) {
           const priceDifference = waseetPrice - currentPrice;
