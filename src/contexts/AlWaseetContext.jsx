@@ -1465,15 +1465,15 @@ export const AlWaseetProvider = ({ children }) => {
           const salesAmount = waseetPrice - deliveryFee;
           updates.sales_amount = salesAmount;
 
-          // ✅ حساب الخصم الفعلي
+          // ✅ حساب الخصم الفعلي (يسمح بالقيم السالبة للزيادات)
           const originalAmount = localOrder.final_amount || 0;
           const actualDiscount = originalAmount - waseetPrice;
-          updates.discount = actualDiscount >= 0 ? actualDiscount : 0;
+          updates.discount = actualDiscount; // ✅ السماح بالقيم السالبة
           
           devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}:`);
           devLog.log(`   - إجمالي (شامل): ${waseetPrice.toLocaleString()} د.ع`);
           devLog.log(`   - المبيعات (بدون توصيل): ${salesAmount.toLocaleString()} د.ع`);
-          devLog.log(`   - الخصم: ${(actualDiscount >= 0 ? actualDiscount : 0).toLocaleString()} د.ع`);
+          devLog.log(`   - ${actualDiscount >= 0 ? 'خصم' : 'زيادة'}: ${Math.abs(actualDiscount).toLocaleString()} د.ع`);
           
           // ✅ تحديث الأرباح
           try {
