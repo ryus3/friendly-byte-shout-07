@@ -1978,52 +1978,52 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // ✅ تحديث السعر دائماً إذا تغير من الوسيط
-      // السعر من الوسيط = المبلغ الكلي شامل التوصيل
       if (waseetOrder.price !== undefined) {
         const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
-        
-        // ✅ استخدام final_amount كمرجع للسعر الأصلي
-        const originalTotalAmount = parseInt(String(localOrder.final_amount)) || parseInt(String(localOrder.total_amount)) || 0;
-        const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
         const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
         
-        // السماح بالأسعار صفر أو سالبة (الشرط: فقط إذا تغير السعر)
-        if (waseetTotalPrice !== currentTotalAmount) {
-          // ✅ حساب الفرق بناءً على السعر الأصلي
-          const priceDifference = waseetTotalPrice - originalTotalAmount;
-          const discountAmount = priceDifference < 0 ? Math.abs(priceDifference) : 0;
-          const additionalProfit = priceDifference > 0 ? priceDifference : 0;
+        // ✅ فصل السعر: منتجات = الشامل - التوصيل
+        const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
+        
+        // ✅ السعر الأصلي للمنتجات (من final_amount)
+        const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+        const originalProductsPrice = originalFinalAmount - deliveryFee;
+        
+        // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
+        const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+        
+        if (productsPriceFromWaseet !== currentProductsPrice) {
+          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
+          const priceDiff = originalProductsPrice - productsPriceFromWaseet;
           
-          const percentageChange = originalTotalAmount > 0 ? Math.abs((priceDifference / originalTotalAmount) * 100) : 100;
-          
-          // ✅ **حماية**: تحذير إذا كان التغيير كبير (أكثر من 50%)
-          if (percentageChange > 50) {
-            console.warn(`⚠️ تغيير كبير في سعر الطلب ${localOrder.order_number}:`);
-            console.warn(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
-            console.warn(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
-            console.warn(`   - التغيير: ${percentageChange.toFixed(1)}%`);
-            console.warn(`   - تأكد أن هذا ليس خطأ أو بيانات cached قديمة!`);
+          if (priceDiff > 0) {
+            // خصم
+            updates.discount = priceDiff;
+            updates.price_increase = 0;
+            updates.price_change_type = 'discount';
+            console.log(`   - 🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
+          } else if (priceDiff < 0) {
+            // زيادة
+            updates.discount = 0;
+            updates.price_increase = Math.abs(priceDiff);
+            updates.price_change_type = 'increase';
+            console.log(`   - 🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+          } else {
+            updates.discount = 0;
+            updates.price_increase = 0;
+            updates.price_change_type = null;
           }
           
-          console.log(`💰 تغيير السعر للطلب ${localOrder.order_number || qrId}:`);
-          console.log(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
-          console.log(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
+          console.log(`💰 تحديث السعر للطلب ${localOrder.order_number || qrId}:`);
+          console.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+          console.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
           console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          if (discountAmount > 0) {
-            console.log(`   - 🔻 خصم: ${discountAmount.toLocaleString()} د.ع`);
-          } else if (additionalProfit > 0) {
-            console.log(`   - 🔺 زيادة: ${additionalProfit.toLocaleString()} د.ع`);
-          }
+          console.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
           
-          // ✅ الحساب الصحيح: final_amount يبقى كما هو (السعر الأصلي)
-          // total_amount يُحدّث للسعر الجديد
-          updates.total_amount = waseetTotalPrice;
-          
-          // ✅ sales_amount = المبلغ الكلي من الوسيط - رسوم التوصيل
-          const newSalesAmount = waseetTotalPrice - deliveryFee;
-          updates.sales_amount = newSalesAmount;
-          
-          console.log(`   - سعر البيع الجديد (بدون توصيل): ${newSalesAmount.toLocaleString()} د.ع`);
+          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
+          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          updates.delivery_fee = deliveryFee;
           
           // ✅ تحديث الأرباح
           try {
@@ -2034,8 +2034,7 @@ export const AlWaseetProvider = ({ children }) => {
               .maybeSingle();
             
             if (profitRecord) {
-              // الربح = سعر المنتج (بدون توصيل) - التكلفة
-              const newProfit = newSalesAmount - profitRecord.total_cost;
+              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
               const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
               await supabase
@@ -2048,16 +2047,9 @@ export const AlWaseetProvider = ({ children }) => {
                 })
                 .eq('id', profitRecord.id);
               
-              const profitChange = newProfit - profitRecord.profit_amount;
-              const profitChangeType = profitChange < 0 ? 'انخفاض' : profitChange > 0 ? 'زيادة' : 'ثابت';
-              
               console.log(`✅ تحديث الأرباح:`);
-              console.log(`   - الربح القديم: ${profitRecord.profit_amount.toLocaleString()} د.ع`);
               console.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
-              console.log(`   - ${profitChangeType}: ${Math.abs(profitChange).toLocaleString()} د.ع`);
-              console.log(`   - حصة الموظف الجديدة: ${employeeShare.toLocaleString()} د.ع`);
-            } else {
-              console.warn(`⚠️ لا يوجد سجل ربح للطلب ${localOrder.order_number || qrId}`);
+              console.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
             }
           } catch (profitError) {
             console.error('❌ خطأ في تحديث الأرباح:', profitError);
