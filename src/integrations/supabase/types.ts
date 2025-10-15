@@ -2655,6 +2655,8 @@ export type Database = {
           original_order_id: string | null
           payment_received_source_id: string | null
           payment_status: string
+          price_change_type: string | null
+          price_increase: number | null
           qr_id: string | null
           receipt_received: boolean | null
           receipt_received_at: string | null
@@ -2706,6 +2708,8 @@ export type Database = {
           original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
+          price_change_type?: string | null
+          price_increase?: number | null
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
@@ -2757,6 +2761,8 @@ export type Database = {
           original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
+          price_change_type?: string | null
+          price_increase?: number | null
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null

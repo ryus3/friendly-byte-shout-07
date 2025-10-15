@@ -66,18 +66,44 @@ export const syncSpecificOrder = async (qrId, token) => {
 
     // ✅ تحديث السعر إذا تغير من الوسيط
     if (waseetOrder.price) {
-      const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
-      const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+      const waseetPrice = parseInt(String(waseetOrder.price)) || 0; // السعر الشامل من الوسيط
+      const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
       
-      if (waseetPrice !== currentPrice && waseetPrice > 0) {
-        const priceDifference = waseetPrice - currentPrice;
+      // ✅ فصل السعر: منتجات = الشامل - التوصيل
+      const productsPriceFromWaseet = waseetPrice - deliveryFee;
+      
+      // ✅ السعر الأصلي للمنتجات (من final_amount - رسوم التوصيل)
+      const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+      const originalProductsPrice = originalFinalAmount - deliveryFee;
+      
+      // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
+      const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+      
+      if (productsPriceFromWaseet !== currentProductsPrice && waseetPrice > 0) {
+        // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+        updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات الحالي
+        updates.sales_amount = productsPriceFromWaseet;  // = total_amount (بدون توصيل)
+        updates.delivery_fee = deliveryFee;
         
-        updates.final_amount = waseetPrice;
-        updates.total_amount = waseetPrice;
+        // ✅ حساب الخصم/الزيادة
+        const priceDiff = originalProductsPrice - productsPriceFromWaseet;
         
-        // حساب sales_amount (السعر - رسوم التوصيل)
-        const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
-        updates.sales_amount = waseetPrice - deliveryFee;
+        if (priceDiff > 0) {
+          // خصم
+          updates.discount = priceDiff;
+          updates.price_increase = 0;
+          updates.price_change_type = 'discount';
+        } else if (priceDiff < 0) {
+          // زيادة
+          updates.discount = 0;
+          updates.price_increase = Math.abs(priceDiff);
+          updates.price_change_type = 'increase';
+        } else {
+          // لا تغيير
+          updates.discount = 0;
+          updates.price_increase = 0;
+          updates.price_change_type = null;
+        }
         
         // ✅ تحديث الأرباح
         try {
@@ -88,7 +114,7 @@ export const syncSpecificOrder = async (qrId, token) => {
             .maybeSingle();
           
           if (profitRecord) {
-            const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
+            const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
             const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
             
             await supabase
