@@ -194,7 +194,35 @@ export const syncOrder98713588 = async () => {
   }
 };
 
+export const syncOrder107647475 = async () => {
+  try {
+    const token = "7ed481be5a53bf1c12a77fbb9384b9b6";
+    const result = await syncSpecificOrder("107647475", token);
+    
+    if (result && result.success) {
+      const updates = result.updates;
+      const msg = `✅ تمت مزامنة الطلب 107647475 بنجاح!
+      
+السعر الأصلي: ${result.local_order.final_amount} د.ع
+السعر الحالي: ${updates.total_amount} د.ع
+${updates.discount > 0 ? `الخصم: ${updates.discount} د.ع` : ''}
+${updates.price_increase > 0 ? `الزيادة: ${updates.price_increase} د.ع` : ''}
+رسوم التوصيل: ${updates.delivery_fee} د.ع
+المجموع النهائي: ${updates.total_amount + updates.delivery_fee} د.ع`;
+      
+      alert(msg);
+      window.location.reload();
+    } else {
+      alert('لم تكن هناك حاجة للمزامنة أو حدث خطأ');
+    }
+  } catch (error) {
+    console.error('❌ خطأ في مزامنة الطلب 107647475:', error);
+    alert(`خطأ في المزامنة: ${error.message}`);
+  }
+};
+
 // تجعل الدالة متاحة في النافذة للاستخدام السريع
 if (typeof window !== 'undefined') {
   window.syncOrder98713588 = syncOrder98713588;
+  window.syncOrder107647475 = syncOrder107647475;
 }
