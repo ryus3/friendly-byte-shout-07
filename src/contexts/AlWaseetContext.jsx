@@ -1456,7 +1456,6 @@ export const AlWaseetProvider = ({ children }) => {
           const originalProductsPrice = currentTotalAmount + currentDiscount - currentIncrease;
           
           // تصحيح final_amount إذا تم استبداله خطأً بسعر الوسيط
-          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
           if (!localOrder.final_amount || localOrder.final_amount === waseetTotalPrice) {
             const reconstructedOriginalPrice = originalProductsPrice + deliveryFee;
             updates.final_amount = reconstructedOriginalPrice;
