@@ -67,17 +67,32 @@ export const syncSpecificOrder = async (qrId, token) => {
     // ✅ تحديث السعر إذا تغير من الوسيط
     if (waseetOrder.price) {
       const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
-      const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+      const originalAmount = parseInt(String(localOrder.final_amount)) || 0;
+      const currentPrice = parseInt(String(localOrder.total_amount)) || 0;
       
       if (waseetPrice !== currentPrice && waseetPrice > 0) {
-        const priceDifference = waseetPrice - currentPrice;
-        
-        updates.final_amount = waseetPrice;
+        // ✅ فقط تحديث total_amount (السعر الحالي)
+        // ⚠️ لا نغير final_amount (السعر الأصلي)
         updates.total_amount = waseetPrice;
         
-        // حساب sales_amount (السعر - رسوم التوصيل)
+        // حساب sales_amount (السعر الحالي - رسوم التوصيل)
         const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
         updates.sales_amount = waseetPrice - deliveryFee;
+        
+        // حساب الخصم الفعلي (السعر الأصلي - السعر الحالي)
+        // القيم الموجبة = خصم، القيم السالبة = زيادة
+        const actualDiscount = originalAmount - waseetPrice;
+        updates.discount = actualDiscount;
+        
+        console.log('🔧 syncSpecificOrder - تحديثات السعر:', {
+          tracking_number: qrId,
+          waseetPrice,
+          originalAmount,
+          total_amount: updates.total_amount,
+          sales_amount: updates.sales_amount,
+          discount: updates.discount,
+          delivery_fee: deliveryFee
+        });
         
         // ✅ تحديث الأرباح
         try {
@@ -113,9 +128,9 @@ export const syncSpecificOrder = async (qrId, token) => {
       if (deliveryPrice >= 0) {
         updates.delivery_fee = deliveryPrice;
         
-        // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-        if (updates.final_amount) {
-          updates.sales_amount = updates.final_amount - deliveryPrice;
+        // ✅ إعادة حساب sales_amount بناءً على total_amount الحالي
+        if (updates.total_amount !== undefined) {
+          updates.sales_amount = updates.total_amount - deliveryPrice;
         }
       }
     }
