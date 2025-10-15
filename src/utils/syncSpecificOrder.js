@@ -67,13 +67,18 @@ export const syncSpecificOrder = async (qrId, token) => {
     // ✅ تحديث السعر إذا تغير من الوسيط
     if (waseetOrder.price) {
       const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
-      const originalAmount = parseInt(String(localOrder.final_amount)) || 0;
       const currentPrice = parseInt(String(localOrder.total_amount)) || 0;
       
       if (waseetPrice !== currentPrice && waseetPrice > 0) {
         // ✅ فقط تحديث total_amount (السعر الحالي)
-        // ⚠️ لا نغير final_amount (السعر الأصلي)
+        // 🔒 CRITICAL: لا نغير final_amount أبداً - إنه السعر الأصلي الثابت
         updates.total_amount = waseetPrice;
+        
+        // التحقق من وجود final_amount صحيح
+        const originalAmount = parseInt(String(localOrder.final_amount)) || 0;
+        if (originalAmount === 0 || originalAmount < waseetPrice) {
+          console.warn(`⚠️ final_amount غير صحيح للطلب ${qrId}: ${originalAmount}. يجب إصلاحه يدوياً`);
+        }
         
         // حساب sales_amount (السعر الحالي - رسوم التوصيل)
         const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
