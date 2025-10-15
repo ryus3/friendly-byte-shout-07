@@ -1464,6 +1464,16 @@ export const AlWaseetProvider = ({ children }) => {
           const deliveryFee = parseInt(String(waseetOrder.delivery_price)) || parseInt(String(localOrder.delivery_fee)) || 0;
           const salesAmount = waseetPrice - deliveryFee;
           updates.sales_amount = salesAmount;
+
+          // ✅ حساب الخصم الفعلي
+          const originalAmount = localOrder.final_amount || 0;
+          const actualDiscount = originalAmount - waseetPrice;
+          updates.discount = actualDiscount >= 0 ? actualDiscount : 0;
+          
+          devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}:`);
+          devLog.log(`   - إجمالي (شامل): ${waseetPrice.toLocaleString()} د.ع`);
+          devLog.log(`   - المبيعات (بدون توصيل): ${salesAmount.toLocaleString()} د.ع`);
+          devLog.log(`   - الخصم: ${(actualDiscount >= 0 ? actualDiscount : 0).toLocaleString()} د.ع`);
           
           // ✅ تحديث الأرباح
           try {
