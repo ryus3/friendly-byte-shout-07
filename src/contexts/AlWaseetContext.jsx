@@ -1922,7 +1922,8 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // ✅ **حماية إضافية**: التحقق من صحة البيانات المُسترجعة
-      if (!waseetOrder || !waseetOrder.qr_id) {
+      // ✅ قبول id أو qr_id من AlWaseet API
+      if (!waseetOrder || (!waseetOrder.qr_id && !waseetOrder.id)) {
         console.error(`❌ البيانات المُسترجعة للطلب ${qrId} غير صالحة:`, waseetOrder);
         return {
           needs_update: false,
