@@ -1717,8 +1717,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         })),
         trackingNumber,
         discount,
-        appliedCoupon?.id || null,
-        finalTotal,
+        'pending',
+        qrLink,
         fullOrderPayload
       );
 
