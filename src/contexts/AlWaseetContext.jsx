@@ -440,23 +440,16 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // ✅ حماية زمنية محسّنة: 5 دقائق بدلاً من دقيقة واحدة
+    // حماية زمنية: عمر الطلب أكبر من دقيقة واحدة
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 5 * 60 * 1000; // 5 دقائق بالميلي ثانية
+    const minAge = 1 * 60 * 1000; // دقيقة واحدة بالميلي ثانية
     if (orderAge < minAge) {
       devLog.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
       return false;
     }
     
-    // ✅ الحل الجذري: لا تحذف الطلبات بدون delivery_partner_order_id
-    // هذا يعني أن الطلب لم يُرسل للوسيط بعد
-    if (!order.delivery_partner_order_id) {
-      devLog.log('❌ canAutoDeleteOrder: فشل - الطلب لم يُرسل للوسيط بعد (لا يوجد delivery_partner_order_id)');
-      return false;
-    }
-    
     // يجب وجود معرف تتبع
-    if (!order.tracking_number && !order.qr_id) {
+    if (!order.tracking_number && !order.qr_id && !order.delivery_partner_order_id) {
       devLog.log('❌ canAutoDeleteOrder: فشل - لا يوجد معرف تتبع');
       return false;
     }

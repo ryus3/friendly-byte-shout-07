@@ -1686,42 +1686,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      // إنشاء الطلب في قاعدة البيانات المحلية
-      const fullOrderPayload = {
-        customer_name: customerInfoPayload.name,
-        customer_phone: customerInfoPayload.phone,
-        customer_address: customerInfoPayload.address,
-        customer_city: customerInfoPayload.city,
-        customer_province: customerInfoPayload.province,
-        notes: orderNotes,
-        ...deliveryData,
-        delivery_partner_order_id: trackingNumber,
-        qr_link: qrLink,
-        order_type: actualOrderType,
-        refund_amount: actualRefundAmount,
-        original_order_id: originalOrder?.id || null
-      };
-      
+      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
       const result = await createOrder(
-        customerInfoPayload,
-        formData.type === 'return' ? [] : cart.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
-          variant_id: item.variant_id,
-          name: item.name,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          price: item.unit_price || item.price,
-          total: item.total_price || (item.quantity * (item.unit_price || item.price))
-        })),
-        trackingNumber,
-        discount,
-        'pending',
-        qrLink,
-        fullOrderPayload
+        customerInfoPayload, 
+        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
+        trackingNumber, 
+        discount, 
+        orderStatus, 
+        qrLink, 
+        { 
+          ...deliveryPartnerData, 
+          ...deliveryData,
+          // ✅ إضافة البيانات الإضافية للإرجاع
+          order_type: actualOrderType,
+          refund_amount: actualRefundAmount,
+          original_order_id: originalOrder?.id || null,
+          final_amount: finalTotal,
+          notes: orderNotes
+        }
       );
-
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;

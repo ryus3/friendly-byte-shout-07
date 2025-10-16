@@ -82,7 +82,7 @@ export const createAlWaseetOrder = async (orderData, token) => {
   // Format primary phone (required)
   if (formattedData.client_mobile) {
     formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-    if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
+    if (!isValidAlWaseetPhone(mappedData.client_mobile)) {
       throw new Error('رقم الهاتف الأساسي غير صحيح. يجب أن يكون رقم عراقي صحيح.');
     }
   }
@@ -90,7 +90,7 @@ export const createAlWaseetOrder = async (orderData, token) => {
   // Format secondary phone (optional) - only include if valid
   if (formattedData.client_mobile2) {
     const formatted2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (isValidAlWaseetPhone(formatted2)) {
+    if (isValidAlWaseetPhone(mappedData.client_mobile2)) {
       formattedData.client_mobile2 = formatted2;
     } else {
       delete formattedData.client_mobile2; // Remove invalid secondary phone
