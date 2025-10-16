@@ -1667,54 +1667,44 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
       }
       
-      // ✅ إنشاء Payload موحد لتمرير جميع البيانات بشكل صحيح
-      const fullOrderPayload = {
-        // ✅ معرف المستخدم - تمريره بشكل صريح
-        created_by: user?.id || user?.user_id,
-        
-        // بيانات العميل
-        customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
-        customer_phone: normalizedPhone,
-        customer_address: `${formData.address}, ${region}, ${city}`,
-        customer_city: city,
-        customer_province: region,
-        notes: orderNotes,
-        
-        // عناصر الطلب
-        items: formData.type === 'return' ? [] : orderItems.map(item => ({
-          product_id: item.id,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity
-        })),
-        
-        // ✅ الحسابات المالية الصحيحة
-        total_amount: Math.round(Math.abs(finalTotal)),  // السعر الكلي شامل التوصيل
-        sales_amount: Math.round(subtotal - discount),   // سعر المنتجات فقط (بدون توصيل)
-        discount: discount,
-        delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
-        final_amount: Math.round(finalTotal),  // قد يكون سالباً للإرجاع
-        
-        // معلومات الطلب
-        order_type: actualOrderType,
-        refund_amount: actualRefundAmount,
-        original_order_id: originalOrder?.id || null,
-        tracking_number: trackingNumber,
-        status: orderStatus,
-        qr_link: qrLink,
-        
-        // شريك التوصيل
-        delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-        alwaseet_city_id: effectiveCityId || null,
-        alwaseet_region_id: effectiveRegionId || null,
-        
-        // بيانات إضافية من Al-Waseet
-        ...(deliveryPartnerData || {})
+      const customerInfoPayload = {
+        name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
+        phone: normalizedPhone, // استخدام الرقم المطبع
+        address: `${formData.address}, ${region}, ${city}`,
+        city: city, 
+        province: region, // ✅ الحل الجذري - حفظ المنطقة
+        notes: formData.notes,
       };
       
-      // ✅ استدعاء createOrder بصيغة Payload الموحدة
-      const result = await createOrder(fullOrderPayload);
+      // معلومات شريك التوصيل
+      const deliveryData = {
+        delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
+        // ✅ إصلاح: استخدام deliveryFeeAmount المحسوبة بدلاً من deliveryPartnerData
+        delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
+        // ✅ الحل الجذري - حفظ معرفات الوسيط
+        alwaseet_city_id: effectiveCityId || null,
+        alwaseet_region_id: effectiveRegionId || null,
+      };
+      
+      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
+      const result = await createOrder(
+        customerInfoPayload, 
+        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
+        trackingNumber, 
+        discount, 
+        orderStatus, 
+        qrLink, 
+        { 
+          ...deliveryPartnerData, 
+          ...deliveryData,
+          // ✅ إضافة البيانات الإضافية للإرجاع
+          order_type: actualOrderType,
+          refund_amount: actualRefundAmount,
+          original_order_id: originalOrder?.id || null,
+          final_amount: finalTotal,
+          notes: orderNotes
+        }
+      );
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;

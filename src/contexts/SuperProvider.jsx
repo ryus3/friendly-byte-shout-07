@@ -1045,15 +1045,13 @@ export const SuperProvider = ({ children }) => {
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,
-        // ✅ استخدام القيم من Payload مباشرة إذا كانت موجودة
-        total_amount: isPayload && arg1.total_amount !== undefined
-          ? arg1.total_amount  // من Payload مباشرة
-          : (orderType === 'return' 
-              ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-              : total),
-        sales_amount: isPayload && arg1.sales_amount !== undefined
-          ? arg1.sales_amount  // من Payload مباشرة
-          : (subtotal - discount),
+        // ✅ total_amount = السعر الكلي شامل التوصيل (للطلبات العادية والوسيط)
+        // للإرجاع: total_amount = refund_amount فقط
+        total_amount: orderType === 'return' 
+          ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
+          : total,  // ← السعر الكلي (subtotal - discount + delivery_fee)
+        // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
+        sales_amount: subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
         // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
@@ -1068,13 +1066,7 @@ export const SuperProvider = ({ children }) => {
         tracking_number: trackingNumber,
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: deliveryPartnerDataArg?.notes || baseOrder.notes,
-        created_by: (() => {
-          const finalCreatedBy = arg1?.created_by || resolveCurrentUserUUID();
-          if (finalCreatedBy && finalCreatedBy.length !== 36) {
-            console.error('❌ UUID غير صالح في created_by:', finalCreatedBy);
-          }
-          return finalCreatedBy;
-        })(),
+        created_by: resolveCurrentUserUUID(),
         // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg
         alwaseet_city_id: finalAlwaseetCityId,
         alwaseet_region_id: finalAlwaseetRegionId,
@@ -1732,15 +1724,11 @@ export const SuperProvider = ({ children }) => {
   }, []);
   // دالة مساعدة لضمان وجود created_by صالح
   const resolveCurrentUserUUID = useCallback(() => {
-    // ✅ الإصلاح: اختيار UUID واحد فقط (تجنب الدمج)
-    const currentUserId = user?.id || user?.user_id || '91484496-b887-44f7-9e5d-be9db5567604';
+    // محاولة الحصول على معرف المستخدم الحالي
+    const currentUserId = user?.user_id || user?.id;
+    if (currentUserId) return currentUserId;
     
-    // ✅ التحقق من صحة UUID (يجب أن يكون 36 حرف)
-    if (currentUserId && currentUserId.length === 36) {
-      return currentUserId;
-    }
-    
-    console.warn('⚠️ UUID غير صالح:', currentUserId);
+    // إذا لم نجد، استخدم المدير الافتراضي
     return '91484496-b887-44f7-9e5d-be9db5567604';
   }, [user]);
 
