@@ -72,120 +72,64 @@ export const syncSpecificOrder = async (qrId, token) => {
       // ✅ فصل السعر: منتجات = الشامل - التوصيل
       const productsPriceFromWaseet = waseetPrice - deliveryFee;
       
-      // 🎯 حساب السعر الأصلي من order_items (المصدر الموثوق!)
-      const { data: orderItems } = await supabase
-        .from('order_items')
-        .select('quantity, unit_price')
-        .eq('order_id', localOrder.id);
+      // ✅ السعر الأصلي للمنتجات (من final_amount - رسوم التوصيل)
+      const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+      const originalProductsPrice = originalFinalAmount - deliveryFee;
       
-      let originalProductsPrice = 0;
-      let priceSource = 'unknown';
+      // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
+      const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
       
-      if (orderItems && orderItems.length > 0) {
-        // ✅ المصدر الأساسي: مجموع order_items
-        originalProductsPrice = orderItems.reduce((sum, item) => 
-          sum + (item.quantity * item.unit_price), 0
-        );
-        priceSource = 'order_items';
-      } else {
-        // Fallback: استخدام final_amount إذا لم توجد order_items
-        const originalTotalPrice = parseInt(String(localOrder.final_amount)) || 
-                                  parseInt(String(localOrder.total_amount + localOrder.delivery_fee)) || 0;
-        originalProductsPrice = originalTotalPrice - (parseInt(String(localOrder.delivery_fee)) || 0);
-        priceSource = 'final_amount_fallback';
-      }
-      
-      console.log('🔍 [syncSpecificOrder] حساب التغيير في السعر:', {
-        orderId: qrId,
-        originalProductsPrice,
-        productsPriceFromWaseet,
-        deliveryFee,
-        priceChange: productsPriceFromWaseet - originalProductsPrice,
-        source: priceSource
-      });
-      
-      // ✅ فقط إذا كان هناك تغيير حقيقي في السعر
-      if (productsPriceFromWaseet !== originalProductsPrice && 
-          waseetPrice > 0 && 
-          originalProductsPrice > 0) {
+      if (productsPriceFromWaseet !== currentProductsPrice && waseetPrice > 0) {
+        // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+        updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات الحالي
+        updates.sales_amount = productsPriceFromWaseet;  // = total_amount (بدون توصيل)
+        updates.delivery_fee = deliveryFee;
         
-        const priceChange = productsPriceFromWaseet - originalProductsPrice;
+        // ✅ حساب الخصم/الزيادة
+        const priceDiff = originalProductsPrice - productsPriceFromWaseet;
         
-        // تحديث فقط إذا كان التغيير غير صفري
-        if (priceChange !== 0) {
-          updates.total_amount = productsPriceFromWaseet;
-          updates.sales_amount = productsPriceFromWaseet;
-          updates.delivery_fee = deliveryFee;
-          
-          if (priceChange > 0) {
-            // زيادة
-            updates.discount = 0;
-            updates.price_increase = priceChange;
-            updates.price_change_type = 'increase';
-            console.log(`📈 زيادة في السعر: ${priceChange} د.ع`);
-          } else {
-            // خصم
-            updates.discount = Math.abs(priceChange);
-            updates.price_increase = 0;
-            updates.price_change_type = 'discount';
-            console.log(`📉 خصم: ${Math.abs(priceChange)} د.ع`);
-          }
-          
-          // ✅ تحديث الأرباح
-          try {
-            const { data: profitRecord } = await supabase
-              .from('profits')
-              .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
-              .eq('order_id', localOrder.id)
-              .maybeSingle();
-            
-            if (profitRecord) {
-              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
-              const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
-              
-              await supabase
-                .from('profits')
-                .update({
-                  total_revenue: waseetPrice,
-                  profit_amount: newProfit,
-                  employee_profit: employeeShare,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', profitRecord.id);
-            }
-          } catch (profitError) {
-            console.error('❌ خطأ في تحديث الأرباح:', profitError);
-          }
-        }
-      } else {
-        // لا يوجد تغيير - إعادة تعيين أي قيم خاطئة
-        if (localOrder.price_increase > 0 || localOrder.discount > 0) {
-          console.log('✅ لا يوجد تغيير في السعر - إعادة تعيين القيم الخاطئة');
+        if (priceDiff > 0) {
+          // خصم
+          updates.discount = priceDiff;
+          updates.price_increase = 0;
+          updates.price_change_type = 'discount';
+        } else if (priceDiff < 0) {
+          // زيادة
+          updates.discount = 0;
+          updates.price_increase = Math.abs(priceDiff);
+          updates.price_change_type = 'increase';
+        } else {
+          // لا تغيير
           updates.discount = 0;
           updates.price_increase = 0;
           updates.price_change_type = null;
         }
-      }
-      
-      // 🛡️ Validation: منع تعارض الخصم والزيادة
-      if (updates.price_increase && updates.discount) {
-        console.error('❌ خطأ: لا يمكن وجود زيادة وخصم معاً!', {
-          orderId: qrId,
-          price_increase: updates.price_increase,
-          discount: updates.discount
-        });
-        delete updates.price_increase;
-        delete updates.discount;
-        delete updates.price_change_type;
-      }
-      
-      // 🛡️ تنظيف price_change_type إذا كانت القيم صفرية
-      if (updates.price_increase === 0 && updates.price_change_type === 'increase') {
-        delete updates.price_change_type;
-      }
-      
-      if (updates.discount === 0 && updates.price_change_type === 'discount') {
-        delete updates.price_change_type;
+        
+        // ✅ تحديث الأرباح
+        try {
+          const { data: profitRecord } = await supabase
+            .from('profits')
+            .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
+            .eq('order_id', localOrder.id)
+            .maybeSingle();
+          
+          if (profitRecord) {
+            const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
+            const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
+            
+            await supabase
+              .from('profits')
+              .update({
+                total_revenue: waseetPrice,
+                profit_amount: newProfit,
+                employee_profit: employeeShare,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', profitRecord.id);
+          }
+        } catch (profitError) {
+          console.error('❌ خطأ في تحديث الأرباح:', profitError);
+        }
       }
     }
 
