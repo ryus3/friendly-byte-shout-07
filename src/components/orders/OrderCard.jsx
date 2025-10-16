@@ -491,16 +491,16 @@ const OrderCard = React.memo(({
                         </span>
                       </div>
                       
-                      {/* عرض الخصم - برتقالي لامع */}
+                      {/* عرض الخصم */}
                       {Number(order.discount || 0) > 0 && (
-                        <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5">
+                        <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">
                           خصم {Number(order.discount).toLocaleString()} د.ع
                         </Badge>
                       )}
                       
-                      {/* عرض الزيادة - أخضر */}
+                      {/* عرض الزيادة */}
                       {Number(order.price_increase || 0) > 0 && (
-                        <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">
+                        <Badge className="bg-blue-500 text-white text-xs px-2 py-0.5">
                           زيادة {Number(order.price_increase).toLocaleString()} د.ع
                         </Badge>
                       )}
