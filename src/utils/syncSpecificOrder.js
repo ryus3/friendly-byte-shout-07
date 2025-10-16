@@ -133,15 +133,15 @@ export const syncSpecificOrder = async (qrId, token) => {
       }
     }
 
-    // تحديث رسوم التوصيل
+    // تحديث رسوم التوصيل إذا تغيرت فقط
     if (waseetOrder.delivery_price) {
       const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
-      if (deliveryPrice >= 0) {
+      if (deliveryPrice >= 0 && deliveryPrice !== localOrder.delivery_fee) {
         updates.delivery_fee = deliveryPrice;
         
-        // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-        if (updates.final_amount) {
-          updates.sales_amount = updates.final_amount - deliveryPrice;
+        // ✅ sales_amount يساوي total_amount دائماً (بدون رسوم التوصيل)
+        if (updates.total_amount) {
+          updates.sales_amount = updates.total_amount;
         }
       }
     }
