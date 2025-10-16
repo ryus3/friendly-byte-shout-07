@@ -433,6 +433,13 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
+    // ✅ حماية حرجة: لا تحذف الطلبات بدون delivery_partner_order_id
+    // هذا يعني أن الطلب لم يُرسل لشركة التوصيل بعد
+    if (!order.delivery_partner_order_id) {
+      devLog.log('❌ canAutoDeleteOrder: فشل - لا يوجد delivery_partner_order_id (الطلب لم يُرسل للوسيط بعد)');
+      return false;
+    }
+    
     // الحالات المسموح حذفها فقط
     const allowedStatuses = ['pending', 'shipped', 'delivery'];
     if (!allowedStatuses.includes(order.status)) {
@@ -440,9 +447,9 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // حماية زمنية: عمر الطلب أكبر من دقيقة واحدة
+    // حماية زمنية: عمر الطلب أكبر من 5 دقائق (زيادة من 1 دقيقة)
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 1 * 60 * 1000; // دقيقة واحدة بالميلي ثانية
+    const minAge = 5 * 60 * 1000; // 5 دقائق بالميلي ثانية
     if (orderAge < minAge) {
       devLog.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
       return false;
@@ -2675,12 +2682,14 @@ export const AlWaseetProvider = ({ children }) => {
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
       // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
+      // ✅ فقط الطلبات المرتبطة بشركة التوصيل (لها delivery_partner_order_id)
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
+          .not('delivery_partner_order_id', 'is', null)
           .or('tracking_number.not.is.null,qr_id.not.is.null'),
         true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
       ).limit(50);
