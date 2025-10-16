@@ -1051,10 +1051,7 @@ export const SuperProvider = ({ children }) => {
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
           : total,  // ← السعر الكلي (subtotal - discount + delivery_fee)
         // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
-        // للإرجاع/الاستبدال: sales_amount = refund_amount (نفس total_amount)
-        sales_amount: orderType === 'return' || orderType === 'exchange'
-          ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : (subtotal - discount),
+        sales_amount: subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
         // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
