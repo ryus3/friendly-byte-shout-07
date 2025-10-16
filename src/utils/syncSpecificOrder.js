@@ -72,37 +72,43 @@ export const syncSpecificOrder = async (qrId, token) => {
       // ✅ فصل السعر: منتجات = الشامل - التوصيل
       const productsPriceFromWaseet = waseetPrice - deliveryFee;
       
-      // ✅ السعر الأصلي للمنتجات (من final_amount - رسوم التوصيل)
-      const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
-      const originalProductsPrice = originalFinalAmount - deliveryFee;
+      // ✅ السعر الأصلي الثابت من final_amount (لا يتغير أبداً!)
+      const originalTotalPrice = parseInt(String(localOrder.final_amount)) || 0;
+      const originalProductsPrice = originalTotalPrice > 0 
+        ? originalTotalPrice - (parseInt(String(localOrder.delivery_fee)) || 0)
+        : (parseInt(String(localOrder.total_amount)) || 0);
       
-      // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
-      const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+      console.log('🔍 [syncSpecificOrder] حساب التغيير في السعر:', {
+        orderId: qrId,
+        originalTotalPrice,
+        originalProductsPrice,
+        productsPriceFromWaseet,
+        deliveryFee,
+        priceChange: productsPriceFromWaseet - originalProductsPrice
+      });
       
-      if (productsPriceFromWaseet !== currentProductsPrice && waseetPrice > 0) {
+      // ✅ فقط إذا كان هناك تغيير حقيقي في السعر
+      if (productsPriceFromWaseet !== originalProductsPrice && waseetPrice > 0 && originalProductsPrice > 0) {
         // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
         updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات الحالي
         updates.sales_amount = productsPriceFromWaseet;  // = total_amount (بدون توصيل)
         updates.delivery_fee = deliveryFee;
         
-        // ✅ حساب الخصم/الزيادة
-        const priceDiff = originalProductsPrice - productsPriceFromWaseet;
+        // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي الثابت
+        const priceChange = productsPriceFromWaseet - originalProductsPrice;
         
-        if (priceDiff > 0) {
-          // خصم
-          updates.discount = priceDiff;
-          updates.price_increase = 0;
-          updates.price_change_type = 'discount';
-        } else if (priceDiff < 0) {
+        if (priceChange > 0) {
           // زيادة
           updates.discount = 0;
-          updates.price_increase = Math.abs(priceDiff);
+          updates.price_increase = priceChange;
           updates.price_change_type = 'increase';
-        } else {
-          // لا تغيير
-          updates.discount = 0;
+          console.log(`📈 زيادة في السعر: ${priceChange} د.ع`);
+        } else if (priceChange < 0) {
+          // خصم
+          updates.discount = Math.abs(priceChange);
           updates.price_increase = 0;
-          updates.price_change_type = null;
+          updates.price_change_type = 'discount';
+          console.log(`📉 خصم: ${Math.abs(priceChange)} د.ع`);
         }
         
         // ✅ تحديث الأرباح
@@ -130,6 +136,12 @@ export const syncSpecificOrder = async (qrId, token) => {
         } catch (profitError) {
           console.error('❌ خطأ في تحديث الأرباح:', profitError);
         }
+      } else if (productsPriceFromWaseet === originalProductsPrice) {
+        // لا يوجد تغيير - نتأكد من إعادة تعيين القيم
+        console.log('✅ لا يوجد تغيير في السعر - إعادة تعيين');
+        updates.discount = 0;
+        updates.price_increase = 0;
+        updates.price_change_type = null;
       }
     }
 
