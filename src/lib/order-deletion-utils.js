@@ -37,7 +37,11 @@ export const canDeleteOrder = (order) => {
     isExternal: !!order.external_id
   });
 
-  const isLocalOrder = !order.external_id;
+  // ✅ الطلب محلي = لا يملك معرف شركة توصيل أو شركة التوصيل هي "محلي"
+  const isLocalOrder = !order.delivery_partner_order_id || 
+                       !order.delivery_partner || 
+                       order.delivery_partner === 'محلي' ||
+                       order.delivery_partner.toLowerCase() === 'local';
   
   if (isLocalOrder) {
     // الطلبات المحلية: فقط إذا كانت في انتظار
@@ -75,7 +79,8 @@ export const canDeleteOrder = (order) => {
  * @returns {boolean}
  */
 export const isBeforePickup = (order) => {
-  if (!order || !order.external_id) return false;
+  // ✅ فحص الطلبات الخارجية بواسطة delivery_partner_order_id
+  if (!order || !order.delivery_partner_order_id) return false;
   
   const deliveryStatus = (order.delivery_status || '').toLowerCase().trim();
   return DELETABLE_DELIVERY_STATUSES.some(status => 
@@ -89,7 +94,11 @@ export const isBeforePickup = (order) => {
  * @returns {string}
  */
 export const getDeleteConfirmationMessage = (order) => {
-  const isLocalOrder = !order.external_id;
+  // ✅ استخدام نفس منطق الفحص الجديد
+  const isLocalOrder = !order.delivery_partner_order_id || 
+                       !order.delivery_partner || 
+                       order.delivery_partner === 'محلي' ||
+                       order.delivery_partner.toLowerCase() === 'local';
   const orderNumber = order.order_number || order.id;
   
   if (isLocalOrder) {
