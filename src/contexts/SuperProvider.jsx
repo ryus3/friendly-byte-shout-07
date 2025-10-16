@@ -1068,7 +1068,13 @@ export const SuperProvider = ({ children }) => {
         tracking_number: trackingNumber,
         delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
         notes: deliveryPartnerDataArg?.notes || baseOrder.notes,
-        created_by: resolveCurrentUserUUID(),
+        created_by: (() => {
+          const finalCreatedBy = arg1?.created_by || resolveCurrentUserUUID();
+          if (finalCreatedBy && finalCreatedBy.length !== 36) {
+            console.error('❌ UUID غير صالح في created_by:', finalCreatedBy);
+          }
+          return finalCreatedBy;
+        })(),
         // ✅ الإصلاح الجذري: استخدام القيم المباشرة من deliveryPartnerDataArg
         alwaseet_city_id: finalAlwaseetCityId,
         alwaseet_region_id: finalAlwaseetRegionId,
@@ -1726,11 +1732,15 @@ export const SuperProvider = ({ children }) => {
   }, []);
   // دالة مساعدة لضمان وجود created_by صالح
   const resolveCurrentUserUUID = useCallback(() => {
-    // محاولة الحصول على معرف المستخدم الحالي
-    const currentUserId = user?.user_id || user?.id;
-    if (currentUserId) return currentUserId;
+    // ✅ الإصلاح: اختيار UUID واحد فقط (تجنب الدمج)
+    const currentUserId = user?.id || user?.user_id || '91484496-b887-44f7-9e5d-be9db5567604';
     
-    // إذا لم نجد، استخدم المدير الافتراضي
+    // ✅ التحقق من صحة UUID (يجب أن يكون 36 حرف)
+    if (currentUserId && currentUserId.length === 36) {
+      return currentUserId;
+    }
+    
+    console.warn('⚠️ UUID غير صالح:', currentUserId);
     return '91484496-b887-44f7-9e5d-be9db5567604';
   }, [user]);
 

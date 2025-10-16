@@ -1669,6 +1669,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // ✅ إنشاء Payload موحد لتمرير جميع البيانات بشكل صحيح
       const fullOrderPayload = {
+        // ✅ معرف المستخدم - تمريره بشكل صريح
+        created_by: user?.id || user?.user_id,
+        
         // بيانات العميل
         customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
         customer_phone: normalizedPhone,
