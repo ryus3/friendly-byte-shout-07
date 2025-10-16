@@ -1686,23 +1686,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
-      const result = await createOrder(
-        customerInfoPayload, 
-        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
-        trackingNumber, 
-        discount, 
-        orderStatus, 
-        qrLink, 
-        { 
-          ...deliveryPartnerData, 
-          ...deliveryData,
-          // ✅ إضافة البيانات الإضافية للإرجاع
+      // ✅ الحل الجذري: استخدام createUnifiedOrder بدلاً من createOrder
+      // هذا يرسل الطلب للوسيط مباشرة ويحصل على delivery_partner_order_id
+      const { createUnifiedOrder } = await import('@/contexts/AlWaseetUnifiedOrderCreator');
+      
+      const result = await createUnifiedOrder(
+        {
+          customer_name: customerInfoPayload.name,
+          customer_phone: customerInfoPayload.phone,
+          customer_address: customerInfoPayload.address,
+          customer_city: customerInfoPayload.city,
+          customer_province: customerInfoPayload.province,
+          alwaseet_city_id: effectiveCityId || parseInt(formData.city_id),
+          alwaseet_region_id: effectiveRegionId || parseInt(formData.region_id),
+          notes: orderNotes,
+          delivery_type: 'توصيل'
+        },
+        formData.type === 'return' ? [] : cart.map(item => ({
+          id: item.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          name: item.name,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.unit_price || item.price,
+          total: item.total_price || (item.quantity * (item.unit_price || item.price))
+        })),
+        discount,
+        {
+          source: 'quick_order',
+          selectedAccount: formData.deliveryAccountCode || 'ryusiq',
+          accountData: { token: waseetToken },
           order_type: actualOrderType,
           refund_amount: actualRefundAmount,
-          original_order_id: originalOrder?.id || null,
-          final_amount: finalTotal,
-          notes: orderNotes
+          original_order_id: originalOrder?.id || null
         }
       );
       if (result.success) {
