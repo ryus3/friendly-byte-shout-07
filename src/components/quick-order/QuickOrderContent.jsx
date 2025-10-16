@@ -1686,22 +1686,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      // ✅ الحل الجذري: استخدام createUnifiedOrder بدلاً من createOrder
-      // هذا يرسل الطلب للوسيط مباشرة ويحصل على delivery_partner_order_id
-      const { createUnifiedOrder } = await import('@/contexts/AlWaseetUnifiedOrderCreator');
+      // إنشاء الطلب في قاعدة البيانات المحلية
+      const fullOrderPayload = {
+        customer_name: customerInfoPayload.name,
+        customer_phone: customerInfoPayload.phone,
+        customer_address: customerInfoPayload.address,
+        customer_city: customerInfoPayload.city,
+        customer_province: customerInfoPayload.province,
+        notes: orderNotes,
+        ...deliveryData,
+        delivery_partner_order_id: trackingNumber,
+        qr_link: qrLink,
+        order_type: actualOrderType,
+        refund_amount: actualRefundAmount,
+        original_order_id: originalOrder?.id || null
+      };
       
-      const result = await createUnifiedOrder(
-        {
-          customer_name: customerInfoPayload.name,
-          customer_phone: customerInfoPayload.phone,
-          customer_address: customerInfoPayload.address,
-          customer_city: customerInfoPayload.city,
-          customer_province: customerInfoPayload.province,
-          alwaseet_city_id: effectiveCityId || parseInt(formData.city_id),
-          alwaseet_region_id: effectiveRegionId || parseInt(formData.region_id),
-          notes: orderNotes,
-          delivery_type: 'توصيل'
-        },
+      const result = await createOrder(
+        customerInfoPayload,
         formData.type === 'return' ? [] : cart.map(item => ({
           id: item.id,
           product_id: item.product_id,
@@ -1713,16 +1715,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           price: item.unit_price || item.price,
           total: item.total_price || (item.quantity * (item.unit_price || item.price))
         })),
+        trackingNumber,
         discount,
-        {
-          source: 'quick_order',
-          selectedAccount: formData.deliveryAccountCode || 'ryusiq',
-          accountData: { token: waseetToken },
-          order_type: actualOrderType,
-          refund_amount: actualRefundAmount,
-          original_order_id: originalOrder?.id || null
-        }
+        appliedCoupon?.id || null,
+        finalTotal,
+        fullOrderPayload
       );
+
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;
