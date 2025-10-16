@@ -389,60 +389,81 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                    );
                  })}
                </div>
-                 <div className="mt-4 pt-4 border-t border-border space-y-2">
-                   {/* السعر الأصلي */}
-                   {(order.final_amount || 0) > 0 && (order.discount > 0 || order.price_increase > 0) && (
-                     <div className="flex justify-between items-center text-sm">
-                       <span className="text-muted-foreground">السعر الأصلي</span>
-                       <span className="text-foreground">{(order.final_amount || 0).toLocaleString()} د.ع</span>
-                     </div>
-                   )}
-                   
-                    {/* سعر المنتجات (قبل الخصم/الزيادة) */}
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">سعر المنتجات</span>
-                      <span className="font-medium text-foreground">
-                        {(order.discount > 0 
-                          ? (order.total_amount || 0) + (order.discount || 0)
-                          : order.price_increase > 0
-                            ? (order.total_amount || 0) - (order.price_increase || 0)
-                            : (order.total_amount || 0)
-                        ).toLocaleString()} د.ع
-                      </span>
-                    </div>
-                   
-                   {/* الخصم - برتقالي لامع */}
-                   {(order.discount || 0) > 0 && (
-                     <div className="flex justify-between items-center text-sm">
-                       <span className="text-orange-500 font-medium">خصم</span>
-                       <span className="text-orange-500 font-bold">-{(order.discount || 0).toLocaleString()} د.ع</span>
-                     </div>
-                   )}
-                   
-                   {/* الزيادة - أخضر */}
-                   {(order.price_increase || 0) > 0 && (
-                     <div className="flex justify-between items-center text-sm">
-                       <span className="text-green-600 font-medium">زيادة</span>
-                       <span className="text-green-600 font-bold">+{(order.price_increase || 0).toLocaleString()} د.ع</span>
-                     </div>
-                   )}
-                   
-                   {/* رسوم التوصيل */}
-                   {(order.delivery_fee || 0) > 0 && (
-                     <div className="flex justify-between items-center text-sm">
-                       <span className="text-muted-foreground">رسوم التوصيل</span>
-                       <span className="text-foreground">{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
-                     </div>
-                   )}
-                   
-                   {/* المجموع النهائي */}
-                   <div className="flex justify-between items-center pt-2 border-t">
-                     <span className="text-lg font-semibold text-foreground">المجموع النهائي</span>
-                     <span className="text-xl font-bold text-primary">
-                       {((order.total_amount || 0) + (order.delivery_fee || 0)).toLocaleString()} د.ع
-                     </span>
-                   </div>
-                 </div>
+                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                  {/* ✅ المنطق الجديد المبسط */}
+                  {(() => {
+                    // السعر الأصلي الكامل = final_amount (ثابت دائماً)
+                    const originalPrice = order.final_amount || 0;
+                    
+                    // سعر المنتجات الأصلي = final_amount - delivery_fee
+                    const originalProductsPrice = originalPrice - (order.delivery_fee || 0);
+                    
+                    // السعر الحالي للمنتجات = total_amount (بعد الخصم/الزيادة)
+                    const currentProductsPrice = order.total_amount || 0;
+                    
+                    // الخصم أو الزيادة
+                    const discount = order.discount || 0;
+                    const priceIncrease = order.price_increase || 0;
+                    
+                    // رسوم التوصيل
+                    const deliveryFee = order.delivery_fee || 0;
+                    
+                    // المجموع النهائي الحالي
+                    const finalTotal = currentProductsPrice + deliveryFee;
+                    
+                    return (
+                      <>
+                        {/* السعر الأصلي الكامل (إذا كان هناك خصم أو زيادة) */}
+                        {(discount > 0 || priceIncrease > 0) && originalPrice > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">السعر الأصلي الكامل</span>
+                            <span className="text-foreground">{originalPrice.toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* سعر المنتجات الأصلي */}
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">سعر المنتجات</span>
+                          <span className="font-medium text-foreground">
+                            {originalProductsPrice.toLocaleString()} د.ع
+                          </span>
+                        </div>
+                        
+                        {/* الخصم */}
+                        {discount > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-orange-500 font-medium">خصم</span>
+                            <span className="text-orange-500 font-bold">-{discount.toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* الزيادة */}
+                        {priceIncrease > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-green-600 font-medium">زيادة</span>
+                            <span className="text-green-600 font-bold">+{priceIncrease.toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* رسوم التوصيل */}
+                        {deliveryFee > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">رسوم التوصيل</span>
+                            <span className="text-foreground">{deliveryFee.toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* المجموع النهائي */}
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="text-lg font-semibold text-foreground">المجموع النهائي</span>
+                          <span className="text-xl font-bold text-primary">
+                            {finalTotal.toLocaleString()} د.ع
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
             </div>
             
             {/* قسم تحديث الحالة - للموظفين والمديرين */}
