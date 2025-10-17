@@ -1446,19 +1446,23 @@ export const AlWaseetProvider = ({ children }) => {
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
         if (needsPriceUpdate) {
           const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;  // السعر الشامل من الوسيط
-          const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
           
-          // ✅ فصل السعر: منتجات = الشامل - التوصيل
-          const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
+          // ✅ رسوم التوصيل الأصلية من الطلب المحلي (لا تتغير أبداً)
+          const localDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
           
-          // ✅ السعر الأصلي للمنتجات = final_amount - رسوم التوصيل
-          // final_amount لا يتغير أبداً - هو السعر الذي دفعه العميل عند الإنشاء
+          // ✅ رسوم التوصيل من الوسيط (قد تكون محدثة)
+          const waseetDeliveryFee = parseInt(String(waseetOrder.delivery_price)) || localDeliveryFee;
+          
+          // ✅ السعر الأصلي للمنتجات = final_amount - رسوم التوصيل الأصلية
           const localFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
-          const originalProductsPrice = localFinalAmount - deliveryFee;
+          const originalProductsPrice = localFinalAmount - localDeliveryFee;
+          
+          // ✅ السعر الجديد للمنتجات من الوسيط
+          const productsPriceFromWaseet = waseetTotalPrice - waseetDeliveryFee;
           
           // تصحيح final_amount إذا تم استبداله خطأً بسعر الوسيط
           if (!localOrder.final_amount || localOrder.final_amount === waseetTotalPrice) {
-            const reconstructedOriginalPrice = originalProductsPrice + deliveryFee;
+            const reconstructedOriginalPrice = originalProductsPrice + localDeliveryFee;
             updates.final_amount = reconstructedOriginalPrice;
             devLog.log(`🔧 تصحيح final_amount من ${localOrder.final_amount} إلى ${reconstructedOriginalPrice}`);
           }
@@ -1485,14 +1489,15 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
           devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
           devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          devLog.log(`   - رسوم التوصيل الأصلية: ${localDeliveryFee.toLocaleString()} د.ع`);
+          devLog.log(`   - رسوم التوصيل من الوسيط: ${waseetDeliveryFee.toLocaleString()} د.ع`);
           devLog.log(`   - ${priceDiff > 0 ? '🔻 خصم' : priceDiff < 0 ? '🔺 زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
           devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
           
           // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
           updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
           updates.sales_amount = productsPriceFromWaseet;  // = total_amount
-          updates.delivery_fee = deliveryFee;
+          updates.delivery_fee = waseetDeliveryFee;
           
           // ✅ تحديث الأرباح
           try {
