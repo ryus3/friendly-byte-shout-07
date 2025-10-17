@@ -1400,10 +1400,12 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
-        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
-        const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
+        // ✅ فحص تغيير السعر - مقارنة سعر المنتجات فقط (بدون التوصيل)
+        const waseetTotalPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+        const waseetDeliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
+        const waseetProductsPrice = waseetTotalPrice - waseetDeliveryFee;
+        const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+        const needsPriceUpdate = waseetProductsPrice !== currentProductsPrice && waseetTotalPrice > 0;
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
         if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
