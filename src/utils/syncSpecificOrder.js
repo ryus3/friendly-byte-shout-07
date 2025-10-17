@@ -66,18 +66,44 @@ export const syncSpecificOrder = async (qrId, token) => {
 
     // ✅ تحديث السعر إذا تغير من الوسيط
     if (waseetOrder.price) {
-      const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
-      const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+      const waseetPrice = parseInt(String(waseetOrder.price)) || 0; // السعر الشامل من الوسيط
+      const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
       
-      if (waseetPrice !== currentPrice && waseetPrice > 0) {
-        const priceDifference = waseetPrice - currentPrice;
+      // ✅ فصل السعر: منتجات = الشامل - التوصيل
+      const productsPriceFromWaseet = waseetPrice - deliveryFee;
+      
+      // ✅ السعر الأصلي للمنتجات (من final_amount - رسوم التوصيل)
+      const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+      const originalProductsPrice = originalFinalAmount - deliveryFee;
+      
+      // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
+      const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+      
+      if (productsPriceFromWaseet !== currentProductsPrice && waseetPrice > 0) {
+        // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+        updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات الحالي
+        updates.sales_amount = productsPriceFromWaseet;  // = total_amount (بدون توصيل)
+        updates.delivery_fee = deliveryFee;
         
-        updates.final_amount = waseetPrice;
-        updates.total_amount = waseetPrice;
+        // ✅ حساب الخصم/الزيادة
+        const priceDiff = originalProductsPrice - productsPriceFromWaseet;
         
-        // حساب sales_amount (السعر - رسوم التوصيل)
-        const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
-        updates.sales_amount = waseetPrice - deliveryFee;
+        if (priceDiff > 0) {
+          // خصم
+          updates.discount = priceDiff;
+          updates.price_increase = 0;
+          updates.price_change_type = 'discount';
+        } else if (priceDiff < 0) {
+          // زيادة
+          updates.discount = 0;
+          updates.price_increase = Math.abs(priceDiff);
+          updates.price_change_type = 'increase';
+        } else {
+          // لا تغيير
+          updates.discount = 0;
+          updates.price_increase = 0;
+          updates.price_change_type = null;
+        }
         
         // ✅ تحديث الأرباح
         try {
@@ -88,7 +114,7 @@ export const syncSpecificOrder = async (qrId, token) => {
             .maybeSingle();
           
           if (profitRecord) {
-            const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
+            const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
             const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
             
             await supabase
@@ -107,15 +133,15 @@ export const syncSpecificOrder = async (qrId, token) => {
       }
     }
 
-    // تحديث رسوم التوصيل
+    // تحديث رسوم التوصيل إذا تغيرت فقط
     if (waseetOrder.delivery_price) {
       const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
-      if (deliveryPrice >= 0) {
+      if (deliveryPrice >= 0 && deliveryPrice !== localOrder.delivery_fee) {
         updates.delivery_fee = deliveryPrice;
         
-        // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-        if (updates.final_amount) {
-          updates.sales_amount = updates.final_amount - deliveryPrice;
+        // ✅ sales_amount يساوي total_amount دائماً (بدون رسوم التوصيل)
+        if (updates.total_amount) {
+          updates.sales_amount = updates.total_amount;
         }
       }
     }
@@ -168,7 +194,35 @@ export const syncOrder98713588 = async () => {
   }
 };
 
+export const syncOrder107647475 = async () => {
+  try {
+    const token = "7ed481be5a53bf1c12a77fbb9384b9b6";
+    const result = await syncSpecificOrder("107647475", token);
+    
+    if (result && result.success) {
+      const updates = result.updates;
+      const msg = `✅ تمت مزامنة الطلب 107647475 بنجاح!
+      
+السعر الأصلي: ${result.local_order.final_amount} د.ع
+السعر الحالي: ${updates.total_amount} د.ع
+${updates.discount > 0 ? `الخصم: ${updates.discount} د.ع` : ''}
+${updates.price_increase > 0 ? `الزيادة: ${updates.price_increase} د.ع` : ''}
+رسوم التوصيل: ${updates.delivery_fee} د.ع
+المجموع النهائي: ${updates.total_amount + updates.delivery_fee} د.ع`;
+      
+      alert(msg);
+      window.location.reload();
+    } else {
+      alert('لم تكن هناك حاجة للمزامنة أو حدث خطأ');
+    }
+  } catch (error) {
+    console.error('❌ خطأ في مزامنة الطلب 107647475:', error);
+    alert(`خطأ في المزامنة: ${error.message}`);
+  }
+};
+
 // تجعل الدالة متاحة في النافذة للاستخدام السريع
 if (typeof window !== 'undefined') {
   window.syncOrder98713588 = syncOrder98713588;
+  window.syncOrder107647475 = syncOrder107647475;
 }
