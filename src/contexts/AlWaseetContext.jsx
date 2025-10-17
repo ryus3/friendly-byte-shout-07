@@ -1405,8 +1405,13 @@ export const AlWaseetProvider = ({ children }) => {
         const currentPrice = parseInt(String(localOrder.final_amount)) || 0;
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
-        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
-        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
+        // ✅ فحص تغيير رسوم التوصيل
+        const waseetDeliveryFee = parseInt(String(waseetOrder.delivery_price)) || 0;
+        const localDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+        const needsDeliveryFeeUpdate = waseetDeliveryFee > 0 && waseetDeliveryFee !== localDeliveryFee;
+
+        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + رسوم التوصيل + الفاتورة)
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !needsDeliveryFeeUpdate && !needsReceiptUpdate && !needsPriceUpdate) {
           continue; // لا حاجة للتحديث
         }
 
@@ -1544,17 +1549,16 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // تحديث رسوم التوصيل إن وُجدت
-        if (waseetOrder.delivery_price) {
-          const dp = parseInt(String(waseetOrder.delivery_price)) || 0;
-          if (dp >= 0) {
-            updates.delivery_fee = dp;
-            
-            // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-            if (updates.total_amount) {
-              updates.sales_amount = updates.total_amount - dp;
-            }
+        // تحديث رسوم التوصيل إذا تغيرت
+        if (needsDeliveryFeeUpdate) {
+          updates.delivery_fee = waseetDeliveryFee;
+          
+          // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
+          if (updates.total_amount) {
+            updates.sales_amount = updates.total_amount - waseetDeliveryFee;
           }
+          
+          devLog.log(`🚚 تحديث رسوم التوصيل: ${localDeliveryFee.toLocaleString()} ← ${waseetDeliveryFee.toLocaleString()} د.ع`);
         }
 
         // ترقية للحالة المكتملة عند التأكيد المالي
