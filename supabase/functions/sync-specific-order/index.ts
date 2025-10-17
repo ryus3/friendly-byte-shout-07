@@ -99,24 +99,57 @@ Deno.serve(async (req) => {
       price_increase: localOrder.price_increase
     })
 
-    // 6. حساب الأسعار من الوسيط
-    const productsPriceFromWaseet = parseFloat(waseetOrder.total_price || '0')
-    const deliveryFeeFromWaseet = parseFloat(waseetOrder.delivery_price || '0')
+    // 6. ✅ حساب الأسعار بالطريقة الصحيحة الموحدة
+    const waseetTotalPrice = parseFloat(waseetOrder.total_price || waseetOrder.price || '0')
+    const waseetDeliveryFee = parseFloat(waseetOrder.delivery_price || '0')
+    
+    // ✅ فصل سعر المنتجات: المنتجات = الشامل - التوصيل
+    const productsPriceFromWaseet = waseetTotalPrice - waseetDeliveryFee
 
     // 7. الأسعار المحلية الحالية
     const currentProductsPrice = parseFloat(localOrder.total_amount || '0')
     const currentDeliveryFee = parseFloat(localOrder.delivery_fee || '0')
     const currentFinalAmount = parseFloat(localOrder.final_amount || '0')
 
-    // 8. حساب الفرق في السعر
+    // 8. ✅ حساب السعر الأصلي للمنتجات (عند الإنشاء)
     const originalProductsPrice = currentFinalAmount - currentDeliveryFee
+    
+    // ✅ حساب الفرق بين السعر الأصلي والسعر الجديد
     const priceDiff = originalProductsPrice - productsPriceFromWaseet
 
-    console.log('💰 تحليل الأسعار:', {
-      productsPriceFromWaseet,
-      currentProductsPrice,
-      originalProductsPrice,
-      priceDiff
+    // 9. التحقق من صحة البيانات
+    if (waseetTotalPrice > 0 && waseetTotalPrice < waseetDeliveryFee) {
+      console.warn('⚠️ تحذير: السعر الشامل أقل من رسوم التوصيل!', {
+        total: waseetTotalPrice,
+        delivery: waseetDeliveryFee
+      })
+    }
+
+    if (productsPriceFromWaseet < 0) {
+      console.error('❌ خطأ: سعر المنتجات سالب!', {
+        products: productsPriceFromWaseet,
+        total: waseetTotalPrice,
+        delivery: waseetDeliveryFee
+      })
+      throw new Error('سعر المنتجات سالب - تحقق من البيانات')
+    }
+
+    console.log('💰 تحليل الأسعار التفصيلي:', {
+      waseet: {
+        total_price: waseetTotalPrice,
+        delivery_fee: waseetDeliveryFee,
+        products_only: productsPriceFromWaseet
+      },
+      local: {
+        total_amount: currentProductsPrice,
+        delivery_fee: currentDeliveryFee,
+        final_amount: currentFinalAmount,
+        original_products: originalProductsPrice
+      },
+      comparison: {
+        price_diff: priceDiff,
+        needs_update: productsPriceFromWaseet !== currentProductsPrice
+      }
     })
 
     // 9. تحديد التغييرات
@@ -127,32 +160,30 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString()
     }
 
-    // 10. تحديث الأسعار إذا تغيرت
-    if (productsPriceFromWaseet !== currentProductsPrice) {
-      updates.total_amount = productsPriceFromWaseet
-      updates.sales_amount = productsPriceFromWaseet
+    // 10. ✅ تحديث الأسعار إذا تغيرت (مع التحقق)
+    if (productsPriceFromWaseet !== currentProductsPrice && waseetTotalPrice > 0) {
+      updates.total_amount = productsPriceFromWaseet       // سعر المنتجات الجديد
+      updates.sales_amount = productsPriceFromWaseet       // مماثل
+      updates.delivery_fee = waseetDeliveryFee             // رسوم التوصيل
+      updates.final_amount = productsPriceFromWaseet + waseetDeliveryFee  // الشامل
       
+      // ✅ حساب الزيادة/الخصم بناءً على السعر الأصلي
       if (priceDiff > 0) {
-        updates.price_increase = priceDiff
-        updates.price_change_type = 'increase'
-        updates.discount = 0
-      } else if (priceDiff < 0) {
-        updates.discount = Math.abs(priceDiff)
+        // الفرق إيجابي = خصم (السعر الجديد أقل)
+        updates.discount = priceDiff
         updates.price_increase = 0
         updates.price_change_type = 'discount'
+      } else if (priceDiff < 0) {
+        // الفرق سالب = زيادة (السعر الجديد أعلى)
+        updates.price_increase = Math.abs(priceDiff)
+        updates.discount = 0
+        updates.price_change_type = 'increase'
       } else {
+        // لا تغيير
         updates.price_increase = 0
         updates.discount = 0
         updates.price_change_type = null
       }
-
-      updates.final_amount = productsPriceFromWaseet + currentDeliveryFee
-    }
-
-    // 11. تحديث رسوم التوصيل إذا تغيرت
-    if (deliveryFeeFromWaseet && deliveryFeeFromWaseet !== currentDeliveryFee) {
-      updates.delivery_fee = deliveryFeeFromWaseet
-      updates.final_amount = (updates.total_amount || currentProductsPrice) + deliveryFeeFromWaseet
     }
 
     // 12. تحديث حالة استلام الفاتورة

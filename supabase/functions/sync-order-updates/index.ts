@@ -79,14 +79,26 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // ✅ حساب الأسعار بالطريقة الصحيحة الموحدة
+        const waseetTotalPrice = Number(waseetOrder.total_price || waseetOrder.price || 0);
+        const waseetDeliveryFee = Number(waseetOrder.delivery_price || 0);
+        const productsPriceFromWaseet = waseetTotalPrice - waseetDeliveryFee;
+
+        // الأسعار المحلية
+        const currentProductsPrice = Number(order.total_amount || 0);
+        const currentDeliveryFee = Number(order.delivery_fee || 0);
+        const currentFinalAmount = Number(order.final_amount || 0);
+        const originalProductsPrice = currentFinalAmount - currentDeliveryFee;
+
         // مقارنة البيانات
         const currentStatus = String(order.delivery_status || '');
         const newStatus = String(waseetOrder.status_id || '');
-        const currentPrice = Number(order.final_amount || 0);
-        const newPrice = Number(waseetOrder.price || 0);
-
+        
         const statusChanged = currentStatus !== newStatus;
-        const priceChanged = currentPrice !== newPrice && newPrice > 0;
+        const priceChanged = productsPriceFromWaseet !== currentProductsPrice && waseetTotalPrice > 0;
+        
+        // حساب الفرق
+        const priceDiff = originalProductsPrice - productsPriceFromWaseet;
 
         if (statusChanged || priceChanged) {
           const updates: any = { updated_at: new Date().toISOString() };
@@ -98,19 +110,31 @@ Deno.serve(async (req) => {
             else if (['31', '32'].includes(newStatus)) updates.status = 'cancelled';
           }
 
-          // ✅ تحديث السعر دائماً إذا تغير
+          // ✅ تحديث السعر بالطريقة الصحيحة الموحدة
           if (priceChanged) {
-            const priceDifference = newPrice - currentPrice;
+            updates.total_amount = productsPriceFromWaseet;      // سعر المنتجات
+            updates.sales_amount = productsPriceFromWaseet;      // مماثل
+            updates.delivery_fee = waseetDeliveryFee;            // رسوم التوصيل
+            updates.final_amount = productsPriceFromWaseet + waseetDeliveryFee;  // الشامل
             
-            updates.final_amount = newPrice;
-            
-            // حساب sales_amount
-            const deliveryFee = Number(waseetOrder.delivery_price || order.delivery_fee || 0);
-            updates.sales_amount = newPrice - deliveryFee;
+            // حساب الزيادة/الخصم
+            if (priceDiff > 0) {
+              updates.discount = priceDiff;
+              updates.price_increase = 0;
+              updates.price_change_type = 'discount';
+            } else if (priceDiff < 0) {
+              updates.price_increase = Math.abs(priceDiff);
+              updates.discount = 0;
+              updates.price_change_type = 'increase';
+            } else {
+              updates.price_increase = 0;
+              updates.discount = 0;
+              updates.price_change_type = null;
+            }
             
             // تحديث refund_amount للطلبات المرتجعة
             if (order.order_type === 'return') {
-              const calculatedRefund = Math.abs(newPrice) - deliveryFee;
+              const calculatedRefund = Math.abs(productsPriceFromWaseet);
               if (calculatedRefund > 0) {
                 updates.refund_amount = calculatedRefund;
               }
@@ -124,31 +148,29 @@ Deno.serve(async (req) => {
               .maybeSingle();
             
             if (profitRecord) {
-              const newProfit = newPrice - deliveryFee - profitRecord.total_cost;
+              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
               const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
               await supabase
                 .from('profits')
                 .update({
-                  total_revenue: newPrice,
+                  total_revenue: productsPriceFromWaseet + waseetDeliveryFee,
                   profit_amount: newProfit,
                   employee_profit: employeeShare,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', profitRecord.id);
               
-              console.log(`✅ Profit updated for order ${order.order_number}: ${priceDifference} IQD`);
+              console.log(`✅ تحديث الربح للطلب ${order.order_number}: فرق ${priceDiff} د.ع`);
             }
 
             // ملاحظة للتوثيق
             const currentNotes = order.notes || '';
-            updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentPrice.toLocaleString()} إلى ${newPrice.toLocaleString()} د.ع`;
+            const changeType = priceDiff > 0 ? 'خصم' : priceDiff < 0 ? 'زيادة' : 'تعديل';
+            updates.notes = `${currentNotes}\n[${new Date().toISOString()}] ${changeType}: من ${currentFinalAmount.toLocaleString()} إلى ${updates.final_amount.toLocaleString()} د.ع`;
           }
 
-          // تحديث رسوم التوصيل
-          if (waseetOrder.delivery_price) {
-            updates.delivery_fee = Number(waseetOrder.delivery_price);
-          }
+          // رسوم التوصيل محدثة بالفعل في قسم السعر
 
           await supabase
             .from('orders')
