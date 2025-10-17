@@ -1509,33 +1509,16 @@ export const AlWaseetProvider = ({ children }) => {
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
         if (needsPriceUpdate) {
           const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;  // السعر الشامل من الوسيط
-          const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
-          
-          // ✅ Console log للتشخيص
-          console.log(`💰 تحديث السعر - البيانات الأولية:`, {
-            waseetTotalPrice,
-            deliveryFee,
-            'من الوسيط': waseetOrder.price,
-            'من الطلب المحلي': localOrder.delivery_fee
-          });
+          const deliveryFee = parseInt(String(waseetOrder.delivery_fee || localOrder.delivery_fee)) || 0;
           
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات (من final_amount)
+          // ✅ السعر الأصلي للمنتجات من final_amount (الذي لا يتغير أبداً)
           const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const originalProductsPrice = originalFinalAmount - deliveryFee;
           
-          // ✅ Console log للتشخيص
-          console.log(`🧮 حساب الفرق:`, {
-            originalFinalAmount,
-            deliveryFee,
-            originalProductsPrice,
-            productsPriceFromWaseet,
-            'الفرق (originalProductsPrice - productsPriceFromWaseet)': originalProductsPrice - productsPriceFromWaseet
-          });
-          
-          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
+          // ✅ حساب الخصم/الزيادة
           const priceDiff = originalProductsPrice - productsPriceFromWaseet;
           
           if (priceDiff > 0) {
@@ -1554,25 +1537,18 @@ export const AlWaseetProvider = ({ children }) => {
             updates.price_change_type = null;
           }
           
-          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
-          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
-          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          devLog.log(`   - ${priceDiff > 0 ? '🔻 خصم' : priceDiff < 0 ? '🔺 زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
-          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
-          console.log(`   - البيانات الكاملة:`, {
-            'localOrder.final_amount': localOrder.final_amount,
-            'localOrder.total_amount': localOrder.total_amount,
-            'waseetOrder.price': waseetOrder.price,
-            'updates.discount': updates.discount,
-            'updates.price_increase': updates.price_increase,
-            'updates.price_change_type': updates.price_change_type
-          });
-          
-          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
-          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
-          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          // ✅ تحديث كلا الحقلين بنفس القيمة (sales_amount = total_amount) لتجنب خطأ Trigger
+          updates.total_amount = productsPriceFromWaseet;  
+          updates.sales_amount = productsPriceFromWaseet;  // ✅ يجب أن يتطابق مع total_amount
           updates.delivery_fee = deliveryFee;
+          
+          // final_amount يبقى كما هو (السعر الأصلي)
+          
+          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+          devLog.log(`   - السعر الأصلي: ${originalProductsPrice.toLocaleString()} د.ع`);
+          devLog.log(`   - السعر الجديد: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          devLog.log(`   - ${priceDiff > 0 ? 'خصم' : priceDiff < 0 ? 'زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+          devLog.log(`   - total_amount = sales_amount = ${productsPriceFromWaseet.toLocaleString()} د.ع`);
           
           // ✅ تحديث الأرباح
           try {
