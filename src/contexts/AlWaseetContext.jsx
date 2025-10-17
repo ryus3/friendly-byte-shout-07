@@ -1351,8 +1351,38 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
+        // ✅ إذا لم نجد الطلب في القائمة، نبحث مباشرة (مهم عند تغيير السعر)
         if (!waseetOrder) {
-          continue; // لم نجد الطلب في الوسيط
+          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
+          
+          // محاولة البحث المباشر بالرقم التتبع/QR
+          if (confirmKey) {
+            try {
+              waseetOrder = await AlWaseetAPI.getOrderByQR(token, confirmKey);
+              if (waseetOrder) {
+                devLog.log(`✅ البحث المباشر: وُجد الطلب ${confirmKey} (تم تحديثه في الوسيط)`);
+              }
+            } catch (e) {
+              devLog.warn(`⚠️ فشل البحث المباشر عن ${confirmKey}:`, e.message);
+            }
+          }
+          
+          // إذا كان لدينا معرف الوسيط، نحاول جلبه مباشرة
+          if (!waseetOrder && localOrder.delivery_partner_order_id) {
+            try {
+              waseetOrder = await AlWaseetAPI.getOrderById(token, localOrder.delivery_partner_order_id);
+              if (waseetOrder) {
+                devLog.log(`✅ البحث بالمعرف: وُجد الطلب #${localOrder.delivery_partner_order_id}`);
+              }
+            } catch (e) {
+              devLog.warn(`⚠️ فشل جلب الطلب بالمعرف:`, e.message);
+            }
+          }
+          
+          // إذا ما زال غير موجود، نتجاهله
+          if (!waseetOrder) {
+            continue;
+          }
         }
 
         checked++;

@@ -367,9 +367,9 @@ const OrderCard = React.memo(({
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
                    {order.created_by_name && (
-                      <div className="flex items-center gap-2 justify-start">
-                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm inline-flex items-center gap-2">
-                          <User className="h-3 w-3" />
+                  <div className="flex items-center gap-2 justify-start">
+                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                          <User className="h-3 w-3 inline-block ml-1" />
                           {order.created_by_name}
                         </span>
                       </div>
