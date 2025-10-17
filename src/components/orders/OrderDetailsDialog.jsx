@@ -398,18 +398,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                      </div>
                    )}
                    
-                    {/* سعر المنتجات (قبل الخصم/الزيادة) */}
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">سعر المنتجات</span>
-                      <span className="font-medium text-foreground">
-                        {(order.discount > 0 
-                          ? (order.total_amount || 0) + (order.discount || 0)
-                          : order.price_increase > 0
-                            ? (order.total_amount || 0) - (order.price_increase || 0)
-                            : (order.total_amount || 0)
-                        ).toLocaleString()} د.ع
-                      </span>
-                    </div>
+                   {/* سعر المنتجات (قبل الخصم/الزيادة) */}
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-muted-foreground">سعر المنتجات</span>
+                     <span className="font-medium text-foreground">
+                       {((order.total_amount || 0) + (order.discount || 0) - (order.price_increase || 0)).toLocaleString()} د.ع
+                     </span>
+                   </div>
                    
                    {/* الخصم - برتقالي لامع */}
                    {(order.discount || 0) > 0 && (

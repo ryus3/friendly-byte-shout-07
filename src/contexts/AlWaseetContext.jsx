@@ -1402,7 +1402,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.final_amount)) || 0;
+        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
@@ -1443,20 +1443,26 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
         if (needsPriceUpdate) {
-          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
+          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;  // السعر الشامل من الوسيط
           const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
           
-          // ✅ السعر الأصلي من قاعدة البيانات
-          const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          // ✅ فصل السعر: منتجات = الشامل - التوصيل
+          const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ حساب الفرق
-          const priceDiff = originalFinalAmount - waseetTotalPrice;
+          // ✅ السعر الأصلي للمنتجات (من final_amount)
+          const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const originalProductsPrice = originalFinalAmount - deliveryFee;
+          
+          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
+          const priceDiff = originalProductsPrice - productsPriceFromWaseet;
           
           if (priceDiff > 0) {
+            // خصم
             updates.discount = priceDiff;
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
           } else if (priceDiff < 0) {
+            // زيادة
             updates.discount = 0;
             updates.price_increase = Math.abs(priceDiff);
             updates.price_change_type = 'increase';
@@ -1466,13 +1472,17 @@ export const AlWaseetProvider = ({ children }) => {
             updates.price_change_type = null;
           }
           
-          // ✅ تحديث الأسعار
-          updates.final_amount = waseetTotalPrice;
-          const productsPrice = waseetTotalPrice - deliveryFee;
-          updates.total_amount = productsPrice;
-          updates.sales_amount = productsPrice;
+          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          devLog.log(`   - ${priceDiff > 0 ? '🔻 خصم' : priceDiff < 0 ? '🔺 زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
           
-          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}: ${originalFinalAmount} ← ${waseetTotalPrice}`);
+          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
+          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          updates.delivery_fee = deliveryFee;
           
           // ✅ تحديث الأرباح
           try {
