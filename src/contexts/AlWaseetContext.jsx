@@ -1449,9 +1449,18 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات (من final_amount)
-          const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
-          const originalProductsPrice = originalFinalAmount - deliveryFee;
+          // ✅ السعر الأصلي للمنتجات (من total_amount الحالي + الخصم - الزيادة)
+          const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+          const currentDiscount = parseInt(String(localOrder.discount)) || 0;
+          const currentIncrease = parseInt(String(localOrder.price_increase)) || 0;
+          const originalProductsPrice = currentTotalAmount + currentDiscount - currentIncrease;
+          
+          // تصحيح final_amount إذا تم استبداله خطأً بسعر الوسيط
+          if (!localOrder.final_amount || localOrder.final_amount === waseetTotalPrice) {
+            const reconstructedOriginalPrice = originalProductsPrice + deliveryFee;
+            updates.final_amount = reconstructedOriginalPrice;
+            devLog.log(`🔧 تصحيح final_amount من ${localOrder.final_amount} إلى ${reconstructedOriginalPrice}`);
+          }
           
           // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
           const priceDiff = originalProductsPrice - productsPriceFromWaseet;

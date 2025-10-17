@@ -1045,12 +1045,12 @@ export const SuperProvider = ({ children }) => {
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,
-        // ✅ total_amount = سعر المنتجات فقط (بدون توصيل)
+        // ✅ total_amount = السعر الكلي شامل التوصيل (للطلبات العادية والوسيط)
         // للإرجاع: total_amount = refund_amount فقط
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : (subtotal - discount),  // ✅ سعر المنتجات فقط (بدون توصيل)
-        // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل) - يجب أن يساوي total_amount
+          : total,  // ← السعر الكلي (subtotal - discount + delivery_fee)
+        // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
         sales_amount: subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
