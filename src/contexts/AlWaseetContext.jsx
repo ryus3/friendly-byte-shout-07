@@ -1451,11 +1451,10 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات (من total_amount الحالي + الخصم - الزيادة)
-          const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
-          const currentDiscount = parseInt(String(localOrder.discount)) || 0;
-          const currentIncrease = parseInt(String(localOrder.price_increase)) || 0;
-          const originalProductsPrice = currentTotalAmount + currentDiscount - currentIncrease;
+          // ✅ السعر الأصلي للمنتجات = final_amount - رسوم التوصيل
+          // final_amount لا يتغير أبداً - هو السعر الذي دفعه العميل عند الإنشاء
+          const localFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const originalProductsPrice = localFinalAmount - deliveryFee;
           
           // تصحيح final_amount إذا تم استبداله خطأً بسعر الوسيط
           if (!localOrder.final_amount || localOrder.final_amount === waseetTotalPrice) {
