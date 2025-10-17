@@ -1379,6 +1379,19 @@ export const AlWaseetProvider = ({ children }) => {
             }
           }
           
+          // ✅ محاولة أخيرة: استخدام bulk API (قد لا يكون cached)
+          if (!waseetOrder && localOrder.delivery_partner_order_id) {
+            try {
+              const bulkResult = await AlWaseetAPI.getOrdersByIdsBulk(token, [localOrder.delivery_partner_order_id]);
+              if (bulkResult && bulkResult.length > 0) {
+                waseetOrder = bulkResult[0];
+                devLog.log(`✅ البحث Bulk: وُجد الطلب #${localOrder.delivery_partner_order_id}`);
+              }
+            } catch (e) {
+              devLog.warn(`⚠️ فشل البحث bulk:`, e.message);
+            }
+          }
+          
           // إذا ما زال غير موجود، نتجاهله
           if (!waseetOrder) {
             continue;
