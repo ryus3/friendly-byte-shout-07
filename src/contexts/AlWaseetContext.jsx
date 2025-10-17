@@ -1239,7 +1239,7 @@ export const AlWaseetProvider = ({ children }) => {
       const { data: pendingOrders, error: pendingErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
+          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received, final_amount, total_amount, delivery_fee, sales_amount, discount, price_increase, price_change_type')
           .eq('delivery_partner', 'alwaseet')
           .in('status', targetStatuses)
       ).limit(200);
