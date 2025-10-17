@@ -1300,8 +1300,16 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
-        if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
+        // ✅ حماية الطلبات المُحدّثة مؤخراً من الحذف التلقائي (آخر 5 دقائق)
+        // السبب: عند تغيير السعر في الوسيط، قد لا يظهر الطلب في API مؤقتاً بسبب:
+        // - تأخير في Cache الوسيط
+        // - إعادة فهرسة البيانات
+        // - تأخير CDN/Load Balancer
+        const recentlyUpdated = localOrder.updated_at && 
+          (Date.now() - new Date(localOrder.updated_at).getTime()) < (5 * 60 * 1000);
+
+        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام ولم يُحدث مؤخراً
+        if (!waseetOrder && !recentlyUpdated && canAutoDeleteOrder(localOrder, user)) {
           // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking - فحص بجميع التوكنات
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
           let remoteCheck = null;
