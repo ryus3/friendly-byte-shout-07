@@ -1400,9 +1400,9 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
+        // ✅ فحص تغيير السعر - مقارنة السعر الكلي مع السعر الكلي
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
+        const currentPrice = parseInt(String(localOrder.final_amount)) || 0;
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
@@ -1453,22 +1453,42 @@ export const AlWaseetProvider = ({ children }) => {
           
           // ✅ المنطق الصحيح:
           // - waseetOrder.price = السعر الكلي شامل التوصيل من شركة التوصيل
-          // - total_amount = السعر الكلي الحالي (يتغير عند تغيير السعر)
-          // - final_amount = السعر الأصلي عند الإنشاء (ثابت - لا يتغير أبداً)
-          // - sales_amount = total_amount - delivery_fee (سعر البيع بدون توصيل)
+          // - final_amount = السعر الكلي (شامل التوصيل) - يتحدث عند تغيير السعر
+          // - total_amount = سعر المنتجات (بدون توصيل)
+          // - sales_amount = total_amount (سعر البيع بدون توصيل)
           
-          // تحديث السعر الكلي فقط (final_amount يبقى كما هو)
-          updates.total_amount = waseetPrice;
-          
-          // حساب sales_amount الصحيح (السعر الكلي - رسوم التوصيل)
           const deliveryFee = parseInt(String(waseetOrder.delivery_price)) || parseInt(String(localOrder.delivery_fee)) || 0;
-          const salesAmount = waseetPrice - deliveryFee;
-          updates.sales_amount = salesAmount;
-
-          // ✅ حساب الخصم الفعلي
-          const originalAmount = localOrder.final_amount || 0;
-          const actualDiscount = originalAmount - waseetPrice;
-          updates.discount = actualDiscount >= 0 ? actualDiscount : 0;
+          
+          // ✅ تحديث السعر الكلي من الوسيط
+          updates.final_amount = waseetPrice;
+          
+          // حساب سعر المنتجات (بدون توصيل)
+          const productPrice = waseetPrice - deliveryFee;
+          updates.total_amount = productPrice;
+          updates.sales_amount = productPrice;
+          
+          // ✅ حساب الخصم أو الزيادة بناءً على السعر الكلي
+          const originalFinalAmount = localOrder.final_amount || 0;
+          const priceDiff = originalFinalAmount - waseetPrice;
+          
+          if (priceDiff > 0) {
+            // خصم
+            updates.discount = priceDiff;
+            updates.price_increase = 0;
+            updates.price_change_type = 'discount';
+          } else if (priceDiff < 0) {
+            // زيادة
+            updates.price_increase = Math.abs(priceDiff);
+            updates.discount = 0;
+            updates.price_change_type = 'increase';
+          } else {
+            // بدون تغيير
+            updates.discount = 0;
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+          }
+          
+          const salesAmount = productPrice;
           
           devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}:`);
           devLog.log(`   - إجمالي (شامل): ${waseetPrice.toLocaleString()} د.ع`);
