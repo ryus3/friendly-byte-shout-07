@@ -1451,14 +1451,18 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
+        // ✅ فحص تغيير السعر - مقارنة مع السعر الشامل الحالي (total_amount + delivery_fee)
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.final_amount)) || 0;
+        const currentTotalPrice = parseInt(String(localOrder.total_amount)) || 0;
+        const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+        const currentPrice = currentTotalPrice + currentDeliveryFee; // السعر الشامل الحالي
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
         // ✅ Console log للتشخيص
         console.log(`🔍 فحص السعر للطلب ${localOrder.tracking_number}:`, {
           waseetPrice,
+          currentTotalPrice,
+          currentDeliveryFee,
           currentPrice,
           'localOrder.final_amount': localOrder.final_amount,
           'localOrder.total_amount': localOrder.total_amount,
