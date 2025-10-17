@@ -1402,7 +1402,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
+        const currentPrice = parseInt(String(localOrder.final_amount)) || 0;
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
