@@ -1045,11 +1045,11 @@ export const SuperProvider = ({ children }) => {
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,
-        // ✅ total_amount = سعر المنتجات فقط (بدون رسوم التوصيل)
+        // ✅ total_amount = سعر المنتجات الأصلي قبل الخصم (بدون رسوم التوصيل)
         // للإرجاع: total_amount = refund_amount فقط
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : subtotal - discount,  // ← سعر المنتجات فقط (بدون delivery_fee)
+          : subtotal,  // ← سعر المنتجات الأصلي قبل الخصم
         // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
         sales_amount: subtotal - discount,
         discount,

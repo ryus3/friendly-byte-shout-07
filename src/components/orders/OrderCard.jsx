@@ -475,21 +475,23 @@ const OrderCard = React.memo(({
                       </div>
                     )}
                     
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xs text-primary/70 font-bold">د.ع</span>
-                        <span className="font-bold text-lg text-primary">
-                          {(() => {
-                            const totalAmount = Number(order.total_amount || 0);
-                            const deliveryFee = Number(order.delivery_fee || 0);
-                            const displayPrice = totalAmount + deliveryFee;
-                            return displayPrice.toLocaleString();
-                          })()}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-medium">
-                          شامل التوصيل
-                        </span>
-                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                       <div className="flex items-center gap-1">
+                         <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                         <span className="font-bold text-lg text-primary">
+                           {(() => {
+                             const totalAmount = Number(order.total_amount || 0);
+                             const discount = Number(order.discount || 0);
+                             const priceIncrease = Number(order.price_increase || 0);
+                             const deliveryFee = Number(order.delivery_fee || 0);
+                             const displayPrice = totalAmount - discount + priceIncrease + deliveryFee;
+                             return displayPrice.toLocaleString();
+                           })()}
+                         </span>
+                         <span className="text-xs text-muted-foreground font-medium">
+                           شامل التوصيل
+                         </span>
+                       </div>
                       
                       {/* عرض الخصم - برتقالي لامع */}
                       {Number(order.discount || 0) > 0 && (
