@@ -1144,6 +1144,43 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
+      // ✅ تسجيل الحذف في auto_delete_log قبل الحذف الفعلي
+      const orderAge = Math.round(
+        (Date.now() - new Date(orderToDelete.created_at).getTime()) / 60000
+      );
+
+      const deleteReason = {
+        message: source === 'fastSync' 
+          ? 'لم يُعثر على الطلب في قائمة الوسيط الكاملة'
+          : source === 'syncOrderByQR'
+          ? 'لم يُعثر على الطلب عبر QR'
+          : source === 'syncAndApplyOrders'
+          ? 'لم يُعثر على الطلب في مزامنة الطلبات الظاهرة'
+          : 'حذف تلقائي',
+        timestamp: new Date().toISOString(),
+        source: source
+      };
+
+      try {
+        await supabase.from('auto_delete_log').insert({
+          order_id: orderToDelete.id,
+          order_number: orderToDelete.order_number,
+          tracking_number: orderToDelete.tracking_number,
+          qr_id: orderToDelete.qr_id,
+          delivery_partner_order_id: orderToDelete.delivery_partner_order_id,
+          deleted_by: user?.id,
+          delete_source: source,
+          reason: deleteReason,
+          order_status: orderToDelete.status,
+          delivery_status: orderToDelete.delivery_status,
+          order_age_minutes: orderAge,
+          order_data: orderToDelete
+        });
+        devLog.log('📝 تم تسجيل الحذف في سجل الحذف التلقائي');
+      } catch (logError) {
+        console.error('⚠️ فشل تسجيل الحذف:', logError);
+      }
+      
       // 2. حذف الخصومات المطبقة أولاً (Fallback - CASCADE سيحذفها تلقائياً)
       try {
         const { error: discountsDeleteError } = await supabase
@@ -1205,7 +1242,7 @@ export const AlWaseetProvider = ({ children }) => {
       devLog.error('❌ خطأ في الحذف التلقائي:', error);
       return false;
     }
-  }, [supabase, toast, scopeOrdersQuery]);
+  }, [supabase, toast, scopeOrdersQuery, user]);
 
   // مزامنة طلبات معلّقة بسرعة عبر IDs (دفعات 25) - صامتة مع إشعارات ذكية + fallback search
   const fastSyncPendingOrders = useCallback(async (showNotifications = false) => {
@@ -2841,7 +2878,7 @@ export const AlWaseetProvider = ({ children }) => {
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by')
+          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by, created_at, order_items(*)')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
           .or('tracking_number.not.is.null,qr_id.not.is.null'),
@@ -2919,6 +2956,33 @@ export const AlWaseetProvider = ({ children }) => {
           if (syncResult?.autoDeleted) {
             deletedCount++;
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
+            
+            // ✅ تسجيل الحذف في auto_delete_log
+            const orderAge = Math.round(
+              (Date.now() - new Date(localOrder.created_at).getTime()) / 60000
+            );
+            
+            try {
+              await supabase.from('auto_delete_log').insert({
+                order_id: localOrder.id,
+                order_number: localOrder.order_number,
+                tracking_number: localOrder.tracking_number,
+                qr_id: localOrder.qr_id,
+                delivery_partner_order_id: localOrder.delivery_partner_order_id,
+                deleted_by: user?.id,
+                delete_source: 'syncAndApplyOrders',
+                reason: {
+                  message: 'لم يُعثر على الطلب في شركة التوصيل بعد مزامنة الطلبات الظاهرة',
+                  timestamp: new Date().toISOString()
+                },
+                order_status: localOrder.status,
+                delivery_status: localOrder.delivery_status,
+                order_age_minutes: orderAge,
+                order_data: localOrder
+              });
+            } catch (logError) {
+              console.error('⚠️ فشل تسجيل الحذف:', logError);
+            }
           } else if (syncResult) {
             console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
               exists_in_remote: syncResult.foundInRemote !== false,

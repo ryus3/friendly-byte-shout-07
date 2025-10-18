@@ -232,6 +232,63 @@ export type Database = {
           },
         ]
       }
+      auto_delete_log: {
+        Row: {
+          created_at: string | null
+          delete_source: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          delivery_partner_order_id: string | null
+          delivery_status: string | null
+          id: string
+          order_age_minutes: number | null
+          order_data: Json | null
+          order_id: string | null
+          order_number: string | null
+          order_status: string | null
+          qr_id: string | null
+          reason: Json | null
+          tracking_number: string | null
+          waseet_orders_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          delete_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delivery_partner_order_id?: string | null
+          delivery_status?: string | null
+          id?: string
+          order_age_minutes?: number | null
+          order_data?: Json | null
+          order_id?: string | null
+          order_number?: string | null
+          order_status?: string | null
+          qr_id?: string | null
+          reason?: Json | null
+          tracking_number?: string | null
+          waseet_orders_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          delete_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          delivery_partner_order_id?: string | null
+          delivery_status?: string | null
+          id?: string
+          order_age_minutes?: number | null
+          order_data?: Json | null
+          order_id?: string | null
+          order_number?: string | null
+          order_status?: string | null
+          qr_id?: string | null
+          reason?: Json | null
+          tracking_number?: string | null
+          waseet_orders_count?: number | null
+        }
+        Relationships: []
+      }
       auto_sync_log: {
         Row: {
           completed_at: string | null

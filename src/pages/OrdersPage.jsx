@@ -93,7 +93,7 @@ const OrdersPage = () => {
   useEffect(() => {
     scrollToTopInstant();
     
-    // مزامنة تلقائية ذكية عند فتح الصفحة - فقط للطلبات النشطة الظاهرة
+    // ✅ مزامنة تلقائية ذكية عند فتح الصفحة - فقط للطلبات النشطة الظاهرة
     if (syncableOrders && syncableOrders.length > 0) {
       const performSmartSync = async () => {
         try {
@@ -102,20 +102,21 @@ const OrdersPage = () => {
           // استخدام المزامنة الذكية من useUnifiedAutoSync
           if (syncAndApplyOrders) {
             await syncAndApplyOrders(syncableOrders);
-            devLog.log('✅ اكتملت المزامنة الذكية التلقائية');
+            devLog.log('✅ اكتملت المزامنة الذكية التلقائية + الحذف التلقائي للطلبات المفقودة');
           }
         } catch (err) {
           devLog.log('⚠️ تعذرت المزامنة الذكية:', err);
         }
       };
       
-      // تأخير 3 ثواني بعد فتح الصفحة
-      const timer = setTimeout(performSmartSync, 3000);
+      // ✅ تأخير 5 ثواني (أكثر أماناً من 3)
+      const timer = setTimeout(performSmartSync, 5000);
       return () => clearTimeout(timer);
     }
   }, []); // تشغيل مرة واحدة عند فتح الصفحة
 
-  // تشغيل مزامنة سريعة تلقائية عند دخول صفحة الطلبات (لجميع المستخدمين)
+  // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
+  /*
   useEffect(() => {
     const timer = setTimeout(() => {
       if (fastSyncPendingOrders) {
@@ -130,6 +131,7 @@ const OrdersPage = () => {
     
     return () => clearTimeout(timer);
   }, []); // تشغيل مرة واحدة عند دخول الصفحة
+  */
 
   // إشعارات للطلبات الجديدة والمحدثة - SuperProvider يتولى التحديثات الفورية
   useEffect(() => {

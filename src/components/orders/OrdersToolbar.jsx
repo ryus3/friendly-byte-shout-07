@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode } from 'lucide-react';
+import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import QROrderScanner from './QROrderScanner';
+import { AutoDeleteLogDialog } from './AutoDeleteLogDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +20,7 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   const { hasPermission } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showDeleteLog, setShowDeleteLog] = useState(false);
   
   const handleSearchChange = (e) => {
     onFiltersChange({ searchTerm: e.target.value });
@@ -106,6 +108,17 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Button>
         </div>
 
+        {/* Auto Delete Log Button - قبل QR Scanner */}
+        <Button 
+          onClick={() => setShowDeleteLog(true)}
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 hover:from-red-600 hover:via-orange-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl hover:scale-105 flex-shrink-0"
+          title="سجل الحذف التلقائي"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+
         {/* QR Scanner Button - في النهاية */}
         <Button 
           onClick={() => setShowQRScanner(true)}
@@ -189,6 +202,12 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         onClose={() => setShowQRScanner(false)}
         onOrderFound={onOrderFound}
         onUpdateOrderStatus={onUpdateOrderStatus}
+      />
+
+      {/* Auto Delete Log Dialog */}
+      <AutoDeleteLogDialog 
+        open={showDeleteLog} 
+        onOpenChange={setShowDeleteLog}
       />
     </div>
   );
