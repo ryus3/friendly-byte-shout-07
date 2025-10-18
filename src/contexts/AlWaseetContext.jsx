@@ -246,15 +246,31 @@ export const AlWaseetProvider = ({ children }) => {
       return { success: true, updatedCount: 0 };
     }
 
-    devLog.log(`🚀 بدء مزامنة ${visibleOrders.length} طلب مرئي بكفاءة...`);
+    // ✅ فلترة مزدوجة - استبعاد الطلبات المكتملة والمرجعة
+    const syncableOrders = visibleOrders.filter(order => {
+      if (!order.created_by || order.delivery_partner !== 'alwaseet') return false;
+      
+      // استبعاد حالة delivery_status = 4 (تم التسليم للزبون)
+      if (order.delivery_status === '4') return false;
+      
+      // استبعاد حالة delivery_status = 17 (تم الإرجاع للتاجر)
+      if (order.delivery_status === '17') return false;
+      
+      return true;
+    });
+
+    if (syncableOrders.length === 0) {
+      devLog.log('لا توجد طلبات نشطة للمزامنة (تم استبعاد المكتملة والمرجعة)');
+      return { success: true, updatedCount: 0 };
+    }
+
+    devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
     
     try {
       // تجميع الطلبات حسب منشئها (created_by)
       const ordersByEmployee = new Map();
       
-      for (const order of visibleOrders) {
-        if (!order.created_by || order.delivery_partner !== 'alwaseet') continue;
-        
+      for (const order of syncableOrders) {
         if (!ordersByEmployee.has(order.created_by)) {
           ordersByEmployee.set(order.created_by, []);
         }
@@ -1384,13 +1400,54 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate) {
+        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
+        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+        const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+        const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+        const currentPrice = currentTotalAmount + currentDeliveryFee; // السعر الشامل الحالي (منتجات + توصيل)
+        const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
+
+        // 🔍 LOGGING مفصّل لفهم تحديث السعر
+        if (waseetPrice > 0) {
+          devLog.info(`🔍 فحص السعر للطلب ${localOrder.order_number}:`, {
+            waseetPrice: waseetPrice.toLocaleString(),
+            waseetOrderPrice: waseetOrder.price,
+            waseetOrderFinalPrice: waseetOrder.final_price,
+            currentPrice: currentPrice.toLocaleString(),
+            currentTotalAmount: currentTotalAmount.toLocaleString(),
+            currentDeliveryFee: currentDeliveryFee.toLocaleString(),
+            needsPriceUpdate,
+            waseetOrderExists: true
+          });
+        }
+
+        // 🔧 فحص حاجة الطلب لتصحيح price_increase الخاطئ
+        const needsCorrection = localOrder.price_increase > 0 && 
+          ((parseInt(String(localOrder.final_amount)) || 0) - currentTotalAmount - currentDeliveryFee) === 0;
+
+        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة + التصحيح)
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate && !needsCorrection) {
           continue; // لا حاجة للتحديث
         }
 
         const updates = {
           updated_at: new Date().toISOString(),
         };
+
+        // 🔧 تصحيح الطلبات ذات price_increase الخاطئ
+        if (localOrder.price_increase > 0) {
+          const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const shouldHaveIncrease = (finalAmount - currentTotalAmount - currentDeliveryFee) !== 0;
+
+          if (!shouldHaveIncrease) {
+            // إعادة تعيين price_increase إلى 0 للطلبات القديمة الخاطئة
+            updates.price_increase = 0;
+            updates.discount = 0;
+            updates.price_change_type = null;
+            devLog.log(`🔧 تصحيح price_increase الخاطئ للطلب ${localOrder.order_number}: كان ${localOrder.price_increase} → أصبح 0`);
+            needsUpdate = true;
+          }
+        }
 
         if (needsStatusUpdate) {
           updates.status = localStatus;
@@ -1419,83 +1476,165 @@ export const AlWaseetProvider = ({ children }) => {
           updates.delivery_status = waseetStatusText;
         }
 
-        // تحديث رسوم التوصيل إن وُجدت
-        if (waseetOrder.delivery_price) {
-          const dp = parseInt(String(waseetOrder.delivery_price)) || 0;
-          if (dp >= 0) updates.delivery_fee = dp;
-        }
-
-        // ✅ Phase 3: معالجة تغيير السعر (الحالة 18)
-        if (waseetStatusId === '18' || waseetStatusId === 18 || waseetStatusText.includes('تغيير سعر') || waseetStatusText.includes('تغيير السعر')) {
-          const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-          const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
+        // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
+        if (needsPriceUpdate) {
+          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
+          const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
           
-          if (waseetPrice !== currentPrice && waseetPrice > 0) {
-            const priceDifference = waseetPrice - currentPrice;
+          // ✅ قراءة جميع القيم من الطلب المحلي
+          const localTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+          const localFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const localDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+          const currentPriceIncrease = parseInt(String(localOrder.price_increase)) || 0;
+
+          // ✅ Log تفصيلي قبل أي حساب
+          devLog.log(`🔍 قيم الطلب ${localOrder.order_number} قبل حساب السعر:`, {
+            localTotalAmount,
+            localFinalAmount,
+            localDeliveryFee,
+            currentPriceIncrease,
+            waseetTotalPrice,
+            waseetDeliveryFee: deliveryFee
+          });
+
+          // ✅ حماية من race condition: إذا كانت جميع القيم = 0، لا نفعل شيء
+          if (localTotalAmount === 0 && localFinalAmount === 0 && localDeliveryFee === 0) {
+            devLog.warn(`⚠️ race condition: تجاهل تحديث السعر للطلب ${localOrder.order_number} - جميع القيم = 0`);
+            devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
+            continue; // ✅ تجاوز هذا الطلب بالكامل - سيتم مزامنته لاحقاً
+          }
+
+          // ✅ فصل السعر: منتجات = الشامل - التوصيل
+          const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
+          
+          // ✅ حساب السعر الأصلي الحقيقي (قبل أي تغييرات)
+          // السعر الأصلي = total_amount الحالي - الزيادة السابقة + الخصم السابق
+          const currentDiscount = parseInt(String(localOrder.discount)) || 0;
+          let originalProductsPrice = localTotalAmount - currentPriceIncrease + currentDiscount;
+
+          devLog.log(`🔍 حساب السعر الأصلي للطلب ${localOrder.order_number}:`, {
+            localTotalAmount,
+            currentPriceIncrease,
+            currentDiscount,
+            originalProductsPrice
+          });
+
+          // إذا كان السعر الأصلي = 0، جرب final_amount - delivery_fee
+          if (originalProductsPrice === 0 && localFinalAmount > 0) {
+            originalProductsPrice = localFinalAmount - localDeliveryFee;
+            devLog.warn(`⚠️ originalProductsPrice = 0، استخدام final_amount - delivery_fee = ${originalProductsPrice.toLocaleString()} د.ع`);
+          }
+          
+          // ✅ حماية إضافية: إذا كان originalProductsPrice سالباً أو صفر ولكن productsPriceFromWaseet > 0
+          if (originalProductsPrice <= 0 && productsPriceFromWaseet > 0) {
+            devLog.warn(`⚠️ race condition: originalProductsPrice = ${originalProductsPrice}، productsPriceFromWaseet = ${productsPriceFromWaseet}`);
+            devLog.warn(`   - تجاهل تحديث السعر - سيتم المحاولة في المزامنة التالية`);
+            continue; // ✅ تجاوز هذا الطلب بالكامل - سيتم مزامنته في الجولة القادمة
+          }
+          
+          // ✅ حساب الفرق
+          const priceDiff = productsPriceFromWaseet - originalProductsPrice;
+          
+          devLog.log(`💰 حساب الفرق للطلب ${localOrder.order_number}:`, {
+            originalProductsPrice,
+            productsPriceFromWaseet,
+            priceDiff,
+            needsUpdate: priceDiff !== 0
+          });
+          
+          // ✅ حماية خاصة: إذا كان currentPriceIncrease > 0 ولكن priceDiff = 0
+          // هذا يعني price_increase خاطئ من مزامنة سابقة
+          if (currentPriceIncrease > 0 && priceDiff === 0 && localTotalAmount > 0) {
+            devLog.warn(`🔧 إصلاح price_increase خاطئ للطلب ${localOrder.order_number}`);
+            devLog.warn(`   - price_increase الحالي: ${currentPriceIncrease.toLocaleString()} د.ع`);
+            devLog.warn(`   - price_increase الصحيح: 0 (لا يوجد فرق فعلي)`);
             
-            devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}: ${currentPrice} → ${waseetPrice} (فرق: ${priceDifference})`);
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+            updates.discount = 0;
             
-            // تحديث السعر في الطلب
-            updates.final_amount = waseetPrice;
-            updates.total_amount = waseetPrice;
+            devLog.log(`✅ تم إصلاح price_increase للطلب ${localOrder.order_number}`);
+          }
+
+          const currentDeliveryFee = localDeliveryFee;
+          
+          if (priceDiff > 0) {
+            // زيادة (السعر الجديد أكبر)
+            updates.price_increase = priceDiff;
+            updates.discount = 0;
+            updates.price_change_type = 'increase';
             
-            // إعادة حساب الأرباح
-            try {
-              const { data: profitRecord } = await supabase
-                .from('profits')
-                .select('id, profit_amount, employee_profit, employee_percentage, total_revenue')
-                .eq('order_id', localOrder.id)
-                .single();
+            // ✅ تحديث السعر فقط عند وجود زيادة فعلية
+            updates.total_amount = productsPriceFromWaseet;
+            updates.sales_amount = productsPriceFromWaseet;
+            
+            devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+            devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+            devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+            devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+            devLog.log(`   - 🔺 زيادة: ${priceDiff.toLocaleString()} د.ع`);
+            devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            
+          } else if (priceDiff < 0) {
+            // خصم (السعر الجديد أقل)
+            updates.discount = Math.abs(priceDiff);
+            updates.price_increase = 0;
+            updates.price_change_type = 'discount';
+            
+            // ✅ تحديث السعر فقط عند وجود خصم فعلي
+            updates.total_amount = productsPriceFromWaseet;
+            updates.sales_amount = productsPriceFromWaseet;
+            
+            devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+            devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+            devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+            devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+            devLog.log(`   - 🔻 خصم: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+            devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            
+          } else {
+            // ✅ لا تغيير - عدم تحديث total_amount على الإطلاق!
+            updates.discount = 0;
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+            
+            devLog.log(`✅ لا تغيير في سعر الطلب ${localOrder.order_number} (${originalProductsPrice.toLocaleString()} د.ع)`);
+          }
+          
+          // ✅ تحديث delivery_fee فقط إذا تغير
+          if (deliveryFee !== currentDeliveryFee) {
+            updates.delivery_fee = deliveryFee;
+            devLog.log(`📦 تحديث رسوم التوصيل: ${currentDeliveryFee.toLocaleString()} → ${deliveryFee.toLocaleString()} د.ع`);
+          }
+          
+          // ✅ تحديث الأرباح
+          try {
+            const { data: profitRecord } = await supabase
+              .from('profits')
+              .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
+              .eq('order_id', localOrder.id)
+              .maybeSingle();
+            
+            if (profitRecord) {
+              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
+              const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
-              if (profitRecord) {
-                // حساب التعديل
-                const employeeShare = (profitRecord.employee_percentage / 100.0) * priceDifference;
-                const systemShare = priceDifference - employeeShare;
-                
-                // تحديث الأرباح
-                await supabase
-                  .from('profits')
-                  .update({
-                    profit_amount: profitRecord.profit_amount + priceDifference,
-                    employee_profit: profitRecord.employee_profit + employeeShare,
-                    total_revenue: profitRecord.total_revenue + priceDifference,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq('id', profitRecord.id);
-                
-                // تسجيل في accounting
-                await supabase
-                  .from('accounting')
-                  .insert({
-                    type: priceDifference > 0 ? 'income' : 'expense',
-                    category: 'تغيير سعر من الوسيط',
-                    amount: Math.abs(priceDifference),
-                    description: `تغيير سعر طلب #${localOrder.order_number} من ${currentPrice.toLocaleString()} إلى ${waseetPrice.toLocaleString()} د.ع (فرق: ${priceDifference.toLocaleString()})`,
-                    reference_type: 'order',
-                    reference_id: localOrder.id,
-                    created_by: user.id
-                  });
-                
-                devLog.log(`✅ تم تحديث الأرباح لطلب ${localOrder.order_number}:`, {
-                  oldProfit: profitRecord.profit_amount,
-                  newProfit: profitRecord.profit_amount + priceDifference,
-                  employeeShare,
-                  systemShare
-                });
-                
-                // إشعار المستخدم
-                if (showNotifications) {
-                  toast({
-                    title: "💰 تغيير سعر من الوسيط",
-                    description: `طلب #${localOrder.order_number}: ${currentPrice.toLocaleString()} ← ${waseetPrice.toLocaleString()} د.ع\nالفرق: ${priceDifference > 0 ? '+' : ''}${priceDifference.toLocaleString()} د.ع`,
-                    variant: priceDifference > 0 ? "default" : "warning",
-                    duration: 8000
-                  });
-                }
-              }
-            } catch (profitError) {
-              devLog.warn('⚠️ خطأ في تحديث الأرباح عند تغيير السعر:', profitError);
+              await supabase
+                .from('profits')
+                .update({
+                  total_revenue: waseetTotalPrice,
+                  profit_amount: newProfit,
+                  employee_profit: employeeShare,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', profitRecord.id);
+              
+              devLog.log(`✅ تحديث الأرباح:`);
+              devLog.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
+              devLog.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
             }
+          } catch (profitError) {
+            console.error('❌ خطأ في تحديث الأرباح:', profitError);
           }
         }
 
@@ -1874,12 +2013,24 @@ export const AlWaseetProvider = ({ children }) => {
             console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
           }
           
+          // ✅ **حماية**: لا تحدّث إذا لم يوجد الطلب في شركة التوصيل
           if (!waseetOrder) {
             return null;
           }
         } else {
           console.log(`✅ وُجد الطلب ${qrId} في أحد الحسابات الأخرى`);
         }
+      }
+
+      // ✅ **حماية إضافية**: التحقق من صحة البيانات المُسترجعة
+      // ✅ قبول id أو qr_id من AlWaseet API
+      if (!waseetOrder || (!waseetOrder.qr_id && !waseetOrder.id)) {
+        console.error(`❌ البيانات المُسترجعة للطلب ${qrId} غير صالحة:`, waseetOrder);
+        return {
+          needs_update: false,
+          invalid_data: true,
+          message: 'البيانات المُسترجعة من شركة التوصيل غير صالحة أو قديمة'
+        };
       }
 
       console.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
@@ -1925,6 +2076,86 @@ export const AlWaseetProvider = ({ children }) => {
         const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
         if (deliveryPrice >= 0) {
           updates.delivery_fee = deliveryPrice;
+        }
+      }
+
+      // ✅ تحديث السعر دائماً إذا تغير من الوسيط
+      if (waseetOrder.price !== undefined) {
+        const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
+        const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
+        
+        // ✅ فصل السعر: منتجات = الشامل - التوصيل
+        const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
+        
+        // ✅ السعر الأصلي للمنتجات (من final_amount)
+        const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+        const originalProductsPrice = originalFinalAmount - deliveryFee;
+        
+        // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
+        const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+        
+        if (productsPriceFromWaseet !== currentProductsPrice) {
+          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
+          const priceDiff = originalProductsPrice - productsPriceFromWaseet;
+          
+          if (priceDiff > 0) {
+            // خصم
+            updates.discount = priceDiff;
+            updates.price_increase = 0;
+            updates.price_change_type = 'discount';
+            console.log(`   - 🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
+          } else if (priceDiff < 0) {
+            // زيادة
+            updates.discount = 0;
+            updates.price_increase = Math.abs(priceDiff);
+            updates.price_change_type = 'increase';
+            console.log(`   - 🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+          } else {
+            updates.discount = 0;
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+          }
+          
+          console.log(`💰 تحديث السعر للطلب ${localOrder.order_number || qrId}:`);
+          console.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+          console.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          console.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+          
+          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
+          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          updates.delivery_fee = deliveryFee;
+          
+          // ✅ تحديث الأرباح
+          try {
+            const { data: profitRecord } = await supabase
+              .from('profits')
+              .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
+              .eq('order_id', localOrder.id)
+              .maybeSingle();
+            
+            if (profitRecord) {
+              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
+              const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
+              
+              await supabase
+                .from('profits')
+                .update({
+                  total_revenue: waseetTotalPrice,
+                  profit_amount: newProfit,
+                  employee_profit: employeeShare,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', profitRecord.id);
+              
+              console.log(`✅ تحديث الأرباح:`);
+              console.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
+              console.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
+            }
+          } catch (profitError) {
+            console.error('❌ خطأ في تحديث الأرباح:', profitError);
+          }
         }
       }
 
@@ -2867,6 +3098,88 @@ export const AlWaseetProvider = ({ children }) => {
       delete window.linkRemoteIdsForExistingOrders;
     };
   }, [linkRemoteIdsForExistingOrders]);
+
+  // 🔍 دالة فحص يدوية لتتبع مشكلة تحديث الأسعار
+  useEffect(() => {
+    window.debugOrderSync = async (trackingNumber) => {
+      try {
+        devLog.info(`🔍 بدء فحص الطلب ${trackingNumber}...`);
+        
+        // جلب الطلب المحلي
+        const { data: localOrder, error: localError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('tracking_number', trackingNumber)
+          .single();
+
+        if (localError) {
+          devLog.error('❌ خطأ في جلب الطلب المحلي:', localError);
+          return { error: localError };
+        }
+
+        devLog.info('📦 الطلب المحلي:', {
+          order_number: localOrder.order_number,
+          tracking_number: localOrder.tracking_number,
+          status: localOrder.status,
+          delivery_status: localOrder.delivery_status,
+          total_amount: localOrder.total_amount,
+          delivery_fee: localOrder.delivery_fee,
+          final_amount: localOrder.final_amount,
+          price_increase: localOrder.price_increase,
+          discount: localOrder.discount
+        });
+
+        // جلب من API الوسيط
+        if (!token) {
+          devLog.error('❌ لا يوجد token - قم بتسجيل الدخول أولاً');
+          return { localOrder, error: 'No token' };
+        }
+
+        devLog.info('🌐 جلب الطلبات من API الوسيط...');
+        const waseetOrders = await getMerchantOrders(token);
+        const waseetOrder = waseetOrders.find(o => String(o.id) === trackingNumber);
+
+        if (!waseetOrder) {
+          devLog.error(`❌ الطلب ${trackingNumber} غير موجود في استجابة API الوسيط`);
+          devLog.info(`📊 عدد الطلبات في الاستجابة: ${waseetOrders.length}`);
+          return { localOrder, waseetOrder: null, error: 'Order not found in API' };
+        }
+
+        devLog.info('🌐 الطلب من الوسيط:', {
+          id: waseetOrder.id,
+          price: waseetOrder.price,
+          final_price: waseetOrder.final_price,
+          delivery_price: waseetOrder.delivery_price,
+          status: waseetOrder.status,
+          status_id: waseetOrder.status_id,
+          state_id: waseetOrder.state_id
+        });
+
+        // حساب التحديثات
+        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+        const currentPrice = (parseInt(String(localOrder.total_amount)) || 0) + (parseInt(String(localOrder.delivery_fee)) || 0);
+        
+        devLog.info('💰 مقارنة الأسعار:', {
+          waseetPrice: waseetPrice.toLocaleString(),
+          currentPrice: currentPrice.toLocaleString(),
+          difference: (waseetPrice - currentPrice).toLocaleString(),
+          needsUpdate: waseetPrice !== currentPrice && waseetPrice > 0
+        });
+
+        return { localOrder, waseetOrder, comparison: { waseetPrice, currentPrice } };
+      } catch (error) {
+        devLog.error('❌ خطأ في debugOrderSync:', error);
+        return { error };
+      }
+    };
+
+    devLog.info('✅ تم تفعيل دالة window.debugOrderSync(trackingNumber)');
+    devLog.info('   مثال: window.debugOrderSync("108108910")');
+
+    return () => {
+      delete window.debugOrderSync;
+    };
+  }, [token]);
 
   return (
     <AlWaseetContext.Provider value={value}>

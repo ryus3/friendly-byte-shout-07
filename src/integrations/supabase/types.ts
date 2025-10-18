@@ -2655,6 +2655,8 @@ export type Database = {
           original_order_id: string | null
           payment_received_source_id: string | null
           payment_status: string
+          price_change_type: string | null
+          price_increase: number | null
           qr_id: string | null
           receipt_received: boolean | null
           receipt_received_at: string | null
@@ -2706,6 +2708,8 @@ export type Database = {
           original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
+          price_change_type?: string | null
+          price_increase?: number | null
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
@@ -2757,6 +2761,8 @@ export type Database = {
           original_order_id?: string | null
           payment_received_source_id?: string | null
           payment_status?: string
+          price_change_type?: string | null
+          price_increase?: number | null
           qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
@@ -5183,7 +5189,7 @@ export type Database = {
         Args:
           | { p_product_id: string; p_quantity: number; p_variant_id: string }
           | { p_quantity: number; p_variant_id: string }
-        Returns: undefined
+        Returns: boolean
       }
       find_city_in_cache: {
         Args: { p_city_text: string }
@@ -5220,6 +5226,10 @@ export type Database = {
       fix_existing_purchase_shipping: {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
+      }
+      fix_incorrect_price_increase_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       fix_regions_cities_linking: {
         Args: Record<PropertyKey, never>
