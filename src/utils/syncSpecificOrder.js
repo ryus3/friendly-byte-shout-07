@@ -138,7 +138,11 @@ export const syncSpecificOrder = async (qrId, token) => {
       const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
       if (deliveryPrice >= 0) {
         updates.delivery_fee = deliveryPrice;
-        // ✅ لا نُعيد حساب sales_amount - تم حسابه بشكل صحيح في السطر 85
+        
+        // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
+        if (updates.final_amount) {
+          updates.sales_amount = updates.final_amount - deliveryPrice;
+        }
       }
     }
 

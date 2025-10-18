@@ -1239,7 +1239,7 @@ export const AlWaseetProvider = ({ children }) => {
       const { data: pendingOrders, error: pendingErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received, final_amount, total_amount, delivery_fee, sales_amount, discount, price_increase, price_change_type')
+          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
           .eq('delivery_partner', 'alwaseet')
           .in('status', targetStatuses)
       ).limit(200);
@@ -1300,16 +1300,8 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // ✅ حماية الطلبات المُحدّثة مؤخراً من الحذف التلقائي (آخر 5 دقائق)
-        // السبب: عند تغيير السعر في الوسيط، قد لا يظهر الطلب في API مؤقتاً بسبب:
-        // - تأخير في Cache الوسيط
-        // - إعادة فهرسة البيانات
-        // - تأخير CDN/Load Balancer
-        const recentlyUpdated = localOrder.updated_at && 
-          (Date.now() - new Date(localOrder.updated_at).getTime()) < (5 * 60 * 1000);
-
-        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام ولم يُحدث مؤخراً
-        if (!waseetOrder && !recentlyUpdated && canAutoDeleteOrder(localOrder, user)) {
+        // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
+        if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
           // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking - فحص بجميع التوكنات
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
           let remoteCheck = null;
@@ -1351,51 +1343,8 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // ✅ إذا لم نجد الطلب في القائمة، نبحث مباشرة (مهم عند تغيير السعر)
         if (!waseetOrder) {
-          const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
-          
-          // محاولة البحث المباشر بالرقم التتبع/QR
-          if (confirmKey) {
-            try {
-              waseetOrder = await AlWaseetAPI.getOrderByQR(token, confirmKey);
-              if (waseetOrder) {
-                devLog.log(`✅ البحث المباشر: وُجد الطلب ${confirmKey} (تم تحديثه في الوسيط)`);
-              }
-            } catch (e) {
-              devLog.warn(`⚠️ فشل البحث المباشر عن ${confirmKey}:`, e.message);
-            }
-          }
-          
-          // إذا كان لدينا معرف الوسيط، نحاول جلبه مباشرة
-          if (!waseetOrder && localOrder.delivery_partner_order_id) {
-            try {
-              waseetOrder = await AlWaseetAPI.getOrderById(token, localOrder.delivery_partner_order_id);
-              if (waseetOrder) {
-                devLog.log(`✅ البحث بالمعرف: وُجد الطلب #${localOrder.delivery_partner_order_id}`);
-              }
-            } catch (e) {
-              devLog.warn(`⚠️ فشل جلب الطلب بالمعرف:`, e.message);
-            }
-          }
-          
-          // ✅ محاولة أخيرة: استخدام bulk API (قد لا يكون cached)
-          if (!waseetOrder && localOrder.delivery_partner_order_id) {
-            try {
-              const bulkResult = await AlWaseetAPI.getOrdersByIdsBulk(token, [localOrder.delivery_partner_order_id]);
-              if (bulkResult && bulkResult.length > 0) {
-                waseetOrder = bulkResult[0];
-                devLog.log(`✅ البحث Bulk: وُجد الطلب #${localOrder.delivery_partner_order_id}`);
-              }
-            } catch (e) {
-              devLog.warn(`⚠️ فشل البحث bulk:`, e.message);
-            }
-          }
-          
-          // إذا ما زال غير موجود، نتجاهله
-          if (!waseetOrder) {
-            continue;
-          }
+          continue; // لم نجد الطلب في الوسيط
         }
 
         checked++;
@@ -1451,28 +1400,10 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        // ✅ فحص تغيير السعر - مقارنة مع السعر الشامل الحالي (total_amount + delivery_fee)
+        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentTotalPrice = parseInt(String(localOrder.total_amount)) || 0;
-        const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
-        const currentPrice = currentTotalPrice + currentDeliveryFee; // السعر الشامل الحالي
+        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
-
-        // ✅ Console log للتشخيص
-        console.log(`🔍 فحص السعر للطلب ${localOrder.tracking_number}:`, {
-          waseetPrice,
-          currentTotalPrice,
-          currentDeliveryFee,
-          currentPrice,
-          'localOrder.final_amount': localOrder.final_amount,
-          'localOrder.total_amount': localOrder.total_amount,
-          'localOrder.delivery_fee': localOrder.delivery_fee,
-          'localOrder.discount': localOrder.discount,
-          'localOrder.price_increase': localOrder.price_increase,
-          needsPriceUpdate,
-          'waseetOrder.price': waseetOrder.price,
-          'waseetOrder.delivery_price': waseetOrder.delivery_price
-        });
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
         if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
@@ -1513,16 +1444,16 @@ export const AlWaseetProvider = ({ children }) => {
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
         if (needsPriceUpdate) {
           const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;  // السعر الشامل من الوسيط
-          const deliveryFee = parseInt(String(waseetOrder.delivery_fee || localOrder.delivery_fee)) || 0;
+          const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
           
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات من final_amount (الذي لا يتغير أبداً)
+          // ✅ السعر الأصلي للمنتجات (من final_amount)
           const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const originalProductsPrice = originalFinalAmount - deliveryFee;
           
-          // ✅ حساب الخصم/الزيادة
+          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
           const priceDiff = originalProductsPrice - productsPriceFromWaseet;
           
           if (priceDiff > 0) {
@@ -1541,18 +1472,17 @@ export const AlWaseetProvider = ({ children }) => {
             updates.price_change_type = null;
           }
           
-          // ✅ تحديث كلا الحقلين بنفس القيمة (sales_amount = total_amount) لتجنب خطأ Trigger
-          updates.total_amount = productsPriceFromWaseet;  
-          updates.sales_amount = productsPriceFromWaseet;  // ✅ يجب أن يتطابق مع total_amount
-          updates.delivery_fee = deliveryFee;
-          
-          // final_amount يبقى كما هو (السعر الأصلي)
-          
           devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
-          devLog.log(`   - السعر الأصلي: ${originalProductsPrice.toLocaleString()} د.ع`);
-          devLog.log(`   - السعر الجديد: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          devLog.log(`   - ${priceDiff > 0 ? 'خصم' : priceDiff < 0 ? 'زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
-          devLog.log(`   - total_amount = sales_amount = ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          devLog.log(`   - ${priceDiff > 0 ? '🔻 خصم' : priceDiff < 0 ? '🔺 زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+          
+          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
+          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
+          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          updates.delivery_fee = deliveryFee;
           
           // ✅ تحديث الأرباح
           try {

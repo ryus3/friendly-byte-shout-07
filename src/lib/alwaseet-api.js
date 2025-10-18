@@ -257,13 +257,7 @@ export const getMerchantOrders = async (token) => {
 };
 
 export const getOrderById = async (token, orderId) => {
-  // ✅ إضافة cache-busting للحصول على بيانات محدّثة
-  const cacheBuster = Date.now();
-  return handleApiCall('merchant-orders', 'GET', token, null, { 
-    token, 
-    order_id: orderId,
-    _: cacheBuster // إجبار API على تجاهل cache
-  });
+  return handleApiCall('merchant-orders', 'GET', token, null, { token, order_id: orderId });
 };
 
 export const getOrderStatuses = async (token) => {
@@ -300,13 +294,9 @@ export const receiveInvoice = async (token, invoiceId) => {
 // Get specific order by QR/tracking number - طريقة موثوقة لحماية نظام الحذف التلقائي
 export const getOrderByQR = async (token, qrId) => {
   try {
-    // ✅ **الطريقة الموثوقة**: جلب كل الطلبات والبحث فيها مع cache-busting
+    // ✅ **الطريقة الموثوقة**: جلب كل الطلبات والبحث فيها
     // هذه الطريقة **لا** تُرجع بيانات cached للطلبات المحذوفة
-    const cacheBuster = Date.now();
-    const orders = await handleApiCall('merchant-orders', 'GET', token, null, { 
-      token,
-      _: cacheBuster // إجبار API على تجاهل cache
-    });
+    const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
     
     if (!orders || !Array.isArray(orders)) {
       console.warn(`⚠️ لم يتم استلام قائمة طلبات صالحة من API`);
