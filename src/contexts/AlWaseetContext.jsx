@@ -1474,8 +1474,8 @@ export const AlWaseetProvider = ({ children }) => {
           const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const originalProductsPrice = finalAmount - deliveryFee;
           
-          // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر القديم
-          const priceDiff = productsPriceFromWaseet - currentTotalAmount;
+          // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر الأصلي للمنتجات
+          const priceDiff = productsPriceFromWaseet - originalProductsPrice;
           
           if (priceDiff > 0) {
             // زيادة (السعر الجديد أكبر)
