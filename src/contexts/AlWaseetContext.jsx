@@ -1402,7 +1402,9 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
+        const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+        const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+        const currentPrice = currentTotalAmount + currentDeliveryFee; // السعر الشامل الحالي (منتجات + توصيل)
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
@@ -1449,18 +1451,9 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات (من total_amount الحالي + الخصم - الزيادة)
-          const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
-          const currentDiscount = parseInt(String(localOrder.discount)) || 0;
-          const currentIncrease = parseInt(String(localOrder.price_increase)) || 0;
-          const originalProductsPrice = currentTotalAmount + currentDiscount - currentIncrease;
-          
-          // تصحيح final_amount إذا تم استبداله خطأً بسعر الوسيط
-          if (!localOrder.final_amount || localOrder.final_amount === waseetTotalPrice) {
-            const reconstructedOriginalPrice = originalProductsPrice + deliveryFee;
-            updates.final_amount = reconstructedOriginalPrice;
-            devLog.log(`🔧 تصحيح final_amount من ${localOrder.final_amount} إلى ${reconstructedOriginalPrice}`);
-          }
+          // ✅ السعر الأصلي للمنتجات = final_amount - delivery_fee (ثابت لا يتغير)
+          const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const originalProductsPrice = finalAmount - deliveryFee;
           
           // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
           const priceDiff = originalProductsPrice - productsPriceFromWaseet;
