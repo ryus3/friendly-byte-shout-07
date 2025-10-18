@@ -1464,31 +1464,76 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
         if (needsPriceUpdate) {
-          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;  // السعر الشامل من الوسيط
+          const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
           const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
           
+          // ✅ قراءة جميع القيم من الطلب المحلي
+          const localTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+          const localFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
+          const localDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+          const currentPriceIncrease = parseInt(String(localOrder.price_increase)) || 0;
+
+          // ✅ Log تفصيلي قبل أي حساب
+          devLog.log(`🔍 قيم الطلب ${localOrder.order_number} قبل حساب السعر:`, {
+            localTotalAmount,
+            localFinalAmount,
+            localDeliveryFee,
+            currentPriceIncrease,
+            waseetTotalPrice,
+            waseetDeliveryFee: deliveryFee
+          });
+
+          // ✅ حماية من race condition: إذا كانت جميع القيم = 0، لا نفعل شيء
+          if (localTotalAmount === 0 && localFinalAmount === 0 && localDeliveryFee === 0) {
+            devLog.warn(`⚠️ race condition: تجاهل تحديث السعر للطلب ${localOrder.order_number} - جميع القيم = 0`);
+            devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
+            return null;
+          }
+
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات = total_amount (مع حماية من القيم الفارغة)
-          // إذا كان total_amount فارغاً، استخدم final_amount - delivery_fee
-          const localTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
-          const originalProductsPrice = localTotalAmount > 0 
-            ? localTotalAmount 
-            : (parseInt(String(localOrder.final_amount)) || 0) - deliveryFee;
+          // ✅ حساب السعر الأصلي للمنتجات مع حماية محسنة
+          let originalProductsPrice = localTotalAmount;
           
-          // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر الأصلي للمنتجات
-          const priceDiff = productsPriceFromWaseet - originalProductsPrice;
-          
-          // ✅ حماية إضافية: إذا كان originalProductsPrice = 0 ولكن productsPriceFromWaseet > 0
-          // هذا يعني race condition - لا نحدث السعر على الإطلاق
-          if (originalProductsPrice === 0 && productsPriceFromWaseet > 0) {
-            devLog.warn(`⚠️ تجاهل تحديث السعر للطلب ${localOrder.order_number}: originalProductsPrice = 0 (race condition محتمل)`);
-            devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
-            return null; // عدم تحديث الطلب
+          // إذا كان total_amount = 0، جرب final_amount - delivery_fee
+          if (originalProductsPrice === 0 && localFinalAmount > 0) {
+            originalProductsPrice = localFinalAmount - localDeliveryFee;
+            devLog.warn(`⚠️ total_amount = 0، استخدام final_amount - delivery_fee = ${originalProductsPrice.toLocaleString()} د.ع`);
           }
           
-          const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+          // ✅ حماية إضافية: إذا كان originalProductsPrice سالباً أو صفر ولكن productsPriceFromWaseet > 0
+          if (originalProductsPrice <= 0 && productsPriceFromWaseet > 0) {
+            devLog.warn(`⚠️ race condition: originalProductsPrice = ${originalProductsPrice}، productsPriceFromWaseet = ${productsPriceFromWaseet}`);
+            devLog.warn(`   - تجاهل تحديث السعر - سيتم المحاولة في المزامنة التالية`);
+            return null;
+          }
+          
+          // ✅ حساب الفرق
+          const priceDiff = productsPriceFromWaseet - originalProductsPrice;
+          
+          devLog.log(`💰 حساب الفرق للطلب ${localOrder.order_number}:`, {
+            originalProductsPrice,
+            productsPriceFromWaseet,
+            priceDiff,
+            needsUpdate: priceDiff !== 0
+          });
+          
+          // ✅ حماية خاصة: إذا كان currentPriceIncrease > 0 ولكن priceDiff = 0
+          // هذا يعني price_increase خاطئ من مزامنة سابقة
+          if (currentPriceIncrease > 0 && priceDiff === 0 && localTotalAmount > 0) {
+            devLog.warn(`🔧 إصلاح price_increase خاطئ للطلب ${localOrder.order_number}`);
+            devLog.warn(`   - price_increase الحالي: ${currentPriceIncrease.toLocaleString()} د.ع`);
+            devLog.warn(`   - price_increase الصحيح: 0 (لا يوجد فرق فعلي)`);
+            
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+            updates.discount = 0;
+            
+            devLog.log(`✅ تم إصلاح price_increase للطلب ${localOrder.order_number}`);
+          }
+
+          const currentDeliveryFee = localDeliveryFee;
           
           if (priceDiff > 0) {
             // زيادة (السعر الجديد أكبر)
