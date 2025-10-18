@@ -1474,20 +1474,21 @@ export const AlWaseetProvider = ({ children }) => {
           const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const originalProductsPrice = finalAmount - deliveryFee;
           
-          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
-          const priceDiff = originalProductsPrice - productsPriceFromWaseet;
+          // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر القديم
+          const priceDiff = productsPriceFromWaseet - currentTotalAmount;
           
           if (priceDiff > 0) {
-            // خصم
-            updates.discount = priceDiff;
+            // زيادة (السعر الجديد أكبر)
+            updates.price_increase = priceDiff;
+            updates.discount = 0;
+            updates.price_change_type = 'increase';
+          } else if (priceDiff < 0) {
+            // خصم (السعر الجديد أقل)
+            updates.discount = Math.abs(priceDiff);
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
-          } else if (priceDiff < 0) {
-            // زيادة
-            updates.discount = 0;
-            updates.price_increase = Math.abs(priceDiff);
-            updates.price_change_type = 'increase';
           } else {
+            // لا تغيير
             updates.discount = 0;
             updates.price_increase = 0;
             updates.price_change_type = null;
