@@ -1470,11 +1470,23 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات = total_amount (مباشرة من القاعدة - أكثر دقة)
-          const originalProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
+          // ✅ السعر الأصلي للمنتجات = total_amount (مع حماية من القيم الفارغة)
+          // إذا كان total_amount فارغاً، استخدم final_amount - delivery_fee
+          const localTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+          const originalProductsPrice = localTotalAmount > 0 
+            ? localTotalAmount 
+            : (parseInt(String(localOrder.final_amount)) || 0) - deliveryFee;
           
           // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر الأصلي للمنتجات
           const priceDiff = productsPriceFromWaseet - originalProductsPrice;
+          
+          // ✅ حماية إضافية: إذا كان originalProductsPrice = 0 ولكن productsPriceFromWaseet > 0
+          // هذا يعني race condition - لا نحدث السعر على الإطلاق
+          if (originalProductsPrice === 0 && productsPriceFromWaseet > 0) {
+            devLog.warn(`⚠️ تجاهل تحديث السعر للطلب ${localOrder.order_number}: originalProductsPrice = 0 (race condition محتمل)`);
+            devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
+            return null; // عدم تحديث الطلب
+          }
           
           const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
           
