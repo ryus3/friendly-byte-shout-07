@@ -1400,13 +1400,7 @@ export const AlWaseetProvider = ({ children }) => {
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
-        // ✅ فحص تغيير السعر قبل تحديد ما إذا كان هناك حاجة للتحديث
-        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
-        const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
-
-        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
-        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate) {
           continue; // لا حاجة للتحديث
         }
 
@@ -1441,8 +1435,11 @@ export const AlWaseetProvider = ({ children }) => {
           updates.delivery_status = waseetStatusText;
         }
 
-        // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
-        if (needsPriceUpdate) {
+        // ✅ تحديث السعر دائماً إذا تغير (ليس فقط الحالة 18)
+        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
+
+        if (waseetPrice !== currentPrice && waseetPrice > 0) {
           const priceDifference = waseetPrice - currentPrice;
           
           devLog.log(`💰 تغيير سعر الطلب ${localOrder.order_number}:`);
