@@ -1470,9 +1470,8 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ السعر الأصلي للمنتجات = final_amount - delivery_fee (ثابت لا يتغير)
-          const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
-          const originalProductsPrice = finalAmount - deliveryFee;
+          // ✅ السعر الأصلي للمنتجات = total_amount (مباشرة من القاعدة - أكثر دقة)
+          const originalProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
           
           // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر الأصلي للمنتجات
           const priceDiff = productsPriceFromWaseet - originalProductsPrice;
