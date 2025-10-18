@@ -1437,7 +1437,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ تحديث السعر دائماً إذا تغير (ليس فقط الحالة 18)
         const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
-        const currentPrice = parseInt(String(localOrder.total_amount || localOrder.final_amount)) || 0;
+        const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
 
         if (waseetPrice !== currentPrice && waseetPrice > 0) {
           const priceDifference = waseetPrice - currentPrice;
@@ -1448,19 +1448,13 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log(`   - الفرق: ${priceDifference.toLocaleString()} د.ع`);
           devLog.log(`   - الحالة: ${waseetStatusText}`);
           
-          // ✅ المنطق الصحيح:
-          // - waseetOrder.price = السعر الكلي شامل التوصيل من شركة التوصيل
-          // - total_amount = السعر الكلي الحالي (يتغير عند تغيير السعر)
-          // - final_amount = السعر الأصلي عند الإنشاء (ثابت - لا يتغير أبداً)
-          // - sales_amount = total_amount - delivery_fee (سعر البيع بدون توصيل)
-          
-          // تحديث السعر الكلي فقط (final_amount يبقى كما هو)
+          // تحديث السعر
+          updates.final_amount = waseetPrice;
           updates.total_amount = waseetPrice;
           
-          // حساب sales_amount الصحيح (السعر الكلي - رسوم التوصيل)
+          // حساب sales_amount
           const deliveryFee = parseInt(String(waseetOrder.delivery_price)) || parseInt(String(localOrder.delivery_fee)) || 0;
-          const salesAmount = waseetPrice - deliveryFee;
-          updates.sales_amount = salesAmount;
+          updates.sales_amount = waseetPrice - deliveryFee;
           
           // ✅ تحديث الأرباح
           try {
@@ -1471,8 +1465,8 @@ export const AlWaseetProvider = ({ children }) => {
               .maybeSingle();
             
             if (profitRecord) {
-              // ✅ الربح = سعر البيع (بدون توصيل) - التكلفة
-              const newProfit = salesAmount - profitRecord.total_cost;
+              // حساب الربح الجديد
+              const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
               const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
               // تحديث سجل الربح
@@ -1518,8 +1512,8 @@ export const AlWaseetProvider = ({ children }) => {
             updates.delivery_fee = dp;
             
             // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-            if (updates.total_amount) {
-              updates.sales_amount = updates.total_amount - dp;
+            if (updates.final_amount) {
+              updates.sales_amount = updates.final_amount - dp;
             }
           }
         }
@@ -1968,49 +1962,41 @@ export const AlWaseetProvider = ({ children }) => {
       // السعر من الوسيط = المبلغ الكلي شامل التوصيل
       if (waseetOrder.price !== undefined) {
         const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
-        
-        // ✅ استخدام final_amount كمرجع للسعر الأصلي
-        const originalTotalAmount = parseInt(String(localOrder.final_amount)) || parseInt(String(localOrder.total_amount)) || 0;
-        const currentTotalAmount = parseInt(String(localOrder.total_amount)) || 0;
+        const currentTotalAmount = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
         const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
         
         // السماح بالأسعار صفر أو سالبة (الشرط: فقط إذا تغير السعر)
         if (waseetTotalPrice !== currentTotalAmount) {
-          // ✅ حساب الفرق بناءً على السعر الأصلي
-          const priceDifference = waseetTotalPrice - originalTotalAmount;
-          const discountAmount = priceDifference < 0 ? Math.abs(priceDifference) : 0;
-          const additionalProfit = priceDifference > 0 ? priceDifference : 0;
-          
-          const percentageChange = originalTotalAmount > 0 ? Math.abs((priceDifference / originalTotalAmount) * 100) : 100;
+          const priceDifference = waseetTotalPrice - currentTotalAmount;
+          const percentageChange = currentTotalAmount > 0 ? Math.abs((priceDifference / currentTotalAmount) * 100) : 100;
           
           // ✅ **حماية**: تحذير إذا كان التغيير كبير (أكثر من 50%)
           if (percentageChange > 50) {
             console.warn(`⚠️ تغيير كبير في سعر الطلب ${localOrder.order_number}:`);
-            console.warn(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
-            console.warn(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            console.warn(`   - المبلغ الكلي الحالي: ${currentTotalAmount.toLocaleString()} د.ع`);
+            console.warn(`   - المبلغ الكلي الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
             console.warn(`   - التغيير: ${percentageChange.toFixed(1)}%`);
             console.warn(`   - تأكد أن هذا ليس خطأ أو بيانات cached قديمة!`);
           }
           
-          console.log(`💰 تغيير السعر للطلب ${localOrder.order_number || qrId}:`);
-          console.log(`   - السعر الأصلي: ${originalTotalAmount.toLocaleString()} د.ع`);
-          console.log(`   - السعر الجديد: ${waseetTotalPrice.toLocaleString()} د.ع`);
-          console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          if (discountAmount > 0) {
-            console.log(`   - 🔻 خصم: ${discountAmount.toLocaleString()} د.ع`);
-          } else if (additionalProfit > 0) {
-            console.log(`   - 🔺 زيادة: ${additionalProfit.toLocaleString()} د.ع`);
-          }
+          // تحديد نوع التغيير
+          const changeType = priceDifference < 0 ? 'خصم' : priceDifference > 0 ? 'ربح إضافي' : 'تعديل';
           
-          // ✅ الحساب الصحيح: final_amount يبقى كما هو (السعر الأصلي)
-          // total_amount يُحدّث للسعر الجديد
+          console.log(`💰 ${changeType} في سعر الطلب ${localOrder.order_number || qrId}:`);
+          console.log(`   - المبلغ الكلي الحالي (شامل التوصيل): ${currentTotalAmount.toLocaleString()} د.ع`);
+          console.log(`   - المبلغ الكلي الجديد (شامل التوصيل): ${waseetTotalPrice.toLocaleString()} د.ع`);
+          console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          console.log(`   - الفرق: ${priceDifference.toLocaleString()} د.ع (${changeType})`);
+          
+          // ✅ الحساب الصحيح: السعر من الوسيط = المبلغ الكلي شامل التوصيل
+          updates.final_amount = waseetTotalPrice;
           updates.total_amount = waseetTotalPrice;
           
-          // ✅ sales_amount = المبلغ الكلي من الوسيط - رسوم التوصيل
+          // ✅ sales_amount = المبلغ الكلي - رسوم التوصيل
           const newSalesAmount = waseetTotalPrice - deliveryFee;
           updates.sales_amount = newSalesAmount;
           
-          console.log(`   - سعر البيع الجديد (بدون توصيل): ${newSalesAmount.toLocaleString()} د.ع`);
+          console.log(`   - سعر المنتج الجديد (بدون توصيل): ${newSalesAmount.toLocaleString()} د.ع`);
           
           // ✅ تحديث الأرباح
           try {
