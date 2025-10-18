@@ -2434,7 +2434,6 @@ export const SuperProvider = ({ children }) => {
         alwaseet_city_id: deliveryPartnerData?.alwaseet_city_id || aiOrder.city_id,
         alwaseet_region_id: deliveryPartnerData?.alwaseet_region_id || aiOrder.region_id,
         total_amount: subtotal,
-        sales_amount: subtotal,
         discount,
       delivery_fee: deliveryFee,
       final_amount: total,

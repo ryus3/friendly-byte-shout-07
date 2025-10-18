@@ -4,11 +4,16 @@ import * as AlWaseetAPI from '@/lib/alwaseet-api';
 
 export const syncSpecificOrder = async (qrId, token) => {
   try {
+    console.log(`🔄 مزامنة عاجلة للطلب ${qrId}...`);
+    
     // جلب الطلب من الوسيط
     const waseetOrder = await AlWaseetAPI.getOrderByQR(token, qrId);
     if (!waseetOrder) {
+      console.warn(`❌ لم يتم العثور على الطلب ${qrId} في الوسيط`);
       return null;
     }
+
+    console.log('📋 بيانات الطلب الحالية من الوسيط:', waseetOrder);
 
     // تحديد الحالة المحلية الصحيحة مع أولوية للمعرفات الرقمية
     const statusId = waseetOrder.status_id || waseetOrder.state_id;
@@ -56,6 +61,9 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    console.log(`📊 الحالة المحلية الحالية: ${localOrder.status}, الحالة الصحيحة: ${correctLocalStatus}`);
+    console.log(`📊 حالة الوسيط الحالية: ${localOrder.delivery_status}, الحالة المعيارية الجديدة: ${standardizedDeliveryStatus}`);
+
     // تحضير التحديثات مع delivery_status المعياري
     const updates = {
       status: correctLocalStatus,
@@ -64,59 +72,11 @@ export const syncSpecificOrder = async (qrId, token) => {
       updated_at: new Date().toISOString()
     };
 
-    // ✅ تحديث السعر إذا تغير من الوسيط
-    if (waseetOrder.price) {
-      const waseetPrice = parseInt(String(waseetOrder.price)) || 0;
-      const currentPrice = parseInt(String(localOrder.final_amount || localOrder.total_amount)) || 0;
-      
-      if (waseetPrice !== currentPrice && waseetPrice > 0) {
-        const priceDifference = waseetPrice - currentPrice;
-        
-        updates.final_amount = waseetPrice;
-        updates.total_amount = waseetPrice;
-        
-        // حساب sales_amount (السعر - رسوم التوصيل)
-        const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
-        updates.sales_amount = waseetPrice - deliveryFee;
-        
-        // ✅ تحديث الأرباح
-        try {
-          const { data: profitRecord } = await supabase
-            .from('profits')
-            .select('id, total_cost, employee_percentage, profit_amount, employee_profit')
-            .eq('order_id', localOrder.id)
-            .maybeSingle();
-          
-          if (profitRecord) {
-            const newProfit = waseetPrice - deliveryFee - profitRecord.total_cost;
-            const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
-            
-            await supabase
-              .from('profits')
-              .update({
-                total_revenue: waseetPrice,
-                profit_amount: newProfit,
-                employee_profit: employeeShare,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', profitRecord.id);
-          }
-        } catch (profitError) {
-          console.error('❌ خطأ في تحديث الأرباح:', profitError);
-        }
-      }
-    }
-
     // تحديث رسوم التوصيل
     if (waseetOrder.delivery_price) {
       const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
       if (deliveryPrice >= 0) {
         updates.delivery_fee = deliveryPrice;
-        
-        // إعادة حساب sales_amount إذا تم تحديث رسوم التوصيل
-        if (updates.final_amount) {
-          updates.sales_amount = updates.final_amount - deliveryPrice;
-        }
       }
     }
 
@@ -136,6 +96,15 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // تحديث حالة المخزون باستخدام النظام الجديد
+    // تم إزالة استدعاء update_order_reservation_status من هنا
+    // لأن التحديث سيتم تلقائياً عبر auto_stock_management_trigger في قاعدة البيانات
+    console.log('📦 سيتم تحديث المخزون تلقائياً عبر المحفز في قاعدة البيانات');
+
+    console.log(`✅ تم تحديث الطلب ${qrId} بنجاح:`);
+    console.log(`   - الحالة: ${localOrder.status} → ${correctLocalStatus}`);
+    console.log(`   - حالة التوصيل: ${localOrder.delivery_status} → ${standardizedDeliveryStatus}`);
+    console.log(`   - معرف الوسيط: ${waseetOrder.id}`);
     
     return {
       success: true,
@@ -151,15 +120,19 @@ export const syncSpecificOrder = async (qrId, token) => {
   }
 };
 
+// مزامنة سريعة للطلب 98713588
 export const syncOrder98713588 = async () => {
   try {
+    // يمكن استخدام هذا التوكن الثابت للمزامنة السريعة
     const token = "7ed481be5a53bf1c12a77fbb9384b9b6";
     const result = await syncSpecificOrder("98713588", token);
     
     if (result && result.success) {
+      console.log('🎯 تمت مزامنة الطلب 98713588 بنجاح');
       alert(`تمت مزامنة الطلب 98713588 بنجاح!\nالحالة الجديدة: ${result.updates.status}\nحالة الوسيط: ${result.updates.delivery_status}`);
       window.location.reload();
     } else {
+      console.warn('⚠️ لم تتم المزامنة أو لم تكن مطلوبة');
       alert('لم تكن هناك حاجة للمزامنة أو حدث خطأ');
     }
   } catch (error) {

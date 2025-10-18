@@ -89,31 +89,45 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // Scroll to top when page loads + ✅ المزامنة الذكية للطلبات الظاهرة فقط
+  // Scroll to top when page loads + auto sync
   useEffect(() => {
     scrollToTopInstant();
     
-    // مزامنة تلقائية ذكية عند فتح الصفحة - فقط للطلبات النشطة الظاهرة
-    if (syncableOrders && syncableOrders.length > 0) {
-      const performSmartSync = async () => {
+    // مزامنة تلقائية عند فتح صفحة الطلبات للمديرين فقط
+    if (hasPermission('view_all_orders')) {
+      const performAutoSync = async () => {
         try {
-          devLog.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط ظاهر...`);
+          await supabase.functions.invoke('sync-alwaseet-invoices', {
+            body: { sync_time: 'orders_page_open', scheduled: false }
+          });
+          devLog.log('🔄 مزامنة تلقائية عند فتح صفحة الطلبات');
           
-          // استخدام المزامنة الذكية من useUnifiedAutoSync
-          if (syncAndApplyOrders) {
-            await syncAndApplyOrders(syncableOrders);
-            devLog.log('✅ اكتملت المزامنة الذكية التلقائية');
+          // تشغيل المزامنة السريعة ومرور الحذف بعد المزامنة الشاملة
+          if (fastSyncPendingOrders) {
+            try {
+              await fastSyncPendingOrders(false); // مزامنة صامتة
+              // ✅ إضافة مرور الحذف التلقائي بعد المزامنة السريعة
+              if (performDeletionPassAfterStatusSync) {
+                devLog.log('🗑️ تشغيل عملية الحذف التلقائي من OrdersPage...');
+                try {
+                  const deletionResult = await performDeletionPassAfterStatusSync();
+                  devLog.log('🗑️ نتيجة الحذف التلقائي من OrdersPage:', deletionResult);
+                } catch (deletionError) {
+                  devLog.warn('⚠️ خطأ في عملية الحذف التلقائي من OrdersPage:', deletionError);
+                }
+              }
+            } catch (syncErr) {
+              devLog.log('تعذر المزامنة السريعة الإضافية:', syncErr);
+            }
           }
         } catch (err) {
-          devLog.log('⚠️ تعذرت المزامنة الذكية:', err);
+          devLog.log('تعذر المزامنة التلقائية:', err);
         }
       };
       
-      // تأخير 3 ثواني بعد فتح الصفحة
-      const timer = setTimeout(performSmartSync, 3000);
-      return () => clearTimeout(timer);
+      performAutoSync();
     }
-  }, []); // تشغيل مرة واحدة عند فتح الصفحة
+  }, [hasPermission]);
 
   // تشغيل مزامنة سريعة تلقائية عند دخول صفحة الطلبات (لجميع المستخدمين)
   useEffect(() => {
@@ -506,24 +520,6 @@ const OrdersPage = () => {
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
     }));
   }, [userOrders, filters, usersMap]);
-
-  // ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
-  const syncableOrders = useMemo(() => {
-    if (!filteredOrders || !Array.isArray(filteredOrders)) return [];
-    
-    return filteredOrders.filter(order => {
-      // فقط طلبات الوسيط
-      if (order.delivery_partner !== 'alwaseet') return false;
-      
-      // استبعاد الطلبات المكتملة (delivery_status = 4)
-      if (order.delivery_status === '4') return false;
-      
-      // استبعاد الطلبات المرجعة (delivery_status = 17)
-      if (order.delivery_status === '17') return false;
-      
-      return true;
-    });
-  }, [filteredOrders]);
 
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {

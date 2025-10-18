@@ -291,35 +291,13 @@ export const receiveInvoice = async (token, invoiceId) => {
   return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
 };
 
-// Get specific order by QR/tracking number - طريقة موثوقة لحماية نظام الحذف التلقائي
+// Get specific order by QR/tracking number
 export const getOrderByQR = async (token, qrId) => {
-  try {
-    // ✅ **الطريقة الموثوقة**: جلب كل الطلبات والبحث فيها
-    // هذه الطريقة **لا** تُرجع بيانات cached للطلبات المحذوفة
-    const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
-    
-    if (!orders || !Array.isArray(orders)) {
-      console.warn(`⚠️ لم يتم استلام قائمة طلبات صالحة من API`);
-      return null;
-    }
-    
-    const found = orders.find(order => 
-      order.qr_id === String(qrId) || 
-      order.id === String(qrId) ||
-      order.tracking_number === String(qrId)
-    );
-    
-    if (found) {
-      // ✅ إضافة timestamp للتحقق من حداثة البيانات
-      found._fetched_at = new Date().toISOString();
-      console.log(`✅ تم العثور على الطلب ${qrId} في القائمة (${orders.length} طلب)`);
-    } else {
-      console.log(`🗑️ الطلب ${qrId} غير موجود في قائمة الطلبات (${orders.length} طلب) - محذوف أو غير موجود`);
-    }
-    
-    return found || null;
-  } catch (error) {
-    console.error(`❌ فشل جلب قائمة الطلبات:`, error);
-    return null;
-  }
+  const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+  // البحث بـ qr_id، id، أو tracking_number لشمول جميع الحالات
+  return orders.find(order => 
+    order.qr_id === String(qrId) || 
+    order.id === String(qrId) ||
+    order.tracking_number === String(qrId)
+  );
 };

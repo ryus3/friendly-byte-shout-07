@@ -423,53 +423,21 @@ const filteredOrders = useMemo(() => {
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
 
-// ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
-const syncableOrders = useMemo(() => {
-  if (!filteredOrders || !Array.isArray(filteredOrders)) return [];
-  
-  return filteredOrders.filter(order => {
-    // فقط طلبات الوسيط
-    if (order.delivery_partner !== 'alwaseet') return false;
-    
-    // استبعاد الطلبات المكتملة (delivery_status = 4)
-    if (order.delivery_status === '4') return false;
-    
-    // استبعاد الطلبات المرجعة (delivery_status = 17)
-    if (order.delivery_status === '17') return false;
-    
-    return true;
-  });
-}, [filteredOrders]);
-
-// المزامنة الذكية للطلبات الظاهرة فقط عند فتح الصفحة - مرة واحدة
-const hasSyncedOnLoad = useRef(false);
+// إرسال الطلبات المرئية للمزامنة الشاملة عند فتح التطبيق - مع منع التكرار
+const hasSentSyncSignal = useRef(false);
 
 useEffect(() => {
-  if (syncableOrders && syncableOrders.length > 0 && !hasSyncedOnLoad.current) {
-    const performSmartSync = async () => {
-      try {
-        console.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط من ${filteredOrders?.length || 0} ظاهر...`);
-        
-        // استخدام autoSyncVisibleOrders من useUnifiedAutoSync
-        const result = await autoSyncVisibleOrders(syncableOrders);
-        
-        if (result?.success) {
-          console.log(`✅ مزامنة ذكية: ${result.updatedCount || 0} طلب محدث`);
-        }
-      } catch (err) {
-        console.warn('⚠️ تعذرت المزامنة الذكية:', err);
-      }
-    };
+  if (filteredOrders && filteredOrders.length > 0 && !hasSentSyncSignal.current) {
+    console.log('🚀 إرسال إشارة مزامنة شاملة للطلبات المرئية (مرة واحدة):', filteredOrders.length);
     
-    // تأخير 3 ثواني بعد فتح الصفحة
-    const timer = setTimeout(() => {
-      performSmartSync();
-      hasSyncedOnLoad.current = true;
-    }, 3000);
+    // إرسال إشارة للمزامنة الشاملة مع الطلبات المرئية مع autoSync=true
+    window.dispatchEvent(new CustomEvent('requestAppStartSyncWithVisibleOrders', {
+      detail: { visibleOrders: filteredOrders, autoSync: true }
+    }));
     
-    return () => clearTimeout(timer);
+    hasSentSyncSignal.current = true;
   }
-}, []); // تشغيل مرة واحدة عند فتح الصفحة
+}, [filteredOrders]);
 
   // تحديد وإبراز طلب عند الوصول من الإشعار برقم الطلب
   useEffect(() => {
