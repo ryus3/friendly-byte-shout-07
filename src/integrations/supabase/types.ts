@@ -5227,6 +5227,10 @@ export type Database = {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
       }
+      fix_incorrect_price_increase_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fix_regions_cities_linking: {
         Args: Record<PropertyKey, never>
         Returns: Json
