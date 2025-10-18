@@ -1407,6 +1407,20 @@ export const AlWaseetProvider = ({ children }) => {
         const currentPrice = currentTotalAmount + currentDeliveryFee; // السعر الشامل الحالي (منتجات + توصيل)
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
+        // 🔍 LOGGING مفصّل لفهم تحديث السعر
+        if (waseetPrice > 0) {
+          devLog.info(`🔍 فحص السعر للطلب ${localOrder.order_number}:`, {
+            waseetPrice: waseetPrice.toLocaleString(),
+            waseetOrderPrice: waseetOrder.price,
+            waseetOrderFinalPrice: waseetOrder.final_price,
+            currentPrice: currentPrice.toLocaleString(),
+            currentTotalAmount: currentTotalAmount.toLocaleString(),
+            currentDeliveryFee: currentDeliveryFee.toLocaleString(),
+            needsPriceUpdate,
+            waseetOrderExists: true
+          });
+        }
+
         // 🔧 فحص حاجة الطلب لتصحيح price_increase الخاطئ
         const needsCorrection = localOrder.price_increase > 0 && 
           ((parseInt(String(localOrder.final_amount)) || 0) - currentTotalAmount - currentDeliveryFee) === 0;
@@ -3084,6 +3098,88 @@ export const AlWaseetProvider = ({ children }) => {
       delete window.linkRemoteIdsForExistingOrders;
     };
   }, [linkRemoteIdsForExistingOrders]);
+
+  // 🔍 دالة فحص يدوية لتتبع مشكلة تحديث الأسعار
+  useEffect(() => {
+    window.debugOrderSync = async (trackingNumber) => {
+      try {
+        devLog.info(`🔍 بدء فحص الطلب ${trackingNumber}...`);
+        
+        // جلب الطلب المحلي
+        const { data: localOrder, error: localError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('tracking_number', trackingNumber)
+          .single();
+
+        if (localError) {
+          devLog.error('❌ خطأ في جلب الطلب المحلي:', localError);
+          return { error: localError };
+        }
+
+        devLog.info('📦 الطلب المحلي:', {
+          order_number: localOrder.order_number,
+          tracking_number: localOrder.tracking_number,
+          status: localOrder.status,
+          delivery_status: localOrder.delivery_status,
+          total_amount: localOrder.total_amount,
+          delivery_fee: localOrder.delivery_fee,
+          final_amount: localOrder.final_amount,
+          price_increase: localOrder.price_increase,
+          discount: localOrder.discount
+        });
+
+        // جلب من API الوسيط
+        if (!token) {
+          devLog.error('❌ لا يوجد token - قم بتسجيل الدخول أولاً');
+          return { localOrder, error: 'No token' };
+        }
+
+        devLog.info('🌐 جلب الطلبات من API الوسيط...');
+        const waseetOrders = await getMerchantOrders(token);
+        const waseetOrder = waseetOrders.find(o => String(o.id) === trackingNumber);
+
+        if (!waseetOrder) {
+          devLog.error(`❌ الطلب ${trackingNumber} غير موجود في استجابة API الوسيط`);
+          devLog.info(`📊 عدد الطلبات في الاستجابة: ${waseetOrders.length}`);
+          return { localOrder, waseetOrder: null, error: 'Order not found in API' };
+        }
+
+        devLog.info('🌐 الطلب من الوسيط:', {
+          id: waseetOrder.id,
+          price: waseetOrder.price,
+          final_price: waseetOrder.final_price,
+          delivery_price: waseetOrder.delivery_price,
+          status: waseetOrder.status,
+          status_id: waseetOrder.status_id,
+          state_id: waseetOrder.state_id
+        });
+
+        // حساب التحديثات
+        const waseetPrice = parseInt(String(waseetOrder.price || waseetOrder.final_price)) || 0;
+        const currentPrice = (parseInt(String(localOrder.total_amount)) || 0) + (parseInt(String(localOrder.delivery_fee)) || 0);
+        
+        devLog.info('💰 مقارنة الأسعار:', {
+          waseetPrice: waseetPrice.toLocaleString(),
+          currentPrice: currentPrice.toLocaleString(),
+          difference: (waseetPrice - currentPrice).toLocaleString(),
+          needsUpdate: waseetPrice !== currentPrice && waseetPrice > 0
+        });
+
+        return { localOrder, waseetOrder, comparison: { waseetPrice, currentPrice } };
+      } catch (error) {
+        devLog.error('❌ خطأ في debugOrderSync:', error);
+        return { error };
+      }
+    };
+
+    devLog.info('✅ تم تفعيل دالة window.debugOrderSync(trackingNumber)');
+    devLog.info('   مثال: window.debugOrderSync("108108910")');
+
+    return () => {
+      delete window.debugOrderSync;
+    };
+  }, [token]);
 
   return (
     <AlWaseetContext.Provider value={value}>
