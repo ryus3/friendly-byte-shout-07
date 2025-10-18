@@ -312,6 +312,10 @@ export const getOrderByQR = async (token, qrId) => {
     if (found) {
       // ✅ إضافة timestamp للتحقق من حداثة البيانات
       found._fetched_at = new Date().toISOString();
+      // ✅ توحيد: ضمان وجود qr_id دائماً
+      if (!found.qr_id && found.id) {
+        found.qr_id = found.id;
+      }
       console.log(`✅ تم العثور على الطلب ${qrId} في القائمة (${orders.length} طلب)`);
     } else {
       console.log(`🗑️ الطلب ${qrId} غير موجود في قائمة الطلبات (${orders.length} طلب) - محذوف أو غير موجود`);
