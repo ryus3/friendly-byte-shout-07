@@ -1508,9 +1508,15 @@ export const AlWaseetProvider = ({ children }) => {
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
           // ✅ حساب السعر الأصلي الحقيقي (قبل أي تغييرات)
-          // السعر الأصلي = total_amount الحالي - الزيادة السابقة + الخصم السابق
+          // total_amount يمثل السعر الأصلي للمنتجات بالفعل - لا نحتاج إضافة/طرح شيء
           const currentDiscount = parseInt(String(localOrder.discount)) || 0;
-          let originalProductsPrice = localTotalAmount - currentPriceIncrease + currentDiscount;
+          let originalProductsPrice = localTotalAmount;
+
+          // فقط في حالة الطلبات القديمة التي لديها price_increase خاطئ
+          if (currentPriceIncrease > 0 && currentDiscount === 0) {
+            // الطلبات القديمة: السعر الأصلي = السعر الحالي - الزيادة
+            originalProductsPrice = localTotalAmount - currentPriceIncrease;
+          }
 
           devLog.log(`🔍 حساب السعر الأصلي للطلب ${localOrder.order_number}:`, {
             localTotalAmount,
@@ -1550,8 +1556,8 @@ export const AlWaseetProvider = ({ children }) => {
             devLog.warn(`   - price_increase الصحيح: 0 (لا يوجد فرق فعلي)`);
             
             updates.price_increase = 0;
-            updates.price_change_type = null;
-            updates.discount = 0;
+            updates.price_change_type = currentDiscount > 0 ? 'discount' : null;
+            // ✅ لا نُصفّر الخصم - قد يكون خصم فعلي من إنشاء الطلب
             
             devLog.log(`✅ تم إصلاح price_increase للطلب ${localOrder.order_number}`);
           }
