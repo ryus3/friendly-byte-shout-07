@@ -1487,7 +1487,7 @@ export const AlWaseetProvider = ({ children }) => {
           if (localTotalAmount === 0 && localFinalAmount === 0 && localDeliveryFee === 0) {
             devLog.warn(`⚠️ race condition: تجاهل تحديث السعر للطلب ${localOrder.order_number} - جميع القيم = 0`);
             devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
-            needsPriceUpdate = false; // تعطيل تحديث السعر فقط، لكن استمر بالمزامنة
+            continue; // ✅ تجاوز هذا الطلب بالكامل - سيتم مزامنته لاحقاً
           }
 
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
@@ -1515,7 +1515,7 @@ export const AlWaseetProvider = ({ children }) => {
           if (originalProductsPrice <= 0 && productsPriceFromWaseet > 0) {
             devLog.warn(`⚠️ race condition: originalProductsPrice = ${originalProductsPrice}، productsPriceFromWaseet = ${productsPriceFromWaseet}`);
             devLog.warn(`   - تجاهل تحديث السعر - سيتم المحاولة في المزامنة التالية`);
-            needsPriceUpdate = false; // تعطيل تحديث السعر فقط، لكن استمر بالمزامنة
+            continue; // ✅ تجاوز هذا الطلب بالكامل - سيتم مزامنته في الجولة القادمة
           }
           
           // ✅ حساب الفرق
