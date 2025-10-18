@@ -1259,9 +1259,37 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0 };
       }
 
-      // 2) اجلب جميع طلبات الوسيط لعمل fallback search
-      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+      // 2) اجلب جميع طلبات الوسيط لعمل fallback search مع معالجة أخطاء Rate Limit
+      let waseetOrders = [];
+      try {
+        waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+        devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+      } catch (apiError) {
+        // ⚠️ CRITICAL: إذا فشل جلب الطلبات، لا نحذف أي طلبات!
+        console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
+        
+        if (apiError.message?.includes('تجاوزت الحد المسموح به') || apiError.message?.includes('rate limit')) {
+          devLog.warn('⚠️ Rate Limit: تم إيقاف المزامنة مؤقتاً لتجنب الحذف الخاطئ');
+          if (showNotifications) {
+            toast({
+              title: "تحذير: معدل الطلبات مرتفع",
+              description: "تم تجاوز الحد المسموح به من الطلبات. المزامنة متوقفة مؤقتاً لحماية بياناتك.",
+              variant: "destructive"
+            });
+          }
+        }
+        
+        setLoading(false);
+        // ✅ إرجاع فوري بدون حذف أي طلبات
+        return { updated: 0, checked: 0, rateLimitHit: true };
+      }
+
+      // ✅ فحص إضافي: إذا كانت القائمة فارغة بشكل غير طبيعي
+      if (!waseetOrders || waseetOrders.length === 0) {
+        devLog.warn('⚠️ تحذير: قائمة الطلبات فارغة - قد يكون هناك خطأ في API');
+        setLoading(false);
+        return { updated: 0, checked: 0, emptyList: true };
+      }
 
       // 3) بناء خرائط للبحث السريع
       const byWaseetId = new Map();
@@ -1302,6 +1330,12 @@ export const AlWaseetProvider = ({ children }) => {
 
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
         if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
+          // ✅ حماية إضافية: لا نحذف إذا كانت قائمة الوسيط صغيرة بشكل مريب
+          if (waseetOrders.length < 10) {
+            devLog.warn(`⚠️ تحذير: قائمة الطلبات صغيرة جداً (${waseetOrders.length} طلب)، تجاهل الحذف التلقائي للطلب ${localOrder.tracking_number}`);
+            continue;
+          }
+          
           // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking - فحص بجميع التوكنات
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
           let remoteCheck = null;
