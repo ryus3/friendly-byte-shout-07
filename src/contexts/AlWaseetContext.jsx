@@ -1476,34 +1476,56 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ حساب الخصم/الزيادة: الفرق بين السعر الجديد والسعر الأصلي للمنتجات
           const priceDiff = productsPriceFromWaseet - originalProductsPrice;
           
+          const currentDeliveryFee = parseInt(String(localOrder.delivery_fee)) || 0;
+          
           if (priceDiff > 0) {
             // زيادة (السعر الجديد أكبر)
             updates.price_increase = priceDiff;
             updates.discount = 0;
             updates.price_change_type = 'increase';
+            
+            // ✅ تحديث السعر فقط عند وجود زيادة فعلية
+            updates.total_amount = productsPriceFromWaseet;
+            updates.sales_amount = productsPriceFromWaseet;
+            
+            devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+            devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+            devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+            devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+            devLog.log(`   - 🔺 زيادة: ${priceDiff.toLocaleString()} د.ع`);
+            devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            
           } else if (priceDiff < 0) {
             // خصم (السعر الجديد أقل)
             updates.discount = Math.abs(priceDiff);
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
+            
+            // ✅ تحديث السعر فقط عند وجود خصم فعلي
+            updates.total_amount = productsPriceFromWaseet;
+            updates.sales_amount = productsPriceFromWaseet;
+            
+            devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
+            devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+            devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+            devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+            devLog.log(`   - 🔻 خصم: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+            devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+            
           } else {
-            // لا تغيير
+            // ✅ لا تغيير - عدم تحديث total_amount على الإطلاق!
             updates.discount = 0;
             updates.price_increase = 0;
             updates.price_change_type = null;
+            
+            devLog.log(`✅ لا تغيير في سعر الطلب ${localOrder.order_number} (${originalProductsPrice.toLocaleString()} د.ع)`);
           }
           
-          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number}:`);
-          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
-          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          devLog.log(`   - ${priceDiff > 0 ? '🔻 خصم' : priceDiff < 0 ? '🔺 زيادة' : 'بدون تغيير'}: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
-          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
-          
-          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
-          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
-          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
-          updates.delivery_fee = deliveryFee;
+          // ✅ تحديث delivery_fee فقط إذا تغير
+          if (deliveryFee !== currentDeliveryFee) {
+            updates.delivery_fee = deliveryFee;
+            devLog.log(`📦 تحديث رسوم التوصيل: ${currentDeliveryFee.toLocaleString()} → ${deliveryFee.toLocaleString()} د.ع`);
+          }
           
           // ✅ تحديث الأرباح
           try {
