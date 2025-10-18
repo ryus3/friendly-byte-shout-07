@@ -389,28 +389,43 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                    );
                  })}
                </div>
-               <div className="mt-4 pt-4 border-t border-border space-y-2">
-                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-muted-foreground">المجموع الفرعي</span>
-                   <span className="text-foreground">{(order.total_amount || 0).toLocaleString()} د.ع</span>
-                 </div>
-                 {(order.delivery_fee || 0) > 0 && (
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-muted-foreground">رسوم التوصيل</span>
-                     <span className="text-foreground">{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
-                   </div>
-                 )}
-                 {(order.discount || 0) > 0 && (
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-muted-foreground">الخصم</span>
-                     <span className="text-destructive">-{(order.discount || 0).toLocaleString()} د.ع</span>
-                   </div>
-                 )}
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <span className="text-lg font-semibold text-foreground">المجموع الكلي</span>
-                    <span className="text-xl font-bold text-primary">{(order.final_amount || order.total || 0).toLocaleString()} د.ع</span>
+                <div className="mt-4 pt-4 border-t border-border space-y-2">
+                  {/* سعر المنتجات (قبل الخصم) */}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">سعر المنتجات</span>
+                    <span className="text-foreground">{(order.total_amount || 0).toLocaleString()} د.ع</span>
                   </div>
-               </div>
+                  
+                  {/* الخصم */}
+                  {(order.discount || 0) > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">الخصم</span>
+                      <span className="text-destructive">-{(order.discount || 0).toLocaleString()} د.ع</span>
+                    </div>
+                  )}
+                  
+                  {/* الزيادة في السعر */}
+                  {(order.price_increase || 0) > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">زيادة السعر</span>
+                      <span className="text-emerald-600">+{(order.price_increase || 0).toLocaleString()} د.ع</span>
+                    </div>
+                  )}
+                  
+                  {/* رسوم التوصيل */}
+                  {(order.delivery_fee || 0) > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">رسوم التوصيل</span>
+                      <span className="text-foreground">+{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
+                    </div>
+                  )}
+                  
+                  {/* المجموع النهائي */}
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <span className="text-lg font-semibold text-foreground">المجموع النهائي</span>
+                    <span className="text-xl font-bold text-primary">{(order.final_amount || 0).toLocaleString()} د.ع</span>
+                  </div>
+                </div>
             </div>
             
             {/* قسم تحديث الحالة - للموظفين والمديرين */}
