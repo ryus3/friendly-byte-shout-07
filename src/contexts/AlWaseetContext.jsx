@@ -1407,7 +1407,16 @@ export const AlWaseetProvider = ({ children }) => {
         const currentPrice = currentTotalAmount + currentDeliveryFee; // السعر الشامل الحالي (منتجات + توصيل)
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
-        // 🔧 تصحيح الطلبات ذات price_increase الخاطئ (بغض النظر عن needsPriceUpdate)
+        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
+          continue; // لا حاجة للتحديث
+        }
+
+        const updates = {
+          updated_at: new Date().toISOString(),
+        };
+
+        // 🔧 تصحيح الطلبات ذات price_increase الخاطئ
         if (localOrder.price_increase > 0) {
           const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const shouldHaveIncrease = (finalAmount - currentTotalAmount - currentDeliveryFee) !== 0;
@@ -1421,15 +1430,6 @@ export const AlWaseetProvider = ({ children }) => {
             needsUpdate = true;
           }
         }
-
-        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة)
-        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate) {
-          continue; // لا حاجة للتحديث
-        }
-
-        const updates = {
-          updated_at: new Date().toISOString(),
-        };
 
         if (needsStatusUpdate) {
           updates.status = localStatus;
