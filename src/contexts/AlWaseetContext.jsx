@@ -1487,26 +1487,35 @@ export const AlWaseetProvider = ({ children }) => {
           if (localTotalAmount === 0 && localFinalAmount === 0 && localDeliveryFee === 0) {
             devLog.warn(`⚠️ race condition: تجاهل تحديث السعر للطلب ${localOrder.order_number} - جميع القيم = 0`);
             devLog.warn(`   - سيتم تحديث السعر في المزامنة التالية عندما تكون البيانات كاملة`);
-            return null;
+            needsPriceUpdate = false; // تعطيل تحديث السعر فقط، لكن استمر بالمزامنة
           }
 
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ حساب السعر الأصلي للمنتجات مع حماية محسنة
-          let originalProductsPrice = localTotalAmount;
-          
-          // إذا كان total_amount = 0، جرب final_amount - delivery_fee
+          // ✅ حساب السعر الأصلي الحقيقي (قبل أي تغييرات)
+          // السعر الأصلي = total_amount الحالي - الزيادة السابقة + الخصم السابق
+          const currentDiscount = parseInt(String(localOrder.discount)) || 0;
+          let originalProductsPrice = localTotalAmount - currentPriceIncrease + currentDiscount;
+
+          devLog.log(`🔍 حساب السعر الأصلي للطلب ${localOrder.order_number}:`, {
+            localTotalAmount,
+            currentPriceIncrease,
+            currentDiscount,
+            originalProductsPrice
+          });
+
+          // إذا كان السعر الأصلي = 0، جرب final_amount - delivery_fee
           if (originalProductsPrice === 0 && localFinalAmount > 0) {
             originalProductsPrice = localFinalAmount - localDeliveryFee;
-            devLog.warn(`⚠️ total_amount = 0، استخدام final_amount - delivery_fee = ${originalProductsPrice.toLocaleString()} د.ع`);
+            devLog.warn(`⚠️ originalProductsPrice = 0، استخدام final_amount - delivery_fee = ${originalProductsPrice.toLocaleString()} د.ع`);
           }
           
           // ✅ حماية إضافية: إذا كان originalProductsPrice سالباً أو صفر ولكن productsPriceFromWaseet > 0
           if (originalProductsPrice <= 0 && productsPriceFromWaseet > 0) {
             devLog.warn(`⚠️ race condition: originalProductsPrice = ${originalProductsPrice}، productsPriceFromWaseet = ${productsPriceFromWaseet}`);
             devLog.warn(`   - تجاهل تحديث السعر - سيتم المحاولة في المزامنة التالية`);
-            return null;
+            needsPriceUpdate = false; // تعطيل تحديث السعر فقط، لكن استمر بالمزامنة
           }
           
           // ✅ حساب الفرق
