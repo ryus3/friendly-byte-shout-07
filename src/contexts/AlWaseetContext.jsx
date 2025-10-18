@@ -1407,8 +1407,8 @@ export const AlWaseetProvider = ({ children }) => {
         const currentPrice = currentTotalAmount + currentDeliveryFee; // السعر الشامل الحالي (منتجات + توصيل)
         const needsPriceUpdate = waseetPrice !== currentPrice && waseetPrice > 0;
 
-        // 🔧 تصحيح الطلبات القديمة ذات price_increase الخاطئ
-        if (!needsPriceUpdate && localOrder.price_increase > 0) {
+        // 🔧 تصحيح الطلبات ذات price_increase الخاطئ (بغض النظر عن needsPriceUpdate)
+        if (localOrder.price_increase > 0) {
           const finalAmount = parseInt(String(localOrder.final_amount)) || 0;
           const shouldHaveIncrease = (finalAmount - currentTotalAmount - currentDeliveryFee) !== 0;
 

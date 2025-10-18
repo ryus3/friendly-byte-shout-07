@@ -1054,6 +1054,9 @@ export const SuperProvider = ({ children }) => {
         sales_amount: subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
+        // ✅ منع price_increase الخاطئ للطلبات الجديدة
+        price_increase: 0,
+        price_change_type: null,
         // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
         final_amount: (orderType === 'return' || orderType === 'exchange') && deliveryPartnerDataArg?.final_amount !== undefined
           ? deliveryPartnerDataArg.final_amount  // ← قد يكون سالباً للإرجاع
