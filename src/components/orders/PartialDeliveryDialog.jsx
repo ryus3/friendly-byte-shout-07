@@ -5,8 +5,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertTriangle, Package, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import { handlePartialDeliveryFinancials } from '@/utils/partial-delivery-financial-handler';
+import { useSuper } from '@/contexts/SuperProvider';
 
 export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) => {
+  const { calculateProfit } = useSuper();
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -54,13 +57,17 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
   const handleConfirm = async () => {
     if (selectedItems.length === 0) {
-      toast.error('يرجى تحديد المنتجات المُسلّمة');
+      toast({
+        title: 'خطأ',
+        description: 'يرجى تحديد المنتجات المُسلّمة',
+        variant: 'destructive'
+      });
       return;
     }
 
     setLoading(true);
     try {
-      // تحديث حالة المنتجات المُسلّمة
+      // 1️⃣ تحديث حالة المنتجات المُسلّمة
       for (const itemId of selectedItems) {
         const item = items.find(i => i.id === itemId);
         await supabase
@@ -72,7 +79,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           })
           .eq('id', itemId);
 
-        // تحرير المخزون
+        // تحرير المخزون (خصم من الكمية الكلية)
         await supabase.rpc('release_stock_item', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
@@ -80,7 +87,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         });
       }
 
-      // تحديث المنتجات غير المُسلّمة → pending_return
+      // 2️⃣ تحديث المنتجات غير المُسلّمة → pending_return
       const undeliveredIds = items
         .filter(item => !selectedItems.includes(item.id))
         .map(item => item.id);
@@ -92,12 +99,40 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           .in('id', undeliveredIds);
       }
 
-      toast.success(`تم تحرير ${selectedItems.length} منتج بنجاح`);
+      // 3️⃣ ✅ معالجة الحسابات المالية للمنتجات المسلمة
+      const financialResult = await handlePartialDeliveryFinancials(
+        order.id,
+        selectedItems,
+        calculateProfit
+      );
+
+      if (!financialResult.success) {
+        console.error('⚠️ فشل في معالجة الحسابات المالية:', financialResult.error);
+        toast({
+          title: 'تحذير',
+          description: 'تم تحديث المخزون ولكن فشل في حساب الأرباح',
+          variant: 'warning'
+        });
+      } else {
+        const { details } = financialResult;
+        toast({
+          title: 'نجاح ✅',
+          description: `تم تحرير ${selectedItems.length} منتج وحساب الأرباح بنجاح
+          • الإيراد: ${details.totalRevenue.toLocaleString()} د.ع
+          • ربح الموظف: ${details.employeeProfit.toLocaleString()} د.ع
+          • ربح النظام: ${details.systemProfit.toLocaleString()} د.ع`,
+        });
+      }
+
       onConfirm?.();
       onOpenChange(false);
     } catch (error) {
       console.error('خطأ في تحديث المنتجات:', error);
-      toast.error('حدث خطأ غير متوقع');
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ غير متوقع',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
