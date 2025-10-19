@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { InvoiceCheckButton } from './InvoiceCheckButton';
+import { PartialDeliveryDialog } from './PartialDeliveryDialog';
 import { 
   Edit2, 
   Trash2, 
@@ -47,6 +48,7 @@ const OrderCard = React.memo(({
 }) => {
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPartialDelivery, setShowPartialDelivery] = useState(false);
   
   const isBeforePickup = (order) => {
     if (isLocalOrder) {
@@ -204,6 +206,26 @@ const OrderCard = React.memo(({
   };
 
   const productSummary = getProductSummary();
+
+  // تحديد ما إذا كان الطلب يحتاج لتحديد المنتجات المُسلّمة
+  const needsPartialDeliverySelection = useMemo(() => {
+    // فقط للطلبات متعددة المنتجات من الوسيط
+    if (order.delivery_partner?.toLowerCase() !== 'alwaseet') return false;
+    if (!order.order_items || order.order_items.length <= 1) return false;
+    
+    // فقط في حالة 4 (تم التسليم)
+    if (order.delivery_status !== '4') return false;
+    
+    // التحقق من وجود تغيير سعر من API
+    if (order.price_change_type !== 'api_sync') return false;
+    
+    // التحقق من أن جميع العناصر لا تزال في pending
+    const allPending = order.order_items.every(item => 
+      !item.item_status || item.item_status === 'pending'
+    );
+    
+    return allPending;
+  }, [order]);
 
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
@@ -595,6 +617,17 @@ const OrderCard = React.memo(({
 
 
             <div className="flex justify-center pt-2 gap-2">
+              {needsPartialDeliverySelection && (
+                <Button
+                  onClick={() => setShowPartialDelivery(true)}
+                  variant="outline"
+                  size="sm"
+                  className="bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/30"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  تحديد المنتجات المُسلّمة
+                </Button>
+              )}
               {additionalButtons}
               
             </div>
@@ -609,6 +642,16 @@ const OrderCard = React.memo(({
         description="سيتم تحرير المخزون المحجوز تلقائياً."
         confirmText="حذف"
         cancelText="إلغاء"
+      />
+      <PartialDeliveryDialog
+        open={showPartialDelivery}
+        onOpenChange={setShowPartialDelivery}
+        order={order}
+        onConfirm={() => {
+          // تحديث العرض
+          setShowPartialDelivery(false);
+          window.dispatchEvent(new CustomEvent('orderUpdated', { detail: order.id }));
+        }}
       />
     </motion.div>
   );

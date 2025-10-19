@@ -12,14 +12,34 @@ import { supabase } from '@/lib/customSupabaseClient';
  * @param {string} deliveryPartner - شركة التوصيل
  * @returns {boolean} هل يجب تحرير المخزون؟
  */
-export const shouldReleaseStock = (status, deliveryStatus, deliveryPartner) => {
+export const shouldReleaseStock = (status, deliveryStatus, deliveryPartner, itemStatus = null) => {
   // للطلبات المحلية
   if (!deliveryPartner || deliveryPartner === 'محلي') {
     return status === 'completed' || status === 'delivered' || status === 'returned_in_stock';
   }
 
-  // لطلبات الوسيط - التحقق من الحالة الخاصة
+  // لطلبات الوسيط - دعم التسليم الجزئي
   if (deliveryPartner?.toLowerCase() === 'alwaseet') {
+    const stateId = String(deliveryStatus);
+    
+    // ✅ نظام جديد: التحقق من حالة العنصر الفردية
+    if (itemStatus) {
+      // حالة 4 (مُسلّم) - تحرير المنتجات المُسلّمة فقط
+      if (itemStatus === 'delivered' && stateId === '4') {
+        return true;
+      }
+      
+      // حالة 17 (مرتجع) - تحرير المنتجات المرتجعة
+      if (itemStatus === 'returned' && stateId === '17') {
+        return true;
+      }
+      
+      // المنتجات في pending_return لا تُحرّر
+      if (itemStatus === 'pending_return') {
+        return false;
+      }
+    }
+    
     try {
       // استخدام النظام الجديد للوسيط
       const { releasesStock } = require('@/lib/alwaseet-statuses');
@@ -31,7 +51,6 @@ export const shouldReleaseStock = (status, deliveryStatus, deliveryPartner) => {
     }
     
     // النظام الافتراضي للوسيط - فقط الحالات 4 و 17 تحرر المخزون
-    const stateId = String(deliveryStatus);
     return stateId === '4' || stateId === '17';
   }
 
@@ -241,9 +260,111 @@ export const auditAndFixReservations = async () => {
   }
 };
 
+/**
+ * تحرير منتجات محددة من الطلب وتحديث حالتها
+ * @param {string} orderId - معرف الطلب
+ * @param {Array} deliveredItemIds - معرفات العناصر المُسلّمة
+ * @returns {Promise<Object>} نتيجة العملية
+ */
+export const releaseDeliveredItems = async (orderId, deliveredItemIds) => {
+  try {
+    const { data: items, error } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', orderId)
+      .in('id', deliveredItemIds);
+
+    if (error) throw error;
+
+    for (const item of items) {
+      // تحديث حالة العنصر
+      await supabase
+        .from('order_items')
+        .update({
+          item_status: 'delivered',
+          quantity_delivered: item.quantity,
+          delivered_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+
+      // تحرير المخزون
+      await supabase.rpc('release_stock_item', {
+        p_product_id: item.product_id,
+        p_variant_id: item.variant_id,
+        p_quantity: item.quantity
+      });
+    }
+
+    // تحديث العناصر الأخرى → pending_return
+    const { data: allItems } = await supabase
+      .from('order_items')
+      .select('id')
+      .eq('order_id', orderId);
+
+    const undeliveredIds = allItems
+      .filter(item => !deliveredItemIds.includes(item.id))
+      .map(item => item.id);
+
+    if (undeliveredIds.length > 0) {
+      await supabase
+        .from('order_items')
+        .update({ item_status: 'pending_return' })
+        .in('id', undeliveredIds);
+    }
+
+    return { success: true, delivered: deliveredItemIds.length };
+  } catch (error) {
+    console.error('خطأ في تحرير المنتجات المُسلّمة:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * إرجاع منتجات غير مُسلّمة للمخزون (حالة 17)
+ * @param {string} orderId - معرف الطلب
+ * @returns {Promise<Object>} نتيجة العملية
+ */
+export const returnUndeliveredItems = async (orderId) => {
+  try {
+    const { data: items, error } = await supabase
+      .from('order_items')
+      .select('*')
+      .eq('order_id', orderId)
+      .eq('item_status', 'pending_return');
+
+    if (error) throw error;
+
+    for (const item of items) {
+      // تحديث حالة العنصر
+      await supabase
+        .from('order_items')
+        .update({
+          item_status: 'returned',
+          quantity_returned: item.quantity,
+          returned_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+
+      // إرجاع للمخزون
+      await supabase.rpc('return_stock_item', {
+        p_product_id: item.product_id,
+        p_variant_id: item.variant_id,
+        p_quantity: item.quantity
+      });
+    }
+
+    return { success: true, returned: items.length };
+  } catch (error) {
+    console.error('خطأ في إرجاع المنتجات:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 export default {
   shouldReleaseStock,
   shouldKeepReservation,
   updateOrderReservationStatus,
-  auditAndFixReservations
+  auditAndFixReservations,
+  releaseDeliveredItems,
+  returnUndeliveredItems
 };

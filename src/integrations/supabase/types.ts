@@ -2516,30 +2516,45 @@ export type Database = {
       order_items: {
         Row: {
           created_at: string
+          delivered_at: string | null
           id: string
+          item_status: string | null
           order_id: string
           product_id: string
           quantity: number
+          quantity_delivered: number | null
+          quantity_returned: number | null
+          returned_at: string | null
           total_price: number
           unit_price: number
           variant_id: string | null
         }
         Insert: {
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          item_status?: string | null
           order_id: string
           product_id: string
           quantity: number
+          quantity_delivered?: number | null
+          quantity_returned?: number | null
+          returned_at?: string | null
           total_price: number
           unit_price: number
           variant_id?: string | null
         }
         Update: {
           created_at?: string
+          delivered_at?: string | null
           id?: string
+          item_status?: string | null
           order_id?: string
           product_id?: string
           quantity?: number
+          quantity_delivered?: number | null
+          quantity_returned?: number | null
+          returned_at?: string | null
           total_price?: number
           unit_price?: number
           variant_id?: string | null
@@ -5837,7 +5852,7 @@ export type Database = {
       }
       release_stock_item: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
-        Returns: Json
+        Returns: undefined
       }
       repair_alwaseet_order_mapping: {
         Args: { p_order_id: string }
@@ -5854,6 +5869,10 @@ export type Database = {
       return_items_to_inventory: {
         Args: { p_order_id: string }
         Returns: Json
+      }
+      return_stock_item: {
+        Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
+        Returns: undefined
       }
       review_archive_status: {
         Args: Record<PropertyKey, never>

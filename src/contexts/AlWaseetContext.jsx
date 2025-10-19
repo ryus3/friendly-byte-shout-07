@@ -1713,6 +1713,25 @@ export const AlWaseetProvider = ({ children }) => {
           } catch (profitError) {
             console.error('❌ خطأ في تحديث الأرباح:', profitError);
           }
+          
+          // ✅ معالجة التسليم الجزئي للطلبات متعددة المنتجات
+          if (priceDiff !== 0) {
+            const { data: orderItems } = await supabase
+              .from('order_items')
+              .select('id, item_status')
+              .eq('order_id', localOrder.id);
+            
+            const hasMultipleItems = orderItems && orderItems.length > 1;
+            const allItemsPending = orderItems?.every(item => 
+              !item.item_status || item.item_status === 'pending'
+            );
+            
+            if (hasMultipleItems && allItemsPending && String(waseetStatusId) === '4') {
+              // ✅ إضافة علامة api_sync لتفعيل نظام التسليم الجزئي
+              updates.price_change_type = 'api_sync';
+              devLog.log(`📦 طلب متعدد المنتجات يحتاج تحديد المنتجات المُسلّمة: ${localOrder.order_number}`);
+            }
+          }
         }
 
         // ترقية للحالة المكتملة عند التأكيد المالي
@@ -1720,6 +1739,19 @@ export const AlWaseetProvider = ({ children }) => {
         if (finConfirmed) {
           if (localStatus === 'delivered' || localOrder.status === 'delivered') {
             updates.status = 'completed';
+          }
+        }
+
+        // ✅ معالجة إرجاع المنتجات في حالة 17
+        if (String(waseetStatusId) === '17' && updates.status === 'returned') {
+          try {
+            const { returnUndeliveredItems } = require('@/utils/reservationSystem');
+            const result = await returnUndeliveredItems(localOrder.id);
+            if (result.success) {
+              devLog.log(`✅ تم إرجاع ${result.returned} منتج للمخزون - طلب ${localOrder.order_number}`);
+            }
+          } catch (returnError) {
+            console.error('❌ خطأ في إرجاع المنتجات:', returnError);
           }
         }
 
