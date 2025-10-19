@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertTriangle, Package, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) => {
   const [items, setItems] = useState([]);
