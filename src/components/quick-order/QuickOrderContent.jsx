@@ -92,8 +92,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
+  const [returnOriginalOrder, setReturnOriginalOrder] = useState(null); // ✅ حفظ الطلب الأصلي من ReturnProductForm
   
-  const originalOrder = aiOrderData?.originalOrder || null;
+  const originalOrder = returnOriginalOrder || aiOrderData?.originalOrder || null;
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
@@ -864,6 +865,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }));
     }
   }, [defaultCustomerName, nameTouched, formData.name]);
+
+  // ✅ مسح الطلب الأصلي المرتبط عند تغيير نوع الطلب
+  useEffect(() => {
+    if (formData.type !== 'return') {
+      setReturnOriginalOrder(null);
+    }
+  }, [formData.type]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 
@@ -2346,6 +2354,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               returnProduct={returnProduct}
               refundAmount={refundAmount}
               onRefundAmountChange={setRefundAmount}
+              onOriginalOrderFound={setReturnOriginalOrder} // ✅ استقبال الطلب الأصلي
             />
           )}
         </fieldset>
