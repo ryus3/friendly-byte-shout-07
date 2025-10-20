@@ -371,6 +371,32 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 </div>
               )}
 
+              {/* عرض معلومات الطلب الأصلي إذا كان طلب إرجاع */}
+              {order.order_type === 'return' && (
+                <div className="p-4 bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <RotateCcw className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <h4 className="font-semibold text-red-800 dark:text-red-200">طلب إرجاع</h4>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-red-700 dark:text-red-300">مبلغ الإرجاع:</span>
+                      <span className="font-bold text-red-900 dark:text-red-100 text-lg">
+                        -{Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
+                      </span>
+                    </div>
+                    {order.ai_orders?.[0]?.original_order_id && (
+                      <div className="pt-2 border-t border-red-200 dark:border-red-800">
+                        <span className="text-red-700 dark:text-red-300">مرتبط بالطلب الأصلي:</span>
+                        <span className="font-medium text-red-900 dark:text-red-100 mr-2">
+                          #{order.ai_orders[0].original_order_id}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
                 

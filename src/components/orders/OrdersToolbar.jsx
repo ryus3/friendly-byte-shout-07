@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode, Trash2 } from 'lucide-react';
+import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode, Trash2, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import QROrderScanner from './QROrderScanner';
 import { AutoDeleteLogDialog } from './AutoDeleteLogDialog';
+import { ReturnOrdersDialog } from './ReturnOrdersDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showDeleteLog, setShowDeleteLog] = useState(false);
+  const [showReturnsDialog, setShowReturnsDialog] = useState(false);
   
   const handleSearchChange = (e) => {
     onFiltersChange({ searchTerm: e.target.value });
@@ -108,18 +110,29 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Button>
         </div>
 
-        {/* Auto Delete Log Button - قبل QR Scanner */}
+        {/* Return Orders Button - جديد */}
+        <Button 
+          onClick={() => setShowReturnsDialog(true)}
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl hover:scale-105 flex-shrink-0"
+          title="طلبات الإرجاع"
+        >
+          <RotateCcw className="h-4 w-4" />
+        </Button>
+
+        {/* Auto Delete Log Button */}
         <Button 
           onClick={() => setShowDeleteLog(true)}
           variant="ghost"
           size="sm"
-          className="h-9 w-9 p-0 bg-gradient-to-r from-red-500 via-orange-500 to-red-600 hover:from-red-600 hover:via-orange-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl hover:scale-105 flex-shrink-0"
+          className="h-9 w-9 p-0 bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 hover:from-orange-600 hover:via-orange-700 hover:to-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl hover:scale-105 flex-shrink-0"
           title="سجل الحذف التلقائي"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
 
-        {/* QR Scanner Button - في النهاية */}
+        {/* QR Scanner Button */}
         <Button 
           onClick={() => setShowQRScanner(true)}
           variant="ghost"
@@ -202,6 +215,12 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         onClose={() => setShowQRScanner(false)}
         onOrderFound={onOrderFound}
         onUpdateOrderStatus={onUpdateOrderStatus}
+      />
+
+      {/* Return Orders Dialog */}
+      <ReturnOrdersDialog 
+        open={showReturnsDialog} 
+        onOpenChange={setShowReturnsDialog}
       />
 
       {/* Auto Delete Log Dialog */}

@@ -510,37 +510,56 @@ const OrderCard = React.memo(({
                     )}
                     
                       <div className="flex flex-col items-end gap-1">
-                       <div className="flex items-center gap-1">
-                         <span className="text-xs text-primary/70 font-bold">د.ع</span>
-                         <span className="font-bold text-lg text-primary">
-                           {(() => {
-                             const totalAmount = Number(order.total_amount || 0);
-                             const discount = Number(order.discount || 0);
-                             const priceIncrease = Number(order.price_increase || 0);
-                             const deliveryFee = Number(order.delivery_fee || 0);
-                             const displayPrice = totalAmount - discount + priceIncrease + deliveryFee;
-                             return displayPrice.toLocaleString();
-                           })()}
-                         </span>
-                         <span className="text-xs text-muted-foreground font-medium">
-                           شامل التوصيل
-                         </span>
-                       </div>
-                      
-                      {/* عرض الخصم - برتقالي لامع */}
-                      {Number(order.discount || 0) > 0 && (
-                        <Badge className="bg-orange-500 text-white text-xs px-2 py-0.5">
-                          خصم {Number(order.discount).toLocaleString()} د.ع
-                        </Badge>
-                      )}
-                      
-                      {/* عرض الزيادة - أخضر */}
-                      {Number(order.price_increase || 0) > 0 && (
-                        <Badge className="bg-green-500 text-white text-xs px-2 py-0.5">
-                          زيادة {Number(order.price_increase).toLocaleString()} د.ع
-                        </Badge>
-                      )}
-                    </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                          <span className="font-bold text-lg text-primary">
+                            {(() => {
+                              // عرض المبلغ السالب لطلبات الإرجاع
+                              if (order.order_type === 'return') {
+                                return '-' + Math.abs(order.refund_amount || 0).toLocaleString();
+                              }
+                              
+                              const totalAmount = Number(order.total_amount || 0);
+                              const discount = Number(order.discount || 0);
+                              const priceIncrease = Number(order.price_increase || 0);
+                              const deliveryFee = Number(order.delivery_fee || 0);
+                              const displayPrice = totalAmount - discount + priceIncrease + deliveryFee;
+                              return displayPrice.toLocaleString();
+                            })()}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {order.order_type === 'return' ? 'مبلغ الإرجاع' : 'شامل التوصيل'}
+                          </span>
+                        </div>
+                       
+                       {/* شارة الخصم - برتقالي تدرج */}
+                       {Number(order.discount || 0) > 0 && order.order_type !== 'return' && (
+                         <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-1 shadow-md">
+                           خصم {Number(order.discount).toLocaleString()} د.ع
+                         </Badge>
+                       )}
+                       
+                       {/* شارة الزيادة - أخضر تدرج */}
+                       {Number(order.price_increase || 0) > 0 && order.order_type !== 'return' && (
+                         <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 shadow-md">
+                           زيادة {Number(order.price_increase).toLocaleString()} د.ع
+                         </Badge>
+                       )}
+                       
+                       {/* شارة الإرجاع - أحمر لامع */}
+                       {order.order_type === 'return' && (
+                         <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 font-bold shadow-lg shadow-red-500/50 animate-pulse">
+                           إرجاع {Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
+                         </Badge>
+                       )}
+                       
+                       {/* شارة الاستبدال - بنفسجي تدرج */}
+                       {order.order_type === 'replacement' && (
+                         <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs px-2 py-1 shadow-md">
+                           استبدال
+                         </Badge>
+                       )}
+                     </div>
                     
                     {paymentStatus && (
                       <div className="flex items-center gap-1 justify-end">

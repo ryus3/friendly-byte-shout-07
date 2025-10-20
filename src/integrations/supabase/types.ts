@@ -4345,6 +4345,114 @@ export type Database = {
           },
         ]
       }
+      return_history: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          delivery_fee: number
+          employee_profit_deducted: number
+          error_message: string | null
+          financial_handler_success: boolean
+          id: string
+          original_order_id: string | null
+          refund_amount: number
+          return_order_id: string
+          status_17_at: string | null
+          status_21_at: string | null
+          system_profit_deducted: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          delivery_fee?: number
+          employee_profit_deducted?: number
+          error_message?: string | null
+          financial_handler_success?: boolean
+          id?: string
+          original_order_id?: string | null
+          refund_amount?: number
+          return_order_id: string
+          status_17_at?: string | null
+          status_21_at?: string | null
+          system_profit_deducted?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          delivery_fee?: number
+          employee_profit_deducted?: number
+          error_message?: string | null
+          financial_handler_success?: boolean
+          id?: string
+          original_order_id?: string | null
+          refund_amount?: number
+          return_order_id?: string
+          status_17_at?: string | null
+          status_21_at?: string | null
+          system_profit_deducted?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "return_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_history_return_order_id_fkey"
+            columns: ["return_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_history_return_order_id_fkey"
+            columns: ["return_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_history_return_order_id_fkey"
+            columns: ["return_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "return_history_return_order_id_fkey"
+            columns: ["return_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           granted_at: string
