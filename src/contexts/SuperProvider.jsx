@@ -1055,9 +1055,11 @@ export const SuperProvider = ({ children }) => {
                 ? deliveryPartnerDataArg.total_amount 
                 : 0)  // ✅ استخدام القيمة الممررة أو 0
             : subtotal,  // ← طلبات عادية = سعر المنتجات الأصلي قبل الخصم
-        // ✅ sales_amount = 0 للاستبدال، وللطلبات العادية = سعر المنتجات - الخصم
+        // ✅ sales_amount = فرق السعر للاستبدال، وللطلبات العادية = سعر المنتجات - الخصم
         sales_amount: (orderType === 'exchange' || orderType === 'replacement')
-          ? 0  // ✅ الاستبدال لا يُحسب كمبيعات
+          ? (deliveryPartnerDataArg?.sales_amount !== undefined 
+              ? deliveryPartnerDataArg.sales_amount  // ✅ استخدام فرق السعر الممرر
+              : 0)
           : subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
