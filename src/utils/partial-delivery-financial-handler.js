@@ -142,6 +142,25 @@ export const handlePartialDeliveryFinancials = async (
           processed_by: employeeId
         });
 
+      // ✅ إضافة إشعار بعد النجاح
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: employeeId,
+          type: 'partial_delivery',
+          title: 'تسليم جزئي ✅',
+          message: `تم معالجة تسليم جزئي للطلب #${order.order_number}\n` +
+                   `• ${deliveredItems.length} منتج مُسلّم\n` +
+                   `• الإيراد: ${(totalRevenue + allocatedDeliveryFee).toLocaleString()} د.ع\n` +
+                   `• ربحك: ${employeeProfit.toLocaleString()} د.ع`,
+          data: {
+            order_id: orderId,
+            delivered_count: deliveredItems.length,
+            total_revenue: totalRevenue + allocatedDeliveryFee,
+            employee_profit: employeeProfit
+          }
+        });
+
       return { 
         success: true, 
         profitId: existingProfit.id,
@@ -201,6 +220,25 @@ export const handlePartialDeliveryFinancials = async (
           system_profit: systemProfit,
           delivery_fee_allocated: allocatedDeliveryFee,
           processed_by: employeeId
+        });
+
+      // ✅ إضافة إشعار بعد النجاح
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: employeeId,
+          type: 'partial_delivery',
+          title: 'تسليم جزئي ✅',
+          message: `تم معالجة تسليم جزئي للطلب #${order.order_number}\n` +
+                   `• ${deliveredItems.length} منتج مُسلّم\n` +
+                   `• الإيراد: ${(totalRevenue + allocatedDeliveryFee).toLocaleString()} د.ع\n` +
+                   `• ربحك: ${employeeProfit.toLocaleString()} د.ع`,
+          data: {
+            order_id: orderId,
+            delivered_count: deliveredItems.length,
+            total_revenue: totalRevenue + allocatedDeliveryFee,
+            employee_profit: employeeProfit
+          }
         });
 
       return { 

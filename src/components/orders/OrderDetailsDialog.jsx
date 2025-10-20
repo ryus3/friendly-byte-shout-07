@@ -12,6 +12,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import { useDeliveryTracking } from '@/hooks/useDeliveryTracking';
 
 const getStatusInfo = (order) => {
   const statusConfig = getStatusForComponent(order);
@@ -39,6 +40,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
   const [syncing, setSyncing] = useState(false);
   const [checkingInvoice, setCheckingInvoice] = useState(false);
   const { syncOrderByTracking, syncOrderByQR, activePartner, isLoggedIn } = useAlWaseet();
+  const { trackingData, loading: trackingLoading } = useDeliveryTracking(order?.id);
 
   React.useEffect(() => {
     if (order) {
@@ -369,26 +371,66 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 </div>
               )}
 
-             <div className="p-4 bg-secondary rounded-lg border border-border">
-               <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
-               <div className="space-y-3">
-                 {(order.order_items || order.items || []).map((item, index) => {
-                   const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
-                   const colorName = item.product_variants?.colors?.name || item.color || '';
-                   const sizeName = item.product_variants?.sizes?.name || item.size || '';
-                   const itemTotal = item.total_price || item.total || (item.unit_price * item.quantity) || 0;
-                   
-                   return (
-                     <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg">
-                       <div>
-                         <p className="font-medium text-foreground">{productName}</p>
-                         <p className="text-sm text-muted-foreground">{colorName} {sizeName && `- ${sizeName}`} × {item.quantity}</p>
-                       </div>
-                       <div className="text-right"><p className="font-semibold text-primary">{itemTotal.toLocaleString()} د.ع</p></div>
-                     </div>
-                   );
-                 })}
-               </div>
+              <div className="p-4 bg-secondary rounded-lg border border-border">
+                <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
+                
+                {/* ✅ عرض معلومات التسليم الجزئي إذا وجدت */}
+                {order.status === 'partial_delivery' && trackingData && (
+                  <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-300 dark:border-amber-800">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">
+                      <PackageCheck className="w-4 h-4" />
+                      <span>تسليم جزئي</span>
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                        <CheckCircle className="w-3 h-3" />
+                        <span>{trackingData.delivered_items_count || 0} منتج مُسلّم</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                        <RotateCcw className="w-3 h-3" />
+                        <span>{trackingData.returned_items_count || 0} منتج راجع</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-3">
+                  {(order.order_items || order.items || []).map((item, index) => {
+                    const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
+                    const colorName = item.product_variants?.colors?.name || item.color || '';
+                    const sizeName = item.product_variants?.sizes?.name || item.size || '';
+                    const itemTotal = item.total_price || item.total || (item.unit_price * item.quantity) || 0;
+                    const itemStatus = item.item_status;
+                    
+                    return (
+                      <div key={index} className={`flex items-center justify-between p-3 bg-background rounded-lg ${
+                        itemStatus === 'delivered' ? 'border-l-4 border-green-500' :
+                        itemStatus === 'pending_return' || itemStatus === 'returned' ? 'border-l-4 border-orange-500' : ''
+                      }`}>
+                        <div className="flex items-center gap-2">
+                          {itemStatus === 'delivered' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                          {(itemStatus === 'pending_return' || itemStatus === 'returned') && <RotateCcw className="w-4 h-4 text-orange-500" />}
+                          <div>
+                            <p className="font-medium text-foreground">{productName}</p>
+                            <p className="text-sm text-muted-foreground">{colorName} {sizeName && `- ${sizeName}`} × {item.quantity}</p>
+                            {itemStatus && itemStatus !== 'pending' && (
+                              <span className={`text-xs font-medium ${
+                                itemStatus === 'delivered' ? 'text-green-600' :
+                                itemStatus === 'pending_return' ? 'text-orange-600' :
+                                itemStatus === 'returned' ? 'text-blue-600' : ''
+                              }`}>
+                                {itemStatus === 'delivered' ? 'مُسلّم' :
+                                 itemStatus === 'pending_return' ? 'بانتظار الإرجاع' :
+                                 itemStatus === 'returned' ? 'تم الإرجاع' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right"><p className="font-semibold text-primary">{itemTotal.toLocaleString()} د.ع</p></div>
+                      </div>
+                    );
+                  })}
+                </div>
                   <div className="mt-4 pt-4 border-t border-border space-y-2">
                     {/* السعر الأصلي الكامل (قبل الخصم) */}
                     <div className="flex justify-between items-center text-sm">

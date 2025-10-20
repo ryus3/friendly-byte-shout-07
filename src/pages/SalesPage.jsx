@@ -43,6 +43,7 @@ const SalesPage = () => {
     return orders?.filter(order => 
       order.status === 'delivered' || 
       order.status === 'completed' ||
+      order.status === 'partial_delivery' || // ✅ إضافة التسليم الجزئي
       (order.delivery_status === '4' && order.delivery_partner?.toLowerCase() === 'alwaseet')
     ) || [];
   }, [orders]);

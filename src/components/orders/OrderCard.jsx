@@ -350,6 +350,18 @@ const OrderCard = React.memo(({
                 </div>
               )}
               
+               {/* ملخص سريع للتسليم الجزئي - أسفل الحالة */}
+               {order.status === 'partial_delivery' && order.order_items && (
+                 <div className="flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full border border-amber-300 dark:border-amber-800">
+                   <PackageCheck className="w-3 h-3" />
+                   <span className="font-medium">
+                     {order.order_items.filter(i => i.item_status === 'delivered').length} مُسلّم
+                     {' • '}
+                     {order.order_items.filter(i => i.item_status === 'pending_return' || i.item_status === 'returned').length} راجع
+                   </span>
+                 </div>
+               )}
+              
                <div className="flex items-center gap-3">
                  {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
                    <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
@@ -603,6 +615,24 @@ const OrderCard = React.memo(({
                                   </span>
                                 )}
                               </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* ✅ تفاصيل التسليم الجزئي - مجاور السعر */}
+                      {order.status === 'partial_delivery' && order.order_items && (
+                        <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
+                          {order.order_items.filter(i => i.item_status === 'delivered').map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 justify-end">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>{item.product?.name || 'منتج'} {item.variant?.color?.name && `- ${item.variant.color.name}`}</span>
+                            </div>
+                          ))}
+                          {order.order_items.filter(i => i.item_status === 'pending_return' || i.item_status === 'returned').map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-xs text-orange-600 dark:text-orange-400 justify-end">
+                              <RotateCcw className="w-3 h-3" />
+                              <span>{item.product?.name || 'منتج'} {item.variant?.color?.name && `- ${item.variant.color.name}`}</span>
                             </div>
                           ))}
                         </div>

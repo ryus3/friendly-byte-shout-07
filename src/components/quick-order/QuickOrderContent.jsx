@@ -1713,9 +1713,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
           const priceDiff = incomingProduct.price - outgoingProduct.price;
           
-          // ✅ 1. ربط بالطلب الأصلي
+          // ✅ 1. ربط بالطلب الأصلي تلقائياً
+          let linkedOriginalOrderId = null;
           const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
           const linkResult = await linkReturnToOriginalOrder(createdOrderId, customerInfoPayload.phone);
+          
+          if (linkResult.success && linkResult.originalOrderId) {
+            linkedOriginalOrderId = linkResult.originalOrderId;
+            console.log('✅ تم ربط طلب الاستبدال تلقائياً بالطلب الأصلي:', linkResult.originalOrderNumber);
+            
+            // تحديث ai_orders بالطلب الأصلي
+            await supabase
+              .from('ai_orders')
+              .update({
+                original_order_id: linkedOriginalOrderId,
+                order_type: 'replacement'
+              })
+              .eq('id', createdOrderId);
+          }
           
           // ✅ 2. حجز المنتج الخارج من المخزون
           const { error: reserveError } = await supabase.rpc('update_variant_stock', {

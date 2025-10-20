@@ -4203,6 +4203,148 @@ export type Database = {
           },
         ]
       }
+      replacement_history: {
+        Row: {
+          created_at: string
+          delivery_fee: number
+          employee_profit_adjusted: number
+          id: string
+          incoming_items: Json | null
+          incoming_order_id: string | null
+          original_order_id: string | null
+          outgoing_items: Json
+          outgoing_order_id: string
+          price_difference: number
+          processed_by: string | null
+          replacement_pair_id: string | null
+          status_17_at: string | null
+          status_21_at: string | null
+          system_profit_adjusted: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_fee?: number
+          employee_profit_adjusted?: number
+          id?: string
+          incoming_items?: Json | null
+          incoming_order_id?: string | null
+          original_order_id?: string | null
+          outgoing_items: Json
+          outgoing_order_id: string
+          price_difference?: number
+          processed_by?: string | null
+          replacement_pair_id?: string | null
+          status_17_at?: string | null
+          status_21_at?: string | null
+          system_profit_adjusted?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_fee?: number
+          employee_profit_adjusted?: number
+          id?: string
+          incoming_items?: Json | null
+          incoming_order_id?: string | null
+          original_order_id?: string | null
+          outgoing_items?: Json
+          outgoing_order_id?: string
+          price_difference?: number
+          processed_by?: string | null
+          replacement_pair_id?: string | null
+          status_17_at?: string | null
+          status_21_at?: string | null
+          system_profit_adjusted?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replacement_history_incoming_order_id_fkey"
+            columns: ["incoming_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_incoming_order_id_fkey"
+            columns: ["incoming_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_incoming_order_id_fkey"
+            columns: ["incoming_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "replacement_history_incoming_order_id_fkey"
+            columns: ["incoming_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "replacement_history_original_order_id_fkey"
+            columns: ["original_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_outgoing_order_id_fkey"
+            columns: ["outgoing_order_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_outgoing_order_id_fkey"
+            columns: ["outgoing_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replacement_history_outgoing_order_id_fkey"
+            columns: ["outgoing_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "replacement_history_outgoing_order_id_fkey"
+            columns: ["outgoing_order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           granted_at: string

@@ -15,7 +15,8 @@ export const handleReplacementFinancials = async ({
   originalOrderId,
   priceDifference,
   deliveryFee,
-  employeeId
+  employeeId,
+  calculateProfit // ✅ إضافة دالة حساب الربح
 }) => {
   try {
     const results = {
@@ -48,8 +49,24 @@ export const handleReplacementFinancials = async ({
 
         // خصم من ربح الطلب الأصلي إذا كان موجوداً
         if (originalOrderId) {
-          await adjustOriginalOrderProfit(originalOrderId, refundAmount);
+          await adjustOriginalOrderProfit(originalOrderId, refundAmount, calculateProfit);
         }
+        
+        // ✅ إضافة إشعار
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: employeeId,
+            type: 'replacement_start',
+            title: 'بدء استبدال 🔄',
+            message: `تم تسليم منتج الاستبدال واستلام المنتج القديم\n` +
+                     `• فرق السعر: ${refundAmount.toLocaleString()} د.ع لصالح الزبون`,
+            data: {
+              order_id: orderId,
+              original_order_id: originalOrderId,
+              refund_amount: refundAmount
+            }
+          });
 
         results.priceDifferenceHandled = true;
         results.details.priceDifference = {
@@ -91,6 +108,21 @@ export const handleReplacementFinancials = async ({
           type: 'employee_deduction',
           amount: deliveryFee
         };
+        
+        // ✅ إضافة إشعار للموظف
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: employeeId,
+            type: 'replacement_delivery_fee',
+            title: 'رسوم توصيل استبدال ⚠️',
+            message: `تم خصم رسوم توصيل الاستبدال من ربحك\n` +
+                     `• المبلغ: ${deliveryFee.toLocaleString()} د.ع`,
+            data: {
+              order_id: orderId,
+              delivery_fee: deliveryFee
+            }
+          });
       } else {
         // رسوم سالبة - نحن ندفع (خصم من فاتورة الوسيط)
         const feeAmount = Math.abs(deliveryFee);
@@ -141,7 +173,7 @@ export const handleReplacementFinancials = async ({
 /**
  * خصم مبلغ من ربح الطلب الأصلي
  */
-const adjustOriginalOrderProfit = async (originalOrderId, refundAmount) => {
+const adjustOriginalOrderProfit = async (originalOrderId, refundAmount, calculateProfit) => {
   try {
     const { data: profitRecord, error: fetchError } = await supabase
       .from('profits')
@@ -157,14 +189,52 @@ const adjustOriginalOrderProfit = async (originalOrderId, refundAmount) => {
     const currentProfit = profitRecord.profit_amount || 0;
     const currentEmployeeProfit = profitRecord.employee_profit || 0;
 
-    // حساب النسبة
-    const employeePercentage = currentRevenue > 0 
-      ? currentEmployeeProfit / currentRevenue 
-      : 0;
+    // ✅ استخدام calculateProfit بدلاً من النسبة المئوية
+    let employeeProfitToDeduct = 0;
+    
+    if (calculateProfit && typeof calculateProfit === 'function') {
+      // جلب تفاصيل الطلب الأصلي
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(
+            *,
+            product:products(*),
+            variant:product_variants(*)
+          )
+        `)
+        .eq('id', originalOrderId)
+        .single();
+
+      if (orderData) {
+        const tempOrder = {
+          items: (orderData.order_items || []).map(item => ({
+            product_id: item.product_id,
+            sku: item.variant_id,
+            price: item.unit_price,
+            quantity: item.quantity,
+            cost_price: item.variant?.cost_price || item.product?.cost_price || 0
+          })),
+          created_at: orderData.created_at,
+          created_by: profitRecord.employee_id
+        };
+
+        const totalEmployeeProfit = calculateProfit(tempOrder, profitRecord.employee_id) || 0;
+        const refundRatio = refundAmount / (currentRevenue || 1);
+        employeeProfitToDeduct = totalEmployeeProfit * refundRatio;
+      }
+    } else {
+      // Fallback للنسبة المئوية إذا لم تتوفر دالة calculateProfit
+      const employeePercentage = currentRevenue > 0 
+        ? currentEmployeeProfit / currentRevenue 
+        : 0;
+      employeeProfitToDeduct = refundAmount * employeePercentage;
+    }
 
     let newRevenue = currentRevenue - refundAmount;
     let newProfit = currentProfit - refundAmount;
-    let newEmployeeProfit = currentEmployeeProfit - (refundAmount * employeePercentage);
+    let newEmployeeProfit = currentEmployeeProfit - employeeProfitToDeduct;
 
     // إذا أصبح الربح سالباً، تسجيل الخسارة
     if (newRevenue < 0) {
