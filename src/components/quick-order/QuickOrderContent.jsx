@@ -634,26 +634,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // حساب المجاميع
    const subtotal = useMemo(() => {
-     // أضافة logging مفصل لتشخيص الخطأ
-     console.log('🔍 Calculating subtotal - Cart debug:', {
-       cart,
-       isArray: Array.isArray(cart),
-       length: cart?.length,
-       items: cart?.map((item, index) => ({
-         index,
-         hasQuantity: 'quantity' in (item || {}),
-         hasTotal: 'total' in (item || {}),
-         quantity: item?.quantity,
-         total: item?.total,
-         isValid: item && typeof item.total === 'number'
-       }))
-     });
-     
      const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
-     const result = safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
-     console.log('✅ Subtotal calculated:', result);
-     return result;
-   }, [cart]);
+     
+     // ✅ للاستبدال: استبعاد المنتج الخارج من حساب subtotal
+     if (formData.type === 'exchange' && outgoingProduct) {
+       const filteredCart = safeCart.filter(item => item.id !== outgoingProduct.id);
+       return filteredCart.reduce((sum, item) => sum + (item.total || 0), 0);
+     }
+     
+     return safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
+   }, [cart, formData.type, outgoingProduct]);
   const deliveryFee = useMemo(() => {
     // رسوم التوصيل دائماً تُحسب في إجمالي السعر المرسل لشركات التوصيل
     return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
@@ -1494,8 +1484,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      // ✅ إصلاح: إضافة أجور التوصيل دائماً لشركة الوسيط
-      let finalTotal = subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
+      // ✅ للاستبدال: لا نستخدم subtotal، سيُعاد حسابه لاحقاً في السطر 1527
+      let finalTotal = formData.type === 'exchange' 
+        ? 0 
+        : subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
       let orderNotes = formData.notes || '';
       let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
                            formData.type === 'return' ? 'return' : 'regular';
