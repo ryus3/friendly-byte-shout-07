@@ -519,6 +519,15 @@ const OrderCard = React.memo(({
                                 return '-' + Math.abs(order.refund_amount || 0).toLocaleString();
                               }
                               
+                              // ✅ الاستبدال: عرض فرق السعر + أجور التوصيل فقط
+                              if (order.order_type === 'replacement') {
+                                const salesAmount = Number(order.sales_amount || 0);
+                                const deliveryFee = Number(order.delivery_fee || 0);
+                                const displayPrice = salesAmount + deliveryFee;
+                                return displayPrice.toLocaleString();
+                              }
+                              
+                              // الطلبات العادية
                               const totalAmount = Number(order.total_amount || 0);
                               const discount = Number(order.discount || 0);
                               const priceIncrease = Number(order.price_increase || 0);
