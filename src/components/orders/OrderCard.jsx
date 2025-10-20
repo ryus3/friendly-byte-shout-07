@@ -546,12 +546,12 @@ const OrderCard = React.memo(({
                          </Badge>
                        )}
                        
-                       {/* شارة الإرجاع - أحمر لامع */}
-                       {order.order_type === 'return' && (
-                         <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 font-bold shadow-lg shadow-red-500/50 animate-pulse">
-                           إرجاع {Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
-                         </Badge>
-                       )}
+                        {/* شارة الإرجاع - أحمر لامع */}
+                        {order.order_type === 'return' && (
+                          <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 font-bold shadow-lg shadow-red-500/50">
+                            إرجاع {Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
+                          </Badge>
+                        )}
                        
                        {/* شارة الاستبدال - بنفسجي تدرج */}
                        {order.order_type === 'replacement' && (

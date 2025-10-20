@@ -1227,8 +1227,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       setFormData(prev => ({
         ...prev,
         price: -refundAmount,
-        priceType: 'negative',
-        notes: `${prev.notes ? prev.notes + ' | ' : ''}إرجاع: ${returnProduct.productName} | المبلغ المُرجع: ${refundAmount.toLocaleString()} د.ع`
+        priceType: 'negative'
       }));
     }
     
@@ -1776,12 +1775,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           });
         }
         
+        // ✅ ربط طلبات الإرجاع بالطلب الأصلي تلقائياً
+        if (formData.type === 'return' && createdOrderId) {
+          console.log('🔗 محاولة ربط طلب الإرجاع بالطلب الأصلي...');
+          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
+          const linkResult = await linkReturnToOriginalOrder(createdOrderId, normalizedPhone);
+          
+          if (linkResult.success) {
+            console.log('✅ تم الربط بالطلب الأصلي:', linkResult.originalOrderNumber);
+          } else {
+            console.warn('⚠️ فشل الربط:', linkResult.error);
+          }
+        }
+        
         if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
           // ✅ المرحلة 3: معالجة كاملة للإرجاع
-          
-          // ✅ 1. ربط الطلب بالطلب الأصلي
-          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
-          await linkReturnToOriginalOrder(createdOrderId, customerInfoPayload.phone);
           
           // 2. حساب ربح المنتج
           const productCost = returnProduct.cost_price || 0;
