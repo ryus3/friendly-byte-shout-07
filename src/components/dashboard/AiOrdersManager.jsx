@@ -467,14 +467,33 @@ useEffect(() => {
         // تحديث فوري محلياً أولاً
         const approvedIds = [...selectedOrders];
         setOrders(prev => prev.filter(o => !approvedIds.includes(o.id)));
-        toast({ title: 'تتم المعالجة...', description: `جاري الموافقة على ${approvedIds.length} طلب`, variant: 'default' });
         
-        // المعالجة الفعلية في الخلفية مع تمرير وجهة الطلب
-        const results = await Promise.all(approvedIds.map(id => 
-          approveAiOrder?.(id, orderDestination.destination, orderDestination.account)
-        ));
-        const successIds = approvedIds.filter((_, i) => results[i]?.success);
-        const failedIds = approvedIds.filter((_, i) => !results[i]?.success);
+        // معالجة تسلسلية مع تأخير لتجنب Rate Limiting
+        const successIds = [];
+        const failedIds = [];
+        let processed = 0;
+        
+        for (const id of approvedIds) {
+          processed++;
+          toast({ 
+            title: 'جاري المعالجة...', 
+            description: `تمت معالجة ${processed} من ${approvedIds.length} طلب`, 
+            variant: 'default' 
+          });
+          
+          const result = await approveAiOrder?.(id, orderDestination.destination, orderDestination.account);
+          
+          if (result?.success) {
+            successIds.push(id);
+          } else {
+            failedIds.push(id);
+          }
+          
+          // تأخير 500ms بين كل طلب (إلا إذا كان آخر طلب)
+          if (processed < approvedIds.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
         
         // تحديث حالة الطلبات المعتمدة لمنع إعادة ظهورها
         if (successIds.length > 0) {
