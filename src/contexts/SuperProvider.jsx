@@ -1050,7 +1050,7 @@ export const SuperProvider = ({ children }) => {
         // للاستبدال: total_amount = 0 (لا يُحسب كمبيعات)
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : orderType === 'exchange'
+          : (orderType === 'exchange' || orderType === 'replacement')  // ✅ دعم كلا الاسمين
             ? 0  // ✅ استبدال = 0 (لا يُحسب كمبيعات جديدة)
             : subtotal,  // ← طلبات عادية = سعر المنتجات الأصلي قبل الخصم
         // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
@@ -1061,7 +1061,7 @@ export const SuperProvider = ({ children }) => {
         price_increase: 0,
         price_change_type: null,
         // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
-        final_amount: (orderType === 'return' || orderType === 'exchange') && deliveryPartnerDataArg?.final_amount !== undefined
+        final_amount: (orderType === 'return' || orderType === 'exchange' || orderType === 'replacement') && deliveryPartnerDataArg?.final_amount !== undefined
           ? deliveryPartnerDataArg.final_amount  // ← قد يكون سالباً للإرجاع
           : (deliveryPartnerDataArg?.final_amount !== undefined 
               ? deliveryPartnerDataArg.final_amount 
