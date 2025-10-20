@@ -1047,25 +1047,18 @@ export const SuperProvider = ({ children }) => {
         customer_province: baseOrder.customer_province,
         // ✅ total_amount = سعر المنتجات الأصلي قبل الخصم (بدون رسوم التوصيل)
         // للإرجاع: total_amount = refund_amount فقط
-        // للاستبدال: total_amount = 0 (لا يُحسب كمبيعات)
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : (orderType === 'exchange' || orderType === 'replacement')
-            ? 0  // ✅ فرض صفر مباشرة للاستبدال - لا نحسب سعر المنتجات
-            : subtotal,  // ← طلبات عادية = سعر المنتجات الأصلي قبل الخصم
-        // ✅ sales_amount = فرق السعر للاستبدال، وللطلبات العادية = سعر المنتجات - الخصم
-        sales_amount: (orderType === 'exchange' || orderType === 'replacement')
-          ? (deliveryPartnerDataArg?.sales_amount !== undefined 
-              ? deliveryPartnerDataArg.sales_amount  // ✅ استخدام فرق السعر الممرر
-              : 0)
-          : subtotal - discount,
+          : subtotal,  // ← سعر المنتجات الأصلي قبل الخصم
+        // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
+        sales_amount: subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
         // ✅ منع price_increase الخاطئ للطلبات الجديدة
         price_increase: 0,
         price_change_type: null,
         // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
-        final_amount: (orderType === 'return' || orderType === 'exchange' || orderType === 'replacement') && deliveryPartnerDataArg?.final_amount !== undefined
+        final_amount: (orderType === 'return' || orderType === 'exchange') && deliveryPartnerDataArg?.final_amount !== undefined
           ? deliveryPartnerDataArg.final_amount  // ← قد يكون سالباً للإرجاع
           : (deliveryPartnerDataArg?.final_amount !== undefined 
               ? deliveryPartnerDataArg.final_amount 

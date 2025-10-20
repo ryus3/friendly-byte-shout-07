@@ -230,26 +230,18 @@ const OrderListItem = ({
             <MobileTableCell label="المبلغ">
               <span className="font-bold text-primary">
                 {(() => {
-                  // ✅ طلبات الاستبدال: عرض فرق السعر + أجور التوصيل
-                  if (order.order_type === 'replacement' || order.order_type === 'exchange') {
-                    const salesAmount = Number(order.sales_amount || 0);
-                    const deliveryFee = Number(order.delivery_fee || 0);
+                  const finalAmount = Number(order.final_amount || order.total_amount || 0);
+                  const salesAmount = Number(order.sales_amount || 0);
+                  const deliveryFee = Number(order.delivery_fee || 0);
+                  
+                  // إذا توفر sales_amount نحتسب (المبيعات + التوصيل)
+                  if (salesAmount > 0) {
                     const total = salesAmount + deliveryFee;
                     return `${total.toLocaleString()} د.ع شامل التوصيل`;
                   }
                   
-                  // ✅ طلبات الإرجاع: عرض مبلغ الإرجاع
-                  if (order.order_type === 'return') {
-                    const refundAmount = Number(order.refund_amount || 0);
-                    return `-${refundAmount.toLocaleString()} د.ع`;
-                  }
-                  
-                  // ✅ الطلبات العادية: total - discount + price_increase + delivery
-                  const totalAmount = Number(order.total_amount || 0);
-                  const discount = Number(order.discount || 0);
-                  const priceIncrease = Number(order.price_increase || 0);
-                  const deliveryFee = Number(order.delivery_fee || 0);
-                  const total = totalAmount - discount + priceIncrease + deliveryFee;
+                  // خلاف ذلك نستخدم (final/total) + أجور التوصيل
+                  const total = finalAmount + deliveryFee;
                   return `${total.toLocaleString()} د.ع شامل التوصيل`;
                 })()}
               </span>
@@ -433,26 +425,18 @@ const OrderListItem = ({
         <div className="min-w-[120px] flex-shrink-0 text-left">
           <div className="font-bold text-sm text-primary">
             {(() => {
-              // ✅ طلبات الاستبدال: عرض فرق السعر + أجور التوصيل
-              if (order.order_type === 'replacement' || order.order_type === 'exchange') {
-                const salesAmount = Number(order.sales_amount || 0);
-                const deliveryFee = Number(order.delivery_fee || 0);
+              const finalAmount = Number(order.final_amount || order.total_amount || 0);
+              const salesAmount = Number(order.sales_amount || 0);
+              const deliveryFee = Number(order.delivery_fee || 0);
+              
+              // إذا توفر sales_amount نحتسب (المبيعات + التوصيل)
+              if (salesAmount > 0) {
                 const total = salesAmount + deliveryFee;
                 return `${total.toLocaleString()} د.ع شامل التوصيل`;
               }
               
-              // ✅ طلبات الإرجاع: عرض مبلغ الإرجاع
-              if (order.order_type === 'return') {
-                const refundAmount = Number(order.refund_amount || 0);
-                return `-${refundAmount.toLocaleString()} د.ع`;
-              }
-              
-              // ✅ الطلبات العادية: total - discount + price_increase + delivery
-              const totalAmount = Number(order.total_amount || 0);
-              const discount = Number(order.discount || 0);
-              const priceIncrease = Number(order.price_increase || 0);
-              const deliveryFee = Number(order.delivery_fee || 0);
-              const total = totalAmount - discount + priceIncrease + deliveryFee;
+              // خلاف ذلك نستخدم (final/total) + أجور التوصيل
+              const total = finalAmount + deliveryFee;
               return `${total.toLocaleString()} د.ع شامل التوصيل`;
             })()}
           </div>

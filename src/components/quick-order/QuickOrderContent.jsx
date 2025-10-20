@@ -92,9 +92,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
-  const [returnOriginalOrder, setReturnOriginalOrder] = useState(null); // ✅ حفظ الطلب الأصلي من ReturnProductForm
   
-  const originalOrder = returnOriginalOrder || aiOrderData?.originalOrder || null;
+  const originalOrder = aiOrderData?.originalOrder || null;
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
@@ -634,16 +633,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // حساب المجاميع
    const subtotal = useMemo(() => {
+     // أضافة logging مفصل لتشخيص الخطأ
+     console.log('🔍 Calculating subtotal - Cart debug:', {
+       cart,
+       isArray: Array.isArray(cart),
+       length: cart?.length,
+       items: cart?.map((item, index) => ({
+         index,
+         hasQuantity: 'quantity' in (item || {}),
+         hasTotal: 'total' in (item || {}),
+         quantity: item?.quantity,
+         total: item?.total,
+         isValid: item && typeof item.total === 'number'
+       }))
+     });
+     
      const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
-     
-     // ✅ للاستبدال: استبعاد المنتج الخارج من حساب subtotal
-     if (formData.type === 'exchange' && outgoingProduct) {
-       const filteredCart = safeCart.filter(item => item.id !== outgoingProduct.id);
-       return filteredCart.reduce((sum, item) => sum + (item.total || 0), 0);
-     }
-     
-     return safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
-   }, [cart, formData.type, outgoingProduct]);
+     const result = safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
+     console.log('✅ Subtotal calculated:', result);
+     return result;
+   }, [cart]);
   const deliveryFee = useMemo(() => {
     // رسوم التوصيل دائماً تُحسب في إجمالي السعر المرسل لشركات التوصيل
     return applyLoyaltyDelivery ? 0 : (settings?.deliveryFee || 0);
@@ -855,28 +864,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }));
     }
   }, [defaultCustomerName, nameTouched, formData.name]);
-
-  // ✅ تحديث السعر تلقائياً للاستبدال عند تغيير المنتجات أو فرق السعر
-  useEffect(() => {
-    if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
-      const autoPriceDiff = incomingProduct.price - outgoingProduct.price;
-      const totalPriceDiff = autoPriceDiff + manualExchangePriceDiff;
-      const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      const calculatedTotal = totalPriceDiff + deliveryFeeAmount;
-      
-      // تحديث السعر في formData
-      if (formData.price !== calculatedTotal) {
-        setFormData(prev => ({ ...prev, price: calculatedTotal }));
-      }
-    }
-  }, [formData.type, outgoingProduct, incomingProduct, manualExchangePriceDiff, settings?.deliveryFee]);
-
-  // ✅ مسح الطلب الأصلي المرتبط عند تغيير نوع الطلب
-  useEffect(() => {
-    if (formData.type !== 'return') {
-      setReturnOriginalOrder(null);
-    }
-  }, [formData.type]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 
@@ -1484,10 +1471,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      // ✅ للاستبدال: لا نستخدم subtotal، سيُعاد حسابه لاحقاً في السطر 1527
-      let finalTotal = formData.type === 'exchange' 
-        ? 0 
-        : subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
+      // ✅ إصلاح: إضافة أجور التوصيل دائماً لشركة الوسيط
+      let finalTotal = subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
       let orderNotes = formData.notes || '';
       let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
                            formData.type === 'return' ? 'return' : 'regular';
@@ -1563,12 +1548,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         return items;
       })(),
-      total_amount: formData.type === 'exchange' ? 0 : Math.round(Math.abs(finalTotal)), // ✅ استبدال = 0، عادي = المبلغ الفعلي
-      sales_amount: formData.type === 'exchange' 
-        ? (incomingProduct && outgoingProduct 
-            ? (incomingProduct.price - outgoingProduct.price) + manualExchangePriceDiff 
-            : 0)
-        : 0, // ✅ فرق السعر الإجمالي (التلقائي + اليدوي) للاستبدال فقط
+      total_amount: formData.type === 'exchange' ? 0 : Math.round(Math.abs(finalTotal)), // ✅ استبدال = 0، عادي = قيمة المنتجات
       final_amount: Math.round(finalTotal), // مع السالب للإرجاع
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
@@ -1732,13 +1712,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         { 
           ...deliveryPartnerData, 
           ...deliveryData,
-          // ✅ فرض total_amount = 0 للاستبدال، المبلغ الفعلي للطلبات العادية
-          total_amount: formData.type === 'exchange' ? 0 : Math.round(Math.abs(finalTotal)),
-          sales_amount: formData.type === 'exchange' 
-            ? (incomingProduct && outgoingProduct 
-                ? (incomingProduct.price - outgoingProduct.price) + manualExchangePriceDiff 
-                : 0)
-            : 0, // ✅ فرق السعر الإجمالي للاستبدال
           // ✅ إضافة البيانات الإضافية للإرجاع
           order_type: actualOrderType,
           refund_amount: actualRefundAmount,
@@ -2373,7 +2346,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               returnProduct={returnProduct}
               refundAmount={refundAmount}
               onRefundAmountChange={setRefundAmount}
-              onOriginalOrderFound={setReturnOriginalOrder} // ✅ استقبال الطلب الأصلي
             />
           )}
         </fieldset>
