@@ -39,6 +39,15 @@ export const handlePartialDeliveryFinancials = async (
     }
 
     // 3️⃣ حساب الإيرادات والتكاليف للمنتجات المسلمة فقط
+    // ✅ استخدام final_amount (المبلغ الفعلي المستلم من شركة التوصيل)
+    const finalAmount = order.final_amount || order.total_amount || 0;
+    const orderTotalRevenue = order.total_amount || 0;
+    
+    // حساب نسبة التسليم
+    const deliveryRatio = orderTotalRevenue > 0 
+      ? finalAmount / orderTotalRevenue 
+      : 1;
+    
     let totalRevenue = 0;
     let totalCost = 0;
 
@@ -49,6 +58,9 @@ export const handlePartialDeliveryFinancials = async (
       totalRevenue += itemRevenue;
       totalCost += itemCost;
     });
+    
+    // ✅ تطبيق نسبة التسليم على الإيراد (بسبب التسليم الجزئي)
+    totalRevenue = totalRevenue * deliveryRatio;
 
     // 4️⃣ حساب ربح الموظف للمنتجات المسلمة فقط
     const employeeId = order.created_by;
@@ -75,12 +87,8 @@ export const handlePartialDeliveryFinancials = async (
     // 5️⃣ حساب ربح النظام
     const systemProfit = totalRevenue - totalCost - employeeProfit;
 
-    // 6️⃣ حساب نسبة رسوم التوصيل (تقسيم نسبي)
-    const orderTotalRevenue = order.total_amount || 0;
-    const deliveryFeeRatio = orderTotalRevenue > 0 
-      ? totalRevenue / orderTotalRevenue 
-      : 0;
-    const allocatedDeliveryFee = (order.delivery_fee || 0) * deliveryFeeRatio;
+    // 6️⃣ حساب رسوم التوصيل المخصصة (نسبي بناءً على deliveryRatio)
+    const allocatedDeliveryFee = (order.delivery_fee || 0) * deliveryRatio;
 
     // 7️⃣ إنشاء أو تحديث سجل الربح
     const { data: existingProfit } = await supabase
@@ -105,6 +113,35 @@ export const handlePartialDeliveryFinancials = async (
 
       if (updateError) throw updateError;
 
+      // ✅ تسجيل في partial_delivery_history
+      await supabase
+        .from('partial_delivery_history')
+        .insert({
+          order_id: orderId,
+          delivered_items: deliveredItems.map(i => ({
+            id: i.id,
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price
+          })),
+          undelivered_items: (order.order_items || [])
+            .filter(item => !deliveredItemIds.includes(item.id))
+            .map(i => ({
+              id: i.id,
+              product_id: i.product_id,
+              variant_id: i.variant_id,
+              quantity: i.quantity,
+              unit_price: i.unit_price
+            })),
+          delivered_revenue: totalRevenue + allocatedDeliveryFee,
+          delivered_cost: totalCost,
+          employee_profit: employeeProfit,
+          system_profit: systemProfit,
+          delivery_fee_allocated: allocatedDeliveryFee,
+          processed_by: employeeId
+        });
+
       return { 
         success: true, 
         profitId: existingProfit.id,
@@ -113,7 +150,8 @@ export const handlePartialDeliveryFinancials = async (
           totalCost,
           systemProfit,
           employeeProfit,
-          deliveredItemsCount: deliveredItems.length
+          deliveredItemsCount: deliveredItems.length,
+          deliveryRatio
         }
       };
     } else {
@@ -136,6 +174,35 @@ export const handlePartialDeliveryFinancials = async (
 
       if (insertError) throw insertError;
 
+      // ✅ تسجيل في partial_delivery_history
+      await supabase
+        .from('partial_delivery_history')
+        .insert({
+          order_id: orderId,
+          delivered_items: deliveredItems.map(i => ({
+            id: i.id,
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price
+          })),
+          undelivered_items: (order.order_items || [])
+            .filter(item => !deliveredItemIds.includes(item.id))
+            .map(i => ({
+              id: i.id,
+              product_id: i.product_id,
+              variant_id: i.variant_id,
+              quantity: i.quantity,
+              unit_price: i.unit_price
+            })),
+          delivered_revenue: totalRevenue + allocatedDeliveryFee,
+          delivered_cost: totalCost,
+          employee_profit: employeeProfit,
+          system_profit: systemProfit,
+          delivery_fee_allocated: allocatedDeliveryFee,
+          processed_by: employeeId
+        });
+
       return { 
         success: true, 
         profitId: newProfit.id,
@@ -144,7 +211,8 @@ export const handlePartialDeliveryFinancials = async (
           totalCost,
           systemProfit,
           employeeProfit,
-          deliveredItemsCount: deliveredItems.length
+          deliveredItemsCount: deliveredItems.length,
+          deliveryRatio
         }
       };
     }

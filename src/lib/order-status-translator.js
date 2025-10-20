@@ -44,6 +44,11 @@ const STATUS_TRANSLATIONS = {
     icon: Truck,
     color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
+  'partial_delivery': {
+    label: 'تسليم جزئي',
+    icon: PackageCheck,
+    color: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
   'delivered': {
     label: 'تم التسليم',
     icon: CheckCircle,

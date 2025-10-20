@@ -141,6 +141,13 @@ export type Database = {
             foreignKeyName: "ai_orders_related_order_id_fkey"
             columns: ["related_order_id"]
             isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_orders_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -207,6 +214,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applied_customer_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
             referencedColumns: ["id"]
           },
           {
@@ -782,6 +796,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_benefit_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
             referencedColumns: ["id"]
           },
           {
@@ -1397,6 +1418,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "delivery_invoices_needing_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
             referencedColumns: ["id"]
           },
           {
@@ -2220,6 +2248,13 @@ export type Database = {
             foreignKeyName: "loyalty_points_history_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_points_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -2273,6 +2308,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_used_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
             referencedColumns: ["id"]
           },
           {
@@ -2375,6 +2417,13 @@ export type Database = {
           order_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "monthly_discount_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "monthly_discount_usage_order_id_fkey"
             columns: ["order_id"]
@@ -2494,6 +2543,13 @@ export type Database = {
             foreignKeyName: "order_discounts_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -2560,6 +2616,13 @@ export type Database = {
           variant_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_items_order_id_fkey"
             columns: ["order_id"]
@@ -2632,6 +2695,13 @@ export type Database = {
           order_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "order_status_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "order_status_history_order_id_fkey"
             columns: ["order_id"]
@@ -3030,6 +3100,80 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      partial_delivery_history: {
+        Row: {
+          created_at: string
+          delivered_cost: number
+          delivered_items: Json
+          delivered_revenue: number
+          delivery_fee_allocated: number
+          employee_profit: number
+          id: string
+          order_id: string
+          processed_at: string
+          processed_by: string | null
+          system_profit: number
+          undelivered_items: Json
+        }
+        Insert: {
+          created_at?: string
+          delivered_cost?: number
+          delivered_items?: Json
+          delivered_revenue?: number
+          delivery_fee_allocated?: number
+          employee_profit?: number
+          id?: string
+          order_id: string
+          processed_at?: string
+          processed_by?: string | null
+          system_profit?: number
+          undelivered_items?: Json
+        }
+        Update: {
+          created_at?: string
+          delivered_cost?: number
+          delivered_items?: Json
+          delivered_revenue?: number
+          delivery_fee_allocated?: number
+          employee_profit?: number
+          id?: string
+          order_id?: string
+          processed_at?: string
+          processed_by?: string | null
+          system_profit?: number
+          undelivered_items?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partial_delivery_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partial_delivery_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partial_delivery_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "partial_delivery_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       permissions: {
         Row: {
@@ -3554,6 +3698,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "profits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "profits_order_id_fkey"
@@ -4319,6 +4470,13 @@ export type Database = {
             foreignKeyName: "settlement_invoice_orders_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_invoice_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -4813,6 +4971,52 @@ export type Database = {
           status_normalized?: string | null
         }
         Relationships: []
+      }
+      delivery_tracking: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          customer_city: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivered_items_count: number | null
+          delivery_fee: number | null
+          delivery_partner: string | null
+          delivery_partner_invoice_id: string | null
+          delivery_partner_order_id: string | null
+          delivery_status: string | null
+          delivery_status_text: string | null
+          employee_profit: number | null
+          final_amount: number | null
+          id: string | null
+          operation_type: string | null
+          order_number: string | null
+          pending_items_count: number | null
+          pending_return_items_count: number | null
+          price_change_type: string | null
+          price_increase: number | null
+          profit_status: string | null
+          receipt_received: boolean | null
+          receipt_received_at: string | null
+          returned_items_count: number | null
+          status: string | null
+          system_profit: number | null
+          total_amount: number | null
+          total_cost: number | null
+          total_items: number | null
+          total_revenue: number | null
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       orders_invoice_receipt_v: {
         Row: {

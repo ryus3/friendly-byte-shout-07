@@ -124,6 +124,20 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         });
       }
 
+      // 4️⃣ ✅ تحديث حالة الطلب الرئيسي
+      const newOrderStatus = undeliveredIds.length > 0 
+        ? 'partial_delivery' 
+        : 'delivered';
+
+      await supabase
+        .from('orders')
+        .update({
+          status: newOrderStatus,
+          price_change_type: null, // إزالة العلامة المؤقتة
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', order.id);
+
       onConfirm?.();
       onOpenChange(false);
     } catch (error) {
