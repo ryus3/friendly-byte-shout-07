@@ -15,7 +15,8 @@ export const useInstantNotifications = (userId, userRole) => {
 
     console.log('🚀 Setting up instant notifications for user:', userId);
 
-    // إعداد قناة الطلبات الذكية مع أداء محسّن
+    // 🔴 تم تعطيل قناة ai_orders مؤقتاً للاختبار - يوجد نظام موحد في useReliableAiOrderNotifications
+    /*
     const aiOrdersChannel = supabase
       .channel(`instant-ai-orders-${userId}-${Date.now()}`)
       .on(
@@ -59,6 +60,7 @@ export const useInstantNotifications = (userId, userRole) => {
       });
 
     channelsRef.current.add(aiOrdersChannel);
+    */
 
     // إعداد قناة الطلبات العادية للإشعارات الفورية
     const ordersChannel = supabase

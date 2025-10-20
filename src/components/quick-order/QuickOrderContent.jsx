@@ -1552,7 +1552,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       final_amount: Math.round(finalTotal), // مع السالب للإرجاع
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
-      discount,
+      discount: formData.type === 'exchange' ? 0 : discount, // ✅ استبدال = 0، عادي/إرجاع = الخصم الفعلي
       delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
       customer_name: formData.name,
       customer_phone: formData.phone,
