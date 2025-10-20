@@ -1571,7 +1571,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         return items;
       })(),
-      total_amount: formData.type === 'exchange' ? 0 : Math.round(Math.abs(finalTotal)), // ✅ استبدال = 0، عادي = قيمة المنتجات
+      total_amount: Math.round(Math.abs(finalTotal)), // ✅ المبلغ المطلوب الفعلي (استبدال وعادي)
       final_amount: Math.round(finalTotal), // مع السالب للإرجاع
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
@@ -1735,8 +1735,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         { 
           ...deliveryPartnerData, 
           ...deliveryData,
-          // ✅ فرض total_amount = 0 للاستبدال
-          total_amount: formData.type === 'exchange' ? 0 : undefined,
+          // ✅ فرض total_amount = المبلغ المطلوب الفعلي (فرق السعر + أجور التوصيل)
+          total_amount: Math.round(Math.abs(finalTotal)),
           // ✅ إضافة البيانات الإضافية للإرجاع
           order_type: actualOrderType,
           refund_amount: actualRefundAmount,
