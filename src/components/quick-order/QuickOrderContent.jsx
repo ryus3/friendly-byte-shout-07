@@ -1548,7 +1548,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         return items;
       })(),
-      total_amount: Math.round(Math.abs(finalTotal)), // القيمة المطلقة
+      total_amount: formData.type === 'exchange' ? 0 : Math.round(Math.abs(finalTotal)), // ✅ استبدال = 0، عادي = قيمة المنتجات
       final_amount: Math.round(finalTotal), // مع السالب للإرجاع
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
