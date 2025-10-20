@@ -1051,9 +1051,7 @@ export const SuperProvider = ({ children }) => {
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
           : (orderType === 'exchange' || orderType === 'replacement')
-            ? (deliveryPartnerDataArg?.total_amount !== undefined 
-                ? deliveryPartnerDataArg.total_amount 
-                : 0)  // ✅ استخدام القيمة الممررة أو 0
+            ? 0  // ✅ فرض صفر مباشرة للاستبدال - لا نحسب سعر المنتجات
             : subtotal,  // ← طلبات عادية = سعر المنتجات الأصلي قبل الخصم
         // ✅ sales_amount = فرق السعر للاستبدال، وللطلبات العادية = سعر المنتجات - الخصم
         sales_amount: (orderType === 'exchange' || orderType === 'replacement')
