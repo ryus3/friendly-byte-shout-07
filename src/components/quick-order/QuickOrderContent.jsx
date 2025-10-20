@@ -1525,13 +1525,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     const orderData = {
       ...formData,
       order_type: actualOrderType, // ✅ ضبط النوع الصحيح
-      items: orderItems.map(item => ({
-        product_id: item.id,
-        variant_id: item.variantId,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity
-      })),
+      items: (() => {
+        const items = orderItems.map(item => ({
+          product_id: item.id,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity
+        }));
+        
+        // ✅ الخطوة 2: إضافة المنتج الخارج للاستبدال
+        if (formData.type === 'exchange' && outgoingProduct) {
+          items.push({
+            product_id: outgoingProduct.id,
+            variant_id: outgoingProduct.variantId,
+            quantity: outgoingProduct.quantity || 1,
+            unit_price: outgoingProduct.price,
+            total_price: outgoingProduct.price * (outgoingProduct.quantity || 1),
+            item_type: 'outgoing'  // ✅ تمييز المنتج الخارج
+          });
+        }
+        
+        return items;
+      })(),
       total_amount: Math.round(Math.abs(finalTotal)), // القيمة المطلقة
       final_amount: Math.round(finalTotal), // مع السالب للإرجاع
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
@@ -1721,7 +1737,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             linkedOriginalOrderId = linkResult.originalOrderId;
             console.log('✅ تم ربط طلب الاستبدال تلقائياً بالطلب الأصلي:', linkResult.originalOrderNumber);
             
-            // تحديث ai_orders بالطلب الأصلي
+            // ✅ الخطوة 4: تحديث ai_orders و orders معاً
             await supabase
               .from('ai_orders')
               .update({
@@ -1729,20 +1745,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 order_type: 'replacement'
               })
               .eq('id', createdOrderId);
+            
+            // ✅ مزامنة في orders أيضاً
+            await supabase
+              .from('orders')
+              .update({
+                original_order_id: linkedOriginalOrderId,
+                related_order_id: linkedOriginalOrderId
+              })
+              .eq('id', createdOrderId);
           }
           
-          // ✅ 2. حجز المنتج الخارج من المخزون
-          const { error: reserveError } = await supabase.rpc('update_variant_stock', {
-            p_variant_id: outgoingProduct.variant_id,
-            p_quantity_change: -outgoingProduct.quantity,
-            p_reason: `حجز استبدال - ${result.trackingNumber || createdOrderId}`
-          });
-          
-          if (reserveError) {
-            console.error('خطأ في حجز المخزون:', reserveError);
-          } else {
-            console.log('✅ تم حجز المنتج الخارج:', outgoingProduct.name);
-          }
+          // ✅ الخطوة 1 و 5: حذف الخصم اليدوي - نظام الحجز الموحد سيتولى المهمة
+          // المنتج الخارج مُضاف لـ order_items بنوع 'outgoing'
+          // سيُحجز تلقائياً عند إنشاء الطلب وسيُخصم عند Status 21
+          console.log('✅ المنتج الخارج سيُحجز تلقائياً عبر نظام الحجز الموحد');
           
           // معالجة المحاسبة الكاملة
           const { error: accountingError } = await supabase.rpc('handle_exchange_price_difference', {
