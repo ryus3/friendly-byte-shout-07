@@ -1050,11 +1050,15 @@ export const SuperProvider = ({ children }) => {
         // للاستبدال: total_amount = 0 (لا يُحسب كمبيعات)
         total_amount: orderType === 'return' 
           ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : (orderType === 'exchange' || orderType === 'replacement')  // ✅ دعم كلا الاسمين
-            ? 0  // ✅ استبدال = 0 (لا يُحسب كمبيعات جديدة)
+          : (orderType === 'exchange' || orderType === 'replacement')
+            ? (deliveryPartnerDataArg?.total_amount !== undefined 
+                ? deliveryPartnerDataArg.total_amount 
+                : 0)  // ✅ استخدام القيمة الممررة أو 0
             : subtotal,  // ← طلبات عادية = سعر المنتجات الأصلي قبل الخصم
-        // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
-        sales_amount: subtotal - discount,
+        // ✅ sales_amount = 0 للاستبدال، وللطلبات العادية = سعر المنتجات - الخصم
+        sales_amount: (orderType === 'exchange' || orderType === 'replacement')
+          ? 0  // ✅ الاستبدال لا يُحسب كمبيعات
+          : subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
         // ✅ منع price_increase الخاطئ للطلبات الجديدة
