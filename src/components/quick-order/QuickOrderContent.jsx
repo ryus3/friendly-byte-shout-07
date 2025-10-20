@@ -1735,6 +1735,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         { 
           ...deliveryPartnerData, 
           ...deliveryData,
+          // ✅ فرض total_amount = 0 للاستبدال
+          total_amount: formData.type === 'exchange' ? 0 : undefined,
           // ✅ إضافة البيانات الإضافية للإرجاع
           order_type: actualOrderType,
           refund_amount: actualRefundAmount,
