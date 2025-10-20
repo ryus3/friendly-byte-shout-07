@@ -47,7 +47,10 @@ const OrderDetailsForm = ({
     settingsDeliveryFee: settings?.deliveryFee
   });
   
-  const finalTotal = total + deliveryFee;
+  // ✅ للاستبدال: استخدم القيمة المحسوبة من QuickOrderContent
+  const finalTotal = formData.type === 'exchange' 
+    ? formData.price // من حساب فرق السعر + التوصيل
+    : total + deliveryFee; // للطلبات العادية
 
   // ضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
@@ -70,12 +73,13 @@ const OrderDetailsForm = ({
     }
   }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 
-  // تحديث السعر النهائي في الحقل تلقائياً
+  // تحديث السعر النهائي في الحقل تلقائياً (إلا للاستبدال)
   useEffect(() => {
-    if (finalTotal !== formData.price) {
+    // ❌ لا تُحدث السعر تلقائياً للاستبدال - سيتم تحديثه من QuickOrderContent
+    if (formData.type !== 'exchange' && finalTotal !== formData.price) {
       handleChange({ target: { name: 'price', value: finalTotal } });
     }
-  }, [finalTotal, formData.price, handleChange]);
+  }, [finalTotal, formData.price, handleChange, formData.type]);
 
   return (
     <Card dir="rtl">
@@ -256,10 +260,18 @@ const OrderDetailsForm = ({
                   handleChange({ target: { name: 'price', value: finalValue } });
                 }} 
                 required 
-                disabled={isSubmittingState} 
+                disabled={isSubmittingState || formData.type === 'exchange'} 
+                readOnly={formData.type === 'exchange'}
                 placeholder="أدخل المبلغ" 
                 className="text-lg font-semibold h-12 text-right"
               />
+              
+              {/* رسالة توضيحية للاستبدال */}
+              {formData.type === 'exchange' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  💡 يتم حساب السعر تلقائياً من فرق السعر + رسوم التوصيل
+                </p>
+              )}
           
           {/* التحذير عند السعر السالب */}
           {formData.priceType === 'negative' && (

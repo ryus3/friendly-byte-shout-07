@@ -866,6 +866,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [defaultCustomerName, nameTouched, formData.name]);
 
+  // ✅ تحديث السعر تلقائياً للاستبدال عند تغيير المنتجات أو فرق السعر
+  useEffect(() => {
+    if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
+      const autoPriceDiff = incomingProduct.price - outgoingProduct.price;
+      const totalPriceDiff = autoPriceDiff + manualExchangePriceDiff;
+      const deliveryFeeAmount = settings?.deliveryFee || 5000;
+      const calculatedTotal = totalPriceDiff + deliveryFeeAmount;
+      
+      // تحديث السعر في formData
+      if (formData.price !== calculatedTotal) {
+        setFormData(prev => ({ ...prev, price: calculatedTotal }));
+      }
+    }
+  }, [formData.type, outgoingProduct, incomingProduct, manualExchangePriceDiff, settings?.deliveryFee]);
+
   // ✅ مسح الطلب الأصلي المرتبط عند تغيير نوع الطلب
   useEffect(() => {
     if (formData.type !== 'return') {
