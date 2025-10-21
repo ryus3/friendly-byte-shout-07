@@ -1511,10 +1511,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       let merchantNotes = orderNotes;
       
       // ✅ معالجة الاستبدال
+      let priceDiff = 0;
+      let calculatedDeliveryFee = 0;
       if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
         const autoPriceDiff = incomingProduct.price - outgoingProduct.price;
-        const priceDiff = autoPriceDiff + manualExchangePriceDiff;
-        const calculatedDeliveryFee = settings?.deliveryFee || 5000;
+        priceDiff = autoPriceDiff + manualExchangePriceDiff;
+        calculatedDeliveryFee = settings?.deliveryFee || 5000;
         finalTotal = priceDiff + calculatedDeliveryFee;
         
         // ملاحظات مبسطة للوسيط (بدون رموز)
@@ -1540,34 +1542,65 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ...formData,
       order_type: actualOrderType, // ✅ ضبط النوع الصحيح
       items: (() => {
-        const items = orderItems.map(item => ({
-          product_id: item.id,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.price * item.quantity
-        }));
+        // ✅ للطلبات العادية: استخدم cart
+        if (formData.type !== 'exchange' && formData.type !== 'return') {
+          return orderItems.map(item => ({
+            product_id: item.id,
+            variant_id: item.variantId,
+            quantity: item.quantity,
+            unit_price: item.price,
+            total_price: item.price * item.quantity
+          }));
+        }
         
-        // ✅ الخطوة 2: إضافة المنتج الخارج للاستبدال
-        if (formData.type === 'exchange' && outgoingProduct) {
+        const items = [];
+        
+        // ✅ للاستبدال: إضافة المنتج الوارد (incoming) والخارج (outgoing)
+        if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
+          // المنتج الوارد (يدخل المخزون في حالة 17)
+          items.push({
+            product_id: incomingProduct.id,
+            variant_id: incomingProduct.variantId,
+            quantity: incomingProduct.quantity || 1,
+            unit_price: incomingProduct.price,
+            total_price: incomingProduct.price * (incomingProduct.quantity || 1),
+            item_type: 'incoming'
+          });
+          
+          // المنتج الخارج (يخصم من المخزون في حالة 21)
           items.push({
             product_id: outgoingProduct.id,
             variant_id: outgoingProduct.variantId,
             quantity: outgoingProduct.quantity || 1,
             unit_price: outgoingProduct.price,
             total_price: outgoingProduct.price * (outgoingProduct.quantity || 1),
-            item_type: 'outgoing'  // ✅ تمييز المنتج الخارج
+            item_type: 'outgoing'
           });
+        }
+        
+        // ✅ للإرجاع: استخدم orderItems (تم تحضيره مسبقاً)
+        if (formData.type === 'return') {
+          return orderItems;
         }
         
         return items;
       })(),
-      total_amount: Math.round(finalTotal), // ✅ بدون abs - يبقى سالب للإرجاع
-      final_amount: Math.round(finalTotal), // مع السالب للإرجاع
+      total_amount: formData.type === 'exchange' 
+        ? Math.round(priceDiff)  // ✅ للاستبدال: فرق السعر فقط (بدون التوصيل)
+        : formData.type === 'return'
+          ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب دائماً
+          : Math.round(finalTotal),  // للطلبات العادية
+      final_amount: formData.type === 'return'
+        ? -Math.abs(refundAmount) + (settings?.deliveryFee || 5000)  // ✅ للإرجاع: سالب + توصيل
+        : Math.round(finalTotal),
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
-      discount: formData.type === 'return' ? 0 : discount, // ✅ صفر للإرجاع، قيمة الخصم للطلبات العادية
-      delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
+      discount: formData.type === 'exchange' || formData.type === 'return' ? 0 : discount, // ✅ صفر للاستبدال والإرجاع
+      delivery_fee: formData.type === 'exchange' 
+        ? (settings?.deliveryFee || 5000)  // ✅ للاستبدال: التوصيل منفصل
+        : formData.type === 'توصيل' 
+          ? deliveryFeeAmount 
+          : 0,
       customer_name: formData.name,
       customer_phone: formData.phone,
       customer_address: formData.address,

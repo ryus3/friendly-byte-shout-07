@@ -316,13 +316,16 @@ const BottomNav = () => {
   const handleHomeClick = () => {
     const targetPage = user?.default_page || '/';
     
-    // إذا كنا بالفعل في الصفحة المستهدفة، فقط نصعد للأعلى
-    if (location.pathname === targetPage) {
-      scrollToTopInstant();
-    } else {
-      // ننتقل للصفحة ثم نصعد للأعلى
+    // ✅ صعد للأعلى فوراً
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    
+    // ✅ ثم انتقل للصفحة إذا لم نكن فيها
+    if (location.pathname !== targetPage) {
       navigate(targetPage);
-      setTimeout(() => scrollToTopInstant(), 100);
+      // ✅ تأكيد الصعود بعد التنقل (احتياطي)
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      });
     }
   };
 
