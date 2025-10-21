@@ -1336,6 +1336,13 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0 };
       }
 
+      // 🔒 جلب القائمة السوداء للطلبات المحذوفة نهائياً
+      const permanentlyDeleted = JSON.parse(
+        localStorage.getItem('permanentlyDeletedOrders') || '[]'
+      );
+      const blacklistedQRs = new Set(permanentlyDeleted.map(d => d.tracking_number));
+      devLog.log(`🚫 [fastSync] القائمة السوداء: ${blacklistedQRs.size} طلب محذوف نهائياً`);
+
       // 2) اجلب جميع طلبات الوسيط لعمل fallback search مع معالجة أخطاء Rate Limit
       let waseetOrders = [];
       try {
@@ -1368,12 +1375,23 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0, emptyList: true };
       }
 
+      // 🔍 تصفية الطلبات المحذوفة نهائياً من قائمة الوسيط
+      const filteredWaseetOrders = waseetOrders.filter(order => {
+        const qr = String(order.qr_id || order.tracking_number || '');
+        if (blacklistedQRs.has(qr)) {
+          devLog.log(`🚫 [fastSync] تجاهل طلب محذوف نهائياً: ${qr}`);
+          return false;
+        }
+        return true;
+      });
+      devLog.log(`✅ [fastSync] بعد التصفية: ${filteredWaseetOrders.length} طلب نشط`);
+
       // 3) بناء خرائط للبحث السريع
       const byWaseetId = new Map();
       const byQrId = new Map();
       const byTracking = new Map();
       
-      for (const wo of waseetOrders) {
+      for (const wo of filteredWaseetOrders) {
         if (wo.id) byWaseetId.set(String(wo.id), wo);
         if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), wo);
         if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), wo);
@@ -1386,6 +1404,13 @@ export const AlWaseetProvider = ({ children }) => {
       const statusChanges = [];
 
       for (const localOrder of pendingOrders) {
+        // 🚫 تخطي الطلبات المحذوفة نهائياً من المعالجة
+        const trackingNum = String(localOrder.tracking_number || localOrder.qr_id || '');
+        if (blacklistedQRs.has(trackingNum)) {
+          devLog.log(`⏭️ [fastSync] تخطي طلب محذوف نهائياً: ${trackingNum}`);
+          continue;
+        }
+
         let waseetOrder = null;
         let needsIdRepair = false;
 
@@ -3125,19 +3150,20 @@ export const AlWaseetProvider = ({ children }) => {
         // الإصلاح الصامت أولاً
         await silentOrderRepair();
         
-        // ثم التصحيح الشامل إذا لم يكن مكتملاً
+        // 🔥 الحل الجذري: تنفيذ الحذف قبل التصحيح لمنع إعادة الإنشاء
+        console.log('🧹 [1/2] تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
+        await performDeletionPassAfterStatusSync();
+        
+        // ثم التصحيح الشامل إذا لم يكن مكتملاً (يحترم القائمة السوداء الآن)
         if (!correctionComplete) {
-          console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
+          console.log('🛠️ [2/2] تنفيذ التصحيح الأولي للطلبات (مع احترام القائمة السوداء)...');
           const correctionResult = await comprehensiveOrderCorrection();
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
         }
 
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
-        console.log('✅ تم الانتهاء من المهام الأولية');
+        console.log('✅ تم الانتهاء من المهام الأولية بالترتيب الصحيح');
         
-        // تشغيل مرور الحذف فوراً لمعالجة الطلبات المحذوفة من الوسيط
-        console.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
-        await performDeletionPassAfterStatusSync();
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }
