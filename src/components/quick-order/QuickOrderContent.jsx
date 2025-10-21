@@ -1542,17 +1542,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ...formData,
       order_type: actualOrderType, // ✅ ضبط النوع الصحيح
       items: (() => {
-        // ✅ للطلبات العادية: استخدم cart
-        if (formData.type !== 'exchange' && formData.type !== 'return') {
-          return orderItems.map(item => ({
-            product_id: item.id,
-            variant_id: item.variantId,
-            quantity: item.quantity,
-            unit_price: item.price,
-            total_price: item.price * item.quantity
-          }));
-        }
-        
         // ✅ للاستبدال: قائمة فارغة (جميع البيانات في exchange_metadata)
         if (formData.type === 'exchange') {
           return [];
@@ -1563,15 +1552,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return orderItems;
         }
         
-        return [];
+        // ✅ للطلبات العادية: استخدم cart
+        return orderItems.map(item => ({
+          product_id: item.id,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity
+        }));
       })(),
       total_amount: formData.type === 'exchange' 
-        ? Math.round(priceDiff)  // ✅ للاستبدال: فرق السعر فقط (بدون التوصيل)
+        ? (() => {
+            // ✅ حساب فرق السعر من جميع منتجات cart
+            const outgoingTotal = cart
+              .filter(item => item.item_direction === 'outgoing')
+              .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            const incomingTotal = cart
+              .filter(item => item.item_direction === 'incoming')
+              .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            return Math.round(incomingTotal - outgoingTotal);
+          })()
         : formData.type === 'return'
           ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب دائماً
           : Math.round(finalTotal),  // للطلبات العادية
       final_amount: formData.type === 'exchange'
-        ? Math.round(priceDiff + calculatedDeliveryFee)  // ✅ للاستبدال: فرق السعر + توصيل
+        ? (() => {
+            // ✅ حساب المبلغ النهائي (فرق السعر + توصيل)
+            const outgoingTotal = cart
+              .filter(item => item.item_direction === 'outgoing')
+              .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            const incomingTotal = cart
+              .filter(item => item.item_direction === 'incoming')
+              .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+            const priceDifference = incomingTotal - outgoingTotal;
+            return Math.round(priceDifference + calculatedDeliveryFee);
+          })()
         : formData.type === 'return'
           ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب (بدون توصيل لأن التوصيل منفصل)
           : Math.round(finalTotal),
@@ -1593,28 +1608,44 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       delivery_status: 'pending',
       status: 'pending',
       // ✅ حفظ بيانات الاستبدال في exchange_metadata
-      exchange_metadata: formData.type === 'exchange' && outgoingProduct && incomingProduct ? {
-        price_difference: priceDiff,  // ✅ فرق السعر
-        delivery_fee: calculatedDeliveryFee,  // ✅ رسوم التوصيل
-        outgoing_items: [{
-          variant_id: outgoingProduct.variantId,
-          product_id: outgoingProduct.id,
-          quantity: outgoingProduct.quantity || 1,
-          product_name: outgoingProduct.productName,
-          color: outgoingProduct.color,
-          size: outgoingProduct.size,
-          price: outgoingProduct.price
-        }],
-        incoming_items: [{
-          variant_id: incomingProduct.variantId,
-          product_id: incomingProduct.id,
-          quantity: incomingProduct.quantity || 1,
-          product_name: incomingProduct.productName,
-          color: incomingProduct.color,
-          size: incomingProduct.size,
-          price: incomingProduct.price
-        }]
-      } : null
+      exchange_metadata: formData.type === 'exchange' ? (() => {
+        // ✅ حساب المنتجات الصادرة والواردة من cart
+        const outgoingItems = cart
+          .filter(item => item.item_direction === 'outgoing')
+          .map(item => ({
+            variant_id: item.variantId,
+            product_id: item.id,
+            quantity: item.quantity || 1,
+            product_name: item.productName,
+            color: item.color,
+            size: item.size,
+            price: item.price
+          }));
+        
+        const incomingItems = cart
+          .filter(item => item.item_direction === 'incoming')
+          .map(item => ({
+            variant_id: item.variantId,
+            product_id: item.id,
+            quantity: item.quantity || 1,
+            product_name: item.productName,
+            color: item.color,
+            size: item.size,
+            price: item.price
+          }));
+        
+        // ✅ حساب فرق السعر من جميع المنتجات
+        const totalOutgoingPrice = outgoingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalIncomingPrice = incomingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const calculatedPriceDiff = totalIncomingPrice - totalOutgoingPrice;
+        
+        return {
+          price_difference: calculatedPriceDiff,
+          delivery_fee: calculatedDeliveryFee,
+          outgoing_items: outgoingItems,
+          incoming_items: incomingItems
+        };
+      })() : null
     };
 
     // إذا كان هذا تعديل على طلب ذكي، قم بالموافقة عليه وإنشاء طلب عادي
@@ -2397,13 +2428,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           {formData.type === 'exchange' && (
             <ExchangeProductsForm
               cart={cart}
-              onSelectOutgoing={(productId) => {
-                const product = cart.find(item => item.id === productId);
-                setOutgoingProduct(product);
+              onAddOutgoing={(product) => {
+                // ✅ إضافة منتج صادر مع تحديد الاتجاه
+                addToCart({ ...product, item_direction: 'outgoing' });
               }}
-              onSelectIncoming={(product) => setIncomingProduct(product)}
-              outgoingProduct={outgoingProduct}
-              incomingProduct={incomingProduct}
+              onAddIncoming={(product) => {
+                // ✅ إضافة منتج وارد مع تحديد الاتجاه
+                addToCart({ ...product, item_direction: 'incoming' });
+              }}
+              onRemoveItem={(index) => {
+                // ✅ حذف منتج من cart
+                const newCart = [...cart];
+                newCart.splice(index, 1);
+                setCart(newCart);
+              }}
               deliveryFee={settings?.deliveryFee || 5000}
               onManualPriceDiffChange={setManualExchangePriceDiff}
             />

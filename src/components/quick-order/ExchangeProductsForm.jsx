@@ -3,21 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Package, PackageCheck } from 'lucide-react';
+import { ArrowRight, Package, PackageCheck, X, Plus } from 'lucide-react';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 export const ExchangeProductsForm = ({
   cart,
-  onSelectOutgoing,
-  onSelectIncoming,
-  outgoingProduct,
-  incomingProduct,
+  onAddOutgoing,
+  onAddIncoming,
+  onRemoveItem,
   deliveryFee = 5000,
   onManualPriceDiffChange
 }) => {
-  const [productSelectOpen, setProductSelectOpen] = useState(false);
+  const [outgoingDialogOpen, setOutgoingDialogOpen] = useState(false);
+  const [incomingDialogOpen, setIncomingDialogOpen] = useState(false);
   const [manualPriceDiff, setManualPriceDiff] = useState(0);
   
   const handleManualPriceDiffChange = (value) => {
@@ -27,10 +26,14 @@ export const ExchangeProductsForm = ({
     }
   };
   
-  const priceDiff = incomingProduct && outgoingProduct 
-    ? incomingProduct.price - outgoingProduct.price 
-    : 0;
+  // ✅ حساب المجاميع من cart
+  const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+  const incomingItems = cart.filter(item => item.item_direction === 'incoming');
   
+  const outgoingTotal = outgoingItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  const incomingTotal = incomingItems.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+  
+  const priceDiff = incomingTotal - outgoingTotal;
   const totalPriceDiff = priceDiff + manualPriceDiff;
   const totalAmount = totalPriceDiff + deliveryFee;
 
@@ -41,47 +44,15 @@ export const ExchangeProductsForm = ({
         تفاصيل الاستبدال
       </h3>
       
-      {/* المنتج الصادر (الخارج للزبون) */}
-      <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/10 relative z-10">
+      {/* المنتجات الصادرة (الخارجة للزبون) */}
+      <Card className="border-blue-200 bg-blue-50/50 dark:bg-blue-900/10">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            المنتج الصادر (الخارج)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <SearchableSelectFixed
-            value={outgoingProduct?.id || ''}
-            onValueChange={onSelectOutgoing}
-            options={cart.map(item => ({
-              value: item.id,
-              label: `${item.productName} - ${item.color} - ${item.size}`
-            }))}
-            placeholder="اختر المنتج المراد إرساله"
-            emptyText="السلة فارغة"
-            className="w-full"
-          />
-          
-          {outgoingProduct && (
-            <div className="p-3 bg-background rounded-lg border">
-              <p className="text-sm font-medium">{outgoingProduct.productName}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {outgoingProduct.size} • {outgoingProduct.color}
-              </p>
-              <p className="text-sm font-semibold mt-2 text-blue-600">
-                السعر: {outgoingProduct.price.toLocaleString()} د.ع
-              </p>
+          <CardTitle className="text-base flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              المنتجات الصادرة (الخارجة)
             </div>
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* المنتج الوارد (الداخل من الزبون) */}
-      <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <PackageCheck className="w-4 h-4" />
-            المنتج الوارد (الداخل)
+            <Badge variant="outline">{outgoingItems.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -89,31 +60,116 @@ export const ExchangeProductsForm = ({
             type="button"
             variant="outline" 
             className="w-full"
-            onClick={() => setProductSelectOpen(true)}
+            onClick={() => setOutgoingDialogOpen(true)}
           >
-            اختر المنتج الجديد
+            <Plus className="w-4 h-4 ml-2" />
+            إضافة منتج صادر
           </Button>
           
-          {incomingProduct && (
-            <div className="p-3 bg-background rounded-lg border border-green-200">
-              <p className="text-sm font-medium">{incomingProduct.productName}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {incomingProduct.size} • {incomingProduct.color}
-              </p>
-              <p className="text-sm font-semibold mt-2 text-green-600">
-                السعر: {incomingProduct.price.toLocaleString()} د.ع
-              </p>
+          {outgoingItems.length > 0 && (
+            <div className="space-y-2">
+              {outgoingItems.map((item, index) => (
+                <div key={index} className="p-3 bg-background rounded-lg border flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.productName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {item.size} • {item.color} • الكمية: {item.quantity || 1}
+                    </p>
+                    <p className="text-sm font-semibold mt-2 text-blue-600">
+                      السعر: {((item.price || 0) * (item.quantity || 1)).toLocaleString()} د.ع
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemoveItem(index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="text-sm font-semibold text-blue-600 pt-2 border-t">
+                المجموع: {outgoingTotal.toLocaleString()} د.ع
+              </div>
             </div>
           )}
           
           <ProductSelectionDialog
-            open={productSelectOpen}
-            onOpenChange={setProductSelectOpen}
+            open={outgoingDialogOpen}
+            onOpenChange={setOutgoingDialogOpen}
             onConfirm={(selectedItems) => {
-              if (selectedItems.length > 0) {
-                onSelectIncoming(selectedItems[0]);
-                setProductSelectOpen(false);
-              }
+              selectedItems.forEach(item => {
+                onAddOutgoing({ ...item, item_direction: 'outgoing' });
+              });
+              setOutgoingDialogOpen(false);
+            }}
+            initialCart={[]}
+          />
+        </CardContent>
+      </Card>
+      
+      {/* المنتجات الواردة (الداخلة من الزبون) */}
+      <Card className="border-green-200 bg-green-50/50 dark:bg-green-900/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-2">
+              <PackageCheck className="w-4 h-4" />
+              المنتجات الواردة (الداخلة)
+            </div>
+            <Badge variant="outline">{incomingItems.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button 
+            type="button"
+            variant="outline" 
+            className="w-full"
+            onClick={() => setIncomingDialogOpen(true)}
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            إضافة منتج وارد
+          </Button>
+          
+          {incomingItems.length > 0 && (
+            <div className="space-y-2">
+              {incomingItems.map((item, index) => (
+                <div key={index} className="p-3 bg-background rounded-lg border border-green-200 flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.productName}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {item.size} • {item.color} • الكمية: {item.quantity || 1}
+                    </p>
+                    <p className="text-sm font-semibold mt-2 text-green-600">
+                      السعر: {((item.price || 0) * (item.quantity || 1)).toLocaleString()} د.ع
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRemoveItem(outgoingItems.length + index)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <div className="text-sm font-semibold text-green-600 pt-2 border-t">
+                المجموع: {incomingTotal.toLocaleString()} د.ع
+              </div>
+            </div>
+          )}
+          
+          <ProductSelectionDialog
+            open={incomingDialogOpen}
+            onOpenChange={setIncomingDialogOpen}
+            onConfirm={(selectedItems) => {
+              selectedItems.forEach(item => {
+                onAddIncoming({ ...item, item_direction: 'incoming' });
+              });
+              setIncomingDialogOpen(false);
             }}
             initialCart={[]}
           />
@@ -121,12 +177,20 @@ export const ExchangeProductsForm = ({
       </Card>
       
       {/* ملخص الحسابات */}
-      {outgoingProduct && incomingProduct && (
+      {(outgoingItems.length > 0 || incomingItems.length > 0) && (
         <Card className="border-purple-300 bg-purple-50 dark:bg-purple-900/20">
           <CardContent className="p-4 space-y-4">
             <h4 className="font-semibold mb-3">ملخص الحسابات</h4>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-muted-foreground">
+                <span>مجموع المنتجات الصادرة:</span>
+                <span>{outgoingTotal.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>مجموع المنتجات الواردة:</span>
+                <span>{incomingTotal.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between border-t pt-2">
                 <span>فرق السعر التلقائي:</span>
                 <span className={`font-semibold ${priceDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {priceDiff >= 0 ? '+' : ''}{priceDiff.toLocaleString()} د.ع

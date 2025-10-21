@@ -1,78 +1,62 @@
 import { supabase } from '@/lib/customSupabaseClient';
 
 /**
- * معالجة المخزون للطلبات الاستبدالية
+ * معالجة المخزون للطلبات الاستبدالية باستخدام exchange_metadata
  * @param {string} orderId - معرف الطلب
- * @param {string[]} outgoingItemIds - معرفات المنتجات الصادرة للزبون
- * @param {string[]} incomingItemIds - معرفات المنتجات الواردة من الزبون
- * @returns {Promise<{success: boolean, outgoingProcessed: number, incomingProcessed: number}>}
+ * @param {Object} exchangeMetadata - بيانات الاستبدال من جدول orders
+ * @param {string} processType - نوع المعالجة: 'outgoing' أو 'incoming'
+ * @returns {Promise<{success: boolean, processed: number}>}
  */
-export const processReplacementInventory = async (orderId, outgoingItemIds, incomingItemIds) => {
+export const processReplacementInventory = async (orderId, exchangeMetadata, processType = 'outgoing') => {
   try {
-    let outgoingProcessed = 0;
-    let incomingProcessed = 0;
-
-    // معالجة المنتجات الصادرة (خصم من المخزون)
-    if (outgoingItemIds.length > 0) {
-      const { data: outgoingItems, error: fetchError } = await supabase
-        .from('order_items')
-        .select('variant_id, quantity')
-        .in('id', outgoingItemIds);
-
-      if (fetchError) throw fetchError;
-
-      for (const item of outgoingItems) {
-        const { error: updateError } = await supabase.rpc(
-          'update_variant_stock',
-          {
-            p_variant_id: item.variant_id,
-            p_quantity_change: -item.quantity,
-            p_reason: `خصم استبدال - طلب ${orderId}`
-          }
-        );
-
-        if (!updateError) {
-          outgoingProcessed++;
-        }
-      }
+    if (!exchangeMetadata) {
+      console.error('❌ لا توجد بيانات exchange_metadata للطلب', orderId);
+      return { success: false, processed: 0, error: 'No exchange metadata found' };
     }
 
-    // معالجة المنتجات الواردة (إضافة للمخزون)
-    if (incomingItemIds.length > 0) {
-      const { data: incomingItems, error: fetchError } = await supabase
-        .from('order_items')
-        .select('variant_id, quantity')
-        .in('id', incomingItemIds);
+    let processed = 0;
+    const items = processType === 'outgoing' 
+      ? exchangeMetadata.outgoing_items 
+      : exchangeMetadata.incoming_items;
 
-      if (fetchError) throw fetchError;
+    if (!items || items.length === 0) {
+      console.log(`✅ لا توجد منتجات ${processType} للمعالجة`);
+      return { success: true, processed: 0 };
+    }
 
-      for (const item of incomingItems) {
-        const { error: updateError } = await supabase.rpc(
-          'update_variant_stock',
-          {
-            p_variant_id: item.variant_id,
-            p_quantity_change: item.quantity,
-            p_reason: `إضافة استبدال - طلب ${orderId}`
-          }
-        );
+    console.log(`🔄 معالجة ${items.length} منتج ${processType} للطلب ${orderId}`);
 
-        if (!updateError) {
-          incomingProcessed++;
+    for (const item of items) {
+      const quantityChange = processType === 'outgoing' 
+        ? -(item.quantity || 1)  // ✅ خصم للمنتجات الصادرة
+        : (item.quantity || 1);   // ✅ إضافة للمنتجات الواردة
+
+      const { error: updateError } = await supabase.rpc(
+        'update_variant_stock',
+        {
+          p_variant_id: item.variant_id,
+          p_quantity_change: quantityChange,
+          p_reason: `${processType === 'outgoing' ? 'خصم' : 'إضافة'} استبدال - طلب ${orderId}`
         }
+      );
+
+      if (updateError) {
+        console.error(`❌ خطأ في تحديث المخزون للمنتج ${item.product_name}:`, updateError);
+      } else {
+        processed++;
+        console.log(`✅ تم ${processType === 'outgoing' ? 'خصم' : 'إضافة'} ${item.quantity} من ${item.product_name}`);
       }
     }
 
     return {
       success: true,
-      outgoingProcessed,
-      incomingProcessed
+      processed
     };
   } catch (error) {
-    console.error('Error processing replacement inventory:', error);
+    console.error('❌ خطأ في معالجة المخزون للاستبدال:', error);
     return {
       success: false,
-      outgoingProcessed: 0,
-      incomingProcessed: 0,
+      processed: 0,
       error: error.message
     };
   }
