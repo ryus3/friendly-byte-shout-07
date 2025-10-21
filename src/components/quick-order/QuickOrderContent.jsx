@@ -1089,6 +1089,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }));
   }, [cart, settings?.deliveryFee, activePartner, discount, applyLoyaltyDelivery]);
 
+  // ✅ تحديث formData.details تلقائياً للاستبدال
+  useEffect(() => {
+    if (formData.type === 'exchange' && cart.length > 0) {
+      const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+      
+      if (outgoingItems.length > 0) {
+        const outgoingDetails = outgoingItems.map(item => 
+          `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`
+            .trim()
+            .replace(/ +/g, ' ')
+        ).join(' + ');
+        
+        setFormData(prev => ({
+          ...prev,
+          details: outgoingDetails
+        }));
+      }
+    }
+  }, [cart, formData.type]);
+
   const validateField = (name, value) => {
     let errorMsg = '';
     if (name === 'phone') {
@@ -1188,26 +1208,42 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     // التحقق من متطلبات الاستبدال
     if (formData.type === 'exchange') {
-      if (!outgoingProduct || !incomingProduct) {
+      // ✅ استخدام cart مع item_direction
+      const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+      const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+      
+      if (outgoingItems.length === 0 || incomingItems.length === 0) {
         toast({
           title: "خطأ",
-          description: "يجب اختيار المنتج الخارج والداخل للاستبدال",
+          description: "يجب اختيار منتجات صادرة وواردة للاستبدال",
           variant: "destructive"
         });
         return;
       }
       
-      // حساب فرق السعر
-      const priceDiff = incomingProduct.price - outgoingProduct.price;
+      // ✅ حساب فرق السعر من cart
+      const outgoingTotal = outgoingItems.reduce((sum, item) => 
+        sum + (item.price * (item.quantity || 1)), 0
+      );
+      const incomingTotal = incomingItems.reduce((sum, item) => 
+        sum + (item.price * (item.quantity || 1)), 0
+      );
+      const priceDiff = incomingTotal - outgoingTotal;
       const calculatedDeliveryFee = settings?.deliveryFee || 5000;
       const finalPrice = priceDiff + calculatedDeliveryFee;
       
-      // تحديث السعر في النموذج
+      // ✅ تحديث formData.details تلقائياً (المنتجات الصادرة فقط)
+      const outgoingDetails = outgoingItems.map(item => 
+        `${item.productName} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`
+          .trim()
+          .replace(/ +/g, ' ')
+      ).join(' + ');
+      
       setFormData(prev => ({
         ...prev,
         price: finalPrice,
-        priceType: finalPrice >= 0 ? 'positive' : 'negative',
-        notes: `${prev.notes ? prev.notes + ' | ' : ''}استبدال: خارج ${outgoingProduct.productName} (${outgoingProduct.price.toLocaleString()}) → داخل ${incomingProduct.productName} (${incomingProduct.price.toLocaleString()}) | فرق: ${priceDiff.toLocaleString()} د.ع`
+        details: outgoingDetails,  // ✅ ملء تلقائي لنوع البضاعة
+        priceType: finalPrice >= 0 ? 'positive' : 'negative'
       }));
     }
     
@@ -1511,23 +1547,54 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // ✅ معالجة الاستبدال
       let priceDiff = 0;
       let calculatedDeliveryFee = 0;
-      if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
-        const autoPriceDiff = incomingProduct.price - outgoingProduct.price;
+
+      if (formData.type === 'exchange') {
+        // ✅ استخراج المنتجات من cart
+        const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+        const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+        
+        // ✅ حساب فرق السعر
+        const outgoingTotal = outgoingItems.reduce((sum, item) => 
+          sum + (item.price * (item.quantity || 1)), 0
+        );
+        const incomingTotal = incomingItems.reduce((sum, item) => 
+          sum + (item.price * (item.quantity || 1)), 0
+        );
+        const autoPriceDiff = incomingTotal - outgoingTotal;
+        
         priceDiff = autoPriceDiff + manualExchangePriceDiff;
         calculatedDeliveryFee = settings?.deliveryFee || 5000;
         finalTotal = priceDiff + calculatedDeliveryFee;
         
-        // ملاحظات مبسطة للوسيط (بدون رموز)
-        merchantNotes = `استبدال منتج ${outgoingProduct.productName} قياس ${outgoingProduct.size} عدد ${outgoingProduct.quantity || 1} واستلام من الزبون ${incomingProduct.productName} قياس ${incomingProduct.size} عدد ${incomingProduct.quantity || 1}`;
+        // ✅ ملاحظات مبسطة للوسيط (بدون رموز) - المنتجات الصادرة والواردة
+        const outgoingDesc = outgoingItems.map(item => 
+          `${item.productName} قياس ${item.size || 'عادي'} عدد ${item.quantity || 1}`
+        ).join(' و ');
         
-        // ملاحظات تفصيلية للنظام الداخلي (بدون رموز)
+        const incomingDesc = incomingItems.map(item => 
+          `${item.productName} قياس ${item.size || 'عادي'} عدد ${item.quantity || 1}`
+        ).join(' و ');
+        
+        merchantNotes = `استبدال منتج ${outgoingDesc} واستلام من الزبون ${incomingDesc}`;
+        
+        // ✅ ملاحظات تفصيلية للنظام الداخلي
+        const outgoingList = outgoingItems.map(item => 
+          `${item.productName} (${item.color || 'افتراضي'}, ${item.size || 'افتراضي'}) × ${item.quantity || 1} = ${(item.price * (item.quantity || 1)).toLocaleString()} د.ع`
+        ).join('\n   ');
+        
+        const incomingList = incomingItems.map(item => 
+          `${item.productName} (${item.color || 'افتراضي'}, ${item.size || 'افتراضي'}) × ${item.quantity || 1} = ${(item.price * (item.quantity || 1)).toLocaleString()} د.ع`
+        ).join('\n   ');
+        
         orderNotes = `استبدال
 ━━━━━━━━━━━━━━━
-منتج صادر: ${outgoingProduct.productName} (${outgoingProduct.color}, ${outgoingProduct.size})
-   السعر: ${outgoingProduct.price.toLocaleString()} د.ع
+منتجات صادرة:
+   ${outgoingList}
+   المجموع: ${outgoingTotal.toLocaleString()} د.ع
 
-منتج وارد: ${incomingProduct.productName} (${incomingProduct.color}, ${incomingProduct.size})
-   السعر: ${incomingProduct.price.toLocaleString()} د.ع
+منتجات واردة:
+   ${incomingList}
+   المجموع: ${incomingTotal.toLocaleString()} د.ع
 
 فرق السعر التلقائي: ${autoPriceDiff >= 0 ? '+' : ''}${autoPriceDiff.toLocaleString()} د.ع${manualExchangePriceDiff !== 0 ? '\nفرق السعر اليدوي: ' + (manualExchangePriceDiff >= 0 ? '+' : '') + manualExchangePriceDiff.toLocaleString() + ' د.ع' : ''}
 فرق السعر الإجمالي: ${priceDiff >= 0 ? '+' : ''}${priceDiff.toLocaleString()} د.ع
@@ -1700,7 +1767,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city_id: effectiveCityId, 
               region_id: effectiveRegionId,
               location: formData.address,
-              type_name: formData.details, 
+              type_name: formData.type === 'exchange' 
+                ? (() => {
+                    // ✅ للاستبدال: المنتجات الصادرة فقط
+                    const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+                    return outgoingItems.map(item => {
+                      const name = item.productName || 'منتج';
+                      const sizePart = item.size ? ` ${item.size}` : '';
+                      const colorPart = item.color ? ` . ${item.color}` : '';
+                      return `${name}${sizePart}${colorPart}`.trim();
+                    }).join(' + ');
+                  })()
+                : formData.details,  // ✅ للطلبات العادية: استخدام details العادي
               items_number: formData.type === 'return' 
                 ? (returnProduct?.quantity || 1)  // ✅ عدد المنتج المُرجع
                 : (orderItems.length > 0 ? orderItems.length : 1),
