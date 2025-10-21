@@ -1590,14 +1590,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         : formData.type === 'return'
           ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب دائماً
           : Math.round(finalTotal),  // للطلبات العادية
-      final_amount: formData.type === 'return'
-        ? -Math.abs(refundAmount) + (settings?.deliveryFee || 5000)  // ✅ للإرجاع: سالب + توصيل
-        : Math.round(finalTotal),
+      final_amount: formData.type === 'exchange'
+        ? Math.round(priceDiff + calculatedDeliveryFee)  // ✅ للاستبدال: فرق السعر + توصيل
+        : formData.type === 'return'
+          ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب (بدون توصيل لأن التوصيل منفصل)
+          : Math.round(finalTotal),
       refund_amount: actualRefundAmount, // ✅ مبلغ الإرجاع
       original_order_id: originalOrder?.id || null, // ✅ ربط بالطلب الأصلي
       discount: formData.type === 'exchange' || formData.type === 'return' ? 0 : discount, // ✅ صفر للاستبدال والإرجاع
-      delivery_fee: formData.type === 'exchange' 
-        ? (settings?.deliveryFee || 5000)  // ✅ للاستبدال: التوصيل منفصل
+      delivery_fee: formData.type === 'exchange' || formData.type === 'return'
+        ? (settings?.deliveryFee || 5000)  // ✅ للاستبدال والإرجاع: التوصيل منفصل
         : formData.type === 'توصيل' 
           ? deliveryFeeAmount 
           : 0,

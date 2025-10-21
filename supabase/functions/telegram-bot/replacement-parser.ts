@@ -160,20 +160,47 @@ export function parseReturnOrder(text: string): ReturnOrderData | null {
   }
 }
 
+// ✅ قائمة المنتجات ذات الكلمتين (يجب تحديثها عند إضافة منتجات جديدة)
+const TWO_WORD_PRODUCTS = [
+  'سوت شيك',
+  'سوت مايسترو',
+  'ترنج اديداس',
+  'جاكيت اديداس',
+  'بنطلون جينز',
+  'تي شيرت',
+  'بولو شيرت'
+];
+
 /**
  * تحليل نص المنتج: "برشلونة ازرق M" => {name: برشلونة, color: ازرق, size: M}
+ * يدعم المنتجات ذات الكلمة الواحدة والكلمتين
  */
 function parseProductString(productText: string): { name: string; color?: string; size?: string } {
-  const parts = productText.trim().split(/\s+/);
+  const trimmedText = productText.trim();
+  const parts = trimmedText.split(/\s+/);
   
   if (parts.length === 0) return { name: '' };
   
-  // الجزء الأول دائماً هو اسم المنتج
-  const name = parts[0];
+  // ✅ التحقق من وجود منتج من كلمتين
+  let name = parts[0];
+  let startIndex = 1;
+  
+  // فحص إذا كانت أول كلمتين تشكلان اسم منتج معروف
+  if (parts.length >= 2) {
+    const possibleTwoWordName = `${parts[0]} ${parts[1]}`;
+    const foundTwoWord = TWO_WORD_PRODUCTS.find(product => 
+      possibleTwoWordName.includes(product) || product.includes(possibleTwoWordName)
+    );
+    
+    if (foundTwoWord) {
+      name = foundTwoWord;
+      startIndex = 2;  // الأجزاء التالية تبدأ من الفهرس 2
+    }
+  }
   
   // الأجزاء التالية: لون، حجم
-  const color = parts[1] || undefined;
-  const size = parts[2] || undefined;
+  const color = parts[startIndex] || undefined;
+  const size = parts[startIndex + 1] || undefined;
   
   return { name, color, size };
 }
