@@ -105,22 +105,22 @@ export const ExchangeProductsForm = ({
               onAddOutgoing(selectedItems);
               setOutgoingDialogOpen(false);
             }}
-            initialCart={outgoingItems.map(item => ({
-              id: `${item.productId}-${item.variantId}`,
-              productId: item.productId,
-              variantId: item.variantId,
-              productName: item.productName,
-              color: item.color,
-              size: item.size,
-              price: item.price,
-              costPrice: item.costPrice,
-              quantity: item.quantity,
-              total: item.total,
-              image: item.image,
-              sku: item.sku,
-              stock: item.stock,
-              reserved: item.reserved
-            }))}
+              initialCart={outgoingItems.map(item => ({
+                id: `${item.productId}-${item.variantId}`,
+                productId: item.productId,
+                variantId: item.variantId,
+                productName: item.productName,
+                color: item.color,
+                size: item.size,
+                price: item.price,
+                costPrice: item.costPrice,
+                quantity: item.quantity,
+                total: item.total,
+                image: item.image,
+                sku: item.sku,
+                stock: item.stock,
+                reserved: item.reserved
+              }))}
           />
         </CardContent>
       </Card>
@@ -186,22 +186,22 @@ export const ExchangeProductsForm = ({
               onAddIncoming(selectedItems);
               setIncomingDialogOpen(false);
             }}
-            initialCart={incomingItems.map(item => ({
-              id: `${item.productId}-${item.variantId}`,
-              productId: item.productId,
-              variantId: item.variantId,
-              productName: item.productName,
-              color: item.color,
-              size: item.size,
-              price: item.price,
-              costPrice: item.costPrice,
-              quantity: item.quantity,
-              total: item.total,
-              image: item.image,
-              sku: item.sku,
-              stock: item.stock,
-              reserved: item.reserved
-            }))}
+              initialCart={incomingItems.map(item => ({
+                id: `${item.productId}-${item.variantId}`,
+                productId: item.productId,
+                variantId: item.variantId,
+                productName: item.productName,
+                color: item.color,
+                size: item.size,
+                price: item.price,
+                costPrice: item.costPrice,
+                quantity: item.quantity,
+                total: item.total,
+                image: item.image,
+                sku: item.sku,
+                stock: item.stock,
+                reserved: item.reserved
+              }))}
           />
         </CardContent>
       </Card>

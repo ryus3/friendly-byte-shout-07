@@ -292,10 +292,13 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
 
   useEffect(() => {
     if (open) {
-      setSelectedItems(initialCart);
-      setIsSearchReadOnly(true); // إعادة تعيين حالة البحث عند فتح النافذة
+      if (selectedItems.length === 0 || 
+          JSON.stringify(selectedItems) !== JSON.stringify(initialCart)) {
+        setSelectedItems(initialCart);
+      }
+      setIsSearchReadOnly(true);
     }
-  }, [open, initialCart]);
+  }, [open]);
 
   const handleSearchClick = () => {
     setIsSearchReadOnly(false);
