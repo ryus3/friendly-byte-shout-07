@@ -1480,7 +1480,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       let orderItems = cart;
       let actualRefundAmount = 0;
       
-      // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير الملاحظات قبل الإرسال
+      // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير المنتجات والملاحظات
       if (formData.type === 'return' && returnProduct && refundAmount > 0) {
         // ✅ المبلغ النهائي = -refundAmount (يشمل التوصيل بالفعل)
         finalTotal = -refundAmount;
@@ -1488,12 +1488,23 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         // ✅ ملاحظات مختصرة بالعربية
         const returnQuantity = returnProduct?.quantity || 1;
-        // المبلغ المدفوع للزبون = المبلغ الكلي - أجور التوصيل
         const amountToCustomer = refundAmount - deliveryFeeAmount;
         orderNotes = `إرجاع: منتج ${returnProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
 
-        // ❗ لا نُنشئ order_items للإرجاع - سلة فارغة
-        orderItems = [];
+        // ✅ إنشاء order_items للمنتج المُرجع لتشغيل الـ triggers
+        orderItems = [{
+          productId: returnProduct.productId || returnProduct.id,
+          variantId: returnProduct.variantId || returnProduct.sku || null,
+          product_id: returnProduct.productId || returnProduct.id,
+          variant_id: returnProduct.variantId || returnProduct.sku || null,
+          quantity: returnQuantity,
+          unit_price: returnProduct.price || 0,
+          price: returnProduct.price || 0,
+          total_price: (returnProduct.price || 0) * returnQuantity,
+          productName: returnProduct.productName,
+          cost_price: returnProduct.cost_price || 0,
+          item_type: 'returned',
+        }];
       }
       
       // ✅ تعريف merchantNotes خارج الشرط لتجنب الخطأ
@@ -1806,14 +1817,42 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         // ✅ ربط طلبات الإرجاع بالطلب الأصلي تلقائياً
         if (formData.type === 'return' && createdOrderId) {
-          console.log('🔗 محاولة ربط طلب الإرجاع بالطلب الأصلي...');
           const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
           const linkResult = await linkReturnToOriginalOrder(createdOrderId, normalizedPhone);
           
           if (linkResult.success) {
-            console.log('✅ تم الربط بالطلب الأصلي:', linkResult.originalOrderNumber);
-          } else {
-            console.warn('⚠️ فشل الربط:', linkResult.error);
+            // ✅ تحديث في ai_orders
+            await supabase
+              .from('ai_orders')
+              .upsert({
+                id: createdOrderId,
+                original_order_id: linkResult.originalOrderId,
+                order_type: 'return',
+                refund_amount: actualRefundAmount,
+              });
+            
+            // ✅ تحديث في orders أيضاً
+            await supabase
+              .from('orders')
+              .update({
+                original_order_id: linkResult.originalOrderId,
+                related_order_id: linkResult.originalOrderId,
+              })
+              .eq('id', createdOrderId);
+              
+            // ✅ إنشاء سجل أولي في return_history
+            await supabase
+              .from('return_history')
+              .insert({
+                return_order_id: createdOrderId,
+                original_order_id: linkResult.originalOrderId,
+                refund_amount: actualRefundAmount,
+                delivery_fee: deliveryFeeAmount,
+                employee_profit_deducted: 0,
+                system_profit_deducted: 0,
+                financial_handler_success: null,
+                created_by: user.id,
+              });
           }
         }
         
