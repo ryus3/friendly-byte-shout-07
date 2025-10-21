@@ -18,6 +18,13 @@ export const setupRealtime = () => {
     debounceTimers.set(eventName, newTimer);
   };
 
+  // 🛡️ فحص القائمة السوداء للطلبات المحذوفة
+  const isOrderPermanentlyDeleted = (trackingNumber) => {
+    if (!trackingNumber) return false;
+    const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
+    return permanentlyDeleted.some(d => d.tracking_number === trackingNumber);
+  };
+
   // تشغيل الإشعارات الفورية للطلبات العادية مع debouncing
   const ordersChannel = supabase
     .channel('orders-realtime')
@@ -28,6 +35,14 @@ export const setupRealtime = () => {
     }, (payload) => {
       const type = payload.eventType;
       if (type === 'INSERT') {
+        // 🚫 منع إعادة إنشاء الطلبات المحذوفة
+        const trackingNumber = payload.new?.delivery_partner_order_id || 
+                              payload.new?.tracking_number || 
+                              payload.new?.qr_id;
+        if (isOrderPermanentlyDeleted(trackingNumber)) {
+          console.log('🚫 منع إعادة إنشاء طلب محذوف:', trackingNumber);
+          return;
+        }
         debouncedDispatch('orderCreated', payload.new, 25);
       } else if (type === 'UPDATE') {
         debouncedDispatch('orderUpdated', payload.new, 25);

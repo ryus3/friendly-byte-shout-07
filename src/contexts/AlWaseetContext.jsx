@@ -1144,6 +1144,22 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
+      // 🔒 إضافة إلى القائمة السوداء الدائمة
+      const trackingNumber = orderToDelete.delivery_partner_order_id || orderToDelete.tracking_number || orderToDelete.qr_id;
+      if (trackingNumber) {
+        const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
+        permanentlyDeleted.push({
+          tracking_number: trackingNumber,
+          deleted_at: new Date().toISOString(),
+          order_number: orderToDelete.order_number,
+          source: source
+        });
+        localStorage.setItem('permanentlyDeletedOrders', 
+          JSON.stringify(permanentlyDeleted.slice(-500))
+        );
+        devLog.log(`🔒 تم إضافة ${trackingNumber} إلى القائمة السوداء الدائمة`);
+      }
+      
       // ✅ تسجيل الحذف في auto_delete_log قبل الحذف الفعلي
       const orderAge = Math.round(
         (Date.now() - new Date(orderToDelete.created_at).getTime()) / 60000
@@ -2939,6 +2955,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       let checkedCount = 0;
       let deletedCount = 0;
+      const deletedOrdersInThisRun = new Set(); // 🔒 تتبع الطلبات المحذوفة في هذه الدورة
       
       // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
       for (const localOrder of localOrders) {
@@ -2946,6 +2963,19 @@ export const AlWaseetProvider = ({ children }) => {
         const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
         if (!trackingNumber) {
           console.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
+          continue;
+        }
+        
+        // 🛡️ تخطي الطلبات المحذوفة في نفس الدورة
+        if (deletedOrdersInThisRun.has(trackingNumber)) {
+          console.log(`⏭️ تخطي ${trackingNumber} - تم حذفه في هذه الدورة`);
+          continue;
+        }
+        
+        // 🛡️ فحص القائمة السوداء الدائمة
+        const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
+        if (permanentlyDeleted.some(d => d.tracking_number === trackingNumber)) {
+          console.log(`🚫 تخطي ${trackingNumber} - موجود في القائمة السوداء`);
           continue;
         }
         
@@ -2987,7 +3017,21 @@ export const AlWaseetProvider = ({ children }) => {
           // التحقق من الحذف التلقائي
           if (syncResult?.autoDeleted) {
             deletedCount++;
+            deletedOrdersInThisRun.add(trackingNumber); // ✅ إضافة إلى قائمة المحذوفات
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
+            
+            // 🔒 تسجيل في القائمة السوداء الدائمة
+            const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
+            permanentlyDeleted.push({
+              tracking_number: trackingNumber,
+              deleted_at: new Date().toISOString(),
+              order_number: localOrder.order_number,
+              source: 'syncAndApplyOrders'
+            });
+            // الاحتفاظ بآخر 500 طلب محذوف فقط
+            localStorage.setItem('permanentlyDeletedOrders', 
+              JSON.stringify(permanentlyDeleted.slice(-500))
+            );
             
             // ✅ تسجيل الحذف في auto_delete_log
             const orderAge = Math.round(
