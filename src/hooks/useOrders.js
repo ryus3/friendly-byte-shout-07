@@ -19,7 +19,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       
       if (orderType === 'return') {
         totalAmount = -Math.abs(refundAmount);
-        finalAmount = -Math.abs(refundAmount);
+        finalAmount = totalAmount + deliveryFee;
       } else {
         totalAmount = cartItems.reduce((sum, item) => sum + (item.total_price || (item.price * item.quantity)), 0) - (discount || 0);
         finalAmount = totalAmount + deliveryFee;
@@ -62,8 +62,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         throw new Error(`فشل في إنشاء الطلب: ${orderError.message}`);
       }
 
-      // إنشاء عناصر الطلب (order_items) - فقط للطلبات العادية والاستبدال
-      if (orderType !== 'return' && cartItems && cartItems.length > 0) {
+      // إنشاء عناصر الطلب (order_items)
+      if (cartItems && cartItems.length > 0) {
         const orderItemsToInsert = cartItems.map(item => ({
           order_id: newOrder.id,
           product_id: item.product_id,
@@ -81,8 +81,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
         }
 
-        // تحديث المخزون
-        if (onStockUpdate) {
+        // تحديث المخزون - فقط للطلبات العادية (ليس للإرجاع)
+        if (orderType !== 'return' && onStockUpdate) {
           for (const item of cartItems) {
             await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'subtract');
           }

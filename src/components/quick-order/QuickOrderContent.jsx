@@ -1736,9 +1736,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // ✅ إنشاء الطلب مع البيانات الصحيحة
       const result = await createOrder(
         customerInfoPayload, 
-        formData.type === 'return' ? [] : cart,
+        orderItems,
         trackingNumber, 
-        discount, 
+        formData.type === 'return' ? 0 : discount, 
         orderStatus, 
         qrLink, 
         deliveryPartnerData // ✅ بيانات شريك التوصيل فقط
