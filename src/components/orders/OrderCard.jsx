@@ -22,7 +22,10 @@ import {
   User,
   Clock,
   ExternalLink,
-  AlertTriangle
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  RefreshCcw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -555,18 +558,26 @@ const OrderCard = React.memo(({
                           </span>
                         </div>
                        
-                       {/* شارة الخصم - برتقالي تدرج */}
+                       {/* شارة الخصم - برتقالي تدرج مع أيقونة */}
                        {Number(order.discount || 0) > 0 && order.order_type !== 'return' && (
-                         <Badge className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs px-2 py-1 shadow-md">
-                           خصم {Number(order.discount).toLocaleString()} د.ع
-                         </Badge>
+                         <div className="relative group/discount">
+                           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
+                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
+                             <TrendingDown className="w-3 h-3" />
+                             <span>خصم {Number(order.discount).toLocaleString()}</span>
+                           </Badge>
+                         </div>
                        )}
                        
-                       {/* شارة الزيادة - أخضر تدرج */}
+                       {/* شارة الزيادة - أخضر تدرج مع أيقونة */}
                        {Number(order.price_increase || 0) > 0 && order.order_type !== 'return' && (
-                         <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1 shadow-md">
-                           زيادة {Number(order.price_increase).toLocaleString()} د.ع
-                         </Badge>
+                         <div className="relative group/increase">
+                           <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full blur-sm"></div>
+                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-2 py-0.5 shadow-md">
+                             <TrendingUp className="w-3 h-3" />
+                             <span>زيادة {Number(order.price_increase).toLocaleString()}</span>
+                           </Badge>
+                         </div>
                        )}
                        
                         {/* شارة الإرجاع - أحمر لامع */}
@@ -576,11 +587,15 @@ const OrderCard = React.memo(({
                           </Badge>
                         )}
                        
-                       {/* شارة الاستبدال - بنفسجي تدرج */}
+                       {/* شارة الاستبدال - بنفسجي تدرج مع أيقونة */}
                        {order.order_type === 'replacement' && (
-                         <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs px-2 py-1 shadow-md">
-                           استبدال
-                         </Badge>
+                         <div className="relative group/exchange">
+                           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-full blur-sm"></div>
+                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white text-xs px-2 py-0.5 shadow-md">
+                             <RefreshCcw className="w-3 h-3" />
+                             <span>استبدال</span>
+                           </Badge>
+                         </div>
                        )}
                      </div>
                     
@@ -597,38 +612,38 @@ const OrderCard = React.memo(({
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
                       
-                      {/* ✅ تصميم احترافي لطلبات الاستبدال */}
+                       {/* ✅ تصميم احترافي لطلبات الاستبدال */}
                       {productSummary.type === 'exchange' && (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {/* المنتجات الصادرة */}
                           {productSummary.outgoing.length > 0 && (
                             <div className="relative group/out">
-                              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-lg blur-sm group-hover/out:blur-md transition-all duration-300"></div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
                               
-                              <div className="relative flex items-start gap-2 p-2 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm group-hover/out:shadow-md group-hover/out:scale-[1.01] transition-all duration-300">
+                              <div className="relative flex items-start gap-1.5 p-1.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300">
                                 {/* أيقونة صادر */}
                                 <div className="flex-shrink-0 relative">
-                                  <div className="absolute inset-0 bg-orange-500/20 rounded blur-sm"></div>
-                                  <div className="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded shadow-md">
-                                    <Package className="h-4 w-4 text-white" />
+                                  <div className="absolute inset-0 bg-orange-500/20 rounded blur-[2px]"></div>
+                                  <div className="relative flex items-center justify-center w-7 h-7 bg-gradient-to-br from-orange-500 to-amber-600 rounded shadow-md">
+                                    <Package className="h-3.5 w-3.5 text-white" />
                                   </div>
                                 </div>
                                 
                                 {/* المحتوى */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                                  <div className="flex items-center gap-1 mb-0.5">
+                                    <span className="text-[9px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
                                       صادر للزبون
                                     </span>
                                     <div className="h-px flex-1 bg-gradient-to-r from-orange-300/50 to-transparent"></div>
                                   </div>
                                   
                                   {productSummary.outgoing.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-1.5 py-1">
+                                    <div key={idx} className="flex items-center gap-1.5 py-0.5">
                                       {item.colorHex && (
                                         <div className="relative">
                                           <div 
-                                            className="w-4 h-4 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                            className="w-3.5 h-3.5 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
                                             style={{ 
                                               backgroundColor: item.colorHex,
                                               boxShadow: `0 1px 4px ${item.colorHex}40`
@@ -637,20 +652,20 @@ const OrderCard = React.memo(({
                                         </div>
                                       )}
                                       
-                                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                      <span className="font-semibold text-[10px] text-gray-900 dark:text-gray-100">
                                         {item.productName}
                                       </span>
                                       {item.color && (
-                                        <span className="text-[10px] text-orange-600 dark:text-orange-400">
+                                        <span className="text-[9px] text-orange-600 dark:text-orange-400">
                                           • {item.color}
                                         </span>
                                       )}
                                       {item.size && (
-                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
+                                        <span className="px-1.5 py-0.5 text-[9px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
                                           {item.size}
                                         </span>
                                       )}
-                                      <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">
+                                      <span className="text-[9px] text-gray-600 dark:text-gray-400 ml-auto">
                                         × {item.quantity}
                                       </span>
                                     </div>
@@ -663,32 +678,32 @@ const OrderCard = React.memo(({
                           {/* المنتجات الواردة */}
                           {productSummary.incoming.length > 0 && (
                             <div className="relative group/in">
-                              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-lg blur-sm group-hover/in:blur-md transition-all duration-300"></div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
                               
-                              <div className="relative flex items-start gap-2 p-2 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm group-hover/in:shadow-md group-hover/in:scale-[1.01] transition-all duration-300">
+                              <div className="relative flex items-start gap-1.5 p-1.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300">
                                 {/* أيقونة وارد */}
                                 <div className="flex-shrink-0 relative">
-                                  <div className="absolute inset-0 bg-blue-500/20 rounded blur-sm"></div>
-                                  <div className="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded shadow-md">
-                                    <PackageCheck className="h-4 w-4 text-white" />
+                                  <div className="absolute inset-0 bg-blue-500/20 rounded blur-[2px]"></div>
+                                  <div className="relative flex items-center justify-center w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-600 rounded shadow-md">
+                                    <PackageCheck className="h-3.5 w-3.5 text-white" />
                                   </div>
                                 </div>
                                 
                                 {/* المحتوى */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1 mb-1">
-                                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                  <div className="flex items-center gap-1 mb-0.5">
+                                    <span className="text-[9px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                                       وارد من الزبون
                                     </span>
                                     <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
                                   </div>
                                   
                                   {productSummary.incoming.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-1.5 py-1">
+                                    <div key={idx} className="flex items-center gap-1.5 py-0.5">
                                       {item.colorHex && (
                                         <div className="relative">
                                           <div 
-                                            className="w-4 h-4 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                            className="w-3.5 h-3.5 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
                                             style={{ 
                                               backgroundColor: item.colorHex,
                                               boxShadow: `0 1px 4px ${item.colorHex}40`
@@ -697,20 +712,20 @@ const OrderCard = React.memo(({
                                         </div>
                                       )}
                                       
-                                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                      <span className="font-semibold text-[10px] text-gray-900 dark:text-gray-100">
                                         {item.productName}
                                       </span>
                                       {item.color && (
-                                        <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                        <span className="text-[9px] text-blue-600 dark:text-blue-400">
                                           • {item.color}
                                         </span>
                                       )}
                                       {item.size && (
-                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                        <span className="px-1.5 py-0.5 text-[9px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                                           {item.size}
                                         </span>
                                       )}
-                                      <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">
+                                      <span className="text-[9px] text-gray-600 dark:text-gray-400 ml-auto">
                                         × {item.quantity}
                                       </span>
                                     </div>

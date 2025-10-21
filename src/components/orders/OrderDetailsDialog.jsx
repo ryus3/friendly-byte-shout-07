@@ -402,24 +402,24 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 
                 {/* ✅ عرض احترافي لطلبات الاستبدال */}
                 {(order.order_type === 'exchange' || order.order_type === 'replacement') && order.exchange_metadata ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {/* المنتجات الصادرة */}
                     {order.exchange_metadata.outgoing_items?.length > 0 && (
                       <div className="relative group/out">
-                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-xl blur-sm group-hover/out:blur-md transition-all duration-300"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-4 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm group-hover/out:shadow-lg group-hover/out:scale-[1.01] transition-all duration-300">
+                        <div className="relative p-2.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300">
                           {/* أيقونة وعنوان */}
-                          <div className="flex items-center gap-3 mb-3">
+                          <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
                               <div className="absolute inset-0 bg-orange-500/20 rounded-lg blur-md"></div>
-                              <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg shadow-lg">
-                                <Package className="h-6 w-6 text-white" />
+                              <div className="relative flex items-center justify-center w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg shadow-lg">
+                                <Package className="h-5 w-5 text-white" />
                               </div>
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                                <span className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
                                   صادر للزبون
                                 </span>
                                 <div className="h-px flex-1 bg-gradient-to-r from-orange-300/50 to-transparent"></div>
@@ -428,13 +428,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                           </div>
                           
                           {/* قائمة المنتجات */}
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {order.exchange_metadata.outgoing_items.map((item, idx) => (
-                              <div key={idx} className="flex items-center gap-2 p-2 bg-white/50 dark:bg-gray-900/30 rounded-lg">
+                              <div key={idx} className="flex items-center gap-2 p-1.5 bg-white/50 dark:bg-gray-900/30 rounded-lg">
                                 {item.color_hex && (
                                   <div className="relative">
                                     <div 
-                                      className="w-6 h-6 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                      className="w-5 h-5 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
                                       style={{ 
                                         backgroundColor: item.color_hex,
                                         boxShadow: `0 2px 8px ${item.color_hex}40`
@@ -443,20 +443,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                                   </div>
                                 )}
                                 
-                                <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
                                   {item.product_name}
                                 </span>
                                 {item.color && (
-                                  <span className="text-xs text-orange-600 dark:text-orange-400">
+                                  <span className="text-[10px] text-orange-600 dark:text-orange-400">
                                     • {item.color}
                                   </span>
                                 )}
                                 {item.size && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
+                                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
                                     {item.size}
                                   </span>
                                 )}
-                                <span className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
+                                <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">
                                   × {item.quantity}
                                 </span>
                               </div>
@@ -469,20 +469,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                     {/* المنتجات الواردة */}
                     {order.exchange_metadata.incoming_items?.length > 0 && (
                       <div className="relative group/in">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-xl blur-sm group-hover/in:blur-md transition-all duration-300"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-4 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm group-hover/in:shadow-lg group-hover/in:scale-[1.01] transition-all duration-300">
+                        <div className="relative p-2.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300">
                           {/* أيقونة وعنوان */}
-                          <div className="flex items-center gap-3 mb-3">
+                          <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
                               <div className="absolute inset-0 bg-blue-500/20 rounded-lg blur-md"></div>
-                              <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg">
-                                <PackageCheck className="h-6 w-6 text-white" />
+                              <div className="relative flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg">
+                                <PackageCheck className="h-5 w-5 text-white" />
                               </div>
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                                   وارد من الزبون
                                 </span>
                                 <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
@@ -491,13 +491,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                           </div>
                           
                           {/* قائمة المنتجات */}
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {order.exchange_metadata.incoming_items.map((item, idx) => (
-                              <div key={idx} className="flex items-center gap-2 p-2 bg-white/50 dark:bg-gray-900/30 rounded-lg">
+                              <div key={idx} className="flex items-center gap-2 p-1.5 bg-white/50 dark:bg-gray-900/30 rounded-lg">
                                 {item.color_hex && (
                                   <div className="relative">
                                     <div 
-                                      className="w-6 h-6 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                      className="w-5 h-5 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
                                       style={{ 
                                         backgroundColor: item.color_hex,
                                         boxShadow: `0 2px 8px ${item.color_hex}40`
@@ -506,20 +506,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                                   </div>
                                 )}
                                 
-                                <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
                                   {item.product_name}
                                 </span>
                                 {item.color && (
-                                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                                  <span className="text-[10px] text-blue-600 dark:text-blue-400">
                                     • {item.color}
                                   </span>
                                 )}
                                 {item.size && (
-                                  <span className="px-2 py-1 text-xs font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                                     {item.size}
                                   </span>
                                 )}
-                                <span className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
+                                <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">
                                   × {item.quantity}
                                 </span>
                               </div>
