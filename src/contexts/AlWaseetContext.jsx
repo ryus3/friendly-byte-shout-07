@@ -3001,44 +3001,6 @@ export const AlWaseetProvider = ({ children }) => {
           if (syncResult?.autoDeleted) {
             deletedCount++;
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
-            
-            // ✅ تسجيل الحذف في auto_delete_log
-            const orderAge = Math.round(
-              (Date.now() - new Date(localOrder.created_at).getTime()) / 60000
-            );
-            
-            try {
-              // ✅ تحديث delivery_status = null قبل التسجيل لمنع إعادة المزامنة
-              await supabase
-                .from('orders')
-                .update({ 
-                  delivery_status: null,
-                  notes: (localOrder.notes || '') + `\n[محذوف تلقائياً - ${new Date().toISOString()}]`
-                })
-                .eq('id', localOrder.id);
-              
-              await supabase.from('auto_delete_log').insert({
-                order_id: localOrder.id,
-                order_number: localOrder.order_number,
-                tracking_number: localOrder.tracking_number,
-                qr_id: localOrder.qr_id,
-                delivery_partner_order_id: localOrder.delivery_partner_order_id,
-                deleted_by: user?.id,
-                delete_source: 'syncAndApplyOrders',
-                reason: {
-                  message: 'لم يُعثر على الطلب في شركة التوصيل بعد مزامنة الطلبات الظاهرة',
-                  timestamp: new Date().toISOString()
-                },
-                order_status: localOrder.status,
-                delivery_status: localOrder.delivery_status,
-                order_age_minutes: orderAge,
-                order_data: localOrder
-              });
-            } catch (logError) {
-              console.error('⚠️ فشل تسجيل الحذف:', logError);
-            }
-            
-            // ✅ استخدام handleAutoDeleteOrder للحذف بالترتيب الصحيح
             await handleAutoDeleteOrder(localOrder.id, 'syncAndApplyOrders');
           } else if (syncResult) {
             console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
