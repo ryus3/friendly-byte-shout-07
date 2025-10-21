@@ -48,8 +48,8 @@ export const ReturnProductForm = ({
           if (onOriginalOrderFound) {
             onOriginalOrderFound(orders[0]);
           }
-          // اقتراح مبلغ الإرجاع
-          const suggestedRefund = orders[0].final_amount - (orders[0].delivery_fee || 0);
+          // ✅ اقتراح مبلغ الإرجاع (يشمل أجور التوصيل)
+          const suggestedRefund = orders[0].final_amount;
           onRefundAmountChange(Math.max(0, suggestedRefund));
         } else {
           setOriginalOrder(null);
@@ -149,10 +149,17 @@ export const ReturnProductForm = ({
             className="text-lg h-12"
           />
           {originalOrder && (
-            <p className="text-xs text-muted-foreground mt-2">
-              💡 المبلغ المقترح:{' '}
-              {(originalOrder.final_amount - (originalOrder.delivery_fee || 0)).toLocaleString()} د.ع
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-muted-foreground">
+                💡 المبلغ المقترح: {originalOrder.final_amount.toLocaleString()} د.ع
+              </p>
+              <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700 p-2">
+                <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">
+                  💰 <strong>مهم:</strong> المبلغ يشمل أجور التوصيل ({(originalOrder.delivery_fee || 0).toLocaleString()} د.ع)
+                  لأن شركة التوصيل تخصم المبلغ الكامل عند الإرجاع
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
         </CardContent>
       </Card>

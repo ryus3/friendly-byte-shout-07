@@ -1895,7 +1895,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             description: (
               <div className="space-y-2 text-sm">
                 <p className="font-bold text-base">💰 ادفع {refundAmount.toLocaleString()} د.ع للزبون عند الاستلام</p>
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  ⚠️ يشمل أجور التوصيل ({formData.deliveryFee?.toLocaleString() || '5,000'} د.ع)
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
                   <p className="text-xs">📊 تفاصيل المبلغ:</p>
                   <ul className="text-xs space-y-1 mt-1">
                     <li>• من الربح: {productProfit.toLocaleString()} د.ع</li>
