@@ -115,10 +115,15 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase
+      console.log('🗑️ حذف السجلات:', selectedLogs);
+
+      const { data, error } = await supabase
         .from('auto_delete_log')
         .delete()
-        .in('id', selectedLogs);
+        .in('id', selectedLogs)
+        .select();
+
+      console.log('✅ نتيجة الحذف:', { data, error });
 
       if (error) throw error;
 
@@ -132,10 +137,10 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
       setSelectAll(false);
       fetchDeletedOrders();
     } catch (error) {
-      console.error('خطأ في الحذف النهائي:', error);
+      console.error('❌ خطأ في الحذف النهائي:', error);
       toast({
         title: "خطأ",
-        description: "فشل في حذف السجلات",
+        description: error.message || "فشل في حذف السجلات",
         variant: "destructive"
       });
     }

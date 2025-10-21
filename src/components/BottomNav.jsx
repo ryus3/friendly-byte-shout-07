@@ -316,17 +316,19 @@ const BottomNav = () => {
   const handleHomeClick = () => {
     const targetPage = user?.default_page || '/';
     
-    // ✅ صعد للأعلى فوراً
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    
-    // ✅ ثم انتقل للصفحة إذا لم نكن فيها
-    if (location.pathname !== targetPage) {
-      navigate(targetPage);
-      // ✅ تأكيد الصعود بعد التنقل (احتياطي)
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      });
+    // ✅ إذا كنا في نفس الصفحة، فقط اصعد للأعلى بشكل سلس
+    if (location.pathname === targetPage) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      return;
     }
+    
+    // ✅ إذا كنا في صفحة أخرى، انتقل ثم اصعد
+    navigate(targetPage);
+    
+    // ✅ تأكيد الصعود بعد التنقل (فوري)
+    setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }, 100);
   };
 
   const handleCheckout = () => {
