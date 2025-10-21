@@ -14,7 +14,8 @@ export const ReturnProductForm = ({
   onSelectReturn,
   returnProduct,
   refundAmount,
-  onRefundAmountChange
+  onRefundAmountChange,
+  onOriginalOrderFound // ✅ إضافة prop جديد لتمرير الطلب الأصلي
 }) => {
   const [originalOrder, setOriginalOrder] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -43,11 +44,18 @@ export const ReturnProductForm = ({
         
         if (orders && orders.length > 0) {
           setOriginalOrder(orders[0]);
+          // ✅ تمرير الطلب الأصلي للـ parent
+          if (onOriginalOrderFound) {
+            onOriginalOrderFound(orders[0]);
+          }
           // اقتراح مبلغ الإرجاع
           const suggestedRefund = orders[0].final_amount - (orders[0].delivery_fee || 0);
           onRefundAmountChange(Math.max(0, suggestedRefund));
         } else {
           setOriginalOrder(null);
+          if (onOriginalOrderFound) {
+            onOriginalOrderFound(null);
+          }
         }
       } catch (err) {
         console.error('خطأ في البحث عن الطلب:', err);

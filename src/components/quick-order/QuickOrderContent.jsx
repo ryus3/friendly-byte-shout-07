@@ -67,6 +67,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [returnProduct, setReturnProduct] = useState(null);
   const [refundAmount, setRefundAmount] = useState(0);
   const [manualExchangePriceDiff, setManualExchangePriceDiff] = useState(0);
+  const [foundOriginalOrder, setFoundOriginalOrder] = useState(null); // ✅ حالة جديدة للطلب الأصلي
   
   // Local storage for default customer name and delivery partner
   const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
@@ -1805,7 +1806,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }
         }
         
-        if (formData.type === 'return' && returnProduct && refundAmount > 0 && originalOrder) {
+        // ✅ استخدام الطلب الأصلي الموجود أو المُمرَّر
+        const effectiveOriginalOrder = foundOriginalOrder || originalOrder;
+        
+        if (formData.type === 'return' && returnProduct && refundAmount > 0 && effectiveOriginalOrder) {
           // ✅ المرحلة 3: معالجة كاملة للإرجاع
           
           // 2. حساب ربح المنتج
@@ -1826,17 +1830,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           await supabase
             .from('orders')
             .update({ 
-              related_order_id: originalOrder.id,
-              original_order_id: originalOrder.id,
+              related_order_id: effectiveOriginalOrder.id,
+              original_order_id: effectiveOriginalOrder.id,
               status: 'return_pending',
               delivery_status: '21',
-              notes: `إرجاع من طلب #${originalOrder.order_number}\nربح المنتج: ${productProfit.toLocaleString()} د.ع\nمن الإيراد: ${(refundAmount - productProfit).toLocaleString()} د.ع`
+              notes: `إرجاع من طلب #${effectiveOriginalOrder.order_number}\nربح المنتج: ${productProfit.toLocaleString()} د.ع\nمن الإيراد: ${(refundAmount - productProfit).toLocaleString()} د.ع`
             })
             .eq('id', createdOrderId);
           
           // 3. معالجة الأرباح (RPC الجديد v2)
           const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return_v2', {
-            p_original_order_id: originalOrder.id,
+            p_original_order_id: effectiveOriginalOrder.id,
             p_refund_amount: refundAmount,
             p_product_profit: productProfit,
             p_return_order_id: createdOrderId
@@ -2346,6 +2350,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               returnProduct={returnProduct}
               refundAmount={refundAmount}
               onRefundAmountChange={setRefundAmount}
+              onOriginalOrderFound={setFoundOriginalOrder}
             />
           )}
         </fieldset>
