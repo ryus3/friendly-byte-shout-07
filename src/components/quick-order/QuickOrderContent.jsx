@@ -2426,7 +2426,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
             cart={cart}
             removeFromCart={removeFromCart}
-            showProductSelection={formData.type !== 'exchange'} {/* ✅ إخفاء المنتجات فقط في الاستبدال */}
+            showProductSelection={formData.type !== 'exchange'}
           />
           
           {/* نماذج الاستبدال والإرجاع */}
