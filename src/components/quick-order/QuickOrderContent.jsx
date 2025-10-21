@@ -1711,13 +1711,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       
       // معلومات شريك التوصيل
-      const deliveryData = {
+      const deliveryPartnerData = {
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-        // ✅ إصلاح: استخدام deliveryFeeAmount المحسوبة بدلاً من deliveryPartnerData
         delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
-        // ✅ الحل الجذري - حفظ معرفات الوسيط
         alwaseet_city_id: effectiveCityId || null,
         alwaseet_region_id: effectiveRegionId || null,
+        
+        // ✅ بيانات الإرجاع/الاستبدال للتوافق مع SuperProvider
+        order_type: actualOrderType,
+        refund_amount: actualRefundAmount,
+        original_order_id: originalOrder?.id || null,
       };
       
       // ✅ إنشاء الطلب مع البيانات الصحيحة
