@@ -1687,11 +1687,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const customerInfoPayload = {
         name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
-        phone: normalizedPhone, // استخدام الرقم المطبع
+        phone: normalizedPhone,
         address: `${formData.address}, ${region}, ${city}`,
         city: city, 
-        province: region, // ✅ الحل الجذري - حفظ المنطقة
-        notes: formData.notes,
+        province: region,
+        notes: orderNotes, // ✅ استخدام orderNotes المحدثة
+        
+        // ✅ الحقول المطلوبة لـ createOrder
+        customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
+        customer_phone: normalizedPhone,
+        customer_phone2: formData.phone2 || null,
+        customer_city: city,
+        customer_province: region,
+        customer_address: `${formData.address}, ${region}, ${city}`,
+        alwaseet_city_id: effectiveCityId || null,
+        alwaseet_region_id: effectiveRegionId || null,
+        
+        // ✅ بيانات نوع الطلب
+        orderType: actualOrderType,
+        refundAmount: actualRefundAmount,
+        originalOrderId: originalOrder?.id || null,
+        deliveryFee: activePartner === 'local' ? 0 : deliveryFeeAmount
       };
       
       // معلومات شريك التوصيل
@@ -1704,24 +1720,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         alwaseet_region_id: effectiveRegionId || null,
       };
       
-      // ✅ للإرجاع: تمرير سلة فارغة لمنع حجز المخزون
+      // ✅ إنشاء الطلب مع البيانات الصحيحة
       const result = await createOrder(
         customerInfoPayload, 
-        formData.type === 'return' ? [] : cart,  // سلة فارغة للإرجاع
+        formData.type === 'return' ? [] : cart,
         trackingNumber, 
         discount, 
         orderStatus, 
         qrLink, 
-        { 
-          ...deliveryPartnerData, 
-          ...deliveryData,
-          // ✅ إضافة البيانات الإضافية للإرجاع
-          order_type: actualOrderType,
-          refund_amount: actualRefundAmount,
-          original_order_id: originalOrder?.id || null,
-          final_amount: finalTotal,
-          notes: orderNotes
-        }
+        deliveryPartnerData // ✅ بيانات شريك التوصيل فقط
       );
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
