@@ -1710,22 +1710,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         deliveryFee: activePartner === 'local' ? 0 : deliveryFeeAmount
       };
       
-      // ✅ تجميع معلومات شريك التوصيل (تحديث البيانات من Al-Waseet أو إنشاء محلي)
-      if (activePartner === 'local' || !deliveryPartnerData) {
-        deliveryPartnerData = {
-          delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-          delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
-          alwaseet_city_id: effectiveCityId || null,
-          alwaseet_region_id: effectiveRegionId || null,
-        };
-      }
-      
-      // ✅ إضافة بيانات الإرجاع/الاستبدال للتوافق مع SuperProvider
+      // ✅ تجميع معلومات شريك التوصيل بشكل صحيح
       deliveryPartnerData = {
-        ...deliveryPartnerData,
+        ...(deliveryPartnerData || {}), // ✅ الاحتفاظ ببيانات Al-Waseet إن وجدت (qr_id, qr_link, etc.)
+        delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet', // ✅ تحديد نوع التوصيل بشكل صريح
+        delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
+        alwaseet_city_id: effectiveCityId || null,
+        alwaseet_region_id: effectiveRegionId || null,
         order_type: actualOrderType,
         refund_amount: actualRefundAmount,
-        original_order_id: originalOrder?.id || null,
+        original_order_id: foundOriginalOrder?.id || originalOrder?.id || null, // ✅ استخدام foundOriginalOrder أولاً
       };
       
       // ✅ إنشاء الطلب مع البيانات الصحيحة
