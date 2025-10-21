@@ -33,7 +33,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const isEditMode = aiOrderData?.editMode || false;
   
   const { createOrder, updateOrder, settings, approveAiOrder, orders } = useInventory();
-  const { cart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
+  const { cart, setCart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
   // ✅ ref للتحقق من mount status
