@@ -1781,7 +1781,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 : formData.details,  // ✅ للطلبات العادية: استخدام details العادي
               items_number: formData.type === 'return' 
                 ? (returnProduct?.quantity || 1)  // ✅ عدد المنتج المُرجع
-                : (orderItems.length > 0 ? orderItems.length : 1),
+                : formData.type === 'exchange'
+                  ? (() => {
+                      // ✅ للاستبدال: مجموع كمية المنتجات الصادرة فقط
+                      const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+                      return outgoingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                    })()
+                  : (orderItems.length > 0 ? orderItems.length : 1),  // ✅ للطلبات العادية: عدد العناصر
               // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلبات العادية)
               price: Math.round(finalTotal),
               package_size: formData.size,
@@ -1860,7 +1866,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // ✅ إنشاء الطلب: للاستبدال استخدام payload mode مع exchange_metadata
       let result;
       if (formData.type === 'exchange') {
-        result = await createOrder(orderData);  // ← payload mode كامل
+        // ✅ للاستبدال: استخدام payload mode مع بيانات التوصيل من Al-Waseet
+        result = await createOrder({
+          ...orderData,
+          // ✅ إضافة بيانات التوصيل من Al-Waseet
+          tracking_number: trackingNumber,
+          qr_link: qrLink,
+          delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
+          delivery_status: trackingNumber ? 'pending' : 'pending',
+        });
       } else {
         result = await createOrder(
           customerInfoPayload, 
