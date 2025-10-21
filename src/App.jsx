@@ -18,7 +18,6 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
-const AdminCleanup = lazy(() => import('@/pages/AdminCleanup.jsx'));
 const Dashboard = lazy(() => import('@/pages/Dashboard.jsx'));
 const ProductsPage = lazy(() => import('@/pages/ProductsPage.jsx'));
 const ManageProductsPage = lazy(() => import('@/pages/ManageProductsPage.jsx'));
@@ -121,7 +120,6 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
-          <Route path="/admin-cleanup" element={<ProtectedRoute permission="manage_employees"><AdminCleanup /></ProtectedRoute>} />
            <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
           
           <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />

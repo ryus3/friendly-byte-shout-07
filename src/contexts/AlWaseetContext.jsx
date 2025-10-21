@@ -924,33 +924,15 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
-      // 🔒 جلب القائمة السوداء للطلبات المحذوفة نهائياً
-      const permanentlyDeleted = JSON.parse(
-        localStorage.getItem('permanentlyDeletedOrders') || '[]'
-      );
-      const blacklistedQRs = new Set(permanentlyDeleted.map(d => d.tracking_number));
-      devLog.log(`🚫 القائمة السوداء: ${blacklistedQRs.size} طلب محذوف نهائياً`);
-      
       // 1) جلب جميع طلبات الوسيط لبناء خريطة شاملة
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       devLog.log(`📦 جلب ${waseetOrders.length} طلب من الوسيط للتصحيح`);
-      
-      // 🔍 تصفية الطلبات المحذوفة نهائياً من قائمة الوسيط
-      const filteredWaseetOrders = waseetOrders.filter(order => {
-        const qr = String(order.qr_id || order.tracking_number || '');
-        if (blacklistedQRs.has(qr)) {
-          devLog.log(`🚫 تجاهل طلب محذوف نهائياً من الوسيط: ${qr}`);
-          return false;
-        }
-        return true;
-      });
-      devLog.log(`✅ بعد التصفية: ${filteredWaseetOrders.length} طلب نشط`);
       
       // بناء خرائط للبحث السريع
       const byQrId = new Map(); // qr_id -> order
       const byTrackingNumber = new Map(); // tracking_number -> order
       
-      filteredWaseetOrders.forEach(order => {
+      waseetOrders.forEach(order => {
         if (order.qr_id) byQrId.set(String(order.qr_id), order);
         if (order.tracking_number && order.tracking_number !== order.qr_id) {
           byTrackingNumber.set(String(order.tracking_number), order);
@@ -976,12 +958,6 @@ export const AlWaseetProvider = ({ children }) => {
       
       // 3) تصحيح كل طلب محلي
       for (const localOrder of localOrders || []) {
-        // 🚫 تخطي الطلبات المحذوفة نهائياً من المعالجة
-        if (blacklistedQRs.has(String(localOrder.tracking_number))) {
-          devLog.log(`⏭️ تخطي طلب محذوف نهائياً: ${localOrder.tracking_number}`);
-          continue;
-        }
-        
         let waseetOrder = null;
         let needsUpdate = false;
         const updates = {};
@@ -1168,22 +1144,6 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
-      // 🔒 إضافة إلى القائمة السوداء الدائمة
-      const trackingNumber = orderToDelete.delivery_partner_order_id || orderToDelete.tracking_number || orderToDelete.qr_id;
-      if (trackingNumber) {
-        const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
-        permanentlyDeleted.push({
-          tracking_number: trackingNumber,
-          deleted_at: new Date().toISOString(),
-          order_number: orderToDelete.order_number,
-          source: source
-        });
-        localStorage.setItem('permanentlyDeletedOrders', 
-          JSON.stringify(permanentlyDeleted.slice(-500))
-        );
-        devLog.log(`🔒 تم إضافة ${trackingNumber} إلى القائمة السوداء الدائمة`);
-      }
-      
       // ✅ تسجيل الحذف في auto_delete_log قبل الحذف الفعلي
       const orderAge = Math.round(
         (Date.now() - new Date(orderToDelete.created_at).getTime()) / 60000
@@ -1336,13 +1296,6 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0 };
       }
 
-      // 🔒 جلب القائمة السوداء للطلبات المحذوفة نهائياً
-      const permanentlyDeleted = JSON.parse(
-        localStorage.getItem('permanentlyDeletedOrders') || '[]'
-      );
-      const blacklistedQRs = new Set(permanentlyDeleted.map(d => d.tracking_number));
-      devLog.log(`🚫 [fastSync] القائمة السوداء: ${blacklistedQRs.size} طلب محذوف نهائياً`);
-
       // 2) اجلب جميع طلبات الوسيط لعمل fallback search مع معالجة أخطاء Rate Limit
       let waseetOrders = [];
       try {
@@ -1375,23 +1328,12 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0, emptyList: true };
       }
 
-      // 🔍 تصفية الطلبات المحذوفة نهائياً من قائمة الوسيط
-      const filteredWaseetOrders = waseetOrders.filter(order => {
-        const qr = String(order.qr_id || order.tracking_number || '');
-        if (blacklistedQRs.has(qr)) {
-          devLog.log(`🚫 [fastSync] تجاهل طلب محذوف نهائياً: ${qr}`);
-          return false;
-        }
-        return true;
-      });
-      devLog.log(`✅ [fastSync] بعد التصفية: ${filteredWaseetOrders.length} طلب نشط`);
-
       // 3) بناء خرائط للبحث السريع
       const byWaseetId = new Map();
       const byQrId = new Map();
       const byTracking = new Map();
       
-      for (const wo of filteredWaseetOrders) {
+      for (const wo of waseetOrders) {
         if (wo.id) byWaseetId.set(String(wo.id), wo);
         if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), wo);
         if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), wo);
@@ -1404,13 +1346,6 @@ export const AlWaseetProvider = ({ children }) => {
       const statusChanges = [];
 
       for (const localOrder of pendingOrders) {
-        // 🚫 تخطي الطلبات المحذوفة نهائياً من المعالجة
-        const trackingNum = String(localOrder.tracking_number || localOrder.qr_id || '');
-        if (blacklistedQRs.has(trackingNum)) {
-          devLog.log(`⏭️ [fastSync] تخطي طلب محذوف نهائياً: ${trackingNum}`);
-          continue;
-        }
-
         let waseetOrder = null;
         let needsIdRepair = false;
 
@@ -3004,7 +2939,6 @@ export const AlWaseetProvider = ({ children }) => {
       
       let checkedCount = 0;
       let deletedCount = 0;
-      const deletedOrdersInThisRun = new Set(); // 🔒 تتبع الطلبات المحذوفة في هذه الدورة
       
       // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
       for (const localOrder of localOrders) {
@@ -3012,19 +2946,6 @@ export const AlWaseetProvider = ({ children }) => {
         const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
         if (!trackingNumber) {
           console.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
-          continue;
-        }
-        
-        // 🛡️ تخطي الطلبات المحذوفة في نفس الدورة
-        if (deletedOrdersInThisRun.has(trackingNumber)) {
-          console.log(`⏭️ تخطي ${trackingNumber} - تم حذفه في هذه الدورة`);
-          continue;
-        }
-        
-        // 🛡️ فحص القائمة السوداء الدائمة
-        const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
-        if (permanentlyDeleted.some(d => d.tracking_number === trackingNumber)) {
-          console.log(`🚫 تخطي ${trackingNumber} - موجود في القائمة السوداء`);
           continue;
         }
         
@@ -3066,21 +2987,7 @@ export const AlWaseetProvider = ({ children }) => {
           // التحقق من الحذف التلقائي
           if (syncResult?.autoDeleted) {
             deletedCount++;
-            deletedOrdersInThisRun.add(trackingNumber); // ✅ إضافة إلى قائمة المحذوفات
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
-            
-            // 🔒 تسجيل في القائمة السوداء الدائمة
-            const permanentlyDeleted = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
-            permanentlyDeleted.push({
-              tracking_number: trackingNumber,
-              deleted_at: new Date().toISOString(),
-              order_number: localOrder.order_number,
-              source: 'syncAndApplyOrders'
-            });
-            // الاحتفاظ بآخر 500 طلب محذوف فقط
-            localStorage.setItem('permanentlyDeletedOrders', 
-              JSON.stringify(permanentlyDeleted.slice(-500))
-            );
             
             // ✅ تسجيل الحذف في auto_delete_log
             const orderAge = Math.round(
@@ -3150,20 +3057,19 @@ export const AlWaseetProvider = ({ children }) => {
         // الإصلاح الصامت أولاً
         await silentOrderRepair();
         
-        // 🔥 الحل الجذري: تنفيذ الحذف قبل التصحيح لمنع إعادة الإنشاء
-        console.log('🧹 [1/2] تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
-        await performDeletionPassAfterStatusSync();
-        
-        // ثم التصحيح الشامل إذا لم يكن مكتملاً (يحترم القائمة السوداء الآن)
+        // ثم التصحيح الشامل إذا لم يكن مكتملاً
         if (!correctionComplete) {
-          console.log('🛠️ [2/2] تنفيذ التصحيح الأولي للطلبات (مع احترام القائمة السوداء)...');
+          console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
           const correctionResult = await comprehensiveOrderCorrection();
           console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
         }
 
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
-        console.log('✅ تم الانتهاء من المهام الأولية بالترتيب الصحيح');
+        console.log('✅ تم الانتهاء من المهام الأولية');
         
+        // تشغيل مرور الحذف فوراً لمعالجة الطلبات المحذوفة من الوسيط
+        console.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
+        await performDeletionPassAfterStatusSync();
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }
