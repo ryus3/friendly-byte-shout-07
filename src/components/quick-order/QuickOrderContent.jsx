@@ -62,8 +62,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [nameTouched, setNameTouched] = useState(false);
   
   // حالات الاستبدال والإرجاع
-  const [outgoingProduct, setOutgoingProduct] = useState(null);
-  const [incomingProduct, setIncomingProduct] = useState(null);
   const [returnProduct, setReturnProduct] = useState(null);
   const [refundAmount, setRefundAmount] = useState(0);
   const [manualExchangePriceDiff, setManualExchangePriceDiff] = useState(0);
@@ -2395,57 +2393,69 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             cities={cities}
             regions={regions}
           />
-          <OrderDetailsForm
-            formData={formData}
-            handleChange={handleChange}
-            handleSelectChange={handleSelectChange}
-            setProductSelectOpen={setProductSelectOpen}
-            isSubmittingState={isSubmittingState}
-            isDeliveryPartnerSelected={isDeliveryPartnerSelected}
-            packageSizes={packageSizes}
-            loadingPackageSizes={loadingPackageSizes}
-            activePartner={activePartner}
-            dataFetchError={dataFetchError}
-            settings={settings}
-            discount={discount}
-            setDiscount={setDiscount}
-            subtotal={subtotal}
-            total={total}
-            customerData={customerData}
-            loyaltyDiscount={loyaltyDiscount}
-            applyLoyaltyDiscount={applyLoyaltyDiscount}
-            onToggleLoyaltyDiscount={() => {
-              const newApply = !applyLoyaltyDiscount;
-              setApplyLoyaltyDiscount(newApply);
-              if (newApply) {
-                setDiscount(prev => prev + loyaltyDiscount);
-              } else {
-                setDiscount(prev => Math.max(0, prev - loyaltyDiscount));
-              }
-            }}
-            applyLoyaltyDelivery={applyLoyaltyDelivery}
-            onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
-            cart={cart}
-            removeFromCart={removeFromCart}
-          />
+          {/* ✅ إخفاء السلة الأصلية في طلبات الاستبدال */}
+          {formData.type !== 'exchange' && (
+            <OrderDetailsForm
+              formData={formData}
+              handleChange={handleChange}
+              handleSelectChange={handleSelectChange}
+              setProductSelectOpen={setProductSelectOpen}
+              isSubmittingState={isSubmittingState}
+              isDeliveryPartnerSelected={isDeliveryPartnerSelected}
+              packageSizes={packageSizes}
+              loadingPackageSizes={loadingPackageSizes}
+              activePartner={activePartner}
+              dataFetchError={dataFetchError}
+              settings={settings}
+              discount={discount}
+              setDiscount={setDiscount}
+              subtotal={subtotal}
+              total={total}
+              customerData={customerData}
+              loyaltyDiscount={loyaltyDiscount}
+              applyLoyaltyDiscount={applyLoyaltyDiscount}
+              onToggleLoyaltyDiscount={() => {
+                const newApply = !applyLoyaltyDiscount;
+                setApplyLoyaltyDiscount(newApply);
+                if (newApply) {
+                  setDiscount(prev => prev + loyaltyDiscount);
+                } else {
+                  setDiscount(prev => Math.max(0, prev - loyaltyDiscount));
+                }
+              }}
+              applyLoyaltyDelivery={applyLoyaltyDelivery}
+              onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
+              cart={cart}
+              removeFromCart={removeFromCart}
+            />
+          )}
           
           {/* نماذج الاستبدال والإرجاع */}
           {formData.type === 'exchange' && (
             <ExchangeProductsForm
               cart={cart}
               onAddOutgoing={(product) => {
-                // ✅ إضافة منتج صادر مع تحديد الاتجاه
-                addToCart({ ...product, item_direction: 'outgoing' });
+                // ✅ إضافة المنتج الكامل مباشرة للـ cart
+                setCart(prev => [...prev, { 
+                  ...product, 
+                  item_direction: 'outgoing',
+                  id: `outgoing-${product.variantId || product.sku}-${Date.now()}`
+                }]);
               }}
               onAddIncoming={(product) => {
-                // ✅ إضافة منتج وارد مع تحديد الاتجاه
-                addToCart({ ...product, item_direction: 'incoming' });
+                // ✅ إضافة المنتج الكامل مباشرة للـ cart
+                setCart(prev => [...prev, { 
+                  ...product, 
+                  item_direction: 'incoming',
+                  id: `incoming-${product.variantId || product.sku}-${Date.now()}`
+                }]);
               }}
               onRemoveItem={(index) => {
-                // ✅ حذف منتج من cart
-                const newCart = [...cart];
-                newCart.splice(index, 1);
-                setCart(newCart);
+                setCart(prev => {
+                  const newCart = [...prev];
+                  newCart.splice(index, 1);
+                  return newCart;
+                });
               }}
               deliveryFee={settings?.deliveryFee || 5000}
               onManualPriceDiffChange={setManualExchangePriceDiff}

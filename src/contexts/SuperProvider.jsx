@@ -1265,6 +1265,12 @@ export const SuperProvider = ({ children }) => {
     try {
       console.log('🔄 SuperProvider updateOrder:', { orderId, updates, newItems });
       
+      // ✅ معالجة المخزون التلقائية للاستبدال عند تغيير delivery_status
+      if (updates.delivery_status) {
+        const { handleExchangeStatusChange } = await import('@/utils/exchange-status-handler');
+        await handleExchangeStatusChange(orderId, updates.delivery_status);
+      }
+      
       // تحديث فوري محلياً مع البيانات الكاملة
       setAllData(prev => ({
         ...prev,
