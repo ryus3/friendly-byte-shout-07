@@ -517,11 +517,12 @@ const OrdersPage = () => {
       // فقط طلبات الوسيط
       if (order.delivery_partner !== 'alwaseet') return false;
       
-      // استبعاد الطلبات المكتملة (delivery_status = 4)
-      if (order.delivery_status === '4') return false;
+      // ✅ استبعاد الحالات النهائية
+      const terminalStatuses = ['completed', 'returned_in_stock'];
+      if (terminalStatuses.includes(order.status)) return false;
       
-      // استبعاد الطلبات المرجعة (delivery_status = 17)
-      if (order.delivery_status === '17') return false;
+      // ✅ استبعاد delivery_status النهائية (4 = تم التسليم، 17 = راجع للتاجر)
+      if (order.delivery_status === '4' || order.delivery_status === '17') return false;
       
       return true;
     });

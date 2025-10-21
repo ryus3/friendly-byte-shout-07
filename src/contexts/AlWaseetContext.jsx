@@ -433,8 +433,8 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // الحالات المسموح حذفها فقط
-    const allowedStatuses = ['pending', 'shipped', 'delivery'];
+    // ✅ فقط الطلبات pending تُحذف تلقائياً (لا shipped و لا delivery)
+    const allowedStatuses = ['pending'];
     if (!allowedStatuses.includes(order.status)) {
       devLog.log(`❌ canAutoDeleteOrder: فشل - حالة غير مسموحة: ${order.status}`);
       return false;
@@ -1899,6 +1899,16 @@ export const AlWaseetProvider = ({ children }) => {
             .single();
         
           if (existingOrder) {
+            // ✅ تخطي الطلبات النهائية (مكتملة أو مرجعة بالكامل)
+            const terminalStatuses = ['completed', 'returned_in_stock'];
+            const terminalDeliveryStatuses = ['4', '17'];
+            
+            if (terminalStatuses.includes(existingOrder.status) || 
+                terminalDeliveryStatuses.includes(existingOrder.delivery_status)) {
+              devLog.log(`⏭️ تخطي الطلب ${trackingNumber} - حالة نهائية: ${existingOrder.status} / ${existingOrder.delivery_status}`);
+              continue;
+            }
+            
             // تحضير التحديثات
             const updates = {
               status: localStatus,
@@ -2907,12 +2917,14 @@ export const AlWaseetProvider = ({ children }) => {
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
       // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
+      // ✅ فقط الطلبات pending تُفحص للحذف التلقائي
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by, created_at, order_items(*)')
           .eq('delivery_partner', 'alwaseet')
           .eq('receipt_received', false)
+          .eq('status', 'pending')
           .or('tracking_number.not.is.null,qr_id.not.is.null'),
         true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
       ).limit(50);
