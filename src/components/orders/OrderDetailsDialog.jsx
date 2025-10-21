@@ -458,49 +458,82 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                   })}
                 </div>
                   <div className="mt-4 pt-4 border-t border-border space-y-2">
-                    {/* السعر الأصلي الكامل (قبل الخصم) */}
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">السعر الأصلي</span>
-                      <span className="text-foreground">
-                        {((order.total_amount || 0) + (order.delivery_fee || 0)).toLocaleString()} د.ع
-                      </span>
-                    </div>
-                    
-                    {/* الخصم */}
-                    {(order.discount || 0) > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-orange-500 font-medium">الخصم</span>
-                        <span className="text-orange-500 font-bold">-{(order.discount || 0).toLocaleString()} د.ع</span>
-                      </div>
+                    {order.order_type === 'return' ? (
+                      /* 🔴 عرض خاص لطلبات الإرجاع */
+                      <>
+                        <div className="flex justify-between items-center text-sm bg-red-50 dark:bg-red-950/20 p-3 rounded">
+                          <span className="text-red-700 dark:text-red-300 font-medium">المبلغ المدفوع للزبون</span>
+                          <span className="text-red-900 dark:text-red-100 font-bold text-lg">
+                            {Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
+                          </span>
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground space-y-1 bg-amber-50 dark:bg-amber-950/20 p-2 rounded">
+                          <p className="font-medium text-amber-800 dark:text-amber-200">📌 ملاحظات مهمة:</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-amber-700 dark:text-amber-300">
+                            <li>المبلغ يُدفع للزبون نقداً</li>
+                            <li>عند تغيير الحالة لـ "21" يُخصم من أرباح الطلب الأصلي</li>
+                            <li>عند تغيير الحالة لـ "17" يُرجع المنتج للمخزون تلقائياً</li>
+                          </ul>
+                        </div>
+                        
+                        {order.delivery_fee > 0 && (
+                          <div className="text-xs text-muted-foreground pt-1 border-t space-y-1">
+                            <div className="flex justify-between">
+                              <span>رسوم التوصيل (مضافة)</span>
+                              <span>{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      /* ✅ العرض العادي للطلبات العادية */
+                      <>
+                        {/* السعر الأصلي الكامل (قبل الخصم) */}
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">السعر الأصلي</span>
+                          <span className="text-foreground">
+                            {((order.total_amount || 0) + (order.delivery_fee || 0) + (order.discount || 0)).toLocaleString()} د.ع
+                          </span>
+                        </div>
+                        
+                        {/* الخصم */}
+                        {(order.discount || 0) > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-orange-500 font-medium">الخصم</span>
+                            <span className="text-orange-500 font-bold">-{(order.discount || 0).toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* الزيادة */}
+                        {(order.price_increase || 0) > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-green-600 font-medium">زيادة السعر</span>
+                            <span className="text-green-600 font-bold">+{(order.price_increase || 0).toLocaleString()} د.ع</span>
+                          </div>
+                        )}
+                        
+                        {/* تفصيل السعر */}
+                        <div className="text-xs text-muted-foreground pt-1 border-t space-y-1">
+                          <div className="flex justify-between">
+                            <span>المنتجات</span>
+                            <span>{(order.total_amount || 0).toLocaleString()} د.ع</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>رسوم التوصيل</span>
+                            <span>{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
+                          </div>
+                        </div>
+                        
+                        {/* المجموع النهائي */}
+                        <div className="flex justify-between items-center pt-2 border-t-2 border-primary/20">
+                          <span className="text-lg font-bold">المبلغ النهائي</span>
+                          <span className="text-xl font-bold text-primary">
+                            {(order.final_amount || 0).toLocaleString()} د.ع
+                          </span>
+                        </div>
+                      </>
                     )}
-                    
-                    {/* الزيادة */}
-                    {(order.price_increase || 0) > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-green-600 font-medium">زيادة السعر</span>
-                        <span className="text-green-600 font-bold">+{(order.price_increase || 0).toLocaleString()} د.ع</span>
-                      </div>
-                    )}
-                    
-                    {/* تفصيل السعر */}
-                    <div className="text-xs text-muted-foreground pt-1 border-t space-y-1">
-                      <div className="flex justify-between">
-                        <span>المنتجات</span>
-                        <span>{(order.total_amount || 0).toLocaleString()} د.ع</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>رسوم التوصيل</span>
-                        <span>{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
-                      </div>
-                    </div>
-                    
-                    {/* المجموع النهائي */}
-                    <div className="flex justify-between items-center pt-2 border-t-2 border-primary/20">
-                      <span className="text-lg font-bold">المبلغ النهائي</span>
-                      <span className="text-xl font-bold text-primary">
-                        {(order.final_amount || 0).toLocaleString()} د.ع
-                      </span>
-                    </div>
                   </div>
             </div>
             
