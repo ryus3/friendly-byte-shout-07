@@ -1144,7 +1144,7 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
-      // 🔍 معلومات التسجيل (سيتم استخدامها بعد الحذف الناجح)
+      // ✅ تسجيل الحذف في auto_delete_log قبل الحذف الفعلي
       const orderAge = Math.round(
         (Date.now() - new Date(orderToDelete.created_at).getTime()) / 60000
       );
@@ -1160,6 +1160,26 @@ export const AlWaseetProvider = ({ children }) => {
         timestamp: new Date().toISOString(),
         source: source
       };
+
+      try {
+        await supabase.from('auto_delete_log').insert({
+          order_id: orderToDelete.id,
+          order_number: orderToDelete.order_number,
+          tracking_number: orderToDelete.tracking_number,
+          qr_id: orderToDelete.qr_id,
+          delivery_partner_order_id: orderToDelete.delivery_partner_order_id,
+          deleted_by: user?.id,
+          delete_source: source,
+          reason: deleteReason,
+          order_status: orderToDelete.status,
+          delivery_status: orderToDelete.delivery_status,
+          order_age_minutes: orderAge,
+          order_data: orderToDelete
+        });
+        devLog.log('📝 تم تسجيل الحذف في سجل الحذف التلقائي');
+      } catch (logError) {
+        console.error('⚠️ فشل تسجيل الحذف:', logError);
+      }
       
       // 2. حذف الخصومات المطبقة أولاً (Fallback - CASCADE سيحذفها تلقائياً)
       try {
@@ -1194,15 +1214,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       // 4. حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
-      console.log('🗑️ محاولة حذف الطلب:', {
-        orderId,
-        trackingNumber: orderToDelete.tracking_number,
-        createdBy: orderToDelete.created_by,
-        currentUserId: user?.id,
-        status: orderToDelete.status
-      });
-      
-      const { error: deleteError, count } = await scopeOrdersQuery(
+      const { error: deleteError } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .delete()
@@ -1210,46 +1222,8 @@ export const AlWaseetProvider = ({ children }) => {
       );
         
       if (deleteError) {
-        console.error('❌ CRITICAL: فشل في حذف الطلب - التفاصيل الكاملة:', {
-          error: deleteError,
-          message: deleteError.message,
-          code: deleteError.code,
-          details: deleteError.details,
-          hint: deleteError.hint,
-          orderId,
-          trackingNumber: orderToDelete.tracking_number,
-          createdBy: orderToDelete.created_by,
-          currentUserId: user?.id,
-          userEmail: user?.email
-        });
+        devLog.error('❌ فشل في حذف الطلب:', deleteError);
         return false;
-      }
-      
-      console.log('✅ نجح حذف الطلب من قاعدة البيانات:', {
-        orderId,
-        trackingNumber: orderToDelete.tracking_number,
-        rowsDeleted: count
-      });
-      
-      // ✅ تسجيل الحذف في auto_delete_log بعد الحذف الناجح فقط
-      try {
-        await supabase.from('auto_delete_log').insert({
-          order_id: orderToDelete.id,
-          order_number: orderToDelete.order_number,
-          tracking_number: orderToDelete.tracking_number,
-          qr_id: orderToDelete.qr_id,
-          delivery_partner_order_id: orderToDelete.delivery_partner_order_id,
-          deleted_by: user?.id,
-          delete_source: source,
-          reason: deleteReason,
-          order_status: orderToDelete.status,
-          delivery_status: orderToDelete.delivery_status,
-          order_age_minutes: orderAge,
-          order_data: orderToDelete
-        });
-        console.log('📝 تم تسجيل الحذف في سجل الحذف التلقائي');
-      } catch (logError) {
-        console.error('⚠️ فشل تسجيل الحذف:', logError);
       }
       
       devLog.log(`✅ تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number || orderId} تلقائياً من ${source}`);
@@ -2132,10 +2106,10 @@ export const AlWaseetProvider = ({ children }) => {
             
             if (!finalCheck) {
               console.log(`🗑️ تأكيد نهائي: حذف الطلب ${qrId} - غير موجود في جميع حسابات المالك`);
-              const deleteSuccess = await handleAutoDeleteOrder(localOrder.id, 'syncOrderByQR');
-              if (deleteSuccess) {
+              const deleteResult = await performAutoDelete(localOrder);
+              if (deleteResult) {
                 return { 
-                  success: true,
+                  ...deleteResult, 
                   autoDeleted: true,
                   message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات شركة التوصيل`
                 };
@@ -3014,7 +2988,33 @@ export const AlWaseetProvider = ({ children }) => {
           if (syncResult?.autoDeleted) {
             deletedCount++;
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
-            // handleAutoDeleteOrder تسجل تلقائياً في auto_delete_log
+            
+            // ✅ تسجيل الحذف في auto_delete_log
+            const orderAge = Math.round(
+              (Date.now() - new Date(localOrder.created_at).getTime()) / 60000
+            );
+            
+            try {
+              await supabase.from('auto_delete_log').insert({
+                order_id: localOrder.id,
+                order_number: localOrder.order_number,
+                tracking_number: localOrder.tracking_number,
+                qr_id: localOrder.qr_id,
+                delivery_partner_order_id: localOrder.delivery_partner_order_id,
+                deleted_by: user?.id,
+                delete_source: 'syncAndApplyOrders',
+                reason: {
+                  message: 'لم يُعثر على الطلب في شركة التوصيل بعد مزامنة الطلبات الظاهرة',
+                  timestamp: new Date().toISOString()
+                },
+                order_status: localOrder.status,
+                delivery_status: localOrder.delivery_status,
+                order_age_minutes: orderAge,
+                order_data: localOrder
+              });
+            } catch (logError) {
+              console.error('⚠️ فشل تسجيل الحذف:', logError);
+            }
           } else if (syncResult) {
             console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
               exists_in_remote: syncResult.foundInRemote !== false,
