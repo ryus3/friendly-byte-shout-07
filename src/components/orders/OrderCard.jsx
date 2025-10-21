@@ -545,6 +545,12 @@ const OrderCard = React.memo(({
                                 return '-' + Math.abs(order.refund_amount || 0).toLocaleString();
                               }
                               
+                              // ✅ للاستبدال/الاستبدال: عرض final_amount مباشرة (يحتوي على فرق السعر + التوصيل)
+                              if (order.order_type === 'replacement' || order.order_type === 'exchange') {
+                                return Number(order.final_amount || 0).toLocaleString();
+                              }
+                              
+                              // للطلبات العادية: حساب عادي
                               const totalAmount = Number(order.total_amount || 0);
                               const discount = Number(order.discount || 0);
                               const priceIncrease = Number(order.price_increase || 0);
@@ -580,11 +586,15 @@ const OrderCard = React.memo(({
                          </div>
                        )}
                        
-                        {/* شارة الإرجاع - أحمر لامع */}
+                        {/* شارة الإرجاع - أحمر تدرج مع أيقونة */}
                         {order.order_type === 'return' && (
-                          <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs px-2 py-1 font-bold shadow-lg shadow-red-500/50">
-                            إرجاع {Math.abs(order.refund_amount || 0).toLocaleString()} د.ع
-                          </Badge>
+                          <div className="relative group/return">
+                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
+                            <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
+                              <RotateCcw className="w-3 h-3" />
+                              <span>ترجيع {Math.abs(order.refund_amount || 0).toLocaleString()}</span>
+                            </Badge>
+                          </div>
                         )}
                        
                        {/* شارة الاستبدال - بنفسجي تدرج مع أيقونة */}
@@ -620,7 +630,7 @@ const OrderCard = React.memo(({
                             <div className="relative group/out">
                               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
                               
-                              <div className="relative flex items-start gap-1.5 p-1.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300">
+                              <div className="relative flex items-start gap-1 p-1 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300 max-w-[200px]">
                                 {/* أيقونة صادر */}
                                 <div className="flex-shrink-0 relative">
                                   <div className="absolute inset-0 bg-orange-500/20 rounded blur-[2px]"></div>
@@ -680,7 +690,7 @@ const OrderCard = React.memo(({
                             <div className="relative group/in">
                               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
                               
-                              <div className="relative flex items-start gap-1.5 p-1.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300">
+                              <div className="relative flex items-start gap-1 p-1 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300 max-w-[200px]">
                                 {/* أيقونة وارد */}
                                 <div className="flex-shrink-0 relative">
                                   <div className="absolute inset-0 bg-blue-500/20 rounded blur-[2px]"></div>

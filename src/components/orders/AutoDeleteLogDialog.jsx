@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, RotateCcw, Trash2, Calendar, User, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +14,8 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [selectedLogs, setSelectedLogs] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,6 +105,42 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     );
   });
 
+  const handlePermanentDelete = async () => {
+    if (selectedLogs.length === 0) return;
+
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف ${selectedLogs.length} سجل نهائياً؟ لا يمكن التراجع عن هذا الإجراء!`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('auto_delete_log')
+        .delete()
+        .in('id', selectedLogs);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم الحذف",
+        description: `تم حذف ${selectedLogs.length} سجل نهائياً`,
+        variant: "default"
+      });
+
+      setSelectedLogs([]);
+      setSelectAll(false);
+      fetchDeletedOrders();
+    } catch (error) {
+      console.error('خطأ في الحذف النهائي:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف السجلات",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getSourceLabel = (source) => {
     switch (source) {
       case 'syncAndApplyOrders':
@@ -156,6 +195,32 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
           </Button>
         </div>
 
+        {/* شريط التحديد والحذف */}
+        <div className="flex items-center gap-3 mb-4 p-3 bg-muted/50 rounded-lg">
+          <Checkbox
+            checked={selectAll}
+            onCheckedChange={(checked) => {
+              setSelectAll(checked);
+              setSelectedLogs(checked ? filteredOrders.map(o => o.id) : []);
+            }}
+          />
+          <span className="text-sm font-medium">
+            تحديد الكل ({filteredOrders.length})
+          </span>
+          
+          {selectedLogs.length > 0 && (
+            <Button
+              onClick={handlePermanentDelete}
+              variant="destructive"
+              size="sm"
+              className="mr-auto"
+            >
+              <Trash2 className="h-4 w-4 ml-2" />
+              حذف نهائياً ({selectedLogs.length})
+            </Button>
+          )}
+        </div>
+
         {/* قائمة الطلبات المحذوفة */}
         <div className="space-y-3">
           {loading ? (
@@ -169,16 +234,26 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
             </div>
           ) : (
             filteredOrders.map((log) => (
-              <div
-                key={log.id}
-                className="p-4 border rounded-lg hover:shadow-md transition-all bg-card"
-              >
-                <div className="flex justify-between items-start gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-lg">
-                        {log.order_number || log.tracking_number || 'غير محدد'}
-                      </span>
+                <div
+                  key={log.id}
+                  className="p-4 border rounded-lg hover:shadow-md transition-all bg-card"
+                >
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={selectedLogs.includes(log.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedLogs(prev =>
+                              checked
+                                ? [...prev, log.id]
+                                : prev.filter(id => id !== log.id)
+                            );
+                          }}
+                        />
+                        <span className="font-bold text-lg">
+                          {log.order_number || log.tracking_number || 'غير محدد'}
+                        </span>
                       <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
                         {getSourceLabel(log.delete_source)}
                       </span>
