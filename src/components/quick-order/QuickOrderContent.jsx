@@ -1553,29 +1553,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }));
         }
         
-        const items = [];
-        
-        // ✅ للاستبدال: إضافة المنتج الوارد (incoming) والخارج (outgoing)
-        if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
-          // المنتج الوارد (يدخل المخزون في حالة 17)
-          items.push({
-            product_id: incomingProduct.id,
-            variant_id: incomingProduct.variantId,
-            quantity: incomingProduct.quantity || 1,
-            unit_price: incomingProduct.price,
-            total_price: incomingProduct.price * (incomingProduct.quantity || 1),
-            item_type: 'incoming'
-          });
-          
-          // المنتج الخارج (يخصم من المخزون في حالة 21)
-          items.push({
-            product_id: outgoingProduct.id,
-            variant_id: outgoingProduct.variantId,
-            quantity: outgoingProduct.quantity || 1,
-            unit_price: outgoingProduct.price,
-            total_price: outgoingProduct.price * (outgoingProduct.quantity || 1),
-            item_type: 'outgoing'
-          });
+        // ✅ للاستبدال: قائمة فارغة (جميع البيانات في exchange_metadata)
+        if (formData.type === 'exchange') {
+          return [];
         }
         
         // ✅ للإرجاع: استخدم orderItems (تم تحضيره مسبقاً)
@@ -1583,7 +1563,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return orderItems;
         }
         
-        return items;
+        return [];
       })(),
       total_amount: formData.type === 'exchange' 
         ? Math.round(priceDiff)  // ✅ للاستبدال: فرق السعر فقط (بدون التوصيل)
@@ -1613,7 +1593,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       delivery_status: 'pending',
       status: 'pending',
       // ✅ حفظ بيانات الاستبدال في exchange_metadata
-      exchange_metadata: formData.type === 'exchange' && outgoingProduct ? {
+      exchange_metadata: formData.type === 'exchange' && outgoingProduct && incomingProduct ? {
+        price_difference: priceDiff,  // ✅ فرق السعر
+        delivery_fee: calculatedDeliveryFee,  // ✅ رسوم التوصيل
         outgoing_items: [{
           variant_id: outgoingProduct.variantId,
           product_id: outgoingProduct.id,
@@ -1623,7 +1605,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           size: outgoingProduct.size,
           price: outgoingProduct.price
         }],
-        incoming_items: incomingProduct ? [{
+        incoming_items: [{
           variant_id: incomingProduct.variantId,
           product_id: incomingProduct.id,
           quantity: incomingProduct.quantity || 1,
@@ -1631,7 +1613,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           color: incomingProduct.color,
           size: incomingProduct.size,
           price: incomingProduct.price
-        }] : []
+        }]
       } : null
     };
 
