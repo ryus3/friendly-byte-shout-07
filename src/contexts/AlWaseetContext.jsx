@@ -3037,6 +3037,50 @@ export const AlWaseetProvider = ({ children }) => {
             } catch (logError) {
               console.error('⚠️ فشل تسجيل الحذف:', logError);
             }
+            
+            // ✅ حذف الطلب فعلياً من قاعدة البيانات
+            try {
+              // تحرير المخزون المحجوز
+              if (localOrder.order_items && localOrder.order_items.length > 0) {
+                for (const item of localOrder.order_items) {
+                  try {
+                    await supabase.rpc('release_stock_item', {
+                      p_product_id: item.product_id,
+                      p_variant_id: item.variant_id,
+                      p_quantity: item.quantity
+                    });
+                    console.log(`✅ تم تحرير ${item.quantity} من المنتج ${item.product_id}`);
+                  } catch (releaseErr) {
+                    console.warn(`⚠️ فشل في تحرير المخزون للعنصر:`, releaseErr);
+                  }
+                }
+              }
+
+              // حذف الطلب نفسه
+              const { error: deleteErr } = await scopeOrdersQuery(
+                supabase
+                  .from('orders')
+                  .delete()
+                  .eq('id', localOrder.id)
+              );
+
+              if (deleteErr) {
+                console.error('❌ فشل في حذف الطلب:', deleteErr);
+              } else {
+                console.log(`✅ تم حذف الطلب ${localOrder.tracking_number} من قاعدة البيانات`);
+                
+                // إرسال حدث لتحديث الواجهة
+                window.dispatchEvent(new CustomEvent('orderDeleted', { 
+                  detail: { 
+                    id: localOrder.id, 
+                    tracking_number: localOrder.tracking_number,
+                    order_number: localOrder.order_number 
+                  } 
+                }));
+              }
+            } catch (deleteError) {
+              console.error('❌ خطأ في حذف الطلب:', deleteError);
+            }
           } else if (syncResult) {
             console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
               exists_in_remote: syncResult.foundInRemote !== false,
