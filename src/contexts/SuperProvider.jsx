@@ -965,11 +965,12 @@ export const SuperProvider = ({ children }) => {
             total_price: i.quantity * i.price
           }));
 
-      // ✅ للإرجاع: يُسمح بسلة فارغة (لا order_items)
+      // ✅ للإرجاع والاستبدال: يُسمح بسلة فارغة
       const orderType = deliveryPartnerDataArg?.order_type || arg1?.order_type || 'regular';
       const isReturn = orderType === 'return';
+      const isExchange = orderType === 'replacement' || orderType === 'exchange';
       
-      if (!items.length && !isReturn) {
+      if (!items.length && !isReturn && !isExchange) {
         return { success: false, error: 'لا توجد عناصر في الطلب' };
       }
 
@@ -993,9 +994,9 @@ export const SuperProvider = ({ children }) => {
         ? (arg1.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`)
         : (trackingNumberArg || `RYUS-${Date.now().toString().slice(-6)}`);
 
-      // ✅ حجز المخزون - تجاهل للإرجاع
+      // ✅ حجز المخزون - تجاهل للإرجاع والاستبدال
       const reservedSoFar = [];
-      if (!isReturn && items.length > 0) {
+      if (!isReturn && !isExchange && items.length > 0) {
         for (const it of items) {
           const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
             p_product_id: it.product_id,
@@ -1018,6 +1019,8 @@ export const SuperProvider = ({ children }) => {
         }
       } else if (isReturn) {
         console.log('⏭️ تخطي حجز المخزون - طلب إرجاع');
+      } else if (isExchange) {
+        console.log('⏭️ تخطي حجز المخزون - طلب استبدال (سيُعالج في الحالة 21/17)');
       }
 
       // بيانات الطلب للإدراج
@@ -1045,11 +1048,17 @@ export const SuperProvider = ({ children }) => {
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,
-        // ✅ total_amount = سعر المنتجات الأصلي قبل الخصم (بدون رسوم التوصيل)
-        // للإرجاع: total_amount = refund_amount فقط
-        total_amount: orderType === 'return' 
-          ? Math.abs(deliveryPartnerDataArg?.refund_amount || 0)
-          : subtotal,  // ← سعر المنتجات الأصلي قبل الخصم
+        // ✅ total_amount: للاستبدال فرق السعر فقط، للإرجاع refund_amount، للعادي سعر المنتجات
+        total_amount: (() => {
+          if (orderType === 'replacement' || orderType === 'exchange') {
+            const metadata = isPayload ? (arg1.exchange_metadata || {}) : {};
+            return Math.abs(metadata.price_difference || 0);
+          }
+          if (orderType === 'return') {
+            return Math.abs(deliveryPartnerDataArg?.refund_amount || 0);
+          }
+          return subtotal;
+        })(),
         // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
         sales_amount: subtotal - discount,
         discount,
@@ -1057,12 +1066,21 @@ export const SuperProvider = ({ children }) => {
         // ✅ منع price_increase الخاطئ للطلبات الجديدة
         price_increase: 0,
         price_change_type: null,
-        // ✅ للإرجاع/الاستبدال: استخدام final_amount من deliveryPartnerDataArg مباشرة (قد يكون سالباً)
-        final_amount: (orderType === 'return' || orderType === 'exchange') && deliveryPartnerDataArg?.final_amount !== undefined
-          ? deliveryPartnerDataArg.final_amount  // ← قد يكون سالباً للإرجاع
-          : (deliveryPartnerDataArg?.final_amount !== undefined 
-              ? deliveryPartnerDataArg.final_amount 
-              : total),
+        // ✅ final_amount: للاستبدال فرق السعر + توصيل، للإرجاع القيمة المرسلة، للعادي الإجمالي
+        final_amount: (() => {
+          if (orderType === 'replacement' || orderType === 'exchange') {
+            const metadata = isPayload ? (arg1.exchange_metadata || {}) : {};
+            const priceDiff = metadata.price_difference || 0;
+            return priceDiff + deliveryFee;
+          }
+          if (orderType === 'return' && deliveryPartnerDataArg?.final_amount !== undefined) {
+            return deliveryPartnerDataArg.final_amount;
+          }
+          if (deliveryPartnerDataArg?.final_amount !== undefined) {
+            return deliveryPartnerDataArg.final_amount;
+          }
+          return total;
+        })(),
         status: 'pending',
         delivery_status: 'pending',
         payment_status: 'pending',
@@ -1087,10 +1105,12 @@ export const SuperProvider = ({ children }) => {
           arg1?.qr_code ||
           trackingNumber || 
           null,
-        // ✅ إضافة حقول الإرجاع
+        // ✅ إضافة حقول الإرجاع والاستبدال
         order_type: orderType,
         refund_amount: deliveryPartnerDataArg?.refund_amount || 0,
         original_order_id: deliveryPartnerDataArg?.original_order_id || null,
+        // ✅ إضافة exchange_metadata للاستبدال
+        exchange_metadata: isPayload ? (arg1.exchange_metadata || null) : null,
       };
 
       console.log('🔍 [SuperProvider] orderRow قبل الحفظ - الإصلاح الجذري:', {

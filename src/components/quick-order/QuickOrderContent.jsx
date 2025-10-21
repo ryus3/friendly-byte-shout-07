@@ -1781,16 +1781,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         original_order_id: foundOriginalOrder?.id || originalOrder?.id || null, // ✅ استخدام foundOriginalOrder أولاً
       };
       
-      // ✅ إنشاء الطلب مع البيانات الصحيحة
-      const result = await createOrder(
-        customerInfoPayload, 
-        orderItems,
-        trackingNumber, 
-        formData.type === 'return' ? 0 : discount, 
-        orderStatus, 
-        qrLink, 
-        deliveryPartnerData // ✅ بيانات شريك التوصيل فقط
-      );
+      // ✅ إنشاء الطلب: للاستبدال استخدام payload mode مع exchange_metadata
+      let result;
+      if (formData.type === 'exchange') {
+        result = await createOrder(orderData);  // ← payload mode كامل
+      } else {
+        result = await createOrder(
+          customerInfoPayload, 
+          orderItems,
+          trackingNumber, 
+          formData.type === 'return' ? 0 : discount, 
+          orderStatus, 
+          qrLink, 
+          deliveryPartnerData
+        );
+      }
       if (result.success) {
         // معالجة ما بعد إنشاء الطلب
         const createdOrderId = result.orderId || result.id;
