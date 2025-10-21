@@ -100,11 +100,16 @@ export const ExchangeProductsForm = ({
             open={outgoingDialogOpen}
             onOpenChange={setOutgoingDialogOpen}
             onConfirm={(selectedItems) => {
-              console.log('✅ المنتجات الصادرة المختارة:', selectedItems);
+              console.log('✅ المنتجات الصادرة من الـ dialog:', selectedItems);
+              console.log('✅ عدد المنتجات الصادرة:', selectedItems.length);
               onAddOutgoing(selectedItems);
               setOutgoingDialogOpen(false);
             }}
-            initialCart={outgoingItems}
+            initialCart={outgoingItems.map(item => ({
+              ...item,
+              id: `${item.productId}-${item.variantId}`,
+              item_direction: undefined
+            }))}
           />
         </CardContent>
       </Card>
@@ -165,11 +170,16 @@ export const ExchangeProductsForm = ({
             open={incomingDialogOpen}
             onOpenChange={setIncomingDialogOpen}
             onConfirm={(selectedItems) => {
-              console.log('✅ المنتجات الواردة المختارة:', selectedItems);
+              console.log('✅ المنتجات الواردة من الـ dialog:', selectedItems);
+              console.log('✅ عدد المنتجات الواردة:', selectedItems.length);
               onAddIncoming(selectedItems);
               setIncomingDialogOpen(false);
             }}
-            initialCart={incomingItems}
+            initialCart={incomingItems.map(item => ({
+              ...item,
+              id: `${item.productId}-${item.variantId}`,
+              item_direction: undefined
+            }))}
           />
         </CardContent>
       </Card>

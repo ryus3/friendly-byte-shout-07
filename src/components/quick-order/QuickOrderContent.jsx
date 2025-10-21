@@ -2434,7 +2434,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             <ExchangeProductsForm
               cart={cart}
               onAddOutgoing={(selectedItems) => {
-                // ✅ مسح المنتجات الصادرة القديمة واستبدالها بالجديدة
+                console.log('🔵 المنتجات الصادرة المستلمة:', selectedItems);
                 setCart(prev => {
                   const nonOutgoing = prev.filter(item => item.item_direction !== 'outgoing');
                   const newOutgoing = selectedItems.map(item => ({
@@ -2442,11 +2442,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     item_direction: 'outgoing',
                     id: `outgoing-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
                   }));
+                  console.log('🔵 المنتجات الصادرة بعد المعالجة:', newOutgoing);
                   return [...nonOutgoing, ...newOutgoing];
                 });
               }}
               onAddIncoming={(selectedItems) => {
-                // ✅ مسح المنتجات الواردة القديمة واستبدالها بالجديدة
+                console.log('🟢 المنتجات الواردة المستلمة:', selectedItems);
                 setCart(prev => {
                   const nonIncoming = prev.filter(item => item.item_direction !== 'incoming');
                   const newIncoming = selectedItems.map(item => ({
@@ -2454,6 +2455,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     item_direction: 'incoming',
                     id: `incoming-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
                   }));
+                  console.log('🟢 المنتجات الواردة بعد المعالجة:', newIncoming);
                   return [...nonIncoming, ...newIncoming];
                 });
               }}
