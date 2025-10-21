@@ -15,10 +15,9 @@ import {
   Wallet,
   TrendingUp,
   Archive,
-  CreditCard, // أيقونة جميلة للأرباح المستلمة
-  HandCoins, // أيقونة جميلة للأرباح المستلمة
-  FolderArchive, // أيقونة احترافية للأرشيف
-  RotateCcw // أيقونة احترافية للراجع للمخزن
+  CreditCard,
+  HandCoins,
+  FolderArchive
 } from 'lucide-react';
 
 /**
