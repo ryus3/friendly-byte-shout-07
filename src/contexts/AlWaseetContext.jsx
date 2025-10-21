@@ -932,20 +932,7 @@ export const AlWaseetProvider = ({ children }) => {
       const byQrId = new Map(); // qr_id -> order
       const byTrackingNumber = new Map(); // tracking_number -> order
       
-      // 🔧 تصفية الطلبات المحذوفة من الوسيط قبل بناء الخرائط
-      const filteredWaseetOrders = waseetOrders.filter(order => {
-        const statusId = String(order.status_id || order.statusId || '');
-        // تجاهل الطلبات المحذوفة (status_id = 1)
-        if (statusId === '1') {
-          devLog.log(`🚫 تجاهل طلب محذوف من الوسيط: ${order.qr_id || order.tracking_number}`);
-          return false;
-        }
-        return true;
-      });
-      
-      devLog.log(`📦 معالجة ${filteredWaseetOrders.length} طلب نشط من أصل ${waseetOrders.length} (تم تجاهل ${waseetOrders.length - filteredWaseetOrders.length} طلب محذوف)`);
-      
-      filteredWaseetOrders.forEach(order => {
+      waseetOrders.forEach(order => {
         if (order.qr_id) byQrId.set(String(order.qr_id), order);
         if (order.tracking_number && order.tracking_number !== order.qr_id) {
           byTrackingNumber.set(String(order.tracking_number), order);
@@ -3001,7 +2988,33 @@ export const AlWaseetProvider = ({ children }) => {
           if (syncResult?.autoDeleted) {
             deletedCount++;
             console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً`);
-            await handleAutoDeleteOrder(localOrder.id, 'syncAndApplyOrders');
+            
+            // ✅ تسجيل الحذف في auto_delete_log
+            const orderAge = Math.round(
+              (Date.now() - new Date(localOrder.created_at).getTime()) / 60000
+            );
+            
+            try {
+              await supabase.from('auto_delete_log').insert({
+                order_id: localOrder.id,
+                order_number: localOrder.order_number,
+                tracking_number: localOrder.tracking_number,
+                qr_id: localOrder.qr_id,
+                delivery_partner_order_id: localOrder.delivery_partner_order_id,
+                deleted_by: user?.id,
+                delete_source: 'syncAndApplyOrders',
+                reason: {
+                  message: 'لم يُعثر على الطلب في شركة التوصيل بعد مزامنة الطلبات الظاهرة',
+                  timestamp: new Date().toISOString()
+                },
+                order_status: localOrder.status,
+                delivery_status: localOrder.delivery_status,
+                order_age_minutes: orderAge,
+                order_data: localOrder
+              });
+            } catch (logError) {
+              console.error('⚠️ فشل تسجيل الحذف:', logError);
+            }
           } else if (syncResult) {
             console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح:`, {
               exists_in_remote: syncResult.foundInRemote !== false,
