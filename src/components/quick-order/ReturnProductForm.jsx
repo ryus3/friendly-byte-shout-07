@@ -175,29 +175,35 @@ export const ReturnProductForm = ({
             
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>مبلغ الإرجاع:</span>
+                <span>مبلغ الإرجاع (شامل التوصيل):</span>
                 <span className="font-bold">{refundAmount.toLocaleString()} د.ع</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span>رسوم التوصيل:</span>
-                <span>5,000 د.ع</span>
               </div>
               
               <div className="border-t border-blue-200 dark:border-blue-700 my-2"></div>
               
               <div className="flex justify-between text-base font-bold text-red-600 dark:text-red-400">
                 <span>المبلغ الكلي (سالب):</span>
-                <span>-{(refundAmount + 5000).toLocaleString()} د.ع</span>
+                <span>-{refundAmount.toLocaleString()} د.ع</span>
               </div>
             </div>
+
+            <Alert className="mt-3 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700">
+              <AlertDescription className="text-xs space-y-1">
+                <p className="font-bold">💡 تفاصيل المبلغ:</p>
+                <ul className="space-y-1 mr-4">
+                  <li>• سعر المنتج: {(refundAmount - (originalOrder?.delivery_fee || 5000)).toLocaleString()} د.ع</li>
+                  <li>• أجور التوصيل: {(originalOrder?.delivery_fee || 5000).toLocaleString()} د.ع</li>
+                  <li className="font-bold">• المجموع: {refundAmount.toLocaleString()} د.ع</li>
+                </ul>
+              </AlertDescription>
+            </Alert>
 
             <Alert className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700">
               <AlertDescription className="text-xs space-y-1">
                 <p className="font-bold">⚠️ ملاحظات مهمة:</p>
                 <ul className="space-y-1 mr-4">
                   <li>• المندوب سيدفع {refundAmount.toLocaleString()} د.ع للزبون عند استلام المنتج</li>
-                  <li>• سيتم خصم {(refundAmount + 5000).toLocaleString()} د.ع من فاتورة الوسيط</li>
+                  <li>• سيتم خصم {refundAmount.toLocaleString()} د.ع من فاتورة الوسيط (شامل التوصيل)</li>
                   <li>• عند حالة "17": سيتم تسجيل حركة نقد تلقائياً</li>
                 </ul>
               </AlertDescription>

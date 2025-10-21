@@ -1482,8 +1482,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير الملاحظات قبل الإرسال
       if (formData.type === 'return' && returnProduct && refundAmount > 0) {
-        // المبلغ النهائي = -(المبلغ المُرجع + رسوم التوصيل)
-        finalTotal = -(refundAmount + deliveryFeeAmount);
+        // ✅ المبلغ النهائي = -refundAmount (يشمل التوصيل بالفعل)
+        finalTotal = -refundAmount;
         actualRefundAmount = refundAmount;
         
         // ✅ ملاحظات مختصرة بالعربية
