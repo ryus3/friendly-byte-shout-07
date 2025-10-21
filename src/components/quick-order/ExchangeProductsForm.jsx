@@ -106,9 +106,20 @@ export const ExchangeProductsForm = ({
               setOutgoingDialogOpen(false);
             }}
             initialCart={outgoingItems.map(item => ({
-              ...item,
               id: `${item.productId}-${item.variantId}`,
-              item_direction: undefined
+              productId: item.productId,
+              variantId: item.variantId,
+              productName: item.productName,
+              color: item.color,
+              size: item.size,
+              price: item.price,
+              costPrice: item.costPrice,
+              quantity: item.quantity,
+              total: item.total,
+              image: item.image,
+              sku: item.sku,
+              stock: item.stock,
+              reserved: item.reserved
             }))}
           />
         </CardContent>
@@ -176,9 +187,20 @@ export const ExchangeProductsForm = ({
               setIncomingDialogOpen(false);
             }}
             initialCart={incomingItems.map(item => ({
-              ...item,
               id: `${item.productId}-${item.variantId}`,
-              item_direction: undefined
+              productId: item.productId,
+              variantId: item.variantId,
+              productName: item.productName,
+              color: item.color,
+              size: item.size,
+              price: item.price,
+              costPrice: item.costPrice,
+              quantity: item.quantity,
+              total: item.total,
+              image: item.image,
+              sku: item.sku,
+              stock: item.stock,
+              reserved: item.reserved
             }))}
           />
         </CardContent>

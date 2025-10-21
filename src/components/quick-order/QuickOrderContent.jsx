@@ -2237,6 +2237,98 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setProductSelectOpen(false);
     toast({ title: "تم تحديث السلة", description: `تم إضافة ${selectedItems.length} منتج.`, variant: "success" });
   };
+
+  const handleConfirmOutgoingProducts = (selectedItems) => {
+    console.log('🔵 تأكيد المنتجات الصادرة:', selectedItems);
+    
+    // مسح المنتجات الصادرة القديمة فقط
+    setCart(prev => prev.filter(item => item.item_direction !== 'outgoing'));
+    
+    // إضافة المنتجات الجديدة مع item_direction
+    (selectedItems || []).filter(item => item != null && typeof item === 'object').forEach(item => {
+      const product = { id: item.productId, name: item.productName, images: [item.image] };
+      const variant = { 
+        id: item.variantId, 
+        sku: item.sku, 
+        color: item.color, 
+        size: item.size, 
+        price: item.price, 
+        cost_price: item.costPrice, 
+        quantity: item.stock, 
+        reserved: item.reserved, 
+        image: item.image 
+      };
+      
+      // استخدام addToCart مع skipStockCheck=true لأنها منتجات صادرة
+      addToCart(product, variant, Number(item?.quantity) || 1, false, true);
+    });
+    
+    // إضافة item_direction للعناصر الجديدة
+    setTimeout(() => {
+      setCart(prev => prev.map(item => {
+        // فقط للعناصر التي ليس لها item_direction بعد
+        const isNewOutgoing = !item.item_direction && selectedItems.some(si => 
+          si.variantId === item.variantId || si.sku === item.sku
+        );
+        if (isNewOutgoing) {
+          return { ...item, item_direction: 'outgoing' };
+        }
+        return item;
+      }));
+    }, 100);
+    
+    toast({ 
+      title: "تم تحديث المنتجات الصادرة", 
+      description: `تم إضافة ${selectedItems.length} منتج.`, 
+      variant: "success" 
+    });
+  };
+
+  const handleConfirmIncomingProducts = (selectedItems) => {
+    console.log('🟢 تأكيد المنتجات الواردة:', selectedItems);
+    
+    // مسح المنتجات الواردة القديمة فقط
+    setCart(prev => prev.filter(item => item.item_direction !== 'incoming'));
+    
+    // إضافة المنتجات الجديدة مع item_direction
+    (selectedItems || []).filter(item => item != null && typeof item === 'object').forEach(item => {
+      const product = { id: item.productId, name: item.productName, images: [item.image] };
+      const variant = { 
+        id: item.variantId, 
+        sku: item.sku, 
+        color: item.color, 
+        size: item.size, 
+        price: item.price, 
+        cost_price: item.costPrice, 
+        quantity: item.stock, 
+        reserved: item.reserved, 
+        image: item.image 
+      };
+      
+      // استخدام addToCart مع skipStockCheck=true لأنها منتجات واردة
+      addToCart(product, variant, Number(item?.quantity) || 1, false, true);
+    });
+    
+    // إضافة item_direction للعناصر الجديدة
+    setTimeout(() => {
+      setCart(prev => prev.map(item => {
+        // فقط للعناصر التي ليس لها item_direction بعد
+        const isNewIncoming = !item.item_direction && selectedItems.some(si => 
+          si.variantId === item.variantId || si.sku === item.sku
+        );
+        if (isNewIncoming) {
+          return { ...item, item_direction: 'incoming' };
+        }
+        return item;
+      }));
+    }, 100);
+    
+    toast({ 
+      title: "تم تحديث المنتجات الواردة", 
+      description: `تم إضافة ${selectedItems.length} منتج.`, 
+      variant: "success" 
+    });
+  };
   
   const partnerSpecificFields = () => {
       if (activePartner === 'local') {
@@ -2433,37 +2525,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           {formData.type === 'exchange' && (
             <ExchangeProductsForm
               cart={cart}
-              onAddOutgoing={(selectedItems) => {
-                console.log('🔵 المنتجات الصادرة المستلمة:', selectedItems);
-                setCart(prev => {
-                  const nonOutgoing = prev.filter(item => item.item_direction !== 'outgoing');
-                  const newOutgoing = selectedItems.map(item => ({
-                    ...item,
-                    item_direction: 'outgoing',
-                    id: `outgoing-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
-                  }));
-                  console.log('🔵 المنتجات الصادرة بعد المعالجة:', newOutgoing);
-                  return [...nonOutgoing, ...newOutgoing];
-                });
-              }}
-              onAddIncoming={(selectedItems) => {
-                console.log('🟢 المنتجات الواردة المستلمة:', selectedItems);
-                setCart(prev => {
-                  const nonIncoming = prev.filter(item => item.item_direction !== 'incoming');
-                  const newIncoming = selectedItems.map(item => ({
-                    ...item,
-                    item_direction: 'incoming',
-                    id: `incoming-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
-                  }));
-                  console.log('🟢 المنتجات الواردة بعد المعالجة:', newIncoming);
-                  return [...nonIncoming, ...newIncoming];
-                });
-              }}
+              onAddOutgoing={handleConfirmOutgoingProducts}
+              onAddIncoming={handleConfirmIncomingProducts}
               onRemoveItem={(itemId) => {
-                // ✅ حذف بالـ ID بدلاً من index
-                setCart(prev => prev.filter(item => item.id !== itemId));
+                removeFromCart(itemId);
               }}
-              deliveryFee={settings?.deliveryFee || 5000}
+              deliveryFee={deliveryFee}
               onManualPriceDiffChange={setManualExchangePriceDiff}
             />
           )}
