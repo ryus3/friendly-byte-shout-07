@@ -1877,8 +1877,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const createdOrderId = result.orderId || result.id;
         
         // معالجة ما بعد إنشاء الطلب للاستبدال/الإرجاع
-        if (formData.type === 'exchange' && outgoingProduct && incomingProduct) {
-          const priceDiff = incomingProduct.price - outgoingProduct.price;
+        if (formData.type === 'exchange' && orderData.exchange_metadata) {
+          const exchangeMetadata = orderData.exchange_metadata;
+          
+          const outgoingTotal = exchangeMetadata.outgoing_items.reduce((sum, item) => 
+            sum + (item.price * item.quantity), 0
+          );
+          const incomingTotal = exchangeMetadata.incoming_items.reduce((sum, item) => 
+            sum + (item.price * item.quantity), 0
+          );
+          const priceDiff = incomingTotal - outgoingTotal;
           
           // ✅ 1. ربط بالطلب الأصلي تلقائياً
           let linkedOriginalOrderId = null;
