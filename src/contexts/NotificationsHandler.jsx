@@ -84,8 +84,7 @@ const NotificationsHandler = () => {
     //   )
     //   .subscribe();
 
-    // 🔴 تم تعطيل قناة ai_orders مؤقتاً للاختبار - يوجد نظام موحد في useReliableAiOrderNotifications
-    /*
+    // إشعارات طلبات تليجرام (AI Orders) - نظام مبسط وموثوق
     const aiOrdersChannel = supabase
       .channel(`ai-orders-notifications-simplified-${user.id}-${Date.now()}`)
       .on(
@@ -291,7 +290,6 @@ const NotificationsHandler = () => {
           console.error('❌ SIMPLIFIED: Error in AI orders Real-time subscription');
         }
       });
-    */
 
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
 
@@ -300,7 +298,7 @@ const NotificationsHandler = () => {
     return () => {
       console.log('🧹 SIMPLIFIED: Cleaning up notification channels');
       supabase.removeChannel(profilesChannel);
-      // supabase.removeChannel(aiOrdersChannel); // 🔴 معطل مؤقتاً
+      supabase.removeChannel(aiOrdersChannel);
     };
     
   }, [user, fetchAdminData, addNotification]);
