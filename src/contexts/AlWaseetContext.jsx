@@ -924,15 +924,33 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
+      // 🔒 جلب القائمة السوداء للطلبات المحذوفة نهائياً
+      const permanentlyDeleted = JSON.parse(
+        localStorage.getItem('permanentlyDeletedOrders') || '[]'
+      );
+      const blacklistedQRs = new Set(permanentlyDeleted.map(d => d.tracking_number));
+      devLog.log(`🚫 القائمة السوداء: ${blacklistedQRs.size} طلب محذوف نهائياً`);
+      
       // 1) جلب جميع طلبات الوسيط لبناء خريطة شاملة
       const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
       devLog.log(`📦 جلب ${waseetOrders.length} طلب من الوسيط للتصحيح`);
+      
+      // 🔍 تصفية الطلبات المحذوفة نهائياً من قائمة الوسيط
+      const filteredWaseetOrders = waseetOrders.filter(order => {
+        const qr = String(order.qr_id || order.tracking_number || '');
+        if (blacklistedQRs.has(qr)) {
+          devLog.log(`🚫 تجاهل طلب محذوف نهائياً من الوسيط: ${qr}`);
+          return false;
+        }
+        return true;
+      });
+      devLog.log(`✅ بعد التصفية: ${filteredWaseetOrders.length} طلب نشط`);
       
       // بناء خرائط للبحث السريع
       const byQrId = new Map(); // qr_id -> order
       const byTrackingNumber = new Map(); // tracking_number -> order
       
-      waseetOrders.forEach(order => {
+      filteredWaseetOrders.forEach(order => {
         if (order.qr_id) byQrId.set(String(order.qr_id), order);
         if (order.tracking_number && order.tracking_number !== order.qr_id) {
           byTrackingNumber.set(String(order.tracking_number), order);
@@ -958,6 +976,12 @@ export const AlWaseetProvider = ({ children }) => {
       
       // 3) تصحيح كل طلب محلي
       for (const localOrder of localOrders || []) {
+        // 🚫 تخطي الطلبات المحذوفة نهائياً من المعالجة
+        if (blacklistedQRs.has(String(localOrder.tracking_number))) {
+          devLog.log(`⏭️ تخطي طلب محذوف نهائياً: ${localOrder.tracking_number}`);
+          continue;
+        }
+        
         let waseetOrder = null;
         let needsUpdate = false;
         const updates = {};
