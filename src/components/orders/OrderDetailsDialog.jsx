@@ -489,11 +489,11 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                     ) : (
                       /* ✅ العرض العادي للطلبات العادية */
                       <>
-                        {/* السعر الأصلي الكامل (قبل الخصم) */}
+                        {/* السعر الأصلي (المنتجات قبل الخصم) */}
                         <div className="flex justify-between items-center text-sm">
-                          <span className="text-muted-foreground">السعر الأصلي</span>
+                          <span className="text-muted-foreground">السعر الأصلي (المنتجات)</span>
                           <span className="text-foreground">
-                            {((order.total_amount || 0) + (order.delivery_fee || 0) + (order.discount || 0)).toLocaleString()} د.ع
+                            {((order.total_amount || 0) + (order.discount || 0)).toLocaleString()} د.ع
                           </span>
                         </div>
                         

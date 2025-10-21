@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
@@ -313,7 +314,16 @@ const BottomNav = () => {
   const itemCount = (cart || []).reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
   const handleHomeClick = () => {
-    navigate(user?.default_page || '/');
+    const targetPage = user?.default_page || '/';
+    
+    // إذا كنا بالفعل في الصفحة المستهدفة، فقط نصعد للأعلى
+    if (location.pathname === targetPage) {
+      scrollToTopInstant();
+    } else {
+      // ننتقل للصفحة ثم نصعد للأعلى
+      navigate(targetPage);
+      setTimeout(() => scrollToTopInstant(), 100);
+    }
   };
 
   const handleCheckout = () => {

@@ -133,21 +133,41 @@ const VariantSelector = ({ variants, onSelect, selectedVariantId, onQuickAdd }) 
                     <div className="bg-background/50 rounded-md p-3">
                       <div className="flex flex-wrap gap-2">
                         {colorVariants.map(variant => (
-                          <Button
-                            key={variant.id}
-                            size="sm"
-                            variant={selectedVariantId === variant.id ? 'default' : 'outline'}
-                            onClick={() => onSelect(variant)}
-                            onDoubleClick={() => handleSizeDoubleClick(variant)}
-                            disabled={variant.quantity === 0}
-                            className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
-                            title="نقر مزدوج للإضافة السريعة"
-                          >
-                            {variant.size}
-                            <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
-                              {variant.quantity}
-                            </span>
-                          </Button>
+                          <div key={variant.id} className="flex items-center gap-1">
+                            {/* زر القياس الأساسي */}
+                            <Button
+                              size="sm"
+                              variant={selectedVariantId === variant.id ? 'default' : 'outline'}
+                              onClick={() => onSelect(variant)}
+                              onDoubleClick={() => handleSizeDoubleClick(variant)}
+                              disabled={variant.quantity === 0}
+                              className="relative h-9 min-w-[3rem] font-medium transition-all hover:scale-105"
+                              title="نقر مزدوج للإضافة السريعة"
+                            >
+                              {variant.size}
+                              <span className="absolute -bottom-1 -right-1 text-[10px] bg-primary/10 text-primary px-1 rounded">
+                                {variant.quantity}
+                              </span>
+                            </Button>
+                            
+                            {/* زر + للإضافة السريعة - يظهر فقط عند اختيار القياس */}
+                            {selectedVariantId === variant.id && variant.quantity > 0 && (
+                              <motion.button
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSizeDoubleClick(variant);
+                                }}
+                                className="h-9 w-9 rounded-md bg-gradient-to-br from-green-500 to-emerald-600 text-white flex items-center justify-center shadow-md hover:shadow-lg hover:scale-110 transition-all active:scale-95"
+                                title="إضافة سريعة"
+                              >
+                                <Plus className="w-5 h-5" />
+                              </motion.button>
+                            )}
+                          </div>
                         ))}
                       </div>
                       <p className="text-xs text-muted-foreground mt-2 text-center">
