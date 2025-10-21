@@ -26,25 +26,57 @@ export const handleExchangeStatusChange = async (orderId, newDeliveryStatus) => 
       return { success: true, skipped: true };
     }
 
-    // الحالة 21: تسليم للزبون (خصم المنتجات الصادرة)
+    // ✅ الحالة 21: تسليم للزبون (تحويل الحجز إلى مبيعات)
     if (newDeliveryStatus === '21' || newDeliveryStatus === 21) {
-      console.log('🔄 معالجة المنتجات الصادرة للطلب', orderId);
+      console.log('🔄 تحويل الحجز إلى مبيعات للطلب', orderId);
+      
+      // ✅ 1. إلغاء الحجز أولاً
+      if (order.exchange_metadata?.outgoing_items) {
+        for (const item of order.exchange_metadata.outgoing_items) {
+          await supabase.rpc('release_variant_stock', {
+            p_variant_id: item.variant_id,
+            p_quantity: item.quantity || 1,
+            p_order_id: orderId
+          });
+          console.log(`✅ تم إلغاء حجز ${item.product_name}`);
+        }
+      }
+      
+      // ✅ 2. خصم من المخزون الفعلي
       const result = await processReplacementInventory(
         orderId,
         order.exchange_metadata,
         'outgoing'
       );
+      
+      // ✅ 3. معالجة فرق السعر (ربح أو خسارة)
+      if (order.exchange_metadata?.priceDifference !== undefined && order.exchange_metadata.priceDifference !== 0) {
+        const { handleReplacementFinancials } = await import('./replacement-financial-handler');
+        
+        await handleReplacementFinancials({
+          orderId: order.id,
+          originalOrderId: order.original_order_id,
+          priceDifference: order.exchange_metadata.priceDifference || order.total_amount,
+          deliveryFee: order.delivery_fee || 0,
+          employeeId: order.created_by
+        });
+        
+        console.log('✅ تمت معالجة فرق السعر');
+      }
+      
+      console.log('✅ تم تحويل المنتجات الصادرة من "محجوز" إلى "مباع"');
       return result;
     }
 
-    // الحالة 17: استلام من الزبون (إضافة المنتجات الواردة)
+    // ✅ الحالة 17: استلام من الزبون (إضافة المنتجات الواردة)
     if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
-      console.log('🔄 معالجة المنتجات الواردة للطلب', orderId);
+      console.log('🔄 إضافة المنتجات الواردة للطلب', orderId);
       const result = await processReplacementInventory(
         orderId,
         order.exchange_metadata,
         'incoming'
       );
+      console.log('✅ تم إضافة المنتجات الواردة للمخزون');
       return result;
     }
 

@@ -17,7 +17,18 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       let totalAmount = 0;
       let finalAmount = 0;
       
-      if (orderType === 'return') {
+      // ✅ معالجة خاصة لطلبات الاستبدال
+      if (orderType === 'replacement' || orderType === 'exchange') {
+        const exchangeMetadata = customerInfo.exchange_metadata;
+        
+        if (!exchangeMetadata) {
+          throw new Error('بيانات الاستبدال مفقودة');
+        }
+        
+        // ✅ استخدام المبلغ المحسوب من الواجهة
+        totalAmount = customerInfo.total_amount || 0;
+        finalAmount = totalAmount + deliveryFee;
+      } else if (orderType === 'return') {
         totalAmount = -Math.abs(refundAmount);
         finalAmount = totalAmount + deliveryFee;
       } else {
@@ -47,9 +58,12 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           status: status || 'pending',
           delivery_status: deliveryPartnerData ? 1 : 0,
           qr_link: qrLink,
-          order_type: orderType,
+          order_type: orderType === 'replacement' ? 'replacement' : orderType === 'exchange' ? 'exchange' : orderType,
           refund_amount: orderType === 'return' ? Math.abs(refundAmount) : null,
           original_order_id: originalOrderId,
+          exchange_metadata: (orderType === 'replacement' || orderType === 'exchange') 
+            ? customerInfo.exchange_metadata 
+            : null,
           delivery_partner: deliveryPartnerData?.partner || null,
           delivery_partner_order_id: deliveryPartnerData?.orderId || null,
           created_at: new Date().toISOString(),
@@ -62,15 +76,78 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         throw new Error(`فشل في إنشاء الطلب: ${orderError.message}`);
       }
 
-      // إنشاء عناصر الطلب (order_items)
-      if (cartItems && cartItems.length > 0) {
+      // ✅ إنشاء order_items للاستبدال (للحجز والتتبع فقط)
+      if ((orderType === 'replacement' || orderType === 'exchange') && customerInfo.exchange_metadata) {
+        const exchangeMetadata = customerInfo.exchange_metadata;
+        const orderItemsToInsert = [];
+        
+        // ✅ إضافة المنتجات الصادرة (outgoing)
+        if (exchangeMetadata.outgoing_items && exchangeMetadata.outgoing_items.length > 0) {
+          for (const item of exchangeMetadata.outgoing_items) {
+            orderItemsToInsert.push({
+              order_id: newOrder.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity || 1,
+              unit_price: 0,              // ✅ صفر لتجنب الحسابات المالية
+              total_price: 0,             // ✅ صفر لتجنب الحسابات المالية
+              item_direction: 'outgoing'  // ✅ تحديد الاتجاه
+            });
+          }
+        }
+        
+        // ✅ إضافة المنتجات الواردة (incoming) - للتتبع فقط
+        if (exchangeMetadata.incoming_items && exchangeMetadata.incoming_items.length > 0) {
+          for (const item of exchangeMetadata.incoming_items) {
+            orderItemsToInsert.push({
+              order_id: newOrder.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity || 1,
+              unit_price: 0,              // ✅ صفر
+              total_price: 0,             // ✅ صفر
+              item_direction: 'incoming'  // ✅ تحديد الاتجاه
+            });
+          }
+        }
+        
+        // ✅ حفظ order_items
+        if (orderItemsToInsert.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+          
+          if (itemsError) {
+            throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
+          }
+          
+          // ✅ حجز المنتجات الصادرة فوراً
+          console.log('🔒 حجز المنتجات الصادرة...');
+          for (const item of exchangeMetadata.outgoing_items) {
+            const { error: reserveError } = await supabase.rpc('reserve_variant_stock', {
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity || 1,
+              p_order_id: newOrder.id
+            });
+            
+            if (reserveError) {
+              console.error(`❌ فشل حجز ${item.product_name}:`, reserveError);
+            } else {
+              console.log(`✅ تم حجز ${item.quantity} من ${item.product_name} (${item.size} - ${item.color})`);
+            }
+          }
+        }
+      }
+      // ✅ للطلبات العادية والإرجاع: نفس المنطق القديم
+      else if (cartItems && cartItems.length > 0) {
         const orderItemsToInsert = cartItems.map(item => ({
           order_id: newOrder.id,
           product_id: item.product_id,
           variant_id: item.variant_id || null,
           quantity: item.quantity || 1,
           unit_price: item.unit_price || item.price || 0,
-          total_price: item.total_price || ((item.unit_price || item.price || 0) * (item.quantity || 1))
+          total_price: item.total_price || ((item.unit_price || item.price || 0) * (item.quantity || 1)),
+          item_direction: null  // ✅ null للطلبات العادية
         }));
 
         const { error: itemsError } = await supabase

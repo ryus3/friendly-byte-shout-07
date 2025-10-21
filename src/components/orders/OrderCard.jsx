@@ -118,6 +118,29 @@ const OrderCard = React.memo(({
   };
 
   const getProductSummary = () => {
+    // ✅ معالجة خاصة لطلبات الاستبدال
+    if ((order.order_type === 'exchange' || order.order_type === 'replacement') && order.exchange_metadata) {
+      const { outgoing_items = [], incoming_items = [] } = order.exchange_metadata;
+      
+      return {
+        type: 'exchange',
+        outgoing: outgoing_items.map(item => ({
+          productName: item.product_name,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          colorHex: item.color_hex
+        })),
+        incoming: incoming_items.map(item => ({
+          productName: item.product_name,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          colorHex: item.color_hex
+        }))
+      };
+    }
+    
     if (!order.items || order.items.length === 0) return null;
     
     const validItems = (order.items || []).filter(item => item != null && typeof item === 'object');
@@ -573,6 +596,131 @@ const OrderCard = React.memo(({
                 {productSummary && (
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div className="min-w-0 flex-1">
+                      
+                      {/* ✅ تصميم احترافي لطلبات الاستبدال */}
+                      {productSummary.type === 'exchange' && (
+                        <div className="space-y-2">
+                          {/* المنتجات الصادرة */}
+                          {productSummary.outgoing.length > 0 && (
+                            <div className="relative group/out">
+                              <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-lg blur-sm group-hover/out:blur-md transition-all duration-300"></div>
+                              
+                              <div className="relative flex items-start gap-2 p-2 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm group-hover/out:shadow-md group-hover/out:scale-[1.01] transition-all duration-300">
+                                {/* أيقونة صادر */}
+                                <div className="flex-shrink-0 relative">
+                                  <div className="absolute inset-0 bg-orange-500/20 rounded blur-sm"></div>
+                                  <div className="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded shadow-md">
+                                    <Package className="h-4 w-4 text-white" />
+                                  </div>
+                                </div>
+                                
+                                {/* المحتوى */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <span className="text-[10px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                                      صادر للزبون
+                                    </span>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-orange-300/50 to-transparent"></div>
+                                  </div>
+                                  
+                                  {productSummary.outgoing.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5 py-1">
+                                      {item.colorHex && (
+                                        <div className="relative">
+                                          <div 
+                                            className="w-4 h-4 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                            style={{ 
+                                              backgroundColor: item.colorHex,
+                                              boxShadow: `0 1px 4px ${item.colorHex}40`
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                        {item.productName}
+                                      </span>
+                                      {item.color && (
+                                        <span className="text-[10px] text-orange-600 dark:text-orange-400">
+                                          • {item.color}
+                                        </span>
+                                      )}
+                                      {item.size && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
+                                          {item.size}
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">
+                                        × {item.quantity}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* المنتجات الواردة */}
+                          {productSummary.incoming.length > 0 && (
+                            <div className="relative group/in">
+                              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-lg blur-sm group-hover/in:blur-md transition-all duration-300"></div>
+                              
+                              <div className="relative flex items-start gap-2 p-2 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm group-hover/in:shadow-md group-hover/in:scale-[1.01] transition-all duration-300">
+                                {/* أيقونة وارد */}
+                                <div className="flex-shrink-0 relative">
+                                  <div className="absolute inset-0 bg-blue-500/20 rounded blur-sm"></div>
+                                  <div className="relative flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded shadow-md">
+                                    <PackageCheck className="h-4 w-4 text-white" />
+                                  </div>
+                                </div>
+                                
+                                {/* المحتوى */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                      وارد من الزبون
+                                    </span>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
+                                  </div>
+                                  
+                                  {productSummary.incoming.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-1.5 py-1">
+                                      {item.colorHex && (
+                                        <div className="relative">
+                                          <div 
+                                            className="w-4 h-4 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                            style={{ 
+                                              backgroundColor: item.colorHex,
+                                              boxShadow: `0 1px 4px ${item.colorHex}40`
+                                            }}
+                                          />
+                                        </div>
+                                      )}
+                                      
+                                      <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                        {item.productName}
+                                      </span>
+                                      {item.color && (
+                                        <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                          • {item.color}
+                                        </span>
+                                      )}
+                                      {item.size && (
+                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                          {item.size}
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] text-gray-600 dark:text-gray-400 ml-auto">
+                                        × {item.quantity}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       
                       {productSummary.type === 'single' && (
                         <>

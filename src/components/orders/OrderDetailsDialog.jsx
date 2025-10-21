@@ -400,63 +400,196 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
                 
-                {/* ✅ عرض معلومات التسليم الجزئي إذا وجدت */}
-                {order.status === 'partial_delivery' && trackingData && (
-                  <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-300 dark:border-amber-800">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">
-                      <PackageCheck className="w-4 h-4" />
-                      <span>تسليم جزئي</span>
-                    </div>
-                    <div className="text-xs space-y-1">
-                      <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                        <CheckCircle className="w-3 h-3" />
-                        <span>{trackingData.delivered_items_count || 0} منتج مُسلّم</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
-                        <RotateCcw className="w-3 h-3" />
-                        <span>{trackingData.returned_items_count || 0} منتج راجع</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-3">
-                  {(order.order_items || order.items || []).map((item, index) => {
-                    const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
-                    const colorName = item.product_variants?.colors?.name || item.color || '';
-                    const sizeName = item.product_variants?.sizes?.name || item.size || '';
-                    const itemTotal = item.total_price || item.total || (item.unit_price * item.quantity) || 0;
-                    const itemStatus = item.item_status;
-                    
-                    return (
-                      <div key={index} className={`flex items-center justify-between p-3 bg-background rounded-lg ${
-                        itemStatus === 'delivered' ? 'border-l-4 border-green-500' :
-                        itemStatus === 'pending_return' || itemStatus === 'returned' ? 'border-l-4 border-orange-500' : ''
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {itemStatus === 'delivered' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                          {(itemStatus === 'pending_return' || itemStatus === 'returned') && <RotateCcw className="w-4 h-4 text-orange-500" />}
-                          <div>
-                            <p className="font-medium text-foreground">{productName}</p>
-                            <p className="text-sm text-muted-foreground">{colorName} {sizeName && `- ${sizeName}`} × {item.quantity}</p>
-                            {itemStatus && itemStatus !== 'pending' && (
-                              <span className={`text-xs font-medium ${
-                                itemStatus === 'delivered' ? 'text-green-600' :
-                                itemStatus === 'pending_return' ? 'text-orange-600' :
-                                itemStatus === 'returned' ? 'text-blue-600' : ''
-                              }`}>
-                                {itemStatus === 'delivered' ? 'مُسلّم' :
-                                 itemStatus === 'pending_return' ? 'بانتظار الإرجاع' :
-                                 itemStatus === 'returned' ? 'تم الإرجاع' : ''}
-                              </span>
-                            )}
+                {/* ✅ عرض احترافي لطلبات الاستبدال */}
+                {(order.order_type === 'exchange' || order.order_type === 'replacement') && order.exchange_metadata ? (
+                  <div className="space-y-3">
+                    {/* المنتجات الصادرة */}
+                    {order.exchange_metadata.outgoing_items?.length > 0 && (
+                      <div className="relative group/out">
+                        <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-xl blur-sm group-hover/out:blur-md transition-all duration-300"></div>
+                        
+                        <div className="relative p-4 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm group-hover/out:shadow-lg group-hover/out:scale-[1.01] transition-all duration-300">
+                          {/* أيقونة وعنوان */}
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="flex-shrink-0 relative">
+                              <div className="absolute inset-0 bg-orange-500/20 rounded-lg blur-md"></div>
+                              <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg shadow-lg">
+                                <Package className="h-6 w-6 text-white" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                                  صادر للزبون
+                                </span>
+                                <div className="h-px flex-1 bg-gradient-to-r from-orange-300/50 to-transparent"></div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* قائمة المنتجات */}
+                          <div className="space-y-2">
+                            {order.exchange_metadata.outgoing_items.map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 p-2 bg-white/50 dark:bg-gray-900/30 rounded-lg">
+                                {item.color_hex && (
+                                  <div className="relative">
+                                    <div 
+                                      className="w-6 h-6 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                      style={{ 
+                                        backgroundColor: item.color_hex,
+                                        boxShadow: `0 2px 8px ${item.color_hex}40`
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                
+                                <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                  {item.product_name}
+                                </span>
+                                {item.color && (
+                                  <span className="text-xs text-orange-600 dark:text-orange-400">
+                                    • {item.color}
+                                  </span>
+                                )}
+                                {item.size && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
+                                    {item.size}
+                                  </span>
+                                )}
+                                <span className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
+                                  × {item.quantity}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         </div>
-                        <div className="text-right"><p className="font-semibold text-primary">{itemTotal.toLocaleString()} د.ع</p></div>
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                    
+                    {/* المنتجات الواردة */}
+                    {order.exchange_metadata.incoming_items?.length > 0 && (
+                      <div className="relative group/in">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-xl blur-sm group-hover/in:blur-md transition-all duration-300"></div>
+                        
+                        <div className="relative p-4 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm group-hover/in:shadow-lg group-hover/in:scale-[1.01] transition-all duration-300">
+                          {/* أيقونة وعنوان */}
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="flex-shrink-0 relative">
+                              <div className="absolute inset-0 bg-blue-500/20 rounded-lg blur-md"></div>
+                              <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg shadow-lg">
+                                <PackageCheck className="h-6 w-6 text-white" />
+                              </div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                  وارد من الزبون
+                                </span>
+                                <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* قائمة المنتجات */}
+                          <div className="space-y-2">
+                            {order.exchange_metadata.incoming_items.map((item, idx) => (
+                              <div key={idx} className="flex items-center gap-2 p-2 bg-white/50 dark:bg-gray-900/30 rounded-lg">
+                                {item.color_hex && (
+                                  <div className="relative">
+                                    <div 
+                                      className="w-6 h-6 rounded-full shadow-inner ring-2 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
+                                      style={{ 
+                                        backgroundColor: item.color_hex,
+                                        boxShadow: `0 2px 8px ${item.color_hex}40`
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                                
+                                <span className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                  {item.product_name}
+                                </span>
+                                {item.color && (
+                                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                                    • {item.color}
+                                  </span>
+                                )}
+                                {item.size && (
+                                  <span className="px-2 py-1 text-xs font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                    {item.size}
+                                  </span>
+                                )}
+                                <span className="text-sm text-gray-600 dark:text-gray-400 ml-auto">
+                                  × {item.quantity}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* ✅ عرض معلومات التسليم الجزئي إذا وجدت */}
+                    {order.status === 'partial_delivery' && trackingData && (
+                      <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-300 dark:border-amber-800">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">
+                          <PackageCheck className="w-4 h-4" />
+                          <span>تسليم جزئي</span>
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            <span>{trackingData.delivered_items_count || 0} منتج مُسلّم</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                            <RotateCcw className="w-3 h-3" />
+                            <span>{trackingData.returned_items_count || 0} منتج راجع</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="space-y-3">
+                      {(order.order_items || order.items || []).map((item, index) => {
+                        const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
+                        const colorName = item.product_variants?.colors?.name || item.color || '';
+                        const sizeName = item.product_variants?.sizes?.name || item.size || '';
+                        const itemTotal = item.total_price || item.total || (item.unit_price * item.quantity) || 0;
+                        const itemStatus = item.item_status;
+                        
+                        return (
+                          <div key={index} className={`flex items-center justify-between p-3 bg-background rounded-lg ${
+                            itemStatus === 'delivered' ? 'border-l-4 border-green-500' :
+                            itemStatus === 'pending_return' || itemStatus === 'returned' ? 'border-l-4 border-orange-500' : ''
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              {itemStatus === 'delivered' && <CheckCircle className="w-4 h-4 text-green-500" />}
+                              {(itemStatus === 'pending_return' || itemStatus === 'returned') && <RotateCcw className="w-4 h-4 text-orange-500" />}
+                              <div>
+                                <p className="font-medium text-foreground">{productName}</p>
+                                <p className="text-sm text-muted-foreground">{colorName} {sizeName && `- ${sizeName}`} × {item.quantity}</p>
+                                {itemStatus && itemStatus !== 'pending' && (
+                                  <span className={`text-xs font-medium ${
+                                    itemStatus === 'delivered' ? 'text-green-600' :
+                                    itemStatus === 'pending_return' ? 'text-orange-600' :
+                                    itemStatus === 'returned' ? 'text-blue-600' : ''
+                                  }`}>
+                                    {itemStatus === 'delivered' ? 'مُسلّم' :
+                                     itemStatus === 'pending_return' ? 'بانتظار الإرجاع' :
+                                     itemStatus === 'returned' ? 'تم الإرجاع' : ''}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right"><p className="font-semibold text-primary">{itemTotal.toLocaleString()} د.ع</p></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                   <div className="mt-4 pt-4 border-t border-border space-y-2">
                     {order.order_type === 'return' ? (
                       /* 🔴 عرض خاص لطلبات الإرجاع */

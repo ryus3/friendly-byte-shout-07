@@ -2574,6 +2574,7 @@ export type Database = {
           created_at: string
           delivered_at: string | null
           id: string
+          item_direction: string | null
           item_status: string | null
           order_id: string
           product_id: string
@@ -2589,6 +2590,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           id?: string
+          item_direction?: string | null
           item_status?: string | null
           order_id: string
           product_id: string
@@ -2604,6 +2606,7 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           id?: string
+          item_direction?: string | null
           item_status?: string | null
           order_id?: string
           product_id?: string
