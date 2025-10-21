@@ -1488,7 +1488,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         // ✅ ملاحظات مختصرة بالعربية
         const returnQuantity = returnProduct?.quantity || 1;
-        orderNotes = `إرجاع: منتج ${returnProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${refundAmount.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
+        // المبلغ المدفوع للزبون = المبلغ الكلي - أجور التوصيل
+        const amountToCustomer = refundAmount - deliveryFeeAmount;
+        orderNotes = `إرجاع: منتج ${returnProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
 
         // ❗ لا نُنشئ order_items للإرجاع - سلة فارغة
         orderItems = [];
