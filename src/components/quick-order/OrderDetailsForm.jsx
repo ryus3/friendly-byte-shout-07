@@ -31,7 +31,8 @@ const OrderDetailsForm = ({
   applyLoyaltyDelivery = false,
   onToggleLoyaltyDelivery,
   cart,
-  removeFromCart
+  removeFromCart,
+  showProductSelection = true // ✅ prop جديد لإخفاء قسم المنتجات
 }) => {
   const { hasPermission } = useAuth();
   
@@ -84,133 +85,136 @@ const OrderDetailsForm = ({
         <CardDescription className="text-right">إدارة المنتجات في السلة وتفاصيل الطلب النهائية.</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
-        <div className="space-y-2 md:col-span-2">
-          <Label>المنتجات</Label>
-          <Button type="button" variant="outline" className="w-full" onClick={() => setProductSelectOpen(true)} disabled={!isDeliveryPartnerSelected || isSubmittingState}>
-            <PlusCircle className="w-4 h-4 ml-2" />
-            اختر المنتجات ({cart.length})
-          </Button>
-          <div className="space-y-2 pt-4">
-            {cart.map(item => (
-              <div key={item.id} className="flex items-center justify-between p-2 bg-secondary rounded-lg">
-                <div className="flex items-center gap-3">
-                  <img src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded-md" />
-                  <div>
-                    <p className="font-semibold">{item.productName}</p>
-                    <p className="text-xs text-muted-foreground">{`${item.size}, ${item.color}${item.quantity > 1 ? ` - عدد ${item.quantity}` : ''}`}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p>{item.total.toLocaleString()} د.ع</p>
-                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
-                    <Trash2 className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {cart.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">السلة فارغة</p>}
-          
-          {/* ملخص السعر مع خانة الخصم */}
-          {cart.length > 0 && (
-            <div className="mt-4 p-4 bg-secondary/50 rounded-lg border space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>مجموع المنتجات:</span>
-                <span>{subtotal.toLocaleString()} د.ع</span>
-              </div>
-              
-              <div className="flex justify-between text-sm">
-                <span>رسوم التوصيل:</span>
-                <span>{deliveryFee.toLocaleString()} د.ع</span>
-              </div>
-              
-              <div className="flex justify-between text-sm font-medium border-t pt-2">
-                <span>المجموع الكلي:</span>
-                <span>{(subtotal + deliveryFee).toLocaleString()} د.ع</span>
-              </div>
-              
-              {/* مزايا الولاء */}
-              {customerData?.currentTier?.discount_percentage > 0 && (
-                <div className="flex justify-between items-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">👑</span>
-                    <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
-                      خصم الولاء ({customerData.currentTier.discount_percentage}%)
-                    </span>
+        {/* ✅ قسم المنتجات يظهر فقط عندما showProductSelection = true */}
+        {showProductSelection && (
+          <div className="space-y-2 md:col-span-2">
+            <Label>المنتجات</Label>
+            <Button type="button" variant="outline" className="w-full" onClick={() => setProductSelectOpen(true)} disabled={!isDeliveryPartnerSelected || isSubmittingState}>
+              <PlusCircle className="w-4 h-4 ml-2" />
+              اختر المنتجات ({cart.length})
+            </Button>
+            <div className="space-y-2 pt-4">
+              {cart.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-2 bg-secondary rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <img src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded-md" />
+                    <div>
+                      <p className="font-semibold">{item.productName}</p>
+                      <p className="text-xs text-muted-foreground">{`${item.size}, ${item.color}${item.quantity > 1 ? ` - عدد ${item.quantity}` : ''}`}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-purple-700 dark:text-purple-300">
-                      {loyaltyDiscount.toLocaleString('ar')} د.ع
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={applyLoyaltyDiscount}
-                      onChange={onToggleLoyaltyDiscount}
-                      className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
-                    />
+                    <p>{item.total.toLocaleString()} د.ع</p>
+                    <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeFromCart(item.id)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-              )}
-              
-              {customerData?.currentTier?.free_delivery && activePartner === 'local' && (
-                <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm">🚚</span>
-                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                      توصيل مجاني (مستوى ذهبي)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-700 dark:text-green-300">
-                      {baseDeliveryFee.toLocaleString('ar')} د.ع
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={applyLoyaltyDelivery}
-                      onChange={onToggleLoyaltyDelivery}
-                      className="rounded border-green-300 text-green-600 focus:ring-green-500"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* خانة الخصم العادي */}
-              {hasPermission('apply_order_discounts') && (
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="manual_discount" className="text-sm flex items-center gap-1">
-                    <Tag className="w-4 h-4" /> خصم إضافي
-                  </Label>
-                  <Input
-                    id="manual_discount"
-                    type="number"
-                    min="0"
-                    max={subtotal}
-                    value={applyLoyaltyDiscount ? Math.max(0, discount - loyaltyDiscount) : discount} 
-                    onChange={(e) => {
-                      const manualDiscount = Math.max(0, Math.min(subtotal, Number(e.target.value)));
-                      const totalDiscount = applyLoyaltyDiscount ? loyaltyDiscount + manualDiscount : manualDiscount;
-                      setDiscount(totalDiscount);
-                    }} 
-                    className="w-24 text-right"
-                    placeholder="0"
-                  />
-                </div>
-              )}
-              
-              {discount > 0 && (
-                <div className="flex justify-between text-sm text-destructive">
-                  <span>الخصم:</span>
-                  <span>-{discount.toLocaleString()} د.ع</span>
-                </div>
-              )}
-              
-              <div className="flex justify-between text-base font-semibold border-t pt-2">
-                <span>المجموع النهائي:</span>
-                <span className="text-primary">{finalTotal.toLocaleString()} د.ع</span>
-              </div>
+              ))}
             </div>
-          )}
-        </div>
+            {cart.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">السلة فارغة</p>}
+            
+            {/* ملخص السعر مع خانة الخصم */}
+            {cart.length > 0 && (
+              <div className="mt-4 p-4 bg-secondary/50 rounded-lg border space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>مجموع المنتجات:</span>
+                  <span>{subtotal.toLocaleString()} د.ع</span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span>رسوم التوصيل:</span>
+                  <span>{deliveryFee.toLocaleString()} د.ع</span>
+                </div>
+                
+                <div className="flex justify-between text-sm font-medium border-t pt-2">
+                  <span>المجموع الكلي:</span>
+                  <span>{(subtotal + deliveryFee).toLocaleString()} د.ع</span>
+                </div>
+                
+                {/* مزايا الولاء */}
+                {customerData?.currentTier?.discount_percentage > 0 && (
+                  <div className="flex justify-between items-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">👑</span>
+                      <span className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                        خصم الولاء ({customerData.currentTier.discount_percentage}%)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-purple-700 dark:text-purple-300">
+                        {loyaltyDiscount.toLocaleString('ar')} د.ع
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={applyLoyaltyDiscount}
+                        onChange={onToggleLoyaltyDiscount}
+                        className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {customerData?.currentTier?.free_delivery && activePartner === 'local' && (
+                  <div className="flex justify-between items-center p-2 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-700">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🚚</span>
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                        توصيل مجاني (مستوى ذهبي)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-700 dark:text-green-300">
+                        {baseDeliveryFee.toLocaleString('ar')} د.ع
+                      </span>
+                      <input
+                        type="checkbox"
+                        checked={applyLoyaltyDelivery}
+                        onChange={onToggleLoyaltyDelivery}
+                        className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* خانة الخصم العادي */}
+                {hasPermission('apply_order_discounts') && (
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="manual_discount" className="text-sm flex items-center gap-1">
+                      <Tag className="w-4 h-4" /> خصم إضافي
+                    </Label>
+                    <Input
+                      id="manual_discount"
+                      type="number"
+                      min="0"
+                      max={subtotal}
+                      value={applyLoyaltyDiscount ? Math.max(0, discount - loyaltyDiscount) : discount} 
+                      onChange={(e) => {
+                        const manualDiscount = Math.max(0, Math.min(subtotal, Number(e.target.value)));
+                        const totalDiscount = applyLoyaltyDiscount ? loyaltyDiscount + manualDiscount : manualDiscount;
+                        setDiscount(totalDiscount);
+                      }} 
+                      className="w-24 text-right"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
+                
+                {discount > 0 && (
+                  <div className="flex justify-between text-sm text-destructive">
+                    <span>الخصم:</span>
+                    <span>-{discount.toLocaleString()} د.ع</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between text-base font-semibold border-t pt-2">
+                  <span>المجموع النهائي:</span>
+                  <span className="text-primary">{finalTotal.toLocaleString()} د.ع</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <div className="space-y-2">
           <Label htmlFor="details">نوع البضاعة</Label>
           <Input id="details" name="details" value={formData.details} onChange={handleChange} disabled={isSubmittingState} required placeholder="يتم ملؤه تلقائياً من المنتجات المختارة" />

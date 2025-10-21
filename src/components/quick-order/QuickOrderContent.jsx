@@ -2393,42 +2393,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             cities={cities}
             regions={regions}
           />
-          {/* ✅ إخفاء السلة الأصلية في طلبات الاستبدال */}
-          {formData.type !== 'exchange' && (
-            <OrderDetailsForm
-              formData={formData}
-              handleChange={handleChange}
-              handleSelectChange={handleSelectChange}
-              setProductSelectOpen={setProductSelectOpen}
-              isSubmittingState={isSubmittingState}
-              isDeliveryPartnerSelected={isDeliveryPartnerSelected}
-              packageSizes={packageSizes}
-              loadingPackageSizes={loadingPackageSizes}
-              activePartner={activePartner}
-              dataFetchError={dataFetchError}
-              settings={settings}
-              discount={discount}
-              setDiscount={setDiscount}
-              subtotal={subtotal}
-              total={total}
-              customerData={customerData}
-              loyaltyDiscount={loyaltyDiscount}
-              applyLoyaltyDiscount={applyLoyaltyDiscount}
-              onToggleLoyaltyDiscount={() => {
-                const newApply = !applyLoyaltyDiscount;
-                setApplyLoyaltyDiscount(newApply);
-                if (newApply) {
-                  setDiscount(prev => prev + loyaltyDiscount);
-                } else {
-                  setDiscount(prev => Math.max(0, prev - loyaltyDiscount));
-                }
-              }}
-              applyLoyaltyDelivery={applyLoyaltyDelivery}
-              onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
-              cart={cart}
-              removeFromCart={removeFromCart}
-            />
-          )}
+          {/* ✅ إظهار OrderDetailsForm دائماً، إخفاء قسم المنتجات فقط في الاستبدال */}
+          <OrderDetailsForm
+            formData={formData}
+            handleChange={handleChange}
+            handleSelectChange={handleSelectChange}
+            setProductSelectOpen={setProductSelectOpen}
+            isSubmittingState={isSubmittingState}
+            isDeliveryPartnerSelected={isDeliveryPartnerSelected}
+            packageSizes={packageSizes}
+            loadingPackageSizes={loadingPackageSizes}
+            activePartner={activePartner}
+            dataFetchError={dataFetchError}
+            settings={settings}
+            discount={discount}
+            setDiscount={setDiscount}
+            subtotal={subtotal}
+            total={total}
+            customerData={customerData}
+            loyaltyDiscount={loyaltyDiscount}
+            applyLoyaltyDiscount={applyLoyaltyDiscount}
+            onToggleLoyaltyDiscount={() => {
+              const newApply = !applyLoyaltyDiscount;
+              setApplyLoyaltyDiscount(newApply);
+              if (newApply) {
+                setDiscount(prev => prev + loyaltyDiscount);
+              } else {
+                setDiscount(prev => Math.max(0, prev - loyaltyDiscount));
+              }
+            }}
+            applyLoyaltyDelivery={applyLoyaltyDelivery}
+            onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
+            cart={cart}
+            removeFromCart={removeFromCart}
+            showProductSelection={formData.type !== 'exchange'} {/* ✅ إخفاء المنتجات فقط في الاستبدال */}
+          />
           
           {/* نماذج الاستبدال والإرجاع */}
           {formData.type === 'exchange' && (
@@ -2450,12 +2449,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   id: `incoming-${product.variantId || product.sku}-${Date.now()}`
                 }]);
               }}
-              onRemoveItem={(index) => {
-                setCart(prev => {
-                  const newCart = [...prev];
-                  newCart.splice(index, 1);
-                  return newCart;
-                });
+              onRemoveItem={(itemId) => {
+                // ✅ حذف بالـ ID بدلاً من index
+                setCart(prev => prev.filter(item => item.id !== itemId));
               }}
               deliveryFee={settings?.deliveryFee || 5000}
               onManualPriceDiffChange={setManualExchangePriceDiff}

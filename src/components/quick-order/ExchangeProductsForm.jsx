@@ -68,8 +68,8 @@ export const ExchangeProductsForm = ({
           
           {outgoingItems.length > 0 && (
             <div className="space-y-2">
-              {outgoingItems.map((item, index) => (
-                <div key={index} className="p-3 bg-background rounded-lg border flex justify-between items-start">
+              {outgoingItems.map((item) => (
+                <div key={item.id} className="p-3 bg-background rounded-lg border flex justify-between items-start">
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.productName}</p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -83,7 +83,7 @@ export const ExchangeProductsForm = ({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemoveItem(index)}
+                    onClick={() => onRemoveItem(item.id)}
                     className="text-red-500 hover:text-red-700"
                   >
                     <X className="w-4 h-4" />
@@ -100,8 +100,9 @@ export const ExchangeProductsForm = ({
             open={outgoingDialogOpen}
             onOpenChange={setOutgoingDialogOpen}
             onConfirm={(selectedItems) => {
+              console.log('✅ المنتجات الصادرة المختارة:', selectedItems);
               selectedItems.forEach(item => {
-                onAddOutgoing({ ...item, item_direction: 'outgoing' });
+                onAddOutgoing(item);
               });
               setOutgoingDialogOpen(false);
             }}
@@ -134,8 +135,8 @@ export const ExchangeProductsForm = ({
           
           {incomingItems.length > 0 && (
             <div className="space-y-2">
-              {incomingItems.map((item, index) => (
-                <div key={index} className="p-3 bg-background rounded-lg border border-green-200 flex justify-between items-start">
+              {incomingItems.map((item) => (
+                <div key={item.id} className="p-3 bg-background rounded-lg border border-green-200 flex justify-between items-start">
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.productName}</p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -149,7 +150,7 @@ export const ExchangeProductsForm = ({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => onRemoveItem(outgoingItems.length + index)}
+                    onClick={() => onRemoveItem(item.id)}
                     className="text-red-500 hover:text-red-700"
                   >
                     <X className="w-4 h-4" />
@@ -166,8 +167,9 @@ export const ExchangeProductsForm = ({
             open={incomingDialogOpen}
             onOpenChange={setIncomingDialogOpen}
             onConfirm={(selectedItems) => {
+              console.log('✅ المنتجات الواردة المختارة:', selectedItems);
               selectedItems.forEach(item => {
-                onAddIncoming({ ...item, item_direction: 'incoming' });
+                onAddIncoming(item);
               });
               setIncomingDialogOpen(false);
             }}
