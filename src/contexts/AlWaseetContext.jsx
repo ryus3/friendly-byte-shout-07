@@ -932,7 +932,20 @@ export const AlWaseetProvider = ({ children }) => {
       const byQrId = new Map(); // qr_id -> order
       const byTrackingNumber = new Map(); // tracking_number -> order
       
-      waseetOrders.forEach(order => {
+      // 🔧 تصفية الطلبات المحذوفة من الوسيط قبل بناء الخرائط
+      const filteredWaseetOrders = waseetOrders.filter(order => {
+        const statusId = String(order.status_id || order.statusId || '');
+        // تجاهل الطلبات المحذوفة (status_id = 1)
+        if (statusId === '1') {
+          devLog.log(`🚫 تجاهل طلب محذوف من الوسيط: ${order.qr_id || order.tracking_number}`);
+          return false;
+        }
+        return true;
+      });
+      
+      devLog.log(`📦 معالجة ${filteredWaseetOrders.length} طلب نشط من أصل ${waseetOrders.length} (تم تجاهل ${waseetOrders.length - filteredWaseetOrders.length} طلب محذوف)`);
+      
+      filteredWaseetOrders.forEach(order => {
         if (order.qr_id) byQrId.set(String(order.qr_id), order);
         if (order.tracking_number && order.tracking_number !== order.qr_id) {
           byTrackingNumber.set(String(order.tracking_number), order);
@@ -2995,6 +3008,15 @@ export const AlWaseetProvider = ({ children }) => {
             );
             
             try {
+              // ✅ تحديث delivery_status = null قبل التسجيل لمنع إعادة المزامنة
+              await supabase
+                .from('orders')
+                .update({ 
+                  delivery_status: null,
+                  notes: (localOrder.notes || '') + `\n[محذوف تلقائياً - ${new Date().toISOString()}]`
+                })
+                .eq('id', localOrder.id);
+              
               await supabase.from('auto_delete_log').insert({
                 order_id: localOrder.id,
                 order_number: localOrder.order_number,
