@@ -101,12 +101,10 @@ export const ExchangeProductsForm = ({
             onOpenChange={setOutgoingDialogOpen}
             onConfirm={(selectedItems) => {
               console.log('✅ المنتجات الصادرة المختارة:', selectedItems);
-              selectedItems.forEach(item => {
-                onAddOutgoing(item);
-              });
+              onAddOutgoing(selectedItems);
               setOutgoingDialogOpen(false);
             }}
-            initialCart={[]}
+            initialCart={outgoingItems}
           />
         </CardContent>
       </Card>
@@ -168,12 +166,10 @@ export const ExchangeProductsForm = ({
             onOpenChange={setIncomingDialogOpen}
             onConfirm={(selectedItems) => {
               console.log('✅ المنتجات الواردة المختارة:', selectedItems);
-              selectedItems.forEach(item => {
-                onAddIncoming(item);
-              });
+              onAddIncoming(selectedItems);
               setIncomingDialogOpen(false);
             }}
-            initialCart={[]}
+            initialCart={incomingItems}
           />
         </CardContent>
       </Card>

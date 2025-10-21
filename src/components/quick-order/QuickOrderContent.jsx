@@ -2433,21 +2433,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           {formData.type === 'exchange' && (
             <ExchangeProductsForm
               cart={cart}
-              onAddOutgoing={(product) => {
-                // ✅ إضافة المنتج الكامل مباشرة للـ cart
-                setCart(prev => [...prev, { 
-                  ...product, 
-                  item_direction: 'outgoing',
-                  id: `outgoing-${product.variantId || product.sku}-${Date.now()}`
-                }]);
+              onAddOutgoing={(selectedItems) => {
+                // ✅ مسح المنتجات الصادرة القديمة واستبدالها بالجديدة
+                setCart(prev => {
+                  const nonOutgoing = prev.filter(item => item.item_direction !== 'outgoing');
+                  const newOutgoing = selectedItems.map(item => ({
+                    ...item,
+                    item_direction: 'outgoing',
+                    id: `outgoing-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
+                  }));
+                  return [...nonOutgoing, ...newOutgoing];
+                });
               }}
-              onAddIncoming={(product) => {
-                // ✅ إضافة المنتج الكامل مباشرة للـ cart
-                setCart(prev => [...prev, { 
-                  ...product, 
-                  item_direction: 'incoming',
-                  id: `incoming-${product.variantId || product.sku}-${Date.now()}`
-                }]);
+              onAddIncoming={(selectedItems) => {
+                // ✅ مسح المنتجات الواردة القديمة واستبدالها بالجديدة
+                setCart(prev => {
+                  const nonIncoming = prev.filter(item => item.item_direction !== 'incoming');
+                  const newIncoming = selectedItems.map(item => ({
+                    ...item,
+                    item_direction: 'incoming',
+                    id: `incoming-${item.variantId || item.sku}-${Date.now()}-${Math.random()}`
+                  }));
+                  return [...nonIncoming, ...newIncoming];
+                });
               }}
               onRemoveItem={(itemId) => {
                 // ✅ حذف بالـ ID بدلاً من index
