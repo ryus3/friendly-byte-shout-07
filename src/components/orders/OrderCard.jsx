@@ -523,104 +523,17 @@ const OrderCard = React.memo(({
             </div>
 
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                  <div className="flex items-center gap-2 text-right">
                   <div className="space-y-1">
-                    {employeeProfit > 0 && (
-                      <div className="flex items-center gap-1 text-xs justify-end">
-                        <span className="font-bold text-emerald-600">
-                          {employeeProfit.toLocaleString()} د.ع
-                        </span>
-                        <span className="text-muted-foreground">:ربح الموظف</span>
-                      </div>
-                    )}
-                    
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-primary/70 font-bold">د.ع</span>
-                          <span className="font-bold text-lg text-primary">
-                            {(() => {
-                              // عرض المبلغ السالب لطلبات الإرجاع
-                              if (order.order_type === 'return') {
-                                return '-' + Math.abs(order.refund_amount || 0).toLocaleString();
-                              }
-                              
-                              // ✅ للاستبدال/الاستبدال: عرض final_amount مباشرة (يحتوي على فرق السعر + التوصيل)
-                              if (order.order_type === 'replacement' || order.order_type === 'exchange') {
-                                return Number(order.final_amount || 0).toLocaleString();
-                              }
-                              
-                              // للطلبات العادية: حساب عادي
-                              const totalAmount = Number(order.total_amount || 0);
-                              const discount = Number(order.discount || 0);
-                              const priceIncrease = Number(order.price_increase || 0);
-                              const deliveryFee = Number(order.delivery_fee || 0);
-                              const displayPrice = totalAmount - discount + priceIncrease + deliveryFee;
-                              return displayPrice.toLocaleString();
-                            })()}
-                          </span>
-                          <span className="text-xs text-muted-foreground font-medium">
-                            {order.order_type === 'return' ? 'مبلغ الإرجاع' : 'شامل التوصيل'}
-                          </span>
-                        </div>
-                       
-                       {/* شارة الخصم - برتقالي تدرج مع أيقونة */}
-                       {Number(order.discount || 0) > 0 && order.order_type !== 'return' && (
-                         <div className="relative group/discount">
-                           <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
-                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
-                             <TrendingDown className="w-3 h-3" />
-                             <span>خصم {Number(order.discount).toLocaleString()}</span>
-                           </Badge>
-                         </div>
-                       )}
-                       
-                       {/* شارة الزيادة - أخضر تدرج مع أيقونة */}
-                       {Number(order.price_increase || 0) > 0 && order.order_type !== 'return' && order.order_type !== 'replacement' && (
-                         <div className="relative group/increase">
-                           <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full blur-sm"></div>
-                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs px-2 py-0.5 shadow-md">
-                             <TrendingUp className="w-3 h-3" />
-                             <span>زيادة {Number(order.price_increase).toLocaleString()}</span>
-                           </Badge>
-                         </div>
-                       )}
-                       
-                        {/* شارة الإرجاع - أحمر تدرج مع أيقونة */}
-                        {order.order_type === 'return' && (
-                          <div className="relative group/return">
-                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
-                            <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
-                              <RotateCcw className="w-3 h-3" />
-                              <span>ترجيع {Math.abs(order.refund_amount || 0).toLocaleString()}</span>
-                            </Badge>
-                          </div>
-                        )}
-                       
-                       {/* شارة الاستبدال - بنفسجي تدرج مع أيقونة */}
-                       {order.order_type === 'replacement' && (
-                         <div className="relative group/exchange">
-                           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-full blur-sm"></div>
-                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white text-xs px-2 py-0.5 shadow-md">
-                             <RefreshCcw className="w-3 h-3" />
-                             <span>استبدال</span>
-                           </Badge>
-                         </div>
-                       )}
-                     </div>
-                    
-                    {paymentStatus && (
-                      <div className="flex items-center gap-1 justify-end">
-                        <span className="text-xs font-medium">{paymentStatus.label}</span>
-                        <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
-                      </div>
-                    )}
-                  </div>
+...
+                  )}
                 </div>
+              </div>
 
                 {productSummary && (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="min-w-0 flex-1">
+                  <div className="mr-auto">
+                    <div className="min-w-0">
                       
                        {/* ✅ تصميم احترافي لطلبات الاستبدال */}
                       {productSummary.type === 'exchange' && (
