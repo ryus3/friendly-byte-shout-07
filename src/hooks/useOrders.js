@@ -124,10 +124,10 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           // ✅ حجز المنتجات الصادرة فوراً
           console.log('🔒 حجز المنتجات الصادرة...');
           for (const item of exchangeMetadata.outgoing_items) {
-            const { error: reserveError } = await supabase.rpc('reserve_variant_stock', {
+            const { error: reserveError } = await supabase.rpc('reserve_stock_for_order', {
+              p_product_id: item.product_id,
               p_variant_id: item.variant_id,
-              p_quantity: item.quantity || 1,
-              p_order_id: newOrder.id
+              p_quantity: item.quantity || 1
             });
             
             if (reserveError) {
@@ -138,8 +138,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           }
         }
       }
-      // ✅ للطلبات العادية والإرجاع: نفس المنطق القديم
-      else if (cartItems && cartItems.length > 0) {
+      // ✅ للطلبات العادية فقط (ليس الإرجاع)
+      else if (cartItems && cartItems.length > 0 && orderType !== 'return') {
         const orderItemsToInsert = cartItems.map(item => ({
           order_id: newOrder.id,
           product_id: item.product_id,

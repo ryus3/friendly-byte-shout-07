@@ -408,7 +408,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                       <div className="relative group/out">
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-2.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
+                        <div className="relative p-2.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300 w-full">
                           {/* أيقونة وعنوان */}
                           <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
@@ -471,7 +471,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                       <div className="relative group/in">
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-2.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
+                        <div className="relative p-2.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300 w-full">
                           {/* أيقونة وعنوان */}
                           <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
