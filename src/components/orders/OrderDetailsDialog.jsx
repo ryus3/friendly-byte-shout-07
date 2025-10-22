@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2, RotateCcw } from 'lucide-react';
+import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2, RotateCcw, PackageCheck } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
