@@ -4635,7 +4635,7 @@ export type Database = {
           action: string
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           record_id: string | null
           table_name: string
           user_agent: string | null
@@ -4645,7 +4645,7 @@ export type Database = {
           action: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name: string
           user_agent?: string | null
@@ -4655,7 +4655,7 @@ export type Database = {
           action?: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name?: string
           user_agent?: string | null
@@ -5454,10 +5454,7 @@ export type Database = {
         }
         Returns: Json
       }
-      apply_monthly_city_discount_trigger: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      apply_monthly_city_discount_trigger: { Args: never; Returns: undefined }
       approve_employee_complete: {
         Args: { p_full_name: string; p_user_id: string }
         Returns: Json
@@ -5470,22 +5467,10 @@ export type Database = {
           user_email: string
         }[]
       }
-      auto_apply_city_benefits: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      auto_cleanup_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      auto_select_monthly_city_discount: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      bytea_to_text: {
-        Args: { data: string }
-        Returns: string
-      }
+      auto_apply_city_benefits: { Args: never; Returns: Json }
+      auto_cleanup_notifications: { Args: never; Returns: undefined }
+      auto_select_monthly_city_discount: { Args: never; Returns: undefined }
+      bytea_to_text: { Args: { data: string }; Returns: string }
       calculate_employee_item_profit: {
         Args: {
           p_base_profit_amount: number
@@ -5504,30 +5489,15 @@ export type Database = {
         }
         Returns: number
       }
-      calculate_loyalty_points_per_order: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      calculate_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      calculate_missing_profits: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      calculate_loyalty_points_per_order: { Args: never; Returns: number }
+      calculate_main_cash_balance: { Args: never; Returns: number }
+      calculate_missing_profits: { Args: never; Returns: number }
       calculate_order_profit_fixed_amounts: {
         Args: { order_id_input: string }
         Returns: undefined
       }
-      calculate_order_profits: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
-      calculate_real_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      calculate_order_profits: { Args: { p_order_id: string }; Returns: Json }
+      calculate_real_main_cash_balance: { Args: never; Returns: number }
       calculate_sold_quantity: {
         Args: { p_product_id: string; p_variant_id: string }
         Returns: number
@@ -5545,14 +5515,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      can_manage_finances: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      can_view_all_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      can_manage_finances: { Args: never; Returns: boolean }
+      can_view_all_orders: { Args: never; Returns: boolean }
       check_city_benefits: {
         Args: { p_city_name: string; p_order_amount: number }
         Returns: Json
@@ -5585,10 +5549,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      cleanup_deleted_purchases: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      cleanup_deleted_purchases: { Args: never; Returns: undefined }
       cleanup_delivery_invoices_keep_latest: {
         Args: { p_keep_count?: number }
         Returns: Json
@@ -5601,26 +5562,11 @@ export type Database = {
         Args: { p_days_back?: number }
         Returns: Json
       }
-      cleanup_expired_telegram_selections: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_backups: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_old_delivery_invoices: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      cleanup_old_notifications: {
-        Args: { p_days?: number }
-        Returns: number
-      }
-      cleanup_reserved_stock: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      cleanup_expired_telegram_selections: { Args: never; Returns: undefined }
+      cleanup_old_backups: { Args: never; Returns: undefined }
+      cleanup_old_delivery_invoices: { Args: never; Returns: Json }
+      cleanup_old_notifications: { Args: { p_days?: number }; Returns: number }
+      cleanup_reserved_stock: { Args: never; Returns: number }
       cleanup_stock_notification_history: {
         Args: { p_days?: number }
         Returns: number
@@ -5650,22 +5596,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      daily_notifications_cleanup: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      daitch_mokotoff: {
-        Args: { "": string }
-        Returns: string[]
-      }
-      debug_orders_rls: {
-        Args: { p_user_id?: string }
-        Returns: Json
-      }
-      debug_reservation_triggers: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      daily_notifications_cleanup: { Args: never; Returns: Json }
+      daitch_mokotoff: { Args: { "": string }; Returns: string[] }
+      debug_orders_rls: { Args: { p_user_id?: string }; Returns: Json }
+      debug_reservation_triggers: { Args: never; Returns: Json }
       delete_ai_order_safely: {
         Args: { p_ai_order_id: string }
         Returns: boolean
@@ -5674,24 +5608,15 @@ export type Database = {
         Args: { p_purchase_id: string }
         Returns: Json
       }
-      dmetaphone: {
-        Args: { "": string }
-        Returns: string
-      }
-      dmetaphone_alt: {
-        Args: { "": string }
-        Returns: string
-      }
-      expire_old_points: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      extract_actual_address: {
-        Args:
-          | { input_text: string }
-          | { p_city_name: string; p_original_text: string }
-        Returns: string
-      }
+      dmetaphone: { Args: { "": string }; Returns: string }
+      dmetaphone_alt: { Args: { "": string }; Returns: string }
+      expire_old_points: { Args: never; Returns: undefined }
+      extract_actual_address:
+        | {
+            Args: { p_city_name: string; p_original_text: string }
+            Returns: string
+          }
+        | { Args: { input_text: string }; Returns: string }
       extract_product_items_from_text: {
         Args: { input_text: string }
         Returns: Json
@@ -5704,22 +5629,26 @@ export type Database = {
         Args: { input_text: string }
         Returns: number
       }
-      extractphonefromtext: {
-        Args: { input_text: string }
-        Returns: string
-      }
+      extractphonefromtext: { Args: { input_text: string }; Returns: string }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
           product_id: string
         }[]
       }
-      finalize_stock_item: {
-        Args:
-          | { p_product_id: string; p_quantity: number; p_variant_id: string }
-          | { p_quantity: number; p_variant_id: string }
-        Returns: boolean
-      }
+      finalize_stock_item:
+        | {
+            Args: { p_quantity: number; p_variant_id: string }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_product_id: string
+              p_quantity: number
+              p_variant_id: string
+            }
+            Returns: undefined
+          }
       find_city_in_cache: {
         Args: { p_city_text: string }
         Returns: {
@@ -5740,50 +5669,29 @@ export type Database = {
           similarity_score: number
         }[]
       }
-      fix_all_damaged_alwaseet_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      fix_all_damaged_alwaseet_orders: { Args: never; Returns: Json }
       fix_alwaseet_order_stock: {
         Args: { p_tracking_number: string }
         Returns: Json
       }
-      fix_corrupted_invoice_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      fix_corrupted_invoice_data: { Args: never; Returns: Json }
       fix_existing_purchase_shipping: {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
       }
-      fix_incorrect_price_increase_v2: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      fix_regions_cities_linking: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      fix_incorrect_price_increase_v2: { Args: never; Returns: Json }
+      fix_regions_cities_linking: { Args: never; Returns: Json }
       generate_customer_promo_code: {
         Args: { customer_id_param: string }
         Returns: string
       }
-      generate_employee_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_employee_code: { Args: never; Returns: string }
       generate_employee_telegram_code: {
         Args: { p_user_id: string }
         Returns: string
       }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_order_qr_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_order_number: { Args: never; Returns: string }
+      generate_order_qr_id: { Args: never; Returns: string }
       generate_product_barcode: {
         Args: {
           p_color_name?: string
@@ -5803,14 +5711,8 @@ export type Database = {
         }
         Returns: Json
       }
-      generate_purchase_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_ry_settlement_invoice_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_purchase_number: { Args: never; Returns: string }
+      generate_ry_settlement_invoice_number: { Args: never; Returns: string }
       generate_settlement_invoice_number: {
         Args: { p_hint?: string }
         Returns: string
@@ -5824,7 +5726,7 @@ export type Database = {
         Returns: string
       }
       get_all_inventory_simple: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           available_quantity: number
           category_name: string
@@ -5854,10 +5756,7 @@ export type Database = {
         }
         Returns: Json
       }
-      get_default_cash_source: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_default_cash_source: { Args: never; Returns: string }
       get_employee_by_telegram_chat_id: {
         Args: { p_chat_id: number }
         Returns: Json
@@ -5879,12 +5778,9 @@ export type Database = {
           total_variants: number
         }[]
       }
-      get_employee_last_sync: {
-        Args: { p_employee_id: string }
-        Returns: Json
-      }
+      get_employee_last_sync: { Args: { p_employee_id: string }; Returns: Json }
       get_filters_data: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           categories: Json
           colors: Json
@@ -5914,7 +5810,7 @@ export type Database = {
         }[]
       }
       get_inventory_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           archived_products_count: number
           departments_data: Json
@@ -5929,7 +5825,7 @@ export type Database = {
         }[]
       }
       get_last_cities_regions_sync: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cities_count: number
           last_sync_at: string
@@ -5939,7 +5835,7 @@ export type Database = {
         }[]
       }
       get_last_successful_cities_regions_sync: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cities_count: number
           last_sync_at: string
@@ -5949,7 +5845,7 @@ export type Database = {
         }[]
       }
       get_products_sold_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           last_sold_date: string
           orders_count: number
@@ -5968,7 +5864,7 @@ export type Database = {
         Returns: Json
       }
       get_sales_summary_stats: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           total_cogs: number
           total_delivery_fees: number
@@ -5982,7 +5878,7 @@ export type Database = {
         Returns: Json
       }
       get_unified_orders_analytics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           completed_orders: number
           pending_orders: number
@@ -5995,7 +5891,7 @@ export type Database = {
         }[]
       }
       get_unified_orders_analytics_by_user: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           completed_orders: number
           pending_orders: number
@@ -6007,12 +5903,9 @@ export type Database = {
           total_revenue: number
         }[]
       }
-      get_unified_profits_analytics: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_unified_profits_analytics: { Args: never; Returns: Json }
       get_unique_employees_count_with_settlements: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: number
       }
       get_user_allowed_filters: {
@@ -6079,10 +5972,7 @@ export type Database = {
           tracking_number: string
         }[]
       }
-      get_user_highest_role: {
-        Args: { p_user_id: string }
-        Returns: string
-      }
+      get_user_highest_role: { Args: { p_user_id: string }; Returns: string }
       get_user_product_access: {
         Args: { p_permission_type: string; p_user_id: string }
         Returns: Json
@@ -6101,27 +5991,77 @@ export type Database = {
       http: {
         Args: { request: Database["public"]["CompositeTypes"]["http_request"] }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "http_request"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_delete: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
-      http_get: {
-        Args: { data: Json; uri: string } | { uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_delete:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+      http_get:
+        | {
+            Args: { uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_head: {
         Args: { uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_header: {
         Args: { field: string; value: string }
         Returns: Database["public"]["CompositeTypes"]["http_header"]
+        SetofOptions: {
+          from: "*"
+          to: "http_header"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       http_list_curlopt: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           curlopt: string
           value: string
@@ -6130,45 +6070,54 @@ export type Database = {
       http_patch: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_post: {
-        Args:
-          | { content: string; content_type: string; uri: string }
-          | { data: Json; uri: string }
-        Returns: Database["public"]["CompositeTypes"]["http_response"]
-      }
+      http_post:
+        | {
+            Args: { content: string; content_type: string; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: { data: Json; uri: string }
+            Returns: Database["public"]["CompositeTypes"]["http_response"]
+            SetofOptions: {
+              from: "*"
+              to: "http_response"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       http_put: {
         Args: { content: string; content_type: string; uri: string }
         Returns: Database["public"]["CompositeTypes"]["http_response"]
+        SetofOptions: {
+          from: "*"
+          to: "http_response"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      http_reset_curlopt: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      http_reset_curlopt: { Args: never; Returns: boolean }
       http_set_curlopt: {
         Args: { curlopt: string; value: string }
         Returns: boolean
       }
-      is_admin_or_deputy: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_admin_or_deputy_secure: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_financial_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_hr_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_manager_user: {
-        Args: { user_id?: string }
-        Returns: boolean
-      }
+      is_admin_or_deputy: { Args: never; Returns: boolean }
+      is_admin_or_deputy_secure: { Args: never; Returns: boolean }
+      is_financial_admin: { Args: never; Returns: boolean }
+      is_hr_admin: { Args: never; Returns: boolean }
+      is_manager_user: { Args: { user_id?: string }; Returns: boolean }
       link_employee_telegram_code: {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
@@ -6188,18 +6137,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      log_cities_regions_sync_start: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      log_cities_regions_sync_start: { Args: never; Returns: string }
       log_sensitive_access: {
         Args: { p_action: string; p_record_id?: string; p_table_name: string }
         Returns: undefined
       }
-      manage_background_sync_cron: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      manage_background_sync_cron: { Args: never; Returns: undefined }
       mark_invoice_orders_synced: {
         Args: { p_external_id: string; p_partner?: string }
         Returns: boolean
@@ -6208,33 +6151,27 @@ export type Database = {
         Args: { p_expense_id: string }
         Returns: Json
       }
-      migrate_employee_dues_expenses: {
-        Args:
-          | Record<PropertyKey, never>
-          | {
+      migrate_employee_dues_expenses:
+        | {
+            Args: {
               p_employee_id?: string
               p_from_date?: string
               p_limit?: number
               p_to_date?: string
             }
-        Returns: Json
-      }
+            Returns: Json
+          }
+        | { Args: never; Returns: Json }
       migrate_existing_customers_to_phone_loyalty: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: undefined
       }
       normalize_arabic_location: {
         Args: { input_text: string }
         Returns: string
       }
-      normalize_arabic_text: {
-        Args: { input_text: string }
-        Returns: string
-      }
-      normalize_phone_number: {
-        Args: { phone_input: string }
-        Returns: string
-      }
+      normalize_arabic_text: { Args: { input_text: string }; Returns: string }
+      normalize_phone_number: { Args: { phone_input: string }; Returns: string }
       parse_address_using_cache: {
         Args: { p_address_text: string }
         Returns: Json
@@ -6295,10 +6232,7 @@ export type Database = {
         }
         Returns: Json
       }
-      refresh_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      refresh_main_cash_balance: { Args: never; Returns: undefined }
       release_reserved_stock: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
@@ -6319,28 +6253,16 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
       }
-      restore_manager_orders: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      return_items_to_inventory: {
-        Args: { p_order_id: string }
-        Returns: Json
-      }
+      restore_manager_orders: { Args: never; Returns: Json }
+      return_items_to_inventory: { Args: { p_order_id: string }; Returns: Json }
       return_stock_item: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: undefined
       }
-      review_archive_status: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      run_maintenance: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      review_archive_status: { Args: never; Returns: undefined }
+      run_maintenance: { Args: never; Returns: Json }
       scan_and_fix_inventory_consistency: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           action_taken: string
           new_reserved: number
@@ -6352,14 +6274,8 @@ export type Database = {
           variant_info: string
         }[]
       }
-      select_random_city_for_monthly_discount: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      setup_monthly_city_benefits: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      select_random_city_for_monthly_discount: { Args: never; Returns: Json }
+      setup_monthly_city_benefits: { Args: never; Returns: Json }
       should_keep_reservation_for_order: {
         Args: {
           p_delivery_partner?: string
@@ -6423,18 +6339,12 @@ export type Database = {
           region_name: string
         }[]
       }
-      soundex: {
-        Args: { "": string }
-        Returns: string
-      }
+      soundex: { Args: { "": string }; Returns: string }
       sync_alwaseet_invoice_data: {
         Args: { p_invoice_data: Json; p_orders_data: Json }
         Returns: Json
       }
-      sync_employee_orders: {
-        Args: { p_employee_id: string }
-        Returns: Json
-      }
+      sync_employee_orders: { Args: { p_employee_id: string }; Returns: Json }
       sync_missing_invoice_targeted: {
         Args: { p_employee_id: string; p_invoice_id: string }
         Returns: Json
@@ -6447,26 +6357,14 @@ export type Database = {
         Args: { p_tracking_number: string }
         Returns: Json
       }
-      sync_user_scoped_received_invoices: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      text_soundex: {
-        Args: { "": string }
-        Returns: string
-      }
-      text_to_bytea: {
-        Args: { data: string }
-        Returns: string
-      }
+      sync_user_scoped_received_invoices: { Args: never; Returns: Json }
+      text_soundex: { Args: { "": string }; Returns: string }
+      text_to_bytea: { Args: { data: string }; Returns: string }
       translate_arabic_color: {
         Args: { arabic_color: string }
         Returns: string
       }
-      translate_arabic_size: {
-        Args: { arabic_size: string }
-        Returns: string
-      }
+      translate_arabic_size: { Args: { arabic_size: string }; Returns: string }
       update_cash_source_balance: {
         Args: {
           p_amount: number
@@ -6479,14 +6377,8 @@ export type Database = {
         }
         Returns: Json
       }
-      update_city_order_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_customer_gender_classification: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_city_order_stats: { Args: never; Returns: undefined }
+      update_customer_gender_classification: { Args: never; Returns: undefined }
       update_customer_phone_loyalty: {
         Args: {
           p_customer_city?: string
@@ -6561,16 +6453,23 @@ export type Database = {
         }
         Returns: Json
       }
-      urlencode: {
-        Args: { data: Json } | { string: string } | { string: string }
-        Returns: string
-      }
-      username_exists: {
-        Args: { p_username: string }
-        Returns: boolean
-      }
+      urlencode:
+        | { Args: { data: Json }; Returns: string }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { string: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+      username_exists: { Args: { p_username: string }; Returns: boolean }
       validate_cash_balance_sync: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           current_balance: number
           difference: number
@@ -6580,7 +6479,7 @@ export type Database = {
         }[]
       }
       validate_cash_source_balances: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           calculated_balance: number
           cash_source_name: string
@@ -6589,18 +6488,9 @@ export type Database = {
           recorded_balance: number
         }[]
       }
-      validate_invoice_data_integrity: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      validate_promo_code: {
-        Args: { promo_code_param: string }
-        Returns: Json
-      }
-      verify_invoice_1849184_for_manager: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      validate_invoice_data_integrity: { Args: never; Returns: Json }
+      validate_promo_code: { Args: { promo_code_param: string }; Returns: Json }
+      verify_invoice_1849184_for_manager: { Args: never; Returns: Json }
     }
     Enums: {
       [_ in never]: never
@@ -6611,7 +6501,7 @@ export type Database = {
         value: string | null
       }
       http_request: {
-        method: unknown | null
+        method: unknown
         uri: string | null
         headers: Database["public"]["CompositeTypes"]["http_header"][] | null
         content_type: string | null
