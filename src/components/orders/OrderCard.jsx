@@ -619,8 +619,8 @@ const OrderCard = React.memo(({
                 </div>
 
                 {productSummary && (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div className="min-w-0 flex-1">
+                  <div className="ml-auto">
+                    <div className="min-w-0">
                       
                        {/* ✅ تصميم احترافي لطلبات الاستبدال */}
                       {productSummary.type === 'exchange' && (
