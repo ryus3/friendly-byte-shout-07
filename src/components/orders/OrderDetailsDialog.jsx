@@ -408,7 +408,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                       <div className="relative group/out">
                         <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-orange-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-2.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300">
+                        <div className="relative p-2.5 bg-gradient-to-br from-orange-50/90 to-amber-50/90 dark:from-orange-950/30 dark:to-amber-950/30 rounded-xl border border-orange-200/50 dark:border-orange-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
                           {/* أيقونة وعنوان */}
                           <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
@@ -419,7 +419,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
+                                <span className="text-[11px] font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">
                                   صادر للزبون
                                 </span>
                                 <div className="h-px flex-1 bg-gradient-to-r from-orange-300/50 to-transparent"></div>
@@ -443,20 +443,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                                   </div>
                                 )}
                                 
-                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                <span className="font-semibold text-[11px] text-gray-900 dark:text-gray-100">
                                   {item.product_name}
                                 </span>
                                 {item.color && (
-                                  <span className="text-[10px] text-orange-600 dark:text-orange-400">
+                                  <span className="text-[11px] text-orange-600 dark:text-orange-400">
                                     • {item.color}
                                   </span>
                                 )}
                                 {item.size && (
-                                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
+                                  <span className="px-1.5 py-0.5 text-[11px] font-medium bg-orange-200/50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full">
                                     {item.size}
                                   </span>
                                 )}
-                                <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">
+                                <span className="text-[11px] text-gray-600 dark:text-gray-400 ml-auto">
                                   × {item.quantity}
                                 </span>
                               </div>
@@ -471,7 +471,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                       <div className="relative group/in">
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-xl blur-[2px] transition-all duration-300"></div>
                         
-                        <div className="relative p-2.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300">
+                        <div className="relative p-2.5 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
                           {/* أيقونة وعنوان */}
                           <div className="flex items-center gap-2.5 mb-2.5">
                             <div className="flex-shrink-0 relative">
@@ -482,7 +482,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
                                   وارد من الزبون
                                 </span>
                                 <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
@@ -506,20 +506,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                                   </div>
                                 )}
                                 
-                                <span className="font-semibold text-xs text-gray-900 dark:text-gray-100">
+                                <span className="font-semibold text-[11px] text-gray-900 dark:text-gray-100">
                                   {item.product_name}
                                 </span>
                                 {item.color && (
-                                  <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                  <span className="text-[11px] text-blue-600 dark:text-blue-400">
                                     • {item.color}
                                   </span>
                                 )}
                                 {item.size && (
-                                  <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                  <span className="px-1.5 py-0.5 text-[11px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
                                     {item.size}
                                   </span>
                                 )}
-                                <span className="text-xs text-gray-600 dark:text-gray-400 ml-auto">
+                                <span className="text-[11px] text-gray-600 dark:text-gray-400 ml-auto">
                                   × {item.quantity}
                                 </span>
                               </div>
@@ -638,8 +638,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                           </div>
                         )}
                         
-                        {/* الزيادة */}
-                        {(order.price_increase || 0) > 0 && (
+                        {/* الزيادة - إخفاء في طلبات الاستبدال */}
+                        {(order.price_increase || 0) > 0 && order.order_type !== 'replacement' && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-green-600 font-medium">زيادة السعر</span>
                             <span className="text-green-600 font-bold">+{(order.price_increase || 0).toLocaleString()} د.ع</span>
