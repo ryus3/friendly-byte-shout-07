@@ -2380,7 +2380,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // إضافة المنتجات الجديدة مع item_direction مباشرة
       const newOutgoing = (selectedItems || []).map(item => ({
-        id: `outgoing-${item.variantId}-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         productId: item.productId,
         variantId: item.variantId,
         productName: item.productName,
@@ -2416,7 +2416,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // إضافة المنتجات الجديدة مع item_direction مباشرة
       const newIncoming = (selectedItems || []).map(item => ({
-        id: `incoming-${item.variantId}-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         productId: item.productId,
         variantId: item.variantId,
         productName: item.productName,

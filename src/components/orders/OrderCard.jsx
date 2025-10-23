@@ -144,21 +144,21 @@ const OrderCard = React.memo(({
       };
     }
     
-    // ✅ معالجة خاصة لطلبات الإرجاع
-    if (order.order_type === 'return' && order.order_items) {
-      const incomingItems = order.order_items.filter(item => item.item_direction === 'incoming');
-      
-      return {
-        type: 'return',
-        incoming: incomingItems.map(item => ({
-          productName: item.product_name,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          colorHex: item.color_hex
-        }))
-      };
-    }
+  // ✅ معالجة خاصة لطلبات الإرجاع
+  if (order.order_type === 'return' && order.order_items) {
+    const incomingItems = order.order_items.filter(item => item.item_direction === 'incoming');
+    
+    return {
+      type: 'return',
+      incoming: incomingItems.map(item => ({
+        productName: item.products?.name || item.product_name || 'منتج',
+        color: item.product_variants?.colors?.name || item.color || '',
+        size: item.product_variants?.sizes?.name || item.size || '',
+        quantity: item.quantity || 1,
+        colorHex: item.product_variants?.colors?.hex_code || item.color_hex || null
+      }))
+    };
+  }
     
     if (!order.items || order.items.length === 0) return null;
     
