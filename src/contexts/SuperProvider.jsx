@@ -1001,8 +1001,10 @@ export const SuperProvider = ({ children }) => {
         ? (arg1.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`)
         : (trackingNumberArg || `RYUS-${Date.now().toString().slice(-6)}`);
 
-      // ✅ حجز المخزون - تجاهل للإرجاع والاستبدال
+      // ✅ حجز المخزون
       const reservedSoFar = [];
+
+      // ✅ 1. طلبات عادية: حجز كل المنتجات
       if (!isReturn && !isExchange && items.length > 0) {
         for (const it of items) {
           const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
@@ -1024,10 +1026,53 @@ export const SuperProvider = ({ children }) => {
           }
           reservedSoFar.push(it);
         }
-      } else if (isReturn) {
+      } 
+      // ✅ 2. طلبات الاستبدال: حجز المنتجات الصادرة فقط
+      else if (isExchange) {
+        const exchangeMetadata = isPayload 
+          ? arg1?.exchange_metadata 
+          : deliveryPartnerDataArg?.exchange_metadata;
+        
+        if (exchangeMetadata?.outgoing_items && exchangeMetadata.outgoing_items.length > 0) {
+          console.log('🔒 حجز المنتجات الصادرة للاستبدال...');
+          
+          for (const item of exchangeMetadata.outgoing_items) {
+            const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
+              p_product_id: item.product_id,
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity || 1
+            });
+            
+            if (reserveErr || reserveRes?.success === false) {
+              // تراجع عن أي حجوزات سابقة
+              for (const r of reservedSoFar) {
+                await supabase.rpc('release_stock_item', {
+                  p_product_id: r.product_id,
+                  p_variant_id: r.variant_id,
+                  p_quantity: r.quantity
+                });
+              }
+              const msg = reserveErr?.message || reserveRes?.error || `المخزون المتاح غير كافٍ لـ ${item.product_name}`;
+              return { success: false, error: msg };
+            }
+            
+            reservedSoFar.push({
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity || 1
+            });
+            
+            console.log(`✅ تم حجز ${item.quantity} من ${item.product_name}`);
+          }
+          
+          console.log('✅ تم حجز جميع المنتجات الصادرة بنجاح');
+        } else {
+          console.log('⏭️ لا توجد منتجات صادرة لحجزها');
+        }
+      } 
+      // ✅ 3. طلبات الإرجاع: لا حجز
+      else if (isReturn) {
         console.log('⏭️ تخطي حجز المخزون - طلب إرجاع');
-      } else if (isExchange) {
-        console.log('⏭️ تخطي حجز المخزون - طلب استبدال (سيُعالج في الحالة 21/17)');
       }
 
       // بيانات الطلب للإدراج
