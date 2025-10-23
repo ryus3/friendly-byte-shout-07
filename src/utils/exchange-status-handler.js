@@ -26,8 +26,10 @@ export const handleExchangeStatusChange = async (orderId, newDeliveryStatus) => 
       return { success: true, skipped: true };
     }
 
-    // ✅ الحالة 21: تسليم للزبون (تحويل الحجز إلى مبيعات)
-    if (newDeliveryStatus === '21' || newDeliveryStatus === 21) {
+    // ✅ الحالة 4 أو 21: تسليم للزبون (تحويل الحجز إلى مبيعات فعلية)
+    // الحالة 4: في الطريق للزبون | الحالة 21: تم التسليم
+    if (newDeliveryStatus === '21' || newDeliveryStatus === 21 || 
+        newDeliveryStatus === '4' || newDeliveryStatus === 4) {
       console.log('🔄 تحويل الحجز إلى مبيعات للطلب', orderId);
       
       // ✅ 1. إلغاء الحجز أولاً

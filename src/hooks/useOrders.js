@@ -113,29 +113,18 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         
         // ✅ حفظ order_items
         if (orderItemsToInsert.length > 0) {
+          console.log(`📝 إنشاء ${orderItemsToInsert.length} order_items لطلب الاستبدال...`);
+          
           const { error: itemsError } = await supabase
             .from('order_items')
             .insert(orderItemsToInsert);
           
           if (itemsError) {
+            console.error('❌ فشل إنشاء order_items:', itemsError);
             throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
           }
           
-          // ✅ حجز المنتجات الصادرة فوراً
-          console.log('🔒 حجز المنتجات الصادرة...');
-          for (const item of exchangeMetadata.outgoing_items) {
-            const { error: reserveError } = await supabase.rpc('reserve_stock_for_order', {
-              p_product_id: item.product_id,
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity || 1
-            });
-            
-            if (reserveError) {
-              console.error(`❌ فشل حجز ${item.product_name}:`, reserveError);
-            } else {
-              console.log(`✅ تم حجز ${item.quantity} من ${item.product_name} (${item.size} - ${item.color})`);
-            }
-          }
+          console.log(`✅ تم إنشاء ${orderItemsToInsert.length} order_items بنجاح - سيتم حجز المنتجات الصادرة تلقائياً عبر التريجر`);
         }
       }
       // ✅ للطلبات العادية فقط (ليس الإرجاع)
