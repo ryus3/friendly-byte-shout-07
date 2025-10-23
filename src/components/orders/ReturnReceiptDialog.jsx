@@ -13,102 +13,27 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
   const handleProcessReturn = async () => {
     try {
       setIsProcessing(true);
-
-      // ✅ فحص: هل مرّ الطلب بحالة 21 (return_pending)؟
-      const { data: statusHistory } = await supabase
-        .from('order_status_history')
-        .select('new_status, new_delivery_status')
-        .eq('order_id', order.id)
-        .order('changed_at', { ascending: false });
       
-      const hasPassed21 = statusHistory?.some(
-        h => h.new_status === 'return_pending' || h.new_delivery_status === '21'
-      ) || order.status === 'return_pending' || order.delivery_status === '21';
-
-      // ✅ معالجة المخزون فقط إذا مرّ بحالة 21
-      if (hasPassed21) {
-        // إضافة المنتجات للمخزون باستخدام RPC
-        for (const item of orderItems) {
-          const { error: stockError } = await supabase.rpc('update_variant_stock', {
-            p_variant_id: item.variant_id,
-            p_quantity_change: item.quantity,
-            p_reason: `إرجاع للمخزون - ${order.tracking_number}`
-          });
-
-          if (stockError) {
-            console.error('خطأ في إضافة المخزون:', stockError);
-          } else {
-            console.log(`✅ تم إرجاع ${item.quantity} قطعة للمخزون`);
-          }
-        }
-
-        // ✅ معالجة المحاسبة تلقائياً
-        if (order.original_order_id && order.final_amount < 0) {
-          const { error: financialError } = await supabase.rpc('adjust_profit_for_return_v2', {
-            p_original_order_id: order.original_order_id,
-            p_refund_amount: Math.abs(order.final_amount),
-            p_product_profit: 0, // سيحسبه النظام
-            p_return_order_id: order.id
-          });
-
-          if (financialError) {
-            console.error('خطأ في المعالجة المالية:', financialError);
-          } else {
-            console.log('✅ تم تعديل الأرباح تلقائياً');
-          }
-        }
-
-        console.log('✅ تم إرجاع المنتجات للمخزون - الطلب مرّ بحالة 21');
-      } else {
-        console.log('⚠️ إلغاء إرجاع - الطلب لم يمر بحالة 21 - لا تحديث للمخزون');
-      }
-
-      // تحديث حالة الطلب إلى "مستلم الراجع"
-      const { error: orderError } = await supabase
+      // ✅ فقط تحديث delivery_status إلى '17'
+      // النظام التلقائي (return-status-handler.js) سيعالج المخزون والماليات
+      const { error } = await supabase
         .from('orders')
-        .update({
-          status: 'return_received',
-          delivery_status: '17', // ✅ حالة الوسيط 17
-          updated_at: new Date().toISOString()
-        })
+        .update({ delivery_status: '17' })
         .eq('id', order.id);
-
-      if (orderError) {
-        throw new Error(`خطأ في تحديث حالة الطلب: ${orderError.message}`);
-      }
-
-      // ✅ المرحلة 4: تحديث حالة حركة النقد عند الاستلام
-      if (hasPassed21) {
-        await supabase
-          .from('cash_movements')
-          .update({ 
-            description: `إرجاع للزبون - طلب #${order.tracking_number} - ✅ تم الدفع عند الاستلام`
-          })
-          .eq('reference_id', order.id)
-          .eq('reference_type', 'order')
-          .eq('movement_type', 'withdrawal');
-      }
-
+      
+      if (error) throw error;
+      
       toast({
-        title: hasPassed21 ? "✅ تم استلام الراجع بنجاح" : "⚠️ تم إلغاء الإرجاع",
-        description: hasPassed21 
-          ? (
-            <div className="space-y-1 text-sm">
-              <p>• تم إرجاع المنتجات للمخزون</p>
-              <p>• تم تسجيل دفع المبلغ للزبون</p>
-            </div>
-          )
-          : "تم تحديث الحالة بدون معالجة المخزون",
+        title: "✅ تم استلام الراجع",
+        description: "سيتم معالجة المخزون والأرباح تلقائياً",
         variant: "success"
       });
-
+      
       if (onSuccess) onSuccess();
       onClose();
-
     } catch (error) {
-      console.error('خطأ في معالجة الراجع:', error);
       toast({
-        title: "خطأ في استلام الراجع",
+        title: "خطأ",
         description: error.message,
         variant: "destructive"
       });

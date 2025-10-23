@@ -1160,7 +1160,8 @@ export const SuperProvider = ({ children }) => {
         variant_id: it.variant_id || null,
         quantity: it.quantity,
         unit_price: it.unit_price,
-        total_price: it.total_price
+        total_price: it.total_price,
+        item_direction: it.item_direction || null // ✅ حفظ اتجاه العناصر (incoming للإرجاع)
       })) : [];
 
       if (items.length > 0) {
