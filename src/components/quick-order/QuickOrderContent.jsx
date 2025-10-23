@@ -26,6 +26,7 @@ import { handleReplacementFinancials } from '@/utils/replacement-financial-handl
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
+import { linkReturnToOriginalOrder } from '@/utils/return-order-linker';
 
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
@@ -1934,7 +1935,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           // ✅ 1. ربط بالطلب الأصلي تلقائياً
           let linkedOriginalOrderId = null;
-          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
           const linkResult = await linkReturnToOriginalOrder(createdOrderId, customerInfoPayload.phone);
           
           if (linkResult.success && linkResult.originalOrderId) {
@@ -1998,7 +1998,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         
         // ✅ ربط طلبات الإرجاع بالطلب الأصلي تلقائياً
         if (formData.type === 'return' && createdOrderId) {
-          const { linkReturnToOriginalOrder } = await import('@/utils/return-order-linker');
           const linkResult = await linkReturnToOriginalOrder(createdOrderId, normalizedPhone);
           
           if (linkResult.success) {
