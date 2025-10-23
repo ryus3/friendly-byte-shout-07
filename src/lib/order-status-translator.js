@@ -88,6 +88,31 @@ const STATUS_TRANSLATIONS = {
     label: 'تم الإرجاع إلى التاجر',
     icon: Home,
     color: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '3': {
+    label: 'قيد التوصيل',
+    icon: Truck,
+    color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '4': {
+    label: 'تم التسليم للزبون',
+    icon: CheckCircle,
+    color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border border-green-300/50 shadow-lg shadow-green-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '12': {
+    label: 'قيد التوصيل الى الزبون',
+    icon: MapPin,
+    color: 'bg-gradient-to-r from-teal-400 to-cyan-500 text-white border border-teal-300/50 shadow-lg shadow-teal-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '13': {
+    label: 'راجعة للمخزن',
+    icon: RotateCcw,
+    color: 'bg-gradient-to-r from-orange-500 to-red-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  },
+  '23': {
+    label: 'ارسال الى مخزن الارجاعات',
+    icon: RotateCcw,
+    color: 'bg-gradient-to-r from-orange-500 to-yellow-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   }
 };
 

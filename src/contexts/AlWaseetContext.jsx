@@ -356,7 +356,8 @@ export const AlWaseetProvider = ({ children }) => {
                   status: newStatus,
                   delivery_fee: newDeliveryFee,
                   receipt_received: newReceiptReceived,
-                  delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id
+                  delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id,
+                  updated_at: new Date().toISOString()
                 };
 
                 // تحديث الطلب في قاعدة البيانات
@@ -370,6 +371,12 @@ export const AlWaseetProvider = ({ children }) => {
                 } else {
                   console.error(`❌ خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
                 }
+              } else {
+                // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
+                await supabase
+                  .from('orders')
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq('id', localOrder.id);
               }
             }
           }
@@ -1499,7 +1506,12 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة + التصحيح)
         if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate && !needsCorrection) {
-          continue; // لا حاجة للتحديث
+          // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
+          await supabase
+            .from('orders')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', localOrder.id);
+          continue;
         }
 
         const updates = {
