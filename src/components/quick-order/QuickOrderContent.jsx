@@ -1527,11 +1527,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         finalTotal = -refundAmount;
         actualRefundAmount = refundAmount;
         
-        // ✅ ملاحظات مختصرة بالعربية
-        const returnedProduct = incomingItems[0];
-        const returnQuantity = returnedProduct?.quantity || 1;
+        // ✅ ملاحظات مختصرة بالعربية - دعم عدة منتجات
+        const productsDesc = incomingItems.map(item => 
+          `${item.productName} (${item.color}, ${item.size}) × ${item.quantity}`
+        ).join(' + ');
+        
+        const totalQuantity = incomingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
         const amountToCustomer = refundAmount - deliveryFeeAmount;
-        orderNotes = `إرجاع: منتج ${returnedProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
+        
+        orderNotes = `إرجاع: ${productsDesc} | إجمالي العدد: ${totalQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
 
         // ✅ إنشاء order_items من cart (المنتجات الواردة)
         orderItems = incomingItems.map(item => ({
@@ -1775,20 +1779,39 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city_id: effectiveCityId, 
               region_id: effectiveRegionId,
               location: formData.address,
-              type_name: formData.type === 'exchange' 
+              type_name: formData.type === 'return'
                 ? (() => {
-                    // ✅ للاستبدال: المنتجات الصادرة فقط
-                    const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
-                    return outgoingItems.map(item => {
+                    // ✅ للإرجاع: "طلب ترجيع + أسماء المنتجات"
+                    const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+                    if (incomingItems.length === 0) return 'طلب ترجيع';
+                    
+                    const productNames = incomingItems.map(item => {
                       const name = item.productName || 'منتج';
                       const sizePart = item.size ? ` ${item.size}` : '';
                       const colorPart = item.color ? ` . ${item.color}` : '';
                       return `${name}${sizePart}${colorPart}`.trim();
                     }).join(' + ');
+                    
+                    return `طلب ترجيع: ${productNames}`;
                   })()
-                : formData.details,  // ✅ للطلبات العادية: استخدام details العادي
+                : formData.type === 'exchange' 
+                  ? (() => {
+                      // ✅ للاستبدال: المنتجات الصادرة فقط
+                      const outgoingItems = cart.filter(item => item.item_direction === 'outgoing');
+                      return outgoingItems.map(item => {
+                        const name = item.productName || 'منتج';
+                        const sizePart = item.size ? ` ${item.size}` : '';
+                        const colorPart = item.color ? ` . ${item.color}` : '';
+                        return `${name}${sizePart}${colorPart}`.trim();
+                      }).join(' + ');
+                    })()
+                  : formData.details,  // ✅ للطلبات العادية: استخدام details العادي
               items_number: formData.type === 'return' 
-                ? (returnProduct?.quantity || 1)  // ✅ عدد المنتج المُرجع
+                ? (() => {
+                    // ✅ مجموع كمية المنتجات الواردة
+                    const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+                    return incomingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+                  })()
                 : formData.type === 'exchange'
                   ? (() => {
                       // ✅ للاستبدال: مجموع كمية المنتجات الصادرة فقط
@@ -2018,24 +2041,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // ✅ استخدام الطلب الأصلي الموجود أو المُمرَّر
         const effectiveOriginalOrder = foundOriginalOrder || originalOrder;
         
-        if (formData.type === 'return' && returnProduct && refundAmount > 0 && effectiveOriginalOrder) {
-          // ✅ المرحلة 3: معالجة كاملة للإرجاع
+        if (formData.type === 'return' && refundAmount > 0 && effectiveOriginalOrder) {
+          // ✅ المعالجة المالية للإرجاع - دعم عدة منتجات
+          const incomingItems = cart.filter(item => item.item_direction === 'incoming');
           
-          // 2. حساب ربح المنتج
-          const productCost = returnProduct.cost_price || 0;
-          const productPrice = returnProduct.price || 0;
-          const productProfit = (productPrice - productCost) * returnProduct.quantity;
+          // حساب إجمالي ربح المنتجات المُرجعة
+          const totalProductProfit = incomingItems.reduce((sum, item) => {
+            const productCost = item.costPrice || 0;
+            const productPrice = item.price || 0;
+            const quantity = item.quantity || 1;
+            return sum + ((productPrice - productCost) * quantity);
+          }, 0);
           
           console.log('💰 تفاصيل الإرجاع:', {
-            سعر_البيع: productPrice * returnProduct.quantity,
-            التكلفة: productCost * returnProduct.quantity,
-            ربح_المنتج: productProfit,
+            عدد_المنتجات: incomingItems.length,
+            إجمالي_الربح: totalProductProfit,
             مبلغ_الإرجاع: refundAmount,
-            من_الربح: productProfit,
-            من_الإيراد: refundAmount - productProfit
+            من_الربح: totalProductProfit,
+            من_الإيراد: refundAmount - totalProductProfit
           });
           
-          // 2. ربط الطلب وتعيين الحالة
+          // ربط الطلب وتعيين الحالة
           await supabase
             .from('orders')
             .update({ 
@@ -2043,15 +2069,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               original_order_id: effectiveOriginalOrder.id,
               status: 'return_pending',
               delivery_status: '21',
-              notes: `إرجاع من طلب #${effectiveOriginalOrder.order_number}\nربح المنتج: ${productProfit.toLocaleString()} د.ع\nمن الإيراد: ${(refundAmount - productProfit).toLocaleString()} د.ع`
+              notes: `إرجاع من طلب #${effectiveOriginalOrder.order_number}\nعدد المنتجات: ${incomingItems.length}\nإجمالي الربح: ${totalProductProfit.toLocaleString()} د.ع\nمن الإيراد: ${(refundAmount - totalProductProfit).toLocaleString()} د.ع`
             })
             .eq('id', createdOrderId);
           
-          // 3. معالجة الأرباح (RPC الجديد v2)
+          // معالجة الأرباح (RPC v2)
           const { data: adjustResult, error: adjustError } = await supabase.rpc('adjust_profit_for_return_v2', {
             p_original_order_id: effectiveOriginalOrder.id,
             p_refund_amount: refundAmount,
-            p_product_profit: productProfit,
+            p_product_profit: totalProductProfit,
             p_return_order_id: createdOrderId
           });
           

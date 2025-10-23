@@ -22,8 +22,8 @@ export const ReturnProductForm = ({
   const [searching, setSearching] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   
-  // ✅ حساب المنتج المختار من cart
-  const selectedProduct = cart?.find(item => item.item_direction === 'incoming');
+  // ✅ حساب المنتجات المختارة من cart
+  const selectedProducts = cart?.filter(item => item.item_direction === 'incoming') || [];
   
   // البحث التلقائي عن الطلب الأصلي
   useEffect(() => {
@@ -94,7 +94,7 @@ export const ReturnProductForm = ({
       
       onAddIncoming(incomingProducts);
       
-      // اقتراح مبلغ الإرجاع بناءً على المنتج
+      // اقتراح مبلغ الإرجاع بناءً على المنتجات
       if (originalOrder) {
         onRefundAmountChange(originalOrder.final_amount);
       } else {
@@ -105,6 +105,11 @@ export const ReturnProductForm = ({
     setProductDialogOpen(false);
   };
   
+  const handleRemoveProduct = (productId) => {
+    const updatedProducts = selectedProducts.filter(p => p.id !== productId);
+    onAddIncoming(updatedProducts);
+  };
+  
   return (
     <div className="space-y-4 mt-6">
       <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -112,10 +117,10 @@ export const ReturnProductForm = ({
         تفاصيل الإرجاع
       </h3>
       
-      {/* المنتج المُرجع - اختيار مباشر */}
+      {/* المنتجات المُرجعة - اختيار متعدد */}
       <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/10">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">المنتج المُرجع (الوارد)</CardTitle>
+          <CardTitle className="text-base">المنتجات المُرجعة (الواردة)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button
@@ -125,27 +130,40 @@ export const ReturnProductForm = ({
             className="w-full border-dashed border-2 hover:bg-orange-100 dark:hover:bg-orange-900/20"
           >
             <Plus className="w-4 h-4 ml-2" />
-            اختر المنتج المُرجع
+            اختر المنتجات المُرجعة
           </Button>
           
-          {selectedProduct && (
-            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border">
-              <div className="flex items-center gap-3">
-                <img 
-                  src={selectedProduct.image} 
-                  alt={selectedProduct.productName}
-                  className="w-12 h-12 object-cover rounded"
-                />
-                <div className="flex-1">
-                  <p className="font-semibold">{selectedProduct.productName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedProduct.color} - {selectedProduct.size} × {selectedProduct.quantity}
-                  </p>
+          {selectedProducts.length > 0 && (
+            <div className="space-y-2">
+              {selectedProducts.map((product) => (
+                <div key={product.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={product.image} 
+                      alt={product.productName}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold">{product.productName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {product.color} - {product.size} × {product.quantity}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {(product.price * product.quantity).toLocaleString()} د.ع
+                    </Badge>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveProduct(product.id)}
+                      className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                    >
+                      ×
+                    </Button>
+                  </div>
                 </div>
-                <Badge variant="secondary">
-                  {(selectedProduct.price * selectedProduct.quantity).toLocaleString()} د.ع
-                </Badge>
-              </div>
+              ))}
             </div>
           )}
         </CardContent>
@@ -222,7 +240,7 @@ export const ReturnProductForm = ({
       </Card>
 
       {/* ملخص مالي تفصيلي */}
-      {selectedProduct && refundAmount > 0 && (
+      {selectedProducts.length > 0 && refundAmount > 0 && (
         <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/10">
           <CardContent className="p-4">
             <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
