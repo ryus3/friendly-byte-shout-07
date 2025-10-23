@@ -1,0 +1,215 @@
+import { supabase } from '@/lib/customSupabaseClient';
+
+/**
+ * معالجة المخزون والماليات التلقائية لطلبات الإرجاع عند تغيير الحالة
+ * @param {string} orderId - معرف الطلب
+ * @param {number|string} newDeliveryStatus - الحالة الجديدة للتوصيل
+ * @returns {Promise<{success: boolean, processed?: number, cancelled?: boolean, skipped?: boolean, error?: string}>}
+ */
+export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
+  try {
+    console.log('🔄 بدء معالجة حالة الإرجاع:', { orderId, newDeliveryStatus });
+
+    // جلب الطلب
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single();
+
+    if (error || !order) {
+      console.error('❌ خطأ في جلب الطلب:', error);
+      return { success: false, error: error?.message };
+    }
+
+    // التحقق من نوع الطلب
+    if (order.order_type !== 'return') {
+      console.log('⏭️ ليس طلب إرجاع، تخطي المعالجة');
+      return { success: true, skipped: true };
+    }
+
+    // ✅ الحالة 21: تم دفع المبلغ للزبون واستلام المنتج من قبل المندوب
+    if (newDeliveryStatus === '21' || newDeliveryStatus === 21) {
+      console.log('💰 الحالة 21: تم دفع المبلغ للزبون واستلام المنتج من المندوب');
+      
+      // تحديث حالة الطلب إلى "return_pending" (بانتظار استلام المنتج من المندوب)
+      await supabase
+        .from('orders')
+        .update({ 
+          order_status: 'return_pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+      
+      console.log('✅ تم تحديث حالة الطلب إلى return_pending - بانتظار استلام المنتج من المندوب');
+      return { success: true, statusUpdated: 'return_pending' };
+    }
+
+    // ✅ الحالة 17: استلام المنتج من المندوب (إضافة للمخزون + معالجة مالية)
+    if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
+      console.log('📦 الحالة 17: استلام المنتج المُرجع من المندوب');
+      
+      // ✅ التحقق من المرور بالحالة 21 أولاً
+      if (order.order_status !== 'return_pending') {
+        console.log('⚠️ لم يتم المرور بالحالة 21 أولاً - إلغاء طلب الإرجاع');
+        
+        // إلغاء الطلب
+        await supabase
+          .from('orders')
+          .update({ 
+            order_status: 'cancelled',
+            merchant_notes: (order.merchant_notes || '') + '\n[تلقائي] تم إلغاء الطلب - لم يتم استلام المنتج من الزبون',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+        
+        console.log('❌ تم إلغاء طلب الإرجاع - لم يمر بالحالة 21');
+        return { success: true, cancelled: true, reason: 'لم يتم المرور بالحالة 21' };
+      }
+
+      // ✅ جلب order_items
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*, product_variants(id, product_id)')
+        .eq('order_id', orderId);
+      
+      if (itemsError || !items || items.length === 0) {
+        console.error('❌ خطأ في جلب order_items:', itemsError);
+        return { success: false, error: 'لا توجد منتجات للإرجاع' };
+      }
+      
+      console.log(`📦 جلب ${items.length} منتج للإرجاع`);
+
+      // ✅ إرجاع المنتجات للمخزون الفعلي
+      let stockUpdatedCount = 0;
+      for (const item of items) {
+        try {
+          const { data: stockResult, error: stockError } = await supabase.rpc('update_variant_stock', {
+            p_variant_id: item.variant_id,
+            p_quantity_change: item.quantity,
+            p_reason: `إرجاع للمخزون - ${order.tracking_number || orderId}`
+          });
+
+          if (stockError) {
+            console.error(`❌ فشل إرجاع ${item.variant_id}:`, stockError);
+          } else {
+            stockUpdatedCount++;
+            console.log(`✅ تم إرجاع ${item.quantity} من المنتج ${item.variant_id} للمخزون`);
+          }
+        } catch (err) {
+          console.error(`❌ خطأ في إرجاع ${item.variant_id}:`, err);
+        }
+      }
+
+      if (stockUpdatedCount === 0) {
+        console.error('❌ فشل إرجاع جميع المنتجات للمخزون');
+        return { success: false, error: 'فشل إرجاع المنتجات للمخزون' };
+      }
+
+      console.log(`✅ تم إرجاع ${stockUpdatedCount} من ${items.length} منتج للمخزون`);
+
+      // ✅ معالجة الماليات (خصم من الطلب الأصلي)
+      let financialResult = null;
+      let lossAmount = 0;
+      let isLoss = false;
+
+      if (order.original_order_id) {
+        const refundAmount = Math.abs(order.final_amount || 0);
+        
+        // جلب الطلب الأصلي لمعرفة قيمته
+        const { data: originalOrder } = await supabase
+          .from('orders')
+          .select('final_amount, total_amount')
+          .eq('id', order.original_order_id)
+          .single();
+
+        const originalAmount = originalOrder?.final_amount || originalOrder?.total_amount || 0;
+        
+        // ✅ حالة الخسارة: مبلغ الإرجاع > الطلب الأصلي
+        if (refundAmount > originalAmount) {
+          isLoss = true;
+          lossAmount = refundAmount - originalAmount;
+          console.log(`⚠️ خسارة: مبلغ الإرجاع (${refundAmount}) > الطلب الأصلي (${originalAmount})`);
+          console.log(`💸 مبلغ الخسارة: ${lossAmount}`);
+        }
+
+        try {
+          const { data: profitResult, error: profitError } = await supabase.rpc('adjust_profit_for_return_v2', {
+            p_original_order_id: order.original_order_id,
+            p_refund_amount: refundAmount,
+            p_product_profit: 0,
+            p_return_order_id: order.id
+          });
+
+          if (profitError) {
+            console.error('❌ خطأ في معالجة الأرباح:', profitError);
+          } else {
+            financialResult = profitResult;
+            console.log('✅ تمت معالجة الأرباح:', profitResult);
+          }
+        } catch (err) {
+          console.error('❌ خطأ في adjust_profit_for_return_v2:', err);
+        }
+
+        // ✅ تسجيل الخسارة في accounting إذا وجدت
+        if (isLoss && lossAmount > 0) {
+          try {
+            const { error: accountingError } = await supabase
+              .from('accounting')
+              .insert({
+                transaction_type: 'expense',
+                amount: lossAmount,
+                category: 'return_loss',
+                description: `خسارة إرجاع - الفرق بين مبلغ الإرجاع (${refundAmount}) والطلب الأصلي (${originalAmount})`,
+                related_order_id: order.id,
+                employee_id: order.created_by,
+                created_at: new Date().toISOString()
+              });
+
+            if (accountingError) {
+              console.error('❌ خطأ في تسجيل الخسارة:', accountingError);
+            } else {
+              console.log(`✅ تم تسجيل خسارة بمبلغ ${lossAmount} في المحاسبة`);
+            }
+          } catch (err) {
+            console.error('❌ خطأ في تسجيل الخسارة:', err);
+          }
+        }
+      } else {
+        console.log('⚠️ لا يوجد original_order_id - تخطي المعالجة المالية');
+      }
+
+      // ✅ تحديث حالة الطلب إلى "completed"
+      const notesAddition = isLoss 
+        ? `\n[تلقائي] تم إرجاع ${stockUpdatedCount} منتج للمخزون ومعالجة الأرباح. خسارة: ${lossAmount} دينار`
+        : `\n[تلقائي] تم إرجاع ${stockUpdatedCount} منتج للمخزون ومعالجة الأرباح`;
+
+      await supabase
+        .from('orders')
+        .update({ 
+          order_status: 'completed',
+          merchant_notes: (order.merchant_notes || '') + notesAddition,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      console.log('✅ اكتملت معالجة طلب الإرجاع بنجاح');
+      
+      return { 
+        success: true, 
+        processed: stockUpdatedCount,
+        financialResult,
+        isLoss,
+        lossAmount: isLoss ? lossAmount : 0
+      };
+    }
+
+    // حالة أخرى - لا حاجة لمعالجة
+    console.log('⏭️ حالة غير معروفة، تخطي المعالجة');
+    return { success: true, skipped: true };
+
+  } catch (error) {
+    console.error('❌ خطأ في معالجة حالة الإرجاع:', error);
+    return { success: false, error: error.message };
+  }
+};

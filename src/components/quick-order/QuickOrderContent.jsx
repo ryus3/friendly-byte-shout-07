@@ -1537,7 +1537,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           total_price: (returnProduct.price || 0) * returnQuantity,
           productName: returnProduct.productName,
           cost_price: returnProduct.cost_price || 0,
-          item_type: 'returned',
+          item_direction: 'incoming',
         }];
       }
       

@@ -1265,10 +1265,19 @@ export const SuperProvider = ({ children }) => {
     try {
       console.log('🔄 SuperProvider updateOrder:', { orderId, updates, newItems });
       
-      // ✅ معالجة المخزون التلقائية للاستبدال عند تغيير delivery_status
+      // ✅ معالجة المخزون التلقائية عند تغيير delivery_status
       if (updates.delivery_status) {
-        const { handleExchangeStatusChange } = await import('@/utils/exchange-status-handler');
-        await handleExchangeStatusChange(orderId, updates.delivery_status);
+        // معالجة طلبات الاستبدال
+        const currentOrder = allData.orders?.find(o => o.id === orderId);
+        if (currentOrder?.order_type === 'replacement' || currentOrder?.order_type === 'exchange') {
+          const { handleExchangeStatusChange } = await import('@/utils/exchange-status-handler');
+          await handleExchangeStatusChange(orderId, updates.delivery_status);
+        }
+        // معالجة طلبات الإرجاع
+        else if (currentOrder?.order_type === 'return') {
+          const { handleReturnStatusChange } = await import('@/utils/return-status-handler');
+          await handleReturnStatusChange(orderId, updates.delivery_status);
+        }
       }
       
       // تحديث فوري محلياً مع البيانات الكاملة
