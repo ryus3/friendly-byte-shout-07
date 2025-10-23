@@ -8,10 +8,58 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink = null, deliveryPartnerData = null) => {
     try {
-      const orderType = customerInfo.orderType || 'normal';
-      const refundAmount = customerInfo.refundAmount || 0;
-      const originalOrderId = customerInfo.originalOrderId || null;
-      const deliveryFee = customerInfo.deliveryFee || 0;
+      // ✅ كشف Payload Mode (طلبات الاستبدال) vs Separate Parameters Mode (طلبات عادية)
+      const isPayloadMode = customerInfo && typeof customerInfo === 'object' && 
+                           (customerInfo.tracking_number || customerInfo.exchange_metadata || customerInfo.order_type);
+      
+      console.log('🔍 نمط الاستدعاء:', {
+        mode: isPayloadMode ? 'Payload Mode (استبدال/إرجاع)' : 'Separate Parameters (عادي)',
+        hasTrackingNumber: !!customerInfo?.tracking_number,
+        hasExchangeMetadata: !!customerInfo?.exchange_metadata,
+        orderType: customerInfo?.order_type || customerInfo?.orderType,
+        cartItemsParam: cartItems,
+        trackingNumberParam: trackingNumber
+      });
+      
+      let actualCustomerInfo, actualCartItems, actualTrackingNumber, actualDiscount, actualStatus, actualQrLink, actualDeliveryPartnerData;
+      
+      if (isPayloadMode) {
+        console.log('📦 Payload Mode: استخراج البيانات من الكائن الواحد');
+        // ✅ استخراج البيانات من الكائن الواحد (لطلبات الاستبدال/الإرجاع)
+        actualCustomerInfo = customerInfo;
+        actualCartItems = customerInfo.items || [];
+        actualTrackingNumber = customerInfo.tracking_number || trackingNumber;
+        actualDiscount = customerInfo.discount || 0;
+        actualStatus = customerInfo.status || 'pending';
+        actualQrLink = customerInfo.qr_link || qrLink;
+        actualDeliveryPartnerData = customerInfo.delivery_partner ? {
+          partner: customerInfo.delivery_partner,
+          orderId: customerInfo.delivery_partner_order_id,
+          ...deliveryPartnerData
+        } : deliveryPartnerData;
+        
+        console.log('📋 البيانات المستخرجة:', {
+          trackingNumber: actualTrackingNumber,
+          cartItems: actualCartItems,
+          discount: actualDiscount,
+          status: actualStatus
+        });
+      } else {
+        console.log('📦 Separate Parameters: استخدام المعاملات المنفصلة');
+        // ✅ استخدام المعاملات المنفصلة (للطلبات العادية)
+        actualCustomerInfo = customerInfo;
+        actualCartItems = cartItems;
+        actualTrackingNumber = trackingNumber;
+        actualDiscount = discount;
+        actualStatus = status;
+        actualQrLink = qrLink;
+        actualDeliveryPartnerData = deliveryPartnerData;
+      }
+      
+      const orderType = actualCustomerInfo.orderType || actualCustomerInfo.order_type || 'normal';
+      const refundAmount = actualCustomerInfo.refundAmount || actualCustomerInfo.refund_amount || 0;
+      const originalOrderId = actualCustomerInfo.originalOrderId || actualCustomerInfo.original_order_id || null;
+      const deliveryFee = actualCustomerInfo.deliveryFee || actualCustomerInfo.delivery_fee || 0;
       
       // حساب total_amount و final_amount
       let totalAmount = 0;
@@ -19,53 +67,63 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       
       // ✅ معالجة خاصة لطلبات الاستبدال
       if (orderType === 'replacement' || orderType === 'exchange') {
-        const exchangeMetadata = customerInfo.exchange_metadata;
+        const exchangeMetadata = actualCustomerInfo.exchange_metadata;
         
         if (!exchangeMetadata) {
           throw new Error('بيانات الاستبدال مفقودة');
         }
         
         // ✅ استخدام المبلغ المحسوب من الواجهة
-        totalAmount = customerInfo.total_amount || 0;
+        totalAmount = actualCustomerInfo.total_amount || 0;
         finalAmount = totalAmount + deliveryFee;
       } else if (orderType === 'return') {
         totalAmount = -Math.abs(refundAmount);
         finalAmount = totalAmount + deliveryFee;
       } else {
-        totalAmount = cartItems.reduce((sum, item) => sum + (item.total_price || (item.price * item.quantity)), 0) - (discount || 0);
+        totalAmount = actualCartItems.reduce((sum, item) => sum + (item.total_price || (item.price * item.quantity)), 0) - (actualDiscount || 0);
         finalAmount = totalAmount + deliveryFee;
       }
 
       // إنشاء سجل الطلب
+      console.log('📝 إنشاء سجل الطلب:', {
+        order_number: actualTrackingNumber,
+        tracking_number: actualTrackingNumber,
+        orderType,
+        total_amount: totalAmount,
+        final_amount: finalAmount,
+        discount: actualDiscount,
+        status: actualStatus
+      });
+      
       const { data: newOrder, error: orderError } = await supabase
         .from('orders')
         .insert({
-          order_number: trackingNumber,
-          tracking_number: trackingNumber,
-          customer_name: customerInfo.customer_name,
-          customer_phone: customerInfo.customer_phone,
-          customer_phone2: customerInfo.customer_phone2 || null,
-          customer_city: customerInfo.customer_city,
-          customer_province: customerInfo.customer_province,
-          customer_address: customerInfo.customer_address,
-          alwaseet_city_id: customerInfo.alwaseet_city_id || null,
-          alwaseet_region_id: customerInfo.alwaseet_region_id || null,
-          notes: customerInfo.notes || '',
+          order_number: actualTrackingNumber,
+          tracking_number: actualTrackingNumber,
+          customer_name: actualCustomerInfo.customer_name,
+          customer_phone: actualCustomerInfo.customer_phone,
+          customer_phone2: actualCustomerInfo.customer_phone2 || null,
+          customer_city: actualCustomerInfo.customer_city,
+          customer_province: actualCustomerInfo.customer_province,
+          customer_address: actualCustomerInfo.customer_address,
+          alwaseet_city_id: actualCustomerInfo.alwaseet_city_id || null,
+          alwaseet_region_id: actualCustomerInfo.alwaseet_region_id || null,
+          notes: actualCustomerInfo.notes || '',
           total_amount: totalAmount,
           delivery_fee: deliveryFee,
           final_amount: finalAmount,
-          discount: discount || 0,
-          status: status || 'pending',
-          delivery_status: deliveryPartnerData ? 1 : 0,
-          qr_link: qrLink,
+          discount: actualDiscount || 0,
+          status: actualStatus || 'pending',
+          delivery_status: actualDeliveryPartnerData ? 1 : 0,
+          qr_link: actualQrLink,
           order_type: orderType === 'replacement' ? 'replacement' : orderType === 'exchange' ? 'exchange' : orderType,
           refund_amount: orderType === 'return' ? Math.abs(refundAmount) : null,
           original_order_id: originalOrderId,
           exchange_metadata: (orderType === 'replacement' || orderType === 'exchange') 
-            ? customerInfo.exchange_metadata 
+            ? actualCustomerInfo.exchange_metadata 
             : null,
-          delivery_partner: deliveryPartnerData?.partner || null,
-          delivery_partner_order_id: deliveryPartnerData?.orderId || null,
+          delivery_partner: actualDeliveryPartnerData?.partner || null,
+          delivery_partner_order_id: actualDeliveryPartnerData?.orderId || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -73,12 +131,20 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         .single();
 
       if (orderError) {
+        console.error('❌ فشل إنشاء الطلب:', orderError);
         throw new Error(`فشل في إنشاء الطلب: ${orderError.message}`);
       }
+      
+      console.log('✅ تم إنشاء الطلب بنجاح:', {
+        orderId: newOrder.id,
+        orderNumber: newOrder.order_number,
+        trackingNumber: newOrder.tracking_number,
+        orderType: newOrder.order_type
+      });
 
       // ✅ إنشاء order_items للاستبدال (للحجز والتتبع فقط)
-      if ((orderType === 'replacement' || orderType === 'exchange') && customerInfo.exchange_metadata) {
-        const exchangeMetadata = customerInfo.exchange_metadata;
+      if ((orderType === 'replacement' || orderType === 'exchange') && actualCustomerInfo.exchange_metadata) {
+        const exchangeMetadata = actualCustomerInfo.exchange_metadata;
         const orderItemsToInsert = [];
         
         console.log('🔍 بدء معالجة order_items للاستبدال:', {
@@ -181,8 +247,10 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         }
       }
       // ✅ للطلبات العادية فقط (ليس الإرجاع)
-      else if (cartItems && cartItems.length > 0 && orderType !== 'return') {
-        const orderItemsToInsert = cartItems.map(item => ({
+      else if (actualCartItems && actualCartItems.length > 0 && orderType !== 'return') {
+        console.log(`📦 إنشاء order_items للطلب العادي: ${actualCartItems.length} منتجات`);
+        
+        const orderItemsToInsert = actualCartItems.map(item => ({
           order_id: newOrder.id,
           product_id: item.product_id,
           variant_id: item.variant_id || null,
@@ -197,30 +265,40 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           .insert(orderItemsToInsert);
 
         if (itemsError) {
+          console.error('❌ فشل إنشاء order_items للطلب العادي:', itemsError);
           throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
         }
+        
+        console.log(`✅ تم إنشاء ${orderItemsToInsert.length} order_items للطلب العادي`);
 
         // تحديث المخزون - فقط للطلبات العادية (ليس للإرجاع)
         if (orderType !== 'return' && onStockUpdate) {
-          for (const item of cartItems) {
+          for (const item of actualCartItems) {
             await onStockUpdate(item.product_id, item.variant_id, item.quantity, 'subtract');
           }
         }
       }
 
       // إضافة الطلب للحالة المحلية
-      setOrders(prevOrders => [...prevOrders, { ...newOrder, items: cartItems }]);
+      setOrders(prevOrders => [...prevOrders, { ...newOrder, items: actualCartItems }]);
 
       // إضافة إشعار
       if (addNotification) {
         const orderTypeText = orderType === 'return' ? 'إرجاع' : orderType === 'exchange' ? 'استبدال' : 'طلب';
         addNotification(
-          `تم إنشاء ${orderTypeText} جديد: ${trackingNumber}`,
+          `تم إنشاء ${orderTypeText} جديد: ${actualTrackingNumber}`,
           'success'
         );
       }
 
-      return { success: true, trackingNumber, orderId: newOrder.id };
+      console.log('✅ اكتمل إنشاء الطلب بنجاح:', {
+        success: true,
+        trackingNumber: actualTrackingNumber,
+        orderId: newOrder.id,
+        orderType
+      });
+
+      return { success: true, trackingNumber: actualTrackingNumber, orderId: newOrder.id };
     } catch (error) {
       console.error('Error in createOrder:', error);
       return { success: false, error: error.message || 'حدث خطأ في إنشاء الطلب' };
