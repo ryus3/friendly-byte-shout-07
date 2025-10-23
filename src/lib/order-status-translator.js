@@ -10,7 +10,6 @@ import {
   MapPin,
   Home
 } from 'lucide-react';
-import { ALWASEET_STATUS_DEFINITIONS } from './alwaseet-statuses';
 
 /**
  * نظام موحد لترجمة وعرض حالات الطلبات
@@ -301,19 +300,7 @@ const getStatusConfig = (status) => {
     return getDefaultConfig('غير محدد');
   }
 
-  // ✅ إذا كان رقماً، استخدم ALWASEET_STATUS_DEFINITIONS
-  if (/^\d+$/.test(String(status).trim())) {
-    const alwaseetConfig = ALWASEET_STATUS_DEFINITIONS[String(status).trim()];
-    if (alwaseetConfig) {
-      return {
-        label: alwaseetConfig.text,
-        icon: alwaseetConfig.icon,
-        color: alwaseetConfig.color + ' px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-      };
-    }
-  }
-
-  // البحث في الترجمات المحددة (للحالات القديمة النصية)
+  // البحث في الترجمات المحددة
   const config = STATUS_TRANSLATIONS[status];
   if (config) {
       return {

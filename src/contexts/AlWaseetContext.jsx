@@ -1544,7 +1544,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (needsDeliveryStatusUpdate) {
-          updates.delivery_status = String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || '');
+          updates.delivery_status = waseetStatusText;
         }
 
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
@@ -1912,7 +1912,7 @@ export const AlWaseetProvider = ({ children }) => {
             // تحضير التحديثات
             const updates = {
               status: localStatus,
-              delivery_status: String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || ''),
+              delivery_status: waseetStatusText,
               updated_at: new Date().toISOString(),
             };
             
@@ -2184,7 +2184,7 @@ export const AlWaseetProvider = ({ children }) => {
       // تحضير التحديثات
       const updates = {
         status: correctLocalStatus,
-        delivery_status: String(fetchedOrder.state_id || fetchedOrder.status_id || ''),
+        delivery_status: String(waseetOrder.state_id || waseetOrder.status_id || ''),
         delivery_partner_order_id: String(waseetOrder.id),
         qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
         updated_at: new Date().toISOString()
