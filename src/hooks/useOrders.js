@@ -81,9 +81,26 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         const exchangeMetadata = customerInfo.exchange_metadata;
         const orderItemsToInsert = [];
         
+        console.log('🔍 بدء معالجة order_items للاستبدال:', {
+          orderType,
+          hasExchangeMetadata: !!exchangeMetadata,
+          outgoingCount: exchangeMetadata.outgoing_items?.length || 0,
+          incomingCount: exchangeMetadata.incoming_items?.length || 0,
+          fullMetadata: exchangeMetadata
+        });
+        
         // ✅ إضافة المنتجات الصادرة (outgoing)
-        if (exchangeMetadata.outgoing_items && exchangeMetadata.outgoing_items.length > 0) {
+        if (exchangeMetadata.outgoing_items && Array.isArray(exchangeMetadata.outgoing_items)) {
+          console.log(`📦 معالجة ${exchangeMetadata.outgoing_items.length} منتج صادر...`);
+          
           for (const item of exchangeMetadata.outgoing_items) {
+            console.log('  ➕ إضافة منتج صادر:', {
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity,
+              product_name: item.product_name
+            });
+            
             orderItemsToInsert.push({
               order_id: newOrder.id,
               product_id: item.product_id,
@@ -94,11 +111,22 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
               item_direction: 'outgoing'  // ✅ تحديد الاتجاه
             });
           }
+        } else {
+          console.warn('⚠️ لا توجد منتجات صادرة أو البيانات غير صحيحة!', exchangeMetadata.outgoing_items);
         }
         
         // ✅ إضافة المنتجات الواردة (incoming) - للتتبع فقط
-        if (exchangeMetadata.incoming_items && exchangeMetadata.incoming_items.length > 0) {
+        if (exchangeMetadata.incoming_items && Array.isArray(exchangeMetadata.incoming_items)) {
+          console.log(`📦 معالجة ${exchangeMetadata.incoming_items.length} منتج وارد...`);
+          
           for (const item of exchangeMetadata.incoming_items) {
+            console.log('  ➕ إضافة منتج وارد:', {
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity,
+              product_name: item.product_name
+            });
+            
             orderItemsToInsert.push({
               order_id: newOrder.id,
               product_id: item.product_id,
@@ -109,22 +137,47 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
               item_direction: 'incoming'  // ✅ تحديد الاتجاه
             });
           }
+        } else {
+          console.warn('⚠️ لا توجد منتجات واردة أو البيانات غير صحيحة!', exchangeMetadata.incoming_items);
         }
         
-        // ✅ حفظ order_items
+        console.log(`📊 إجمالي order_items للإدراج: ${orderItemsToInsert.length}`, orderItemsToInsert);
+        
+        // ✅ حفظ order_items مع معالجة شاملة
         if (orderItemsToInsert.length > 0) {
-          console.log(`📝 إنشاء ${orderItemsToInsert.length} order_items لطلب الاستبدال...`);
+          console.log(`📝 محاولة إنشاء ${orderItemsToInsert.length} order_items في قاعدة البيانات...`);
           
-          const { error: itemsError } = await supabase
+          const { data: insertedItems, error: itemsError } = await supabase
             .from('order_items')
-            .insert(orderItemsToInsert);
+            .insert(orderItemsToInsert)
+            .select();  // ✅ إرجاع البيانات المدرجة للتحقق
           
           if (itemsError) {
-            console.error('❌ فشل إنشاء order_items:', itemsError);
+            console.error('❌ فشل إنشاء order_items:', {
+              error: itemsError,
+              code: itemsError.code,
+              message: itemsError.message,
+              details: itemsError.details,
+              hint: itemsError.hint,
+              itemsToInsert: orderItemsToInsert
+            });
             throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
           }
           
-          console.log(`✅ تم إنشاء ${orderItemsToInsert.length} order_items بنجاح - سيتم حجز المنتجات الصادرة تلقائياً عبر التريجر`);
+          console.log(`✅ تم إنشاء ${insertedItems?.length || 0} order_items بنجاح:`, insertedItems);
+          console.log('🔒 سيتم حجز المنتجات الصادرة تلقائياً عبر التريجر auto_stock_management_trigger');
+        } else {
+          // ✅ تحذير واضح إذا لم يتم إنشاء أي items
+          console.error('❌ لا توجد عناصر للإدراج! تفاصيل exchangeMetadata الكاملة:', {
+            full_metadata: exchangeMetadata,
+            outgoing_items: exchangeMetadata.outgoing_items,
+            incoming_items: exchangeMetadata.incoming_items,
+            outgoing_type: typeof exchangeMetadata.outgoing_items,
+            incoming_type: typeof exchangeMetadata.incoming_items,
+            outgoing_isArray: Array.isArray(exchangeMetadata.outgoing_items),
+            incoming_isArray: Array.isArray(exchangeMetadata.incoming_items)
+          });
+          throw new Error('فشل في معالجة منتجات الاستبدال - البيانات غير كاملة');
         }
       }
       // ✅ للطلبات العادية فقط (ليس الإرجاع)
