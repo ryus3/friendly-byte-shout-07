@@ -1691,7 +1691,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           .filter(item => item.item_direction === 'outgoing')
           .map(item => ({
             variant_id: item.variantId,
-            product_id: item.id,
+            product_id: item.productId,
             quantity: item.quantity || 1,
             product_name: item.productName,
             color: item.color,
@@ -1703,7 +1703,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           .filter(item => item.item_direction === 'incoming')
           .map(item => ({
             variant_id: item.variantId,
-            product_id: item.id,
+            product_id: item.productId,
             quantity: item.quantity || 1,
             product_name: item.productName,
             color: item.color,

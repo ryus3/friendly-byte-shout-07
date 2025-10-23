@@ -769,13 +769,13 @@ const OrderCard = React.memo(({
                           {/* المنتجات الواردة (الإرجاع) */}
                           {productSummary.incoming.length > 0 && (
                             <div className="relative group/in">
-                              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-cyan-500/10 to-blue-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
+                              <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-emerald-500/10 to-green-500/10 rounded-lg blur-[2px] transition-all duration-300"></div>
                               
-                              <div className="relative flex items-start gap-1 p-1 bg-gradient-to-br from-blue-50/90 to-cyan-50/90 dark:from-blue-950/30 dark:to-cyan-950/30 rounded-lg border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
+                              <div className="relative flex items-start gap-1 p-1 bg-gradient-to-br from-green-50/90 to-emerald-50/90 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm transition-all duration-300 max-w-[170px]">
                                 {/* أيقونة وارد */}
                                 <div className="flex-shrink-0 relative">
-                                  <div className="absolute inset-0 bg-blue-500/20 rounded blur-[2px]"></div>
-                                  <div className="relative flex items-center justify-center w-7 h-7 bg-gradient-to-br from-blue-500 to-cyan-600 rounded shadow-md">
+                                  <div className="absolute inset-0 bg-green-500/20 rounded blur-[2px]"></div>
+                                  <div className="relative flex items-center justify-center w-7 h-7 bg-gradient-to-br from-green-500 to-emerald-600 rounded shadow-md">
                                     <PackageCheck className="h-3.5 w-3.5 text-white" />
                                   </div>
                                 </div>
@@ -783,36 +783,24 @@ const OrderCard = React.memo(({
                                 {/* المحتوى */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1 mb-0.5">
-                                    <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                                    <span className="text-[10px] font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">
                                       وارد من الزبون
                                     </span>
-                                    <div className="h-px flex-1 bg-gradient-to-r from-blue-300/50 to-transparent"></div>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-green-300/50 to-transparent"></div>
                                   </div>
                                   
                                   {productSummary.incoming.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-1.5 py-0.5">
-                                      {item.colorHex && (
-                                        <div className="relative">
-                                          <div 
-                                            className="w-3.5 h-3.5 rounded-full shadow-inner ring-1 ring-white dark:ring-gray-800 hover:scale-110 transition-transform duration-200" 
-                                            style={{ 
-                                              backgroundColor: item.colorHex,
-                                              boxShadow: `0 1px 4px ${item.colorHex}40`
-                                            }}
-                                          />
-                                        </div>
-                                      )}
-                                      
                                       <span className="font-semibold text-[11px] text-gray-900 dark:text-gray-100">
                                         {item.productName}
                                       </span>
                                       {item.color && (
-                                        <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                        <span className="text-[10px] text-green-600 dark:text-green-400">
                                           • {item.color}
                                         </span>
                                       )}
                                       {item.size && (
-                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-blue-200/50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+                                        <span className="px-1.5 py-0.5 text-[10px] font-medium bg-green-200/50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full">
                                           {item.size}
                                         </span>
                                       )}
