@@ -11,8 +11,8 @@ import { normalizePhone } from '@/utils/phoneUtils';
 
 export const ReturnProductForm = ({
   customerPhone,
+  cart,
   onAddIncoming,
-  returnProduct,
   refundAmount,
   onRefundAmountChange,
   onOriginalOrderFound,
@@ -21,7 +21,9 @@ export const ReturnProductForm = ({
   const [originalOrder, setOriginalOrder] = useState(null);
   const [searching, setSearching] = useState(false);
   const [productDialogOpen, setProductDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // ✅ حساب المنتج المختار من cart
+  const selectedProduct = cart?.find(item => item.item_direction === 'incoming');
   
   // البحث التلقائي عن الطلب الأصلي
   useEffect(() => {
@@ -91,7 +93,6 @@ export const ReturnProductForm = ({
       }));
       
       onAddIncoming(incomingProducts);
-      setSelectedProduct(incomingProducts[0]);
       
       // اقتراح مبلغ الإرجاع بناءً على المنتج
       if (originalOrder) {

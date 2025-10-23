@@ -62,7 +62,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [nameTouched, setNameTouched] = useState(false);
   
   // حالات الاستبدال والإرجاع
-  const [returnProduct, setReturnProduct] = useState(null);
   const [refundAmount, setRefundAmount] = useState(0);
   const [manualExchangePriceDiff, setManualExchangePriceDiff] = useState(0);
   const [foundOriginalOrder, setFoundOriginalOrder] = useState(null); // ✅ حالة جديدة للطلب الأصلي
@@ -1249,10 +1248,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     // التحقق من متطلبات الإرجاع
     if (formData.type === 'return') {
-      if (!returnProduct || !refundAmount) {
+      const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+      
+      if (incomingItems.length === 0 || !refundAmount) {
         toast({
           title: "خطأ",
-          description: "يجب اختيار المنتج ومبلغ الإرجاع",
+          description: "يجب اختيار المنتج المُرجع ومبلغ الإرجاع",
           variant: "destructive"
         });
         return;
@@ -1514,31 +1515,38 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       let orderItems = cart;
       let actualRefundAmount = 0;
       
-      // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير المنتجات والملاحظات
-      if (formData.type === 'return' && returnProduct && refundAmount > 0) {
+      // ✅ معالجة الإرجاع - حساب المبلغ السالب وتحضير المنتجات
+      if (formData.type === 'return' && refundAmount > 0) {
+        const incomingItems = cart.filter(item => item.item_direction === 'incoming');
+        
+        if (incomingItems.length === 0) {
+          throw new Error('يجب اختيار المنتج المُرجع');
+        }
+        
         // ✅ المبلغ النهائي = -refundAmount (يشمل التوصيل بالفعل)
         finalTotal = -refundAmount;
         actualRefundAmount = refundAmount;
         
         // ✅ ملاحظات مختصرة بالعربية
-        const returnQuantity = returnProduct?.quantity || 1;
+        const returnedProduct = incomingItems[0];
+        const returnQuantity = returnedProduct?.quantity || 1;
         const amountToCustomer = refundAmount - deliveryFeeAmount;
-        orderNotes = `إرجاع: منتج ${returnProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
+        orderNotes = `إرجاع: منتج ${returnedProduct.productName} عدد ${returnQuantity} | المبلغ المُرجع للزبون: ${amountToCustomer.toLocaleString()} د.ع${formData.notes ? ' | ' + formData.notes : ''}`;
 
-        // ✅ إنشاء order_items للمنتج المُرجع لتشغيل الـ triggers
-        orderItems = [{
-          productId: returnProduct.productId || returnProduct.id,
-          variantId: returnProduct.variantId || returnProduct.sku || null,
-          product_id: returnProduct.productId || returnProduct.id,
-          variant_id: returnProduct.variantId || returnProduct.sku || null,
-          quantity: returnQuantity,
-          unit_price: returnProduct.price || 0,
-          price: returnProduct.price || 0,
-          total_price: (returnProduct.price || 0) * returnQuantity,
-          productName: returnProduct.productName,
-          cost_price: returnProduct.cost_price || 0,
+        // ✅ إنشاء order_items من cart (المنتجات الواردة)
+        orderItems = incomingItems.map(item => ({
+          productId: item.productId || item.id,
+          variantId: item.variantId || item.sku || null,
+          product_id: item.productId || item.id,
+          variant_id: item.variantId || item.sku || null,
+          quantity: item.quantity,
+          unit_price: item.price || 0,
+          price: item.price || 0,
+          total_price: (item.price || 0) * item.quantity,
+          productName: item.productName,
+          cost_price: item.costPrice || 0,
           item_direction: 'incoming',
-        }];
+        }));
       }
       
       // ✅ تعريف merchantNotes خارج الشرط لتجنب الخطأ
@@ -2598,7 +2606,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             onToggleLoyaltyDelivery={() => setApplyLoyaltyDelivery(!applyLoyaltyDelivery)}
             cart={cart}
             removeFromCart={removeFromCart}
-            showProductSelection={formData.type !== 'exchange'}
+            showProductSelection={formData.type !== 'exchange' && formData.type !== 'return'}
           />
           
           {/* نماذج الاستبدال والإرجاع */}
@@ -2618,8 +2626,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           {formData.type === 'return' && (
             <ReturnProductForm
               customerPhone={formData.phone}
+              cart={cart}
               onAddIncoming={handleConfirmIncomingProducts}
-              returnProduct={returnProduct}
               refundAmount={refundAmount}
               onRefundAmountChange={setRefundAmount}
               onOriginalOrderFound={setFoundOriginalOrder}
