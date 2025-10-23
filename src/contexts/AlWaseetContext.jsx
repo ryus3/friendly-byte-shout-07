@@ -1467,7 +1467,8 @@ export const AlWaseetProvider = ({ children }) => {
 
         // فحص ما إذا كانت هناك حاجة لتحديث
         const needsStatusUpdate = localOrder.status !== localStatus;
-        const needsDeliveryStatusUpdate = localOrder.delivery_status !== waseetStatusText;
+        const waseetNumericStatus = String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || '');
+        const needsDeliveryStatusUpdate = localOrder.delivery_status !== waseetNumericStatus;
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1; // تطبيع مقارنة الأرقام
         const needsReceiptUpdate = finConfirmed && !localOrder.receipt_received;
 
