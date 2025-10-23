@@ -1912,7 +1912,7 @@ export const AlWaseetProvider = ({ children }) => {
             // تحضير التحديثات
             const updates = {
               status: localStatus,
-              delivery_status: waseetStatusText,
+              delivery_status: String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || ''),
               updated_at: new Date().toISOString(),
             };
             
@@ -2184,7 +2184,7 @@ export const AlWaseetProvider = ({ children }) => {
       // تحضير التحديثات
       const updates = {
         status: correctLocalStatus,
-        delivery_status: String(waseetOrder.state_id || waseetOrder.status_id || ''),
+        delivery_status: String(fetchedOrder.state_id || fetchedOrder.status_id || ''),
         delivery_partner_order_id: String(waseetOrder.id),
         qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
         updated_at: new Date().toISOString()
