@@ -12,15 +12,21 @@
 export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
   if (!variantId || !Array.isArray(orders)) return 0;
 
-  const activeOrderStatuses = ['pending', 'shipped', 'delivery']; // استبعاد 'returned' لأنها لا تحتجز المخزون في المنطق الصحيح القديم
+  const activeOrderStatuses = ['pending', 'shipped', 'delivery'];
   
   return orders.reduce((totalReserved, order) => {
+    // استبعاد طلبات الإرجاع من الحجز
+    if (order.order_type === 'return') return totalReserved;
+    
     // تحقق من أن الطلب يحجز مخزون
     if (!activeOrderStatuses.includes(order.status)) return totalReserved;
     
     // حساب الكمية المحجوزة من هذا الطلب لهذا المتغير
     const orderItems = order.order_items || order.items || [];
     const reservedFromThisOrder = orderItems.reduce((orderReserved, item) => {
+      // استبعاد المنتجات الواردة (incoming) من الحجز
+      if (item.item_direction === 'incoming') return orderReserved;
+      
       if (item.variant_id === variantId) {
         return orderReserved + (item.quantity || 0);
       }

@@ -3,22 +3,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, AlertTriangle, PackageMinus } from 'lucide-react';
-import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
+import { Button } from '@/components/ui/button';
+import { CheckCircle, AlertTriangle, PackageMinus, Plus } from 'lucide-react';
+import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone } from '@/utils/phoneUtils';
 
 export const ReturnProductForm = ({
-  cart,
   customerPhone,
-  onSelectReturn,
+  onAddIncoming,
   returnProduct,
   refundAmount,
   onRefundAmountChange,
-  onOriginalOrderFound // ✅ إضافة prop جديد لتمرير الطلب الأصلي
+  onOriginalOrderFound,
+  deliveryFee = 5000
 }) => {
   const [originalOrder, setOriginalOrder] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   
   // البحث التلقائي عن الطلب الأصلي
   useEffect(() => {
@@ -67,6 +70,40 @@ export const ReturnProductForm = ({
     searchOriginalOrder();
   }, [customerPhone, onRefundAmountChange]);
   
+  const handleConfirmIncoming = (selectedItems) => {
+    if (selectedItems && selectedItems.length > 0) {
+      const incomingProducts = selectedItems.map(item => ({
+        id: `incoming-${item.variantId}-${Date.now()}-${Math.random()}`,
+        productId: item.productId,
+        variantId: item.variantId,
+        productName: item.productName,
+        color: item.color,
+        size: item.size,
+        price: item.price,
+        costPrice: item.costPrice,
+        quantity: item.quantity,
+        total: item.total,
+        image: item.image,
+        sku: item.sku,
+        stock: item.stock,
+        reserved: item.reserved,
+        item_direction: 'incoming'
+      }));
+      
+      onAddIncoming(incomingProducts);
+      setSelectedProduct(incomingProducts[0]);
+      
+      // اقتراح مبلغ الإرجاع بناءً على المنتج
+      if (originalOrder) {
+        onRefundAmountChange(originalOrder.final_amount);
+      } else {
+        const productValue = incomingProducts.reduce((sum, p) => sum + (p.price * p.quantity), 0);
+        onRefundAmountChange(productValue + deliveryFee);
+      }
+    }
+    setProductDialogOpen(false);
+  };
+  
   return (
     <div className="space-y-4 mt-6">
       <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -74,23 +111,42 @@ export const ReturnProductForm = ({
         تفاصيل الإرجاع
       </h3>
       
-      {/* المنتج المُرجع */}
+      {/* المنتج المُرجع - اختيار مباشر */}
       <Card className="border-orange-200 bg-orange-50/50 dark:bg-orange-900/10">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">المنتج المُرجع</CardTitle>
+          <CardTitle className="text-base">المنتج المُرجع (الوارد)</CardTitle>
         </CardHeader>
-        <CardContent>
-          <SearchableSelectFixed
-            value={returnProduct?.id || ''}
-            onValueChange={onSelectReturn}
-            options={cart.map(item => ({
-              value: item.id,
-              label: `${item.productName} - ${item.color} - ${item.size}`
-            }))}
-            placeholder="اختر المنتج المراد إرجاعه"
-            emptyText="السلة فارغة"
-            className="w-full"
-          />
+        <CardContent className="space-y-3">
+          <Button
+            type="button"
+            onClick={() => setProductDialogOpen(true)}
+            variant="outline"
+            className="w-full border-dashed border-2 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+          >
+            <Plus className="w-4 h-4 ml-2" />
+            اختر المنتج المُرجع
+          </Button>
+          
+          {selectedProduct && (
+            <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={selectedProduct.image} 
+                  alt={selectedProduct.productName}
+                  className="w-12 h-12 object-cover rounded"
+                />
+                <div className="flex-1">
+                  <p className="font-semibold">{selectedProduct.productName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedProduct.color} - {selectedProduct.size} × {selectedProduct.quantity}
+                  </p>
+                </div>
+                <Badge variant="secondary">
+                  {(selectedProduct.price * selectedProduct.quantity).toLocaleString()} د.ع
+                </Badge>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
@@ -165,7 +221,7 @@ export const ReturnProductForm = ({
       </Card>
 
       {/* ملخص مالي تفصيلي */}
-      {returnProduct && refundAmount > 0 && (
+      {selectedProduct && refundAmount > 0 && (
         <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/10">
           <CardContent className="p-4">
             <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
@@ -211,6 +267,13 @@ export const ReturnProductForm = ({
           </CardContent>
         </Card>
       )}
+      
+      <ProductSelectionDialog 
+        open={productDialogOpen} 
+        onOpenChange={setProductDialogOpen}
+        onConfirm={handleConfirmIncoming}
+        initialCart={[]}
+      />
     </div>
   );
 };

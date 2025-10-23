@@ -2617,16 +2617,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           {formData.type === 'return' && (
             <ReturnProductForm
-              cart={cart}
               customerPhone={formData.phone}
-              onSelectReturn={(productId) => {
-                const product = cart.find(item => item.id === productId);
-                setReturnProduct(product);
-              }}
+              onAddIncoming={handleConfirmIncomingProducts}
               returnProduct={returnProduct}
               refundAmount={refundAmount}
               onRefundAmountChange={setRefundAmount}
               onOriginalOrderFound={setFoundOriginalOrder}
+              deliveryFee={deliveryFee}
             />
           )}
         </fieldset>
