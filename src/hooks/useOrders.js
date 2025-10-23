@@ -143,6 +143,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       });
 
       // ✅ إنشاء order_items للاستبدال (للحجز والتتبع فقط)
+      console.log('🔍 DEBUG: فحص شرط الاستبدال:', {
+        orderType: orderType,
+        orderTypeCheck1: orderType === 'replacement',
+        orderTypeCheck2: orderType === 'exchange',
+        hasExchangeMetadata: !!actualCustomerInfo.exchange_metadata,
+        exchangeMetadata: actualCustomerInfo.exchange_metadata,
+        fullCustomerInfo: actualCustomerInfo,
+        conditionResult: (orderType === 'replacement' || orderType === 'exchange') && actualCustomerInfo.exchange_metadata
+      });
+      
       if ((orderType === 'replacement' || orderType === 'exchange') && actualCustomerInfo.exchange_metadata) {
         const exchangeMetadata = actualCustomerInfo.exchange_metadata;
         const orderItemsToInsert = [];
