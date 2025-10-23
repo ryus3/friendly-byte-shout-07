@@ -10,14 +10,26 @@ import {
   MapPin,
   Home
 } from 'lucide-react';
+import { ALWASEET_STATUS_DEFINITIONS } from '@/lib/alwaseet-statuses';
 
 /**
  * نظام موحد لترجمة وعرض حالات الطلبات
  * يستخدم الألوان الجميلة المحددة في index.css
  */
 
+// تحويل جميع حالات الوسيط إلى تنسيق STATUS_TRANSLATIONS
+const ALWASEET_TRANSLATIONS = Object.entries(ALWASEET_STATUS_DEFINITIONS).reduce((acc, [key, config]) => {
+  acc[key] = {
+    label: config.text,
+    icon: config.icon,
+    color: config.color + ' px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
+  };
+  return acc;
+}, {});
+
 // ترجمة الحالات مع الألوان والأيقونات الموحدة
 const STATUS_TRANSLATIONS = {
+  ...ALWASEET_TRANSLATIONS, // ✅ جميع 42 حالة من الوسيط أولاً
   // الحالات الأساسية
   'فعال': {
     label: 'قيد التجهيز',
@@ -79,11 +91,7 @@ const STATUS_TRANSLATIONS = {
     icon: XCircle,
     color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
-  '2': {
-    label: 'تم الاستلام من قبل المندوب',
-    icon: Truck,
-    color: 'bg-gradient-to-r from-orange-500 to-amber-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
+  // ✅ الحالات المخصصة ذات الألوان الجميلة (تكتب فوق ALWASEET_TRANSLATIONS)
   '17': {
     label: 'تم الإرجاع إلى التاجر',
     icon: Home,
@@ -98,11 +106,6 @@ const STATUS_TRANSLATIONS = {
     label: 'تم التسليم للزبون',
     icon: CheckCircle,
     color: 'bg-gradient-to-r from-green-500 to-emerald-600 text-white border border-green-300/50 shadow-lg shadow-green-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
-  },
-  '12': {
-    label: 'قيد التوصيل الى الزبون',
-    icon: MapPin,
-    color: 'bg-gradient-to-r from-teal-400 to-cyan-500 text-white border border-teal-300/50 shadow-lg shadow-teal-400/40 px-2 py-1 text-xs max-w-[160px] font-bold rounded-lg'
   },
   '13': {
     label: 'راجعة للمخزن',
