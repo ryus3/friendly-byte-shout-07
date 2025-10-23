@@ -1544,7 +1544,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (needsDeliveryStatusUpdate) {
-          updates.delivery_status = waseetStatusText;
+          updates.delivery_status = String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || '');
         }
 
         // ✅ تحديث السعر إذا تغير (تم فحصه بالفعل في needsPriceUpdate)
