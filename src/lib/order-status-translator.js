@@ -10,6 +10,7 @@ import {
   MapPin,
   Home
 } from 'lucide-react';
+import { ALWASEET_STATUS_DEFINITIONS } from './alwaseet-statuses';
 
 /**
  * نظام موحد لترجمة وعرض حالات الطلبات
@@ -298,6 +299,18 @@ export const translateOrderStatus = (status, deliveryStatus = null, isLocalOrder
 const getStatusConfig = (status) => {
   if (!status) {
     return getDefaultConfig('غير محدد');
+  }
+
+  // ✅ إذا كان رقماً، ابحث في ALWASEET_STATUS_DEFINITIONS أولاً
+  if (/^\d+$/.test(String(status).trim())) {
+    const alwaseetConfig = ALWASEET_STATUS_DEFINITIONS[String(status).trim()];
+    if (alwaseetConfig) {
+      return {
+        label: alwaseetConfig.text,
+        icon: alwaseetConfig.icon,
+        color: alwaseetConfig.color
+      };
+    }
   }
 
   // البحث في الترجمات المحددة
