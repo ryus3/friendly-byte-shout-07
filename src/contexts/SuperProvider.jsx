@@ -211,13 +211,19 @@ export const SuperProvider = ({ children }) => {
 
     // حساب الحجز من الطلبات النشطة
     (data.orders || []).filter(order => order != null).forEach(order => {
-      // الطلبات التي تحجز المخزون
-      const shouldReserveStock = ['pending', 'shipped', 'delivery', 'returned'].includes(order?.status);
+      // ✅ استبعاد طلبات الإرجاع من الحجز
+      if (order.order_type === 'return') return;
+      
+      // الطلبات التي تحجز المخزون (إزالة 'returned' لأنها لا تحجز)
+      const shouldReserveStock = ['pending', 'shipped', 'delivery'].includes(order?.status);
       
       if (shouldReserveStock && order?.order_items) {
         // تصفية العناصر null/undefined قبل المعالجة
         const validItems = (order.order_items || []).filter(item => item != null && typeof item === 'object');
         validItems.forEach(item => {
+          // ✅ استبعاد المنتجات الواردة (incoming) من الحجز
+          if (item.item_direction === 'incoming') return;
+          
           if (item?.variant_id) {
             const currentReserved = reservationMap.get(item.variant_id) || 0;
             reservationMap.set(item.variant_id, currentReserved + (Number(item?.quantity) || 0));
