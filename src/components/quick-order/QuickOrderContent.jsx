@@ -1781,11 +1781,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               location: formData.address,
               type_name: formData.type === 'return'
                 ? (() => {
-                    // ✅ للإرجاع: "طلب ترجيع + أسماء المنتجات"
-                    const incomingItems = cart.filter(item => item.item_direction === 'incoming');
-                    if (incomingItems.length === 0) return 'طلب ترجيع';
+                    // ✅ للإرجاع: "طلب ترجيع + أسماء المنتجات" - استخدام orderItems
+                    if (orderItems.length === 0) return 'طلب ترجيع';
                     
-                    const productNames = incomingItems.map(item => {
+                    const productNames = orderItems.map(item => {
                       const name = item.productName || 'منتج';
                       const sizePart = item.size ? ` ${item.size}` : '';
                       const colorPart = item.color ? ` . ${item.color}` : '';
@@ -2136,8 +2135,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded mt-2">
                   <p className="text-xs">📊 تفاصيل المبلغ:</p>
                   <ul className="text-xs space-y-1 mt-1">
-                    <li>• من الربح: {productProfit.toLocaleString()} د.ع</li>
-                    <li>• من الإيراد: {(refundAmount - productProfit).toLocaleString()} د.ع</li>
+                    <li>• من الربح: {totalProductProfit.toLocaleString()} د.ع</li>
+                    <li>• من الإيراد: {(refundAmount - totalProductProfit).toLocaleString()} د.ع</li>
                     {adjustResult?.employee_share > 0 && (
                       <li>• خصم من ربح الموظف: {adjustResult.employee_share.toLocaleString()} د.ع</li>
                     )}

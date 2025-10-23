@@ -962,7 +962,8 @@ export const SuperProvider = ({ children }) => {
             variant_id: i.variantId || i.sku,
             quantity: i.quantity,
             unit_price: i.price,
-            total_price: i.quantity * i.price
+            total_price: i.quantity * i.price,
+            item_direction: i.item_direction || null
           }));
 
       // ✅ للإرجاع والاستبدال: يُسمح بسلة فارغة
