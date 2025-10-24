@@ -14,12 +14,10 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   const [addSizesDialogOpen, setAddSizesDialogOpen] = useState(false);
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
-    
-    
     setVariants(prev => prev.map(v => {
-      // استخدام المعيار الموحد: color_id و size_id حصرياً
-      const vColorId = String(v.color_id || '');
-      const vSizeId = String(v.size_id || '');
+      // ✅ دعم كلا المعيارين: colorId/color_id و sizeId/size_id
+      const vColorId = String(v.color_id || v.colorId || '');
+      const vSizeId = String(v.size_id || v.sizeId || '');
       const targetColorId = String(colorId || '');
       const targetSizeId = String(sizeId || '');
       
@@ -30,7 +28,6 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
         
         // معالجة خاصة لحقل الكمية
         if (field === 'quantity') {
-          // تحديث الكمية في المخزون والحقل المباشر
           updated.quantity = value;
           if (updated.inventory) {
             updated.inventory = { ...updated.inventory, quantity: value };
@@ -38,10 +35,8 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
             updated.inventory = { quantity: value };
           }
         } else {
-          // تحديث الحقول الأخرى بشكل طبيعي
           updated[field] = value;
         }
-        
         
         return updated;
       }
@@ -50,7 +45,11 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
   };
 
   const handleRemoveSizeFromColor = (sizeId) => {
-    setVariants(prev => prev.filter(v => !(v.color_id === color.id && v.size_id === sizeId)));
+    setVariants(prev => prev.filter(v => {
+      const vColorId = v.color_id || v.colorId;
+      const vSizeId = v.size_id || v.sizeId;
+      return !(vColorId === color.id && vSizeId === sizeId);
+    }));
   };
 
   const handleAddSizes = (newSizes) => {
@@ -316,11 +315,12 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                             type="number" 
                             placeholder="0" 
                             className="text-center font-medium w-full"
-                            value={currentQuantity || ''} 
+                             value={currentQuantity || ''} 
                             onChange={e => {
                               const newQuantity = parseInt(e.target.value) || 0;
-                              handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', newQuantity);
-                            }} 
+                              const targetSizeId = variantData.sizeId || variantData.size_id;
+                              handleVariantChange(color.id, targetSizeId, 'quantity', newQuantity);
+                            }}
                             min="0"
                             step="1"
                           />
@@ -338,8 +338,11 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                                   type="text" 
                                   placeholder="مثال: مناسب لوزن 50-60 كغ" 
                                   className="text-center text-xs w-full"
-                                  value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
-                                  onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                                   value={variantData.hint || ''} 
+                                  onChange={e => {
+                                    const targetSizeId = variantData.sizeId || variantData.size_id;
+                                    handleVariantChange(color.id, targetSizeId, 'hint', e.target.value);
+                                  }}
                                 />
                              </TooltipTrigger>
                                <TooltipContent><p>تلميح ذكي للزبائن عن هذا القياس</p></TooltipContent>

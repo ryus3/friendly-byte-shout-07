@@ -838,11 +838,11 @@ const AddProductPage = () => {
                     <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-3 md:space-y-4">
                          {selectedColors.map((color) => (
-                            <SortableColorCard
+                             <SortableColorCard
                               key={color.id}
                               id={color.id}
                               color={color}
-                              allSizesForType={isEditMode ? [] : variants.filter(v => v.colorId === color.id)}
+                              allSizesForType={variants.filter(v => (v.colorId === color.id || v.color_id === color.id))}
                               variants={variants}
                               setVariants={setVariants}
                               price={productInfo.price}
