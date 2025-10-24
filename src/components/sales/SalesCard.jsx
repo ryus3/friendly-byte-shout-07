@@ -118,15 +118,17 @@ const SalesCard = ({
           
           {/* Header: Status Badges (left) & Order Number (right) */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              {statusInfo.badge}
-              {receiptInfo.badge}
-            </div>
-            
+            {/* اليسار: رقم الطلب */}
             <div className="flex items-center gap-2">
               <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
                 {order.order_number}
               </h3>
+            </div>
+            
+            {/* اليمين: Badges */}
+            <div className="flex items-center gap-2">
+              {statusInfo.badge}
+              {receiptInfo.badge}
             </div>
           </div>
 
