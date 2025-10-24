@@ -134,8 +134,8 @@ const SalesCard = ({
           <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
               
-              {/* Column 1 (left): Date, Time, Employee, Delivery Partner */}
-              <div className="space-y-1 text-left order-1 sm:order-1">
+              {/* Column 1 (right in RTL): Date, Time, Employee, Delivery Partner */}
+              <div className="space-y-1 text-left order-3 sm:order-1">
                 <div className="flex items-center gap-2 justify-start">
                   <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-sm font-bold text-foreground">
@@ -157,7 +157,7 @@ const SalesCard = ({
                   </div>
                 )}
                 
-                {/* Delivery Partner - في العمود الأيسر */}
+                {/* Delivery Partner - في العمود الأيمن */}
                 {order.delivery_partner && order.delivery_partner !== 'محلي' && (
                   <div className="flex flex-col gap-1 items-start">
                     <div className="flex justify-start w-full">
@@ -173,7 +173,7 @@ const SalesCard = ({
               </div>
               
               {/* Column 2 (center): View Details Button */}
-              <div className="flex items-center justify-center gap-1 order-3 sm:order-2">
+              <div className="flex items-center justify-center gap-1 order-2 sm:order-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -185,8 +185,8 @@ const SalesCard = ({
                 </Button>
               </div>
               
-              {/* Column 3 (right): Customer Name, Phone, City */}
-              <div className="space-y-1 text-left order-2 sm:order-3">
+              {/* Column 3 (left in RTL): Customer Name, Phone, City */}
+              <div className="space-y-1 text-left order-1 sm:order-3">
                 <div className="flex items-center gap-2 flex-row-reverse">
                   <User className="h-4 w-4 text-primary" />
                   <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
