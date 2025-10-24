@@ -947,7 +947,8 @@ export const SuperProvider = ({ children }) => {
             variant_id: i.variant_id,
             quantity: i.quantity,
             unit_price: i.unit_price || i.price || 0,
-            total_price: i.total_price || (i.quantity * (i.unit_price || i.price || 0))
+            total_price: i.total_price || (i.quantity * (i.unit_price || i.price || 0)),
+            item_direction: i.item_direction || null
           }))
         : (cartItemsArg || []).map(i => ({
             product_id: i.productId || i.id,
