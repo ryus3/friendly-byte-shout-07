@@ -115,117 +115,131 @@ const SalesCard = ({
       <CardContent className="relative p-4">
         <div className="space-y-3">
           
-          {/* Header: Order Number & Status */}
+          {/* Header: Status Badges (left) & Order Number (right) */}
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
-                {order.order_number}
-              </h3>
-            </div>
-            
             <div className="flex items-center gap-2">
               {statusInfo.badge}
               {receiptInfo.badge}
             </div>
+            
+            <div className="flex items-center gap-2">
+              {order.delivery_partner && order.delivery_partner !== 'محلي' && (
+                <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
+                  ({order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()})
+                </Badge>
+              )}
+              <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
+                {order.order_number}
+              </h3>
+            </div>
           </div>
 
-          {/* Main Content Grid - 3 columns on desktop, 1 on mobile */}
-          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Main Content Grid - 3 columns */}
+          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
+            <div className="grid grid-cols-3 gap-3 items-center">
               
-              {/* Left Column (RTL): Date & Location */}
-              <div className="space-y-2 order-3 md:order-1">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-primary" />
+              {/* Column 1 (left): Date, Time, Employee, Delivery Partner */}
+              <div className="space-y-1 text-left">
+                <div className="flex items-center gap-2 justify-start">
+                  <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-sm font-bold text-foreground">
                     {format(new Date(order.created_at), 'dd/MM/yyyy')}
                   </span>
                 </div>
-                
-                {(order.customer_city || order.customer_province) && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-foreground">
-                      {order.customer_city}
-                      {order.customer_province && ` - ${order.customer_province}`}
+                <div className="flex items-center gap-2 justify-start">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(order.created_at), 'p', { locale: ar })}
+                  </span>
+                </div>
+                {showEmployee && employee && (
+                  <div className="flex items-center gap-2 justify-start">
+                    <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                      <UserIcon className="h-3 w-3 inline-block ml-1" />
+                      {employee.full_name}
                     </span>
                   </div>
                 )}
-                
-                {order.delivery_partner && (
-                  <div className="flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-primary" />
-                    <Badge variant="outline" className="font-bold text-xs">
-                      {order.delivery_partner}
-                    </Badge>
-                  </div>
-                )}
               </div>
               
-              {/* Middle Column: Customer & Products */}
-              <div className="space-y-3 order-1 md:order-2">
-                {/* Customer */}
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-foreground">{order.customer_name}</span>
-                    {order.customer_phone && (
-                      <span className="text-xs text-muted-foreground mr-2" dir="ltr">
-                        {order.customer_phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Products */}
-                {orderProducts && orderProducts.length > 0 && (
-                  <div className="space-y-1">
-                    {orderProducts.slice(0, 2).map((item, index) => (
-                      <div key={index} className="text-sm flex justify-between items-center">
-                        <span className="text-foreground truncate">{item.product_name}</span>
-                        <Badge variant="secondary" className="mr-2 flex-shrink-0">
-                          {item.quantity}x
-                        </Badge>
-                      </div>
-                    ))}
-                    {orderProducts.length > 2 && (
-                      <div className="text-xs text-muted-foreground">
-                        +{orderProducts.length - 2} آخرين
-                      </div>
-                    )}
-                  </div>
-                )}
+              {/* Column 2 (center): View Details Button */}
+              <div className="flex items-center justify-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleViewDetails}
+                  className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
+                  title="معاينة"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
               </div>
               
-              {/* Right Column (RTL): Amount & Employee */}
-              <div className="space-y-2 order-2 md:order-3 text-right">
-                <div>
-                  <div className="text-2xl font-bold text-primary tabular-nums" dir="ltr">
-                    {formatCurrency(parseFloat(order.final_amount || 0))}
-                  </div>
-                  <div className="text-xs text-muted-foreground">المبلغ</div>
+              {/* Column 3 (right): Customer Name, Phone, City */}
+              <div className="space-y-1 text-left">
+                <div className="flex items-center gap-2 flex-row-reverse">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
                 </div>
-                
-                {showEmployee && employee && (
-                  <div className="text-xs text-muted-foreground">
-                    <User className="w-3 h-3 inline ml-1" />
-                    {employee.full_name}
+                {order.customer_phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
+                    <Phone className="h-3 w-3" />
+                    <span dir="ltr">{order.customer_phone}</span>
+                  </div>
+                )}
+                {(order.customer_city || order.customer_province) && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
+                    <MapPin className="h-3 w-3 flex-shrink-0" />
+                    <span className="text-right">
+                      {order.customer_city}
+                      {order.customer_province && ` – ${order.customer_province}`}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           </div>
-          
-          {/* Footer: View Details Button */}
-          <div className="flex justify-end pt-3 border-t border-muted/30">
-            <Button 
-              size="sm" 
-              onClick={handleViewDetails}
-              className="hover:scale-105 transition-transform"
-            >
-              <Eye className="w-4 h-4 ml-2" />
-              عرض التفاصيل
-            </Button>
+
+          {/* Products & Amount Row */}
+          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
+            <div className="flex items-center justify-between">
+              {/* Products - Right */}
+              <div className="flex-1">
+                {orderProducts && orderProducts.length > 0 && (
+                  <div className="space-y-1">
+                    {orderProducts.slice(0, 2).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <Package className="h-3 w-3 text-primary" />
+                          <span className="font-medium">{item.product_name}</span>
+                        </div>
+                        <Badge variant="secondary" className="mr-2">x{item.quantity}</Badge>
+                      </div>
+                    ))}
+                    {orderProducts.length > 2 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{orderProducts.length - 2} منتجات أخرى
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Amount - Left */}
+              <div className="flex items-center gap-2 text-right">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                    <span className="font-bold text-lg text-primary" dir="ltr">
+                      {parseFloat(order.final_amount || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground font-medium">
+                    شامل التوصيل
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </CardContent>
