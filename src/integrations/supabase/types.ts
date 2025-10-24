@@ -3573,6 +3573,44 @@ export type Database = {
           },
         ]
       }
+      products_cache: {
+        Row: {
+          base_price: number | null
+          colors: Json | null
+          id: string
+          name: string
+          normalized_name: string
+          sizes: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_price?: number | null
+          colors?: Json | null
+          id: string
+          name: string
+          normalized_name: string
+          sizes?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_price?: number | null
+          colors?: Json | null
+          id?: string
+          name?: string
+          normalized_name?: string
+          sizes?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_cache_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -6207,6 +6245,7 @@ export type Database = {
         Args: { p_keep?: number }
         Returns: number
       }
+      rebuild_products_cache: { Args: never; Returns: undefined }
       recalculate_cash_source_balance: {
         Args: { p_source_id: string }
         Returns: number
