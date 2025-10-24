@@ -6,7 +6,7 @@ interface ProductCache {
   normalized_name: string;
   base_price: number;
   colors: Array<{ id: string; name: string }>;
-  sizes: Array<{ id: string; name: string; is_numeric: boolean }>;
+  sizes: Array<{ id: string; name: string }>;
 }
 
 let cache: ProductCache[] = [];
@@ -38,7 +38,7 @@ export async function getProductsCache(forceRefresh = false): Promise<ProductCac
         product_variants (
           id,
           colors ( id, name ),
-          sizes ( id, name, is_numeric )
+          sizes ( id, name )
         )
       `)
       .eq('is_active', true);
