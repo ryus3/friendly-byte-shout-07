@@ -95,157 +95,139 @@ const SalesCard = ({
   return (
     <Card 
       className={`
-        relative overflow-hidden transition-all duration-300 cursor-pointer group
-        ${isHovered ? 'scale-[1.02] shadow-2xl shadow-primary/20 dark:shadow-primary/10' : 'shadow-lg hover:shadow-xl dark:shadow-lg dark:hover:shadow-xl'}
-        bg-gradient-to-br ${statusInfo.color} ${statusInfo.borderColor}
-        border-2 hover:border-primary/40 dark:hover:border-primary/60
+        relative overflow-hidden rounded-2xl
+        bg-gradient-to-br from-card via-card/95 to-card/90
+        border-2 transition-all duration-500 ease-out cursor-pointer
+        shadow-xl shadow-black/10 hover:shadow-2xl hover:shadow-primary/25
+        dark:shadow-white/5 dark:hover:shadow-primary/15
+        ${isHovered ? 'border-primary ring-4 ring-primary/20 shadow-2xl shadow-primary/30' : 'border-border/30 hover:border-primary/50'}
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleViewDetails}
     >
-      {/* Floating Action Button */}
-      <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-        <Button 
-          size="sm" 
-          className="w-8 h-8 p-0 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 shadow-lg hover:shadow-xl transition-all"
-          onClick={handleViewDetails}
-        >
-          <Eye className="w-4 h-4" />
-        </Button>
-      </div>
+      {/* Top Gradient Line */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-blue-500 opacity-60" />
+      
+      {/* Hover Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 hover:opacity-100 transition-all duration-500" />
 
-      {/* Status Indicator Strip */}
-      <div className={`absolute top-0 right-0 w-1 h-full bg-gradient-to-b ${
-        order.status === 'completed' ? 'from-emerald-400 to-green-600' : 
-        order.status === 'delivered' ? 'from-blue-400 to-indigo-600' : 'from-gray-400 to-slate-600'
-      } opacity-80`} />
-
-      <CardContent className="p-6 space-y-4">
-        {/* Header Section */}
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                {hasTrackingNumber ? (
-                  <Tag className="w-4 h-4 text-primary dark:text-primary-foreground" />
-                ) : (
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                )}
-                <h3 className="font-bold text-lg text-foreground dark:text-foreground">
-                  {hasTrackingNumber ? `#${primaryId}` : `#${order.order_number}`}
-                </h3>
-              </div>
-              {hasTrackingNumber && (
-                <ExternalLink className="w-3 h-3 text-muted-foreground opacity-60" />
-              )}
+      <CardContent className="relative p-4">
+        <div className="space-y-3">
+          
+          {/* Header: Order Number & Status */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
+                {order.order_number}
+              </h3>
             </div>
             
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               {statusInfo.badge}
               {receiptInfo.badge}
             </div>
           </div>
 
-          <div className="text-left">
-            <div className="text-2xl font-bold text-primary dark:text-primary-foreground" dir="ltr">
-              {formatCurrency(parseFloat((order.final_amount || 0) - (order.delivery_fee || 0))).replace(/[٠-٩]/g, (d) => '0123456789'['٠١٢٣٤٥٦٧٨٩'.indexOf(d)])}
-            </div>
-            <div className="text-xs text-muted-foreground">مبلغ البيع</div>
-          </div>
-        </div>
-
-        {/* Customer & Location Info */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-white/40 dark:border-white/10 backdrop-blur-sm">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/50 dark:to-pink-900/50 flex items-center justify-center">
-              <User className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div className="flex-1">
-              <div className="font-medium text-foreground dark:text-foreground">
-                {order.customer_name || 'عميل غير محدد'}
-              </div>
-            </div>
-            {order.customer_phone && (
-              <div className="text-xs text-muted-foreground" dir="ltr">
-                {order.customer_phone}
-              </div>
-            )}
-          </div>
-
-          {(order.customer_city || order.customer_province) && (
-            <div className="flex items-center gap-3 p-3 bg-white/60 dark:bg-white/5 rounded-lg border border-white/40 dark:border-white/10 backdrop-blur-sm">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 flex items-center justify-center">
-                <MapPin className="w-4 h-4 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-foreground dark:text-foreground">
-                  {order.customer_city}
-                  {order.customer_province && ` - ${order.customer_province}`}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Products Preview */}
-        {orderProducts && orderProducts.length > 0 && (
-          <div className="p-3 bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 mb-2">
-              <ShoppingBag className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-              <span className="font-medium text-slate-700 dark:text-slate-300">المنتجات ({orderProducts.length})</span>
-            </div>
-            <div className="space-y-1">
-              {orderProducts.slice(0, 3).map((item, index) => (
-                <div key={index} className="flex justify-between items-center text-sm">
-                  <span className="text-slate-600 dark:text-slate-400 font-medium">
-                    {item.product_name}
+          {/* Main Content Grid - 3 columns on desktop, 1 on mobile */}
+          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Left Column (RTL): Date & Location */}
+              <div className="space-y-2 order-3 md:order-1">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">
+                    {format(new Date(order.created_at), 'dd/MM/yyyy')}
                   </span>
-                   <Badge variant="secondary" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" dir="ltr">
-                     {item.quantity.toLocaleString('en-US')}x
-                   </Badge>
                 </div>
-              ))}
-              {orderProducts.length > 3 && (
-                <div className="text-xs text-muted-foreground text-center pt-1">
-                  +{orderProducts.length - 3} منتجات أخرى
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Footer Section */}
-        <div className="space-y-3 pt-2 border-t border-white/40 dark:border-white/10">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Calendar className="w-3 h-3" />
-              {format(new Date(order.created_at), 'dd/MM/yyyy')}
-            </div>
-            {order.delivery_partner && (
-              <div className="flex items-center gap-1">
-                <Truck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700">
-                  {order.delivery_partner}
-                </Badge>
+                
+                {(order.customer_city || order.customer_province) && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-foreground">
+                      {order.customer_city}
+                      {order.customer_province && ` - ${order.customer_province}`}
+                    </span>
+                  </div>
+                )}
+                
+                {order.delivery_partner && (
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-primary" />
+                    <Badge variant="outline" className="font-bold text-xs">
+                      {order.delivery_partner}
+                    </Badge>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-
-          {showEmployee && employee && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/40 dark:bg-white/5 p-2 rounded-md">
-              <User className="w-3 h-3" />
-              <span className="font-medium">الموظف:</span>
-              <span>{employee.full_name || employee.username || employee.email || 'غير محدد'}</span>
+              
+              {/* Middle Column: Customer & Products */}
+              <div className="space-y-3 order-1 md:order-2">
+                {/* Customer */}
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-primary" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-foreground">{order.customer_name}</span>
+                    {order.customer_phone && (
+                      <span className="text-xs text-muted-foreground mr-2" dir="ltr">
+                        {order.customer_phone}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Products */}
+                {orderProducts && orderProducts.length > 0 && (
+                  <div className="space-y-1">
+                    {orderProducts.slice(0, 2).map((item, index) => (
+                      <div key={index} className="text-sm flex justify-between items-center">
+                        <span className="text-foreground truncate">{item.product_name}</span>
+                        <Badge variant="secondary" className="mr-2 flex-shrink-0">
+                          {item.quantity}x
+                        </Badge>
+                      </div>
+                    ))}
+                    {orderProducts.length > 2 && (
+                      <div className="text-xs text-muted-foreground">
+                        +{orderProducts.length - 2} آخرين
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              {/* Right Column (RTL): Amount & Employee */}
+              <div className="space-y-2 order-2 md:order-3 text-right">
+                <div>
+                  <div className="text-2xl font-bold text-primary tabular-nums" dir="ltr">
+                    {formatCurrency(parseFloat(order.final_amount || 0))}
+                  </div>
+                  <div className="text-xs text-muted-foreground">المبلغ</div>
+                </div>
+                
+                {showEmployee && employee && (
+                  <div className="text-xs text-muted-foreground">
+                    <User className="w-3 h-3 inline ml-1" />
+                    {employee.full_name}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          </div>
+          
+          {/* Footer: View Details Button */}
+          <div className="flex justify-end pt-3 border-t border-muted/30">
+            <Button 
+              size="sm" 
+              onClick={handleViewDetails}
+              className="hover:scale-105 transition-transform"
+            >
+              <Eye className="w-4 h-4 ml-2" />
+              عرض التفاصيل
+            </Button>
+          </div>
         </div>
-
-        {/* Hover Effect Overlay */}
-        <div className={`
-          absolute inset-0 bg-gradient-to-r from-primary/5 to-blue-600/5 dark:from-primary/10 dark:to-blue-600/10 opacity-0 
-          ${isHovered ? 'opacity-100' : ''} transition-opacity duration-300 pointer-events-none
-        `} />
       </CardContent>
     </Card>
   );
