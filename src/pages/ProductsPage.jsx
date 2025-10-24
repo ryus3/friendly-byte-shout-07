@@ -21,6 +21,7 @@ import AdvancedProductFilters from '@/components/products/AdvancedProductFilters
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+import { RefreshCacheButton } from '@/components/products/RefreshCacheButton';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
@@ -273,13 +274,16 @@ const ProductsPage = () => {
   // Header جميل للمنتجات
   const ProductsHeader = () => (
     <div className="mb-4">
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-          استعراض المنتجات
-        </h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          اكتشف مجموعتنا الواسعة من المنتجات عالية الجودة
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            استعراض المنتجات
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            اكتشف مجموعتنا الواسعة من المنتجات عالية الجودة
+          </p>
+        </div>
+        {isAdmin && <RefreshCacheButton />}
       </div>
     </div>
   );

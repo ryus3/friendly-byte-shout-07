@@ -308,6 +308,15 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
       
       console.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name, 'المتغيرات:', finalProduct.variants?.length);
       
+      // تحديث فوري للكاش بعد إضافة المنتج
+      try {
+        console.log('🔄 تحديث كاش المنتجات...');
+        await supabase.functions.invoke('refresh-product-cache');
+        console.log('✅ تم تحديث الكاش بنجاح');
+      } catch (cacheError) {
+        console.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية الإضافة):', cacheError);
+      }
+      
       return { success: true, data: finalProduct };
     } catch (error) {
       console.error("Error adding product:", error);
@@ -795,6 +804,15 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
               message: `تم تحديث المنتج "${productData.name}" مع جميع متغيراته وكمياته`,
               type: 'success'
             });
+        }
+        
+        // تحديث فوري للكاش بعد تعديل المنتج
+        try {
+          console.log('🔄 تحديث كاش المنتجات...');
+          await supabase.functions.invoke('refresh-product-cache');
+          console.log('✅ تم تحديث الكاش بنجاح');
+        } catch (cacheError) {
+          console.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية التحديث):', cacheError);
         }
         
         if(totalImagesToUpload === 0) setUploadProgress(100);
