@@ -117,7 +117,8 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
         order_items!inner (
           product_id,
           variant_id,
-          quantity
+          quantity,
+          item_direction
         )
       `)
       .eq('id', orderId)
@@ -139,8 +140,10 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
     });
 
     if (shouldRelease) {
-      // تحرير المخزون المحجوز
-      for (const item of order.order_items) {
+      // تحرير المخزون المحجوز - فقط للمنتجات الصادرة (outgoing) أو العادية
+      for (const item of order.order_items.filter(
+        i => !i.item_direction || i.item_direction === 'outgoing'
+      )) {
         const { error: releaseError } = await supabase.rpc('release_stock_item', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
@@ -158,8 +161,10 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
     } 
     
     if (shouldKeep) {
-      // التأكد من حجز المخزون (إذا لم يكن محجوزاً بالفعل)
-      for (const item of order.order_items) {
+      // التأكد من حجز المخزون - فقط للمنتجات الصادرة (outgoing) أو العادية
+      for (const item of order.order_items.filter(
+        i => !i.item_direction || i.item_direction === 'outgoing'
+      )) {
         const { error: reserveError } = await supabase.rpc('reserve_stock_for_order', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
@@ -202,7 +207,8 @@ export const auditAndFixReservations = async () => {
         order_items!inner (
           product_id,
           variant_id,
-          quantity
+          quantity,
+          item_direction
         )
       `)
       .in('status', ['pending', 'shipped', 'delivery', 'returned', 'completed', 'delivered']);
