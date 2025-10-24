@@ -16,7 +16,8 @@ import {
   Phone,
   Tag,
   ExternalLink,
-  ShoppingBag
+  ShoppingBag,
+  Building
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -123,11 +124,6 @@ const SalesCard = ({
             </div>
             
             <div className="flex items-center gap-2">
-              {order.delivery_partner && order.delivery_partner !== 'محلي' && (
-                <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
-                  ({order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()})
-                </Badge>
-              )}
               <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
                 {order.order_number}
               </h3>
@@ -136,10 +132,10 @@ const SalesCard = ({
 
           {/* Main Content Grid - 3 columns */}
           <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
-            <div className="grid grid-cols-3 gap-3 items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
               
               {/* Column 1 (left): Date, Time, Employee, Delivery Partner */}
-              <div className="space-y-1 text-left">
+              <div className="space-y-1 text-left order-1 sm:order-1">
                 <div className="flex items-center gap-2 justify-start">
                   <Calendar className="h-4 w-4 text-primary" />
                   <span className="text-sm font-bold text-foreground">
@@ -155,15 +151,29 @@ const SalesCard = ({
                 {showEmployee && employee && (
                   <div className="flex items-center gap-2 justify-start">
                     <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                      <UserIcon className="h-3 w-3 inline-block ml-1" />
+                      <User className="h-3 w-3 inline-block ml-1" />
                       {employee.full_name}
                     </span>
+                  </div>
+                )}
+                
+                {/* Delivery Partner - في العمود الأيسر */}
+                {order.delivery_partner && order.delivery_partner !== 'محلي' && (
+                  <div className="flex flex-col gap-1 items-start">
+                    <div className="flex justify-start w-full">
+                      <Badge className="bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold px-2 py-1 text-xs rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6">
+                        <Truck className="h-3 w-3" />
+                        <span className="truncate">
+                          {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()}
+                        </span>
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>
               
               {/* Column 2 (center): View Details Button */}
-              <div className="flex items-center justify-center gap-1">
+              <div className="flex items-center justify-center gap-1 order-3 sm:order-2">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -176,7 +186,7 @@ const SalesCard = ({
               </div>
               
               {/* Column 3 (right): Customer Name, Phone, City */}
-              <div className="space-y-1 text-left">
+              <div className="space-y-1 text-left order-2 sm:order-3">
                 <div className="flex items-center gap-2 flex-row-reverse">
                   <User className="h-4 w-4 text-primary" />
                   <span className="font-bold text-foreground text-sm">{order.customer_name}</span>

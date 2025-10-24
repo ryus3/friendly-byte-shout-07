@@ -52,7 +52,7 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
     return (
         <>
             <Dialog open={open} onOpenChange={onClose}>
-                <DialogContent className="max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-6xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogContent className="max-w-[95vw] sm:max-w-xl md:max-w-3xl lg:max-w-5xl mx-2 sm:mx-4 max-h-[90vh] overflow-hidden flex flex-col">
                     <DialogHeader className="flex-shrink-0">
                         <DialogTitle className="text-lg">{title}</DialogTitle>
                         <DialogDescription className="text-sm">
