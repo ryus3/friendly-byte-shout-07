@@ -1620,8 +1620,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ...formData,
       order_type: actualOrderType, // ✅ ضبط النوع الصحيح
       items: (() => {
-        // ✅ NEW: للاستبدال: نمرر cart كما هو (سيُستخدم لبناء order_items)
+        // ✅ للاستبدال: validation ثم تمرير cart
         if (formData.type === 'exchange') {
+          // ✅ VALIDATION: التأكد من أن جميع المنتجات لها item_direction
+          const invalidItems = cart.filter(item => !item.item_direction);
+          if (invalidItems.length > 0) {
+            console.error('❌ منتجات بدون item_direction:', invalidItems);
+            toast({
+              title: "خطأ في البيانات",
+              description: "جميع المنتجات يجب أن تحتوي على اتجاه (صادر/وارد)",
+              variant: "destructive"
+            });
+            throw new Error('جميع المنتجات يجب أن تحتوي على اتجاه (outgoing/incoming)');
+          }
+          
           console.log('📦 [QuickOrderContent] تمرير cart للاستبدال:', cart);
           return cart.map(item => ({
             product_id: item.productId,

@@ -136,9 +136,28 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           throw new Error('بيانات الاستبدال مفقودة');
         }
         
-        // ✅ استخدام المبلغ المحسوب من الواجهة
-        totalAmount = actualCustomerInfo.total_amount || 0;
+        // ✅ حساب فرق السعر فقط
+        const outgoingTotal = (exchangeMetadata.outgoing_items || [])
+          .reduce((sum, item) => sum + (item.total_price || 0), 0);
+        const incomingTotal = (exchangeMetadata.incoming_items || [])
+          .reduce((sum, item) => sum + (item.total_price || 0), 0);
+        
+        const priceDifference = outgoingTotal - incomingTotal;
+        
+        // ✅ المبلغ = فرق السعر فقط (إذا كان موجباً، وإلا صفر)
+        totalAmount = priceDifference > 0 ? priceDifference : 0;
+        
+        // ✅ المبلغ النهائي = فرق السعر + رسوم التوصيل
         finalAmount = totalAmount + deliveryFee;
+        
+        console.log('💰 حساب مبالغ الاستبدال:', {
+          outgoingTotal,
+          incomingTotal,
+          priceDifference,
+          totalAmount,
+          deliveryFee,
+          finalAmount
+        });
       } else if (orderType === 'return') {
         totalAmount = -Math.abs(refundAmount);
         finalAmount = totalAmount + deliveryFee;
@@ -248,9 +267,12 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
               product_id: item.product_id,
               variant_id: item.variant_id,
               quantity: item.quantity || 1,
-              unit_price: 0,              // ✅ صفر لتجنب الحسابات المالية
-              total_price: 0,             // ✅ صفر لتجنب الحسابات المالية
-              item_direction: 'outgoing'  // ✅ تحديد الاتجاه
+              unit_price: item.unit_price || 0,
+              total_price: item.total_price || 0,
+              item_direction: 'outgoing',  // ✅ تحديد الاتجاه
+              product_name: item.product_name,
+              color_name: item.color_name,
+              size_name: item.size_name
             });
           }
         } else {
@@ -274,9 +296,12 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
               product_id: item.product_id,
               variant_id: item.variant_id,
               quantity: item.quantity || 1,
-              unit_price: 0,              // ✅ صفر
-              total_price: 0,             // ✅ صفر
-              item_direction: 'incoming'  // ✅ تحديد الاتجاه
+              unit_price: item.unit_price || 0,
+              total_price: item.total_price || 0,
+              item_direction: 'incoming',  // ✅ تحديد الاتجاه
+              product_name: item.product_name,
+              color_name: item.color_name,
+              size_name: item.size_name
             });
           }
         } else {
