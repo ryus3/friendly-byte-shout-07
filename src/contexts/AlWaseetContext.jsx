@@ -246,16 +246,14 @@ export const AlWaseetProvider = ({ children }) => {
       return { success: true, updatedCount: 0 };
     }
 
-    // ✅ فلترة مزدوجة - استبعاد الطلبات المكتملة والمرجعة
+    // ✅ فلترة - استبعاد الطلبات المرجعة فقط
     const syncableOrders = visibleOrders.filter(order => {
       if (!order.created_by || order.delivery_partner !== 'alwaseet') return false;
       
-      // استبعاد حالة delivery_status = 4 (تم التسليم للزبون)
-      if (order.delivery_status === '4') return false;
-      
-      // استبعاد حالة delivery_status = 17 (تم الإرجاع للتاجر)
+      // استبعاد حالة delivery_status = 17 (تم الإرجاع للتاجر) - نهائية تماماً
       if (order.delivery_status === '17') return false;
       
+      // ✅ الحالة 4 (مُسلم) لا نستبعدها - للسماح بمزامنة التحديثات الممكنة
       return true;
     });
 

@@ -861,22 +861,20 @@ const NotificationsPanel = () => {
                                        // البحث عن الطلب من النظام الموحد
                                        if (orderId && orders && orders.length > 0) {
                                          const foundOrder = orders.find(order => order.id === orderId);
-                                         if (foundOrder) {
-                                           // استخدام تنسيق "المدينة - المنطقة"
-                                           const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
-                                           const addressParts = (foundOrder.customer_address || '').split(',');
-                                           const region = (addressParts[1] || addressParts[0] || 'غير محدد').trim();
-                                           return `${city} - ${region}`;
-                                         }
+                                          if (foundOrder) {
+                                            // استخدام تنسيق "المدينة - المنطقة" مباشرة من customer_province
+                                            const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
+                                            const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
+                                            return `${city} - ${region}`;
+                                          }
                                        }
                                        
-                                       // للإشعارات القديمة بدون order_id، استخدام البيانات من data
-                                       if (data.customer_city || data.customer_address) {
-                                         const city = data.customer_city || 'غير محدد';
-                                         const addressParts = (data.customer_address || '').split(',');
-                                         const region = (addressParts[1] || addressParts[0] || 'غير محدد').trim();
-                                         return `${city} - ${region}`;
-                                       }
+                                        // للإشعارات القديمة بدون order_id، استخدام البيانات من data
+                                        if (data.customer_city || data.customer_address) {
+                                          const city = data.customer_city || 'غير محدد';
+                                          const region = data.customer_province || 'غير محدد';
+                                          return `${city} - ${region}`;
+                                        }
                                      }
                                      
                                      // العنوان الافتراضي

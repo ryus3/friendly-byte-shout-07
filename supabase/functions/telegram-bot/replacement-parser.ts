@@ -160,20 +160,10 @@ export function parseReturnOrder(text: string): ReturnOrderData | null {
   }
 }
 
-// ✅ قائمة المنتجات ذات الكلمتين (يجب تحديثها عند إضافة منتجات جديدة)
-const TWO_WORD_PRODUCTS = [
-  'سوت شيك',
-  'سوت مايسترو',
-  'ترنج اديداس',
-  'جاكيت اديداس',
-  'بنطلون جينز',
-  'تي شيرت',
-  'بولو شيرت'
-];
-
 /**
- * تحليل نص المنتج: "برشلونة ازرق M" => {name: برشلونة, color: ازرق, size: M}
- * يدعم المنتجات ذات الكلمة الواحدة والكلمتين
+ * تحليل نص المنتج بطريقة ديناميكية - يتعرف على المنتجات متعددة الكلمات تلقائياً
+ * يعمل بطريقة عكسية: يحدد الحجم واللون أولاً، والباقي هو اسم المنتج
+ * مثال: "ريال مدريد ازرق L" => {name: "ريال مدريد", color: "ازرق", size: "L"}
  */
 function parseProductString(productText: string): { name: string; color?: string; size?: string } {
   const trimmedText = productText.trim();
@@ -181,26 +171,74 @@ function parseProductString(productText: string): { name: string; color?: string
   
   if (parts.length === 0) return { name: '' };
   
-  // ✅ التحقق من وجود منتج من كلمتين
-  let name = parts[0];
-  let startIndex = 1;
+  // قوائم الأحجام والألوان المعروفة
+  const KNOWN_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL', '2XL', '3XL', '4XL',
+                       'صغير', 'وسط', 'كبير', 'لارج', 'ميديوم', 'سمول'];
+  const KNOWN_COLORS = ['ازرق', 'احمر', 'اسود', 'ابيض', 'اخضر', 'اصفر',
+                        'رمادي', 'بني', 'برتقالي', 'بنفسجي', 'وردي', 'كحلي',
+                        'سمائي', 'برونزي', 'ذهبي', 'فضي', 'نيلي', 'زهري'];
   
-  // فحص إذا كانت أول كلمتين تشكلان اسم منتج معروف
-  if (parts.length >= 2) {
-    const possibleTwoWordName = `${parts[0]} ${parts[1]}`;
-    const foundTwoWord = TWO_WORD_PRODUCTS.find(product => 
-      possibleTwoWordName.includes(product) || product.includes(possibleTwoWordName)
-    );
+  // دالة فحص الحجم
+  const isKnownSize = (text: string): boolean => {
+    const upper = text.toUpperCase();
+    return KNOWN_SIZES.includes(upper) || KNOWN_SIZES.includes(text);
+  };
+  
+  // دالة فحص اللون
+  const isKnownColor = (text: string): boolean => {
+    return KNOWN_COLORS.includes(text);
+  };
+  
+  // منطق التحليل الذكي: نبدأ من الآخر ونبحث عن الحجم واللون
+  let productName = parts[0];
+  let color: string | undefined = undefined;
+  let size: string | undefined = undefined;
+  
+  // فحص آخر جزء: هل هو حجم؟
+  if (parts.length >= 2 && isKnownSize(parts[parts.length - 1])) {
+    size = parts[parts.length - 1];
     
-    if (foundTwoWord) {
-      name = foundTwoWord;
-      startIndex = 2;  // الأجزاء التالية تبدأ من الفهرس 2
+    // فحص ما قبل الأخير: هل هو لون؟
+    if (parts.length >= 3 && isKnownColor(parts[parts.length - 2])) {
+      color = parts[parts.length - 2];
+      productName = parts.slice(0, parts.length - 2).join(' ');
+    } else {
+      productName = parts.slice(0, parts.length - 1).join(' ');
+    }
+  }
+  // إذا لم يكن الأخير حجم، فحص: هل الأخير لون؟
+  else if (parts.length >= 2 && isKnownColor(parts[parts.length - 1])) {
+    color = parts[parts.length - 1];
+    productName = parts.slice(0, parts.length - 1).join(' ');
+  }
+  // حالة: 3 أجزاء بدون تطابق مباشر
+  else if (parts.length === 3) {
+    productName = `${parts[0]} ${parts[1]}`;
+    if (isKnownSize(parts[2])) {
+      size = parts[2];
+    } else if (isKnownColor(parts[2])) {
+      color = parts[2];
+    }
+  }
+  // حالة: 4+ أجزاء
+  else if (parts.length >= 4) {
+    const possibleSize = parts[parts.length - 1];
+    const possibleColor = parts[parts.length - 2];
+    
+    if (isKnownSize(possibleSize) && isKnownColor(possibleColor)) {
+      size = possibleSize;
+      color = possibleColor;
+      productName = parts.slice(0, parts.length - 2).join(' ');
+    } else if (isKnownSize(possibleSize)) {
+      size = possibleSize;
+      productName = parts.slice(0, parts.length - 1).join(' ');
+    } else if (isKnownColor(possibleColor)) {
+      color = possibleColor;
+      productName = parts.slice(0, parts.length - 1).join(' ');
+    } else {
+      productName = parts.join(' ');
     }
   }
   
-  // الأجزاء التالية: لون، حجم
-  const color = parts[startIndex] || undefined;
-  const size = parts[startIndex + 1] || undefined;
-  
-  return { name, color, size };
+  return { name: productName, color, size };
 }
