@@ -1620,9 +1620,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ...formData,
       order_type: actualOrderType, // ✅ ضبط النوع الصحيح
       items: (() => {
-        // ✅ للاستبدال: قائمة فارغة (جميع البيانات في exchange_metadata)
+        // ✅ NEW: للاستبدال: نمرر cart كما هو (سيُستخدم لبناء order_items)
         if (formData.type === 'exchange') {
-          return [];
+          console.log('📦 [QuickOrderContent] تمرير cart للاستبدال:', cart);
+          return cart.map(item => ({
+            product_id: item.productId,
+            variant_id: item.variantId,
+            quantity: item.quantity || 1,
+            unit_price: item.price,
+            total_price: item.price * (item.quantity || 1),
+            item_direction: item.item_direction // ✅ حفظ الاتجاه
+          }));
         }
         
         // ✅ للإرجاع: استخدم orderItems (تم تحضيره مسبقاً)

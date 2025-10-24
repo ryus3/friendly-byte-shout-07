@@ -39,6 +39,39 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         // ✅ استخراج البيانات من الكائن الواحد (لطلبات الاستبدال/الإرجاع)
         actualCustomerInfo = customerInfo;
         actualCartItems = customerInfo.items || [];
+        
+        // ✅ FALLBACK: إذا items فارغة واستبدال، استخرج من exchange_metadata
+        if (actualCartItems.length === 0 && 
+            (customerInfo.order_type === 'replacement' || customerInfo.order_type === 'exchange') &&
+            customerInfo.exchange_metadata) {
+          console.log('⚠️ items فارغة - استخراج من exchange_metadata');
+          const { outgoing_items = [], incoming_items = [] } = customerInfo.exchange_metadata;
+          
+          actualCartItems = [
+            ...outgoing_items.map(item => ({
+              ...item,
+              item_direction: 'outgoing',
+              productId: item.product_id,
+              variantId: item.variant_id,
+              productName: item.product_name
+            })),
+            ...incoming_items.map(item => ({
+              ...item,
+              item_direction: 'incoming',
+              productId: item.product_id,
+              variantId: item.variant_id,
+              productName: item.product_name
+            }))
+          ];
+          
+          console.log('✅ تم استخراج cart items من exchange_metadata:', actualCartItems);
+        }
+        
+        console.log('📋 actualCartItems النهائية:', {
+          count: actualCartItems.length,
+          items: actualCartItems
+        });
+        
         actualTrackingNumber = customerInfo.tracking_number || trackingNumber;
         actualDiscount = customerInfo.discount || 0;
         actualStatus = customerInfo.status || 'pending';
