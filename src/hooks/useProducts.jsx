@@ -23,15 +23,41 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
     try {
       console.log('🏗️ بدء إضافة المنتج:', productData.name);
       
+      // فحص تكرار اسم المنتج وإضافة رقم تسلسلي إذا لزم الأمر
+      let finalProductName = productData.name.trim();
+      const { data: duplicates, error: checkError } = await supabase
+        .from('products')
+        .select('name')
+        .ilike('name', `${finalProductName}%`)
+        .order('name');
+      
+      if (!checkError && duplicates && duplicates.length > 0) {
+        // البحث عن أعلى رقم تسلسلي
+        let maxNumber = 0;
+        duplicates.forEach(prod => {
+          const match = prod.name.match(new RegExp(`^${finalProductName}\\s*\\((\\d+)\\)$`, 'i'));
+          if (match) {
+            maxNumber = Math.max(maxNumber, parseInt(match[1]));
+          } else if (prod.name.toLowerCase() === finalProductName.toLowerCase()) {
+            maxNumber = Math.max(maxNumber, 1);
+          }
+        });
+        
+        if (maxNumber > 0) {
+          finalProductName = `${finalProductName} (${maxNumber + 1})`;
+          console.log('⚠️ تم اكتشاف منتج مكرر. الاسم الجديد:', finalProductName);
+        }
+      }
+      
       // توليد باركود رئيسي للمنتج
-      const mainBarcode = generateUniqueBarcode(productData.name, 'PRODUCT', 'MAIN', Date.now().toString());
+      const mainBarcode = generateUniqueBarcode(finalProductName, 'PRODUCT', 'MAIN', Date.now().toString());
       console.log('📋 باركود المنتج الرئيسي:', mainBarcode);
 
       // 1. Insert the main product data
       const { data: newProduct, error: productError } = await supabase
         .from('products')
         .insert({
-          name: productData.name,
+          name: finalProductName,
           description: productData.description,
           base_price: productData.price,
           cost_price: productData.costPrice || 0,

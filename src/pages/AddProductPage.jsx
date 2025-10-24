@@ -462,6 +462,25 @@ const AddProductPage = () => {
         toast({ title: "خطأ", description: "يرجى إدخال اسم المنتج وسعره الأساسي.", variant: "destructive"});
         return;
     }
+    
+    // فحص تكرار اسم المنتج (في حالة الإضافة فقط)
+    if (!isEditMode) {
+      const { data: existingProducts, error: checkError } = await supabase
+        .from('products')
+        .select('id, name')
+        .ilike('name', productInfo.name.trim())
+        .limit(1);
+      
+      if (!checkError && existingProducts && existingProducts.length > 0) {
+        const confirmed = window.confirm(
+          `⚠️ يوجد منتج بنفس الاسم "${existingProducts[0].name}".\n\nهل تريد الاستمرار بإضافة المنتج رغم ذلك؟`
+        );
+        
+        if (!confirmed) {
+          return; // إلغاء الإضافة
+        }
+      }
+    }
     if (selectedColors.length === 0) {
       toast({ title: "خطأ", description: "يرجى اختيار لون واحد على الأقل.", variant: "destructive"});
       return;
