@@ -1661,14 +1661,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       })(),
       total_amount: formData.type === 'exchange' 
         ? (() => {
-            // ✅ حساب فرق السعر من جميع منتجات cart
+            // ✅ حساب فرق السعر: outgoing - incoming (موجب أو صفر)
             const outgoingTotal = cart
               .filter(item => item.item_direction === 'outgoing')
               .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
             const incomingTotal = cart
               .filter(item => item.item_direction === 'incoming')
               .reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
-            return Math.round(incomingTotal - outgoingTotal);
+            const priceDiff = outgoingTotal - incomingTotal;
+            return Math.max(0, Math.round(priceDiff)); // ✅ فقط فرق السعر الموجب أو صفر
           })()
         : formData.type === 'return'
           ? -Math.abs(refundAmount)  // ✅ للإرجاع: سالب دائماً
@@ -1717,7 +1718,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             product_name: item.productName,
             color: item.color,
             size: item.size,
-            price: item.price
+            color_name: item.color,      // ✅ إضافة للـ useOrders
+            size_name: item.size,         // ✅ إضافة للـ useOrders
+            price: item.price,
+            unit_price: item.price,       // ✅ إضافة للـ useOrders
+            total_price: item.price * (item.quantity || 1) // ✅ إضافة للـ useOrders
           }));
         
         const incomingItems = cart
@@ -1729,7 +1734,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             product_name: item.productName,
             color: item.color,
             size: item.size,
-            price: item.price
+            color_name: item.color,      // ✅ إضافة للـ useOrders
+            size_name: item.size,         // ✅ إضافة للـ useOrders
+            price: item.price,
+            unit_price: item.price,       // ✅ إضافة للـ useOrders
+            total_price: item.price * (item.quantity || 1) // ✅ إضافة للـ useOrders
           }));
         
         // ✅ حساب فرق السعر من جميع المنتجات
