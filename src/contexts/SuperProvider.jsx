@@ -3,7 +3,7 @@
  * يستبدل InventoryContext بنظام أكثر كفاءة مع ضمان عدم تغيير أي وظيفة
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
@@ -625,23 +625,19 @@ export const SuperProvider = ({ children }) => {
     }
   }, [fetchAllData]);
 
-  // دالة فورية لعرض الطلب الجديد من Real-time payload مباشرة (0ms)
+  // ⚡ دالة فورية لعرض الطلب الجديد - محسّنة للأداء
   const addOrderInstantly = useCallback((newOrderPayload) => {
     try {
-      console.log('⚡ addOrderInstantly: إضافة طلب فورية من Real-time payload');
-      
-      // تنظيف كاش الطلبات فوراً لضمان عدم التضارب
+      // تنظيف كاش الطلبات فوراً
       superAPI.invalidate('orders');
       
-      // إضافة الطلب فوراً من payload
       const newOrder = {
         ...newOrderPayload,
-        items: [], // سيتم جلبها في الخلفية
-        order_items: [], // فارغة مؤقتاً
-        isInstantOrder: true // علامة للتمييز
+        items: [],
+        order_items: [],
+        isInstantOrder: true
       };
       
-      // فلترة الطلب حسب صلاحيات الموظف
       const filtered = filterDataByEmployeeCode({ orders: [newOrder] }, user);
       
       if (filtered.orders && filtered.orders.length > 0 && !permanentlyDeletedOrders.has(newOrder.id)) {
@@ -650,27 +646,22 @@ export const SuperProvider = ({ children }) => {
           orders: [filtered.orders[0], ...(prev.orders || [])]
         }));
         
-        // جلب order_items في الخلفية فوراً بدون تأخير
+        // جلب التفاصيل في الخلفية
         fetchOrderItemsBackground(newOrder.id);
       }
     } catch (err) {
-      console.error('❌ addOrderInstantly: خطأ في الإضافة الفورية:', err);
+      devLog.error('❌ addOrderInstantly: خطأ في الإضافة الفورية:', err);
     }
   }, [user]);
 
-  // دالة لجلب order_items في الخلفية وتحديث الطلب
+  // ⚡ دالة جلب التفاصيل في الخلفية - محسّنة
   const fetchOrderItemsBackground = useCallback(async (orderId) => {
     try {
-      const startTime = performance.now();
-      console.log('⚡ fetchOrderItemsBackground: جلب تفاصيل فوري للطلب', orderId);
-      
-      // استخدام SuperAPI للاستفادة من cache محسن
       const fullOrder = await superAPI.getOrderById(orderId);
         
       if (fullOrder && fullOrder.order_items?.length > 0) {
         const normalized = normalizeOrder(fullOrder, allData.users);
         
-        // تحديث الطلب مع التفاصيل الكاملة
         setAllData(prev => ({
           ...prev,
           orders: (prev.orders || []).map(order =>
@@ -679,12 +670,9 @@ export const SuperProvider = ({ children }) => {
               : order
           )
         }));
-        
-        const fetchTime = performance.now() - startTime;
-        console.log(`✅ تزامن كامل للطلب في ${fetchTime.toFixed(1)}ms:`, normalized.order_number);
       }
     } catch (err) {
-      console.error('❌ fetchOrderItemsBackground: خطأ في جلب التفاصيل:', err);
+      devLog.error('❌ fetchOrderItemsBackground: خطأ في جلب التفاصيل:', err);
     }
   }, [user]);
 
@@ -695,9 +683,7 @@ export const SuperProvider = ({ children }) => {
     const reloadTimerRef = { current: null };
 
     const handleRealtimeUpdate = (table, payload) => {
-      console.log(`🔄 SuperProvider: تحديث فوري لحظي في ${table}`, payload);
-      
-      // تحديث مباشر فوري للطلبات - بدون إعادة جلب
+      devLog.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
       if (table === 'orders') {
         const type = payload.eventType;
         const rowNew = payload.new || {};
@@ -3188,14 +3174,8 @@ export const SuperProvider = ({ children }) => {
     sizes: allData.sizes || [],
   };
 
-  // إضافة لوق للتتبع
-  console.log('🔍 SuperProvider contextValue:', {
-    hasCart: !!contextValue.cart,
-    cartLength: contextValue.cart?.length || 0,
-    loading: contextValue.loading,
-    hasProducts: !!contextValue.products,
-    productsLength: contextValue.products?.length || 0
-  });
+  // ⚡ تم إزالة console.log المتكرر لتحسين الأداء
+  // في Development فقط: devLog.log('🔍 SuperProvider contextValue:', {...});
 
   return (
     <SuperContext.Provider value={contextValue}>
