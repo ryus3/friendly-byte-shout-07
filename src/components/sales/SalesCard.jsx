@@ -113,92 +113,52 @@ const SalesCard = ({
       {/* Hover Overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 hover:opacity-100 transition-all duration-500" />
 
+      {/* Floating View Button - في الزاوية اليسرى العليا */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleViewDetails}
+        className="absolute top-3 left-3 z-10 h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md backdrop-blur-sm"
+        title="معاينة التفاصيل"
+      >
+        <Eye className="h-4 w-4" />
+      </Button>
+
       <CardContent className="relative p-4">
         <div className="space-y-3">
           
-          {/* Header: Status Badges (left) & Order Number (right) */}
+          {/* Header: رقم الطلب + Status Badges */}
           <div className="flex items-start justify-between">
-            {/* اليسار: رقم الطلب */}
             <div className="flex items-center gap-2">
               <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
                 {order.order_number}
               </h3>
             </div>
             
-            {/* اليمين: Badges */}
             <div className="flex items-center gap-2">
               {statusInfo.badge}
               {receiptInfo.badge}
             </div>
           </div>
 
-          {/* Main Content Grid - 3 columns */}
-          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+          {/* Main Content: عمودين بسيط */}
+          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
-              {/* Column 1 (right in RTL): Date, Time, Employee, Delivery Partner */}
-              <div className="space-y-1 text-left order-3 sm:order-1">
-                <div className="flex items-center gap-2 justify-start">
-                  <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold text-foreground">
-                    {format(new Date(order.created_at), 'dd/MM/yyyy')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 justify-start">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(order.created_at), 'p', { locale: ar })}
-                  </span>
-                </div>
-                {showEmployee && employee && (
-                  <div className="flex items-center gap-2 justify-start">
-                    <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                      <User className="h-3 w-3 inline-block ml-1" />
-                      {employee.full_name}
-                    </span>
-                  </div>
-                )}
-                
-                {/* Delivery Partner - في العمود الأيمن */}
-                {order.delivery_partner && order.delivery_partner !== 'محلي' && (
-                  <div className="flex flex-col gap-1 items-start">
-                    <div className="flex justify-start w-full">
-                      <Badge className="bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold px-2 py-1 text-xs rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6">
-                        <Truck className="h-3 w-3" />
-                        <span className="truncate">
-                          {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()}
-                        </span>
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Column 2 (center): View Details Button */}
-              <div className="flex items-center justify-center gap-1 order-2 sm:order-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleViewDetails}
-                  className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
-                  title="معاينة"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              
-              {/* Column 3 (left in RTL): Customer Name, Phone, City */}
-              <div className="space-y-1 text-left order-1 sm:order-3">
+              {/* العمود الأيمن: معلومات العميل */}
+              <div className="space-y-2 order-1">
                 <div className="flex items-center gap-2 flex-row-reverse">
                   <User className="h-4 w-4 text-primary" />
                   <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
                 </div>
+                
                 {order.customer_phone && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
                     <Phone className="h-3 w-3" />
                     <span dir="ltr">{order.customer_phone}</span>
                   </div>
                 )}
+                
                 {(order.customer_city || order.customer_province) && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
                     <MapPin className="h-3 w-3 flex-shrink-0" />
@@ -209,13 +169,52 @@ const SalesCard = ({
                   </div>
                 )}
               </div>
+              
+              {/* العمود الأيسر: التاريخ والوقت والموظف */}
+              <div className="space-y-2 order-2 text-left">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold text-foreground">
+                    {format(new Date(order.created_at), 'dd/MM/yyyy')}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {format(new Date(order.created_at), 'p', { locale: ar })}
+                  </span>
+                </div>
+                
+                {showEmployee && employee && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                      <User className="h-3 w-3 inline-block ml-1" />
+                      {employee.full_name}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Products & Amount Row */}
+          {/* Delivery Partner Badge - بارز في الوسط */}
+          {order.delivery_partner && order.delivery_partner !== 'محلي' && (
+            <div className="flex justify-center">
+              <Badge className="bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold px-3 py-1.5 text-sm rounded-full flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                <span>
+                  {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()}
+                </span>
+              </Badge>
+            </div>
+          )}
+
+          {/* المنتجات + المبلغ */}
           <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
             <div className="flex items-center justify-between">
-              {/* Products - Right */}
+              
+              {/* المنتجات - اليمين */}
               <div className="flex-1">
                 {orderProducts && orderProducts.length > 0 && (
                   <div className="space-y-1">
@@ -237,7 +236,7 @@ const SalesCard = ({
                 )}
               </div>
               
-              {/* Amount - Left */}
+              {/* المبلغ - اليسار */}
               <div className="flex items-center gap-2 text-right">
                 <div className="space-y-1">
                   <div className="flex items-center gap-1">
