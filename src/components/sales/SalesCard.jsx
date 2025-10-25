@@ -96,163 +96,257 @@ const SalesCard = ({
   return (
     <Card 
       className={`
-        relative overflow-hidden rounded-2xl
-        bg-gradient-to-br from-card via-card/95 to-card/90
-        border-2 transition-all duration-500 ease-out cursor-pointer
-        shadow-xl shadow-black/10 hover:shadow-2xl hover:shadow-primary/25
-        dark:shadow-white/5 dark:hover:shadow-primary/15
-        ${isHovered ? 'border-primary ring-4 ring-primary/20 shadow-2xl shadow-primary/30' : 'border-border/30 hover:border-primary/50'}
+        group relative overflow-hidden rounded-3xl
+        bg-gradient-to-br from-card/95 via-card to-card/90
+        border transition-all duration-700 ease-out cursor-pointer
+        backdrop-blur-xl
+        ${isHovered 
+          ? 'border-primary/60 shadow-2xl shadow-primary/30 scale-[1.02] -translate-y-1' 
+          : 'border-border/40 shadow-lg shadow-black/5 hover:border-primary/40'
+        }
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleViewDetails}
     >
-      {/* Top Gradient Line */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-blue-500 opacity-60" />
-      
-      {/* Hover Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 hover:opacity-100 transition-all duration-500" />
+      {/* Animated Gradient Background */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-blue-500/5 animate-gradient" />
+      </div>
 
-      {/* Floating View Button - في الزاوية اليسرى العليا */}
+      {/* Top Decorative Elements */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-blue-500 opacity-80" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      
+      {/* Corner Accent */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/10 to-transparent rounded-bl-full opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+      
+      {/* Floating Action Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={handleViewDetails}
-        className="absolute top-3 left-3 z-10 h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md backdrop-blur-sm"
+        className={`
+          absolute top-4 left-4 z-20 
+          h-10 w-10 p-0 rounded-2xl
+          bg-gradient-to-br from-primary/20 to-primary/10
+          backdrop-blur-md border border-primary/30
+          text-primary
+          transition-all duration-500
+          ${isHovered 
+            ? 'scale-110 shadow-lg shadow-primary/40 rotate-12' 
+            : 'hover:scale-105'
+          }
+        `}
         title="معاينة التفاصيل"
       >
         <Eye className="h-4 w-4" />
       </Button>
 
-      <CardContent className="relative p-4">
-        <div className="space-y-3">
-          
-          {/* Header: رقم الطلب + Status Badges */}
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums" dir="ltr">
-                {order.order_number}
+      <CardContent className="relative p-6 space-y-5">
+        
+        {/* Header Section */}
+        <div className="flex items-start justify-between gap-4">
+          {/* Order Number with Icon */}
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 backdrop-blur-sm border border-primary/20">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground font-medium mb-0.5">رقم الطلب</div>
+              <h3 className="font-black text-xl text-foreground tracking-tight" dir="ltr">
+                #{order.order_number}
               </h3>
             </div>
-            
-            <div className="flex items-center gap-2">
-              {statusInfo.badge}
-              {receiptInfo.badge}
-            </div>
           </div>
+          
+          {/* Status Badges */}
+          <div className="flex flex-col gap-2 items-end">
+            {statusInfo.badge}
+            {receiptInfo.badge}
+          </div>
+        </div>
 
-          {/* Main Content: عمودين بسيط */}
-          <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Main Content Grid */}
+        <div className="relative rounded-2xl bg-gradient-to-br from-muted/30 via-muted/10 to-transparent p-5 border border-muted/40 backdrop-blur-sm">
+          {/* Decorative dot pattern */}
+          <div className="absolute inset-0 opacity-5" style={{
+            backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)',
+            backgroundSize: '16px 16px'
+          }} />
+          
+          <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-6">
+            
+            {/* Customer Information */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider mb-3">
+                <div className="h-px flex-1 bg-gradient-to-r from-primary/50 to-transparent" />
+                <span>معلومات العميل</span>
+                <div className="h-px w-8 bg-primary/50" />
+              </div>
               
-              {/* العمود الأيمن: معلومات العميل */}
-              <div className="space-y-2 order-1">
-                <div className="flex items-center gap-2 flex-row-reverse">
+              <div className="flex items-start gap-3 group/item">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
                   <User className="h-4 w-4 text-primary" />
-                  <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
                 </div>
-                
-                {order.customer_phone && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
-                    <Phone className="h-3 w-3" />
-                    <span dir="ltr">{order.customer_phone}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground mb-1">اسم العميل</div>
+                  <div className="font-bold text-foreground text-sm truncate">{order.customer_name}</div>
+                </div>
+              </div>
+              
+              {order.customer_phone && (
+                <div className="flex items-start gap-3 group/item">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
+                    <Phone className="h-4 w-4 text-primary" />
                   </div>
-                )}
-                
-                {(order.customer_city || order.customer_province) && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
-                    <MapPin className="h-3 w-3 flex-shrink-0" />
-                    <span className="text-right">
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-1">رقم الهاتف</div>
+                    <div className="font-mono text-sm text-foreground" dir="ltr">{order.customer_phone}</div>
+                  </div>
+                </div>
+              )}
+              
+              {(order.customer_city || order.customer_province) && (
+                <div className="flex items-start gap-3 group/item">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
+                    <MapPin className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-1">العنوان</div>
+                    <div className="text-sm text-foreground">
                       {order.customer_city}
                       {order.customer_province && ` – ${order.customer_province}`}
-                    </span>
+                    </div>
                   </div>
-                )}
+                </div>
+              )}
+            </div>
+            
+            {/* Order Details */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wider mb-3">
+                <div className="h-px w-8 bg-primary/50" />
+                <span>تفاصيل الطلب</span>
+                <div className="h-px flex-1 bg-gradient-to-l from-primary/50 to-transparent" />
               </div>
               
-              {/* العمود الأيسر: التاريخ والوقت والموظف */}
-              <div className="space-y-2 order-2 text-left">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start gap-3 group/item">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
                   <Calendar className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-bold text-foreground">
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">التاريخ</div>
+                  <div className="font-bold text-foreground text-sm">
                     {format(new Date(order.created_at), 'dd/MM/yyyy')}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    {format(new Date(order.created_at), 'p', { locale: ar })}
-                  </span>
-                </div>
-                
-                {showEmployee && employee && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                      <User className="h-3 w-3 inline-block ml-1" />
-                      {employee.full_name}
-                    </span>
                   </div>
-                )}
+                </div>
               </div>
+              
+              <div className="flex items-start gap-3 group/item">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
+                  <Clock className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs text-muted-foreground mb-1">الوقت</div>
+                  <div className="font-medium text-foreground text-sm">
+                    {format(new Date(order.created_at), 'p', { locale: ar })}
+                  </div>
+                </div>
+              </div>
+              
+              {showEmployee && employee && (
+                <div className="flex items-start gap-3 group/item">
+                  <div className="p-2 rounded-lg bg-primary/10 group-hover/item:bg-primary/20 transition-colors">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs text-muted-foreground mb-1">الموظف</div>
+                    <div className="font-medium text-foreground text-sm">{employee.full_name}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          {/* Delivery Partner Badge - بارز في الوسط */}
-          {order.delivery_partner && order.delivery_partner !== 'محلي' && (
-            <div className="flex justify-center">
-              <Badge className="bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold px-3 py-1.5 text-sm rounded-full flex items-center gap-2">
+        {/* Delivery Partner Badge */}
+        {order.delivery_partner && order.delivery_partner !== 'محلي' && (
+          <div className="flex justify-center">
+            <div className="relative group/delivery">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-cyan-500 rounded-full blur-md opacity-50 group-hover/delivery:opacity-75 transition-opacity" />
+              <Badge className="relative bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border-0 shadow-lg shadow-blue-500/30 font-bold px-4 py-2 text-sm rounded-full flex items-center gap-2">
                 <Truck className="h-4 w-4" />
                 <span>
                   {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : order.delivery_partner.toUpperCase()}
                 </span>
               </Badge>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* المنتجات + المبلغ */}
-          <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
-            <div className="flex items-center justify-between">
+        {/* Products & Amount Section */}
+        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 backdrop-blur-sm">
+          {/* Shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          
+          <div className="relative p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               
-              {/* المنتجات - اليمين */}
-              <div className="flex-1">
+              {/* Products List */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-bold text-primary uppercase tracking-wider">المنتجات</span>
+                </div>
+                
                 {orderProducts && orderProducts.length > 0 && (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {orderProducts.slice(0, 2).map((item, index) => (
-                      <div key={index} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-3 w-3 text-primary" />
-                          <span className="font-medium">{item.product_name}</span>
-                        </div>
-                        <Badge variant="secondary" className="mr-2">x{item.quantity}</Badge>
+                      <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-card/50 border border-border/30 backdrop-blur-sm">
+                        <span className="font-medium text-sm text-foreground truncate flex-1">
+                          {item.product_name}
+                        </span>
+                        <Badge variant="secondary" className="mr-2 font-bold">
+                          ×{item.quantity}
+                        </Badge>
                       </div>
                     ))}
                     {orderProducts.length > 2 && (
-                      <span className="text-xs text-muted-foreground">
-                        +{orderProducts.length - 2} منتجات أخرى
-                      </span>
+                      <div className="text-xs text-muted-foreground text-center py-1">
+                        +{orderProducts.length - 2} منتجات إضافية
+                      </div>
                     )}
                   </div>
                 )}
               </div>
               
-              {/* المبلغ - اليسار */}
-              <div className="flex items-center gap-2 text-right">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-primary/70 font-bold">د.ع</span>
-                    <span className="font-bold text-lg text-primary" dir="ltr">
-                      {parseFloat(order.final_amount || 0).toLocaleString()}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-medium">
-                    شامل التوصيل
+              {/* Total Amount */}
+              <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30">
+                <div className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
+                  المبلغ الإجمالي
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black text-primary tabular-nums" dir="ltr">
+                    {parseFloat(order.final_amount || 0).toLocaleString()}
                   </span>
+                  <span className="text-lg font-bold text-primary/70">د.ع</span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1 font-medium">
+                  شامل التوصيل
                 </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Bottom Decorative Line */}
+        <div className="flex items-center gap-3 opacity-30">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+          <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-border to-transparent" />
+        </div>
+
       </CardContent>
     </Card>
   );
