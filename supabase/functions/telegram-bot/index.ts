@@ -1044,6 +1044,21 @@ serve(async (req) => {
 
   try {
     // ==========================================
+    // 🔒 Security: Telegram Webhook Token Validation
+    // ==========================================
+    const secretToken = req.headers.get('X-Telegram-Bot-Api-Secret-Token');
+    const botToken = await getBotToken();
+    
+    // Validate webhook secret token if provided (recommended security measure)
+    if (secretToken && botToken && secretToken !== botToken) {
+      console.error('❌ Invalid webhook secret token - potential attack attempt');
+      return new Response(JSON.stringify({ error: 'Unauthorized webhook request' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // ==========================================
     // Security: Request Size Validation
     // ==========================================
     const contentLength = req.headers.get('content-length');

@@ -6531,6 +6531,10 @@ export type Database = {
       }
       validate_invoice_data_integrity: { Args: never; Returns: Json }
       validate_promo_code: { Args: { promo_code_param: string }; Returns: Json }
+      validate_telegram_webhook_token: {
+        Args: { expected_token: string; secret_token: string }
+        Returns: boolean
+      }
       verify_invoice_1849184_for_manager: { Args: never; Returns: Json }
     }
     Enums: {
