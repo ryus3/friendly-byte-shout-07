@@ -1,6 +1,7 @@
 node_modules
 .git
 .env
+.env.local
 *.log
 .DS_Store
 scripts
@@ -14,5 +15,3 @@ vite-start.js
 package-override.json
 SYSTEM*.md
 *.bat
-*.sh
-*.mjs
