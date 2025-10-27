@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "installCommand": "npm install --legacy-peer-deps --production=false",
+  "installCommand": "npm ci --legacy-peer-deps --omit=dev",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -35,7 +35,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://tkheostkubborwkwzugl.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://tkheostkubborwkwzugl.supabase.co wss://tkheostkubborwkwzugl.supabase.co"
+          "value": "default-src 'self' https://tkheostkubborwkwzugl.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://tkheostkubborwkwzugl.supabase.co wss://tkheostkubborwkwzugl.supabase.co"
         }
       ]
     },
