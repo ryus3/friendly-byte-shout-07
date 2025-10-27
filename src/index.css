@@ -200,7 +200,7 @@
   }
   body, html {
     @apply bg-background text-foreground;
-    font-family: 'Cairo', 'Tajawal', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    font-family: 'Cairo', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
     direction: rtl;
     height: 100dvh;
     -webkit-text-size-adjust: 100%;
