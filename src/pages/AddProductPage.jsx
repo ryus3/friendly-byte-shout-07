@@ -503,9 +503,9 @@ const AddProductPage = () => {
     
     const productData = {
       ...productInfo,
-      price: parseFloat(productInfo.price),
-      costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : null,
-      profitAmount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
+      base_price: parseFloat(productInfo.price) || 0,
+      cost_price: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
+      profit_amount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
       profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : null,
       variants: variants.map(v => ({
         ...v,
