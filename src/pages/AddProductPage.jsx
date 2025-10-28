@@ -503,9 +503,9 @@ const AddProductPage = () => {
     
     const productData = {
       ...productInfo,
-      base_price: parseFloat(productInfo.price) || 0,
-      cost_price: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
-      profit_amount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
+      price: parseFloat(productInfo.price) || 0,
+      costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
+      profitAmount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
       profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : null,
       variants: variants.map(v => ({
         ...v,
@@ -882,6 +882,31 @@ const AddProductPage = () => {
                 </CardContent>
               </Card>
             )}
+            
+            {/* زر حفظ ثابت في الأسفل */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 p-3 md:p-4 shadow-2xl z-50">
+              <div className="container mx-auto max-w-7xl">
+                <Button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || isUploading || !productInfo.name || !settings}
+                  className="w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white font-semibold shadow-lg transform transition-all hover:scale-[1.02] disabled:hover:scale-100"
+                  size="lg"
+                >
+                  {isSubmitting || isUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin ml-2" />
+                      <span>جاري الحفظ... {uploadProgress > 0 && `(${Math.round(uploadProgress)}%)`}</span>
+                    </>
+                  ) : (
+                    <>
+                      <PackagePlus className="w-5 h-5 ml-2" />
+                      <span>{isEditMode ? 'حفظ التحديثات' : 'حفظ المنتج'}</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </form>
           
         </div>
