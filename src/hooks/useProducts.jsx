@@ -59,9 +59,9 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         .insert({
           name: finalProductName,
           description: productData.description,
-          base_price: productData.price,
-          cost_price: productData.costPrice || 0,
-          profit_amount: productData.profitAmount || 0,
+          base_price: parseFloat(productData.price) || 0,
+          cost_price: parseFloat(productData.costPrice) || 0,
+          profit_amount: parseFloat(productData.profitAmount) || 0,
           barcode: mainBarcode,
           is_active: productData.isVisible,
           created_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
