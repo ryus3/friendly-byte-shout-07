@@ -1934,6 +1934,16 @@ serve(async (req) => {
               callback_data: `region_${r.regionId}`
             }]);
             
+            // إضافة زر "المزيد" إذا كان هناك أكثر من 60 منطقة
+            if (totalRegions > 60) {
+              const remainingAfterPage3 = totalRegions - 60;
+              const nextBatch = Math.min(25, remainingAfterPage3);
+              page3Buttons.push([{
+                text: `🟡 عرض ${nextBatch} خيار إضافي`,
+                callback_data: `region_page4_${cityId}`
+              }]);
+            }
+            
             // زر العودة
             page3Buttons.push([{
               text: '🔙 العودة للخيارات الأولى',
@@ -1949,6 +1959,47 @@ serve(async (req) => {
             
             await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
             console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 31 إلى 60)`);
+            responseMessage = '';
+          } else {
+            responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+          }
+        }
+        // ✅ الصفحة 4: عرض 25 منطقة إضافية (من 61 إلى 85)
+        else if (data.startsWith('region_page4_')) {
+          const cityId = parseInt(data.replace('region_page4_', ''));
+          
+          const { data: pendingData } = await supabase
+            .from('telegram_pending_selections')
+            .select('*')
+            .eq('chat_id', chatId)
+            .eq('action', 'region_clarification')
+            .maybeSingle();
+          
+          if (pendingData?.context?.all_regions) {
+            const allRegions = pendingData.context.all_regions;
+            const totalRegions = allRegions.length;
+            const page4Regions = allRegions.slice(60, 85);
+            
+            const page4Buttons = page4Regions.map((r: any) => [{
+              text: `📍 ${r.regionName}`,
+              callback_data: `region_${r.regionId}`
+            }]);
+            
+            // زر العودة
+            page4Buttons.push([{
+              text: '🔙 العودة للخيارات الأولى',
+              callback_data: `region_back_${cityId}`
+            }]);
+            
+            page4Buttons.push([{
+              text: '❌ لا شيء مما سبق',
+              callback_data: 'region_none'
+            }]);
+            
+            const page4Message = `📍 الصفحة 4 - اختر المنطقة الصحيحة (${page4Regions.length} خيار إضافي):`;
+            
+            await sendTelegramMessage(chatId, page4Message, { inline_keyboard: page4Buttons }, botToken);
+            console.log(`✅ الصفحة 4: عرض ${page4Regions.length} منطقة (من 61 إلى 85)`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
@@ -2131,6 +2182,7 @@ serve(async (req) => {
         else if (data.startsWith('region_') && 
                   !data.startsWith('region_page2_') && 
                   !data.startsWith('region_page3_') && 
+                  !data.startsWith('region_page4_') &&
                   !data.startsWith('region_back_') &&
                   !data.startsWith('region_more_')) {
           try {

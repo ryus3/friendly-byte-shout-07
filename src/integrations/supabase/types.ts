@@ -6228,18 +6228,31 @@ export type Database = {
         }
         Returns: Json
       }
-      process_telegram_order: {
-        Args: {
-          p_city_id: number
-          p_city_name: string
-          p_employee_code: string
-          p_message_text: string
-          p_region_id: number
-          p_region_name: string
-          p_telegram_chat_id: number
-        }
-        Returns: Json
-      }
+      process_telegram_order:
+        | {
+            Args: {
+              p_city_id: number
+              p_city_name: string
+              p_employee_code: string
+              p_message_text: string
+              p_region_id: number
+              p_region_name: string
+              p_telegram_chat_id: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_city_id?: number
+              p_city_name?: string
+              p_employee_code: string
+              p_message_text: string
+              p_region_id?: number
+              p_region_name?: string
+              p_telegram_chat_id: number
+            }
+            Returns: Json
+          }
       prune_delivery_invoices_for_user: {
         Args: { p_employee_id: string; p_keep_count?: number }
         Returns: Json
