@@ -46,6 +46,7 @@ export type Database = {
           replacement_pair_id: string | null
           resolved_city_name: string | null
           resolved_region_name: string | null
+          secondary_phone: string | null
           source: string
           status: string
           telegram_chat_id: number | null
@@ -84,6 +85,7 @@ export type Database = {
           replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
+          secondary_phone?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
@@ -122,6 +124,7 @@ export type Database = {
           replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
+          secondary_phone?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null

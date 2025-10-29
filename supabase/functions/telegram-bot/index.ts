@@ -9,7 +9,9 @@ import {
   validateAddress, 
   validateOrderItems,
   sanitizeText,
-  checkRateLimit 
+  checkRateLimit,
+  convertArabicToEnglishNumbers,
+  parseArabicNumberWords
 } from './validation.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -131,19 +133,36 @@ async function sendTelegramMessage(chatId: number, text: string, replyMarkup?: a
   }
 }
 
-// Extract phone number from text using simple regex
-function extractPhoneFromText(text: string): string {
-  const phonePattern = /\b(07[3-9]\d{8}|00964[37]\d{8}|964[37]\d{8})\b/;
-  const match = text.match(phonePattern);
-  if (match) {
+// Extract all phone numbers from text (primary and secondary)
+function extractAllPhonesFromText(text: string): { 
+  primary: string; 
+  secondary: string | null 
+} {
+  // تحويل الأرقام العربية إلى إنجليزية أولاً
+  const normalizedText = convertArabicToEnglishNumbers(text);
+  
+  const phonePattern = /\b(07[3-9]\d{8}|00964[37]\d{8}|964[37]\d{8})\b/g;
+  const matches = [...normalizedText.matchAll(phonePattern)];
+  
+  const phones: string[] = [];
+  matches.forEach(match => {
     let phone = match[0];
     // Normalize to Iraqi format
     phone = phone.replace(/^(00964|964)/, '0');
     if (phone.startsWith('07') && phone.length === 11) {
-      return phone;
+      phones.push(phone);
     }
-  }
-  return '';
+  });
+  
+  return {
+    primary: phones[0] || '',
+    secondary: phones[1] || null
+  };
+}
+
+// Legacy function for backward compatibility
+function extractPhoneFromText(text: string): string {
+  return extractAllPhonesFromText(text).primary;
 }
 
 // ==========================================
@@ -1340,6 +1359,12 @@ serve(async (req) => {
         }
 
         // ==========================================
+        // تطبيع النص: تحويل الأرقام العربية والكلمات الرقمية
+        // ==========================================
+        text = parseArabicNumberWords(text);
+        console.log('📝 النص بعد تحويل الكلمات الرقمية:', text);
+
+        // ==========================================
         // كشف نوع الطلب: عادي، استبدال، ترجيع
         // ==========================================
         const detectOrderType = (text: string): 'replacement' | 'return' | 'regular' => {
@@ -1353,6 +1378,12 @@ serve(async (req) => {
 
         const orderType = detectOrderType(text);
         console.log('🔍 نوع الطلب المكتشف:', orderType);
+        
+        // ==========================================
+        // استخراج أرقام الهاتف (الأساسي والثانوي)
+        // ==========================================
+        const phoneNumbers = extractAllPhonesFromText(text);
+        console.log('📞 أرقام الهاتف المستخرجة:', phoneNumbers);
 
         // معالجة طلبات الاستبدال
         if (orderType === 'replacement') {
@@ -1371,7 +1402,8 @@ serve(async (req) => {
                 telegram_chat_id: chatId,
                 original_text: text,
                 customer_name: replacementData.customerInfo.name,
-                customer_phone: replacementData.customerInfo.phone,
+                customer_phone: replacementData.customerInfo.phone || phoneNumbers.primary,
+                secondary_phone: phoneNumbers.secondary,
                 customer_city: replacementData.customerInfo.city,
                 customer_address: replacementData.customerInfo.address,
                 delivery_fee: replacementData.deliveryFee,
@@ -1408,7 +1440,8 @@ serve(async (req) => {
                 telegram_chat_id: chatId,
                 original_text: text,
                 customer_name: replacementData.customerInfo.name,
-                customer_phone: replacementData.customerInfo.phone,
+                customer_phone: replacementData.customerInfo.phone || phoneNumbers.primary,
+                secondary_phone: phoneNumbers.secondary,
                 customer_city: replacementData.customerInfo.city,
                 customer_address: replacementData.customerInfo.address,
                 delivery_fee: 0,
@@ -1488,7 +1521,8 @@ serve(async (req) => {
                 telegram_chat_id: chatId,
                 original_text: text,
                 customer_name: returnData.customerInfo.name,
-                customer_phone: returnData.customerInfo.phone,
+                customer_phone: returnData.customerInfo.phone || phoneNumbers.primary,
+                secondary_phone: phoneNumbers.secondary,
                 customer_city: returnData.customerInfo.city,
                 customer_address: returnData.customerInfo.address,
                 delivery_fee: 0,
@@ -1663,9 +1697,9 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ نظام pagination احترافي: 5 → 10 → 15
+                  // ✅ نظام pagination محسّن: 10 → 20 → 30
                   const totalRegions = localRegionMatches.length;
-                  const firstPageSize = Math.min(5, totalRegions);
+                  const firstPageSize = Math.min(10, totalRegions);
                   const topRegions = localRegionMatches.slice(0, firstPageSize);
                   
                   const regionButtons = topRegions.map(r => [{
@@ -1673,10 +1707,10 @@ serve(async (req) => {
                     callback_data: `region_${r.regionId}`
                   }]);
                   
-                  // زر "المزيد من الخيارات" (10 إضافية) إذا كان هناك أكثر من 5
-                  if (totalRegions > 5) {
-                    const remainingAfterFirst = totalRegions - 5;
-                    const nextBatch = Math.min(10, remainingAfterFirst);
+                  // زر "المزيد من الخيارات" (20 إضافية) إذا كان هناك أكثر من 10
+                  if (totalRegions > 10) {
+                    const remainingAfterFirst = totalRegions - 10;
+                    const nextBatch = Math.min(20, remainingAfterFirst);
                     regionButtons.push([{
                       text: `🟡 عرض ${nextBatch} خيارات إضافية`,
                       callback_data: `region_page2_${localCityResult.cityId}`
@@ -1842,17 +1876,17 @@ serve(async (req) => {
           if (pendingData?.context?.all_regions) {
             const allRegions = pendingData.context.all_regions;
             const totalRegions = allRegions.length;
-            const page2Regions = allRegions.slice(5, 15);
+            const page2Regions = allRegions.slice(10, 30);
             
             const page2Buttons = page2Regions.map((r: any) => [{
               text: `📍 ${r.regionName}`,
               callback_data: `region_${r.regionId}`
             }]);
             
-            // زر "المزيد" (15 إضافية) إذا كان هناك أكثر من 15
-            if (totalRegions > 15) {
-              const remainingAfterPage2 = totalRegions - 15;
-              const nextBatch = Math.min(15, remainingAfterPage2);
+            // زر "المزيد" (30 إضافية) إذا كان هناك أكثر من 30
+            if (totalRegions > 30) {
+              const remainingAfterPage2 = totalRegions - 30;
+              const nextBatch = Math.min(30, remainingAfterPage2);
               page2Buttons.push([{
                 text: `🟡 عرض ${nextBatch} خيار إضافي`,
                 callback_data: `region_page3_${cityId}`
@@ -1873,7 +1907,7 @@ serve(async (req) => {
             const page2Message = `📍 الصفحة 2 - اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page2Message, { inline_keyboard: page2Buttons }, botToken);
-            console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 6 إلى 15)`);
+            console.log(`✅ الصفحة 2: عرض ${page2Regions.length} منطقة (من 11 إلى 30)`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
@@ -1893,7 +1927,7 @@ serve(async (req) => {
           if (pendingData?.context?.all_regions) {
             const allRegions = pendingData.context.all_regions;
             const totalRegions = allRegions.length;
-            const page3Regions = allRegions.slice(15, 30);
+            const page3Regions = allRegions.slice(30, 60);
             
             const page3Buttons = page3Regions.map((r: any) => [{
               text: `📍 ${r.regionName}`,
@@ -1914,7 +1948,7 @@ serve(async (req) => {
             const page3Message = `📍 الصفحة 3 - اختر المنطقة الصحيحة:`;
             
             await sendTelegramMessage(chatId, page3Message, { inline_keyboard: page3Buttons }, botToken);
-            console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 16 إلى 30)`);
+            console.log(`✅ الصفحة 3: عرض ${page3Regions.length} منطقة (من 31 إلى 60)`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
@@ -1932,16 +1966,16 @@ serve(async (req) => {
           if (pendingData?.context?.all_regions) {
             const allRegions = pendingData.context.all_regions;
             const totalRegions = allRegions.length;
-            const topRegions = allRegions.slice(0, 5);
+            const topRegions = allRegions.slice(0, 10);
             
             const regionButtons = topRegions.map((r: any) => [{
               text: `📍 ${r.regionName}`,
               callback_data: `region_${r.regionId}`
             }]);
             
-            if (totalRegions > 5) {
-              const remainingAfterFirst = totalRegions - 5;
-              const nextBatch = Math.min(10, remainingAfterFirst);
+            if (totalRegions > 10) {
+              const remainingAfterFirst = totalRegions - 10;
+              const nextBatch = Math.min(20, remainingAfterFirst);
               regionButtons.push([{
                 text: `🟡 عرض ${nextBatch} خيارات إضافية`,
                 callback_data: `region_page2_${pendingData.context.city_id}`

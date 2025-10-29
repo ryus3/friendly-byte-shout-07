@@ -132,6 +132,35 @@ export function validateOrderItems(items: any[]): { isValid: boolean; errors: st
 }
 
 /**
+ * Convert Arabic numbers to English numbers
+ */
+export function convertArabicToEnglishNumbers(text: string): string {
+  const arabicNumbers = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+  const englishNumbers = ['0','1','2','3','4','5','6','7','8','9'];
+  
+  let converted = text;
+  arabicNumbers.forEach((arabic, index) => {
+    converted = converted.replace(new RegExp(arabic, 'g'), englishNumbers[index]);
+  });
+  
+  return converted;
+}
+
+/**
+ * Parse Arabic number words (e.g., "28 الف" → "28000")
+ */
+export function parseArabicNumberWords(text: string): string {
+  let parsed = text;
+  
+  // تحويل "الف" و "ألف" إلى "000"
+  parsed = parsed.replace(/(\d+)\s*(?:الف|ألف|الاف|آلاف)/gi, (match, number) => {
+    return (parseInt(number) * 1000).toString();
+  });
+  
+  return parsed;
+}
+
+/**
  * Rate limiting: Check if chat_id is making too many requests
  */
 const requestCounts = new Map<number, { count: number; resetTime: number }>();
