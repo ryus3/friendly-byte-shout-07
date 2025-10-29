@@ -5670,7 +5670,7 @@ export type Database = {
         Args: { input_text: string }
         Returns: number
       }
-      extractphonefromtext: { Args: { input_text: string }; Returns: string }
+      extractphonefromtext: { Args: { input_text: string }; Returns: Json }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
