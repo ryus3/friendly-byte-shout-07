@@ -2114,42 +2114,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             console.log('✅ نتيجة معالجة الأرباح:', adjustResult);
           }
           
-          // 4. تسجيل حركة نقد (سحب من القاصة)
-          const { data: cashSources } = await supabase
-            .from('cash_sources')
-            .select('id, current_balance')
-            .eq('name', 'القاصة الرئيسية')
-            .maybeSingle();
-          
-          if (cashSources) {
-            const newBalance = cashSources.current_balance - refundAmount;
-            
-            const { error: cashError } = await supabase
-              .from('cash_movements')
-              .insert({
-                cash_source_id: cashSources.id,
-                movement_type: 'withdrawal',
-                amount: refundAmount,
-                balance_before: cashSources.current_balance,
-                balance_after: newBalance,
-                description: `إرجاع للزبون - طلب #${result.orderNumber} - بانتظار الاستلام`,
-                reference_type: 'order',
-                reference_id: createdOrderId,
-                created_by: user.id,
-                effective_at: new Date().toISOString()
-              });
-            
-            if (cashError) {
-              console.error('❌ خطأ في تسجيل حركة النقد:', cashError);
-            } else {
-              await supabase
-                .from('cash_sources')
-                .update({ current_balance: newBalance })
-                .eq('id', cashSources.id);
-              
-              console.log('✅ تم تسجيل حركة النقد:', refundAmount);
-            }
-          }
+          // ✅ لا نسجل حركة نقد الآن - سيتم تسجيلها عند تغيير الحالة إلى 21 (دفع للزبون)
+          console.log('⏳ حركة النقد ستُسجل تلقائياً عند تغيير حالة التوصيل إلى 21 (تم الدفع للزبون)');
           
           // 5. Toast محسّن مع تفاصيل دقيقة
           toast({

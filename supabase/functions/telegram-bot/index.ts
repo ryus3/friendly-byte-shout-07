@@ -1777,14 +1777,14 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ نظام pagination محسّن: عند وجود تطابق 100%، نعرض 5-8 فقط
+                  // ✅ نظام pagination محسّن: عند وجود تطابق 100%، نعرض 5 فقط (1 + 4 متشابهات)
                   const totalRegions = localRegionMatches.length;
                   const hasPerfectMatch = localRegionMatches.some(r => r.confidence === 1.0);
                   
-                  // إذا كان هناك تطابق 100%، نعرض 5-8 فقط (حسب العدد المتاح)
+                  // إذا كان هناك تطابق 100%، نعرض 5 فقط (حسب العدد المتاح)
                   let firstPageSize;
                   if (hasPerfectMatch && totalRegions > 1) {
-                    firstPageSize = Math.min(8, totalRegions); // أقصى 8 نتائج
+                    firstPageSize = Math.min(5, totalRegions); // أقصى 5 نتائج (1 تطابق + 4 متشابهات)
                   } else {
                     firstPageSize = Math.min(10, totalRegions); // النظام العادي
                   }

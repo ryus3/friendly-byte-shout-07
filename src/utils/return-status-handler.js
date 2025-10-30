@@ -108,6 +108,50 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
 
       console.log(`✅ تم إرجاع ${stockUpdatedCount} من ${items.length} منتج للمخزون`);
 
+      // ✅ تسجيل حركة نقد (سحب من القاصة الرئيسية)
+      try {
+        const { data: mainCashSource } = await supabase
+          .from('cash_sources')
+          .select('id, current_balance')
+          .eq('name', 'القاصة الرئيسية')
+          .maybeSingle();
+        
+        if (mainCashSource && order.total_amount > 0) {
+          const refundAmount = Math.abs(order.total_amount);
+          const newBalance = mainCashSource.current_balance - refundAmount;
+          
+          // إنشاء حركة نقد (سحب)
+          const { error: cashError } = await supabase
+            .from('cash_movements')
+            .insert({
+              cash_source_id: mainCashSource.id,
+              movement_type: 'out',
+              amount: refundAmount,
+              balance_before: mainCashSource.current_balance,
+              balance_after: newBalance,
+              description: `دفع إرجاع للزبون - طلب #${order.order_number || 'غير معروف'}`,
+              reference_type: 'return_order',
+              reference_id: orderId,
+              created_by: order.created_by,
+              effective_at: new Date().toISOString()
+            });
+          
+          if (!cashError) {
+            // تحديث رصيد القاصة
+            await supabase
+              .from('cash_sources')
+              .update({ current_balance: newBalance })
+              .eq('id', mainCashSource.id);
+            
+            console.log('✅ تم تسجيل حركة نقد للإرجاع:', refundAmount);
+          } else {
+            console.error('❌ خطأ في تسجيل حركة النقد:', cashError);
+          }
+        }
+      } catch (cashErr) {
+        console.error('❌ خطأ في معالجة حركة النقد:', cashErr);
+      }
+
       // ✅ معالجة الماليات (خصم من الطلب الأصلي)
       let financialResult = null;
       let lossAmount = 0;
