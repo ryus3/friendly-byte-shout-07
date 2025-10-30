@@ -587,14 +587,86 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
     const cityRegions = regionsCache.filter(r => r.city_id === cityId);
     
     console.log(`🔍 بحث محلي عن منطقة: "${text}" → منظف: "${normalized}" في مدينة ${cityId}`);
-    console.log(`📋 عدد المناطق في هذه المدينة: ${cityRegions.length}`);
     
-    const matches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+    const matches: Array<{ regionId: number; regionName: string; confidence: number; externalId?: string | number }> = [];
     const words = normalized.split(/\s+/).filter(w => w.length > 1);
     console.log(`📝 الكلمات المستخرجة للبحث:`, words);
     
-    // 🎯 البحث الذكي مع 4 مستويات
+    // 🎯 المستوى 0: تطابق كامل للنص كاملاً (أولوية قصوى)
     for (const region of cityRegions) {
+      const regionNormalized = region.normalized;
+      
+      // تطابق كامل تام - 100%
+      if (regionNormalized === normalized || region.name.toLowerCase() === text.toLowerCase()) {
+        matches.push({
+          regionId: region.id,
+          regionName: region.name,
+          externalId: region.alwaseet_id,
+          confidence: 1.0
+        });
+        console.log(`✅ تطابق كامل 100%: "${text}" = "${region.name}"`);
+      }
+      // تطابق جزئي قوي للنص الكامل - 98%
+      else if (regionNormalized.includes(normalized) && normalized.split(/\s+/).length > 1) {
+        matches.push({
+          regionId: region.id,
+          regionName: region.name,
+          externalId: region.alwaseet_id,
+          confidence: 0.98
+        });
+        console.log(`✅ تطابق جزئي قوي 98%: "${text}" في "${region.name}"`);
+      }
+    }
+    
+    // إذا وجدنا تطابق كامل أو قوي، نرجع مباشرة
+    if (matches.length > 0) {
+      matches.sort((a, b) => b.confidence - a.confidence);
+      console.log(`🏆 وجدنا ${matches.length} تطابق كامل/قوي - توقف البحث`);
+      return matches;
+    }
+    
+    // 🎯 المستوى 1: تركيبات من كلمتين أو أكثر (أولوية عالية)
+    if (words.length >= 2) {
+      for (let len = words.length; len >= 2; len--) {
+        for (let i = 0; i <= words.length - len; i++) {
+          const combination = words.slice(i, i + len).join(' ');
+          
+          for (const region of cityRegions) {
+            const regionTokens = region.normalized.split(/\s+/);
+            
+            // البحث عن التركيب في المنطقة
+            for (let j = 0; j <= regionTokens.length - len; j++) {
+              const regionCombination = regionTokens.slice(j, j + len).join(' ');
+              
+              if (combination === regionCombination) {
+                const baseConfidence = 0.92 + (len * 0.02); // كلما أطول التركيب، أعلى الثقة
+                matches.push({
+                  regionId: region.id,
+                  regionName: region.name,
+                  externalId: region.alwaseet_id,
+                  confidence: Math.min(baseConfidence, 0.97)
+                });
+                console.log(`✅ تركيب ${len} كلمات: "${combination}" في "${region.name}" (${baseConfidence})`);
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // إذا وجدنا تطابقات من تركيبات، نفضلها على الكلمات المنفردة
+    if (matches.length > 0) {
+      matches.sort((a, b) => b.confidence - a.confidence);
+      console.log(`🏆 وجدنا ${matches.length} تطابق من تركيبات - عرضها أولاً`);
+      
+      // نكمل البحث عن كلمات منفردة لكن بثقة أقل
+    }
+    
+    // 🎯 المستوى 2: البحث عن كلمات منفردة (ثقة أقل)
+    for (const region of cityRegions) {
+      // تجنب التكرار
+      if (matches.some(m => m.regionId === region.id)) continue;
+      
       const regionTokens = region.normalized.split(/\s+/);
       let bestScore = 0;
       
@@ -602,19 +674,19 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         if (word.length < 2) continue;
         
         for (const token of regionTokens) {
-          // ✅ Level 1: مطابقة كاملة - 100%
+          // مطابقة كاملة - 85% (أقل من التركيبات)
           if (token === word) {
-            bestScore = Math.max(bestScore, 100);
+            bestScore = Math.max(bestScore, 85);
           }
-          // ✅ Level 2: مطابقة جزئية - 95%
+          // مطابقة جزئية - 80%
           else if (token.includes(word) || word.includes(token)) {
-            bestScore = Math.max(bestScore, 95);
+            bestScore = Math.max(bestScore, 80);
           }
-          // ✅ Level 3: البحث في بداية الكلمة - 90%
+          // البحث في بداية الكلمة - 75%
           else if (token.startsWith(word) || word.startsWith(token)) {
-            bestScore = Math.max(bestScore, 90);
+            bestScore = Math.max(bestScore, 75);
           }
-          // 🧠 Level 4: Fuzzy Matching - 70-85%
+          // Fuzzy Matching - 70-75%
           else {
             const similarity = calculateSimilarity(word, token);
             if (similarity >= 70) {
@@ -624,21 +696,21 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         }
       }
       
-      // ✅ إضافة المطابقات فوق عتبة الثقة (70%)
+      // إضافة فقط إذا كانت الثقة > 70%
       if (bestScore >= 70) {
         matches.push({
-          regionId: region.id,           // المعرف الموحد
+          regionId: region.id,
           regionName: region.name,
-          externalId: region.alwaseet_id, // ✅ المعرف الخارجي للوسيط
+          externalId: region.alwaseet_id,
           confidence: bestScore / 100
         });
       }
     }
     
-    // 🏆 ترتيب النتائج حسب الثقة (الأعلى أولاً)
+    // ترتيب نهائي حسب الثقة
     matches.sort((a, b) => b.confidence - a.confidence);
     
-    console.log(`✅ تم العثور على ${matches.length} مطابقة`);
+    console.log(`✅ إجمالي المطابقات: ${matches.length}`);
     if (matches.length > 0) {
       const topMatches = matches.slice(0, 10).map(m => 
         `${m.regionName} (${Math.round(m.confidence * 100)}%)`
@@ -648,7 +720,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
     
     return matches;
   } catch (error) {
-    console.error('❌ خطأ في البحث المحلي عن المناطق:', error);
+    console.error('❌ خطأ في البحث المحلي:', error);
     return [];
   }
 }
@@ -1696,7 +1768,7 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ نظام pagination محسّن: 10 → 20 → 30
+                  // ✅ نظام pagination محسّن: 10 → 20 → 30 → 25 → 30 (صفحة 5 جديدة)
                   const totalRegions = localRegionMatches.length;
                   const firstPageSize = Math.min(10, totalRegions);
                   const topRegions = localRegionMatches.slice(0, firstPageSize);
@@ -1984,6 +2056,16 @@ serve(async (req) => {
               callback_data: `region_${r.regionId}`
             }]);
             
+            // زر "المزيد" (30 إضافية) إذا كان هناك أكثر من 85
+            if (totalRegions > 85) {
+              const remainingAfterPage4 = totalRegions - 85;
+              const nextBatch = Math.min(30, remainingAfterPage4);
+              page4Buttons.push([{
+                text: `🟡 عرض ${nextBatch} خيار إضافي`,
+                callback_data: `region_page5_${cityId}`
+              }]);
+            }
+            
             // زر العودة
             page4Buttons.push([{
               text: '🔙 العودة للخيارات الأولى',
@@ -1999,6 +2081,53 @@ serve(async (req) => {
             
             await sendTelegramMessage(chatId, page4Message, { inline_keyboard: page4Buttons }, botToken);
             console.log(`✅ الصفحة 4: عرض ${page4Regions.length} منطقة (من 61 إلى 85)`);
+            responseMessage = '';
+          } else {
+            responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
+          }
+        }
+        // ✅ الصفحة 5: عرض 30 منطقة إضافية (من 86 إلى 115)
+        else if (data.startsWith('region_page5_')) {
+          const cityId = parseInt(data.replace('region_page5_', ''));
+          
+          const { data: pendingData } = await supabase
+            .from('telegram_pending_selections')
+            .select('*')
+            .eq('chat_id', chatId)
+            .eq('action', 'region_clarification')
+            .maybeSingle();
+          
+          if (pendingData?.context?.all_regions) {
+            const allRegions = pendingData.context.all_regions;
+            const totalRegions = allRegions.length;
+            const page5Regions = allRegions.slice(85, 115);
+            
+            const page5Buttons = page5Regions.map((r: any) => [{
+              text: `📍 ${r.regionName}`,
+              callback_data: `region_${r.regionId}`
+            }]);
+            
+            // زر العودة
+            page5Buttons.push([{
+              text: '🔙 العودة للخيارات الأولى',
+              callback_data: `region_back_${cityId}`
+            }]);
+            
+            // زر العودة للصفحة 4
+            page5Buttons.push([{
+              text: '⬅️ رجوع للصفحة 4',
+              callback_data: `region_page4_${cityId}`
+            }]);
+            
+            page5Buttons.push([{
+              text: '❌ لا شيء مما سبق',
+              callback_data: 'region_none'
+            }]);
+            
+            const page5Message = `📍 الصفحة 5 - اختر المنطقة الصحيحة (${page5Regions.length} خيار إضافي):`;
+            
+            await sendTelegramMessage(chatId, page5Message, { inline_keyboard: page5Buttons }, botToken);
+            console.log(`✅ الصفحة 5: عرض ${page5Regions.length} منطقة (من 86 إلى 115)`);
             responseMessage = '';
           } else {
             responseMessage = '⚠️ انتهت صلاحية هذا الاختيار. يرجى إعادة إرسال طلبك.';
