@@ -88,7 +88,7 @@ export const useUnifiedAutoSync = () => {
 
     try {
       setIsSyncing(true);
-      console.log('🔄 مزامنة تلقائية للفواتير...');
+      devLog.log('🔄 مزامنة تلقائية للفواتير...');
 
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
         body: { 
@@ -102,7 +102,7 @@ export const useUnifiedAutoSync = () => {
       if (error) throw error;
 
       if (data?.invoices_synced > 0) {
-        console.log(`✅ مزامنة تلقائية: ${data.invoices_synced} فاتورة جديدة`);
+        devLog.log(`✅ مزامنة تلقائية: ${data.invoices_synced} فاتورة جديدة`);
         
         // إشعار خفيف (بدون toast مزعج)
         window.dispatchEvent(new CustomEvent('autoSyncCompleted', { 
@@ -131,7 +131,7 @@ export const useUnifiedAutoSync = () => {
 
     try {
       setIsSyncing(true);
-      console.log(`🔄 مزامنة تلقائية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
+      devLog.log(`🔄 مزامنة تلقائية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
 
       // استيراد دالة المزامنة الذكية
       const { useAlWaseet } = await import('../contexts/AlWaseetContext');
@@ -140,7 +140,7 @@ export const useUnifiedAutoSync = () => {
       const result = await syncVisibleOrdersBatch(visibleOrders);
 
       if (result?.success && result.updatedCount > 0) {
-        console.log(`✅ مزامنة تلقائية: ${result.updatedCount} طلب محدث`);
+        devLog.log(`✅ مزامنة تلقائية: ${result.updatedCount} طلب محدث`);
         
         // إشعار خفيف
         window.dispatchEvent(new CustomEvent('autoSyncCompleted', { 
@@ -200,7 +200,7 @@ export const useUnifiedAutoSync = () => {
     
     if (isEmployeeFollowUpPage && syncSettings?.invoice_auto_sync && shouldAutoSync('invoices')) {
       const timer = setTimeout(() => {
-        console.log('🚀 مزامنة تلقائية عند فتح صفحة متابعة الموظفين');
+        devLog.log('🚀 مزامنة تلقائية عند فتح صفحة متابعة الموظفين');
         autoSyncInvoices();
       }, 3000);
 

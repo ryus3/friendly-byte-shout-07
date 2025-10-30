@@ -89,31 +89,39 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // Scroll to top when page loads + ✅ المزامنة الذكية للطلبات الظاهرة فقط
+  // Scroll to top when page loads + ✅ المزامنة الذكية الدورية المستمرة
   useEffect(() => {
     scrollToTopInstant();
+  }, []);
+
+  // ✅ مزامنة دورية مستمرة - ليس فقط عند فتح الصفحة
+  useEffect(() => {
+    if (!syncableOrders || syncableOrders.length === 0) return;
     
-    // ✅ مزامنة تلقائية ذكية عند فتح الصفحة - فقط للطلبات النشطة الظاهرة
-    if (syncableOrders && syncableOrders.length > 0) {
-      const performSmartSync = async () => {
-        try {
-          devLog.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط ظاهر...`);
-          
-          // استخدام المزامنة الذكية من useUnifiedAutoSync
-          if (syncAndApplyOrders) {
-            await syncAndApplyOrders(syncableOrders);
-            devLog.log('✅ اكتملت المزامنة الذكية التلقائية + الحذف التلقائي للطلبات المفقودة');
-          }
-        } catch (err) {
-          devLog.log('⚠️ تعذرت المزامنة الذكية:', err);
+    const performSmartSync = async () => {
+      try {
+        devLog.log(`🔄 [OrdersPage] مزامنة ذكية: ${syncableOrders.length} طلب نشط`);
+        
+        if (syncAndApplyOrders) {
+          await syncAndApplyOrders(syncableOrders);
+          devLog.log('✅ [OrdersPage] اكتملت المزامنة الذكية');
         }
-      };
-      
-      // ✅ تأخير 5 ثواني (أكثر أماناً من 3)
-      const timer = setTimeout(performSmartSync, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, []); // تشغيل مرة واحدة عند فتح الصفحة
+      } catch (err) {
+        devLog.warn('⚠️ [OrdersPage] تعذرت المزامنة:', err);
+      }
+    };
+    
+    // مزامنة فورية بعد 5 ثواني
+    const initialTimer = setTimeout(performSmartSync, 5000);
+    
+    // مزامنة دورية كل 5 دقائق
+    const interval = setInterval(performSmartSync, 5 * 60 * 1000);
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [syncableOrders, syncAndApplyOrders]); // ✅ تحديث عند تغيير الطلبات
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
@@ -521,8 +529,9 @@ const OrdersPage = () => {
       const terminalStatuses = ['completed', 'returned_in_stock'];
       if (terminalStatuses.includes(order.status)) return false;
       
-      // ✅ استبعاد delivery_status النهائية (4 = تم التسليم، 17 = راجع للتاجر)
-      if (order.delivery_status === '4' || order.delivery_status === '17') return false;
+      // ✅ استبعاد delivery_status = '17' فقط (راجع للتاجر) - النهائية الوحيدة
+      // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
+      if (order.delivery_status === '17') return false;
       
       return true;
     });

@@ -12,19 +12,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = async (order) => {
     if (!order) {
-      console.log('❌ No order data provided to EditOrderDialog');
+      devLog.log('❌ No order data provided to EditOrderDialog');
       return null;
     }
-    
-    console.log('🔍 EditOrderDialog - Raw order data received:', order);
-    console.log('🔍 EditOrderDialog - Order items available:', order.order_items || order.items);
-    console.log('🔍 EditOrderDialog - Address data:', {
-      customer_city: order.customer_city,
-      customer_province: order.customer_province,
-      city: order.city,
-      region: order.region,
-      province: order.province
-    });
     
     // تحويل المنتجات لصيغة cart items مع product_id و variant_id للتحميل الصحيح
     const cartItems = (order.order_items || order.items || []).map(item => ({
@@ -47,7 +37,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       variant_id: item.variant_id
     }));
 
-    console.log('🛒 EditOrderDialog - Converted cart items:', cartItems);
+    
 
     // تحويل معرفات/أسماء المدن والمناطق إلى معرفات Al Waseet مع أفضلية القيم المخزنة
     let city_id = order?.alwaseet_city_id ? String(order.alwaseet_city_id) : '';
@@ -58,25 +48,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     
     if (!city_id && order.delivery_partner === 'alwaseet' && isLoggedIn && token) {
       try {
-        console.log('🔄 محاولة تحويل الأسماء إلى معرفات Al Waseet لعدم توفر قيم مخزنة...');
         const cities = await getCities(token);
         const cityMatch = cities.find(city => city.name === order.customer_city);
         if (cityMatch) {
           city_id = String(cityMatch.id);
-          console.log(`✅ تم العثور على المدينة: ${order.customer_city} → ID: ${city_id}`);
           const regions = await getRegionsByCity(token, cityMatch.id);
           const regionMatch = regions.find(region => region.name === order.customer_province);
           if (regionMatch) {
             region_id = String(regionMatch.id);
-            console.log(`✅ تم العثور على المنطقة: ${order.customer_province} → ID: ${region_id}`);
-          } else {
-            console.warn(`⚠️ لم يتم العثور على المنطقة: ${order.customer_province}`);
           }
-        } else {
-          console.warn(`⚠️ لم يتم العثور على المدينة: ${order.customer_city}`);
         }
       } catch (error) {
-        console.warn('⚠️ فشل تحويل أسماء المدينة/المنطقة إلى معرفات:', error);
+        devLog.warn('⚠️ فشل تحويل أسماء المدينة/المنطقة إلى معرفات:', error);
       }
     }
 
@@ -130,7 +113,6 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     };
 
-    console.log('📋 EditOrderDialog - Final edit data prepared:', editData);
     return editData;
   };
 

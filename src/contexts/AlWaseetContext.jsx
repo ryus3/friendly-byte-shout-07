@@ -838,9 +838,9 @@ export const AlWaseetProvider = ({ children }) => {
       
       // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
       setTimeout(() => {
-        console.log('🔄 تشغيل فحص الطلبات المحذوفة بعد تجديد التوكن...');
+        devLog.log('🔄 تشغيل فحص الطلبات المحذوفة بعد تجديد التوكن...');
         fastSyncPendingOrders(false).then(result => {
-          console.log('✅ نتيجة الفحص التلقائي بعد تجديد التوكن:', result);
+          devLog.log('✅ نتيجة الفحص التلقائي بعد تجديد التوكن:', result);
         }).catch(error => {
           console.error('❌ خطأ في الفحص التلقائي:', error);
         });
@@ -1966,10 +1966,10 @@ export const AlWaseetProvider = ({ children }) => {
               // إرسال إشعار تغيير الحالة للحالات المهمة مع تحديد state_id الصحيح
               const actualStateId = waseetOrder.state_id || waseetOrder.status_id || waseetOrder.statusId;
               if (actualStateId) {
-                console.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId: actualStateId, statusText: waseetStatusText });
+                devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId: actualStateId, statusText: waseetStatusText });
                 createOrderStatusNotification(trackingNumber, actualStateId, waseetStatusText);
               } else {
-                console.warn('⚠️ لا يوجد state_id للطلب:', trackingNumber, waseetOrder);
+                devLog.warn('⚠️ لا يوجد state_id للطلب:', trackingNumber, waseetOrder);
               }
             }
           }
@@ -2004,7 +2004,7 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
   const syncOrderByQR = useCallback(async (qrId) => {
     try {
-      console.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
+      devLog.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
       
       // جلب الطلب المحلي أولاً للتحقق من شروط الحذف + تحديد صاحب الطلب
       // ✅ البحث بـ tracking_number أو qr_id أو delivery_partner_order_id
@@ -2025,17 +2025,17 @@ export const AlWaseetProvider = ({ children }) => {
         if (!order) return { token: null, source: 'no_order' };
         
         const orderOwnerId = order.created_by;
-        console.log(`🔍 البحث عن توكن فعال للطلب ${order.tracking_number || order.id} (مالك: ${orderOwnerId})`);
+        devLog.log(`🔍 البحث عن توكن فعال للطلب ${order.tracking_number || order.id} (مالك: ${orderOwnerId})`);
         
         // جلب جميع حسابات مالك الطلب
         const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
         if (ownerAccounts.length > 0) {
-          console.log(`👤 وُجد ${ownerAccounts.length} حساب لمالك الطلب ${orderOwnerId}`);
+          devLog.log(`👤 وُجد ${ownerAccounts.length} حساب لمالك الطلب ${orderOwnerId}`);
           
           // تجربة كل حساب على حدة
           for (const account of ownerAccounts) {
             if (account.token) {
-              console.log(`🔑 تجربة حساب: ${account.account_username} لمالك الطلب`);
+              devLog.log(`🔑 تجربة حساب: ${account.account_username} لمالك الطلب`);
               return { 
                 token: account.token, 
                 source: `owner:${orderOwnerId}:${account.account_username}`,
@@ -2047,12 +2047,12 @@ export const AlWaseetProvider = ({ children }) => {
         
         // إذا لم نجد توكن لمالك الطلب وكان المستخدم الحالي مختلف
         if (fallbackToCurrentUser && user?.id && user.id !== orderOwnerId) {
-          console.log(`🔄 لم يوجد توكن لمالك الطلب، التراجع للمستخدم الحالي ${user.id}`);
+          devLog.log(`🔄 لم يوجد توكن لمالك الطلب، التراجع للمستخدم الحالي ${user.id}`);
           const currentUserAccounts = await getUserDeliveryAccounts(user.id, 'alwaseet');
           
           for (const account of currentUserAccounts) {
             if (account.token) {
-              console.log(`🔑 استخدام حساب المستخدم الحالي: ${account.account_username}`);
+              devLog.log(`🔑 استخدام حساب المستخدم الحالي: ${account.account_username}`);
               return { 
                 token: account.token, 
                 source: `current_user:${user.id}:${account.account_username}`,
@@ -2069,11 +2069,11 @@ export const AlWaseetProvider = ({ children }) => {
       const { token: effectiveToken, source: tokenSource, accountUsername } = await getEffectiveTokenForOrder(localOrder, true);
 
       if (!effectiveToken) {
-        console.warn(`❌ لا يوجد توكن صالح للمزامنة للطلب ${qrId} (مصدر: ${tokenSource})`);
+        devLog.warn(`❌ لا يوجد توكن صالح للمزامنة للطلب ${qrId} (مصدر: ${tokenSource})`);
         return null;
       }
 
-      console.log(`🔑 استخدام توكن من: ${tokenSource} للطلب ${qrId}`);
+      devLog.log(`🔑 استخدام توكن من: ${tokenSource} للطلب ${qrId}`);
 
       // البحث المتقدم بجميع التوكنات المتاحة لمالك الطلب قبل اعتبار الطلب محذوف
       const checkOrderWithAllTokens = async (orderId) => {
@@ -2083,25 +2083,25 @@ export const AlWaseetProvider = ({ children }) => {
         // جلب جميع حسابات مالك الطلب
         const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
         
-        console.log(`🔍 فحص الطلب ${orderId} بجميع التوكنات (${ownerAccounts.length} حساب)`);
+        devLog.log(`🔍 فحص الطلب ${orderId} بجميع التوكنات (${ownerAccounts.length} حساب)`);
         
         // تجربة كل توكن
         for (const account of ownerAccounts) {
           if (!account.token) continue;
           
           try {
-            console.log(`🔄 تجربة البحث بحساب: ${account.account_username}`);
+            devLog.log(`🔄 تجربة البحث بحساب: ${account.account_username}`);
             const foundOrder = await AlWaseetAPI.getOrderByQR(account.token, orderId);
             if (foundOrder) {
-              console.log(`✅ وُجد الطلب ${orderId} بحساب: ${account.account_username}`);
+              devLog.log(`✅ وُجد الطلب ${orderId} بحساب: ${account.account_username}`);
               return foundOrder;
             }
           } catch (error) {
-            console.warn(`⚠️ فشل البحث بحساب ${account.account_username}:`, error.message);
+            devLog.warn(`⚠️ فشل البحث بحساب ${account.account_username}:`, error.message);
           }
         }
         
-        console.log(`❌ الطلب ${orderId} غير موجود في جميع حسابات المالك (${ownerAccounts.length} حساب)`);
+        devLog.log(`❌ الطلب ${orderId} غير موجود في جميع حسابات المالك (${ownerAccounts.length} حساب)`);
         return null;
       };
 
@@ -2109,25 +2109,25 @@ export const AlWaseetProvider = ({ children }) => {
       let waseetOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
       
       if (!waseetOrder) {
-        console.warn(`❌ لم يتم العثور على الطلب ${qrId} بالتوكن الأولي (${tokenSource})`);
+        devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} بالتوكن الأولي (${tokenSource})`);
         
         // فحص متقدم بجميع التوكنات قبل الحذف
-        console.log(`🔍 بدء الفحص المتقدم بجميع التوكنات للطلب ${qrId}...`);
+        devLog.log(`🔍 بدء الفحص المتقدم بجميع التوكنات للطلب ${qrId}...`);
         waseetOrder = await checkOrderWithAllTokens(qrId);
         
         if (!waseetOrder) {
-          console.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في جميع الحسابات`);
+          devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في جميع الحسابات`);
           
           // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
           if (localOrder && canAutoDeleteOrder(localOrder, user)) {
-            console.log(`⚠️ التحقق من حذف الطلب ${qrId} - مؤكد عدم وجوده في جميع الحسابات`);
+            devLog.log(`⚠️ التحقق من حذف الطلب ${qrId} - مؤكد عدم وجوده في جميع الحسابات`);
             
             // انتظار إضافي للتأكد (قد يكون هناك تأخير في التزامن)
             await new Promise(resolve => setTimeout(resolve, 3000));
             const finalCheck = await checkOrderWithAllTokens(qrId);
             
             if (!finalCheck) {
-              console.log(`🗑️ تأكيد نهائي: حذف الطلب ${qrId} - غير موجود في جميع حسابات المالك`);
+              devLog.log(`🗑️ تأكيد نهائي: حذف الطلب ${qrId} - غير موجود في جميع حسابات المالك`);
               const deleteResult = await performAutoDelete(localOrder);
               if (deleteResult) {
                 return { 
@@ -2137,11 +2137,11 @@ export const AlWaseetProvider = ({ children }) => {
                 };
               }
             } else {
-              console.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
+              devLog.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
               waseetOrder = finalCheck;
             }
           } else {
-            console.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
+            devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
           }
           
           // ✅ **حماية**: لا تحدّث إذا لم يوجد الطلب في شركة التوصيل
@@ -2149,7 +2149,7 @@ export const AlWaseetProvider = ({ children }) => {
             return null;
           }
         } else {
-          console.log(`✅ وُجد الطلب ${qrId} في أحد الحسابات الأخرى`);
+          devLog.log(`✅ وُجد الطلب ${qrId} في أحد الحسابات الأخرى`);
         }
       }
 
@@ -2164,7 +2164,7 @@ export const AlWaseetProvider = ({ children }) => {
         };
       }
 
-      console.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
+      devLog.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
 
       // تحميل حالات الطلبات إذا لم تكن محملة
       let statusMap = orderStatusesMap;
@@ -2189,7 +2189,7 @@ export const AlWaseetProvider = ({ children }) => {
         })();
 
       if (!localOrder) {
-        console.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);
+        devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);
         return null;
       }
 
@@ -2234,24 +2234,24 @@ export const AlWaseetProvider = ({ children }) => {
             updates.discount = priceDiff;
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
-            console.log(`   - 🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
+            devLog.log(`   - 🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
           } else if (priceDiff < 0) {
             // زيادة
             updates.discount = 0;
             updates.price_increase = Math.abs(priceDiff);
             updates.price_change_type = 'increase';
-            console.log(`   - 🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+            devLog.log(`   - 🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
           } else {
             updates.discount = 0;
             updates.price_increase = 0;
             updates.price_change_type = null;
           }
           
-          console.log(`💰 تحديث السعر للطلب ${localOrder.order_number || qrId}:`);
-          console.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
-          console.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          console.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          console.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
+          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number || qrId}:`);
+          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
+          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
+          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
+          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
           
           // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
           updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
@@ -2280,9 +2280,9 @@ export const AlWaseetProvider = ({ children }) => {
                 })
                 .eq('id', profitRecord.id);
               
-              console.log(`✅ تحديث الأرباح:`);
-              console.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
-              console.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
+              devLog.log(`✅ تحديث الأرباح:`);
+              devLog.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
+              devLog.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
             }
           } catch (profitError) {
             console.error('❌ خطأ في تحديث الأرباح:', profitError);
@@ -2307,7 +2307,7 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      console.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
+      devLog.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
       
       return {
         needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
@@ -2346,7 +2346,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (ordersToCheck.length === 0) return;
 
-      console.log(`🔍 فحص ${ordersToCheck.length} طلب للحذف التلقائي...`);
+      devLog.log(`🔍 فحص ${ordersToCheck.length} طلب للحذف التلقائي...`);
 
       for (const order of ordersToCheck) {
         let verificationAttempts = 0;
