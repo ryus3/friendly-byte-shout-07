@@ -2365,7 +2365,7 @@ serve(async (req) => {
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
-📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}${aiOrderData.secondary_phone && aiOrderData.secondary_phone !== 'null' ? '\n📱 هاتف 2: ' + aiOrderData.secondary_phone : ''}
+📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {
