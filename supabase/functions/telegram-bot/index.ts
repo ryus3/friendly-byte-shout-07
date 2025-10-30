@@ -1796,9 +1796,9 @@ serve(async (req) => {
                     callback_data: `region_${r.regionId}`
                   }]);
                   
-                  // زر "المزيد من الخيارات" (20 إضافية) إذا كان هناك أكثر من 10
-                  if (totalRegions > 10) {
-                    const remainingAfterFirst = totalRegions - 10;
+                  // زر "المزيد من الخيارات" (20 إضافية) إذا كان هناك أكثر من firstPageSize
+                  if (totalRegions > firstPageSize) {
+                    const remainingAfterFirst = totalRegions - firstPageSize;
                     const nextBatch = Math.min(20, remainingAfterFirst);
                     regionButtons.push([{
                       text: `🟡 عرض ${nextBatch} خيارات إضافية`,
