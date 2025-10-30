@@ -1950,6 +1950,39 @@ export type Database = {
           },
         ]
       }
+      fcm_tokens: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          id: string
+          is_active: boolean | null
+          platform: string | null
+          token: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string | null
+          token: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          platform?: string | null
+          token?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       financial_transactions: {
         Row: {
           amount: number
@@ -2449,6 +2482,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_preferences: {
+        Row: {
+          ai_orders: boolean | null
+          created_at: string | null
+          delivery_updates: boolean | null
+          id: string
+          new_registrations: boolean | null
+          regular_orders: boolean | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ai_orders?: boolean | null
+          created_at?: string | null
+          delivery_updates?: boolean | null
+          id?: string
+          new_registrations?: boolean | null
+          regular_orders?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ai_orders?: boolean | null
+          created_at?: string | null
+          delivery_updates?: boolean | null
+          id?: string
+          new_registrations?: boolean | null
+          regular_orders?: boolean | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
