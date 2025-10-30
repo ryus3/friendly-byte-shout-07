@@ -2222,7 +2222,7 @@ export const SuperProvider = ({ children }) => {
           // ✅ استخدام اسم الزبون من الطلب الذكي مباشرة، ثم الافتراضي من الإعدادات
           client_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           client_mobile: normalizedPhone,
-          client_mobile2: '',
+          client_mobile2: aiOrder.customer_phone2 || '',
           // ✅ استخدام customer_address مباشرة - يحتوي فقط على أقرب نقطة دالة
           location: aiOrder.customer_address || nearestPoint || '',
           type_name: productNames, // أسماء المنتجات كاملة مع الألوان والمقاسات
@@ -2484,6 +2484,7 @@ export const SuperProvider = ({ children }) => {
         // ✅ استخدام اسم الزبون المستخرج
         customer_name: extractedData.customer_name || aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
+        customer_phone2: aiOrder.customer_phone2 || null,
         // ✅ استخدام nearestPoint كعنوان أساسي
         customer_address: aiOrder.customer_address || 'غير محدد',
         customer_city: cityName || aiOrder.resolved_city_name || aiOrder.customer_city || extractedData.city,
