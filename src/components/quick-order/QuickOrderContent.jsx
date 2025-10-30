@@ -1897,7 +1897,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // ✅ الحقول المطلوبة لـ createOrder
         customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
         customer_phone: normalizedPhone,
-        customer_phone2: formData.phone2 || null,
+        customer_phone2: formData.second_phone || null,
         customer_city: city,
         customer_province: region,
         customer_address: `${formData.address}, ${region}, ${city}`,

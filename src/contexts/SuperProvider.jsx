@@ -1027,6 +1027,7 @@ export const SuperProvider = ({ children }) => {
       const baseOrder = isPayload ? arg1 : {
         customer_name: arg1?.customer_name || arg1?.name,
         customer_phone: arg1?.customer_phone || arg1?.phone,
+        customer_phone2: arg1?.customer_phone2 || arg1?.second_phone || '',
         customer_address: arg1?.customer_address || arg1?.address,
         customer_city: arg1?.customer_city || arg1?.city,
         customer_province: arg1?.customer_province || arg1?.province,
@@ -1045,6 +1046,7 @@ export const SuperProvider = ({ children }) => {
         order_number: orderNumber,
         customer_name: baseOrder.customer_name,
         customer_phone: baseOrder.customer_phone,
+        customer_phone2: baseOrder.customer_phone2 || null,
         customer_address: baseOrder.customer_address,
         customer_city: baseOrder.customer_city,
         customer_province: baseOrder.customer_province,

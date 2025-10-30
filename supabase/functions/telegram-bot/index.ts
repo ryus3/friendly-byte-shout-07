@@ -2493,7 +2493,7 @@ serve(async (req) => {
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
-📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}${aiOrderData.customer_phone2 && aiOrderData.customer_phone2 !== 'null' ? '\n📱 هاتف 2: ' + aiOrderData.customer_phone2 : ''}
+📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}${aiOrderData.customer_phone2 && String(aiOrderData.customer_phone2).trim() && aiOrderData.customer_phone2 !== 'null' && aiOrderData.customer_phone2 !== null ? '\n📱 هاتف 2: ' + aiOrderData.customer_phone2 : ''}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {
