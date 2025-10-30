@@ -246,16 +246,15 @@ export const AlWaseetProvider = ({ children }) => {
       return { success: true, updatedCount: 0 };
     }
 
-    // ✅ فلترة - استبعاد الطلبات النهائية المكتملة
+    // ✅ فلترة - استبعاد الطلبات المرجعة فقط (النهائية الوحيدة)
     const syncableOrders = visibleOrders.filter(order => {
       if (!order.created_by || order.delivery_partner !== 'alwaseet') return false;
       
-      // استبعاد الحالات النهائية:
-      // - delivery_status = '4' (تم التسليم للزبون) - نهائية تماماً
-      // - delivery_status = '17' (تم الإرجاع للتاجر) - نهائية تماماً
-      if (order.delivery_status === '4' || order.delivery_status === '17') return false;
+      // استبعاد delivery_status = '17' فقط (تم الإرجاع للتاجر) - نهائية تماماً
+      // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
+      if (order.delivery_status === '17') return false;
       
-      // السماح بمزامنة الطلبات الأخرى (pending, shipped, in_delivery, etc.)
+      // السماح بمزامنة جميع الحالات الأخرى بما فيها الحالة 4
       return true;
     });
 

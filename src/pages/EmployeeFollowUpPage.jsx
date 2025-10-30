@@ -440,10 +440,8 @@ const syncableOrders = useMemo(() => {
     // فقط طلبات الوسيط
     if (order.delivery_partner !== 'alwaseet') return false;
     
-    // استبعاد الطلبات المكتملة (delivery_status = 4)
-    if (order.delivery_status === '4') return false;
-    
-    // استبعاد الطلبات المرجعة (delivery_status = 17)
+    // استبعاد الطلبات المرجعة فقط (delivery_status = 17) - النهائية الوحيدة
+    // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
     if (order.delivery_status === '17') return false;
     
     return true;
