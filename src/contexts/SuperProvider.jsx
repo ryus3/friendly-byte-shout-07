@@ -1034,6 +1034,14 @@ export const SuperProvider = ({ children }) => {
         notes: arg1?.notes,
       };
 
+      console.log('🔍 [SuperProvider createOrder] baseOrder بعد البناء:', {
+        customer_phone: baseOrder.customer_phone,
+        customer_phone2: baseOrder.customer_phone2,
+        hasPhone2: !!baseOrder.customer_phone2,
+        arg1_customer_phone2: arg1?.customer_phone2,
+        arg1_second_phone: arg1?.second_phone
+      });
+
       // ✅ الإصلاح النهائي: fallback ثنائي لضمان استخدام المعرفات الصحيحة
       const finalAlwaseetCityId = deliveryPartnerDataArg?.alwaseet_city_id 
         || arg1?.alwaseet_city_id 
@@ -1114,6 +1122,12 @@ export const SuperProvider = ({ children }) => {
         // ✅ إضافة exchange_metadata للاستبدال
         exchange_metadata: isPayload ? (arg1.exchange_metadata || null) : null,
       };
+
+      console.log('🔍 [SuperProvider createOrder] orderRow قبل الإدراج:', {
+        customer_phone: orderRow.customer_phone,
+        customer_phone2: orderRow.customer_phone2,
+        hasPhone2: !!orderRow.customer_phone2
+      });
 
       console.log('🔍 [SuperProvider] orderRow قبل الحفظ - الإصلاح الجذري:', {
         deliveryPartnerDataArg_exists: !!deliveryPartnerDataArg,

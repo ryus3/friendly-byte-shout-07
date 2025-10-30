@@ -36,6 +36,13 @@ export const useDeliveryOrderHandler = () => {
         delivery_type: 'توصيل'
       };
 
+      console.log('🔍 [DeliveryOrderHandler] customerInfo بعد البناء:', {
+        customer_phone: customerInfo.customer_phone,
+        customer_phone2: customerInfo.customer_phone2,
+        hasPhone2: !!customerInfo.customer_phone2,
+        aiOrder_phone2: aiOrder.customer_phone2
+      });
+
       // تحويل العناصر إلى صيغة cart
       const cart = itemsInput.map(item => ({
         id: item.product_id || `temp-${Date.now()}-${Math.random()}`,

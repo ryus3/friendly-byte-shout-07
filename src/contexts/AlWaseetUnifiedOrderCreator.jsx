@@ -76,6 +76,14 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             alwaseet_region_id: finalRegionId
           };
 
+          console.log('🔍 [AlWaseetUnifiedOrderCreator] alWaseetPayload بعد البناء:', {
+            phone: alWaseetPayload.phone,
+            customer_phone2: alWaseetPayload.customer_phone2,
+            hasPhone2: !!alWaseetPayload.customer_phone2,
+            customerInfo_phone2: customerInfo.customer_phone2,
+            customerInfo_second_phone: customerInfo.second_phone
+          });
+
           console.log('📦 [AlWaseetUnifiedOrderCreator] إرسال للوسيط:', {
             ...alWaseetPayload,
             city_id: finalCityId,
@@ -112,6 +120,13 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               customerInfo_customer_region_id: customerInfo.customer_region_id,
               finalCityId,
               finalRegionId
+            });
+
+            console.log('🔍 [AlWaseetUnifiedOrderCreator] customerInfo قبل استدعاء createOrder:', {
+              customer_name: customerInfo.customer_name,
+              customer_phone: customerInfo.customer_phone,
+              customer_phone2: customerInfo.customer_phone2,
+              hasPhone2: !!customerInfo.customer_phone2
             });
 
             // Create local order with qr_id as tracking_number (primary identifier)

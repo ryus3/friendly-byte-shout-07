@@ -178,6 +178,13 @@ const mapToAlWaseetFields = (orderData) => {
     replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
   }
   
+  console.log('🔍 [mapToAlWaseetFields] client_mobile2 بعد mapping:', {
+    orderData_customer_phone2: orderData.customer_phone2,
+    orderData_phone2: orderData.phone2,
+    orderData_client_mobile2: orderData.client_mobile2,
+    final_client_mobile2: mapped.client_mobile2
+  });
+  
   console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
   
   // التحقق من البيانات المطلوبة
