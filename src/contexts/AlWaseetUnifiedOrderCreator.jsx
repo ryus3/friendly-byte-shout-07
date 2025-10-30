@@ -57,7 +57,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           const alWaseetPayload = {
             name: customerInfo.customer_name || customerInfo.name,
             phone: customerInfo.customer_phone || customerInfo.phone,
-            second_phone: customerInfo.second_phone || '',
+            second_phone: customerInfo.customer_phone2 || customerInfo.second_phone || '',
             address: customerInfo.customer_address || customerInfo.address,
             // ✅ إضافة المدينة والمنطقة لتنظيف العنوان في alwaseet-api
             customer_city: customerInfo.customer_city,

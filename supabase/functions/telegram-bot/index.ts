@@ -1474,7 +1474,7 @@ serve(async (req) => {
                 original_text: text,
                 customer_name: replacementData.customerInfo.name,
                 customer_phone: replacementData.customerInfo.phone || phoneNumbers.primary,
-                secondary_phone: phoneNumbers.secondary,
+                customer_phone2: phoneNumbers.secondary,
                 customer_city: replacementData.customerInfo.city,
                 customer_address: replacementData.customerInfo.address,
                 delivery_fee: replacementData.deliveryFee,
@@ -1512,7 +1512,7 @@ serve(async (req) => {
                 original_text: text,
                 customer_name: replacementData.customerInfo.name,
                 customer_phone: replacementData.customerInfo.phone || phoneNumbers.primary,
-                secondary_phone: phoneNumbers.secondary,
+                customer_phone2: phoneNumbers.secondary,
                 customer_city: replacementData.customerInfo.city,
                 customer_address: replacementData.customerInfo.address,
                 delivery_fee: 0,
@@ -1593,7 +1593,7 @@ serve(async (req) => {
                 original_text: text,
                 customer_name: returnData.customerInfo.name,
                 customer_phone: returnData.customerInfo.phone || phoneNumbers.primary,
-                secondary_phone: phoneNumbers.secondary,
+                customer_phone2: phoneNumbers.secondary,
                 customer_city: returnData.customerInfo.city,
                 customer_address: returnData.customerInfo.address,
                 delivery_fee: 0,
@@ -2493,7 +2493,7 @@ serve(async (req) => {
 
 🔹 ${aiOrderData.customer_name || 'ريوس'}
 📍 ${pendingData.context.city_name} - ${regionName}${aiOrderData.customer_address && aiOrderData.customer_address !== 'لم يُحدد' ? ' - ' + aiOrderData.customer_address : ''}
-📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}${aiOrderData.secondary_phone && aiOrderData.secondary_phone !== 'null' ? '\n📱 هاتف 2: ' + aiOrderData.secondary_phone : ''}
+📱 الهاتف: ${aiOrderData.customer_phone || 'غير محدد'}${aiOrderData.customer_phone2 && aiOrderData.customer_phone2 !== 'null' ? '\n📱 هاتف 2: ' + aiOrderData.customer_phone2 : ''}
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {

@@ -25,6 +25,7 @@ export type Database = {
           customer_city: string | null
           customer_name: string | null
           customer_phone: string | null
+          customer_phone2: string | null
           customer_province: string | null
           delivery_fee: number | null
           id: string
@@ -46,7 +47,6 @@ export type Database = {
           replacement_pair_id: string | null
           resolved_city_name: string | null
           resolved_region_name: string | null
-          secondary_phone: string | null
           source: string
           status: string
           telegram_chat_id: number | null
@@ -64,6 +64,7 @@ export type Database = {
           customer_city?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          customer_phone2?: string | null
           customer_province?: string | null
           delivery_fee?: number | null
           id?: string
@@ -85,7 +86,6 @@ export type Database = {
           replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
-          secondary_phone?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
@@ -103,6 +103,7 @@ export type Database = {
           customer_city?: string | null
           customer_name?: string | null
           customer_phone?: string | null
+          customer_phone2?: string | null
           customer_province?: string | null
           delivery_fee?: number | null
           id?: string
@@ -124,7 +125,6 @@ export type Database = {
           replacement_pair_id?: string | null
           resolved_city_name?: string | null
           resolved_region_name?: string | null
-          secondary_phone?: string | null
           source?: string
           status?: string
           telegram_chat_id?: number | null
