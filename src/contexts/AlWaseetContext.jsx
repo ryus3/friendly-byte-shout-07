@@ -320,7 +320,7 @@ export const AlWaseetProvider = ({ children }) => {
             );
 
             if (remoteOrder) {
-              // تحديد الحالة المحلية بناءً على حالة الوسيط مع أولوية للمعرفات الرقمية
+              // ✅ الطلب موجود في getMerchantOrders - تحديث عادي
               const statusId = remoteOrder.status_id || remoteOrder.state_id;
               let newDeliveryStatus;
               
@@ -367,6 +367,7 @@ export const AlWaseetProvider = ({ children }) => {
 
                 if (!error) {
                   totalUpdated++;
+                  devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر getMerchantOrders`);
                 } else {
                   console.error(`❌ خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
                 }
@@ -376,6 +377,86 @@ export const AlWaseetProvider = ({ children }) => {
                   .from('orders')
                   .update({ updated_at: new Date().toISOString() })
                   .eq('id', localOrder.id);
+                
+                devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} (لا تغيير في البيانات)`);
+              }
+            } else {
+              // ⚠️ الطلب غير موجود في getMerchantOrders
+              // (ربما مكتمل delivery_status=4 أو قديم)
+              // استخدام getOrderById كـ fallback
+              
+              devLog.warn(`⚠️ الطلب ${localOrder.tracking_number} غير موجود في merchant-orders`);
+              devLog.log(`   → جلبه مباشرة باستخدام getOrderById...`);
+              
+              try {
+                const directOrder = await AlWaseetAPI.getOrderById(
+                  employeeTokenData.token,
+                  localOrder.qr_id || localOrder.tracking_number
+                );
+                
+                if (directOrder) {
+                  // تطبيق نفس منطق التحديث
+                  const statusId = directOrder.status_id || directOrder.state_id;
+                  let newDeliveryStatus;
+                  
+                  if (statusId) {
+                    newDeliveryStatus = String(statusId);
+                  } else if (directOrder.status_text === 'تم التسليم للزبون') {
+                    newDeliveryStatus = '4';
+                  } else if (directOrder.status_text === 'تم الارجاع الى التاجر') {
+                    newDeliveryStatus = '17';
+                  } else {
+                    newDeliveryStatus = directOrder.status_text;
+                  }
+                  
+                  const statusConfig = getStatusConfig(newDeliveryStatus);
+                  const newStatus = statusConfig.localStatus;
+                  const newDeliveryFee = parseFloat(directOrder.delivery_fee) || 0;
+                  const newReceiptReceived = statusConfig.receiptReceived;
+
+                  const needsUpdate = (
+                    localOrder.delivery_status !== newDeliveryStatus ||
+                    localOrder.status !== newStatus ||
+                    localOrder.delivery_fee !== newDeliveryFee ||
+                    localOrder.receipt_received !== newReceiptReceived ||
+                    !localOrder.delivery_partner_order_id
+                  );
+
+                  if (needsUpdate) {
+                    const updates = {
+                      delivery_status: newDeliveryStatus,
+                      status: newStatus,
+                      delivery_fee: newDeliveryFee,
+                      receipt_received: newReceiptReceived,
+                      delivery_partner_order_id: directOrder.id || directOrder.order_id,
+                      updated_at: new Date().toISOString()
+                    };
+
+                    const { error } = await supabase
+                      .from('orders')
+                      .update(updates)
+                      .eq('id', localOrder.id);
+
+                    if (!error) {
+                      totalUpdated++;
+                      devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر getOrderById (fallback)`);
+                    } else {
+                      console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
+                    }
+                  } else {
+                    // تحديث الوقت فقط (لإظهار أن المزامنة حدثت)
+                    await supabase
+                      .from('orders')
+                      .update({ updated_at: new Date().toISOString() })
+                      .eq('id', localOrder.id);
+                    
+                    devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} عبر fallback (لا تغيير)`);
+                  }
+                } else {
+                  devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);
+                }
+              } catch (directError) {
+                console.error(`❌ خطأ جلب ${localOrder.tracking_number} مباشرة:`, directError);
               }
             }
           }
