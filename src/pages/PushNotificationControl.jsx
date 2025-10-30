@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
-import { PushNotifications } from '@capacitor/push-notifications';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, CheckCircle2, XCircle } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, Smartphone } from 'lucide-react';
+
+// Dynamic import for Capacitor
+let PushNotifications = null;
+try {
+  const capacitorModule = await import('@capacitor/push-notifications');
+  PushNotifications = capacitorModule.PushNotifications;
+} catch (e) {
+  console.log('📱 Capacitor not available - running in web mode');
+}
 
 const PushNotificationControl = () => {
   const { toast } = useToast();
@@ -25,6 +33,37 @@ const PushNotificationControl = () => {
   const registerNotifications = async () => {
     try {
       setIsRegistering(true);
+
+      // Check if Capacitor is available
+      if (!PushNotifications) {
+        console.log('📱 Running in web mode - Capacitor Push Notifications not available');
+        setIsRegistering(false);
+        toast({
+          title: "📱 وضع الويب",
+          description: "الإشعارات متاحة فقط على التطبيق الأصلي (Android/iOS)",
+          variant: "default"
+        });
+        
+        // Load preferences anyway
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data } = await supabase
+            .from('notification_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (data) {
+            setPreferences({
+              ai_orders: data.ai_orders ?? true,
+              regular_orders: data.regular_orders ?? false,
+              delivery_updates: data.delivery_updates ?? true,
+              new_registrations: data.new_registrations ?? true
+            });
+          }
+        }
+        return;
+      }
       
       // طلب الإذن
       const result = await PushNotifications.requestPermissions();
