@@ -1948,6 +1948,7 @@ export const SuperProvider = ({ children }) => {
         const alwaseetPayload = {
           customer_name: aiOrder.customer_name || profile?.default_customer_name || 'زبون تليغرام',
           customer_phone: aiOrder.customer_phone,
+          customer_phone2: aiOrder.customer_phone2 || null,
           customer_address: aiOrder.customer_address,
           customer_city: aiOrder.customer_city,
           customer_province: aiOrder.customer_province,
