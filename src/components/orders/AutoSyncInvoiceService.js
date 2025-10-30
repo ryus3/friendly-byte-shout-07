@@ -34,18 +34,23 @@ export class AutoSyncInvoiceService {
 
   static async syncReceivedInvoicesAutomatically() {
     try {
-      // Call the sync function for recent received invoices
+      // ✅ Call the sync function for recent received invoices
       const { data, error } = await supabase.rpc('sync_recent_received_invoices');
       
       if (error) {
-        console.warn('Auto-sync failed:', error.message);
+        console.warn('❌ Auto-sync failed:', error.message);
         return { success: false, error: error.message };
       }
 
-      console.log('Auto-sync completed:', data);
+      if (data?.updated_orders_count > 0) {
+        console.log(`✅ Auto-sync completed: تم تحديث ${data.updated_orders_count} طلب`, data);
+      } else {
+        console.log('ℹ️ Auto-sync completed: لا توجد تحديثات', data);
+      }
+      
       return { success: true, data };
     } catch (error) {
-      console.warn('Auto-sync error:', error);
+      console.warn('❌ Auto-sync error:', error.message || error);
       return { success: false, error: error.message };
     }
   }

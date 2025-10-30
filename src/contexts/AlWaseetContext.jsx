@@ -1342,14 +1342,16 @@ export const AlWaseetProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      // Auto-sync invoices first
+      // ✅ مزامنة الفواتير المستلمة أولاً
       try {
         const { data: invoiceSyncRes, error: invoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
-        if (invoiceSyncRes?.updated_orders_count > 0) {
+        if (invoiceSyncErr) {
+          devLog.warn('⚠️ خطأ في مزامنة الفواتير:', invoiceSyncErr.message);
+        } else if (invoiceSyncRes?.updated_orders_count > 0) {
           devLog.log(`✅ مزامنة الفواتير: تم تحديث ${invoiceSyncRes.updated_orders_count} طلب`);
         }
       } catch (invoiceError) {
-        devLog.warn('⚠️ خطأ في مزامنة الفواتير:', invoiceError);
+        devLog.warn('⚠️ استثناء في مزامنة الفواتير:', invoiceError);
       }
       
       // تأكد من تحميل خريطة الحالات
@@ -1388,6 +1390,11 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
         devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+        console.log('📊 إحصائيات المزامنة:', {
+          totalLocal: pendingOrders.length,
+          totalWaseet: waseetOrders.length,
+          localOrders: pendingOrders.map(o => o.tracking_number)
+        });
       } catch (apiError) {
         // ⚠️ CRITICAL: إذا فشل جلب الطلبات، لا نحذف أي طلبات!
         console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
@@ -1436,20 +1443,35 @@ export const AlWaseetProvider = ({ children }) => {
         let waseetOrder = null;
         let needsIdRepair = false;
 
-        // أولاً: البحث بمعرف الوسيط إذا كان موجوداً
-        if (localOrder.delivery_partner_order_id) {
+        // ✅ أولاً: البحث بمعرف الوسيط إذا كان موجوداً وصحيحاً
+        if (localOrder.delivery_partner_order_id && localOrder.delivery_partner_order_id !== localOrder.tracking_number) {
           waseetOrder = byWaseetId.get(String(localOrder.delivery_partner_order_id));
         }
 
-        // ثانياً: fallback search بـ tracking_number أو qr_id
+        // ✅ ثانياً: fallback search بـ tracking_number أو qr_id
         if (!waseetOrder) {
           const tn = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
           if (tn) {
             waseetOrder = byQrId.get(tn) || byTracking.get(tn);
-            if (waseetOrder && !localOrder.delivery_partner_order_id) {
-              needsIdRepair = true; // نحتاج لإصلاح المعرف
+            
+            // ✅ إصلاح: وضع علامة للإصلاح إذا كان delivery_partner_order_id خاطئ أو فارغ
+            if (waseetOrder && (!localOrder.delivery_partner_order_id || localOrder.delivery_partner_order_id === localOrder.tracking_number)) {
+              needsIdRepair = true;
+              devLog.log(`🔧 [${localOrder.tracking_number}] يحتاج إصلاح delivery_partner_order_id`);
             }
           }
+        }
+
+        // ✅ Logging مفصّل للتشخيص
+        if (!waseetOrder) {
+          console.log(`❌ [${localOrder.tracking_number}] غير موجود في AlWaseet API`);
+        } else {
+          console.log(`✅ [${localOrder.tracking_number}] موجود في AlWaseet:`, {
+            id: waseetOrder.id,
+            qr_id: waseetOrder.qr_id,
+            status_id: waseetOrder.status_id,
+            state_id: waseetOrder.state_id
+          });
         }
 
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
@@ -1918,14 +1940,16 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // Final invoice sync after order updates
+      // ✅ Final invoice sync after order updates
       try {
-        const { data: finalInvoiceSyncRes } = await supabase.rpc('sync_recent_received_invoices');
-        if (finalInvoiceSyncRes?.updated_orders_count > 0) {
+        const { data: finalInvoiceSyncRes, error: finalInvoiceSyncErr } = await supabase.rpc('sync_recent_received_invoices');
+        if (finalInvoiceSyncErr) {
+          devLog.warn('⚠️ خطأ في المزامنة النهائية للفواتير:', finalInvoiceSyncErr.message);
+        } else if (finalInvoiceSyncRes?.updated_orders_count > 0) {
           devLog.log(`✅ مزامنة فواتير نهائية: تم تحديث ${finalInvoiceSyncRes.updated_orders_count} طلب إضافي`);
         }
       } catch (finalInvoiceError) {
-        devLog.warn('⚠️ خطأ في المزامنة النهائية للفواتير:', finalInvoiceError);
+        devLog.warn('⚠️ استثناء في المزامنة النهائية للفواتير:', finalInvoiceError.message || finalInvoiceError);
       }
 
       return { updated, checked, statusChanges: statusChanges.length };
@@ -2850,7 +2874,7 @@ export const AlWaseetProvider = ({ children }) => {
         console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
         await performDeletionPassAfterStatusSync();
         
-        // Sync received invoices automatically after order sync
+        // ✅ مزامنة الفواتير المستلمة تلقائياً بعد مزامنة الطلبات
         console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
         try {
           const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
@@ -2858,6 +2882,8 @@ export const AlWaseetProvider = ({ children }) => {
             console.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
           } else if (syncRes?.updated_orders_count > 0) {
             console.log(`✅ تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
+          } else {
+            console.log('ℹ️ لا توجد فواتير جديدة للمزامنة');
           }
         } catch (e) {
           console.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);

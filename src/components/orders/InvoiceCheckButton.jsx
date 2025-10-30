@@ -30,14 +30,14 @@ export const InvoiceCheckButton = ({ orderId, trackingNumber, onSuccess }) => {
         console.log("✅ Retroactive link result:", linkResult);
       }
       
-      // Then sync recent received invoices
+      // ✅ Then sync recent received invoices
       const { data: syncResult, error: syncError } = await supabase.rpc('sync_recent_received_invoices');
       
       if (syncError) {
-        console.error("Error syncing invoices:", syncError);
+        console.error("❌ Error syncing invoices:", syncError.message);
         toast({
           title: "خطأ في المزامنة",
-          description: "حدث خطأ أثناء فحص الفواتير",
+          description: `فشلت المزامنة: ${syncError.message}`,
           variant: "destructive",
         });
       } else {
