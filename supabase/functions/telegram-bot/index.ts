@@ -2497,11 +2497,27 @@ serve(async (req) => {
 ${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
 💵 المبلغ الإجمالي: ${(aiOrderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   } else {
-                    // Fallback للرسالة القديمة
+                    // Fallback - بناء الرسالة من orderResult مباشرة
                     const allRegions = pendingData.context.all_regions || [];
                     const selectedRegion = allRegions.find((r: any) => r.regionId === regionId);
                     const regionName = selectedRegion?.regionName || 'المنطقة المختارة';
-                    responseMessage = orderResult.message;
+                    
+                    // استخراج معلومات المنتجات من orderResult
+                    let itemsText = '';
+                    if (orderResult?.orderResult?.items && Array.isArray(orderResult.orderResult.items)) {
+                      itemsText = orderResult.orderResult.items.map((item: any) => 
+                        `❇️ ${item.product_name || 'منتج'} (${item.color || 'لون'}) ${item.size || 'قياس'} × ${item.quantity || 1}`
+                      ).join('\n');
+                    }
+                    
+                    const orderData = orderResult?.orderResult || orderResult;
+                    responseMessage = `✅ تم استلام الطلب!
+
+🔹 ${orderData.customer_name || 'ريوس'}
+📍 ${pendingData.context.city_name} - ${regionName}${orderData.customer_address && orderData.customer_address !== 'لم يُحدد' ? ' - ' + orderData.customer_address : ''}
+📱 الهاتف: ${orderData.customer_phone || 'غير محدد'}${orderData.customer_phone2 && String(orderData.customer_phone2).trim() && orderData.customer_phone2 !== 'null' && orderData.customer_phone2 !== null ? '\n📱 هاتف 2: ' + orderData.customer_phone2 : ''}
+${itemsText || '❇️ تفاصيل الطلب غير متوفرة'}
+💵 المبلغ الإجمالي: ${(orderData.total_amount || 0).toLocaleString('en-US')} د.ع`;
                   }
                 } else {
                   responseMessage = orderResult?.message || 'لم أتمكن من معالجة طلبك.';
