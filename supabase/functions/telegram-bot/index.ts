@@ -1777,9 +1777,18 @@ serve(async (req) => {
                       }
                     });
                   
-                  // ✅ نظام pagination محسّن: 10 → 20 → 30 → 25 → 30 (صفحة 5 جديدة)
+                  // ✅ نظام pagination محسّن: عند وجود تطابق 100%، نعرض 5-8 فقط
                   const totalRegions = localRegionMatches.length;
-                  const firstPageSize = Math.min(10, totalRegions);
+                  const hasPerfectMatch = localRegionMatches.some(r => r.confidence === 1.0);
+                  
+                  // إذا كان هناك تطابق 100%، نعرض 5-8 فقط (حسب العدد المتاح)
+                  let firstPageSize;
+                  if (hasPerfectMatch && totalRegions > 1) {
+                    firstPageSize = Math.min(8, totalRegions); // أقصى 8 نتائج
+                  } else {
+                    firstPageSize = Math.min(10, totalRegions); // النظام العادي
+                  }
+                  
                   const topRegions = localRegionMatches.slice(0, firstPageSize);
                   
                   const regionButtons = topRegions.map(r => [{
