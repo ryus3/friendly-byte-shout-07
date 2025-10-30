@@ -618,11 +618,10 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // إذا وجدنا تطابق كامل أو قوي، نرجع مباشرة
+    // إذا وجدنا تطابق كامل أو قوي، نحتفظ به لكن نكمل البحث
     if (matches.length > 0) {
-      matches.sort((a, b) => b.confidence - a.confidence);
-      console.log(`🏆 وجدنا ${matches.length} تطابق كامل/قوي - توقف البحث`);
-      return matches;
+      console.log(`✅ وجدنا ${matches.length} تطابق كامل/قوي - نكمل البحث عن خيارات متشابهة`);
+      // لا نرجع هنا - نكمل البحث في المستويات التالية
     }
     
     // 🎯 المستوى 1: تركيبات من كلمتين أو أكثر (أولوية عالية)
@@ -707,18 +706,28 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
       }
     }
     
-    // ترتيب نهائي حسب الثقة
-    matches.sort((a, b) => b.confidence - a.confidence);
-    
-    console.log(`✅ إجمالي المطابقات: ${matches.length}`);
-    if (matches.length > 0) {
-      const topMatches = matches.slice(0, 10).map(m => 
-        `${m.regionName} (${Math.round(m.confidence * 100)}%)`
-      );
-      console.log(`🏆 أفضل 10 نتائج:`, topMatches);
+    // إزالة التكرارات (نفس region_id)
+    const uniqueMatches = [];
+    const seenIds = new Set();
+    for (const match of matches) {
+      if (!seenIds.has(match.regionId)) {
+        seenIds.add(match.regionId);
+        uniqueMatches.push(match);
+      }
     }
     
-    return matches;
+    // ترتيب نهائي حسب الثقة
+    uniqueMatches.sort((a, b) => b.confidence - a.confidence);
+    
+    console.log(`✅ إجمالي المطابقات: ${uniqueMatches.length} (بعد إزالة التكرار)`);
+    if (uniqueMatches.length > 0) {
+      const topMatches = uniqueMatches.slice(0, 15).map(m => 
+        `${m.regionName} (${Math.round(m.confidence * 100)}%)`
+      );
+      console.log(`🏆 أفضل 15 نتيجة:`, topMatches);
+    }
+    
+    return uniqueMatches;
   } catch (error) {
     console.error('❌ خطأ في البحث المحلي:', error);
     return [];
