@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">متجر RYUS</string>
-    <string name="title_activity_main">متجر RYUS</string>
+    <string name="app_name">RYUS POS</string>
+    <string name="title_activity_main">RYUS POS</string>
     <string name="package_name">com.ryus.inventory</string>
     <string name="custom_url_scheme">com.ryus.inventory</string>
 </resources>
