@@ -533,6 +533,12 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                     {order.customer_phone || order.order_data?.customer_phone || order.order_data?.phone}
                   </span>
                 )}
+                {(order.customer_phone2 || order.order_data?.customer_phone2 || order.order_data?.second_phone) && (
+                  <span className="text-[11px] flex items-center gap-1">
+                    <Smartphone className="w-3 h-3" />
+                    {order.customer_phone2 || order.order_data?.customer_phone2 || order.order_data?.second_phone}
+                  </span>
+                )}
               </div>
                 
                 {items && items.length > 0 ? (
