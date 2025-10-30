@@ -87,15 +87,14 @@ export const createAlWaseetOrder = async (orderData, token) => {
     }
   }
   
-  // Format secondary phone (optional) - only include if valid
+  // Format secondary phone (optional) - معالجة مثل الرقم الأساسي تماماً
   if (formattedData.client_mobile2) {
-    const formatted2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (formatted2) {
-      formattedData.client_mobile2 = formatted2;
-      console.log('✅ Formatted secondary phone:', formatted2);
-    } else {
-      console.warn('⚠️ Could not format secondary phone:', formattedData.client_mobile2);
+    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+      console.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
       delete formattedData.client_mobile2;
+    } else {
+      console.log('✅ تم تنسيق الرقم الثانوي بنجاح:', formattedData.client_mobile2);
     }
   }
 
@@ -230,15 +229,14 @@ export const editAlWaseetOrder = async (orderData, token) => {
     }
   }
   
-  // Format secondary phone (optional) - only include if valid
+  // Format secondary phone (optional) - معالجة مثل الرقم الأساسي تماماً
   if (formattedData.client_mobile2) {
-    const formatted2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (formatted2) {
-      formattedData.client_mobile2 = formatted2;
-      console.log('✅ Formatted secondary phone for edit:', formatted2);
-    } else {
-      console.warn('⚠️ Could not format secondary phone for edit:', formattedData.client_mobile2);
+    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+      console.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
       delete formattedData.client_mobile2;
+    } else {
+      console.log('✅ تم تنسيق الرقم الثانوي بنجاح للتعديل:', formattedData.client_mobile2);
     }
   }
   
