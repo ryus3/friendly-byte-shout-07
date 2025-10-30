@@ -89,39 +89,10 @@ const OrdersPage = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
   const [activeTab, setActiveTab] = useLocalStorage('ordersActiveTab', 'orders');
 
-  // Scroll to top when page loads + ✅ المزامنة الذكية الدورية المستمرة
+  // Scroll to top when page loads
   useEffect(() => {
     scrollToTopInstant();
   }, []);
-
-  // ✅ مزامنة دورية مستمرة - ليس فقط عند فتح الصفحة
-  useEffect(() => {
-    if (!syncableOrders || syncableOrders.length === 0) return;
-    
-    const performSmartSync = async () => {
-      try {
-        devLog.log(`🔄 [OrdersPage] مزامنة ذكية: ${syncableOrders.length} طلب نشط`);
-        
-        if (syncAndApplyOrders) {
-          await syncAndApplyOrders(syncableOrders);
-          devLog.log('✅ [OrdersPage] اكتملت المزامنة الذكية');
-        }
-      } catch (err) {
-        devLog.warn('⚠️ [OrdersPage] تعذرت المزامنة:', err);
-      }
-    };
-    
-    // مزامنة فورية بعد 5 ثواني
-    const initialTimer = setTimeout(performSmartSync, 5000);
-    
-    // مزامنة دورية كل 5 دقائق
-    const interval = setInterval(performSmartSync, 5 * 60 * 1000);
-    
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(interval);
-    };
-  }, [syncableOrders, syncAndApplyOrders]); // ✅ تحديث عند تغيير الطلبات
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
@@ -536,6 +507,35 @@ const OrdersPage = () => {
       return true;
     });
   }, [filteredOrders]);
+
+  // ✅ مزامنة دورية مستمرة - بعد تعريف syncableOrders
+  useEffect(() => {
+    if (!syncableOrders || syncableOrders.length === 0) return;
+    
+    const performSmartSync = async () => {
+      try {
+        devLog.log(`🔄 [OrdersPage] مزامنة ذكية: ${syncableOrders.length} طلب نشط`);
+        
+        if (syncAndApplyOrders) {
+          await syncAndApplyOrders(syncableOrders);
+          devLog.log('✅ [OrdersPage] اكتملت المزامنة الذكية');
+        }
+      } catch (err) {
+        devLog.warn('⚠️ [OrdersPage] تعذرت المزامنة:', err);
+      }
+    };
+    
+    // مزامنة فورية بعد 5 ثواني
+    const initialTimer = setTimeout(performSmartSync, 5000);
+    
+    // مزامنة دورية كل 5 دقائق
+    const interval = setInterval(performSmartSync, 5 * 60 * 1000);
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [syncableOrders, syncAndApplyOrders]); // ✅ تحديث عند تغيير الطلبات
 
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {
