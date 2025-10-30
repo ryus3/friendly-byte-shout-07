@@ -2516,6 +2516,33 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_templates: {
+        Row: {
+          body_template: string
+          created_at: string | null
+          id: string
+          title_template: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          body_template: string
+          created_at?: string | null
+          id?: string
+          title_template: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          body_template?: string
+          created_at?: string | null
+          id?: string
+          title_template?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           auto_delete: boolean | null
