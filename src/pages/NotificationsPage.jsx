@@ -17,6 +17,7 @@ import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
+import { NotificationSettings } from '@/components/notifications/NotificationSettings';
 import ScrollingText from '@/components/ui/scrolling-text';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { getStatusForComponent } from '@/lib/order-status-translator';
@@ -257,6 +258,9 @@ const NotificationsPage = () => {
       </Helmet>
 
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+        {/* إعدادات الإشعارات */}
+        <NotificationSettings />
+
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-3">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent">

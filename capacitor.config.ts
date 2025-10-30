@@ -23,7 +23,13 @@ const config: CapacitorConfig = {
     },
     App: {
       deepLinkingEnabled: true
+    },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert']
     }
+  },
+  android: {
+    icon: 'public/app-icon.png'
   }
 };
 
