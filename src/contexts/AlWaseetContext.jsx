@@ -443,6 +443,11 @@ export const AlWaseetProvider = ({ children }) => {
             continue;
           }
 
+          devLog.log(`📦 تم جلب ${merchantOrders.length} طلب من ${partnerName}:`, {
+            sampleOrder: merchantOrders[0],
+            fields: merchantOrders[0] ? Object.keys(merchantOrders[0]) : []
+          });
+
           // تحديث كل طلب محلي بناءً على بيانات الوسيط
           for (const localOrder of employeeOrders) {
             const trackingIds = [
@@ -452,30 +457,46 @@ export const AlWaseetProvider = ({ children }) => {
             ].filter(Boolean);
 
             // البحث عن الطلب في بيانات الوسيط
-            const remoteOrder = merchantOrders.find(ro => 
-              trackingIds.some(id => 
-                ro.tracking_number === id || 
-                ro.qr_id === id || 
-                ro.id === id ||
-                ro.order_id === id
-              )
-            );
+            const isModon = employeeTokenData.partner_name === 'modon';
+            const remoteOrder = merchantOrders.find(ro => {
+              if (isModon) {
+                // MODON يستخدم: id, qr_id فقط
+                return trackingIds.some(id => 
+                  String(ro.id) === String(id) || 
+                  String(ro.qr_id) === String(id)
+                );
+              } else {
+                // AlWaseet يستخدم: tracking_number, qr_id, id, order_id
+                return trackingIds.some(id => 
+                  ro.tracking_number === id || 
+                  ro.qr_id === id || 
+                  ro.id === id ||
+                  ro.order_id === id
+                );
+              }
+            });
 
             if (remoteOrder) {
               // ✅ الطلب موجود في getMerchantOrders - تحديث عادي
-              const isModon = employeeTokenData.partner_name === 'modon';
-              const statusId = remoteOrder.status_id || remoteOrder.state_id;
-              let newDeliveryStatus;
+              let statusId, newDeliveryStatus;
               
-              // أولوية للمعرف الرقمي إن وجد
-              if (statusId) {
+              if (isModon) {
+                // MODON: استخدام status_id مباشرة
+                statusId = remoteOrder.status_id;
                 newDeliveryStatus = String(statusId);
-              } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
-                newDeliveryStatus = '4';
-              } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
-                newDeliveryStatus = isModon ? '7' : '17';
               } else {
-                newDeliveryStatus = remoteOrder.status_text;
+                // AlWaseet: منطق معقد للحالات
+                statusId = remoteOrder.status_id || remoteOrder.state_id;
+                
+                if (statusId) {
+                  newDeliveryStatus = String(statusId);
+                } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
+                  newDeliveryStatus = '4';
+                } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
+                  newDeliveryStatus = '17';
+                } else {
+                  newDeliveryStatus = remoteOrder.status_text;
+                }
               }
               
               // استخدام التعريف الصحيح حسب الشريك
@@ -483,7 +504,9 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               const newStatus = statusConfig.localStatus;
-              const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
+              
+              // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
+              const newDeliveryFee = localOrder.delivery_fee || 0;
               const newReceiptReceived = statusConfig.receiptReceived;
 
               // تحديث الطلب إذا تغيرت بياناته
@@ -501,7 +524,7 @@ export const AlWaseetProvider = ({ children }) => {
                   status: newStatus,
                   delivery_fee: newDeliveryFee,
                   receipt_received: newReceiptReceived,
-                  delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id,
+                  delivery_partner_order_id: isModon ? String(remoteOrder.id) : (remoteOrder.id || remoteOrder.order_id),
                   updated_at: new Date().toISOString()
                 };
 
