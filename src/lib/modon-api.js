@@ -215,21 +215,28 @@ export async function getMerchantOrders(token) {
  * Map order data to MODON fields
  */
 function mapToModonFields(orderData) {
-  const cleanedLocation = orderData.customer_address || orderData.address || '';
+  // ✅ استخدام customer_address أو location مباشرة
+  const cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
+  
+  // ✅ نفس معالجة السعر كالوسيط - دعم الإرجاع والاستبدال
+  const finalPrice = orderData.final_amount || orderData.price || orderData.final_total || orderData.total_amount || 0;
+  const merchantPrice = Math.round(Number(finalPrice));
   
   return {
-    client_name: orderData.customer_name || orderData.name || '',
-    client_mobile: orderData.customer_phone || orderData.phone || '',
-    client_mobile2: orderData.customer_phone2 || orderData.phone2 || '',
-    city_id: parseInt(orderData.modon_city_id || orderData.city_id || 0),
-    region_id: parseInt(orderData.modon_region_id || orderData.region_id || 0),
+    client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
+    client_mobile: orderData.customer_phone || orderData.phone || orderData.client_mobile || '',
+    client_mobile2: orderData.customer_phone2 || orderData.phone2 || orderData.client_mobile2 || '',
+    // ✅ إصلاح city_id و region_id - نفس الترتيب كالوسيط
+    city_id: parseInt(orderData.city_id || orderData.customer_city_id || orderData.modon_city_id || 0),
+    region_id: parseInt(orderData.region_id || orderData.customer_region_id || orderData.modon_region_id || 0),
     location: cleanedLocation,
-    type_name: orderData.details || 'طلب عادي',
-    items_number: parseInt(orderData.quantity || 1),
-    price: Number(orderData.price || 0),
-    package_size: parseInt(orderData.package_size_id || orderData.size || 1),
+    type_name: orderData.details || orderData.type_name || 'طلب عادي',
+    items_number: parseInt(orderData.items_number || orderData.quantity || 1),
+    price: merchantPrice,  // ✅ استخدام merchantPrice (دعم الإرجاع/الاستبدال)
+    package_size: parseInt(orderData.package_size_id || orderData.size || orderData.package_size || 1),
     merchant_notes: orderData.merchant_notes || orderData.notes || '',
-    replacement: orderData.order_type === 'replacement' ? 1 : 0
+    // ✅ دعم الإرجاع والاستبدال بشكل صحيح
+    replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || orderData.type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
   };
 }
 
@@ -262,7 +269,14 @@ export async function createModonOrder(orderData, token) {
   formattedData.package_size = parseInt(formattedData.package_size) || 0;
   formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
-  devLog.log('📦 إنشاء طلب في مدن:', formattedData);
+  devLog.log('📦 إنشاء طلب في مدن:', {
+    ...formattedData,
+    // ✅ لوج تشخيصي
+    original_city_id: orderData.city_id,
+    original_region_id: orderData.region_id,
+    mapped_city_id: formattedData.city_id,
+    mapped_region_id: formattedData.region_id
+  });
   
   const data = await handleModonApiCall(
     'create-order', 
