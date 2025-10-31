@@ -7,6 +7,7 @@ import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import * as ModonAPI from '@/lib/modon-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
+import { getModonStatusConfig } from '@/lib/modon-statuses';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
 import { displaySecuritySummary } from '@/utils/securityLogger';
@@ -440,6 +441,7 @@ export const AlWaseetProvider = ({ children }) => {
 
             if (remoteOrder) {
               // ✅ الطلب موجود في getMerchantOrders - تحديث عادي
+              const isModon = employeeTokenData.partner_name === 'modon';
               const statusId = remoteOrder.status_id || remoteOrder.state_id;
               let newDeliveryStatus;
               
@@ -449,12 +451,15 @@ export const AlWaseetProvider = ({ children }) => {
               } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
                 newDeliveryStatus = '4';
               } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
-                newDeliveryStatus = '17';
+                newDeliveryStatus = isModon ? '7' : '17';
               } else {
                 newDeliveryStatus = remoteOrder.status_text;
               }
               
-              const statusConfig = getStatusConfig(newDeliveryStatus);
+              // استخدام التعريف الصحيح حسب الشريك
+              const statusConfig = isModon 
+                ? getModonStatusConfig(statusId, remoteOrder.status)
+                : getStatusConfig(newDeliveryStatus);
               const newStatus = statusConfig.localStatus;
               const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
               const newReceiptReceived = statusConfig.receiptReceived;
