@@ -59,13 +59,31 @@ serve(async (req) => {
     console.log('🔄 Calling MODON API:', url);
     
     const response = await fetch(url, options);
-    const data = await response.json();
+    
+    // Check if response is JSON before parsing
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      // Handle non-JSON responses (HTML error pages, etc.)
+      const text = await response.text();
+      console.error('❌ MODON returned non-JSON response:', text.substring(0, 200));
+      
+      // Return structured error
+      data = {
+        status: false,
+        errNum: '999',
+        msg: `خطأ في الاتصال بـ MODON API. الرد غير صحيح (${response.status}). تحقق من بيانات الدخول أو الـ endpoint.`
+      };
+    }
 
     console.log('✅ MODON Response:', { status: response.status, hasData: !!data });
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: response.status,
+      status: 200, // Always return 200 to client, error info is in data
     });
 
   } catch (error) {
