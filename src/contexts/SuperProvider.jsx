@@ -1868,28 +1868,14 @@ export const SuperProvider = ({ children }) => {
           destination: destination
         });
         
-        // تعريف المتغيرات خارج البلوك لاستخدامها في النطاق الكامل
-        let cityId = null;
-        let foundCityName = null;
-        let regionId = null;
-        let foundRegionName = null;
-        let nearestPoint = '';
-        
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
           console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
-          console.log('🔍 [DEBUG] approveAiOrder parameters:', {
-            orderId,
-            destination,
-            selectedAccount,
-            actualAccountNormalized: actualAccount
-          });
-          
           // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
           const accountData = await getTokenForUser(createdBy, actualAccount, destination);
           
-          console.log('🔍 [DEBUG] getTokenForUser result:', {
+          console.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
             foundToken: !!accountData?.token,
@@ -2062,7 +2048,12 @@ export const SuperProvider = ({ children }) => {
         return candidates;
       };
       
-      // المتغيرات معرّفة في أعلى الدالة
+      // تعريف المتغيرات مسبقاً
+      let cityId = null;
+      let foundCityName = null;
+      let regionId = null;
+      let foundRegionName = null;
+      let nearestPoint = '';
       
       // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
       if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
@@ -2382,7 +2373,7 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
         return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
       }
-    } else {
+      }
 
       // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
       const products = Array.isArray(allData.products) ? allData.products : [];
@@ -2447,7 +2438,6 @@ export const SuperProvider = ({ children }) => {
       if (!normalizedItems.length) return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
 
       return await createLocalOrder(aiOrder, normalizedItems, aiOrder.id);
-    }
     } catch (err) {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };

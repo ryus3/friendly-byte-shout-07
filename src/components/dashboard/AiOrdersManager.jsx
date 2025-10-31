@@ -232,7 +232,7 @@ useEffect(() => {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('auto_approval_enabled, default_ai_order_destination, selected_delivery_account, selected_delivery_partner')
+          .select('auto_approval_enabled, default_ai_order_destination, selected_delivery_account')
           .eq('user_id', user.user_id)
           .single();
         
@@ -243,7 +243,7 @@ useEffect(() => {
             setOrderDestination({
               destination: data.default_ai_order_destination,
               account: data.selected_delivery_account || '',
-              partnerName: data.selected_delivery_partner || data.default_ai_order_destination
+              partnerName: data.default_ai_order_destination
             });
           } else {
             // Ensure local destination is properly set
