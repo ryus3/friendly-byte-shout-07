@@ -96,7 +96,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         // التبديل إلى حساب موجود وتسجيل الدخول الفعلي
         if (selectedAccount && !username && !password && !showAddForm) {
             // تفعيل الحساب المحفوظ وتسجيل الدخول الفعلي
-            const success = await activateAccount(selectedAccount.account_username);
+            const success = await activateAccount(selectedAccount.account_username, selectedPartner, selectedAccount.isExpired);
             if (success) {
                 // تحديث الحساب الافتراضي أيضاً
                 await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);

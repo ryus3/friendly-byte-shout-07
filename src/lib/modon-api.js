@@ -50,7 +50,7 @@ export async function loginToModon(username, password) {
     devLog.log('🔐 تسجيل دخول إلى مدن...');
     
     const data = await handleModonApiCall(
-      'merchant-login',
+      'login',
       'POST',
       null,
       { username, password },
@@ -61,6 +61,7 @@ export async function loginToModon(username, password) {
     if (data.status === true && data.errNum === 'S000' && data.data?.[0]?.token) {
       devLog.log('✅ تم تسجيل الدخول بنجاح إلى مدن');
       return {
+        success: true,
         token: data.data[0].token,
         merchantId: data.data[0].merchant_id,
         username: data.data[0].username

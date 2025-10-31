@@ -257,10 +257,11 @@ export const AlWaseetProvider = ({ children }) => {
         if (normalizedUsername && !seenUsernames.has(normalizedUsername)) {
           seenUsernames.add(normalizedUsername);
           // إضافة حقل isExpired للحسابات المنتهية
-          const isExpired = account.expires_at && new Date(account.expires_at) <= new Date();
+          const isExpired = account.expires_at && new Date(account.expires_at) < new Date();
           uniqueAccounts.push({
             ...account,
-            isExpired
+            isExpired,
+            expires_at: account.expires_at
           });
         }
       }
@@ -928,7 +929,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
         
         tokenData = { token: result.token };
-        partnerData = { username };
+        partnerData = { username, password };
       } else {
         // الوسيط - استخدام alwaseet-proxy
         const { data, error: proxyError } = await supabase.functions.invoke('alwaseet-proxy', {
@@ -949,7 +950,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         tokenData = data.data;
-        partnerData = { username };
+        partnerData = { username, password };
       }
 
       // حفظ التوكن في قاعدة البيانات مع دعم تعدد الحسابات
