@@ -296,8 +296,10 @@ export async function createModonOrder(orderData, token) {
   );
   
   if (data.status === true && data.errNum === 'S000') {
-    devLog.log('✅ تم إنشاء الطلب في مدن:', data.data[0]);
-    return data.data[0];
+    // ✅ MODON ترجع object مباشر، ليس array
+    const orderData = Array.isArray(data.data) ? data.data[0] : data.data;
+    devLog.log('✅ تم إنشاء الطلب في مدن:', orderData);
+    return orderData;
   }
   
   throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
@@ -350,8 +352,10 @@ export async function editModonOrder(orderData, token) {
   );
   
   if (data.status === true && data.errNum === 'S000') {
-    devLog.log('✅ تم تعديل الطلب في مدن');
-    return data.data?.[0] || true;
+    // ✅ MODON ترجع object مباشر، ليس array
+    const orderData = Array.isArray(data.data) ? data.data[0] : data.data;
+    devLog.log('✅ تم تعديل الطلب في مدن:', orderData);
+    return orderData || true;
   }
   
   throw new Error(data.msg || 'فشل تعديل الطلب في مدن');
@@ -429,8 +433,10 @@ export async function getOrdersByIdsBatch(ids, token) {
     );
     
     if (data.status === true && data.errNum === 'S000') {
-      devLog.log(`✅ تم جلب ${data.data?.length || 0} طلب بالدفعة`);
-      return data.data || [];
+      // ✅ تأكد من أن data.data مصفوفة
+      const orders = Array.isArray(data.data) ? data.data : (data.data ? [data.data] : []);
+      devLog.log(`✅ تم جلب ${orders.length} طلب بالدفعة`);
+      return orders;
     }
     
     throw new Error(data.msg || 'فشل جلب الطلبات بالدفعات');
