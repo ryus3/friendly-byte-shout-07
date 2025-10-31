@@ -97,15 +97,15 @@ const AlWaseetInvoicesTab = () => {
   };
 
 
-  // Show message if not logged in to Al-Waseet
-  if (!isLoggedIn || activePartner !== 'alwaseet') {
+  // Show message if not logged in to delivery partner (support both AlWaseet and MODON)
+  if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
           <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
           <h3 className="text-lg font-semibold mb-2">غير متصل بشركة التوصيل</h3>
           <p className="text-muted-foreground mb-4">
-            يجب تسجيل الدخول إلى شركة التوصيل أولاً لعرض الفواتير
+            يجب تسجيل الدخول إلى شركة التوصيل (الوسيط أو مدن) أولاً لعرض الفواتير
           </p>
         </CardContent>
       </Card>
@@ -308,7 +308,9 @@ const AlWaseetInvoicesTab = () => {
                 <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
-            <span className="text-right">فواتير شركة التوصيل</span>
+            <span className="text-right">
+              فواتير {activePartner === 'modon' ? 'مدن' : activePartner === 'alwaseet' ? 'الوسيط' : 'شركة التوصيل'}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>

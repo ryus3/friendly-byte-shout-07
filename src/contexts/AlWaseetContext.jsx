@@ -921,6 +921,152 @@ export const AlWaseetProvider = ({ children }) => {
     fetchToken();
   }, [fetchToken]);
 
+  // 🔐 Auto-Login: استعادة الجلسة تلقائياً عند بدء التطبيق
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (!user?.id || isLoggedIn) return;
+      
+      try {
+        devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل...');
+        
+        // البحث عن التوكن الافتراضي أو الأحدث للشريك النشط
+        const tokenData = await getTokenForUser(user.id, null, activePartner);
+        
+        if (!tokenData) {
+          devLog.log('⚠️ لم يتم العثور على توكن صالح للشريك:', activePartner);
+          return;
+        }
+        
+        // التحقق من صلاحية التوكن
+        const expiresAt = new Date(tokenData.expires_at);
+        const now = new Date();
+        const hoursUntilExpiry = (expiresAt - now) / (1000 * 60 * 60);
+        
+        if (expiresAt <= now) {
+          devLog.log('⚠️ التوكن منتهي الصلاحية. محاولة تجديد...');
+          // محاولة إعادة التفعيل
+          const reactivated = await reactivateExpiredAccount(tokenData.account_username, activePartner);
+          if (!reactivated) {
+            toast({
+              title: "انتهت صلاحية تسجيل الدخول",
+              description: `يرجى تسجيل الدخول مرة أخرى إلى ${deliveryPartners[activePartner]?.name || activePartner}`,
+              variant: "destructive"
+            });
+          }
+          return;
+        }
+        
+        // تسجيل دخول تلقائي
+        setToken(tokenData.token);
+        setWaseetUser({
+          username: tokenData.account_username,
+          merchantId: tokenData.merchant_id,
+          label: tokenData.account_label
+        });
+        setIsLoggedIn(true);
+        setActivePartner(activePartner);
+        
+        // تحديث last_used_at
+        await supabase
+          .from('delivery_partner_tokens')
+          .update({ last_used_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+          .eq('partner_name', activePartner)
+          .ilike('account_username', tokenData.account_username.trim().toLowerCase());
+        
+        const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
+        devLog.log(`✅ تم استعادة الجلسة بنجاح: ${tokenData.account_label || tokenData.account_username} في ${partnerDisplayName}`);
+        
+        // 🔔 إشعار قبل انتهاء الصلاحية (24 ساعة)
+        if (hoursUntilExpiry > 0 && hoursUntilExpiry <= 24) {
+          const hoursRemaining = Math.floor(hoursUntilExpiry);
+          toast({
+            title: "⚠️ تنبيه: قرب انتهاء صلاحية التوكن",
+            description: `ستنتهي صلاحية تسجيل الدخول خلال ${hoursRemaining} ساعة. يرجى تسجيل الدخول مجدداً قريباً.`,
+            variant: "default",
+            duration: 8000
+          });
+        }
+        
+      } catch (error) {
+        console.error('❌ خطأ في استعادة الجلسة:', error);
+      }
+    };
+    
+    restoreSession();
+  }, [user?.id, activePartner, isLoggedIn, getTokenForUser, reactivateExpiredAccount]);
+
+  // 🔔 فحص دوري لصلاحية التوكن والإشعار قبل 24 ساعة
+  useEffect(() => {
+    if (!user?.id || !isLoggedIn || !token) return;
+    
+    const checkTokenExpiry = async () => {
+      try {
+        const { data: tokenData } = await supabase
+          .from('delivery_partner_tokens')
+          .select('expires_at, account_username, account_label')
+          .eq('user_id', user.id)
+          .eq('partner_name', activePartner)
+          .eq('token', token)
+          .maybeSingle();
+        
+        if (!tokenData) return;
+        
+        const expiresAt = new Date(tokenData.expires_at);
+        const now = new Date();
+        const hoursUntilExpiry = (expiresAt - now) / (1000 * 60 * 60);
+        
+        // إشعار إذا باقي أقل من 24 ساعة ولم يتم الإشعار مؤخراً
+        if (hoursUntilExpiry > 0 && hoursUntilExpiry <= 24) {
+          const lastWarningKey = `token_expiry_warning_${user.id}_${activePartner}`;
+          const lastWarning = localStorage.getItem(lastWarningKey);
+          const lastWarningTime = lastWarning ? new Date(lastWarning) : null;
+          
+          // عرض الإشعار مرة واحدة كل 6 ساعات
+          if (!lastWarningTime || (now - lastWarningTime) > (6 * 60 * 60 * 1000)) {
+            const hoursRemaining = Math.floor(hoursUntilExpiry);
+            const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
+            
+            toast({
+              title: "⚠️ تنبيه: قرب انتهاء صلاحية التوكن",
+              description: `ستنتهي صلاحية تسجيل الدخول لـ ${partnerDisplayName} (${tokenData.account_label || tokenData.account_username}) خلال ${hoursRemaining} ساعة. يرجى تسجيل الدخول مجدداً لتجديد الصلاحية.`,
+              variant: "default",
+              duration: 10000
+            });
+            
+            localStorage.setItem(lastWarningKey, now.toISOString());
+          }
+        }
+        
+        // تسجيل خروج تلقائي عند انتهاء الصلاحية
+        if (expiresAt <= now) {
+          devLog.log('⚠️ انتهت صلاحية التوكن. تسجيل خروج تلقائي...');
+          setToken(null);
+          setWaseetUser(null);
+          setIsLoggedIn(false);
+          
+          const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
+          toast({
+            title: "انتهت صلاحية تسجيل الدخول",
+            description: `يرجى تسجيل الدخول مرة أخرى إلى ${partnerDisplayName}`,
+            variant: "destructive",
+            duration: 8000
+          });
+        }
+      } catch (error) {
+        console.error('❌ خطأ في فحص صلاحية التوكن:', error);
+      }
+    };
+    
+    // فحص فوري عند التحميل
+    checkTokenExpiry();
+    
+    // فحص دوري كل ساعة
+    const intervalId = setInterval(checkTokenExpiry, 60 * 60 * 1000);
+    
+    return () => clearInterval(intervalId);
+  }, [user?.id, isLoggedIn, token, activePartner]);
+
   // Auto-sync will be set up after functions are defined
 
   // normalizeUsername is declared earlier to avoid TDZ with dependency arrays
