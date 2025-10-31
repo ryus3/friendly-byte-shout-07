@@ -1806,8 +1806,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       let qrLink = null;
       let deliveryPartnerData = null;
 
-      if (activePartner === 'alwaseet') {
-          if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
+      if (activePartner === 'alwaseet' || activePartner === 'modon') {
+          const partnerNameAr = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+          if (!isWaseetLoggedIn || !waseetToken) throw new Error(`يجب تسجيل الدخول لـ${partnerNameAr} أولاً.`);
           
             // تطبيع رقم الهاتف للتأكد من التوافق مع API
             const normalizedPhone = normalizePhone(formData.phone);
@@ -1815,14 +1816,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               throw new Error('رقم الهاتف غير صحيح. يرجى إدخال رقم هاتف عراقي صحيح.');
             }
             
-            // ✅ بناء payload للوسيط باستخدام القيم المحسوبة من handleCreateOrder
-            const alWaseetPayload = {
+            // ✅ بناء payload موحد للوسيط ومدن
+            const deliveryPayload = {
+              // للوسيط
               client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
               client_mobile: normalizedPhone,
               client_mobile2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
+              // لمدن
+              name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
+              phone: normalizedPhone,
+              customer_phone2: formData.second_phone ? normalizePhone(formData.second_phone) : '',
+              // مشتركة
               city_id: effectiveCityId, 
               region_id: effectiveRegionId,
               location: formData.address,
+              address: formData.address,
               type_name: formData.type === 'return'
                 ? (() => {
                     // ✅ للإرجاع: "طلب ترجيع + أسماء المنتجات" - استخدام orderItems
@@ -1849,6 +1857,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                       }).join(' + ');
                     })()
                   : formData.details,  // ✅ للطلبات العادية: استخدام details العادي
+              details: formData.details,
               items_number: formData.type === 'return' 
                 ? (() => {
                     // ✅ مجموع كمية المنتجات الواردة
@@ -1862,15 +1871,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                       return outgoingItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
                     })()
                   : (orderItems.length > 0 ? orderItems.length : 1),  // ✅ للطلبات العادية: عدد العناصر
+              quantity: orderItems.length > 0 ? orderItems.length : 1,
               // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلبات العادية)
               price: Math.round(finalTotal),
               package_size: formData.size,
+              size: formData.size,
               // ✅ استخدام merchantNotes المبسطة للوسيط في حالة الاستبدال
               merchant_notes: formData.type === 'exchange' ? merchantNotes : orderNotes,
+              notes: formData.type === 'exchange' ? merchantNotes : orderNotes,
               // ✅ تمييز الإرجاع والاستبدال
-              replacement: (formData.type === 'return' || formData.type === 'exchange') ? 1 : 0
+              replacement: (formData.type === 'return' || formData.type === 'exchange') ? 1 : 0,
+              type: formData.type === 'return' || formData.type === 'exchange' ? 'replacement' : 'new'
            };
-           console.log('🔍 Diagnostic check before Al-Waseet order creation:', {
+           console.log('🔍 Diagnostic check before delivery order creation:', {
+             activePartner,
              city_id: effectiveCityId,
              region_id: effectiveRegionId,
              formData_city_id: formData.city_id,
@@ -1878,15 +1892,23 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
              selectedCityId,
              selectedRegionId
            });
-           const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+           
+           // ✅ استدعاء API المناسب
+           let deliveryResponse;
+           if (activePartner === 'modon') {
+             const ModonAPI = await import('@/lib/modon-api');
+             deliveryResponse = await ModonAPI.createModonOrder(deliveryPayload, waseetToken);
+           } else {
+             deliveryResponse = await createAlWaseetOrder(deliveryPayload, waseetToken);
+           }
           
-          if (!alWaseetResponse || !alWaseetResponse.qr_id) {
-            throw new Error("لم يتم استلام رقم التتبع من شركة التوصيل.");
+          if (!deliveryResponse || !deliveryResponse.qr_id) {
+            throw new Error(`لم يتم استلام رقم التتبع من ${partnerNameAr}.`);
           }
 
-          trackingNumber = alWaseetResponse.qr_id;
-          qrLink = alWaseetResponse.qr_link;
-          deliveryPartnerData = alWaseetResponse;
+          trackingNumber = deliveryResponse.qr_id;
+          qrLink = deliveryResponse.qr_link;
+          deliveryPartnerData = deliveryResponse;
       } else if (activePartner === 'local') {
           // الطلبات المحلية - سيتم إنشاء رقم التتبع تلقائياً في useOrders
           trackingNumber = null;
@@ -1925,10 +1947,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         deliveryFee: activePartner === 'local' ? 0 : deliveryFeeAmount
       };
       
+      // ✅ تحديد اسم الشريك بشكل صحيح
+      const partnerName = activePartner === 'modon' ? 'modon' : 
+                          activePartner === 'alwaseet' ? 'alwaseet' : 
+                          'محلي';
+      
       // ✅ تجميع معلومات شريك التوصيل بشكل صحيح
       deliveryPartnerData = {
-        ...(deliveryPartnerData || {}), // ✅ الاحتفاظ ببيانات Al-Waseet إن وجدت (qr_id, qr_link, etc.)
-        delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet', // ✅ تحديد نوع التوصيل بشكل صريح
+        ...(deliveryPartnerData || {}), // ✅ الاحتفاظ ببيانات الشريك إن وجدت (qr_id, qr_link, etc.)
+        delivery_partner: partnerName, // ✅ 'modon' أو 'alwaseet' أو 'محلي'
         delivery_fee: activePartner === 'local' ? 0 : deliveryFeeAmount,
         alwaseet_city_id: effectiveCityId || null,
         alwaseet_region_id: effectiveRegionId || null,
@@ -1943,10 +1970,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // ✅ للاستبدال: استخدام payload mode مع بيانات التوصيل من Al-Waseet
         result = await createOrder({
           ...orderData,
-          // ✅ إضافة بيانات التوصيل من Al-Waseet
+          // ✅ إضافة بيانات التوصيل من الشريك
           tracking_number: trackingNumber,
           qr_link: qrLink,
-          delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
+          delivery_partner: partnerName, // ✅ استخدام partnerName بدلاً من hardcoded
           delivery_status: trackingNumber ? 'pending' : 'pending',
         });
       } else {
