@@ -1868,6 +1868,13 @@ export const SuperProvider = ({ children }) => {
           destination: destination
         });
         
+        // تعريف المتغيرات خارج البلوك لاستخدامها في النطاق الكامل
+        let cityId = null;
+        let foundCityName = null;
+        let regionId = null;
+        let foundRegionName = null;
+        let nearestPoint = '';
+        
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
           console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
@@ -2055,12 +2062,7 @@ export const SuperProvider = ({ children }) => {
         return candidates;
       };
       
-      // تعريف المتغيرات مسبقاً
-      let cityId = null;
-      let foundCityName = null;
-      let regionId = null;
-      let foundRegionName = null;
-      let nearestPoint = '';
+      // المتغيرات معرّفة في أعلى الدالة
       
       // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
       if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
