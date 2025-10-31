@@ -1,38 +1,44 @@
 import devLog from './devLogger';
+import { normalizePhone } from '../utils/phoneUtils';
 
 // ======== القسم 1: دوال المساعدة ========
 
 /**
  * Handle phone number formatting for MODON API
+ * Uses same logic as Al Waseet for consistency
  */
 export function formatPhoneForModon(phone) {
   if (!phone) return '';
   
-  let cleaned = String(phone).replace(/\D/g, '');
+  // ✅ استخدام normalizePhone من phoneUtils (نفس منطق الوسيط)
+  const normalized = normalizePhone(phone);
   
-  // إذا كان الرقم يبدأ بـ 07، حذف الصفر وإضافة البادئة
-  if (cleaned.startsWith('07')) {
-    cleaned = cleaned.substring(1);
-  }
-  // إذا كان يبدأ بـ 9647، استخدامه مباشرة
-  else if (!cleaned.startsWith('964')) {
-    // إزالة أي بادئة خاطئة والبدء من 7
-    cleaned = cleaned.replace(/^0+/, '');
+  if (!normalized || normalized.length !== 11) {
+    devLog.warn('⚠️ رقم غير صحيح بعد التنسيق:', { original: phone, normalized });
+    return '';
   }
   
-  // التأكد من البادئة الصحيحة
-  if (!cleaned.startsWith('964')) {
-    cleaned = '964' + cleaned;
-  }
+  // Remove leading 0 and add +964
+  const withoutZero = normalized.startsWith('0') ? normalized.slice(1) : normalized;
+  const formatted = `+964${withoutZero}`;
   
-  return '+' + cleaned;
+  devLog.log('📞 تنسيق رقم الهاتف:', {
+    original: phone,
+    normalized,
+    formatted,
+    isValid: isValidModonPhone(formatted)
+  });
+  
+  return formatted;
 }
 
 /**
  * Validate MODON phone number format
+ * Format: +964 + 10 digits = 14 characters total
  */
 export function isValidModonPhone(phone) {
   if (!phone) return false;
+  // ✅ التنسيق الصحيح: +964 متبوعة بـ 10 أرقام (7XXXXXXXXX)
   const phoneRegex = /^\+9647\d{9}$/;
   return phoneRegex.test(phone);
 }
