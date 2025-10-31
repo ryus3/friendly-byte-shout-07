@@ -484,6 +484,30 @@ export const UnifiedAuthProvider = ({ children }) => {
 
   const logout = async () => {
     setLoading(true);
+    
+    // Clear sensitive data from localStorage for security
+    const sensitiveKeys = [
+      'processedAiOrders',
+      'aiOrdersEmployeeFilter',
+      'defaultCustomerName',
+      'defaultDeliveryPartner',
+      'defaultCustomerPhone',
+      'defaultCustomerPhone2',
+      'defaultProvince',
+      'defaultCity',
+      'defaultRegion',
+      'selectedDeliveryPartner',
+      'employeeFilter'
+    ];
+    
+    sensitiveKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Failed to remove ${key} from localStorage:`, error);
+      }
+    });
+    
     if (supabase) {
       await supabase.auth.signOut();
     }
