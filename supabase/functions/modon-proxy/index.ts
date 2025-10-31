@@ -44,11 +44,12 @@ serve(async (req) => {
 
     // Handle body based on content type
     if (payload && (method === 'POST' || method === 'PUT')) {
-      if (isFormData && endpoint === 'login') {
-        // Create FormData for login
+      if (isFormData) {
+        // Create FormData for login and create-order endpoints
         const formData = new FormData();
-        formData.append('username', payload.username);
-        formData.append('password', payload.password);
+        Object.keys(payload).forEach(key => {
+          formData.append(key, payload[key]);
+        });
         options.body = formData;
       } else {
         options.body = JSON.stringify(payload);

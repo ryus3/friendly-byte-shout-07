@@ -2,6 +2,7 @@ import React, { createContext, useContext, useCallback } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { createAlWaseetOrder } from '@/lib/alwaseet-api';
+import * as ModonAPI from '@/lib/modon-api';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -112,8 +113,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           // ✅ استدعاء API المناسب حسب الشريك
           let partnerResult;
           if (activePartner === 'modon') {
-            // TODO: سيتم إضافة createModonOrder لاحقاً
-            throw new Error('إنشاء طلبات مدن قيد التطوير');
+            partnerResult = await ModonAPI.createModonOrder(partnerPayload, useToken);
           } else {
             partnerResult = await createAlWaseetOrder(partnerPayload, useToken);
           }
@@ -132,7 +132,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               console.warn('⚠️ No qr_id received from Al-Waseet, will set tracking_number to null');
             }
             
-            // ✅ الإصلاح الجذري: استخدام نفس القيم المرسلة للوسيط
+            // ✅ الإصلاح الجذري: استخدام نفس القيم المرسلة للشريك
             console.log('🔍 [UnifiedOrderCreator] customerInfo قبل إنشاء الطلب المحلي:', {
               customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
               customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
@@ -160,7 +160,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
               {
                 delivery_partner_order_id: waseetInternalId || null,
                 tracking_number: qrId || null,
-                delivery_partner: 'alwaseet',
+                delivery_partner: activePartner,
                 alwaseet_city_id: finalCityId,
                 alwaseet_region_id: finalRegionId
               }
