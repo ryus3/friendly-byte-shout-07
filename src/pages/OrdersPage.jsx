@@ -94,6 +94,47 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
+  // ✅ مزامنة تلقائية للطلبات المعلقة عند الدخول
+  useEffect(() => {
+    const performInitialSync = async () => {
+      // انتظار تحميل الطلبات أولاً
+      if (inventoryLoading || !orders || orders.length === 0) {
+        devLog.log('⏳ انتظار تحميل الطلبات في OrdersPage...');
+        return;
+      }
+      
+      // جلب الطلبات المعلقة فقط (pending, shipped, delivery)
+      const pendingOrders = orders.filter(o => 
+        ['pending', 'shipped', 'delivery'].includes(o.status)
+      );
+      
+      if (pendingOrders.length === 0) {
+        devLog.log('ℹ️ لا توجد طلبات معلقة للمزامنة');
+        return;
+      }
+      
+      devLog.log(`🔄 مزامنة تلقائية لـ ${pendingOrders.length} طلب معلق في OrdersPage...`);
+      
+      try {
+        const result = await syncAndApplyOrders(pendingOrders);
+        
+        if (result.success && result.updatedCount > 0) {
+          devLog.log(`✅ تم تحديث ${result.updatedCount} طلب تلقائياً`);
+          await refreshOrders(); // تحديث الواجهة
+        }
+      } catch (error) {
+        console.error('❌ خطأ في المزامنة التلقائية:', error);
+      }
+    };
+
+    // تأخير 2 ثانية قبل المزامنة (لتحميل الطلبات)
+    const timer = setTimeout(() => {
+      performInitialSync();
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [orders, inventoryLoading]); // ✅ تشغيل عند تحميل الطلبات
+
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
   useEffect(() => {

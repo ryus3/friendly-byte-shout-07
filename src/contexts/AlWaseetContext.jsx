@@ -407,6 +407,24 @@ export const AlWaseetProvider = ({ children }) => {
             continue;
           }
 
+          // ✅ التحقق من صلاحية Token لـ MODON
+          if (employeeTokenData.partner_name === 'modon') {
+            if (!employeeTokenData.token || employeeTokenData.token.length < 10) {
+              devLog.log(`❌ MODON token غير صالح للموظف: ${employeeId}`);
+              toast({
+                title: "خطأ في token مدن",
+                description: `يرجى تسجيل الدخول مجدداً إلى مدن`,
+                variant: "destructive"
+              });
+              continue;
+            }
+            
+            devLog.log(`✅ MODON token صالح للموظف: ${employeeId}`, {
+              tokenLength: employeeTokenData.token.length,
+              tokenPreview: employeeTokenData.token.substring(0, 15) + '...'
+            });
+          }
+
           devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي (${employeeTokenData.partner_name})`);
           
           // استدعاء API المناسب حسب partner_name
@@ -418,12 +436,33 @@ export const AlWaseetProvider = ({ children }) => {
               merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
             }
             
-            if (!merchantOrders || !Array.isArray(merchantOrders)) {
-              const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
-              devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
+          if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {
+            const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
+            
+            // ⚠️ إذا كانت MODON ولا توجد طلبات، قد يكون لا توجد فواتير
+            if (employeeTokenData.partner_name === 'modon' && (!merchantOrders || merchantOrders.length === 0)) {
+              devLog.log(`⚠️ لا توجد طلبات من ${partnerName} - قد لا تكون هناك فواتير مُستَلمة`);
               
-              toast({
-                title: `تحذير: فشل مزامنة ${partnerName}`,
+              // محاولة التحقق من الفواتير
+              try {
+                const invoices = await ModonAPI.getMerchantInvoices(employeeTokenData.token);
+                devLog.log(`📋 فواتير مدن المتاحة: ${invoices?.length || 0}`, {
+                  hasInvoices: invoices && invoices.length > 0,
+                  invoicesSample: invoices?.slice(0, 3)
+                });
+                
+                if (!invoices || invoices.length === 0) {
+                  devLog.log('💡 نصيحة: تأكد من وجود فواتير مُستَلمة في حساب مدن');
+                }
+              } catch (err) {
+                console.error('❌ خطأ في التحقق من فواتير مدن:', err);
+              }
+            }
+            
+            devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
+            
+            toast({
+              title: `تحذير: فشل مزامنة ${partnerName}`,
                 description: `تعذر الحصول على طلبات الموظف من ${partnerName}. تحقق من تسجيل الدخول.`,
                 variant: 'destructive',
                 duration: 5000

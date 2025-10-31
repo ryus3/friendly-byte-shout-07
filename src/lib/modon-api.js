@@ -204,13 +204,27 @@ export async function getMerchantOrders(token) {
     
     if (!invoices || invoices.length === 0) {
       devLog.log('⚠️ لا توجد فواتير من مدن');
+      devLog.log('💡 تأكد من:');
+      devLog.log('   1. وجود طلبات مُرسلة في مدن');
+      devLog.log('   2. استلام الفواتير من شركة مدن');
+      devLog.log('   3. صلاحية token المستخدم');
       return [];
     }
     
-    devLog.log(`📋 تم جلب ${invoices.length} فاتورة من مدن`);
+    devLog.log(`📋 تم جلب ${invoices.length} فاتورة من مدن:`, {
+      invoicesSample: invoices.slice(0, 3).map(inv => ({
+        id: inv.id,
+        status: inv.status,
+        delivered_count: inv.delivered_orders_count,
+        price: inv.merchant_price
+      }))
+    });
     
     // 2. جلب الطلبات من كل فاتورة
     let allOrders = [];
+    let successfulInvoices = 0;
+    let failedInvoices = 0;
+    
     for (const invoice of invoices) {
       try {
         const invoiceData = await getInvoiceOrders(token, invoice.id);
@@ -218,13 +232,37 @@ export async function getMerchantOrders(token) {
         
         if (orders && orders.length > 0) {
           allOrders = allOrders.concat(orders);
+          successfulInvoices++;
+          devLog.log(`  ✅ فاتورة ${invoice.id}: ${orders.length} طلب`);
+        } else {
+          devLog.log(`  ⚠️ فاتورة ${invoice.id}: لا توجد طلبات`);
         }
       } catch (error) {
-        console.error(`❌ خطأ في جلب طلبات الفاتورة ${invoice.id}:`, error);
+        failedInvoices++;
+        console.error(`  ❌ خطأ في جلب طلبات الفاتورة ${invoice.id}:`, error.message);
       }
     }
     
-    devLog.log(`✅ تم جلب ${allOrders.length} طلب من مدن عبر ${invoices.length} فاتورة`);
+    devLog.log(`✅ نتيجة نهائية: ${allOrders.length} طلب من ${successfulInvoices}/${invoices.length} فاتورة`);
+    
+    if (failedInvoices > 0) {
+      devLog.log(`⚠️ فشل جلب ${failedInvoices} فاتورة - تحقق من الأخطاء أعلاه`);
+    }
+    
+    // عرض عينة من الطلبات
+    if (allOrders.length > 0) {
+      devLog.log('📦 عينة من الطلبات:', {
+        firstOrder: {
+          id: allOrders[0].id,
+          qr_id: allOrders[0].qr_id,
+          status_id: allOrders[0].status_id,
+          delivery_price: allOrders[0].delivery_price,
+          price: allOrders[0].price
+        },
+        totalOrders: allOrders.length
+      });
+    }
+    
     return allOrders;
   } catch (error) {
     console.error('❌ خطأ في جلب الطلبات من مدن:', error);

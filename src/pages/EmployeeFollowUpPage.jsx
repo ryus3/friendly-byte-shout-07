@@ -193,9 +193,16 @@ const EmployeeFollowUpPage = () => {
   // مزامنة شاملة فورية عند دخول الصفحة
   useEffect(() => {
     const performInitialSync = async () => {
+      // انتظار تحميل الطلبات أولاً
+      if (loading || !orders || orders.length === 0) {
+        console.log('⏳ انتظار تحميل الطلبات...');
+        return;
+      }
+      
       console.log('🔄 بدء المزامنة الشاملة الفورية لصفحة متابعة الموظفين');
       try {
-        await comprehensiveSync();
+        // ✅ تمرير جميع الطلبات للمزامنة
+        await comprehensiveSync(orders, syncVisibleOrdersBatch);
         console.log('✅ تمت المزامنة الشاملة بنجاح');
       } catch (error) {
         console.error('❌ خطأ في المزامنة الشاملة:', error);
@@ -203,7 +210,7 @@ const EmployeeFollowUpPage = () => {
     };
 
     performInitialSync();
-  }, []); // تنفذ مرة واحدة فقط عند دخول الصفحة
+  }, [orders, loading]); // ✅ إعادة المحاولة عند تحميل الطلبات
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
