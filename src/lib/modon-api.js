@@ -191,24 +191,41 @@ export async function getPackageSizes(token) {
 }
 
 /**
- * Get all merchant orders from MODON
+ * Get all merchant orders from MODON through invoices
+ * ⚠️ MODON لا يوفر endpoint مباشر لـ merchant-orders
+ * يجب استخدام الفواتير للحصول على الطلبات (مثل AlWaseet)
  */
 export async function getMerchantOrders(token) {
   try {
-    const data = await handleModonApiCall(
-      'merchant-orders',
-      'GET',
-      token,
-      null,
-      { token }
-    );
+    devLog.log('📦 جلب طلبات مدن عبر الفواتير...');
     
-    if (data.status === true && data.errNum === 'S000') {
-      devLog.log(`✅ تم جلب ${data.data?.length || 0} طلب من مدن`);
-      return data.data || [];
+    // 1. جلب جميع الفواتير
+    const invoices = await getMerchantInvoices(token);
+    
+    if (!invoices || invoices.length === 0) {
+      devLog.log('⚠️ لا توجد فواتير من مدن');
+      return [];
     }
     
-    throw new Error(data.msg || 'فشل جلب الطلبات من مدن');
+    devLog.log(`📋 تم جلب ${invoices.length} فاتورة من مدن`);
+    
+    // 2. جلب الطلبات من كل فاتورة
+    let allOrders = [];
+    for (const invoice of invoices) {
+      try {
+        const invoiceData = await getInvoiceOrders(token, invoice.id);
+        const orders = invoiceData?.orders || [];
+        
+        if (orders && orders.length > 0) {
+          allOrders = allOrders.concat(orders);
+        }
+      } catch (error) {
+        console.error(`❌ خطأ في جلب طلبات الفاتورة ${invoice.id}:`, error);
+      }
+    }
+    
+    devLog.log(`✅ تم جلب ${allOrders.length} طلب من مدن عبر ${invoices.length} فاتورة`);
+    return allOrders;
   } catch (error) {
     console.error('❌ خطأ في جلب الطلبات من مدن:', error);
     throw error;

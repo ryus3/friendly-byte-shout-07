@@ -444,8 +444,16 @@ export const AlWaseetProvider = ({ children }) => {
           }
 
           devLog.log(`📦 تم جلب ${merchantOrders.length} طلب من ${partnerName}:`, {
+            partnerName: employeeTokenData.partner_name,
             sampleOrder: merchantOrders[0],
-            fields: merchantOrders[0] ? Object.keys(merchantOrders[0]) : []
+            fields: merchantOrders[0] ? Object.keys(merchantOrders[0]) : [],
+            trackingNumbers: merchantOrders.slice(0, 5).map(o => ({
+              id: o.id,
+              qr_id: o.qr_id,
+              status_id: o.status_id,
+              delivery_price: o.delivery_price,
+              price: o.price
+            }))
           });
 
           // تحديث كل طلب محلي بناءً على بيانات الوسيط
