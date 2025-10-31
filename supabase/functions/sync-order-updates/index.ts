@@ -28,17 +28,19 @@ Deno.serve(async (req) => {
       .limit(100);
 
     if (error) {
-      console.error('خطأ في جلب الطلبات:', error);
+      console.error('❌ خطأ في جلب الطلبات:', error);
       throw error;
     }
 
-    console.log(`📦 تم العثور على ${activeOrders?.length || 0} طلب نشط`);
+    console.log(`📦 تم العثور على ${activeOrders?.length || 0} طلب نشط للمزامنة`);
 
     let updatesCount = 0;
     const changes: any[] = [];
 
     for (const order of activeOrders || []) {
       try {
+        console.log(`🔍 معالجة الطلب ${order.order_number} (${order.tracking_number})`);
+        
         // التحقق من وجود delivery_partner_order_id
         if (!order.delivery_partner_order_id) {
           console.log(`⚠️ الطلب ${order.tracking_number} لا يحتوي على delivery_partner_order_id - تخطي`);
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
           .single();
 
         if (!tokenData) {
-          console.log(`⚠️ لم يتم العثور على token للمستخدم ${order.created_by}`);
+          console.log(`❌ لا يوجد token للطلب ${order.tracking_number}`);
           continue;
         }
 
@@ -65,13 +67,13 @@ Deno.serve(async (req) => {
         );
 
         if (!response.ok) {
-          console.log(`⚠️ فشل جلب الطلب ${order.delivery_partner_order_id} من AlWaseet`);
+          console.log(`❌ فشل جلب الطلب ${order.delivery_partner_order_id} من AlWaseet`);
           continue;
         }
 
         const result = await response.json();
         if (!result.status || result.errNum !== 'S000') {
-          console.log(`⚠️ استجابة غير صحيحة من AlWaseet للطلب ${order.delivery_partner_order_id}`);
+          console.log(`❌ استجابة غير صحيحة من AlWaseet للطلب ${order.delivery_partner_order_id}`);
           continue;
         }
 
@@ -79,9 +81,11 @@ Deno.serve(async (req) => {
         const waseetOrder = Array.isArray(result.data) ? result.data[0] : result.data;
 
         if (!waseetOrder) {
-          console.log(`⚠️ لم يتم العثور على الطلب ${order.delivery_partner_order_id} في AlWaseet`);
+          console.log(`❌ لم يتم العثور على الطلب ${order.delivery_partner_order_id} في AlWaseet`);
           continue;
         }
+
+        console.log(`✅ تم جلب بيانات ${order.tracking_number} - الحالة: ${waseetOrder.status_id}`);
 
         // مقارنة البيانات
         const currentStatus = String(order.delivery_status || '');
@@ -92,14 +96,17 @@ Deno.serve(async (req) => {
         const statusChanged = currentStatus !== newStatus;
         const priceChanged = currentPrice !== newPrice && newPrice > 0;
 
+        // 🔥 دائماً نحدث updated_at حتى بدون تغييرات
+        const updates: any = { updated_at: new Date().toISOString() };
+        const changesList: string[] = [];
+
         if (statusChanged || priceChanged) {
-          const updates: any = { updated_at: new Date().toISOString() };
-          
           if (statusChanged) {
             updates.delivery_status = newStatus;
             if (newStatus === '4') updates.status = 'delivered';
             else if (newStatus === '17') updates.status = 'returned_in_stock';
             else if (['31', '32'].includes(newStatus)) updates.status = 'cancelled';
+            changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
           }
 
           // ✅ تحديث السعر دائماً إذا تغير
@@ -141,12 +148,13 @@ Deno.serve(async (req) => {
                 })
                 .eq('id', profitRecord.id);
               
-              console.log(`✅ Profit updated for order ${order.order_number}: ${priceDifference} IQD`);
+              console.log(`💰 تحديث الأرباح للطلب ${order.order_number}: ${priceDifference} د.ع`);
             }
 
             // ملاحظة للتوثيق
             const currentNotes = order.notes || '';
             updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentPrice.toLocaleString()} إلى ${newPrice.toLocaleString()} د.ع`;
+            changesList.push(`السعر: ${currentPrice} → ${newPrice} د.ع`);
           }
 
           // تحديث رسوم التوصيل
@@ -154,45 +162,45 @@ Deno.serve(async (req) => {
             updates.delivery_fee = Number(waseetOrder.delivery_price);
           }
 
-          await supabase
-            .from('orders')
-            .update(updates)
-            .eq('id', order.id);
-
-          updatesCount++;
-          changes.push({
-            order_id: order.id,
-            order_number: order.order_number,
-            tracking_number: order.tracking_number,
-            status_changed: statusChanged,
-            price_changed: priceChanged,
-            old_status: currentStatus,
-            new_status: newStatus,
-            old_price: currentPrice,
-            new_price: newPrice
-          });
-
           // إرسال إشعار للمستخدم
           await supabase.from('notifications').insert({
             user_id: order.created_by,
             type: 'alwaseet_sync_update',
             title: 'تحديث من شركة التوصيل',
-            message: `الطلب ${order.order_number || order.tracking_number}: ${
-              statusChanged ? `الحالة تغيرت إلى ${newStatus}` : ''
-            } ${priceChanged ? `السعر تغير إلى ${newPrice.toLocaleString()}` : ''}`,
+            message: `الطلب ${order.order_number || order.tracking_number}: ${changesList.join('، ')}`,
             data: { 
               order_id: order.id,
               order_number: order.order_number,
               changes: { statusChanged, priceChanged, newStatus, newPrice }
             }
           });
+
+          updatesCount++;
+          changes.push({
+            order_id: order.id,
+            order_number: order.order_number,
+            tracking_number: order.tracking_number,
+            changes: changesList
+          });
+
+          console.log(`✅ تم تحديث ${order.tracking_number}: ${changesList.join('، ')}`);
+        }
+
+        // 🔥 دائماً نحدث updated_at حتى لو لم تتغير البيانات
+        await supabase
+          .from('orders')
+          .update(updates)
+          .eq('id', order.id);
+
+        if (!statusChanged && !priceChanged) {
+          console.log(`⏰ تم تحديث وقت ${order.tracking_number} فقط (لا توجد تغييرات)`);
         }
       } catch (orderError: any) {
         console.error(`❌ خطأ في معالجة الطلب ${order.tracking_number}:`, orderError.message);
       }
     }
 
-    
+    console.log(`✅ انتهت المزامنة: فُحص ${activeOrders?.length || 0} طلب، حُدّث ${updatesCount} طلب بتغييرات`);
 
     return new Response(JSON.stringify({
       success: true,
