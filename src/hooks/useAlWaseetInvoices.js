@@ -22,7 +22,7 @@ export const useAlWaseetInvoices = () => {
 
   // Enhanced smart fetch with instant loading and background sync
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
-    if (!token || !isLoggedIn || activePartner !== 'alwaseet') {
+    if (!token || !isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
       return;
     }
 
@@ -33,8 +33,16 @@ export const useAlWaseetInvoices = () => {
 
     try {
       // Smart fetch: only get recent invoices to avoid loading thousands
-      console.log(`🔄 جلب الفواتير (${timeFilter}) - ${forceRefresh ? 'إجباري' : 'تلقائي'}`);
-      const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+      console.log(`🔄 جلب الفواتير (${timeFilter}) - ${forceRefresh ? 'إجباري' : 'تلقائي'} من ${activePartner}`);
+      
+      // استدعاء API المناسب حسب activePartner
+      let invoicesData;
+      if (activePartner === 'modon') {
+        const ModonAPI = await import('@/lib/modon-api');
+        invoicesData = await ModonAPI.getMerchantInvoices(token);
+      } else {
+        invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+      }
       
       // Persist invoices to DB (bulk upsert via RPC) - in background
       if (invoicesData?.length > 0) {
@@ -158,7 +166,7 @@ export const useAlWaseetInvoices = () => {
 
   // Enhanced instant loading with smart caching
   useEffect(() => {
-    if (!isLoggedIn || activePartner !== 'alwaseet') return;
+    if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) return;
 
     const loadInvoicesInstantly = async () => {
       // 1. Load cached invoices from database FIRST (instant)
@@ -166,7 +174,7 @@ export const useAlWaseetInvoices = () => {
         const { data: cachedInvoices, error } = await supabase
           .from('delivery_invoices')
           .select('*')
-          .eq('partner', 'alwaseet')
+          .eq('partner', activePartner)
           .eq('owner_user_id', user?.id)
           .order('issued_at', { ascending: false })
           .limit(50);
@@ -247,7 +255,13 @@ export const useAlWaseetInvoices = () => {
       // محاولة API أولاً إذا كان التوكن متاحاً - أولوية للبيانات الحية
       if (token && isLoggedIn) {
         try {
-          invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+          // استدعاء API المناسب حسب activePartner
+          if (activePartner === 'modon') {
+            const ModonAPI = await import('@/lib/modon-api');
+            invoiceData = await ModonAPI.getInvoiceOrders(token, invoiceId);
+          } else {
+            invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+          }
           dataSource = 'api';
           console.log('✅ جلب طلبات الفاتورة من API مباشرة:', invoiceData?.orders?.length || 0);
           
@@ -405,15 +419,20 @@ export const useAlWaseetInvoices = () => {
     try {
       console.log(`🔄 استلام الفاتورة ${invoiceId}...`);
       
-      // 1) تأكيد الاستلام على API الوسيط
-      await AlWaseetAPI.receiveInvoice(token, invoiceId);
+      // 1) تأكيد الاستلام على API المناسب
+      if (activePartner === 'modon') {
+        const ModonAPI = await import('@/lib/modon-api');
+        await ModonAPI.receiveInvoice(token, invoiceId);
+      } else {
+        await AlWaseetAPI.receiveInvoice(token, invoiceId);
+      }
 
       // 2) جلب الفاتورة من قاعدة البيانات المحلية
       const { data: invoiceRecord, error: invoiceError } = await supabase
         .from('delivery_invoices')
         .select('id, external_id, issued_at, updated_at')
         .eq('external_id', String(invoiceId))
-        .eq('partner', 'alwaseet')
+        .eq('partner', activePartner)
         .maybeSingle();
 
       if (invoiceError || !invoiceRecord) {

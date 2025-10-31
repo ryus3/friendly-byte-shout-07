@@ -1,94 +1,138 @@
-import { supabase } from '@/integrations/supabase/client';
+import devLog from './devLogger';
+
+// ======== القسم 1: دوال المساعدة ========
 
 /**
- * MODON Express API Integration
- * Base URL: https://mcht.modon-express.net/v1/merchant
+ * Handle phone number formatting for MODON API
  */
-
-/**
- * Login to MODON and get authentication token
- * @param {string} username - Merchant username
- * @param {string} password - Merchant password
- * @returns {Promise<{success: boolean, token?: string, error?: string}>}
- */
-export async function loginToModon(username, password) {
-  try {
-    console.log('🔐 تسجيل الدخول إلى مدن...');
-
-    const data = await handleModonApiCall(
-      'login',
-      'POST',
-      null, // No token needed for login
-      { username, password },
-      null,
-      true // isFormData flag
-    );
-
-    console.log('📦 استجابة مدن:', data);
-
-    if (data.status === true && data.errNum === 'S000') {
-      return {
-        success: true,
-        token: data.data.token,
-      };
-    } else {
-      return {
-        success: false,
-        error: data.msg || 'فشل تسجيل الدخول',
-      };
-    }
-  } catch (error) {
-    console.error('❌ خطأ في تسجيل الدخول:', error);
-    return {
-      success: false,
-      error: error.message || 'خطأ في الاتصال بالخادم',
-    };
+export function formatPhoneForModon(phone) {
+  if (!phone) return '';
+  
+  let cleaned = String(phone).replace(/\D/g, '');
+  
+  // إذا كان الرقم يبدأ بـ 07، حذف الصفر وإضافة البادئة
+  if (cleaned.startsWith('07')) {
+    cleaned = cleaned.substring(1);
   }
+  // إذا كان يبدأ بـ 9647، استخدامه مباشرة
+  else if (!cleaned.startsWith('964')) {
+    // إزالة أي بادئة خاطئة والبدء من 7
+    cleaned = cleaned.replace(/^0+/, '');
+  }
+  
+  // التأكد من البادئة الصحيحة
+  if (!cleaned.startsWith('964')) {
+    cleaned = '964' + cleaned;
+  }
+  
+  return '+' + cleaned;
 }
 
 /**
- * Generic API call handler for MODON
+ * Validate MODON phone number format
  */
-async function handleModonApiCall(endpoint, method, token, payload = null, queryParams = null, isFormData = false) {
+export function isValidModonPhone(phone) {
+  if (!phone) return false;
+  const phoneRegex = /^\+9647\d{9}$/;
+  return phoneRegex.test(phone);
+}
+
+// ======== القسم 2: المصادقة ========
+
+/**
+ * Login to MODON and get authentication token
+ * @param {string} username - MODON username
+ * @param {string} password - MODON password
+ * @returns {Promise<Object>} Login response with token
+ */
+export async function loginToModon(username, password) {
   try {
-    const { data, error } = await supabase.functions.invoke('modon-proxy', {
-      body: {
-        endpoint,
-        method,
-        token,
-        payload,
-        queryParams,
-        isFormData,
-      },
-    });
-
-    if (error) {
-      console.error('❌ Proxy Error:', error);
-      throw new Error(error.message);
+    devLog.log('🔐 تسجيل دخول إلى مدن...');
+    
+    const data = await handleModonApiCall(
+      'merchant-login',
+      'POST',
+      null,
+      { username, password },
+      null,
+      true
+    );
+    
+    if (data.status === true && data.errNum === 'S000' && data.data?.[0]?.token) {
+      devLog.log('✅ تم تسجيل الدخول بنجاح إلى مدن');
+      return {
+        token: data.data[0].token,
+        merchantId: data.data[0].merchant_id,
+        username: data.data[0].username
+      };
     }
-
-    return data;
+    
+    throw new Error(data.msg || 'فشل تسجيل الدخول إلى مدن');
   } catch (error) {
-    console.error('❌ MODON API Error:', error);
+    console.error('❌ خطأ في تسجيل الدخول إلى مدن:', error);
     throw error;
   }
 }
 
+// ======== القسم 3: التواصل مع API ========
+
+/**
+ * Generic function to handle MODON API calls through proxy
+ */
+async function handleModonApiCall(endpoint, method, token, payload = null, queryParams = null, isFormData = false) {
+  try {
+    const requestBody = {
+      endpoint,
+      method,
+      token: token || null,
+      payload: payload || null,
+      queryParams: queryParams || null,
+      isFormData: isFormData || false
+    };
+    
+    devLog.log('📤 MODON API Request:', { endpoint, method, hasToken: !!token, hasPayload: !!payload });
+    
+    const response = await fetch(
+      'https://tkheostkubborwkwzugl.supabase.co/functions/v1/modon-proxy',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA`
+        },
+        body: JSON.stringify(requestBody)
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    devLog.log('📥 MODON API Response:', { status: data.status, hasData: !!data.data });
+    
+    return data;
+  } catch (error) {
+    console.error('❌ MODON API Call Failed:', error);
+    throw error;
+  }
+}
+
+// ======== القسم 4: جلب البيانات ========
+
 /**
  * Get all cities from MODON
- * @param {string} token - Authentication token
- * @returns {Promise<Array>} List of cities
  */
 export async function getCities(token) {
   try {
-    console.log('🌆 جلب المدن من مدن...');
     const data = await handleModonApiCall('citys', 'GET', token);
     
     if (data.status === true && data.errNum === 'S000') {
-      console.log(`✅ تم جلب ${data.data.length} مدينة من مدن`);
-      return data.data; // [{id: "1", city_name: "بغداد"}]
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} مدينة من مدن`);
+      return data.data || [];
     }
-    throw new Error(data.msg || 'فشل جلب المدن');
+    
+    throw new Error(data.msg || 'فشل جلب المدن من مدن');
   } catch (error) {
     console.error('❌ خطأ في جلب المدن من مدن:', error);
     throw error;
@@ -96,16 +140,12 @@ export async function getCities(token) {
 }
 
 /**
- * Get regions by city ID from MODON
- * @param {string} token - Authentication token
- * @param {string|number} cityId - City ID
- * @returns {Promise<Array>} List of regions
+ * Get regions for a specific city from MODON
  */
 export async function getRegionsByCity(token, cityId) {
   try {
-    console.log(`🏘️ جلب مناطق المدينة ${cityId} من مدن...`);
     const data = await handleModonApiCall(
-      'regions',
+      'city-regions',
       'GET',
       token,
       null,
@@ -113,10 +153,11 @@ export async function getRegionsByCity(token, cityId) {
     );
     
     if (data.status === true && data.errNum === 'S000') {
-      console.log(`✅ تم جلب ${data.data.length} منطقة من مدن`);
-      return data.data; // [{id: "1", region_name: "الكرادة"}]
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} منطقة من مدن`);
+      return data.data || [];
     }
-    throw new Error(data.msg || 'فشل جلب المناطق');
+    
+    throw new Error(data.msg || 'فشل جلب المناطق من مدن');
   } catch (error) {
     console.error('❌ خطأ في جلب المناطق من مدن:', error);
     throw error;
@@ -125,19 +166,17 @@ export async function getRegionsByCity(token, cityId) {
 
 /**
  * Get package sizes from MODON
- * @param {string} token - Authentication token
- * @returns {Promise<Array>} List of package sizes
  */
 export async function getPackageSizes(token) {
   try {
-    console.log('📦 جلب أحجام الطرود من مدن...');
     const data = await handleModonApiCall('package-sizes', 'GET', token);
     
     if (data.status === true && data.errNum === 'S000') {
-      console.log(`✅ تم جلب ${data.data.length} حجم من مدن`);
-      return data.data; // [{id: "1", size: "صغير"}]
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} حجم طرد من مدن`);
+      return data.data || [];
     }
-    throw new Error(data.msg || 'فشل جلب أحجام الطرود');
+    
+    throw new Error(data.msg || 'فشل جلب أحجام الطرود من مدن');
   } catch (error) {
     console.error('❌ خطأ في جلب أحجام الطرود من مدن:', error);
     throw error;
@@ -146,27 +185,33 @@ export async function getPackageSizes(token) {
 
 /**
  * Get all merchant orders from MODON
- * @param {string} token - Authentication token
- * @returns {Promise<Array>} List of merchant orders
  */
 export async function getMerchantOrders(token) {
   try {
-    console.log('📦 جلب طلبات التاجر من مدن...');
-    const data = await handleModonApiCall('orders', 'GET', token);
+    const data = await handleModonApiCall(
+      'merchant-orders',
+      'GET',
+      token,
+      null,
+      { token }
+    );
     
     if (data.status === true && data.errNum === 'S000') {
-      console.log(`✅ تم جلب ${data.data?.length || 0} طلب`);
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} طلب من مدن`);
       return data.data || [];
     }
-    throw new Error(data.msg || 'فشل جلب الطلبات');
+    
+    throw new Error(data.msg || 'فشل جلب الطلبات من مدن');
   } catch (error) {
     console.error('❌ خطأ في جلب الطلبات من مدن:', error);
     throw error;
   }
 }
 
+// ======== القسم 5: إدارة الطلبات ========
+
 /**
- * Map order data to MODON fields format
+ * Map order data to MODON fields
  */
 function mapToModonFields(orderData) {
   const cleanedLocation = orderData.customer_address || orderData.address || '';
@@ -188,145 +233,115 @@ function mapToModonFields(orderData) {
 }
 
 /**
- * Create a new order in MODON
- * @param {Object} orderData - Order details
- * @param {string} token - Authentication token
- * @returns {Promise<Object>} Created order data
+ * Create order in MODON
  */
 export async function createModonOrder(orderData, token) {
-  try {
-    console.log('📦 إنشاء طلب جديد في مدن...');
-    
-    // Import phone utilities
-    const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
-    
-    const mappedData = mapToModonFields(orderData);
-    const formattedData = { ...mappedData };
-    
-    // Format and validate phone numbers
-    if (formattedData.client_mobile) {
-      formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-      if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
-        throw new Error('رقم الهاتف الأساسي غير صحيح - يجب أن يكون بصيغة +9647XXXXXXXXX');
-      }
-    } else {
-      throw new Error('رقم هاتف العميل مطلوب');
+  const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
+  
+  const mappedData = mapToModonFields(orderData);
+  const formattedData = { ...mappedData };
+  
+  if (formattedData.client_mobile) {
+    formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
+      throw new Error('رقم الهاتف الأساسي غير صحيح');
     }
-    
-    // Format secondary phone
-    if (formattedData.client_mobile2) {
-      formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-      if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
-        console.warn('⚠️ رقم الهاتف الثانوي غير صحيح، سيتم حذفه');
-        delete formattedData.client_mobile2;
-      }
-    }
-
-    // Ensure numeric fields are properly formatted
-    formattedData.price = Number(formattedData.price) || 0;
-    formattedData.items_number = parseInt(formattedData.items_number) || 1;
-    formattedData.city_id = parseInt(formattedData.city_id) || 0;
-    formattedData.region_id = parseInt(formattedData.region_id) || 0;
-    formattedData.package_size = parseInt(formattedData.package_size) || 1;
-    formattedData.replacement = parseInt(formattedData.replacement) || 0;
-    
-    console.log('📤 بيانات الطلب المُرسلة لمدن:', formattedData);
-    
-    const data = await handleModonApiCall(
-      'create-order',
-      'POST',
-      token,
-      formattedData,
-      { token },
-      true // isFormData
-    );
-    
-    if (data.status === true && data.errNum === 'S000') {
-      console.log('✅ تم إنشاء الطلب في مدن بنجاح:', data.data[0]);
-      return data.data[0]; // MODON returns array with single order
-    }
-    
-    throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
-  } catch (error) {
-    console.error('❌ خطأ في إنشاء الطلب في مدن:', error);
-    throw error;
   }
+  
+  if (formattedData.client_mobile2) {
+    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+      delete formattedData.client_mobile2;
+    }
+  }
+
+  formattedData.price = Number(formattedData.price) || 0;
+  formattedData.items_number = parseInt(formattedData.items_number) || 0;
+  formattedData.city_id = parseInt(formattedData.city_id) || 0;
+  formattedData.region_id = parseInt(formattedData.region_id) || 0;
+  formattedData.package_size = parseInt(formattedData.package_size) || 0;
+  formattedData.replacement = parseInt(formattedData.replacement) || 0;
+  
+  devLog.log('📦 إنشاء طلب في مدن:', formattedData);
+  
+  const data = await handleModonApiCall(
+    'create-order', 
+    'POST', 
+    token, 
+    formattedData, 
+    { token },
+    true
+  );
+  
+  if (data.status === true && data.errNum === 'S000') {
+    devLog.log('✅ تم إنشاء الطلب في مدن:', data.data[0]);
+    return data.data[0];
+  }
+  
+  throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
 }
 
 /**
- * Edit an existing order in MODON
- * @param {Object} orderData - Updated order details (must include qr_id)
- * @param {string} token - Authentication token
- * @returns {Promise<Object>} Updated order data
+ * Edit order in MODON
  */
 export async function editModonOrder(orderData, token) {
-  try {
-    console.log('✏️ تعديل طلب في مدن...');
-    
-    if (!orderData.qr_id) {
-      throw new Error('رقم الطلب (qr_id) مطلوب للتعديل');
-    }
-    
-    const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
-    
-    const mappedData = mapToModonFields(orderData);
-    const formattedData = { ...mappedData, qr_id: orderData.qr_id };
-    
-    // Format and validate phone numbers
-    if (formattedData.client_mobile) {
-      formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-      if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
-        throw new Error('رقم الهاتف الأساسي غير صحيح');
-      }
-    }
-    
-    if (formattedData.client_mobile2) {
-      formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-      if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
-        delete formattedData.client_mobile2;
-      }
-    }
-
-    // Format numeric fields
-    formattedData.price = Number(formattedData.price) || 0;
-    formattedData.items_number = parseInt(formattedData.items_number) || 1;
-    formattedData.city_id = parseInt(formattedData.city_id) || 0;
-    formattedData.region_id = parseInt(formattedData.region_id) || 0;
-    formattedData.package_size = parseInt(formattedData.package_size) || 1;
-    formattedData.replacement = parseInt(formattedData.replacement) || 0;
-    
-    console.log('📤 بيانات التعديل المُرسلة لمدن:', formattedData);
-    
-    const data = await handleModonApiCall(
-      'edit-order',
-      'POST',
-      token,
-      formattedData,
-      { token },
-      true
-    );
-    
-    if (data.status === true && data.errNum === 'S000') {
-      console.log('✅ تم تعديل الطلب في مدن بنجاح');
-      return data.data[0];
-    }
-    
-    throw new Error(data.msg || 'فشل تعديل الطلب');
-  } catch (error) {
-    console.error('❌ خطأ في تعديل الطلب في مدن:', error);
-    throw error;
+  const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
+  
+  const mappedData = mapToModonFields(orderData);
+  const formattedData = { ...mappedData };
+  
+  if (!orderData.qr_id && !formattedData.qr_id) {
+    throw new Error('رقم الطلب (qr_id) مطلوب للتعديل');
   }
+  
+  formattedData.qr_id = orderData.qr_id || formattedData.qr_id;
+  
+  if (formattedData.client_mobile) {
+    formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
+      throw new Error('رقم الهاتف الأساسي غير صحيح');
+    }
+  }
+  
+  if (formattedData.client_mobile2) {
+    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
+    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+      delete formattedData.client_mobile2;
+    }
+  }
+
+  formattedData.price = Number(formattedData.price) || 0;
+  formattedData.items_number = parseInt(formattedData.items_number) || 0;
+  formattedData.city_id = parseInt(formattedData.city_id) || 0;
+  formattedData.region_id = parseInt(formattedData.region_id) || 0;
+  formattedData.package_size = parseInt(formattedData.package_size) || 0;
+  formattedData.replacement = parseInt(formattedData.replacement) || 0;
+  
+  devLog.log('✏️ تعديل طلب في مدن:', formattedData);
+  
+  const data = await handleModonApiCall(
+    'edit-order',
+    'POST',
+    token,
+    formattedData,
+    { token },
+    true
+  );
+  
+  if (data.status === true && data.errNum === 'S000') {
+    devLog.log('✅ تم تعديل الطلب في مدن');
+    return data.data?.[0] || true;
+  }
+  
+  throw new Error(data.msg || 'فشل تعديل الطلب في مدن');
 }
 
 /**
  * Get order by QR/tracking number from MODON
- * @param {string} token - Authentication token
- * @param {string|number} qrId - QR/tracking number
- * @returns {Promise<Object>} Order data
  */
 export async function getOrderByQR(token, qrId) {
   try {
-    console.log(`🔍 جلب طلب بـ QR: ${qrId} من مدن...`);
+    devLog.log(`🔍 جلب طلب بـ QR: ${qrId} من مدن...`);
     
     const allOrders = await getMerchantOrders(token);
     const order = allOrders.find(o => String(o.qr_id) === String(qrId));
@@ -335,10 +350,160 @@ export async function getOrderByQR(token, qrId) {
       throw new Error(`الطلب ${qrId} غير موجود في مدن`);
     }
     
-    console.log('✅ تم العثور على الطلب:', order);
+    devLog.log('✅ تم العثور على الطلب:', order);
     return order;
   } catch (error) {
     console.error('❌ خطأ في جلب الطلب من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete order from MODON (only if status_id = 1)
+ */
+export async function deleteModonOrder(qrId, token) {
+  try {
+    devLog.log(`🗑️ حذف الطلب ${qrId} من مدن...`);
+    
+    const data = await handleModonApiCall(
+      'delete_orders',
+      'POST',
+      token,
+      { order_id: String(qrId) },
+      { token },
+      true
+    );
+    
+    if (data.status === true) {
+      devLog.log(`✅ تم حذف الطلب ${qrId} من مدن`);
+      return true;
+    }
+    
+    throw new Error(data.msg || 'فشل حذف الطلب من مدن');
+  } catch (error) {
+    console.error('❌ خطأ في حذف الطلب من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get orders by IDs (batch, max 25)
+ */
+export async function getOrdersByIdsBatch(ids, token) {
+  try {
+    if (!Array.isArray(ids)) {
+      ids = [ids];
+    }
+    
+    const idsString = ids.slice(0, 25).join(',');
+    devLog.log(`📦 جلب ${ids.length} طلب بالدفعة من مدن...`);
+    
+    const data = await handleModonApiCall(
+      'get-orders-by-ids-bulk',
+      'POST',
+      token,
+      { ids: idsString },
+      { token },
+      true
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} طلب بالدفعة`);
+      return data.data || [];
+    }
+    
+    throw new Error(data.msg || 'فشل جلب الطلبات بالدفعات');
+  } catch (error) {
+    console.error('❌ خطأ في جلب الطلبات بالدفعات:', error);
+    throw error;
+  }
+}
+
+// ======== القسم 6: إدارة الفواتير ========
+
+/**
+ * Get merchant invoices from MODON
+ */
+export async function getMerchantInvoices(token) {
+  try {
+    devLog.log('📄 جلب الفواتير من مدن...');
+    
+    const data = await handleModonApiCall(
+      'get_merchant_invoices',
+      'GET',
+      token,
+      null,
+      { token },
+      false
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} فاتورة من مدن`);
+      return data.data || [];
+    }
+    
+    throw new Error(data.msg || 'فشل جلب الفواتير من مدن');
+  } catch (error) {
+    console.error('❌ خطأ في جلب الفواتير من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get invoice orders from MODON
+ */
+export async function getInvoiceOrders(token, invoiceId) {
+  try {
+    devLog.log(`📋 جلب طلبات الفاتورة ${invoiceId} من مدن...`);
+    
+    const data = await handleModonApiCall(
+      'get_merchant_invoice_orders',
+      'GET',
+      token,
+      null,
+      { token, invoice_id: String(invoiceId) },
+      false
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      devLog.log(`✅ تم جلب طلبات الفاتورة ${invoiceId}`);
+      return {
+        invoice: data.data?.invoice || [],
+        orders: data.data?.orders || []
+      };
+    }
+    
+    throw new Error(data.msg || 'فشل جلب طلبات الفاتورة');
+  } catch (error) {
+    console.error('❌ خطأ في جلب طلبات الفاتورة من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Receive (confirm) invoice from MODON
+ */
+export async function receiveInvoice(token, invoiceId) {
+  try {
+    devLog.log(`✅ استلام الفاتورة ${invoiceId} من مدن...`);
+    
+    const data = await handleModonApiCall(
+      'receive_merchant_invoice',
+      'GET',
+      token,
+      null,
+      { token, invoice_id: String(invoiceId) },
+      false
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      devLog.log(`✅ تم استلام الفاتورة ${invoiceId} في مدن`);
+      return true;
+    }
+    
+    throw new Error(data.msg || 'فشل استلام الفاتورة من مدن');
+  } catch (error) {
+    console.error('❌ خطأ في استلام الفاتورة من مدن:', error);
     throw error;
   }
 }

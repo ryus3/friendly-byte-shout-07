@@ -311,8 +311,19 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                     )}
                       <div className="flex items-center gap-1.5">
                          <Building className="w-3 h-3"/>
-                         <span className="font-medium">{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
+                         <span className="font-medium">
+                           {order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : 
+                            order.delivery_partner === 'alwaseet' ? 'AL WASEET' :
+                            order.delivery_partner === 'modon' ? 'MODON' :
+                            order.delivery_partner}
+                         </span>
                      </div>
+                     {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
+                       <div className="flex items-center gap-1.5 text-xs text-primary">
+                         <UserCircle className="w-3 h-3"/>
+                         <span>الحساب: {order.delivery_account_used}</span>
+                       </div>
+                     )}
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">

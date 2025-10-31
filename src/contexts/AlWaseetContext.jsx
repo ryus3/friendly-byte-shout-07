@@ -74,14 +74,102 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [activePartner]);
 
+  // دالة لإعادة تفعيل حساب منتهي الصلاحية
+  const reactivateExpiredAccount = useCallback(async (accountUsername, partnerName = null) => {
+    if (!user?.id || !accountUsername) {
+      return false;
+    }
+    
+    const partner = partnerName || activePartner;
+    
+    try {
+      setLoading(true);
+      
+      // جلب بيانات الحساب المحفوظة
+      const { data: accountRecord, error } = await supabase
+        .from('delivery_partner_tokens')
+        .select('account_username, merchant_id, account_label, partner_data')
+        .eq('user_id', user.id)
+        .eq('partner_name', partner)
+        .ilike('account_username', accountUsername.trim().toLowerCase())
+        .single();
+      
+      if (error || !accountRecord) {
+        throw new Error('لم يتم العثور على بيانات الحساب');
+      }
+      
+      // محاولة إعادة تسجيل الدخول باستخدام بيانات محفوظة
+      let newToken = null;
+      if (partner === 'alwaseet') {
+        const loginResult = await AlWaseetAPI.loginToWaseet(accountUsername, accountRecord.partner_data?.password);
+        newToken = loginResult.token;
+      } else if (partner === 'modon') {
+        const loginResult = await ModonAPI.loginToModon(accountUsername, accountRecord.partner_data?.password);
+        newToken = loginResult.token;
+      }
+      
+      if (!newToken) {
+        throw new Error('فشل إعادة تسجيل الدخول. يرجى تسجيل الدخول يدوياً');
+      }
+      
+      // تحديث التوكن في قاعدة البيانات
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      
+      await supabase
+        .from('delivery_partner_tokens')
+        .update({
+          token: newToken,
+          expires_at: expiresAt.toISOString(),
+          last_used_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id)
+        .eq('partner_name', partner)
+        .ilike('account_username', accountUsername.trim().toLowerCase());
+      
+      // تحديث حالة السياق
+      setToken(newToken);
+      setWaseetUser({
+        username: accountRecord.account_username,
+        merchantId: accountRecord.merchant_id,
+        label: accountRecord.account_label
+      });
+      setIsLoggedIn(true);
+      setActivePartner(partner);
+      
+      const partnerDisplayName = deliveryPartners[partner]?.name || partner;
+      toast({
+        title: "✅ تم تجديد الجلسة بنجاح",
+        description: `تم تجديد تسجيل الدخول للحساب: ${accountRecord.account_label || accountRecord.account_username} في ${partnerDisplayName}`,
+        variant: "default"
+      });
+      
+      return true;
+    } catch (error) {
+      toast({
+        title: "خطأ في تجديد الجلسة",
+        description: error.message || 'يرجى تسجيل الدخول يدوياً',
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, activePartner]);
+
   // دالة لتفعيل حساب محدد وتسجيل الدخول الفعلي
-  const activateAccount = useCallback(async (accountUsername, partnerName = null) => {
+  const activateAccount = useCallback(async (accountUsername, partnerName = null, accountIsExpired = false) => {
     if (!user?.id || !accountUsername) {
       return false;
     }
     
     // استخدام activePartner إذا لم يتم تحديد partnerName
     const partner = partnerName || activePartner;
+    
+    // إذا كان الحساب منتهياً، محاولة إعادة التفعيل
+    if (accountIsExpired) {
+      return await reactivateExpiredAccount(accountUsername, partner);
+    }
     
     try {
       setLoading(true);
@@ -91,11 +179,12 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (!accountData) {
         toast({
-          title: "خطأ في تسجيل الدخول",
-          description: "لم يتم العثور على بيانات صالحة للحساب المحدد",
-          variant: "destructive"
+          title: "انتهت صلاحية الحساب",
+          description: "جاري محاولة تجديد تسجيل الدخول...",
+          variant: "default"
         });
-        return false;
+        // محاولة إعادة التفعيل
+        return await reactivateExpiredAccount(accountUsername, partner);
       }
       
       // تحديث حالة السياق
@@ -135,7 +224,7 @@ export const AlWaseetProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, getTokenForUser]);
+  }, [user?.id, getTokenForUser, reactivateExpiredAccount]);
 
   // دالة للحصول على جميع حسابات المستخدم لشركة معينة مع إزالة التكرار
   const getUserDeliveryAccounts = useCallback(async (userId, partnerName = 'alwaseet') => {
@@ -164,15 +253,15 @@ export const AlWaseetProvider = ({ children }) => {
       const seenUsernames = new Set();
 
       for (const account of accounts) {
-        // فلترة التوكنات المنتهية
-        if (account.expires_at && new Date(account.expires_at) <= new Date()) {
-          continue;
-        }
-        
         const normalizedUsername = account.account_username?.trim()?.toLowerCase();
         if (normalizedUsername && !seenUsernames.has(normalizedUsername)) {
           seenUsernames.add(normalizedUsername);
-          uniqueAccounts.push(account);
+          // إضافة حقل isExpired للحسابات المنتهية
+          const isExpired = account.expires_at && new Date(account.expires_at) <= new Date();
+          uniqueAccounts.push({
+            ...account,
+            isExpired
+          });
         }
       }
       
