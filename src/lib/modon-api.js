@@ -237,21 +237,20 @@ function mapToModonFields(orderData) {
  * Create order in MODON
  */
 export async function createModonOrder(orderData, token) {
-  const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
-  
   const mappedData = mapToModonFields(orderData);
   const formattedData = { ...mappedData };
   
+  // Format phone numbers for MODON
   if (formattedData.client_mobile) {
-    formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-    if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
-      throw new Error('رقم الهاتف الأساسي غير صحيح');
+    formattedData.client_mobile = formatPhoneForModon(formattedData.client_mobile);
+    if (!isValidModonPhone(formattedData.client_mobile)) {
+      throw new Error('رقم الهاتف الأساسي غير صحيح. يجب أن يبدأ بـ +9647');
     }
   }
   
   if (formattedData.client_mobile2) {
-    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+    formattedData.client_mobile2 = formatPhoneForModon(formattedData.client_mobile2);
+    if (!isValidModonPhone(formattedData.client_mobile2)) {
       delete formattedData.client_mobile2;
     }
   }
@@ -286,8 +285,6 @@ export async function createModonOrder(orderData, token) {
  * Edit order in MODON
  */
 export async function editModonOrder(orderData, token) {
-  const { formatPhoneForAlWaseet, isValidAlWaseetPhone } = await import('../utils/phoneUtils.js');
-  
   const mappedData = mapToModonFields(orderData);
   const formattedData = { ...mappedData };
   
@@ -297,16 +294,17 @@ export async function editModonOrder(orderData, token) {
   
   formattedData.qr_id = orderData.qr_id || formattedData.qr_id;
   
+  // Format phone numbers for MODON
   if (formattedData.client_mobile) {
-    formattedData.client_mobile = formatPhoneForAlWaseet(formattedData.client_mobile);
-    if (!isValidAlWaseetPhone(formattedData.client_mobile)) {
-      throw new Error('رقم الهاتف الأساسي غير صحيح');
+    formattedData.client_mobile = formatPhoneForModon(formattedData.client_mobile);
+    if (!isValidModonPhone(formattedData.client_mobile)) {
+      throw new Error('رقم الهاتف الأساسي غير صحيح. يجب أن يبدأ بـ +9647');
     }
   }
   
   if (formattedData.client_mobile2) {
-    formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
-    if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
+    formattedData.client_mobile2 = formatPhoneForModon(formattedData.client_mobile2);
+    if (!isValidModonPhone(formattedData.client_mobile2)) {
       delete formattedData.client_mobile2;
     }
   }
