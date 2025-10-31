@@ -50,8 +50,9 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('partner_name', partner);
       
       if (accountUsername) {
-        // البحث عن حساب محدد مع المقارنة المطبعة
-        query = query.ilike('account_username', accountUsername.trim().toLowerCase());
+        // تطبيع اسم الحساب: lowercase + trim + إزالة المسافات وتحويلها لشرطات
+        const normalizedAccount = accountUsername.trim().toLowerCase().replace(/\s+/g, '-');
+        query = query.ilike('account_username', normalizedAccount);
       } else {
         // البحث عن الحساب الافتراضي أو الأحدث
         query = query.order('is_default', { ascending: false })

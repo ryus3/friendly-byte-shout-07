@@ -39,22 +39,43 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     // حالة اتصال الشركاء (محسوبة مسبقاً عند فتح النافذة)
     const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
 
-    // تهيئة الشريك المختار مرة واحدة عند فتح النافذة فقط
+    // تهيئة الشريك المختار من profiles أو activePartner
     useEffect(() => {
-        if (!open) return;
-        const keys = Object.keys(availablePartners);
-        const initialPartner = (activePartner && keys.includes(activePartner)) ? activePartner : keys[0];
-        setSelectedPartner((prev) => prev || initialPartner);
-    }, [open, activePartner, availablePartners]);
+        if (!open || !user?.id) return;
+        
+        // جلب الشريك المحفوظ في profiles
+        supabase
+          .from('profiles')
+          .select('selected_delivery_partner')
+          .eq('user_id', user.id)
+          .single()
+          .then(({ data: profile }) => {
+            const keys = Object.keys(availablePartners);
+            let initialPartner;
+            
+            if (profile?.selected_delivery_partner && keys.includes(profile.selected_delivery_partner)) {
+              // استخدام الشريك المحفوظ في profiles
+              initialPartner = profile.selected_delivery_partner;
+            } else if (activePartner && keys.includes(activePartner)) {
+              // استخدام الشريك النشط
+              initialPartner = activePartner;
+            } else {
+              // استخدام أول شريك متاح
+              initialPartner = keys[0];
+            }
+            
+            setSelectedPartner((prev) => prev || initialPartner);
+          });
+    }, [open, user?.id, activePartner, availablePartners]);
 
     // تحميل حسابات المستخدم عند تغيير الشركة المختارة
     useEffect(() => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
-                // جلب الحساب المحفوظ في profiles أولاً
+                // جلب الحساب والشريك المحفوظين في profiles أولاً
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('selected_delivery_account')
+                    .select('selected_delivery_account, selected_delivery_partner')
                     .eq('user_id', user.id)
                     .single();
                 
@@ -141,11 +162,14 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         
         const success = await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
         if (success) {
-            // حفظ الحساب الافتراضي في profiles أيضاً
-            await supabase
-                .from('profiles')
-                .update({ selected_delivery_account: selectedAccount.account_username })
-                .eq('user_id', user.id);
+      // حفظ الحساب والشريك الافتراضيين في profiles
+      await supabase
+        .from('profiles')
+        .update({ 
+          selected_delivery_account: selectedAccount.account_username,
+          selected_delivery_partner: selectedPartner
+        })
+        .eq('user_id', user.id);
             
             toast({ 
                 title: "تم التحديث", 

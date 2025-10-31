@@ -3728,6 +3728,7 @@ export type Database = {
           order_creation_mode: string | null
           phone: string | null
           selected_delivery_account: string | null
+          selected_delivery_partner: string | null
           status: string
           updated_at: string
           user_id: string
@@ -3753,6 +3754,7 @@ export type Database = {
           order_creation_mode?: string | null
           phone?: string | null
           selected_delivery_account?: string | null
+          selected_delivery_partner?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -3778,6 +3780,7 @@ export type Database = {
           order_creation_mode?: string | null
           phone?: string | null
           selected_delivery_account?: string | null
+          selected_delivery_partner?: string | null
           status?: string
           updated_at?: string
           user_id?: string

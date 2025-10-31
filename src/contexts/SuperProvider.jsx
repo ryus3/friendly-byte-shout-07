@@ -1841,6 +1841,16 @@ export const SuperProvider = ({ children }) => {
           }
         }
 
+        // التحقق من صحة destination
+        const validDestinations = ['modon', 'alwaseet', 'local'];
+        if (!validDestinations.includes(destination)) {
+          console.error('❌ destination غير صالح:', destination);
+          return { 
+            success: false, 
+            error: `وجهة توصيل غير صالحة: ${destination}. يجب أن تكون إحدى: ${validDestinations.join(', ')}` 
+          };
+        }
+
         if (!actualAccount) {
           return { 
             success: false, 
@@ -1848,20 +1858,46 @@ export const SuperProvider = ({ children }) => {
           };
         }
         
+        // تطبيع اسم الحساب قبل البحث
+        const rawAccount = actualAccount;
+        actualAccount = actualAccount.trim().toLowerCase().replace(/\s+/g, '-');
+        
+        console.log('🔍 تطبيع اسم الحساب:', {
+          original: rawAccount,
+          normalized: actualAccount,
+          destination: destination
+        });
+        
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
           console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
           // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
           const accountData = await getTokenForUser(createdBy, actualAccount, destination);
+          
+          console.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
+            requestedAccount: actualAccount,
+            requestedPartner: destination,
+            foundToken: !!accountData?.token,
+            foundAccount: accountData?.account_username,
+            foundPartner: accountData?.partner_name,
+            tokenExpiry: accountData?.expires_at
+          });
+          
           if (!accountData?.token) {
-            console.error('❌ فشل في الحصول على توكن صالح للحساب:', actualAccount);
-            throw new Error('فشل في الحصول على توكن صالح للحساب المحدد');
+            console.error('❌ فشل في الحصول على توكن:', {
+              userId: createdBy,
+              accountUsername: actualAccount,
+              partnerName: destination,
+              suggestion: `تحقق من وجود توكن صالح في delivery_partner_tokens لهذا المستخدم والحساب`
+            });
+            throw new Error(`فشل في الحصول على توكن صالح للحساب: ${actualAccount} (${destination})`);
           }
           
           console.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
           console.log('📋 بيانات الحساب:', { 
-            username: accountData.username,
+            username: accountData.account_username,
+            partner: accountData.partner_name,
             hasToken: !!accountData.token,
             expiresAt: accountData.expires_at
           });
